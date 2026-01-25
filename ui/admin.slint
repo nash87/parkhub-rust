@@ -1,0 +1,625 @@
+// Admin Dashboard - Parking lot management for administrators
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+
+// Admin stats data
+export struct AdminStats {
+    total-bookings-today: int,
+    revenue-today: float,
+    occupancy-rate: float,
+    active-users: int,
+    available-slots: int,
+    total-slots: int,
+}
+
+// Slot management data
+export struct AdminSlotInfo {
+    id: string,
+    slot-number: int,
+    floor-name: string,
+    status: string,
+    current-user: string,
+    booking-end: string,
+    maintenance-note: string,
+}
+
+// Quick stat card
+component QuickStatCard inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <string> change: "";
+    in property <bool> positive: true;
+    in property <color> accent-color: Theme.primary;
+
+    height: 90px;
+    border-radius: 12px;
+    background: Theme.surface;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 6px;
+
+        Text {
+            text: root.label;
+            font-size: 11px;
+            font-weight: 500;
+            color: Theme.text-tertiary;
+        }
+
+        Text {
+            text: root.value;
+            font-size: 24px;
+            font-weight: 800;
+            color: root.accent-color;
+        }
+
+        if change != "" : HorizontalLayout {
+            spacing: 4px;
+
+            // Arrow indicator
+            Rectangle {
+                width: 10px;
+                height: 10px;
+                y: (parent.height - self.height) / 2;
+
+                Rectangle {
+                    width: 6px;
+                    height: 2px;
+                    x: root.positive ? 0 : 2px;
+                    y: root.positive ? 6px : 4px;
+                    background: root.positive ? Theme.secondary : Theme.error;
+                    border-radius: 1px;
+                }
+                Rectangle {
+                    width: 6px;
+                    height: 2px;
+                    x: root.positive ? 2px : 0;
+                    y: root.positive ? 4px : 6px;
+                    background: root.positive ? Theme.secondary : Theme.error;
+                    border-radius: 1px;
+                }
+            }
+
+            Text {
+                text: root.change;
+                font-size: 10px;
+                color: root.positive ? Theme.secondary : Theme.error;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// Occupancy bar
+component OccupancyBar inherits Rectangle {
+    in property <float> rate: 0;
+    in property <int> available: 0;
+    in property <int> total: 0;
+
+    property <color> bar-color: root.rate > 0.9 ? Theme.error :
+                                root.rate > 0.7 ? Theme.warning :
+                                Theme.secondary;
+
+    height: 80px;
+    border-radius: 12px;
+    background: Theme.surface;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+
+        HorizontalLayout {
+            Text {
+                horizontal-stretch: 1;
+                text: "Auslastung";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: Math.round(root.rate * 100) + "%";
+                font-size: 16px;
+                font-weight: 700;
+                color: root.bar-color;
+                vertical-alignment: center;
+            }
+        }
+
+        // Progress bar
+        Rectangle {
+            height: 12px;
+            border-radius: 6px;
+            background: Theme.surface-elevated;
+
+            Rectangle {
+                width: parent.width * root.rate;
+                height: parent.height;
+                border-radius: 6px;
+                background: root.bar-color;
+
+                animate width { duration: 500ms; easing: ease-out; }
+            }
+        }
+
+        Text {
+            text: root.available + " von " + root.total + " Plätzen frei";
+            font-size: 11px;
+            color: Theme.text-tertiary;
+        }
+    }
+}
+
+// Slot list item for admin
+component AdminSlotItem inherits Rectangle {
+    in property <AdminSlotInfo> slot;
+
+    callback toggle-maintenance();
+    callback view-details();
+    callback force-release();
+
+    property <color> status-color: slot.status == "available" ? Theme.secondary :
+                                   slot.status == "occupied" ? Theme.primary :
+                                   slot.status == "maintenance" ? Theme.warning :
+                                   Theme.error;
+
+    height: 64px;
+    border-radius: 10px;
+    background: item-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+    border-width: 1px;
+    border-color: slot.status == "maintenance" ? Theme.warning.transparentize(0.7) : Theme.border;
+
+    item-touch := TouchArea {
+        clicked => { root.view-details(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Slot number
+        Rectangle {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: root.status-color.transparentize(0.85);
+            y: (parent.height - self.height) / 2;
+
+            Text {
+                text: slot.slot-number;
+                font-size: 16px;
+                font-weight: 700;
+                color: root.status-color;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Info
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: slot.floor-name;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Status badge
+                Rectangle {
+                    width: 64px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: root.status-color.transparentize(0.85);
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: slot.status == "available" ? "Frei" :
+                              slot.status == "occupied" ? "Belegt" :
+                              slot.status == "maintenance" ? "Wartung" :
+                              slot.status;
+                        font-size: 9px;
+                        font-weight: 600;
+                        color: root.status-color;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            if slot.current-user != "" : Text {
+                text: slot.current-user + " • bis " + slot.booking-end;
+                font-size: 11px;
+                color: Theme.text-tertiary;
+            }
+
+            if slot.maintenance-note != "" : Text {
+                text: slot.maintenance-note;
+                font-size: 11px;
+                color: Theme.warning;
+            }
+        }
+
+        // Actions
+        HorizontalLayout {
+            spacing: 4px;
+            y: (parent.height - 32px) / 2;
+
+            // Maintenance toggle
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: maint-touch.has-hover ? Theme.warning.transparentize(0.8) : transparent;
+
+                maint-touch := TouchArea {
+                    clicked => { root.toggle-maintenance(); }
+                    mouse-cursor: pointer;
+                }
+
+                // Wrench icon (simplified)
+                Rectangle {
+                    width: 14px;
+                    height: 4px;
+                    x: 9px;
+                    y: 8px;
+                    border-radius: 2px;
+                    background: slot.status == "maintenance" ? Theme.warning : Theme.text-tertiary;
+                }
+                Rectangle {
+                    width: 4px;
+                    height: 12px;
+                    x: 14px;
+                    y: 12px;
+                    border-radius: 2px;
+                    background: slot.status == "maintenance" ? Theme.warning : Theme.text-tertiary;
+                }
+            }
+
+            // Force release (only for occupied)
+            if slot.status == "occupied" : Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: release-touch.has-hover ? Theme.error.transparentize(0.8) : transparent;
+
+                release-touch := TouchArea {
+                    clicked => { root.force-release(); }
+                    mouse-cursor: pointer;
+                }
+
+                // X icon
+                Rectangle {
+                    width: 10px;
+                    height: 2px;
+                    x: 11px;
+                    y: 15px;
+                    background: Theme.error;
+                    border-radius: 1px;
+                }
+                Rectangle {
+                    width: 2px;
+                    height: 10px;
+                    x: 15px;
+                    y: 11px;
+                    background: Theme.error;
+                    border-radius: 1px;
+                }
+            }
+        }
+    }
+}
+
+// Quick action button
+component QuickActionButton inherits Rectangle {
+    in property <string> label;
+    in property <string> icon-text: "";
+    in property <color> accent-color: Theme.primary;
+
+    callback clicked();
+
+    height: 72px;
+    border-radius: 12px;
+    background: action-touch.has-hover ? root.accent-color.transparentize(0.85) : Theme.surface;
+    border-width: 1px;
+    border-color: root.accent-color.transparentize(0.8);
+
+    animate background { duration: 150ms; }
+
+    action-touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    VerticalLayout {
+        padding: 12px;
+        alignment: center;
+        spacing: 6px;
+
+        Rectangle {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: root.accent-color.transparentize(0.85);
+            x: (parent.width - self.width) / 2;
+
+            Text {
+                text: root.icon-text;
+                font-size: 14px;
+                color: root.accent-color;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: root.label;
+            font-size: 12px;
+            font-weight: 500;
+            color: Theme.text-primary;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+// Main admin dashboard
+export component AdminDashboard inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <AdminStats> stats: {
+        total-bookings-today: 0,
+        revenue-today: 0,
+        occupancy-rate: 0,
+        active-users: 0,
+        available-slots: 0,
+        total-slots: 0,
+    };
+    in property <[AdminSlotInfo]> slots: [];
+    in property <string> currency: "EUR";
+    in property <bool> is-loading: false;
+
+    // Callbacks
+    callback close-panel();
+    callback refresh();
+    callback toggle-slot-maintenance(string);
+    callback force-release-slot(string);
+    callback view-slot-details(string);
+    callback export-report();
+    callback manage-pricing();
+    callback view-all-bookings();
+    callback send-announcement();
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+
+                    Text {
+                        text: "Admin Dashboard";
+                        font-size: Theme.font-size-lg;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+                }
+
+                // Refresh button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: refresh-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    refresh-touch := TouchArea {
+                        clicked => { root.refresh(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Refresh icon
+                    Rectangle {
+                        width: 18px;
+                        height: 18px;
+                        x: 9px;
+                        y: 9px;
+                        border-radius: 9px;
+                        border-width: 2px;
+                        border-color: Theme.text-secondary;
+                        background: transparent;
+                    }
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Quick stats row 1
+                HorizontalLayout {
+                    spacing: 10px;
+
+                    QuickStatCard {
+                        horizontal-stretch: 1;
+                        label: "BUCHUNGEN HEUTE";
+                        value: stats.total-bookings-today;
+                        change: "+12%";
+                        positive: true;
+                        accent-color: Theme.primary;
+                    }
+
+                    QuickStatCard {
+                        horizontal-stretch: 1;
+                        label: "UMSATZ HEUTE";
+                        value: stats.revenue-today + " " + root.currency;
+                        change: "+8%";
+                        positive: true;
+                        accent-color: Theme.secondary;
+                    }
+                }
+
+                // Quick stats row 2
+                HorizontalLayout {
+                    spacing: 10px;
+
+                    QuickStatCard {
+                        horizontal-stretch: 1;
+                        label: "AKTIVE NUTZER";
+                        value: stats.active-users;
+                        accent-color: Theme.info;
+                    }
+
+                    QuickStatCard {
+                        horizontal-stretch: 1;
+                        label: "FREIE PLÄTZE";
+                        value: stats.available-slots + "/" + stats.total-slots;
+                        accent-color: stats.available-slots < 5 ? Theme.warning : Theme.secondary;
+                    }
+                }
+
+                // Occupancy bar
+                OccupancyBar {
+                    rate: stats.occupancy-rate;
+                    available: stats.available-slots;
+                    total: stats.total-slots;
+                }
+
+                // Quick actions
+                Text {
+                    text: "Schnellaktionen";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    padding-top: 8px;
+                }
+
+                HorizontalLayout {
+                    spacing: 10px;
+
+                    QuickActionButton {
+                        horizontal-stretch: 1;
+                        label: "Bericht";
+                        icon-text: "📊";
+                        accent-color: Theme.info;
+                        clicked => { root.export-report(); }
+                    }
+
+                    QuickActionButton {
+                        horizontal-stretch: 1;
+                        label: "Preise";
+                        icon-text: "💰";
+                        accent-color: Theme.secondary;
+                        clicked => { root.manage-pricing(); }
+                    }
+
+                    QuickActionButton {
+                        horizontal-stretch: 1;
+                        label: "Buchungen";
+                        icon-text: "📋";
+                        accent-color: Theme.primary;
+                        clicked => { root.view-all-bookings(); }
+                    }
+
+                    QuickActionButton {
+                        horizontal-stretch: 1;
+                        label: "Mitteilung";
+                        icon-text: "📢";
+                        accent-color: Theme.warning;
+                        clicked => { root.send-announcement(); }
+                    }
+                }
+
+                // Slot management
+                Text {
+                    text: "Parkplätze verwalten";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    padding-top: 8px;
+                }
+
+                VerticalLayout {
+                    spacing: 8px;
+
+                    for slot in root.slots : AdminSlotItem {
+                        slot: slot;
+
+                        toggle-maintenance => { root.toggle-slot-maintenance(slot.id); }
+                        force-release => { root.force-release-slot(slot.id); }
+                        view-details => { root.view-slot-details(slot.id); }
+                    }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,476 @@
+// Statistics View - User booking statistics and analytics
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+
+// Monthly stat data
+export struct MonthlyStatData {
+    month: string,
+    bookings: int,
+    hours: float,
+    spent: float,
+}
+
+// Stat card component
+component StatCard inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <string> subtitle: "";
+    in property <color> accent-color: Theme.primary;
+
+    height: 100px;
+    border-radius: 12px;
+    background: Theme.surface;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 8px;
+
+        // Label
+        Text {
+            text: root.label;
+            font-size: 12px;
+            font-weight: 500;
+            color: Theme.text-tertiary;
+        }
+
+        // Value
+        Text {
+            text: root.value;
+            font-size: 28px;
+            font-weight: 800;
+            color: root.accent-color;
+        }
+
+        // Subtitle
+        if subtitle != "" : Text {
+            text: root.subtitle;
+            font-size: 11px;
+            color: Theme.text-tertiary;
+        }
+    }
+
+    // Accent bar
+    Rectangle {
+        width: 4px;
+        height: parent.height - 24px;
+        x: parent.width - 12px;
+        y: 12px;
+        border-radius: 2px;
+        background: root.accent-color.transparentize(0.6);
+    }
+}
+
+// Mini bar chart for monthly breakdown
+component MiniBarChart inherits Rectangle {
+    in property <[MonthlyStatData]> data: [];
+    in property <string> title: "";
+
+    height: 180px;
+    border-radius: 12px;
+    background: Theme.surface;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: root.title;
+            font-size: 14px;
+            font-weight: 600;
+            color: Theme.text-primary;
+        }
+
+        // Chart area
+        Rectangle {
+            vertical-stretch: 1;
+            background: transparent;
+
+            HorizontalLayout {
+                alignment: space-between;
+                padding-bottom: 20px;
+
+                for stat in root.data : VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: end;
+                    spacing: 4px;
+
+                    // Bar
+                    Rectangle {
+                        width: 24px;
+                        height: stat.bookings > 0 ? Math.max(20px, stat.bookings * 8px) : 4px;
+                        border-radius: 4px;
+                        background: stat.bookings > 0 ? Theme.primary : Theme.surface-elevated;
+                        x: (parent.width - self.width) / 2;
+
+                        animate height { duration: 300ms; easing: ease-out; }
+                    }
+
+                    // Month label
+                    Text {
+                        text: stat.month;
+                        font-size: 10px;
+                        color: Theme.text-tertiary;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Main statistics panel
+export component StatisticsPanel inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <int> total-bookings: 0;
+    in property <float> total-hours: 0;
+    in property <float> total-spent: 0;
+    in property <string> currency: "EUR";
+    in property <string> favorite-lot: "";
+    in property <int> favorite-slot: 0;
+    in property <float> average-duration: 0;
+    in property <int> bookings-this-month: 0;
+    in property <[MonthlyStatData]> monthly-breakdown: [];
+
+    // Callbacks
+    callback close-panel();
+    callback refresh();
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Statistiken";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Refresh button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: refresh-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    refresh-touch := TouchArea {
+                        clicked => { root.refresh(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Refresh icon (circular arrows)
+                    Rectangle {
+                        width: 18px;
+                        height: 18px;
+                        x: 9px;
+                        y: 9px;
+                        border-radius: 9px;
+                        border-width: 2px;
+                        border-color: Theme.text-secondary;
+                        background: transparent;
+                    }
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Main stats grid
+                Text {
+                    text: "Übersicht";
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                }
+
+                // Stats row 1
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    StatCard {
+                        horizontal-stretch: 1;
+                        label: "Gesamtbuchungen";
+                        value: root.total-bookings;
+                        subtitle: root.bookings-this-month + " diesen Monat";
+                        accent-color: Theme.primary;
+                    }
+
+                    StatCard {
+                        horizontal-stretch: 1;
+                        label: "Parkstunden";
+                        value: Math.round(root.total-hours) + "h";
+                        subtitle: "Ø " + Math.round(root.average-duration) + " Min";
+                        accent-color: Theme.info;
+                    }
+                }
+
+                // Stats row 2
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    StatCard {
+                        horizontal-stretch: 1;
+                        label: "Ausgaben";
+                        value: Math.round(root.total-spent * 100) / 100 + " " + root.currency;
+                        accent-color: Theme.secondary;
+                    }
+
+                    StatCard {
+                        horizontal-stretch: 1;
+                        label: "Lieblingsplatz";
+                        value: root.favorite-slot > 0 ? "#" + root.favorite-slot : "-";
+                        subtitle: root.favorite-lot;
+                        accent-color: Theme.warning;
+                    }
+                }
+
+                // Monthly breakdown chart
+                Text {
+                    text: "Buchungen pro Monat";
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    padding-top: Theme.spacing-sm;
+                }
+
+                MiniBarChart {
+                    data: root.monthly-breakdown;
+                }
+
+                // Additional insights
+                Text {
+                    text: "Einblicke";
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    padding-top: Theme.spacing-sm;
+                }
+
+                Card {
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        // Insight row 1
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 10px;
+                                background: Theme.primary.transparentize(0.9);
+
+                                // Clock icon
+                                Rectangle {
+                                    width: 20px;
+                                    height: 20px;
+                                    x: 10px;
+                                    y: 10px;
+                                    border-radius: 10px;
+                                    border-width: 2px;
+                                    border-color: Theme.primary;
+                                    background: transparent;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Durchschnittliche Parkdauer";
+                                    font-size: 13px;
+                                    color: Theme.text-secondary;
+                                }
+
+                                Text {
+                                    text: Math.round(root.average-duration) + " Minuten pro Buchung";
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    color: Theme.text-primary;
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Theme.border;
+                        }
+
+                        // Insight row 2
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 10px;
+                                background: Theme.secondary.transparentize(0.9);
+
+                                // Money icon
+                                Rectangle {
+                                    width: 16px;
+                                    height: 16px;
+                                    x: 12px;
+                                    y: 12px;
+                                    border-radius: 8px;
+                                    border-width: 2px;
+                                    border-color: Theme.secondary;
+                                    background: transparent;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Durchschnittliche Kosten";
+                                    font-size: 13px;
+                                    color: Theme.text-secondary;
+                                }
+
+                                Text {
+                                    text: root.total-bookings > 0 ?
+                                          Math.round(root.total-spent / root.total-bookings * 100) / 100 + " " + root.currency + " pro Buchung" :
+                                          "Keine Daten";
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    color: Theme.text-primary;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Empty state if no bookings
+                if root.total-bookings == 0 : Card {
+                    VerticalLayout {
+                        padding: 32px;
+                        alignment: center;
+                        spacing: 16px;
+
+                        Rectangle {
+                            width: 64px;
+                            height: 64px;
+                            border-radius: 32px;
+                            background: Theme.surface-elevated;
+                            x: (parent.width - self.width - 64px) / 2;
+
+                            // Chart icon placeholder
+                            Rectangle {
+                                width: 8px;
+                                height: 20px;
+                                x: 14px;
+                                y: 28px;
+                                border-radius: 2px;
+                                background: Theme.text-tertiary;
+                            }
+                            Rectangle {
+                                width: 8px;
+                                height: 28px;
+                                x: 28px;
+                                y: 20px;
+                                border-radius: 2px;
+                                background: Theme.text-tertiary;
+                            }
+                            Rectangle {
+                                width: 8px;
+                                height: 16px;
+                                x: 42px;
+                                y: 32px;
+                                border-radius: 2px;
+                                background: Theme.text-tertiary;
+                            }
+                        }
+
+                        Text {
+                            text: "Noch keine Statistiken";
+                            font-size: 16px;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Buche deinen ersten Parkplatz,\num Statistiken zu sehen.";
+                            font-size: 13px;
+                            color: Theme.text-tertiary;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

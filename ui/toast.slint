@@ -1,0 +1,346 @@
+// Toast Notifications - Non-blocking notification system
+
+import { Theme } from "theme.slint";
+
+// Toast type enum
+export enum ToastType {
+    Success,
+    Error,
+    Warning,
+    Info,
+}
+
+// Toast data structure
+export struct ToastData {
+    id: string,
+    toast-type: ToastType,
+    title: string,
+    message: string,
+    duration-ms: int,
+    dismissible: bool,
+}
+
+// Individual toast component
+component ToastItem inherits Rectangle {
+    in property <ToastData> toast;
+    in property <bool> is-visible: true;
+
+    callback dismiss();
+
+    property <color> accent-color: toast.toast-type == ToastType.Success ? Theme.secondary :
+                                   toast.toast-type == ToastType.Error ? Theme.error :
+                                   toast.toast-type == ToastType.Warning ? Theme.warning :
+                                   Theme.info;
+
+    width: 360px;
+    height: toast.message != "" ? 80px : 60px;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: root.accent-color.transparentize(0.7);
+    drop-shadow-blur: 12px;
+    drop-shadow-color: #000000.transparentize(0.6);
+    drop-shadow-offset-y: 4px;
+
+    opacity: root.is-visible ? 1.0 : 0.0;
+
+    animate opacity { duration: 200ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Icon
+        Rectangle {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: root.accent-color.transparentize(0.85);
+            y: (parent.height - self.height) / 2;
+
+            // Success checkmark
+            if toast.toast-type == ToastType.Success : Rectangle {
+                width: 16px;
+                height: 16px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                Rectangle {
+                    width: 3px;
+                    height: 8px;
+                    x: 3px;
+                    y: 5px;
+                    background: Theme.secondary;
+                    border-radius: 1.5px;
+                }
+                Rectangle {
+                    width: 3px;
+                    height: 12px;
+                    x: 9px;
+                    y: 1px;
+                    background: Theme.secondary;
+                    border-radius: 1.5px;
+                }
+            }
+
+            // Error X
+            if toast.toast-type == ToastType.Error : Rectangle {
+                width: 14px;
+                height: 14px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                Rectangle {
+                    width: 3px;
+                    height: 18px;
+                    x: 5.5px;
+                    y: -2px;
+                    background: Theme.error;
+                    border-radius: 1.5px;
+                }
+                Rectangle {
+                    width: 18px;
+                    height: 3px;
+                    x: -2px;
+                    y: 5.5px;
+                    background: Theme.error;
+                    border-radius: 1.5px;
+                }
+            }
+
+            // Warning triangle
+            if toast.toast-type == ToastType.Warning : Rectangle {
+                width: 16px;
+                height: 16px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 2px;
+                border-width: 2px;
+                border-color: Theme.warning;
+                background: transparent;
+
+                Rectangle {
+                    width: 2px;
+                    height: 6px;
+                    x: 7px;
+                    y: 3px;
+                    background: Theme.warning;
+                    border-radius: 1px;
+                }
+                Rectangle {
+                    width: 2px;
+                    height: 2px;
+                    x: 7px;
+                    y: 11px;
+                    background: Theme.warning;
+                    border-radius: 1px;
+                }
+            }
+
+            // Info circle
+            if toast.toast-type == ToastType.Info : Rectangle {
+                width: 16px;
+                height: 16px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 8px;
+                border-width: 2px;
+                border-color: Theme.info;
+                background: transparent;
+
+                Rectangle {
+                    width: 2px;
+                    height: 2px;
+                    x: 7px;
+                    y: 3px;
+                    background: Theme.info;
+                    border-radius: 1px;
+                }
+                Rectangle {
+                    width: 2px;
+                    height: 6px;
+                    x: 7px;
+                    y: 7px;
+                    background: Theme.info;
+                    border-radius: 1px;
+                }
+            }
+        }
+
+        // Content
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: toast.title;
+                font-size: 14px;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+
+            if toast.message != "" : Text {
+                text: toast.message;
+                font-size: 12px;
+                color: Theme.text-secondary;
+                wrap: word-wrap;
+            }
+        }
+
+        // Dismiss button
+        if toast.dismissible : Rectangle {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: dismiss-touch.has-hover ? Theme.surface-elevated : transparent;
+            y: (parent.height - self.height) / 2;
+
+            dismiss-touch := TouchArea {
+                clicked => { root.dismiss(); }
+                mouse-cursor: pointer;
+            }
+
+            // X icon
+            Rectangle {
+                width: 10px;
+                height: 2px;
+                x: 9px;
+                y: 13px;
+                background: Theme.text-tertiary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 2px;
+                height: 10px;
+                x: 13px;
+                y: 9px;
+                background: Theme.text-tertiary;
+                border-radius: 1px;
+            }
+        }
+    }
+}
+
+// Toast container - manages multiple toasts
+export component ToastContainer inherits Rectangle {
+    in property <[ToastData]> toasts: [];
+
+    callback dismiss-toast(string);
+
+    background: transparent;
+
+    // Position at top-right
+    VerticalLayout {
+        alignment: start;
+        spacing: 8px;
+        padding: 16px;
+
+        for toast in root.toasts : ToastItem {
+            toast: toast;
+
+            dismiss => {
+                root.dismiss-toast(toast.id);
+            }
+        }
+    }
+}
+
+// Single toast display (for simple use cases)
+export component SingleToast inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <ToastType> toast-type: ToastType.Info;
+    in property <string> title: "";
+    in property <string> message: "";
+    in property <bool> dismissible: true;
+
+    callback dismiss();
+
+    background: transparent;
+
+    if root.is-visible : ToastItem {
+        x: (parent.width - self.width) / 2;
+        y: 16px;
+
+        toast: {
+            id: "single",
+            toast-type: root.toast-type,
+            title: root.title,
+            message: root.message,
+            duration-ms: 4000,
+            dismissible: root.dismissible,
+        };
+
+        dismiss => { root.dismiss(); }
+    }
+}
+
+// Compact inline notification
+export component InlineNotification inherits Rectangle {
+    in property <ToastType> notification-type: ToastType.Info;
+    in property <string> text: "";
+    in property <bool> dismissible: false;
+
+    callback dismiss();
+
+    property <color> bg-color: notification-type == ToastType.Success ? Theme.secondary.transparentize(0.9) :
+                               notification-type == ToastType.Error ? Theme.error.transparentize(0.9) :
+                               notification-type == ToastType.Warning ? Theme.warning.transparentize(0.9) :
+                               Theme.info.transparentize(0.9);
+
+    property <color> text-color: notification-type == ToastType.Success ? Theme.secondary :
+                                 notification-type == ToastType.Error ? Theme.error :
+                                 notification-type == ToastType.Warning ? Theme.warning :
+                                 Theme.info;
+
+    height: 40px;
+    border-radius: 8px;
+    background: root.bg-color;
+    border-width: 1px;
+    border-color: root.text-color.transparentize(0.8);
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+
+        // Small indicator
+        Rectangle {
+            width: 4px;
+            height: 20px;
+            border-radius: 2px;
+            background: root.text-color;
+            y: (parent.height - self.height) / 2;
+        }
+
+        Text {
+            horizontal-stretch: 1;
+            text: root.text;
+            font-size: 13px;
+            color: root.text-color;
+            vertical-alignment: center;
+        }
+
+        if root.dismissible : Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: inline-dismiss.has-hover ? root.text-color.transparentize(0.8) : transparent;
+            y: (parent.height - self.height) / 2;
+
+            inline-dismiss := TouchArea {
+                clicked => { root.dismiss(); }
+                mouse-cursor: pointer;
+            }
+
+            Text {
+                text: "×";
+                font-size: 16px;
+                font-weight: 600;
+                color: root.text-color;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

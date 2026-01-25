@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": "dev-florian1",
+      "email": "florian1@securanido.local",
+      "name": "Florian 1",
+      "picture": null,
+      "role": "user",
+      "color": "#6366f1"
+    },
+    {
+      "id": "dev-florian2",
+      "email": "florian2@securanido.local",
+      "name": "Florian 2",
+      "picture": null,
+      "role": "user",
+      "color": "#22c55e"
+    },
+    {
+      "id": "dev-admin",
+      "email": "admin@securanido.local",
+      "name": "Administrator",
+      "picture": null,
+      "role": "admin",
+      "color": "#ef4444"
+    }
+  ]
+}

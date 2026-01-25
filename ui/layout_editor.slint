@@ -1,0 +1,899 @@
+// Layout Editor - Drag and drop parking lot designer
+// Top-down view with pillars, walls, slots, and more
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+
+// Element types for the editor
+export enum ElementType {
+    ParkingSlot,
+    Wall,
+    Pillar,
+    Entry,
+    Exit,
+    Handicap,
+    Electric,
+    Motorcycle,
+    Lane,
+    Arrow,
+}
+
+// A placeable element on the grid
+export struct LayoutElement {
+    id: string,
+    element-type: ElementType,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    rotation: float,  // 0, 90, 180, 270
+    slot-number: int,
+    color: color,
+}
+
+// Saved layout structure
+export struct SavedLayout {
+    id: string,
+    name: string,
+    created: string,
+    elements-count: int,
+    thumbnail: string,
+}
+
+// Toolbar element for palette with Phosphor icons
+component ToolbarElement inherits Rectangle {
+    in property <ElementType> element-type;
+    in property <string> icon;
+    in property <string> label;
+    in property <bool> selected: false;
+
+    callback clicked();
+
+    width: 74px;
+    height: 68px;
+    border-radius: Theme.radius-md;
+    background: root.selected ? Theme.primary.transparentize(0.7) :
+                touch.has-hover ? Theme.surface-elevated : Theme.surface;
+    border-width: root.selected ? 2px : 1px;
+    border-color: root.selected ? Theme.primary : Theme.border;
+    drop-shadow-blur: root.selected ? 6px : 0;
+    drop-shadow-color: Theme.primary.transparentize(0.6);
+
+    animate background { duration: Theme.animation-fast; }
+    animate drop-shadow-blur { duration: Theme.animation-fast; }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        padding: 6px;
+
+        Icon {
+            icon: root.icon;
+            icon-size: 22px;
+            icon-color: root.selected ? Theme.primary : Theme.text-secondary;
+        }
+
+        Text {
+            text: root.label;
+            font-size: Theme.font-size-xs;
+            font-weight: root.selected ? 600 : 400;
+            color: root.selected ? Theme.primary : Theme.text-secondary;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+}
+
+// Grid cell for the canvas
+component GridCell inherits Rectangle {
+    in property <int> grid-x;
+    in property <int> grid-y;
+    in property <bool> has-element: false;
+    in property <bool> is-hovered: false;
+    in property <bool> can-place: true;
+
+    callback clicked();
+    callback hover-changed(bool);
+
+    width: 40px;
+    height: 40px;
+    background: root.has-element ? transparent :
+                root.is-hovered && root.can-place ? Theme.primary.transparentize(0.9) :
+                root.is-hovered && !root.can-place ? Theme.error.transparentize(0.9) :
+                transparent;
+    border-width: 1px;
+    border-color: Theme.border.transparentize(0.8);
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+
+        moved => {
+            root.hover-changed(true);
+        }
+    }
+}
+
+// Draggable element on canvas
+component CanvasElement inherits Rectangle {
+    in property <LayoutElement> element;
+    in property <bool> selected: false;
+    in property <bool> is-dragging: false;
+
+    callback select();
+    callback drag-start();
+    callback drag-move(float, float);
+    callback drag-end();
+    callback rotate();
+    callback delete();
+
+    x: element.x * 1px;
+    y: element.y * 1px;
+    width: element.width * 1px;
+    height: element.height * 1px;
+    border-radius: element.element-type == ElementType.Pillar ? Theme.radius-full : Theme.radius-sm;
+
+    background: element.element-type == ElementType.ParkingSlot ? Theme.secondary.transparentize(0.7) :
+                element.element-type == ElementType.Handicap ? Theme.info.transparentize(0.7) :
+                element.element-type == ElementType.Electric ? Theme.warning.transparentize(0.7) :
+                element.element-type == ElementType.Motorcycle ? Theme.primary.transparentize(0.7) :
+                element.element-type == ElementType.Wall ? Theme.text-muted :
+                element.element-type == ElementType.Pillar ? Theme.text-tertiary :
+                element.element-type == ElementType.Entry ? Theme.success.transparentize(0.5) :
+                element.element-type == ElementType.Exit ? Theme.error.transparentize(0.5) :
+                element.element-type == ElementType.Lane ? Theme.background :
+                Theme.surface;
+
+    border-width: root.selected ? 2px : 1px;
+    border-color: root.selected ? Theme.primary : Theme.border;
+
+    // Selection glow effect
+    drop-shadow-color: root.selected ? Theme.primary.transparentize(0.5) : transparent;
+    drop-shadow-blur: root.selected ? 8px : 0;
+
+    touch := TouchArea {
+        clicked => { root.select(); }
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down) {
+                root.drag-start();
+            }
+            if (event.kind == PointerEventKind.up) {
+                root.drag-end();
+            }
+        }
+        moved => {
+            if (self.pressed) {
+                root.drag-move(self.mouse-x / 1px, self.mouse-y / 1px);
+            }
+        }
+        mouse-cursor: move;
+    }
+
+    // Element content
+    VerticalLayout {
+        alignment: center;
+
+        Text {
+            text: element.element-type == ElementType.ParkingSlot ? "P" + element.slot-number :
+                  element.element-type == ElementType.Handicap ? "H" :
+                  element.element-type == ElementType.Electric ? "E" :
+                  element.element-type == ElementType.Motorcycle ? "M" :
+                  element.element-type == ElementType.Entry ? "IN" :
+                  element.element-type == ElementType.Exit ? "OUT" :
+                  element.element-type == ElementType.Arrow ? ">" :
+                  "";
+            font-size: element.width > 50 ? Theme.font-size-md : Theme.font-size-xs;
+            font-weight: 600;
+            color: Theme.text-primary;
+            horizontal-alignment: center;
+            rotation-angle: element.rotation * 1deg;
+        }
+    }
+
+    // Resize handles when selected
+    if root.selected : Rectangle {
+        x: parent.width - 8px;
+        y: parent.height - 8px;
+        width: 12px;
+        height: 12px;
+        border-radius: 6px;
+        background: Theme.primary;
+
+        TouchArea {
+            mouse-cursor: nwse-resize;
+        }
+    }
+
+    // Rotation handle when selected
+    if root.selected : Rectangle {
+        x: parent.width / 2 - 6px;
+        y: -20px;
+        width: 12px;
+        height: 12px;
+        border-radius: 6px;
+        background: Theme.secondary;
+
+        TouchArea {
+            clicked => { root.rotate(); }
+            mouse-cursor: pointer;
+        }
+    }
+
+    // Delete handle when selected
+    if root.selected : Rectangle {
+        x: parent.width - 6px;
+        y: -6px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: Theme.error;
+
+        TouchArea {
+            clicked => { root.delete(); }
+            mouse-cursor: pointer;
+        }
+
+        Text {
+            text: "X";
+            font-size: 10px;
+            font-weight: 700;
+            color: Theme.on-primary;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// Saved layout card
+component LayoutCard inherits Rectangle {
+    in property <SavedLayout> layout;
+    in property <bool> selected: false;
+
+    callback select();
+    callback delete();
+    callback load();
+
+    height: 100px;
+    border-radius: Theme.radius-lg;
+    background: root.selected ? Theme.primary.transparentize(0.9) : Theme.surface;
+    border-width: root.selected ? 2px : 1px;
+    border-color: root.selected ? Theme.primary : Theme.border;
+
+    TouchArea {
+        clicked => { root.select(); }
+        double-clicked => { root.load(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding: Theme.spacing-md;
+        spacing: Theme.spacing-md;
+
+        // Thumbnail preview
+        Rectangle {
+            width: 80px;
+            height: 70px;
+            border-radius: Theme.radius-md;
+            background: Theme.background;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            Text {
+                text: "P";
+                font-size: 24px;
+                color: Theme.text-tertiary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Info
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 4px;
+            alignment: center;
+
+            Text {
+                text: root.layout.name;
+                font-size: Theme.font-size-md;
+                font-weight: 600;
+                color: Theme.text-primary;
+                overflow: elide;
+            }
+
+            Text {
+                text: root.layout.elements-count + " elements";
+                font-size: Theme.font-size-sm;
+                color: Theme.text-secondary;
+            }
+
+            Text {
+                text: root.layout.created;
+                font-size: Theme.font-size-xs;
+                color: Theme.text-tertiary;
+            }
+        }
+
+        // Actions
+        VerticalLayout {
+            alignment: center;
+            spacing: Theme.spacing-xs;
+
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 16px;
+                background: load-touch.has-hover ? Theme.primary.transparentize(0.8) : transparent;
+
+                load-touch := TouchArea {
+                    clicked => { root.load(); }
+                    mouse-cursor: pointer;
+                }
+
+                Text {
+                    text: ">";
+                    font-size: Theme.font-size-lg;
+                    color: Theme.primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 16px;
+                background: del-touch.has-hover ? Theme.error.transparentize(0.8) : transparent;
+
+                del-touch := TouchArea {
+                    clicked => { root.delete(); }
+                    mouse-cursor: pointer;
+                }
+
+                Text {
+                    text: "X";
+                    font-size: Theme.font-size-sm;
+                    color: Theme.error;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+// Main Layout Editor Component
+export component LayoutEditor inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[LayoutElement]> elements: [];
+    in property <[SavedLayout]> saved-layouts: [];
+    in-out property <ElementType> selected-tool: ElementType.ParkingSlot;
+    in-out property <string> selected-element-id: "";
+    in-out property <bool> show-grid: true;
+    in-out property <int> grid-size: 40;
+    in-out property <float> zoom: 1.0;
+    in-out property <string> layout-name: "My Parking Lot";
+    in-out property <bool> show-saved-layouts: false;
+    in-out property <int> next-slot-number: 1;
+
+    // Callbacks
+    callback add-element(ElementType, float, float);
+    callback select-element(string);
+    callback move-element(string, float, float);
+    callback rotate-element(string);
+    callback delete-element(string);
+    callback save-layout(string);
+    callback load-layout(string);
+    callback delete-layout(string);
+    callback clear-canvas();
+    callback toggle-grid();
+    callback zoom-in();
+    callback zoom-out();
+    callback back();
+
+    HorizontalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Left Toolbar - Element Palette
+        Rectangle {
+            width: 90px;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: Theme.spacing-sm;
+                spacing: Theme.spacing-sm;
+                alignment: start;
+
+                Text {
+                    text: "Elements";
+                    font-size: Theme.font-size-sm;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    horizontal-alignment: center;
+                }
+
+                // Parking Slot
+                ToolbarElement {
+                    element-type: ElementType.ParkingSlot;
+                    icon: PhosphorIcons.parking;
+                    label: "Slot";
+                    selected: root.selected-tool == ElementType.ParkingSlot;
+                    clicked => { root.selected-tool = ElementType.ParkingSlot; }
+                }
+
+                // Handicap Slot
+                ToolbarElement {
+                    element-type: ElementType.Handicap;
+                    icon: PhosphorIcons.wheelchair;
+                    label: "Handicap";
+                    selected: root.selected-tool == ElementType.Handicap;
+                    clicked => { root.selected-tool = ElementType.Handicap; }
+                }
+
+                // Electric Slot
+                ToolbarElement {
+                    element-type: ElementType.Electric;
+                    icon: PhosphorIcons.lightning;
+                    label: "Electric";
+                    selected: root.selected-tool == ElementType.Electric;
+                    clicked => { root.selected-tool = ElementType.Electric; }
+                }
+
+                // Motorcycle
+                ToolbarElement {
+                    element-type: ElementType.Motorcycle;
+                    icon: PhosphorIcons.motorcycle;
+                    label: "Moto";
+                    selected: root.selected-tool == ElementType.Motorcycle;
+                    clicked => { root.selected-tool = ElementType.Motorcycle; }
+                }
+
+                // Wall
+                ToolbarElement {
+                    element-type: ElementType.Wall;
+                    icon: PhosphorIcons.wall;
+                    label: "Wall";
+                    selected: root.selected-tool == ElementType.Wall;
+                    clicked => { root.selected-tool = ElementType.Wall; }
+                }
+
+                // Pillar
+                ToolbarElement {
+                    element-type: ElementType.Pillar;
+                    icon: PhosphorIcons.columns;
+                    label: "Pillar";
+                    selected: root.selected-tool == ElementType.Pillar;
+                    clicked => { root.selected-tool = ElementType.Pillar; }
+                }
+
+                // Entry
+                ToolbarElement {
+                    element-type: ElementType.Entry;
+                    icon: PhosphorIcons.sign-in;
+                    label: "Entry";
+                    selected: root.selected-tool == ElementType.Entry;
+                    clicked => { root.selected-tool = ElementType.Entry; }
+                }
+
+                // Exit
+                ToolbarElement {
+                    element-type: ElementType.Exit;
+                    icon: PhosphorIcons.arrow-square-out;
+                    label: "Exit";
+                    selected: root.selected-tool == ElementType.Exit;
+                    clicked => { root.selected-tool = ElementType.Exit; }
+                }
+
+                // Lane
+                ToolbarElement {
+                    element-type: ElementType.Lane;
+                    icon: PhosphorIcons.path;
+                    label: "Lane";
+                    selected: root.selected-tool == ElementType.Lane;
+                    clicked => { root.selected-tool = ElementType.Lane; }
+                }
+            }
+        }
+
+        // Main Canvas Area
+        VerticalLayout {
+            horizontal-stretch: 1;
+
+            // Top Toolbar
+            Rectangle {
+                height: 50px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding: Theme.spacing-sm;
+                    spacing: Theme.spacing-md;
+                    alignment: space-between;
+
+                    // Left - Back and Title
+                    HorizontalLayout {
+                        spacing: Theme.spacing-md;
+
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 18px;
+                            background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                            back-touch := TouchArea {
+                                clicked => { root.back(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            Icon {
+                                icon: PhosphorIcons.arrow-left;
+                                icon-size: 20px;
+                                icon-color: back-touch.has-hover ? Theme.primary : Theme.text-primary;
+                            }
+                        }
+
+                        // Editable layout name
+                        Rectangle {
+                            width: 200px;
+                            height: 36px;
+                            background: Theme.background;
+                            border-radius: Theme.radius-sm;
+                            border-width: 1px;
+                            border-color: Theme.border;
+
+                            name-input := TextInput {
+                                text <=> root.layout-name;
+                                font-size: Theme.font-size-md;
+                                color: Theme.text-primary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    // Center - View controls
+                    HorizontalLayout {
+                        spacing: Theme.spacing-sm;
+
+                        // Grid toggle
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: root.show-grid ? Theme.primary.transparentize(0.8) : Theme.surface-elevated;
+
+                            TouchArea {
+                                clicked => { root.toggle-grid(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            Icon {
+                                icon: PhosphorIcons.grid-four;
+                                icon-size: 18px;
+                                icon-color: root.show-grid ? Theme.primary : Theme.text-secondary;
+                            }
+                        }
+
+                        // Zoom out
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: zoom-out-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                            zoom-out-touch := TouchArea {
+                                clicked => { root.zoom-out(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            Icon {
+                                icon: PhosphorIcons.magnifying-glass-minus;
+                                icon-size: 18px;
+                                icon-color: zoom-out-touch.has-hover ? Theme.primary : Theme.text-primary;
+                            }
+                        }
+
+                        Text {
+                            text: Math.round(root.zoom * 100) + "%";
+                            font-size: Theme.font-size-sm;
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                            width: 45px;
+                            horizontal-alignment: center;
+                        }
+
+                        // Zoom in
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: zoom-in-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                            zoom-in-touch := TouchArea {
+                                clicked => { root.zoom-in(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            Icon {
+                                icon: PhosphorIcons.magnifying-glass-plus;
+                                icon-size: 18px;
+                                icon-color: zoom-in-touch.has-hover ? Theme.primary : Theme.text-primary;
+                            }
+                        }
+                    }
+
+                    // Right - Actions
+                    HorizontalLayout {
+                        spacing: Theme.spacing-sm;
+
+                        // Clear
+                        Rectangle {
+                            width: 80px;
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: clear-touch.has-hover ? Theme.error.transparentize(0.85) : transparent;
+                            border-width: 1px;
+                            border-color: Theme.error.transparentize(0.5);
+
+                            clear-touch := TouchArea {
+                                clicked => { root.clear-canvas(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 4px;
+
+                                Icon {
+                                    icon: PhosphorIcons.trash;
+                                    icon-size: 14px;
+                                    icon-color: Theme.error;
+                                }
+
+                                Text {
+                                    text: "Clear";
+                                    font-size: Theme.font-size-sm;
+                                    color: Theme.error;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // Layouts
+                        Rectangle {
+                            width: 90px;
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: root.show-saved-layouts ? Theme.primary.transparentize(0.8) : Theme.surface-elevated;
+
+                            TouchArea {
+                                clicked => { root.show-saved-layouts = !root.show-saved-layouts; }
+                                mouse-cursor: pointer;
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 4px;
+
+                                Icon {
+                                    icon: PhosphorIcons.folder-open;
+                                    icon-size: 14px;
+                                    icon-color: root.show-saved-layouts ? Theme.primary : Theme.text-primary;
+                                }
+
+                                Text {
+                                    text: "Layouts";
+                                    font-size: Theme.font-size-sm;
+                                    color: root.show-saved-layouts ? Theme.primary : Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // Save
+                        Rectangle {
+                            width: 80px;
+                            height: 36px;
+                            border-radius: Theme.radius-sm;
+                            background: save-touch.has-hover ? Theme.primary : Theme.primary.transparentize(0.2);
+
+                            save-touch := TouchArea {
+                                clicked => { root.save-layout(root.layout-name); }
+                                mouse-cursor: pointer;
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 4px;
+
+                                Icon {
+                                    icon: PhosphorIcons.floppy-disk;
+                                    icon-size: 14px;
+                                    icon-color: Theme.on-primary;
+                                }
+
+                                Text {
+                                    text: "Save";
+                                    font-size: Theme.font-size-sm;
+                                    font-weight: 600;
+                                    color: Theme.on-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Canvas
+            Rectangle {
+                vertical-stretch: 1;
+                background: Theme.background;
+                clip: true;
+
+                // Grid background (simplified visual grid)
+                if root.show-grid : Rectangle {
+                    width: 100%;
+                    height: 100%;
+                    background: Theme.background;
+
+                    // Simple dotted grid effect using a pattern overlay
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        background: Theme.border.transparentize(0.95);
+                    }
+                }
+
+                // Canvas touch area for placing elements
+                canvas-touch := TouchArea {
+                    clicked => {
+                        // Calculate grid position
+                        root.add-element(
+                            root.selected-tool,
+                            Math.floor(self.mouse-x / 1px / root.grid-size / root.zoom) * root.grid-size,
+                            Math.floor(self.mouse-y / 1px / root.grid-size / root.zoom) * root.grid-size
+                        );
+                    }
+                    mouse-cursor: crosshair;
+                }
+
+                // Placed elements
+                for element in root.elements : CanvasElement {
+                    element: {
+                        id: element.id,
+                        element-type: element.element-type,
+                        x: element.x * root.zoom,
+                        y: element.y * root.zoom,
+                        width: element.width * root.zoom,
+                        height: element.height * root.zoom,
+                        rotation: element.rotation,
+                        slot-number: element.slot-number,
+                        color: element.color,
+                    };
+                    selected: root.selected-element-id == element.id;
+
+                    select => { root.select-element(element.id); }
+                    drag-move(dx, dy) => { root.move-element(element.id, dx, dy); }
+                    rotate => { root.rotate-element(element.id); }
+                    delete => { root.delete-element(element.id); }
+                }
+
+                // Saved layouts panel (slide in from right)
+                if root.show-saved-layouts : Rectangle {
+                    x: parent.width - 280px;
+                    width: 270px;
+                    height: 100%;
+                    background: Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.border;
+
+                    VerticalLayout {
+                        padding: Theme.spacing-md;
+                        spacing: Theme.spacing-sm;
+
+                        HorizontalLayout {
+                            alignment: space-between;
+
+                            Text {
+                                text: "Saved Layouts";
+                                font-size: Theme.font-size-lg;
+                                font-weight: 600;
+                                color: Theme.text-primary;
+                                vertical-alignment: center;
+                            }
+
+                            Rectangle {
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 14px;
+                                background: close-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                                close-touch := TouchArea {
+                                    clicked => { root.show-saved-layouts = false; }
+                                    mouse-cursor: pointer;
+                                }
+
+                                Text {
+                                    text: "X";
+                                    font-size: Theme.font-size-sm;
+                                    color: Theme.text-secondary;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // Layouts list
+                        Flickable {
+                            vertical-stretch: 1;
+
+                            VerticalLayout {
+                                spacing: Theme.spacing-sm;
+
+                                if root.saved-layouts.length == 0 : Rectangle {
+                                    height: 100px;
+
+                                    Text {
+                                        text: "No saved layouts yet";
+                                        font-size: Theme.font-size-sm;
+                                        color: Theme.text-tertiary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                for layout in root.saved-layouts : LayoutCard {
+                                    layout: layout;
+                                    load => { root.load-layout(layout.id); }
+                                    delete => { root.delete-layout(layout.id); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Bottom status bar
+            Rectangle {
+                height: 32px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: Theme.spacing-md;
+                    padding-right: Theme.spacing-md;
+                    alignment: space-between;
+
+                    Text {
+                        text: "Elements: " + root.elements.length + " | Next Slot: #" + root.next-slot-number;
+                        font-size: Theme.font-size-xs;
+                        color: Theme.text-tertiary;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: "Click to place | Drag to move | Right-click to rotate";
+                        font-size: Theme.font-size-xs;
+                        color: Theme.text-tertiary;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,638 @@
+// Settings Panel - User preferences and app settings
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+
+// App settings data structure
+export struct AppSettings {
+    dark-mode: bool,
+    notifications-enabled: bool,
+    sound-enabled: bool,
+    vibration-enabled: bool,
+    language: string,
+    currency: string,
+    auto-extend-booking: bool,
+    default-duration: int,
+}
+
+// Settings section data
+export struct SettingToggle {
+    key: string,
+    label: string,
+    description: string,
+    enabled: bool,
+}
+
+export struct SettingOption {
+    key: string,
+    label: string,
+    value: string,
+    options: [string],
+}
+
+// Toggle switch component
+component ToggleSwitch inherits Rectangle {
+    in property <bool> checked: false;
+    in property <bool> enabled: true;
+
+    callback toggled(bool);
+
+    width: 48px;
+    height: 26px;
+    border-radius: 13px;
+    background: root.checked ? Theme.primary : #3a3a3a;
+    opacity: root.enabled ? 1.0 : 0.5;
+
+    animate background { duration: 150ms; }
+
+    // Track
+    Rectangle {
+        x: root.checked ? parent.width - self.width - 3px : 3px;
+        y: (parent.height - self.height) / 2;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: white;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: #00000040;
+
+        animate x { duration: 150ms; easing: ease-out; }
+    }
+
+    TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.toggled(!root.checked);
+        }
+        mouse-cursor: root.enabled ? pointer : default;
+    }
+}
+
+// Dropdown selector component
+component Dropdown inherits Rectangle {
+    in property <string> current-value: "";
+    in property <[string]> options: [];
+    in property <bool> expanded: false;
+
+    callback value-changed(string);
+    callback toggle-expanded();
+
+    height: 40px;
+    border-radius: 8px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+
+        Text {
+            horizontal-stretch: 1;
+            text: root.current-value;
+            font-size: 14px;
+            color: Theme.text-primary;
+            vertical-alignment: center;
+        }
+
+        // Arrow indicator
+        Rectangle {
+            width: 16px;
+            height: 16px;
+            y: (parent.height - self.height) / 2;
+
+            // Simple arrow using rectangles
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 2px;
+                y: 6px;
+                background: Theme.text-secondary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 6px;
+                y: 6px;
+                background: Theme.text-secondary;
+                border-radius: 1px;
+            }
+        }
+    }
+
+    TouchArea {
+        clicked => {
+            root.toggle-expanded();
+        }
+        mouse-cursor: pointer;
+    }
+}
+
+// Settings section header
+component SectionHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> icon-text: "";
+
+    height: 40px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: start;
+
+        if icon-text != "" : Rectangle {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: Theme.primary.transparentize(0.9);
+            y: (parent.height - self.height) / 2;
+
+            Text {
+                text: root.icon-text;
+                font-size: 16px;
+                color: Theme.primary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: root.title;
+            font-size: 16px;
+            font-weight: 600;
+            color: Theme.text-primary;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// Settings row component
+component SettingsRow inherits Rectangle {
+    in property <string> label;
+    in property <string> description: "";
+    in property <bool> show-arrow: false;
+
+    callback clicked();
+
+    height: description != "" ? 72px : 52px;
+    background: row-touch.has-hover ? Theme.surface-elevated : transparent;
+    border-radius: 8px;
+
+    animate background { duration: 100ms; }
+
+    row-touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: root.label;
+                font-size: 14px;
+                color: Theme.text-primary;
+            }
+
+            if description != "" : Text {
+                text: root.description;
+                font-size: 12px;
+                color: Theme.text-tertiary;
+            }
+        }
+
+        @children
+
+        if show-arrow : Rectangle {
+            width: 20px;
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+
+            // Arrow icon
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 6px;
+                y: 7px;
+                background: Theme.text-secondary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 2px;
+                height: 8px;
+                x: 11px;
+                y: 6px;
+                background: Theme.text-secondary;
+                border-radius: 1px;
+            }
+        }
+    }
+}
+
+// Main settings panel
+export component SettingsPanel inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <AppSettings> settings: {
+        dark-mode: true,
+        notifications-enabled: true,
+        sound-enabled: true,
+        vibration-enabled: false,
+        language: "de",
+        currency: "EUR",
+        auto-extend-booking: false,
+        default-duration: 60,
+    };
+
+    // Internal mutable state
+    property <bool> notifications-enabled: settings.notifications-enabled;
+    property <bool> sound-enabled: settings.sound-enabled;
+    property <bool> email-reminders: true;
+    property <string> language: settings.language == "de" ? "Deutsch" : "English";
+    property <int> default-duration: settings.default-duration;
+    property <string> theme: settings.dark-mode ? "dark" : "light";
+
+    // Callbacks
+    callback save-settings(AppSettings);
+    callback toggle-dark-mode();
+    callback change-language(string);
+    callback close-panel();
+    callback manage-vehicles();
+    callback view-statistics();
+    callback clear-cache();
+    callback export-data();
+    callback delete-account();
+    callback setting-changed(string, string);
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Einstellungen";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Scrollable content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-lg;
+
+                // ═══════════════════════════════════════════════════════════════
+                // NOTIFICATIONS SECTION
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+
+                    SectionHeader {
+                        title: "Benachrichtigungen";
+                        icon-text: "🔔";
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 4px;
+                            spacing: 0;
+
+                            SettingsRow {
+                                label: "Push-Benachrichtigungen";
+                                description: "Erhalte Benachrichtigungen über Buchungen";
+
+                                ToggleSwitch {
+                                    checked: root.notifications-enabled;
+                                    toggled(val) => {
+                                        root.notifications-enabled = val;
+                                        root.setting-changed("notifications_enabled", val ? "true" : "false");
+                                    }
+                                }
+                            }
+
+                            SettingsRow {
+                                label: "E-Mail-Erinnerungen";
+                                description: "Erinnerungen vor Buchungsende";
+
+                                ToggleSwitch {
+                                    checked: root.email-reminders;
+                                    toggled(val) => {
+                                        root.email-reminders = val;
+                                        root.setting-changed("email_reminders", val ? "true" : "false");
+                                    }
+                                }
+                            }
+
+                            SettingsRow {
+                                label: "Töne";
+                                description: "Sound bei Aktionen abspielen";
+
+                                ToggleSwitch {
+                                    checked: root.sound-enabled;
+                                    toggled(val) => {
+                                        root.sound-enabled = val;
+                                        root.setting-changed("sound_enabled", val ? "true" : "false");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // PREFERENCES SECTION
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+
+                    SectionHeader {
+                        title: "Einstellungen";
+                        icon-text: "⚙️";
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 4px;
+                            spacing: 0;
+
+                            SettingsRow {
+                                label: "Sprache";
+
+                                Rectangle {
+                                    width: 120px;
+                                    height: 36px;
+                                    border-radius: 6px;
+                                    background: Theme.surface;
+                                    border-width: 1px;
+                                    border-color: Theme.border;
+
+                                    Text {
+                                        text: root.language;
+                                        font-size: 13px;
+                                        color: Theme.text-primary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            SettingsRow {
+                                label: "Design";
+
+                                Rectangle {
+                                    width: 120px;
+                                    height: 36px;
+                                    border-radius: 6px;
+                                    background: Theme.surface;
+                                    border-width: 1px;
+                                    border-color: Theme.border;
+
+                                    Text {
+                                        text: root.theme;
+                                        font-size: 13px;
+                                        color: Theme.text-primary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            SettingsRow {
+                                label: "Standard-Buchungsdauer";
+
+                                Rectangle {
+                                    width: 120px;
+                                    height: 36px;
+                                    border-radius: 6px;
+                                    background: Theme.surface;
+                                    border-width: 1px;
+                                    border-color: Theme.border;
+
+                                    Text {
+                                        text: root.default-duration + " Min";
+                                        font-size: 13px;
+                                        color: Theme.text-primary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // ACCOUNT SECTION
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+
+                    SectionHeader {
+                        title: "Konto";
+                        icon-text: "👤";
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 4px;
+                            spacing: 0;
+
+                            SettingsRow {
+                                label: "Fahrzeuge verwalten";
+                                description: "Kennzeichen hinzufügen oder entfernen";
+                                show-arrow: true;
+                                clicked => { root.manage-vehicles(); }
+                            }
+
+                            SettingsRow {
+                                label: "Statistiken";
+                                description: "Deine Buchungsübersicht";
+                                show-arrow: true;
+                                clicked => { root.view-statistics(); }
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // DATA & PRIVACY SECTION
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+
+                    SectionHeader {
+                        title: "Daten & Datenschutz";
+                        icon-text: "🔒";
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 4px;
+                            spacing: 0;
+
+                            SettingsRow {
+                                label: "Cache leeren";
+                                description: "Lokale Daten löschen";
+                                show-arrow: true;
+                                clicked => { root.clear-cache(); }
+                            }
+
+                            SettingsRow {
+                                label: "Daten exportieren";
+                                description: "Buchungshistorie als CSV";
+                                show-arrow: true;
+                                clicked => { root.export-data(); }
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // DANGER ZONE
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+
+                    SectionHeader {
+                        title: "Gefahrenbereich";
+                        icon-text: "⚠️";
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 4px;
+                            spacing: 0;
+
+                            Rectangle {
+                                height: 60px;
+                                background: delete-touch.has-hover ? Theme.error.transparentize(0.9) : transparent;
+                                border-radius: 8px;
+
+                                delete-touch := TouchArea {
+                                    clicked => { root.delete-account(); }
+                                    mouse-cursor: pointer;
+                                }
+
+                                HorizontalLayout {
+                                    padding-left: 12px;
+                                    padding-right: 12px;
+
+                                    VerticalLayout {
+                                        horizontal-stretch: 1;
+                                        alignment: center;
+                                        spacing: 2px;
+
+                                        Text {
+                                            text: "Konto löschen";
+                                            font-size: 14px;
+                                            color: Theme.error;
+                                        }
+
+                                        Text {
+                                            text: "Alle Daten werden dauerhaft gelöscht";
+                                            font-size: 12px;
+                                            color: Theme.error.transparentize(0.4);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // APP INFO
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+                    padding-top: Theme.spacing-md;
+
+                    Text {
+                        text: "Securanido Parking v0.1.0";
+                        font-size: 12px;
+                        color: Theme.text-tertiary;
+                        horizontal-alignment: center;
+                    }
+
+                    Text {
+                        text: "© 2024 Securanido GmbH";
+                        font-size: 11px;
+                        color: Theme.text-tertiary;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

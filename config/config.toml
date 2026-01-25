@@ -1,0 +1,39 @@
+[app]
+name = "Securanido Parking"
+version = "0.1.0"
+
+[server]
+# Default to local development
+local_url = "http://localhost:3000"
+production_url = "https://securanido.com"
+
+# Which server to use: "local" or "production"
+active = "local"
+
+[oauth]
+# Google OAuth2 credentials (to be configured)
+google_client_id = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+google_client_secret = "YOUR_GOOGLE_CLIENT_SECRET"
+redirect_uri = "http://localhost:8765/callback"
+scopes = ["openid", "email", "profile"]
+
+[development]
+# Enable development mode with local users
+enabled = true
+
+# Show dev panel with server switcher
+show_dev_panel = true
+
+[i18n]
+# Default locale: "de" (German) or "en" (English)
+default_locale = "de"
+
+# Available locales
+available = ["de", "en"]
+
+[cache]
+# Local SQLite cache path (relative to app data dir)
+database = "securanido-parking.db"
+
+# Cache TTL in seconds
+ttl = 300

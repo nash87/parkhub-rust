@@ -1,0 +1,8 @@
+# Securanido Parking Desktop - Test Dependencies
+#
+# NOTE: Tests are now run using Rust's built-in test framework.
+# Run tests with: cargo test
+# Or use: tests/run_tests.bat
+#
+# No Python dependencies required for testing.
+# This file is kept for documentation purposes only.

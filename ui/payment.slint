@@ -1,0 +1,753 @@
+// Payment UI Components - Payment methods and checkout
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+
+// Payment method data
+export struct PaymentMethodInfo {
+    id: string,
+    method-type: string,
+    last-four: string,
+    brand: string,
+    expiry: string,
+    is-default: bool,
+}
+
+// Payment summary data
+export struct PaymentSummary {
+    base-price: float,
+    discount: float,
+    tax: float,
+    total: float,
+    currency: string,
+}
+
+// Payment method card
+component PaymentMethodCard inherits Rectangle {
+    in property <PaymentMethodInfo> method;
+    in property <bool> selected: false;
+
+    callback select();
+    callback edit();
+    callback remove();
+
+    height: 68px;
+    border-radius: 12px;
+    background: root.selected ? Theme.primary.transparentize(0.85) : Theme.surface;
+    border-width: root.selected ? 2px : 1px;
+    border-color: root.selected ? Theme.primary : Theme.border;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    TouchArea {
+        clicked => { root.select(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Card icon
+        Rectangle {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: method.brand == "visa" ? #1a1f71 :
+                        method.brand == "mastercard" ? #eb001b :
+                        method.brand == "amex" ? #006fcf :
+                        Theme.surface-elevated;
+            y: (parent.height - self.height) / 2;
+
+            // Card chip representation
+            Rectangle {
+                width: 16px;
+                height: 12px;
+                x: 14px;
+                y: 10px;
+                border-radius: 2px;
+                background: #ffd700;
+            }
+
+            // Card lines
+            Rectangle {
+                width: 24px;
+                height: 2px;
+                x: 10px;
+                y: 28px;
+                border-radius: 1px;
+                background: white.transparentize(0.6);
+            }
+            Rectangle {
+                width: 16px;
+                height: 2px;
+                x: 10px;
+                y: 34px;
+                border-radius: 1px;
+                background: white.transparentize(0.6);
+            }
+        }
+
+        // Card details
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: "•••• " + method.last-four;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                if method.is-default : Rectangle {
+                    width: 56px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: Theme.primary.transparentize(0.85);
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: "Standard";
+                        font-size: 9px;
+                        font-weight: 600;
+                        color: Theme.primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: method.brand + " • Gültig bis " + method.expiry;
+                font-size: 12px;
+                color: Theme.text-secondary;
+            }
+        }
+
+        // Selection indicator
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: root.selected ? Theme.primary : transparent;
+            border-width: root.selected ? 0 : 2px;
+            border-color: Theme.border;
+            y: (parent.height - self.height) / 2;
+
+            if root.selected : Rectangle {
+                width: 8px;
+                height: 8px;
+                x: 8px;
+                y: 8px;
+                border-radius: 4px;
+                background: white;
+            }
+        }
+    }
+}
+
+// Price breakdown component
+component PriceBreakdown inherits Rectangle {
+    in property <PaymentSummary> summary;
+
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        // Base price
+        HorizontalLayout {
+            Text {
+                horizontal-stretch: 1;
+                text: "Parkgebühr";
+                font-size: 14px;
+                color: Theme.text-secondary;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: summary.base-price + " " + summary.currency;
+                font-size: 14px;
+                color: Theme.text-primary;
+                vertical-alignment: center;
+            }
+        }
+
+        // Discount (if any)
+        if summary.discount > 0 : HorizontalLayout {
+            Text {
+                horizontal-stretch: 1;
+                text: "Rabatt";
+                font-size: 14px;
+                color: Theme.secondary;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: "-" + summary.discount + " " + summary.currency;
+                font-size: 14px;
+                color: Theme.secondary;
+                vertical-alignment: center;
+            }
+        }
+
+        // Tax
+        HorizontalLayout {
+            Text {
+                horizontal-stretch: 1;
+                text: "MwSt. (19%)";
+                font-size: 14px;
+                color: Theme.text-secondary;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: summary.tax + " " + summary.currency;
+                font-size: 14px;
+                color: Theme.text-primary;
+                vertical-alignment: center;
+            }
+        }
+
+        // Divider
+        Rectangle {
+            height: 1px;
+            background: Theme.border;
+        }
+
+        // Total
+        HorizontalLayout {
+            Text {
+                horizontal-stretch: 1;
+                text: "Gesamt";
+                font-size: 16px;
+                font-weight: 600;
+                color: Theme.text-primary;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: summary.total + " " + summary.currency;
+                font-size: 20px;
+                font-weight: 700;
+                color: Theme.primary;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// Add payment method form
+component AddPaymentMethodForm inherits Rectangle {
+    in-out property <string> card-number: "";
+    in-out property <string> expiry: "";
+    in-out property <string> cvv: "";
+    in-out property <string> name: "";
+    in-out property <bool> save-card: true;
+
+    callback save();
+    callback cancel();
+
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 16px;
+
+        // Card number
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Kartennummer";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+            }
+
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 14px;
+
+                    num-input := TextInput {
+                        horizontal-stretch: 1;
+                        text <=> root.card-number;
+                        font-size: 16px;
+                        color: Theme.text-primary;
+                        vertical-alignment: center;
+                    }
+
+                    // Card brand icon placeholder
+                    Rectangle {
+                        width: 32px;
+                        height: 20px;
+                        border-radius: 4px;
+                        background: Theme.surface-elevated;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+            }
+        }
+
+        // Expiry and CVV
+        HorizontalLayout {
+            spacing: 12px;
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 6px;
+
+                Text {
+                    text: "Gültig bis";
+                    font-size: 12px;
+                    font-weight: 500;
+                    color: Theme.text-secondary;
+                }
+
+                Rectangle {
+                    height: 48px;
+                    border-radius: 10px;
+                    background: Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.border;
+
+                    exp-input := TextInput {
+                        text <=> root.expiry;
+                        font-size: 16px;
+                        color: Theme.text-primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 6px;
+
+                Text {
+                    text: "CVV";
+                    font-size: 12px;
+                    font-weight: 500;
+                    color: Theme.text-secondary;
+                }
+
+                Rectangle {
+                    height: 48px;
+                    border-radius: 10px;
+                    background: Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.border;
+
+                    cvv-input := TextInput {
+                        text <=> root.cvv;
+                        font-size: 16px;
+                        color: Theme.text-primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // Cardholder name
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Karteninhaber";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+            }
+
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                name-input := TextInput {
+                    text <=> root.name;
+                    font-size: 16px;
+                    color: Theme.text-primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Save card toggle
+        Rectangle {
+            height: 44px;
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Karte für zukünftige Zahlungen speichern";
+                    font-size: 14px;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                Rectangle {
+                    width: 48px;
+                    height: 26px;
+                    border-radius: 13px;
+                    background: root.save-card ? Theme.primary : #3a3a3a;
+                    y: (parent.height - self.height) / 2;
+
+                    Rectangle {
+                        x: root.save-card ? parent.width - self.width - 3px : 3px;
+                        y: (parent.height - self.height) / 2;
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 10px;
+                        background: white;
+
+                        animate x { duration: 150ms; }
+                    }
+
+                    TouchArea {
+                        clicked => { root.save-card = !root.save-card; }
+                        mouse-cursor: pointer;
+                    }
+                }
+            }
+        }
+
+        // Security note
+        Rectangle {
+            height: 40px;
+            border-radius: 8px;
+            background: Theme.info.transparentize(0.9);
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 8px;
+
+                // Lock icon
+                Rectangle {
+                    width: 16px;
+                    height: 16px;
+                    y: (parent.height - self.height) / 2;
+
+                    Rectangle {
+                        width: 12px;
+                        height: 8px;
+                        x: 2px;
+                        y: 6px;
+                        border-radius: 2px;
+                        background: Theme.info;
+                    }
+                    Rectangle {
+                        width: 8px;
+                        height: 6px;
+                        x: 4px;
+                        y: 2px;
+                        border-radius: 4px;
+                        border-width: 2px;
+                        border-color: Theme.info;
+                        background: transparent;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Ihre Daten werden sicher verschlüsselt übertragen";
+                    font-size: 11px;
+                    color: Theme.info;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Action buttons
+        HorizontalLayout {
+            spacing: 12px;
+
+            Button {
+                horizontal-stretch: 1;
+                text: "Abbrechen";
+                clicked => { root.cancel(); }
+            }
+
+            Button {
+                horizontal-stretch: 1;
+                text: "Karte hinzufügen";
+                primary: true;
+                clicked => { root.save(); }
+            }
+        }
+    }
+}
+
+// Main payment panel
+export component PaymentPanel inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[PaymentMethodInfo]> payment-methods: [];
+    in property <PaymentSummary> summary: {
+        base-price: 0,
+        discount: 0,
+        tax: 0,
+        total: 0,
+        currency: "EUR",
+    };
+    in-out property <string> selected-method-id: "";
+    in-out property <bool> show-add-form: false;
+    in property <bool> is-processing: false;
+
+    // Callbacks
+    callback close-panel();
+    callback select-method(string);
+    callback add-payment-method(string, string, string, string, bool);
+    callback remove-payment-method(string);
+    callback process-payment();
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Zahlung";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-lg;
+
+                // Payment methods section
+                if !root.show-add-form : VerticalLayout {
+                    spacing: 12px;
+
+                    HorizontalLayout {
+                        Text {
+                            horizontal-stretch: 1;
+                            text: "Zahlungsmethode";
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                            vertical-alignment: center;
+                        }
+
+                        // Add button
+                        Rectangle {
+                            width: 32px;
+                            height: 32px;
+                            border-radius: 8px;
+                            background: add-btn.has-hover ? Theme.primary.transparentize(0.8) : Theme.primary.transparentize(0.9);
+
+                            add-btn := TouchArea {
+                                clicked => { root.show-add-form = true; }
+                                mouse-cursor: pointer;
+                            }
+
+                            // Plus icon
+                            Rectangle {
+                                width: 12px;
+                                height: 2px;
+                                x: 10px;
+                                y: 15px;
+                                background: Theme.primary;
+                                border-radius: 1px;
+                            }
+                            Rectangle {
+                                width: 2px;
+                                height: 12px;
+                                x: 15px;
+                                y: 10px;
+                                background: Theme.primary;
+                                border-radius: 1px;
+                            }
+                        }
+                    }
+
+                    // Payment method list
+                    for method in root.payment-methods : PaymentMethodCard {
+                        method: method;
+                        selected: method.id == root.selected-method-id;
+
+                        select => {
+                            root.selected-method-id = method.id;
+                            root.select-method(method.id);
+                        }
+                    }
+
+                    if payment-methods.length == 0 : Card {
+                        VerticalLayout {
+                            padding: 24px;
+                            alignment: center;
+                            spacing: 12px;
+
+                            Text {
+                                text: "Keine Zahlungsmethode";
+                                font-size: 15px;
+                                font-weight: 500;
+                                color: Theme.text-primary;
+                                horizontal-alignment: center;
+                            }
+
+                            Text {
+                                text: "Füge eine Karte hinzu, um zu bezahlen";
+                                font-size: 13px;
+                                color: Theme.text-tertiary;
+                                horizontal-alignment: center;
+                            }
+
+                            Button {
+                                text: "Karte hinzufügen";
+                                primary: true;
+                                clicked => { root.show-add-form = true; }
+                            }
+                        }
+                    }
+                }
+
+                // Add payment form
+                if root.show-add-form : Card {
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 16px;
+
+                        Text {
+                            text: "Neue Karte hinzufügen";
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                        }
+
+                        AddPaymentMethodForm {
+                            save => {
+                                root.add-payment-method(
+                                    self.card-number,
+                                    self.expiry,
+                                    self.cvv,
+                                    self.name,
+                                    self.save-card
+                                );
+                                root.show-add-form = false;
+                            }
+                            cancel => {
+                                root.show-add-form = false;
+                            }
+                        }
+                    }
+                }
+
+                // Price breakdown
+                if !root.show-add-form : VerticalLayout {
+                    spacing: 12px;
+
+                    Text {
+                        text: "Zusammenfassung";
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 16px;
+
+                            PriceBreakdown {
+                                summary: root.summary;
+                            }
+                        }
+                    }
+                }
+
+                // Pay button
+                if !root.show-add-form && payment-methods.length > 0 : Button {
+                    text: root.is-processing ? "Verarbeite..." : "Jetzt bezahlen";
+                    primary: true;
+                    loading: root.is-processing;
+                    clicked => { root.process-payment(); }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

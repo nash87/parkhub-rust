@@ -1,0 +1,44 @@
+# Rust build artifacts
+/target/
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Slint generated
+*.slint.rs
+
+# Local config
+.env
+.env.local
+*.local.toml
+
+# Logs
+*.log
+logs/
+
+# User data
+data/
+layouts/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Debug files
+*.pdb
+
+# Package files
+*.zip
+*.tar.gz

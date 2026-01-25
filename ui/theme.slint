@@ -1,0 +1,71 @@
+// Theme matching securanido design system (UnoCSS/Tailwind colors)
+
+export global Theme {
+    // === Colors (matching UnoCSS/Tailwind palette) ===
+
+    // Background colors (dark theme)
+    out property <color> background: #0f0f0f;          // bg-neutral-950
+    out property <color> surface: #1a1a1a;             // bg-neutral-900
+    out property <color> surface-elevated: #262626;    // bg-neutral-800
+
+    // Primary colors (Indigo - matching securanido brand)
+    out property <color> primary: #6366f1;             // indigo-500
+    out property <color> primary-hover: #4f46e5;       // indigo-600
+    out property <color> primary-light: #818cf8;       // indigo-400
+    out property <color> on-primary: #ffffff;
+
+    // Secondary/Success (Green)
+    out property <color> secondary: #22c55e;           // green-500
+    out property <color> secondary-hover: #16a34a;     // green-600
+
+    // Semantic colors
+    out property <color> error: #ef4444;               // red-500
+    out property <color> warning: #f59e0b;             // amber-500
+    out property <color> info: #3b82f6;                // blue-500
+    out property <color> success: #22c55e;             // green-500
+
+    // Text colors
+    out property <color> text-primary: #fafafa;        // neutral-50
+    out property <color> text-secondary: #a3a3a3;      // neutral-400
+    out property <color> text-tertiary: #737373;       // neutral-500
+    out property <color> text-muted: #525252;          // neutral-600
+
+    // Border colors
+    out property <color> border: #404040;              // neutral-700
+    out property <color> border-light: #525252;        // neutral-600
+
+    // === Typography ===
+    out property <length> font-size-xs: 11px;
+    out property <length> font-size-sm: 13px;
+    out property <length> font-size-md: 15px;
+    out property <length> font-size-lg: 17px;
+    out property <length> font-size-xl: 20px;
+    out property <length> font-size-2xl: 24px;
+    out property <length> font-size-3xl: 30px;
+
+    // === Spacing (4px base, matching Tailwind) ===
+    out property <length> spacing-xs: 4px;             // space-1
+    out property <length> spacing-sm: 8px;             // space-2
+    out property <length> spacing-md: 16px;            // space-4
+    out property <length> spacing-lg: 24px;            // space-6
+    out property <length> spacing-xl: 32px;            // space-8
+    out property <length> spacing-2xl: 48px;           // space-12
+
+    // === Border Radius ===
+    out property <length> radius-sm: 4px;              // rounded-sm
+    out property <length> radius-md: 8px;              // rounded-md
+    out property <length> radius-lg: 12px;             // rounded-lg
+    out property <length> radius-xl: 16px;             // rounded-xl
+    out property <length> radius-2xl: 24px;            // rounded-2xl
+    out property <length> radius-full: 9999px;         // rounded-full
+
+    // === Touch Targets ===
+    out property <length> touch-target-min: 44px;
+    out property <length> button-height: 48px;
+    out property <length> input-height: 44px;
+
+    // === Animation Durations ===
+    out property <duration> animation-fast: 150ms;
+    out property <duration> animation-normal: 250ms;
+    out property <duration> animation-slow: 350ms;
+}
