@@ -3,6 +3,7 @@
 import { Theme } from "theme.slint";
 import { Tr } from "i18n.slint";
 import { PhosphorIcons, Icon } from "icons.slint";
+import { ConnectScreen, DiscoveredServer } from "connect.slint";
 import { LoginScreen, DevUser } from "login.slint";
 import { ParkingView, ParkingSlotData, BookingData, DurationOption, SlotStatus } from "parking.slint";
 import { LayoutEditor, LayoutElement, SavedLayout, ElementType } from "layout_editor.slint";
@@ -19,12 +20,13 @@ import { CalendarView, CalendarDay, TimeSlotOption, ScheduledBooking } from "cal
 import { FavoritesPanel, FavoriteSpot } from "favorites.slint";
 import { NotificationsPanel, NotificationItem, NotificationType, ReminderSettings } from "notifications.slint";
 
-export { Theme, Tr, PhosphorIcons, Icon, DevUser, ParkingSlotData, BookingData, DurationOption, SlotStatus, LayoutElement, SavedLayout, ElementType }
+export { Theme, Tr, PhosphorIcons, Icon, DiscoveredServer, DevUser, ParkingSlotData, BookingData, DurationOption, SlotStatus, LayoutElement, SavedLayout, ElementType }
 export { AppSettings, VehicleInfo, MonthlyStatData, ToastData, ToastType, HistoryBooking, HistoryFilter, FloorInfo }
 export { PaymentMethodInfo, PaymentSummary, AdminStats, AdminSlotInfo, CalendarDay, TimeSlotOption, ScheduledBooking }
 export { FavoriteSpot, NotificationItem, NotificationType, ReminderSettings }
 
 export enum AppView {
+    Connect,
     Login,
     Parking,
     LayoutEditor,
@@ -49,8 +51,8 @@ export struct CurrentUser {
 }
 
 export component MainWindow inherits Window {
-    title: "Securanido Parking";
-    no-frame: true;  // Custom frameless window like pmos-controller
+    title: "ParkHub";
+    no-frame: true;  // Custom frameless window
     min-width: 450px;
     min-height: 700px;
     preferred-width: 450px;
@@ -70,9 +72,19 @@ export component MainWindow inherits Window {
     in-out property <bool> screenshot-tooltip-visible: false;
 
     // Application state
-    in-out property <AppView> current-view: AppView.Login;
+    in-out property <AppView> current-view: AppView.Connect;
     in-out property <CurrentUser> current-user;
     in-out property <bool> is-authenticated: false;
+    in-out property <bool> is-connected: false;
+
+    // Server connection state
+    in property <[DiscoveredServer]> discovered-servers: [];
+    in property <bool> is-scanning-servers: false;
+    in property <bool> is-connecting-to-server: false;
+    in property <string> connection-error: "";
+    in-out property <string> manual-server-host: "";
+    in-out property <int> manual-server-port: 7878;
+    in-out property <bool> manual-server-tls: true;
 
     // Login state
     in property <bool> login-loading: false;
@@ -95,6 +107,12 @@ export component MainWindow inherits Window {
     in-out property <string> estimated-cost: "0.00 EUR";
     in-out property <bool> show-booking-panel: false;
     in-out property <bool> is-booking: false;
+
+    // Server connection callbacks
+    callback refresh-servers();
+    callback connect-to-server(string);  // server id
+    callback connect-manual(string, int, bool);  // host, port, tls
+    callback disconnect-from-server();
 
     // Login callbacks
     callback google-login();
@@ -435,7 +453,7 @@ export component MainWindow inherits Window {
                         }
 
                         Text {
-                            text: "Securanido Parking";
+                            text: "ParkHub";
                             font-size: 13px;
                             font-weight: 400;
                             color: #cccccc;
@@ -527,6 +545,21 @@ export component MainWindow inherits Window {
                 }
             }
         }
+
+    // Connect Screen - Server Discovery
+    if current-view == AppView.Connect : ConnectScreen {
+        discovered-servers: root.discovered-servers;
+        is-scanning: root.is-scanning-servers;
+        is-connecting: root.is-connecting-to-server;
+        error-message: root.connection-error;
+        manual-host <=> root.manual-server-host;
+        manual-port <=> root.manual-server-port;
+        manual-tls <=> root.manual-server-tls;
+
+        refresh-servers => { root.refresh-servers(); }
+        connect-to-server(id) => { root.connect-to-server(id); }
+        connect-manual(host, port, tls) => { root.connect-manual(host, port, tls); }
+    }
 
     // Login Screen
     if current-view == AppView.Login : LoginScreen {

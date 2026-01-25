@@ -1,0 +1,451 @@
+// Connect Screen - Server Discovery and Connection
+//
+// Shows discovered servers via mDNS and allows manual connection.
+
+import { Theme } from "theme.slint";
+import { LineEdit, Button } from "std-widgets.slint";
+
+export struct DiscoveredServer {
+    id: string,
+    name: string,
+    host: string,
+    port: int,
+    tls: bool,
+    version: string,
+}
+
+export component ConnectScreen inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[DiscoveredServer]> discovered-servers: [];
+    in property <bool> is-scanning: false;
+    in property <bool> is-connecting: false;
+    in property <string> error-message: "";
+    in-out property <string> manual-host: "";
+    in-out property <int> manual-port: 7878;
+    in-out property <bool> manual-tls: true;
+
+    // Callbacks
+    callback refresh-servers();
+    callback connect-to-server(string);  // server id
+    callback connect-manual(string, int, bool);  // host, port, tls
+
+    VerticalLayout {
+        alignment: start;
+        spacing: 0;
+        padding: 0;
+
+        // Header
+        Rectangle {
+            height: 180px;
+            background: Theme.primary;
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+
+                // Logo
+                Rectangle {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 40px;
+                    background: white.transparentize(0.1);
+
+                    Text {
+                        text: "P";
+                        font-size: 42px;
+                        font-weight: 700;
+                        color: Theme.primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Text {
+                    text: "ParkHub";
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Connect to a server";
+                    font-size: 14px;
+                    color: white.transparentize(0.2);
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Content
+        Rectangle {
+            vertical-stretch: 1;
+            background: Theme.background;
+
+            VerticalLayout {
+                padding: 20px;
+                spacing: 20px;
+
+                // Error message
+                if root.error-message != "" : Rectangle {
+                    height: 44px;
+                    background: Theme.error.transparentize(0.9);
+                    border-radius: 8px;
+
+                    HorizontalLayout {
+                        padding-left: 16px;
+                        padding-right: 16px;
+                        alignment: center;
+
+                        Text {
+                            text: root.error-message;
+                            font-size: 13px;
+                            color: Theme.error;
+                        }
+                    }
+                }
+
+                // Discovered Servers Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+
+                        Text {
+                            text: "Discovered Servers";
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                        }
+
+                        // Refresh button
+                        Rectangle {
+                            width: 32px;
+                            height: 32px;
+                            border-radius: 16px;
+                            background: refresh-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+
+                            refresh-touch := TouchArea {
+                                enabled: !root.is-scanning;
+                                clicked => { root.refresh-servers(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            Text {
+                                text: root.is-scanning ? "..." : "\u{21bb}";
+                                font-size: 16px;
+                                color: Theme.primary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    // Server list
+                    if root.discovered-servers.length == 0 && !root.is-scanning : Rectangle {
+                        height: 80px;
+                        background: Theme.surface;
+                        border-radius: 8px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 4px;
+
+                            Text {
+                                text: "No servers found";
+                                font-size: 14px;
+                                color: Theme.text-secondary;
+                                horizontal-alignment: center;
+                            }
+
+                            Text {
+                                text: "Make sure a ParkHub server is running on your network";
+                                font-size: 12px;
+                                color: Theme.text-tertiary;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
+
+                    if root.is-scanning && root.discovered-servers.length == 0 : Rectangle {
+                        height: 80px;
+                        background: Theme.surface;
+                        border-radius: 8px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 8px;
+
+                            Text {
+                                text: "Scanning network...";
+                                font-size: 14px;
+                                color: Theme.text-secondary;
+                                horizontal-alignment: center;
+                            }
+
+                            // Simple loading dots
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 4px;
+
+                                for i in 3 : Rectangle {
+                                    width: 8px;
+                                    height: 8px;
+                                    border-radius: 4px;
+                                    background: Theme.primary.transparentize(0.5);
+                                }
+                            }
+                        }
+                    }
+
+                    // Server cards
+                    for server in root.discovered-servers : Rectangle {
+                        height: 72px;
+                        background: server-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+                        border-radius: 12px;
+                        border-width: server-touch.has-hover ? 2px : 1px;
+                        border-color: server-touch.has-hover ? Theme.primary : Theme.border;
+
+                        server-touch := TouchArea {
+                            enabled: !root.is-connecting;
+                            clicked => { root.connect-to-server(server.id); }
+                            mouse-cursor: pointer;
+                        }
+
+                        HorizontalLayout {
+                            padding: 16px;
+                            spacing: 12px;
+
+                            // Server icon
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 8px;
+                                background: Theme.primary.transparentize(0.9);
+
+                                Text {
+                                    text: server.tls ? "\u{1f512}" : "\u{1f513}";
+                                    font-size: 18px;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // Server info
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px;
+
+                                Text {
+                                    text: server.name;
+                                    font-size: 15px;
+                                    font-weight: 600;
+                                    color: Theme.text-primary;
+                                }
+
+                                Text {
+                                    text: (server.tls ? "https://" : "http://") + server.host + ":" + server.port;
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                }
+                            }
+
+                            // Connect arrow
+                            Rectangle {
+                                width: 24px;
+                                height: 24px;
+
+                                Text {
+                                    text: "\u{2192}";
+                                    font-size: 18px;
+                                    color: Theme.primary;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Divider
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 12px;
+                    height: 24px;
+
+                    Rectangle {
+                        height: 1px;
+                        horizontal-stretch: 1;
+                        background: Theme.border;
+                    }
+
+                    Text {
+                        text: "or connect manually";
+                        font-size: 12px;
+                        color: Theme.text-tertiary;
+                    }
+
+                    Rectangle {
+                        height: 1px;
+                        horizontal-stretch: 1;
+                        background: Theme.border;
+                    }
+                }
+
+                // Manual Connection Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    // Host input
+                    VerticalLayout {
+                        spacing: 4px;
+
+                        Text {
+                            text: "Server Address";
+                            font-size: 12px;
+                            font-weight: 500;
+                            color: Theme.text-secondary;
+                        }
+
+                        Rectangle {
+                            height: 44px;
+                            background: Theme.surface;
+                            border-radius: 8px;
+                            border-width: 1px;
+                            border-color: Theme.border;
+
+                            LineEdit {
+                                x: 12px;
+                                width: parent.width - 24px;
+                                height: parent.height;
+                                text <=> root.manual-host;
+                                placeholder-text: "192.168.1.100 or server.local";
+                                font-size: 14px;
+                            }
+                        }
+                    }
+
+                    // Port and TLS row
+                    HorizontalLayout {
+                        spacing: 12px;
+
+                        // Port input
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 4px;
+
+                            Text {
+                                text: "Port";
+                                font-size: 12px;
+                                font-weight: 500;
+                                color: Theme.text-secondary;
+                            }
+
+                            Rectangle {
+                                height: 44px;
+                                background: Theme.surface;
+                                border-radius: 8px;
+                                border-width: 1px;
+                                border-color: Theme.border;
+
+                                LineEdit {
+                                    x: 12px;
+                                    width: parent.width - 24px;
+                                    height: parent.height;
+                                    text: root.manual-port == 0 ? "" : "\{root.manual-port}";
+                                    placeholder-text: "7878";
+                                    font-size: 14px;
+                                }
+                            }
+                        }
+
+                        // TLS toggle
+                        VerticalLayout {
+                            spacing: 4px;
+
+                            Text {
+                                text: "Secure";
+                                font-size: 12px;
+                                font-weight: 500;
+                                color: Theme.text-secondary;
+                            }
+
+                            Rectangle {
+                                width: 80px;
+                                height: 44px;
+                                background: tls-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+                                border-radius: 8px;
+                                border-width: 1px;
+                                border-color: root.manual-tls ? Theme.primary : Theme.border;
+
+                                tls-touch := TouchArea {
+                                    clicked => { root.manual-tls = !root.manual-tls; }
+                                    mouse-cursor: pointer;
+                                }
+
+                                HorizontalLayout {
+                                    alignment: center;
+                                    spacing: 6px;
+
+                                    Text {
+                                        text: root.manual-tls ? "\u{1f512}" : "\u{1f513}";
+                                        font-size: 14px;
+                                    }
+
+                                    Text {
+                                        text: root.manual-tls ? "HTTPS" : "HTTP";
+                                        font-size: 13px;
+                                        font-weight: 500;
+                                        color: root.manual-tls ? Theme.primary : Theme.text-secondary;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Connect button
+                    Rectangle {
+                        height: 50px;
+                        background: connect-touch.has-hover ? Theme.primary.darker(10%) : Theme.primary;
+                        border-radius: 12px;
+
+                        connect-touch := TouchArea {
+                            enabled: !root.is-connecting && root.manual-host != "";
+                            clicked => {
+                                root.connect-manual(root.manual-host, root.manual-port, root.manual-tls);
+                            }
+                            mouse-cursor: pointer;
+                        }
+
+                        Text {
+                            text: root.is-connecting ? "Connecting..." : "Connect";
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: white;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Footer
+        Rectangle {
+            height: 40px;
+            background: Theme.surface;
+
+            Text {
+                text: "ParkHub v0.1.0";
+                font-size: 11px;
+                color: Theme.text-tertiary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
