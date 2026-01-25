@@ -4,7 +4,6 @@
 
 use anyhow::{Context, Result};
 use reqwest::Client;
-use std::sync::Arc;
 
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, CreateBookingRequest, HandshakeRequest, HandshakeResponse,
@@ -31,7 +30,7 @@ impl ServerConnection {
             .build()
             .context("Failed to create HTTP client")?;
 
-        let mut conn = Self {
+        let conn = Self {
             client,
             base_url,
             server_info,
