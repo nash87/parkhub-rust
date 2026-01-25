@@ -3,7 +3,7 @@
 //! Uses redb for pure-Rust embedded database storage.
 
 use anyhow::{Context, Result};
-use redb::{Database as RedbDatabase, ReadableTable, TableDefinition};
+use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
