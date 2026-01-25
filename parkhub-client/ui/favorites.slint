@@ -1,0 +1,714 @@
+// Favorites - Save and manage favorite parking spots
+
+import { Theme } from "theme.slint";
+import { Button, Card } from "components/mod.slint";
+
+// Favorite spot data
+export struct FavoriteSpot {
+    id: string,
+    slot-number: int,
+    floor-name: string,
+    lot-name: string,
+    nickname: string,
+    times-used: int,
+    last-used: string,
+    is-available: bool,
+    current-price: float,
+}
+
+// Quick book confirmation
+component QuickBookButton inherits Rectangle {
+    in property <bool> is-available: true;
+    in property <float> price: 0;
+    in property <string> currency: "EUR";
+
+    callback clicked();
+
+    width: 80px;
+    height: 36px;
+    border-radius: 8px;
+    background: root.is-available ?
+                (book-touch.has-hover ? Theme.primary.darker(0.1) : Theme.primary) :
+                Theme.surface-elevated;
+
+    animate background { duration: 150ms; }
+
+    book-touch := TouchArea {
+        enabled: root.is-available;
+        clicked => { root.clicked(); }
+        mouse-cursor: root.is-available ? pointer : not-allowed;
+    }
+
+    if root.is-available : VerticalLayout {
+        alignment: center;
+        spacing: 0;
+
+        Text {
+            text: "Buchen";
+            font-size: 11px;
+            font-weight: 600;
+            color: Theme.on-primary;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.price + " " + root.currency;
+            font-size: 9px;
+            color: Theme.on-primary.transparentize(0.2);
+            horizontal-alignment: center;
+        }
+    }
+
+    if !root.is-available : Text {
+        text: "Belegt";
+        font-size: 11px;
+        font-weight: 500;
+        color: Theme.text-tertiary;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// Favorite spot card
+component FavoriteSpotCard inherits Rectangle {
+    in property <FavoriteSpot> spot;
+    in property <string> currency: "EUR";
+
+    callback quick-book();
+    callback remove-favorite();
+    callback edit-nickname();
+    callback view-on-map();
+
+    height: 88px;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Slot indicator
+        Rectangle {
+            width: 52px;
+            height: 64px;
+            border-radius: 10px;
+            background: spot.is-available ? Theme.secondary.transparentize(0.9) : Theme.surface-elevated;
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+
+                Text {
+                    text: "#" + spot.slot-number;
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: spot.is-available ? Theme.secondary : Theme.text-tertiary;
+                    horizontal-alignment: center;
+                }
+
+                // Heart icon (favorited)
+                Rectangle {
+                    width: 16px;
+                    height: 14px;
+                    x: (parent.width - self.width) / 2;
+
+                    // Heart shape using circles and triangle
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: Theme.error;
+                        x: 0;
+                        y: 0;
+                    }
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: Theme.error;
+                        x: 8px;
+                        y: 0;
+                    }
+                    Rectangle {
+                        width: 12px;
+                        height: 10px;
+                        x: 2px;
+                        y: 4px;
+                        background: Theme.error;
+                        border-radius: 1px;
+                    }
+                }
+            }
+        }
+
+        // Info section
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: spot.nickname != "" ? spot.nickname : "Platz " + spot.slot-number;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                if spot.nickname != "" : Rectangle {
+                    width: 32px;
+                    height: 16px;
+                    border-radius: 4px;
+                    background: Theme.surface-elevated;
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: "#" + spot.slot-number;
+                        font-size: 9px;
+                        color: Theme.text-tertiary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: spot.floor-name + " • " + spot.lot-name;
+                font-size: 12px;
+                color: Theme.text-secondary;
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: spot.times-used + "x genutzt";
+                    font-size: 11px;
+                    color: Theme.text-tertiary;
+                    vertical-alignment: center;
+                }
+
+                if spot.last-used != "" : Text {
+                    text: "Zuletzt: " + spot.last-used;
+                    font-size: 11px;
+                    color: Theme.text-tertiary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Actions
+        VerticalLayout {
+            alignment: center;
+            spacing: 6px;
+
+            QuickBookButton {
+                is-available: spot.is-available;
+                price: spot.current-price;
+                currency: root.currency;
+                clicked => { root.quick-book(); }
+            }
+
+            // Options row
+            HorizontalLayout {
+                spacing: 4px;
+                x: (parent.width - self.width) / 2;
+
+                // Edit nickname button
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 6px;
+                    background: edit-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    edit-touch := TouchArea {
+                        clicked => { root.edit-nickname(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Pencil icon
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 7px;
+                        y: 8px;
+                        background: Theme.text-tertiary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 8px;
+                        x: 7px;
+                        y: 10px;
+                        background: Theme.text-tertiary;
+                        border-radius: 1px;
+                    }
+                }
+
+                // Remove favorite button
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 6px;
+                    background: remove-touch.has-hover ? Theme.error.transparentize(0.85) : transparent;
+
+                    remove-touch := TouchArea {
+                        clicked => { root.remove-favorite(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // X icon
+                    Rectangle {
+                        width: 8px;
+                        height: 2px;
+                        x: 8px;
+                        y: 11px;
+                        background: remove-touch.has-hover ? Theme.error : Theme.text-tertiary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 8px;
+                        x: 11px;
+                        y: 8px;
+                        background: remove-touch.has-hover ? Theme.error : Theme.text-tertiary;
+                        border-radius: 1px;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Add favorite floating action button
+component AddFavoriteButton inherits Rectangle {
+    callback clicked();
+
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: fab-touch.has-hover ? Theme.primary.darker(0.1) : Theme.primary;
+    drop-shadow-blur: 12px;
+    drop-shadow-color: Theme.primary.transparentize(0.6);
+    drop-shadow-offset-y: 4px;
+
+    animate background { duration: 150ms; }
+    animate drop-shadow-blur { duration: 150ms; }
+
+    fab-touch := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    // Plus icon
+    Rectangle {
+        width: 20px;
+        height: 3px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 1.5px;
+        background: Theme.on-primary;
+    }
+    Rectangle {
+        width: 3px;
+        height: 20px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 1.5px;
+        background: Theme.on-primary;
+    }
+}
+
+// Nickname edit dialog
+component NicknameEditDialog inherits Rectangle {
+    in property <string> current-nickname: "";
+    in property <int> slot-number: 0;
+    in-out property <string> new-nickname: "";
+
+    callback save();
+    callback cancel();
+
+    background: Theme.background.transparentize(0.3);
+
+    Rectangle {
+        width: parent.width - 48px;
+        height: 220px;
+        x: 24px;
+        y: (parent.height - self.height) / 2;
+        border-radius: 16px;
+        background: Theme.surface;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: #000000.transparentize(0.5);
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 16px;
+
+            Text {
+                text: "Spitzname für Platz #" + root.slot-number;
+                font-size: 18px;
+                font-weight: 600;
+                color: Theme.text-primary;
+            }
+
+            // Input field
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: Theme.background;
+                border-width: 2px;
+                border-color: Theme.primary;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 14px;
+
+                    input := TextInput {
+                        horizontal-stretch: 1;
+                        text <=> root.new-nickname;
+                        font-size: 15px;
+                        color: Theme.text-primary;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: "z.B. \"Mein Stammplatz\", \"Nähe Aufzug\"";
+                font-size: 12px;
+                color: Theme.text-tertiary;
+            }
+
+            // Buttons
+            HorizontalLayout {
+                spacing: 12px;
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+                    border-radius: 10px;
+                    background: cancel-touch.has-hover ? Theme.surface-elevated : Theme.background;
+                    border-width: 1px;
+                    border-color: Theme.border;
+
+                    cancel-touch := TouchArea {
+                        clicked => { root.cancel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: "Abbrechen";
+                        font-size: 14px;
+                        font-weight: 500;
+                        color: Theme.text-secondary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+                    border-radius: 10px;
+                    background: save-touch.has-hover ? Theme.primary.darker(0.1) : Theme.primary;
+
+                    save-touch := TouchArea {
+                        clicked => { root.save(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: "Speichern";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.on-primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Main favorites panel
+export component FavoritesPanel inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[FavoriteSpot]> favorites: [];
+    in property <string> currency: "EUR";
+    in property <bool> is-loading: false;
+    in-out property <bool> show-nickname-dialog: false;
+    in-out property <string> editing-spot-id: "";
+    in-out property <int> editing-slot-number: 0;
+    in-out property <string> current-nickname: "";
+
+    // Callbacks
+    callback close-panel();
+    callback quick-book-spot(string); // spot id
+    callback remove-favorite(string);
+    callback save-nickname(string, string); // spot id, new nickname
+    callback add-new-favorite();
+    callback refresh();
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Lieblingsplätze";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Refresh button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: refresh-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    refresh-touch := TouchArea {
+                        clicked => { root.refresh(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Refresh icon
+                    Rectangle {
+                        width: 18px;
+                        height: 18px;
+                        x: 9px;
+                        y: 9px;
+                        border-radius: 9px;
+                        border-width: 2px;
+                        border-color: Theme.text-secondary;
+                        background: transparent;
+                    }
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
+
+                // Favorites list
+                if root.favorites.length > 0 : VerticalLayout {
+                    spacing: 10px;
+
+                    for spot in root.favorites : FavoriteSpotCard {
+                        spot: spot;
+                        currency: root.currency;
+
+                        quick-book => { root.quick-book-spot(spot.id); }
+                        remove-favorite => { root.remove-favorite(spot.id); }
+                        edit-nickname => {
+                            root.editing-spot-id = spot.id;
+                            root.editing-slot-number = spot.slot-number;
+                            root.current-nickname = spot.nickname;
+                            root.show-nickname-dialog = true;
+                        }
+                    }
+                }
+
+                // Empty state
+                if root.favorites.length == 0 : Card {
+                    VerticalLayout {
+                        padding: 40px;
+                        alignment: center;
+                        spacing: 16px;
+
+                        // Heart icon
+                        Rectangle {
+                            width: 64px;
+                            height: 64px;
+                            border-radius: 32px;
+                            background: Theme.error.transparentize(0.9);
+                            x: (parent.width - self.width - 80px) / 2;
+
+                            // Heart shape
+                            Rectangle {
+                                width: 16px;
+                                height: 16px;
+                                border-radius: 8px;
+                                background: Theme.error;
+                                x: 16px;
+                                y: 20px;
+                            }
+                            Rectangle {
+                                width: 16px;
+                                height: 16px;
+                                border-radius: 8px;
+                                background: Theme.error;
+                                x: 32px;
+                                y: 20px;
+                            }
+                            Rectangle {
+                                width: 24px;
+                                height: 20px;
+                                x: 20px;
+                                y: 28px;
+                                background: Theme.error;
+                                border-radius: 2px;
+                            }
+                        }
+
+                        Text {
+                            text: "Keine Lieblingsplätze";
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Tippe auf das Herz-Symbol\nbei einem Parkplatz, um ihn\nals Favorit zu speichern.";
+                            font-size: 13px;
+                            color: Theme.text-tertiary;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+
+                        Rectangle {
+                            height: 48px;
+                            width: 160px;
+                            x: (parent.width - self.width) / 2;
+                            border-radius: 24px;
+                            background: add-touch.has-hover ? Theme.primary.darker(0.1) : Theme.primary;
+
+                            add-touch := TouchArea {
+                                clicked => { root.add-new-favorite(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            HorizontalLayout {
+                                alignment: center;
+                                spacing: 8px;
+
+                                // Plus icon
+                                Rectangle {
+                                    width: 16px;
+                                    height: 16px;
+                                    y: (parent.height - self.height) / 2;
+
+                                    Rectangle {
+                                        width: 12px;
+                                        height: 2px;
+                                        x: 2px;
+                                        y: 7px;
+                                        background: Theme.on-primary;
+                                        border-radius: 1px;
+                                    }
+                                    Rectangle {
+                                        width: 2px;
+                                        height: 12px;
+                                        x: 7px;
+                                        y: 2px;
+                                        background: Theme.on-primary;
+                                        border-radius: 1px;
+                                    }
+                                }
+
+                                Text {
+                                    text: "Favorit hinzufügen";
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    color: Theme.on-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom padding for FAB
+                Rectangle {
+                    height: 80px;
+                }
+            }
+        }
+    }
+
+    // Floating action button
+    if root.favorites.length > 0 : AddFavoriteButton {
+        x: parent.width - self.width - 20px;
+        y: parent.height - self.height - 20px;
+        clicked => { root.add-new-favorite(); }
+    }
+
+    // Nickname edit dialog overlay
+    if root.show-nickname-dialog : NicknameEditDialog {
+        current-nickname: root.current-nickname;
+        slot-number: root.editing-slot-number;
+
+        save => {
+            root.save-nickname(root.editing-spot-id, self.new-nickname);
+            root.show-nickname-dialog = false;
+        }
+
+        cancel => {
+            root.show-nickname-dialog = false;
+        }
+    }
+}

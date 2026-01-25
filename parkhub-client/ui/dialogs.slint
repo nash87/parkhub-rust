@@ -1,0 +1,663 @@
+// Dialog Components - Confirmation dialogs, modals, and overlays
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+
+// Dialog overlay backdrop
+component DialogBackdrop inherits Rectangle {
+    callback clicked();
+
+    background: #000000.transparentize(0.4);
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+
+    animate opacity { duration: 200ms; }
+}
+
+// Base dialog container
+component DialogContainer inherits Rectangle {
+    in property <length> dialog-width: 380px;
+
+    width: root.dialog-width;
+    border-radius: 16px;
+    background: Theme.surface;
+    drop-shadow-blur: 24px;
+    drop-shadow-color: #000000.transparentize(0.5);
+    drop-shadow-offset-y: 8px;
+
+    animate y { duration: 200ms; easing: ease-out; }
+    animate opacity { duration: 200ms; }
+}
+
+// Booking confirmation dialog
+export component BookingConfirmationDialog inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <int> slot-number: 0;
+    in property <string> floor-name: "UG-1";
+    in property <string> start-time: "";
+    in property <string> end-time: "";
+    in property <int> duration-minutes: 60;
+    in property <string> license-plate: "";
+    in property <string> total-cost: "0.00 EUR";
+    in property <bool> is-loading: false;
+
+    callback confirm();
+    callback cancel();
+
+    if root.is-visible : DialogBackdrop {
+        clicked => { if !root.is-loading { root.cancel(); } }
+    }
+
+    if root.is-visible : DialogContainer {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        dialog-width: 400px;
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 20px;
+
+            // Header
+            HorizontalLayout {
+                alignment: space-between;
+
+                Text {
+                    text: "Buchung bestätigen";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                if !root.is-loading : Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 16px;
+                    background: close-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    close-touch := TouchArea {
+                        clicked => { root.cancel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // X icon
+                    Rectangle {
+                        width: 12px;
+                        height: 2px;
+                        x: 10px;
+                        y: 15px;
+                        background: Theme.text-secondary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 12px;
+                        x: 15px;
+                        y: 10px;
+                        background: Theme.text-secondary;
+                        border-radius: 1px;
+                    }
+                }
+            }
+
+            // Slot info card
+            Rectangle {
+                height: 80px;
+                border-radius: 12px;
+                background: Theme.primary.transparentize(0.9);
+                border-width: 1px;
+                border-color: Theme.primary.transparentize(0.7);
+
+                HorizontalLayout {
+                    padding: 16px;
+                    spacing: 16px;
+
+                    // Slot number badge
+                    Rectangle {
+                        width: 48px;
+                        height: 48px;
+                        border-radius: 12px;
+                        background: Theme.primary;
+
+                        Text {
+                            text: root.slot-number;
+                            font-size: 20px;
+                            font-weight: 800;
+                            color: white;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 4px;
+
+                        Text {
+                            text: "Parkplatz " + root.slot-number;
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                        }
+
+                        Text {
+                            text: root.floor-name;
+                            font-size: 13px;
+                            color: Theme.text-secondary;
+                        }
+                    }
+                }
+            }
+
+            // Details section
+            VerticalLayout {
+                spacing: 12px;
+
+                // Time row
+                HorizontalLayout {
+                    spacing: 8px;
+
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: Theme.surface-elevated;
+
+                        // Clock icon
+                        Rectangle {
+                            width: 16px;
+                            height: 16px;
+                            x: 8px;
+                            y: 8px;
+                            border-radius: 8px;
+                            border-width: 2px;
+                            border-color: Theme.text-tertiary;
+                            background: transparent;
+
+                            // Clock hands
+                            Rectangle {
+                                width: 2px;
+                                height: 6px;
+                                x: 7px;
+                                y: 4px;
+                                background: Theme.text-tertiary;
+                            }
+                            Rectangle {
+                                width: 5px;
+                                height: 2px;
+                                x: 7px;
+                                y: 7px;
+                                background: Theme.text-tertiary;
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        Text {
+                            text: "Zeitraum";
+                            font-size: 12px;
+                            color: Theme.text-tertiary;
+                        }
+
+                        Text {
+                            text: root.start-time + " - " + root.end-time + " (" + root.duration-minutes + " Min)";
+                            font-size: 14px;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                        }
+                    }
+                }
+
+                // License plate row
+                HorizontalLayout {
+                    spacing: 8px;
+
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: Theme.surface-elevated;
+
+                        // Car icon
+                        Rectangle {
+                            width: 18px;
+                            height: 10px;
+                            x: 7px;
+                            y: 11px;
+                            border-radius: 4px;
+                            background: Theme.text-tertiary;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        Text {
+                            text: "Kennzeichen";
+                            font-size: 12px;
+                            color: Theme.text-tertiary;
+                        }
+
+                        Text {
+                            text: root.license-plate != "" ? root.license-plate : "Nicht angegeben";
+                            font-size: 14px;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                        }
+                    }
+                }
+            }
+
+            // Divider
+            Rectangle {
+                height: 1px;
+                background: Theme.border;
+            }
+
+            // Total cost
+            HorizontalLayout {
+                alignment: space-between;
+
+                Text {
+                    text: "Gesamtkosten";
+                    font-size: 14px;
+                    color: Theme.text-secondary;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: root.total-cost;
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: Theme.primary;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Action buttons
+            HorizontalLayout {
+                spacing: 12px;
+
+                Button {
+                    horizontal-stretch: 1;
+                    text: "Abbrechen";
+                    disabled: root.is-loading;
+                    clicked => { root.cancel(); }
+                }
+
+                Button {
+                    horizontal-stretch: 1;
+                    text: root.is-loading ? "Buche..." : "Jetzt buchen";
+                    primary: true;
+                    loading: root.is-loading;
+                    clicked => { root.confirm(); }
+                }
+            }
+        }
+    }
+}
+
+// Cancel booking confirmation dialog
+export component CancelBookingDialog inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <int> slot-number: 0;
+    in property <string> booking-id: "";
+    in property <string> end-time: "";
+    in property <bool> is-loading: false;
+
+    callback confirm();
+    callback cancel();
+
+    if root.is-visible : DialogBackdrop {
+        clicked => { if !root.is-loading { root.cancel(); } }
+    }
+
+    if root.is-visible : DialogContainer {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 20px;
+
+            // Warning icon
+            Rectangle {
+                width: 64px;
+                height: 64px;
+                border-radius: 32px;
+                background: Theme.warning.transparentize(0.9);
+                x: (parent.width - self.width - 48px) / 2;
+
+                // Warning triangle
+                Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 4px;
+                    border-width: 3px;
+                    border-color: Theme.warning;
+                    background: transparent;
+
+                    // Exclamation mark
+                    Rectangle {
+                        width: 3px;
+                        height: 10px;
+                        x: (parent.width - self.width) / 2;
+                        y: 5px;
+                        background: Theme.warning;
+                        border-radius: 1.5px;
+                    }
+                    Rectangle {
+                        width: 3px;
+                        height: 3px;
+                        x: (parent.width - self.width) / 2;
+                        y: 18px;
+                        background: Theme.warning;
+                        border-radius: 1.5px;
+                    }
+                }
+            }
+
+            // Title
+            Text {
+                text: "Buchung stornieren?";
+                font-size: 20px;
+                font-weight: 700;
+                color: Theme.text-primary;
+                horizontal-alignment: center;
+            }
+
+            // Description
+            Text {
+                text: "Möchtest du die Buchung für Parkplatz " + root.slot-number + " wirklich stornieren? Diese Aktion kann nicht rückgängig gemacht werden.";
+                font-size: 14px;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+
+            // Action buttons
+            HorizontalLayout {
+                spacing: 12px;
+
+                Button {
+                    horizontal-stretch: 1;
+                    text: "Behalten";
+                    disabled: root.is-loading;
+                    clicked => { root.cancel(); }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+                    border-radius: 10px;
+                    background: cancel-btn.has-hover && !root.is-loading ? Theme.error.darker(0.1) : Theme.error;
+
+                    cancel-btn := TouchArea {
+                        enabled: !root.is-loading;
+                        clicked => { root.confirm(); }
+                        mouse-cursor: root.is-loading ? default : pointer;
+                    }
+
+                    Text {
+                        text: root.is-loading ? "..." : "Stornieren";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: white;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Success dialog
+export component SuccessDialog inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <string> title: "Erfolg!";
+    in property <string> message: "";
+    in property <string> button-text: "OK";
+
+    callback close();
+
+    if root.is-visible : DialogBackdrop {
+        clicked => { root.close(); }
+    }
+
+    if root.is-visible : DialogContainer {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 20px;
+            alignment: center;
+
+            // Success icon
+            Rectangle {
+                width: 72px;
+                height: 72px;
+                border-radius: 36px;
+                background: Theme.secondary.transparentize(0.85);
+                x: (parent.width - self.width - 48px) / 2;
+
+                // Checkmark
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+
+                    Rectangle {
+                        width: 6px;
+                        height: 14px;
+                        x: 6px;
+                        y: 12px;
+                        background: Theme.secondary;
+                        border-radius: 3px;
+                    }
+                    Rectangle {
+                        width: 6px;
+                        height: 22px;
+                        x: 18px;
+                        y: 4px;
+                        background: Theme.secondary;
+                        border-radius: 3px;
+                    }
+                }
+            }
+
+            // Title
+            Text {
+                text: root.title;
+                font-size: 20px;
+                font-weight: 700;
+                color: Theme.text-primary;
+                horizontal-alignment: center;
+            }
+
+            // Message
+            if root.message != "" : Text {
+                text: root.message;
+                font-size: 14px;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+
+            // Button
+            Button {
+                text: root.button-text;
+                primary: true;
+                clicked => { root.close(); }
+            }
+        }
+    }
+}
+
+// Error dialog
+export component ErrorDialog inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <string> title: "Fehler";
+    in property <string> message: "";
+    in property <string> button-text: "OK";
+
+    callback close();
+    callback retry();
+
+    if root.is-visible : DialogBackdrop {
+        clicked => { root.close(); }
+    }
+
+    if root.is-visible : DialogContainer {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 20px;
+            alignment: center;
+
+            // Error icon
+            Rectangle {
+                width: 72px;
+                height: 72px;
+                border-radius: 36px;
+                background: Theme.error.transparentize(0.85);
+                x: (parent.width - self.width - 48px) / 2;
+
+                // X mark
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 28px;
+                        x: 10px;
+                        y: -2px;
+                        background: Theme.error;
+                        border-radius: 2px;
+                    }
+                    Rectangle {
+                        width: 28px;
+                        height: 4px;
+                        x: -2px;
+                        y: 10px;
+                        background: Theme.error;
+                        border-radius: 2px;
+                    }
+                }
+            }
+
+            // Title
+            Text {
+                text: root.title;
+                font-size: 20px;
+                font-weight: 700;
+                color: Theme.text-primary;
+                horizontal-alignment: center;
+            }
+
+            // Message
+            if root.message != "" : Text {
+                text: root.message;
+                font-size: 14px;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+            }
+
+            // Buttons
+            HorizontalLayout {
+                spacing: 12px;
+
+                Button {
+                    horizontal-stretch: 1;
+                    text: root.button-text;
+                    clicked => { root.close(); }
+                }
+
+                Button {
+                    horizontal-stretch: 1;
+                    text: "Erneut versuchen";
+                    primary: true;
+                    clicked => { root.retry(); }
+                }
+            }
+        }
+    }
+}
+
+// Loading overlay
+export component LoadingOverlay inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <string> message: "Laden...";
+
+    if root.is-visible : DialogBackdrop { }
+
+    if root.is-visible : Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 200px;
+        height: 120px;
+        border-radius: 16px;
+        background: Theme.surface;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #000000.transparentize(0.6);
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 16px;
+            alignment: center;
+
+            // Spinner
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                x: (parent.width - self.width - 48px) / 2;
+
+                // Spinning circle (simplified)
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 20px;
+                    border-width: 4px;
+                    border-color: Theme.primary.transparentize(0.7);
+                    background: transparent;
+                }
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 20px;
+                    border-width: 4px;
+                    border-color: Theme.primary;
+                    background: transparent;
+                }
+            }
+
+            Text {
+                text: root.message;
+                font-size: 14px;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}

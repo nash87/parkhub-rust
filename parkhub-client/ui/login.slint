@@ -1,0 +1,304 @@
+// Login Screen
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+
+export struct DevUser {
+    id: string,
+    email: string,
+    name: string,
+    initial: string,  // First letter of name for avatar
+    role: string,
+    color: color,
+}
+
+export component LoginScreen inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <bool> is-loading: false;
+    in property <string> error-message: "";
+    in property <bool> dev-mode-enabled: true;
+    in property <[DevUser]> dev-users: [];
+    in property <string> server-mode: "local";  // "local" or "production"
+    in property <string> server-url: "http://localhost:3000";
+
+    // Callbacks
+    callback google-login();
+    callback dev-login(string);  // user id
+    callback toggle-server-mode();
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Theme.spacing-xl;
+        padding: Theme.spacing-xl;
+
+        // Logo and Title
+        VerticalLayout {
+            alignment: center;
+            spacing: Theme.spacing-md;
+
+            // Logo circle with parking icon
+            Rectangle {
+                width: 120px;
+                height: 120px;
+                border-radius: 60px;
+                background: Theme.primary;
+
+                Text {
+                    text: "P";
+                    font-size: 60px;
+                    font-weight: 700;
+                    color: Theme.on-primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Text {
+                text: Tr.login-title;
+                font-size: Theme.font-size-3xl;
+                font-weight: 700;
+                color: Theme.text-primary;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: Tr.login-subtitle;
+                font-size: Theme.font-size-md;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+            }
+        }
+
+        // Error message
+        if root.error-message != "" : Rectangle {
+            height: 50px;
+            max-width: 320px;
+            background: Theme.error.transparentize(0.9);
+            border-radius: Theme.radius-md;
+
+            Text {
+                text: root.error-message;
+                font-size: Theme.font-size-sm;
+                color: Theme.error;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Google Login Button
+        Rectangle {
+            height: 56px;
+            max-width: 320px;
+            border-radius: Theme.radius-lg;
+            background: google-touch.pressed ? #f0f0f0 : #ffffff;
+            border-width: 1px;
+            border-color: #dadce0;
+
+            google-touch := TouchArea {
+                enabled: !root.is-loading;
+                clicked => { root.google-login(); }
+                mouse-cursor: root.is-loading ? default : pointer;
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: Theme.spacing-md;
+                padding-left: Theme.spacing-lg;
+                padding-right: Theme.spacing-lg;
+
+                // Google icon (G)
+                if !root.is-loading : Text {
+                    text: "G";
+                    font-size: Theme.font-size-xl;
+                    font-weight: 700;
+                    color: #4285f4;
+                    vertical-alignment: center;
+                }
+
+                if root.is-loading : Text {
+                    text: "...";
+                    font-size: Theme.font-size-lg;
+                    color: #3c4043;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: root.is-loading ? Tr.login-signing-in : Tr.login-google-button;
+                    font-size: Theme.font-size-md;
+                    font-weight: 500;
+                    color: #3c4043;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Development Mode Section
+        if root.dev-mode-enabled : VerticalLayout {
+            spacing: Theme.spacing-md;
+            max-width: 320px;
+
+            // Divider
+            HorizontalLayout {
+                alignment: center;
+                spacing: Theme.spacing-sm;
+
+                Rectangle {
+                    height: 1px;
+                    horizontal-stretch: 1;
+                    background: Theme.text-tertiary.transparentize(0.7);
+                }
+
+                Text {
+                    text: Tr.login-dev-mode;
+                    font-size: Theme.font-size-xs;
+                    color: Theme.text-tertiary;
+                }
+
+                Rectangle {
+                    height: 1px;
+                    horizontal-stretch: 1;
+                    background: Theme.text-tertiary.transparentize(0.7);
+                }
+            }
+
+            // Dev User Buttons
+            Text {
+                text: Tr.login-quick-login;
+                font-size: Theme.font-size-sm;
+                color: Theme.text-secondary;
+                horizontal-alignment: center;
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: Theme.spacing-sm;
+
+                for user[idx] in root.dev-users : Rectangle {
+                    width: 100px;
+                    height: 110px;
+                    border-radius: Theme.radius-lg;
+                    background: user-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+                    border-width: user-touch.has-hover ? 2px : 1px;
+                    border-color: user-touch.has-hover ? user.color : Theme.border;
+
+                    user-touch := TouchArea {
+                        clicked => { root.dev-login(user.id); }
+                        mouse-cursor: pointer;
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 6px;
+                        padding: Theme.spacing-sm;
+
+                        // Avatar circle with initial
+                        Rectangle {
+                            width: 48px;
+                            height: 48px;
+                            border-radius: 24px;
+                            background: user.color;
+
+                            Text {
+                                text: user.initial;
+                                font-size: 22px;
+                                font-weight: 600;
+                                color: #ffffff;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        // User name
+                        Text {
+                            text: user.name;
+                            font-size: Theme.font-size-sm;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                            overflow: elide;
+                        }
+
+                        // Role badge
+                        Rectangle {
+                            height: 18px;
+                            border-radius: 9px;
+                            background: user.color.transparentize(0.85);
+
+                            HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                alignment: center;
+
+                                Text {
+                                    text: user.role;
+                                    font-size: 10px;
+                                    font-weight: 500;
+                                    color: user.color;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Server Mode Toggle
+            Rectangle {
+                height: 44px;
+                border-radius: Theme.radius-md;
+                background: server-touch.pressed ? Theme.surface-elevated : Theme.surface;
+
+                server-touch := TouchArea {
+                    clicked => { root.toggle-server-mode(); }
+                    mouse-cursor: pointer;
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: Theme.spacing-sm;
+                    padding: Theme.spacing-sm;
+
+                    Text {
+                        text: Tr.dev-server + ":";
+                        font-size: Theme.font-size-sm;
+                        color: Theme.text-secondary;
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {
+                        width: 12px;
+                        height: 12px;
+                        border-radius: 6px;
+                        background: root.server-mode == "local" ? Theme.warning : Theme.secondary;
+                    }
+
+                    Text {
+                        text: root.server-mode == "local" ? Tr.dev-local : Tr.dev-production;
+                        font-size: Theme.font-size-sm;
+                        font-weight: 600;
+                        color: root.server-mode == "local" ? Theme.warning : Theme.secondary;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: "(" + root.server-url + ")";
+                        font-size: Theme.font-size-xs;
+                        color: Theme.text-tertiary;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // Footer
+        Text {
+            text: "v0.1.0";
+            font-size: Theme.font-size-xs;
+            color: Theme.text-tertiary;
+            horizontal-alignment: center;
+        }
+    }
+}

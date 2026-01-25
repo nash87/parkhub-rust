@@ -1,0 +1,374 @@
+// Floor Selector - Multi-floor parking lot navigation
+
+import { Theme } from "theme.slint";
+
+// Floor data structure
+export struct FloorInfo {
+    id: string,
+    name: string,
+    floor-number: int,
+    total-slots: int,
+    available-slots: int,
+    is-full: bool,
+}
+
+// Floor chip component
+component FloorChip inherits Rectangle {
+    in property <FloorInfo> floor;
+    in property <bool> selected: false;
+
+    callback clicked();
+
+    property <float> availability-ratio: floor.total-slots > 0 ?
+        floor.available-slots / floor.total-slots : 0;
+
+    property <color> availability-color: floor.is-full ? Theme.error :
+        root.availability-ratio > 0.5 ? Theme.secondary :
+        root.availability-ratio > 0.2 ? Theme.warning :
+        Theme.error;
+
+    height: 56px;
+    border-radius: 12px;
+    background: root.selected ? Theme.primary.transparentize(0.85) : Theme.surface;
+    border-width: root.selected ? 2px : 1px;
+    border-color: root.selected ? Theme.primary : Theme.border;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Floor name
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: floor.name;
+                font-size: 15px;
+                font-weight: root.selected ? 700 : 500;
+                color: root.selected ? Theme.primary : Theme.text-primary;
+            }
+
+            Text {
+                text: floor.available-slots + "/" + floor.total-slots + " frei";
+                font-size: 11px;
+                color: floor.is-full ? Theme.error : Theme.text-secondary;
+            }
+        }
+
+        // Availability indicator
+        Rectangle {
+            width: 8px;
+            height: 32px;
+            border-radius: 4px;
+            background: Theme.surface-elevated;
+            y: (parent.height - self.height) / 2;
+
+            // Fill bar
+            Rectangle {
+                width: parent.width;
+                height: parent.height * root.availability-ratio;
+                y: parent.height - self.height;
+                border-radius: 4px;
+                background: root.availability-color;
+
+                animate height { duration: 300ms; easing: ease-out; }
+            }
+        }
+    }
+}
+
+// Vertical floor list (for sidebar)
+export component FloorList inherits Rectangle {
+    in property <[FloorInfo]> floors: [];
+    in-out property <string> selected-floor-id: "";
+
+    callback floor-selected(string);
+
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        for floor in root.floors : FloorChip {
+            floor: floor;
+            selected: floor.id == root.selected-floor-id;
+
+            clicked => {
+                root.selected-floor-id = floor.id;
+                root.floor-selected(floor.id);
+            }
+        }
+    }
+}
+
+// Horizontal floor tabs
+export component FloorTabs inherits Rectangle {
+    in property <[FloorInfo]> floors: [];
+    in-out property <string> selected-floor-id: "";
+
+    callback floor-selected(string);
+
+    height: 48px;
+    background: Theme.surface;
+
+    HorizontalLayout {
+        spacing: 4px;
+        padding: 6px;
+
+        for floor in root.floors : Rectangle {
+            horizontal-stretch: 1;
+            height: 36px;
+            border-radius: 8px;
+            background: floor.id == root.selected-floor-id ? Theme.primary : transparent;
+
+            animate background { duration: 150ms; }
+
+            TouchArea {
+                clicked => {
+                    root.selected-floor-id = floor.id;
+                    root.floor-selected(floor.id);
+                }
+                mouse-cursor: pointer;
+            }
+
+            HorizontalLayout {
+                alignment: center;
+                spacing: 6px;
+
+                Text {
+                    text: floor.name;
+                    font-size: 13px;
+                    font-weight: floor.id == root.selected-floor-id ? 600 : 400;
+                    color: floor.id == root.selected-floor-id ? white : Theme.text-secondary;
+                    vertical-alignment: center;
+                }
+
+                // Availability dot
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: floor.is-full ? Theme.error :
+                               floor.available-slots > floor.total-slots / 2 ? Theme.secondary :
+                               Theme.warning;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+    }
+}
+
+// Compact floor dropdown
+export component FloorDropdown inherits Rectangle {
+    in property <[FloorInfo]> floors: [];
+    in-out property <string> selected-floor-id: "";
+    in-out property <bool> expanded: false;
+
+    callback floor-selected(string);
+
+    property <FloorInfo> current-floor: {
+        id: "",
+        name: "Etage wählen",
+        floor-number: 0,
+        total-slots: 0,
+        available-slots: 0,
+        is-full: false,
+    };
+
+    height: 44px;
+    border-radius: 10px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: root.expanded ? Theme.primary : Theme.border;
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 8px;
+
+        // Current selection
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+
+            Text {
+                text: root.current-floor.name;
+                font-size: 14px;
+                font-weight: 500;
+                color: Theme.text-primary;
+            }
+        }
+
+        // Dropdown arrow
+        Rectangle {
+            width: 20px;
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 3px;
+                y: root.expanded ? 10px : 8px;
+                background: Theme.text-secondary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 9px;
+                y: root.expanded ? 10px : 8px;
+                background: Theme.text-secondary;
+                border-radius: 1px;
+            }
+        }
+
+        TouchArea {
+            clicked => { root.expanded = !root.expanded; }
+            mouse-cursor: pointer;
+        }
+    }
+
+    // Dropdown list
+    if root.expanded : Rectangle {
+        y: parent.height + 4px;
+        width: parent.width;
+        height: floors.length * 52px + 8px;
+        border-radius: 10px;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 12px;
+        drop-shadow-color: #000000.transparentize(0.7);
+
+        VerticalLayout {
+            padding: 4px;
+            spacing: 2px;
+
+            for floor in root.floors : Rectangle {
+                height: 48px;
+                border-radius: 8px;
+                background: floor.id == root.selected-floor-id ? Theme.primary.transparentize(0.85) :
+                           item-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                item-touch := TouchArea {
+                    clicked => {
+                        root.selected-floor-id = floor.id;
+                        root.current-floor = floor;
+                        root.expanded = false;
+                        root.floor-selected(floor.id);
+                    }
+                    mouse-cursor: pointer;
+                }
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+
+                    Text {
+                        horizontal-stretch: 1;
+                        text: floor.name;
+                        font-size: 14px;
+                        font-weight: floor.id == root.selected-floor-id ? 600 : 400;
+                        color: floor.id == root.selected-floor-id ? Theme.primary : Theme.text-primary;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: floor.available-slots + " frei";
+                        font-size: 12px;
+                        color: floor.is-full ? Theme.error :
+                               floor.available-slots > floor.total-slots / 2 ? Theme.secondary :
+                               Theme.warning;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Floor overview mini-map
+export component FloorOverview inherits Rectangle {
+    in property <[FloorInfo]> floors: [];
+    in-out property <string> selected-floor-id: "";
+
+    callback floor-selected(string);
+
+    background: Theme.surface;
+    border-radius: 12px;
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+
+        Text {
+            text: "Etagen";
+            font-size: 12px;
+            font-weight: 600;
+            color: Theme.text-secondary;
+        }
+
+        // Floor bars
+        for floor in root.floors : Rectangle {
+            height: 28px;
+            border-radius: 6px;
+            background: floor.id == root.selected-floor-id ? Theme.primary.transparentize(0.8) : Theme.surface-elevated;
+            border-width: floor.id == root.selected-floor-id ? 1px : 0;
+            border-color: Theme.primary.transparentize(0.5);
+
+            TouchArea {
+                clicked => {
+                    root.selected-floor-id = floor.id;
+                    root.floor-selected(floor.id);
+                }
+                mouse-cursor: pointer;
+            }
+
+            HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                spacing: 6px;
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: floor.name;
+                    font-size: 12px;
+                    font-weight: floor.id == root.selected-floor-id ? 600 : 400;
+                    color: floor.id == root.selected-floor-id ? Theme.primary : Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Mini availability bar
+                Rectangle {
+                    width: 40px;
+                    height: 6px;
+                    border-radius: 3px;
+                    background: Theme.background;
+                    y: (parent.height - self.height) / 2;
+
+                    Rectangle {
+                        width: floor.total-slots > 0 ?
+                               parent.width * (floor.available-slots / floor.total-slots) :
+                               0;
+                        height: parent.height;
+                        border-radius: 3px;
+                        background: floor.is-full ? Theme.error :
+                                   floor.available-slots > floor.total-slots / 2 ? Theme.secondary :
+                                   Theme.warning;
+                    }
+                }
+            }
+        }
+    }
+}

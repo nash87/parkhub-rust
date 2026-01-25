@@ -1,0 +1,20 @@
+// Card component matching securanido design
+
+import { Theme } from "../theme.slint";
+
+export component Card inherits Rectangle {
+    in property <bool> elevated: false;
+    in property <bool> interactive: false;
+
+    callback clicked();
+
+    background: root.elevated ? Theme.surface-elevated : Theme.surface;
+    border-radius: Theme.radius-lg;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    if root.interactive : TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+}

@@ -1,0 +1,70 @@
+[package]
+name = "parkhub-client"
+description = "ParkHub Client - Desktop application for parking management"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "parkhub"
+path = "src/main.rs"
+
+[dependencies]
+parkhub-common.workspace = true
+
+# UI Framework
+slint = { version = "1.14", default-features = false, features = [
+    "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2", "raw-window-handle-06"
+] }
+raw-window-handle = "0.6"
+
+# Async runtime
+tokio.workspace = true
+
+# HTTP Client
+reqwest.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+toml = "0.8"
+chrono.workspace = true
+uuid.workspace = true
+
+# Local storage paths
+directories = "5"
+
+# Logging
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Network discovery (mDNS/DNS-SD) for server autodiscovery
+mdns-sd.workspace = true
+
+# TLS certificate handling
+rustls.workspace = true
+rustls-pemfile.workspace = true
+
+# Random for mock data (temporary)
+rand = "0.8"
+
+[build-dependencies]
+slint-build = "1.14"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_HiDpi",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Input_KeyboardAndMouse"
+] }

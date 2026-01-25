@@ -1,0 +1,572 @@
+// Vehicle Management - Add and manage vehicles/license plates
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+
+// Vehicle data structure
+export struct VehicleInfo {
+    id: string,
+    license-plate: string,
+    make: string,
+    model: string,
+    vehicle-color: string,
+    vehicle-type: string,
+    is-default: bool,
+}
+
+// Vehicle card component
+component VehicleCard inherits Rectangle {
+    in property <VehicleInfo> vehicle;
+    in property <bool> is-selected: false;
+
+    callback selected();
+    callback edit();
+    callback delete();
+    callback set-default();
+
+    height: 80px;
+    border-radius: 12px;
+    background: root.is-selected ? Theme.primary.transparentize(0.85) : Theme.surface;
+    border-width: root.is-selected ? 2px : 1px;
+    border-color: root.is-selected ? Theme.primary : Theme.border;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Vehicle icon
+        Rectangle {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: vehicle.is-default ? Theme.primary.transparentize(0.8) : Theme.surface-elevated;
+
+            // Car silhouette
+            Rectangle {
+                width: 32px;
+                height: 18px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 6px;
+                background: vehicle.is-default ? Theme.primary : Theme.text-tertiary;
+
+                // Wheels
+                Rectangle {
+                    width: 6px;
+                    height: 6px;
+                    x: 4px;
+                    y: parent.height - 2px;
+                    border-radius: 3px;
+                    background: Theme.surface;
+                }
+                Rectangle {
+                    width: 6px;
+                    height: 6px;
+                    x: parent.width - 10px;
+                    y: parent.height - 2px;
+                    border-radius: 3px;
+                    background: Theme.surface;
+                }
+            }
+        }
+
+        // Vehicle info
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: vehicle.license-plate;
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                if vehicle.is-default : Rectangle {
+                    width: 60px;
+                    height: 20px;
+                    border-radius: 4px;
+                    background: Theme.primary.transparentize(0.8);
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: "Standard";
+                        font-size: 10px;
+                        font-weight: 600;
+                        color: Theme.primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: vehicle.make != "" ? vehicle.make + " " + vehicle.model : "Fahrzeug";
+                font-size: 13px;
+                color: Theme.text-secondary;
+            }
+        }
+
+        // Action buttons
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+
+            // Menu button
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: menu-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                menu-touch := TouchArea {
+                    clicked => { root.edit(); }
+                    mouse-cursor: pointer;
+                }
+
+                // Three dots
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 3px;
+                    y: (parent.height - 4px) / 2;
+                    height: 4px;
+
+                    for i in 3: Rectangle {
+                        width: 4px;
+                        height: 4px;
+                        border-radius: 2px;
+                        background: Theme.text-secondary;
+                    }
+                }
+            }
+        }
+    }
+
+    TouchArea {
+        clicked => { root.selected(); }
+        mouse-cursor: pointer;
+    }
+}
+
+// Add vehicle form
+component AddVehicleForm inherits Rectangle {
+    in-out property <string> license-plate: "";
+    in-out property <string> make: "";
+    in-out property <string> model: "";
+    in-out property <string> vehicle-color: "";
+    in-out property <bool> is-default: false;
+
+    callback save();
+    callback cancel();
+
+    background: Theme.surface;
+    border-radius: 12px;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 16px;
+
+        // Header
+        Text {
+            text: "Neues Fahrzeug hinzufügen";
+            font-size: 18px;
+            font-weight: 600;
+            color: Theme.text-primary;
+        }
+
+        // License plate input
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Kennzeichen *";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+            }
+
+            Rectangle {
+                height: 44px;
+                border-radius: 8px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                plate-input := TextInput {
+                    text <=> root.license-plate;
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Make input
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Marke";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+            }
+
+            Rectangle {
+                height: 44px;
+                border-radius: 8px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                make-input := TextInput {
+                    text <=> root.make;
+                    font-size: 14px;
+                    color: Theme.text-primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Model input
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Modell";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+            }
+
+            Rectangle {
+                height: 44px;
+                border-radius: 8px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                model-input := TextInput {
+                    text <=> root.model;
+                    font-size: 14px;
+                    color: Theme.text-primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Color input
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Farbe";
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.text-secondary;
+            }
+
+            Rectangle {
+                height: 44px;
+                border-radius: 8px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                color-input := TextInput {
+                    text <=> root.vehicle-color;
+                    font-size: 14px;
+                    color: Theme.text-primary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Default vehicle toggle
+        Rectangle {
+            height: 44px;
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Als Standard-Fahrzeug festlegen";
+                    font-size: 14px;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                Rectangle {
+                    width: 48px;
+                    height: 26px;
+                    border-radius: 13px;
+                    background: root.is-default ? Theme.primary : #3a3a3a;
+                    y: (parent.height - self.height) / 2;
+
+                    Rectangle {
+                        x: root.is-default ? parent.width - self.width - 3px : 3px;
+                        y: (parent.height - self.height) / 2;
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 10px;
+                        background: white;
+
+                        animate x { duration: 150ms; }
+                    }
+
+                    TouchArea {
+                        clicked => { root.is-default = !root.is-default; }
+                        mouse-cursor: pointer;
+                    }
+                }
+            }
+        }
+
+        // Action buttons
+        HorizontalLayout {
+            spacing: 12px;
+
+            Button {
+                horizontal-stretch: 1;
+                text: "Abbrechen";
+                clicked => { root.cancel(); }
+            }
+
+            Button {
+                horizontal-stretch: 1;
+                text: "Speichern";
+                primary: true;
+                clicked => { root.save(); }
+            }
+        }
+    }
+}
+
+// Main vehicle management panel
+export component VehicleManagement inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[VehicleInfo]> vehicles: [];
+    in-out property <bool> show-add-form: false;
+    in-out property <string> selected-vehicle-id: "";
+
+    // Callbacks
+    callback close-panel();
+    callback add-vehicle(string, string, string, string, bool);  // plate, make, model, color, is-default
+    callback edit-vehicle(string);
+    callback delete-vehicle(string);
+    callback set-default-vehicle(string);
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Fahrzeuge";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Add button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: Theme.primary;
+
+                    add-touch := TouchArea {
+                        clicked => { root.show-add-form = true; }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Plus icon
+                    Rectangle {
+                        width: 14px;
+                        height: 2px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        background: white;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 14px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        background: white;
+                        border-radius: 1px;
+                    }
+                }
+            }
+        }
+
+        // Content
+        if !root.show-add-form : Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: 12px;
+
+                if vehicles.length == 0 : Card {
+                    VerticalLayout {
+                        padding: 32px;
+                        alignment: center;
+                        spacing: 16px;
+
+                        // Car icon placeholder
+                        Rectangle {
+                            width: 80px;
+                            height: 80px;
+                            border-radius: 40px;
+                            background: Theme.surface-elevated;
+
+                            Rectangle {
+                                width: 40px;
+                                height: 24px;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                                border-radius: 8px;
+                                background: Theme.text-tertiary;
+                            }
+                        }
+
+                        Text {
+                            text: "Keine Fahrzeuge";
+                            font-size: 16px;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Füge dein erstes Fahrzeug hinzu,\num schneller zu buchen.";
+                            font-size: 13px;
+                            color: Theme.text-tertiary;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+
+                        Button {
+                            text: "Fahrzeug hinzufügen";
+                            primary: true;
+                            clicked => { root.show-add-form = true; }
+                        }
+                    }
+                }
+
+                for vehicle in root.vehicles : VehicleCard {
+                    vehicle: vehicle;
+                    is-selected: vehicle.id == root.selected-vehicle-id;
+
+                    selected => {
+                        root.selected-vehicle-id = vehicle.id;
+                    }
+                    edit => {
+                        root.edit-vehicle(vehicle.id);
+                    }
+                    delete => {
+                        root.delete-vehicle(vehicle.id);
+                    }
+                    set-default => {
+                        root.set-default-vehicle(vehicle.id);
+                    }
+                }
+            }
+        }
+
+        // Add form overlay
+        if root.show-add-form : Rectangle {
+            vertical-stretch: 1;
+            background: Theme.background;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+
+                AddVehicleForm {
+                    save => {
+                        root.add-vehicle(
+                            self.license-plate,
+                            self.make,
+                            self.model,
+                            self.vehicle-color,
+                            self.is-default
+                        );
+                        root.show-add-form = false;
+                    }
+                    cancel => {
+                        root.show-add-form = false;
+                    }
+                }
+            }
+        }
+    }
+}

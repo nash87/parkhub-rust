@@ -1,0 +1,731 @@
+// Calendar View - Future booking calendar and scheduler
+
+import { Theme } from "theme.slint";
+import { Button, Card } from "components/mod.slint";
+
+// Calendar day data
+export struct CalendarDay {
+    day: int,
+    is-current-month: bool,
+    is-today: bool,
+    is-selected: bool,
+    has-booking: bool,
+    booking-count: int,
+}
+
+// Booking slot for time picker
+export struct TimeSlotOption {
+    start-time: string,
+    end-time: string,
+    is-available: bool,
+    price: float,
+}
+
+// Scheduled booking data
+export struct ScheduledBooking {
+    id: string,
+    date: string,
+    start-time: string,
+    end-time: string,
+    slot-number: int,
+    floor-name: string,
+    status: string,
+}
+
+// Calendar header with month navigation
+component CalendarHeader inherits Rectangle {
+    in property <string> month-year: "January 2026";
+
+    callback previous-month();
+    callback next-month();
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        padding: 0;
+        spacing: 8px;
+
+        // Previous month button
+        Rectangle {
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            background: prev-touch.has-hover ? Theme.surface-elevated : transparent;
+
+            prev-touch := TouchArea {
+                clicked => { root.previous-month(); }
+                mouse-cursor: pointer;
+            }
+
+            // Left arrow
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 16px;
+                y: 17px;
+                background: Theme.text-primary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 6px;
+                height: 2px;
+                x: 12px;
+                y: 14px;
+                background: Theme.text-primary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 6px;
+                height: 2px;
+                x: 12px;
+                y: 20px;
+                background: Theme.text-primary;
+                border-radius: 1px;
+            }
+        }
+
+        // Month/Year display
+        Text {
+            horizontal-stretch: 1;
+            text: root.month-year;
+            font-size: 18px;
+            font-weight: 600;
+            color: Theme.text-primary;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        // Next month button
+        Rectangle {
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            background: next-touch.has-hover ? Theme.surface-elevated : transparent;
+
+            next-touch := TouchArea {
+                clicked => { root.next-month(); }
+                mouse-cursor: pointer;
+            }
+
+            // Right arrow
+            Rectangle {
+                width: 8px;
+                height: 2px;
+                x: 12px;
+                y: 17px;
+                background: Theme.text-primary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 6px;
+                height: 2px;
+                x: 16px;
+                y: 14px;
+                background: Theme.text-primary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 6px;
+                height: 2px;
+                x: 16px;
+                y: 20px;
+                background: Theme.text-primary;
+                border-radius: 1px;
+            }
+        }
+    }
+}
+
+// Weekday header row
+component WeekdayHeader inherits Rectangle {
+    height: 32px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 0;
+
+        for day in ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"] : Rectangle {
+            horizontal-stretch: 1;
+
+            Text {
+                text: day;
+                font-size: 11px;
+                font-weight: 600;
+                color: Theme.text-tertiary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// Single calendar day cell
+component CalendarDayCell inherits Rectangle {
+    in property <CalendarDay> day-data;
+
+    callback clicked();
+
+    property <bool> is-interactive: day-data.is-current-month;
+    property <color> bg-color: day-data.is-selected ? Theme.primary :
+                               day-data.is-today ? Theme.primary.transparentize(0.85) :
+                               cell-touch.has-hover && root.is-interactive ? Theme.surface-elevated :
+                               transparent;
+    property <color> text-color: day-data.is-selected ? Theme.on-primary :
+                                 !day-data.is-current-month ? Theme.text-tertiary.transparentize(0.5) :
+                                 day-data.is-today ? Theme.primary :
+                                 Theme.text-primary;
+
+    height: 44px;
+    border-radius: 22px;
+    background: root.bg-color;
+
+    animate background { duration: 150ms; }
+
+    cell-touch := TouchArea {
+        enabled: root.is-interactive;
+        clicked => { root.clicked(); }
+        mouse-cursor: root.is-interactive ? pointer : default;
+    }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+
+        Text {
+            text: day-data.day;
+            font-size: 14px;
+            font-weight: day-data.is-today || day-data.is-selected ? 700 : 400;
+            color: root.text-color;
+            horizontal-alignment: center;
+        }
+
+        // Booking indicator dot
+        if day-data.has-booking && day-data.is-current-month : Rectangle {
+            width: day-data.booking-count > 1 ? 16px : 6px;
+            height: 6px;
+            border-radius: 3px;
+            background: day-data.is-selected ? Theme.on-primary.transparentize(0.3) : Theme.secondary;
+            x: (parent.width - self.width) / 2;
+
+            if day-data.booking-count > 1 : Text {
+                text: day-data.booking-count;
+                font-size: 8px;
+                font-weight: 700;
+                color: day-data.is-selected ? Theme.primary : white;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// Calendar grid
+component CalendarGrid inherits Rectangle {
+    in property <[CalendarDay]> days: [];
+
+    callback day-clicked(int);
+
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 4px;
+
+        // Row 1 (days 0-6)
+        HorizontalLayout {
+            spacing: 0;
+            for i in [0, 1, 2, 3, 4, 5, 6] : CalendarDayCell {
+                horizontal-stretch: 1;
+                day-data: root.days[i];
+                clicked => { root.day-clicked(root.days[i].day); }
+            }
+        }
+
+        // Row 2 (days 7-13)
+        HorizontalLayout {
+            spacing: 0;
+            for i in [7, 8, 9, 10, 11, 12, 13] : CalendarDayCell {
+                horizontal-stretch: 1;
+                day-data: root.days[i];
+                clicked => { root.day-clicked(root.days[i].day); }
+            }
+        }
+
+        // Row 3 (days 14-20)
+        HorizontalLayout {
+            spacing: 0;
+            for i in [14, 15, 16, 17, 18, 19, 20] : CalendarDayCell {
+                horizontal-stretch: 1;
+                day-data: root.days[i];
+                clicked => { root.day-clicked(root.days[i].day); }
+            }
+        }
+
+        // Row 4 (days 21-27)
+        HorizontalLayout {
+            spacing: 0;
+            for i in [21, 22, 23, 24, 25, 26, 27] : CalendarDayCell {
+                horizontal-stretch: 1;
+                day-data: root.days[i];
+                clicked => { root.day-clicked(root.days[i].day); }
+            }
+        }
+
+        // Row 5 (days 28-34)
+        HorizontalLayout {
+            spacing: 0;
+            for i in [28, 29, 30, 31, 32, 33, 34] : CalendarDayCell {
+                horizontal-stretch: 1;
+                day-data: root.days[i];
+                clicked => { root.day-clicked(root.days[i].day); }
+            }
+        }
+
+        // Row 6 (days 35-41) - optional for months that need it
+        if days.length > 35 : HorizontalLayout {
+            spacing: 0;
+            for i in [35, 36, 37, 38, 39, 40, 41] : CalendarDayCell {
+                horizontal-stretch: 1;
+                day-data: root.days[i];
+                clicked => { root.day-clicked(root.days[i].day); }
+            }
+        }
+    }
+}
+
+// Time slot picker
+component TimeSlotPicker inherits Rectangle {
+    in property <[TimeSlotOption]> time-slots: [];
+    in-out property <int> selected-index: -1;
+
+    callback slot-selected(int);
+
+    background: Theme.surface;
+    border-radius: 12px;
+
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+
+        Text {
+            text: "Zeitfenster wählen";
+            font-size: 14px;
+            font-weight: 600;
+            color: Theme.text-primary;
+        }
+
+        // Time slots grid
+        for slot[idx] in root.time-slots : Rectangle {
+            height: 48px;
+            border-radius: 10px;
+            background: idx == root.selected-index ? Theme.primary :
+                        !slot.is-available ? Theme.surface-elevated.transparentize(0.5) :
+                        slot-touch.has-hover ? Theme.surface-elevated : Theme.background;
+            border-width: 1px;
+            border-color: idx == root.selected-index ? Theme.primary :
+                         !slot.is-available ? Theme.border.transparentize(0.5) :
+                         Theme.border;
+
+            slot-touch := TouchArea {
+                enabled: slot.is-available;
+                clicked => {
+                    root.selected-index = idx;
+                    root.slot-selected(idx);
+                }
+                mouse-cursor: slot.is-available ? pointer : not-allowed;
+            }
+
+            HorizontalLayout {
+                padding: 12px;
+                spacing: 8px;
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: slot.start-time + " - " + slot.end-time;
+                    font-size: 14px;
+                    font-weight: idx == root.selected-index ? 600 : 400;
+                    color: idx == root.selected-index ? Theme.on-primary :
+                           !slot.is-available ? Theme.text-tertiary : Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                if !slot.is-available : Text {
+                    text: "Belegt";
+                    font-size: 11px;
+                    font-weight: 500;
+                    color: Theme.error;
+                    vertical-alignment: center;
+                }
+
+                if slot.is-available : Text {
+                    text: slot.price + " EUR";
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: idx == root.selected-index ? Theme.on-primary : Theme.secondary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+// Upcoming booking card
+component UpcomingBookingCard inherits Rectangle {
+    in property <ScheduledBooking> booking;
+
+    callback cancel-booking();
+    callback view-details();
+
+    height: 80px;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // Date column
+        Rectangle {
+            width: 50px;
+            height: 56px;
+            border-radius: 10px;
+            background: Theme.primary.transparentize(0.9);
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 0;
+
+                Text {
+                    text: booking.date;
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: Theme.primary;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: booking.start-time;
+                    font-size: 11px;
+                    color: Theme.text-secondary;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Details
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: "Platz #" + booking.slot-number;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                Rectangle {
+                    width: 4px;
+                    height: 4px;
+                    border-radius: 2px;
+                    background: Theme.text-tertiary;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: booking.floor-name;
+                    font-size: 13px;
+                    color: Theme.text-secondary;
+                    vertical-alignment: center;
+                }
+            }
+
+            Text {
+                text: booking.start-time + " - " + booking.end-time;
+                font-size: 12px;
+                color: Theme.text-tertiary;
+            }
+        }
+
+        // Cancel button
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: cancel-touch.has-hover ? Theme.error.transparentize(0.85) : transparent;
+            y: (parent.height - self.height) / 2;
+
+            cancel-touch := TouchArea {
+                clicked => { root.cancel-booking(); }
+                mouse-cursor: pointer;
+            }
+
+            // X icon
+            Rectangle {
+                width: 12px;
+                height: 2px;
+                x: 10px;
+                y: 15px;
+                background: cancel-touch.has-hover ? Theme.error : Theme.text-tertiary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 2px;
+                height: 12px;
+                x: 15px;
+                y: 10px;
+                background: cancel-touch.has-hover ? Theme.error : Theme.text-tertiary;
+                border-radius: 1px;
+            }
+        }
+    }
+}
+
+// Main calendar view component
+export component CalendarView inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <string> month-year: "Januar 2026";
+    in property <[CalendarDay]> calendar-days: [];
+    in property <int> selected-day: 0;
+    in property <[TimeSlotOption]> available-time-slots: [];
+    in property <[ScheduledBooking]> upcoming-bookings: [];
+    in property <string> selected-date-display: "";
+    in property <bool> is-loading: false;
+
+    // Callbacks
+    callback close-panel();
+    callback previous-month();
+    callback next-month();
+    callback day-selected(int);
+    callback time-slot-selected(int);
+    callback book-time-slot(int, int); // day, slot index
+    callback cancel-scheduled-booking(string);
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Buchungskalender";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Calendar card
+                Card {
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        CalendarHeader {
+                            month-year: root.month-year;
+                            previous-month => { root.previous-month(); }
+                            next-month => { root.next-month(); }
+                        }
+
+                        WeekdayHeader { }
+
+                        CalendarGrid {
+                            days: root.calendar-days;
+                            day-clicked(day) => { root.day-selected(day); }
+                        }
+                    }
+                }
+
+                // Selected date info
+                if root.selected-day > 0 : VerticalLayout {
+                    spacing: 12px;
+
+                    Text {
+                        text: root.selected-date-display;
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    if root.available-time-slots.length > 0 : TimeSlotPicker {
+                        time-slots: root.available-time-slots;
+                        slot-selected(idx) => { root.time-slot-selected(idx); }
+                    }
+
+                    if root.available-time-slots.length == 0 : Card {
+                        VerticalLayout {
+                            padding: 24px;
+                            alignment: center;
+                            spacing: 8px;
+
+                            Text {
+                                text: "Keine Zeitfenster verfügbar";
+                                font-size: 14px;
+                                font-weight: 500;
+                                color: Theme.text-secondary;
+                                horizontal-alignment: center;
+                            }
+
+                            Text {
+                                text: "Alle Plätze für diesen Tag sind bereits gebucht.";
+                                font-size: 12px;
+                                color: Theme.text-tertiary;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Upcoming bookings section
+                if root.upcoming-bookings.length > 0 : VerticalLayout {
+                    spacing: 12px;
+                    padding-top: 8px;
+
+                    Text {
+                        text: "Anstehende Buchungen";
+                        font-size: 16px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    for booking in root.upcoming-bookings : UpcomingBookingCard {
+                        booking: booking;
+                        cancel-booking => { root.cancel-scheduled-booking(booking.id); }
+                    }
+                }
+
+                // Empty state for no upcoming bookings
+                if root.upcoming-bookings.length == 0 && root.selected-day == 0 : Card {
+                    VerticalLayout {
+                        padding: 32px;
+                        alignment: center;
+                        spacing: 12px;
+
+                        // Calendar icon
+                        Rectangle {
+                            width: 56px;
+                            height: 56px;
+                            border-radius: 28px;
+                            background: Theme.primary.transparentize(0.9);
+                            x: (parent.width - self.width - 64px) / 2;
+
+                            Rectangle {
+                                width: 28px;
+                                height: 24px;
+                                x: 14px;
+                                y: 18px;
+                                border-radius: 4px;
+                                border-width: 2px;
+                                border-color: Theme.primary;
+                                background: transparent;
+                            }
+                            Rectangle {
+                                width: 6px;
+                                height: 8px;
+                                x: 18px;
+                                y: 12px;
+                                border-radius: 1px;
+                                background: Theme.primary;
+                            }
+                            Rectangle {
+                                width: 6px;
+                                height: 8px;
+                                x: 32px;
+                                y: 12px;
+                                border-radius: 1px;
+                                background: Theme.primary;
+                            }
+                        }
+
+                        Text {
+                            text: "Keine geplanten Buchungen";
+                            font-size: 16px;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Wähle einen Tag im Kalender,\num einen Parkplatz zu reservieren.";
+                            font-size: 13px;
+                            color: Theme.text-tertiary;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,71 @@
+// Phosphor Icons for Securanido Parking
+// Font loaded from fonts/Phosphor.ttf
+
+// Import the Phosphor font file so Slint can embed it
+import "../fonts/Phosphor.ttf";
+
+// Phosphor icon unicode mappings (Regular weight)
+// Reference: https://phosphoricons.com/
+
+export global PhosphorIcons {
+    // Common icons used in the app
+    out property <string> camera: "\u{e064}";           // Camera icon for screenshots
+    out property <string> camera-plus: "\u{e06a}";      // Camera with plus
+    out property <string> x: "\u{e4f6}";                // X/Close
+    out property <string> minus: "\u{e2e2}";            // Minus/Minimize
+    out property <string> square: "\u{e422}";           // Square/Maximize
+    out property <string> arrows-out: "\u{e02e}";       // Expand
+    out property <string> arrows-in: "\u{e02a}";        // Collapse
+    out property <string> sign-out: "\u{e3e2}";         // Logout
+    out property <string> gear: "\u{e1a4}";             // Settings
+    out property <string> house: "\u{e1f4}";            // Home
+    out property <string> calendar: "\u{e06e}";         // Calendar
+    out property <string> list: "\u{e2a2}";             // List/Bookings
+    out property <string> list-bullets: "\u{e2a8}";     // List with bullets
+    out property <string> car: "\u{e076}";              // Car
+    out property <string> parking: "\u{e30c}";          // Parking (P icon)
+    out property <string> arrow-clockwise: "\u{e01a}";  // Refresh single
+    out property <string> arrows-clockwise: "\u{e028}"; // Refresh double arrows
+    out property <string> plus: "\u{e368}";             // Plus/Add
+    out property <string> trash: "\u{e47c}";            // Delete
+    out property <string> pencil: "\u{e31a}";           // Edit
+    out property <string> floppy-disk: "\u{e154}";      // Save
+    out property <string> folder-open: "\u{e16c}";      // Load/Open
+    out property <string> grid-four: "\u{e1b4}";        // Grid
+    out property <string> magnifying-glass-plus: "\u{e2c2}";  // Zoom in
+    out property <string> magnifying-glass-minus: "\u{e2be}"; // Zoom out
+    out property <string> arrow-left: "\u{e012}";       // Back
+    out property <string> check: "\u{e088}";            // Checkmark
+    out property <string> check-circle: "\u{e08c}";     // Checkmark in circle
+    out property <string> cursor-click: "\u{e0bc}";     // Cursor click
+    out property <string> warning: "\u{e4d8}";          // Warning
+    out property <string> info: "\u{e210}";             // Info
+    out property <string> user: "\u{e48a}";             // User
+    out property <string> users: "\u{e490}";            // Users
+    out property <string> lightning: "\u{e284}";        // Electric/Charging
+    out property <string> wheelchair: "\u{e4ea}";       // Handicap
+    out property <string> motorcycle: "\u{e2f4}";       // Motorcycle
+    out property <string> wall: "\u{e4b0}";             // Wall
+    out property <string> columns: "\u{e0a0}";          // Pillar/Column
+    out property <string> sign-in: "\u{e3de}";          // Entry
+    out property <string> arrow-square-out: "\u{e036}"; // Exit
+    out property <string> path: "\u{e312}";             // Lane/Path
+    out property <string> arrow-right: "\u{e01e}";      // Arrow right
+    out property <string> clock: "\u{e096}";            // Clock/Time
+    out property <string> credit-card: "\u{e0b4}";      // Payment
+    out property <string> receipt: "\u{e384}";          // Receipt/Invoice
+}
+
+// Icon component using Phosphor font
+export component Icon inherits Text {
+    in property <string> icon;
+    in property <color> icon-color: #cccccc;
+    in property <length> icon-size: 16px;
+
+    text: icon;
+    font-family: "Phosphor";
+    font-size: icon-size;
+    color: icon-color;
+    horizontal-alignment: center;
+    vertical-alignment: center;
+}

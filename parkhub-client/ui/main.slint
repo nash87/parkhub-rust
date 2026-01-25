@@ -1,0 +1,1170 @@
+// Main Window - Application entry point
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+import { LoginScreen, DevUser } from "login.slint";
+import { ParkingView, ParkingSlotData, BookingData, DurationOption, SlotStatus } from "parking.slint";
+import { LayoutEditor, LayoutElement, SavedLayout, ElementType } from "layout_editor.slint";
+import { SettingsPanel, AppSettings } from "settings.slint";
+import { VehicleManagement, VehicleInfo } from "vehicles.slint";
+import { BookingConfirmationDialog, CancelBookingDialog, SuccessDialog, ErrorDialog, LoadingOverlay } from "dialogs.slint";
+import { StatisticsPanel, MonthlyStatData } from "statistics.slint";
+import { ToastContainer, ToastData, ToastType } from "toast.slint";
+import { BookingHistoryPanel, HistoryBooking, HistoryFilter } from "history.slint";
+import { FloorList, FloorTabs, FloorDropdown, FloorOverview, FloorInfo } from "floor_selector.slint";
+import { PaymentPanel, PaymentMethodInfo, PaymentSummary } from "payment.slint";
+import { AdminDashboard, AdminStats, AdminSlotInfo } from "admin.slint";
+import { CalendarView, CalendarDay, TimeSlotOption, ScheduledBooking } from "calendar.slint";
+import { FavoritesPanel, FavoriteSpot } from "favorites.slint";
+import { NotificationsPanel, NotificationItem, NotificationType, ReminderSettings } from "notifications.slint";
+
+export { Theme, Tr, PhosphorIcons, Icon, DevUser, ParkingSlotData, BookingData, DurationOption, SlotStatus, LayoutElement, SavedLayout, ElementType }
+export { AppSettings, VehicleInfo, MonthlyStatData, ToastData, ToastType, HistoryBooking, HistoryFilter, FloorInfo }
+export { PaymentMethodInfo, PaymentSummary, AdminStats, AdminSlotInfo, CalendarDay, TimeSlotOption, ScheduledBooking }
+export { FavoriteSpot, NotificationItem, NotificationType, ReminderSettings }
+
+export enum AppView {
+    Login,
+    Parking,
+    LayoutEditor,
+    Settings,
+    Vehicles,
+    Statistics,
+    History,
+    Payment,
+    Admin,
+    Calendar,
+    Favorites,
+    Notifications,
+}
+
+export struct CurrentUser {
+    id: string,
+    email: string,
+    name: string,
+    initial: string,  // First letter of name for avatar
+    picture: string,
+    role: string,
+}
+
+export component MainWindow inherits Window {
+    title: "Securanido Parking";
+    no-frame: true;  // Custom frameless window like pmos-controller
+    min-width: 450px;
+    min-height: 700px;
+    preferred-width: 450px;
+    preferred-height: 800px;
+    background: Theme.background;
+
+    // Window control callbacks
+    callback minimize-window();
+    callback maximize-window();
+    callback close-window();
+    callback start-window-drag();  // For dragging the window by title bar
+    callback take-screenshot();    // For dev screenshot capture
+
+    // Screenshot notification state
+    in-out property <bool> show-screenshot-notification: false;
+    in-out property <string> screenshot-path: "";
+    in-out property <bool> screenshot-tooltip-visible: false;
+
+    // Application state
+    in-out property <AppView> current-view: AppView.Login;
+    in-out property <CurrentUser> current-user;
+    in-out property <bool> is-authenticated: false;
+
+    // Login state
+    in property <bool> login-loading: false;
+    in property <string> login-error: "";
+    in property <bool> dev-mode-enabled: true;
+    in property <[DevUser]> dev-users: [];
+    in property <string> server-mode: "local";
+    in property <string> server-url: "http://localhost:3000";
+
+    // Parking state
+    in property <string> lot-name: "Home Parking";
+    in property <int> available-slots: 0;
+    in property <int> total-slots: 10;
+    in property <[ParkingSlotData]> slots: [];
+    in property <[BookingData]> my-bookings: [];
+    in property <[DurationOption]> duration-options: [];
+    in-out property <int> selected-slot-number: -1;
+    in-out property <int> selected-duration: 60;
+    in-out property <string> license-plate: "";
+    in-out property <string> estimated-cost: "0.00 EUR";
+    in-out property <bool> show-booking-panel: false;
+    in-out property <bool> is-booking: false;
+
+    // Login callbacks
+    callback google-login();
+    callback dev-login(string);
+    callback toggle-server-mode();
+    callback logout();
+
+    // Parking callbacks
+    callback slot-tapped(int);
+    callback book-slot(int, int, string);
+    callback cancel-booking(string);
+    callback refresh-parking();
+    callback parking-tab-changed(int);
+    callback open-layout-editor();
+
+    // Layout editor state
+    in property <[LayoutElement]> layout-elements: [];
+    in property <[SavedLayout]> saved-layouts: [];
+    in-out property <ElementType> editor-selected-tool: ElementType.ParkingSlot;
+    in-out property <string> editor-selected-element-id: "";
+    in-out property <bool> editor-show-grid: true;
+    in-out property <int> editor-grid-size: 40;
+    in-out property <float> editor-zoom: 1.0;
+    in-out property <string> editor-layout-name: "My Parking Lot";
+    in-out property <bool> editor-show-saved-layouts: false;
+    in-out property <int> editor-next-slot-number: 1;
+
+    // Layout editor callbacks
+    callback editor-add-element(ElementType, float, float);
+    callback editor-select-element(string);
+    callback editor-move-element(string, float, float);
+    callback editor-rotate-element(string);
+    callback editor-delete-element(string);
+    callback editor-save-layout(string);
+    callback editor-load-layout(string);
+    callback editor-delete-layout(string);
+    callback editor-clear-canvas();
+    callback editor-toggle-grid();
+    callback editor-zoom-in();
+    callback editor-zoom-out();
+    callback editor-back();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NEW FEATURE STATES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Settings state
+    in property <AppSettings> app-settings: {
+        dark-mode: true,
+        notifications-enabled: true,
+        sound-enabled: true,
+        vibration-enabled: false,
+        language: "de",
+        currency: "EUR",
+        auto-extend-booking: false,
+        default-duration: 60,
+    };
+
+    // Vehicle state
+    in property <[VehicleInfo]> vehicles: [];
+    in-out property <string> selected-vehicle-id: "";
+
+    // Statistics state
+    in property <int> stats-total-bookings: 0;
+    in property <float> stats-total-hours: 0;
+    in property <float> stats-total-spent: 0;
+    in property <string> stats-favorite-lot: "";
+    in property <int> stats-favorite-slot: 0;
+    in property <float> stats-average-duration: 0;
+    in property <int> stats-bookings-this-month: 0;
+    in property <[MonthlyStatData]> stats-monthly-breakdown: [];
+
+    // History state
+    in property <[HistoryBooking]> history-bookings: [];
+    in-out property <HistoryFilter> history-filter: HistoryFilter.All;
+
+    // Floor state
+    in property <[FloorInfo]> floors: [];
+    in-out property <string> selected-floor-id: "";
+
+    // Payment state
+    in property <[PaymentMethodInfo]> payment-methods: [];
+    in property <PaymentSummary> payment-summary: {
+        base-price: 0,
+        discount: 0,
+        tax: 0,
+        total: 0,
+        currency: "EUR",
+    };
+    in-out property <string> selected-payment-method-id: "";
+
+    // General loading state
+    in property <bool> is-loading: false;
+
+    // Admin state
+    in property <AdminStats> admin-stats: {
+        total-bookings-today: 0,
+        revenue-today: 0,
+        occupancy-rate: 0,
+        active-users: 0,
+        available-slots: 0,
+        total-slots: 0,
+    };
+    in property <[AdminSlotInfo]> admin-slots: [];
+
+    // Calendar state
+    in property <string> calendar-month-year: "Januar 2026";
+    in property <[CalendarDay]> calendar-days: [];
+    in-out property <int> calendar-selected-day: 0;
+    in property <[TimeSlotOption]> calendar-time-slots: [];
+    in property <[ScheduledBooking]> scheduled-bookings: [];
+    in property <string> calendar-selected-date-display: "";
+
+    // Favorites state
+    in property <[FavoriteSpot]> favorite-spots: [];
+
+    // Notifications state
+    in property <[NotificationItem]> notifications: [];
+    in property <ReminderSettings> reminder-settings: {
+        booking-reminder-enabled: true,
+        reminder-minutes-before: 15,
+        expiry-warning-enabled: true,
+        expiry-minutes-before: 10,
+        slot-available-alerts: false,
+        price-alerts: false,
+        system-announcements: true,
+    };
+    in property <int> unread-notifications-count: 0;
+
+    // Toast state
+    in property <[ToastData]> toasts: [];
+
+    // Dialog states
+    in-out property <bool> show-booking-confirmation: false;
+    in-out property <bool> show-cancel-confirmation: false;
+    in-out property <bool> show-success-dialog: false;
+    in-out property <bool> show-error-dialog: false;
+    in-out property <bool> show-loading-overlay: false;
+    in property <string> dialog-title: "";
+    in property <string> dialog-message: "";
+
+    // Booking confirmation dialog data
+    in property <int> confirm-slot-number: 0;
+    in property <string> confirm-floor-name: "";
+    in property <string> confirm-start-time: "";
+    in property <string> confirm-end-time: "";
+    in property <int> confirm-duration-minutes: 60;
+    in property <string> confirm-license-plate: "";
+    in property <string> confirm-total-cost: "0.00 EUR";
+    in property <bool> confirm-is-loading: false;
+
+    // Cancel dialog data
+    in property <int> cancel-slot-number: 0;
+    in property <string> cancel-booking-id: "";
+    in property <string> cancel-end-time: "";
+    in property <bool> cancel-is-loading: false;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NEW FEATURE CALLBACKS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Navigation callbacks
+    callback open-settings();
+    callback open-vehicles();
+    callback open-statistics();
+    callback open-history();
+    callback open-payment();
+    callback open-admin();
+    callback open-calendar();
+    callback open-favorites();
+    callback open-notifications();
+    callback navigate-back();
+
+    // Settings callbacks
+    callback save-settings(AppSettings);
+    callback toggle-dark-mode();
+    callback change-language(string);
+
+    // Vehicle callbacks
+    callback add-vehicle-details(string, string, string, string, bool);  // plate, make, model, color, is-default
+    callback update-vehicle(VehicleInfo);
+    callback delete-vehicle(string);
+    callback set-default-vehicle(string);
+
+    // History callbacks
+    callback filter-history(HistoryFilter);
+    callback view-booking-details(string);
+    callback extend-booking(string);
+
+    // Floor callbacks
+    callback select-floor(string);
+
+    // Payment callbacks
+    callback add-payment-method();
+    callback select-payment-method(string);
+    callback process-payment();
+    callback cancel-payment();
+
+    // Admin callbacks
+    callback admin-refresh();
+    callback admin-toggle-slot-maintenance(string);
+    callback admin-force-release-slot(string);
+    callback admin-view-slot-details(string);
+    callback admin-export-report();
+    callback admin-manage-pricing();
+    callback admin-view-all-bookings();
+    callback admin-send-announcement();
+
+    // Calendar callbacks
+    callback calendar-previous-month();
+    callback calendar-next-month();
+    callback calendar-select-day(int);
+    callback calendar-select-time-slot(int);
+    callback calendar-book-slot(int, int);
+    callback calendar-cancel-scheduled-booking(string);
+
+    // Favorites callbacks
+    callback add-favorite(string);
+    callback remove-favorite(string);
+    callback quick-book-favorite(string);
+    callback save-favorite-nickname(string, string);
+
+    // Notifications callbacks
+    callback mark-all-notifications-read();
+    callback mark-notification-read(string);
+    callback dismiss-notification(string);
+    callback notification-action(string, string);
+    callback update-reminder-setting(string, bool);
+    callback update-reminder-time(string, int);
+
+    // Toast callbacks
+    callback dismiss-toast(string);
+
+    // Dialog callbacks
+    callback confirm-booking();
+    callback confirm-cancel-booking();
+    callback close-dialog();
+
+    // Main vertical layout to include title bar on all views
+    VerticalLayout {
+        spacing: 0;
+        padding: 0;
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // CUSTOM TITLE BAR (Windows-style)
+        // ═══════════════════════════════════════════════════════════════════════
+        Rectangle {
+            height: 32px;
+            background: #2d2d30;  // VS Code style dark title bar
+
+            HorizontalLayout {
+                spacing: 0;
+                padding: 0;
+
+                // Screenshot button (always visible, top-left)
+                Rectangle {
+                    width: 40px;
+                    height: 32px;
+                    background: screenshot-btn.has-hover ? Theme.primary.transparentize(0.85) : transparent;
+                    border-radius: 4px;
+
+                    screenshot-btn := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.take-screenshot(); }
+                    }
+
+                    // Camera icon - more visible
+                    HorizontalLayout {
+                        alignment: center;
+                        padding-top: 6px;
+
+                        // Camera body
+                        Rectangle {
+                            width: 18px;
+                            height: 14px;
+                            background: screenshot-btn.has-hover ? Theme.primary : #888888;
+                            border-radius: 3px;
+
+                            // Lens
+                            Rectangle {
+                                width: 8px;
+                                height: 8px;
+                                border-radius: 4px;
+                                background: screenshot-btn.has-hover ? Theme.on-primary : #555555;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+
+                                // Lens inner
+                                Rectangle {
+                                    width: 4px;
+                                    height: 4px;
+                                    border-radius: 2px;
+                                    background: screenshot-btn.has-hover ? Theme.primary : #888888;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                            }
+
+                            // Flash
+                            Rectangle {
+                                width: 4px;
+                                height: 3px;
+                                background: screenshot-btn.has-hover ? Theme.warning : #666666;
+                                border-radius: 1px;
+                                x: parent.width - self.width - 2px;
+                                y: 2px;
+                            }
+                        }
+                    }
+
+                }
+
+                // Title bar drag area (pointer-event for immediate drag on mouse down)
+                Rectangle {
+                    horizontal-stretch: 1;
+                    background: transparent;
+
+                    HorizontalLayout {
+                        padding-left: 6px;
+                        spacing: 8px;
+
+                        // App icon
+                        Rectangle {
+                            width: 18px;
+                            height: 18px;
+                            y: (parent.height - self.height) / 2;
+                            border-radius: 4px;
+                            background: Theme.primary;
+
+                            Text {
+                                text: "P";
+                                font-size: 11px;
+                                font-weight: 700;
+                                color: Theme.on-primary;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Text {
+                            text: "Securanido Parking";
+                            font-size: 13px;
+                            font-weight: 400;
+                            color: #cccccc;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // TouchArea for drag - use pointer-event for mouse down detection
+                    title-bar-drag := TouchArea {
+                        mouse-cursor: default;
+                        pointer-event(event) => {
+                            if (event.kind == PointerEventKind.down && event.button == PointerEventButton.left) {
+                                root.start-window-drag();
+                            }
+                        }
+                        double-clicked => { root.maximize-window(); }
+                    }
+                }
+
+                // Window controls (Windows 11 style)
+                HorizontalLayout {
+                    spacing: 0;
+
+                    // Minimize button
+                    Rectangle {
+                        width: 46px;
+                        height: 32px;
+                        background: min-btn.has-hover ? #3d3d40 : transparent;
+
+                        min-btn := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.minimize-window(); }
+                        }
+
+                        // Minimize line
+                        Rectangle {
+                            width: 10px;
+                            height: 1px;
+                            background: #cccccc;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // Maximize button
+                    Rectangle {
+                        width: 46px;
+                        height: 32px;
+                        background: max-btn.has-hover ? #3d3d40 : transparent;
+
+                        max-btn := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.maximize-window(); }
+                        }
+
+                        // Maximize square outline
+                        Rectangle {
+                            width: 10px;
+                            height: 10px;
+                            border-width: 1px;
+                            border-color: #cccccc;
+                            background: transparent;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    // Close button (red on hover)
+                    Rectangle {
+                        width: 46px;
+                        height: 32px;
+                        background: close-btn.has-hover ? #e81123 : transparent;
+
+                        close-btn := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.close-window(); }
+                        }
+
+                        // X icon using text
+                        Text {
+                            text: "✕";
+                            font-size: 12px;
+                            font-weight: 400;
+                            color: close-btn.has-hover ? white : #cccccc;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+    // Login Screen
+    if current-view == AppView.Login : LoginScreen {
+        is-loading: root.login-loading;
+        error-message: root.login-error;
+        dev-mode-enabled: root.dev-mode-enabled;
+        dev-users: root.dev-users;
+        server-mode: root.server-mode;
+        server-url: root.server-url;
+
+        google-login => { root.google-login(); }
+        dev-login(user-id) => { root.dev-login(user-id); }
+        toggle-server-mode => { root.toggle-server-mode(); }
+    }
+
+    // Parking View (main content after login)
+    if current-view == AppView.Parking : VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // User header bar
+        Rectangle {
+            height: 60px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                alignment: space-between;
+
+                HorizontalLayout {
+                    spacing: Theme.spacing-sm;
+
+                    // User avatar with first letter
+                    Rectangle {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 20px;
+                        background: Theme.primary;
+
+                        Text {
+                            text: root.current-user.initial != "" ? root.current-user.initial : "?";
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: Theme.on-primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2px;
+
+                        Text {
+                            text: root.current-user.name;
+                            font-size: Theme.font-size-md;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                        }
+
+                        Text {
+                            text: root.current-user.email;
+                            font-size: Theme.font-size-xs;
+                            color: Theme.text-secondary;
+                        }
+                    }
+                }
+
+                // Logout button
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 20px;
+                    background: logout-touch.has-hover ? Theme.error.transparentize(0.9) : transparent;
+
+                    logout-touch := TouchArea {
+                        clicked => { root.logout(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Exit/Logout icon (arrow leaving door)
+                    Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+
+                        // Door frame
+                        Rectangle {
+                            width: 10px;
+                            height: 18px;
+                            x: 0;
+                            y: 1px;
+                            border-width: 2px;
+                            border-color: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            border-radius: 2px;
+                            background: transparent;
+                        }
+
+                        // Arrow pointing right (exit)
+                        Rectangle {
+                            width: 8px;
+                            height: 2px;
+                            background: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            x: 10px;
+                            y: 9px;
+                        }
+                        // Arrow head top
+                        Rectangle {
+                            width: 5px;
+                            height: 2px;
+                            background: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            x: 14px;
+                            y: 6px;
+                            // Rotation not available, use positioning
+                        }
+                        // Arrow head bottom
+                        Rectangle {
+                            width: 5px;
+                            height: 2px;
+                            background: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            x: 14px;
+                            y: 12px;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Parking content
+        ParkingView {
+            vertical-stretch: 1;
+            lot-name: root.lot-name;
+            available-slots: root.available-slots;
+            total-slots: root.total-slots;
+            slots: root.slots;
+            my-bookings: root.my-bookings;
+            duration-options: root.duration-options;
+            selected-slot-number <=> root.selected-slot-number;
+            selected-duration <=> root.selected-duration;
+            license-plate <=> root.license-plate;
+            estimated-cost: root.estimated-cost;
+            show-booking-panel <=> root.show-booking-panel;
+            is-booking: root.is-booking;
+
+            slot-tapped(n) => { root.slot-tapped(n); }
+            book-slot(slot, dur, plate) => { root.book-slot(slot, dur, plate); }
+            cancel-booking(id) => { root.cancel-booking(id); }
+            refresh => { root.refresh-parking(); }
+            tab-changed(idx) => { root.parking-tab-changed(idx); }
+        }
+
+        // Dev panel overlay (bottom)
+        if root.dev-mode-enabled && root.is-authenticated : Rectangle {
+            height: 36px;
+            background: #1a1a1a.transparentize(0.1);
+
+            HorizontalLayout {
+                padding-left: Theme.spacing-md;
+                padding-right: Theme.spacing-md;
+                alignment: space-between;
+
+                Text {
+                    text: Tr.dev-mode-label;
+                    font-size: Theme.font-size-xs;
+                    font-weight: 700;
+                    color: Theme.warning;
+                    vertical-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: Theme.spacing-md;
+
+                    // Server indicator
+                    HorizontalLayout {
+                        spacing: 4px;
+
+                        Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 4px;
+                            background: root.server-mode == "local" ? Theme.warning : Theme.secondary;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        Text {
+                            text: root.server-mode == "local" ? "localhost" : "securanido.com";
+                            font-size: Theme.font-size-xs;
+                            color: Theme.text-secondary;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // Layout Editor button
+                    Rectangle {
+                        width: 65px;
+                        height: 26px;
+                        border-radius: Theme.radius-sm;
+                        background: editor-touch.pressed ? Theme.primary : Theme.primary.transparentize(0.3);
+
+                        editor-touch := TouchArea {
+                            clicked => { root.open-layout-editor(); }
+                            mouse-cursor: pointer;
+                        }
+
+                        Text {
+                            text: "Editor";
+                            font-size: Theme.font-size-xs;
+                            font-weight: 600;
+                            color: Theme.on-primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // Switch server button
+                    Rectangle {
+                        width: 55px;
+                        height: 26px;
+                        border-radius: Theme.radius-sm;
+                        background: switch-touch.pressed ? Theme.surface-elevated : Theme.surface;
+
+                        switch-touch := TouchArea {
+                            clicked => { root.toggle-server-mode(); }
+                            mouse-cursor: pointer;
+                        }
+
+                        Text {
+                            text: Tr.dev-switch;
+                            font-size: Theme.font-size-xs;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Layout Editor View
+    if current-view == AppView.LayoutEditor : LayoutEditor {
+        elements: root.layout-elements;
+        saved-layouts: root.saved-layouts;
+        selected-tool <=> root.editor-selected-tool;
+        selected-element-id <=> root.editor-selected-element-id;
+        show-grid <=> root.editor-show-grid;
+        grid-size <=> root.editor-grid-size;
+        zoom <=> root.editor-zoom;
+        layout-name <=> root.editor-layout-name;
+        show-saved-layouts <=> root.editor-show-saved-layouts;
+        next-slot-number <=> root.editor-next-slot-number;
+
+        add-element(elem-type, x, y) => { root.editor-add-element(elem-type, x, y); }
+        select-element(id) => { root.editor-select-element(id); }
+        move-element(id, dx, dy) => { root.editor-move-element(id, dx, dy); }
+        rotate-element(id) => { root.editor-rotate-element(id); }
+        delete-element(id) => { root.editor-delete-element(id); }
+        save-layout(name) => { root.editor-save-layout(name); }
+        load-layout(id) => { root.editor-load-layout(id); }
+        delete-layout(id) => { root.editor-delete-layout(id); }
+        clear-canvas => { root.editor-clear-canvas(); }
+        toggle-grid => { root.editor-toggle-grid(); }
+        zoom-in => { root.editor-zoom-in(); }
+        zoom-out => { root.editor-zoom-out(); }
+        back => { root.editor-back(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SETTINGS VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Settings : SettingsPanel {
+        settings: root.app-settings;
+
+        close-panel => { root.navigate-back(); }
+        save-settings(s) => { root.save-settings(s); }
+        toggle-dark-mode => { root.toggle-dark-mode(); }
+        change-language(lang) => { root.change-language(lang); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VEHICLES VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Vehicles : VehicleManagement {
+        vehicles: root.vehicles;
+
+        close-panel => { root.navigate-back(); }
+        add-vehicle(plate, make, model, color, is-default) => { root.add-vehicle-details(plate, make, model, color, is-default); }
+        delete-vehicle(id) => { root.delete-vehicle(id); }
+        set-default-vehicle(id) => { root.set-default-vehicle(id); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STATISTICS VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Statistics : StatisticsPanel {
+        total-bookings: root.stats-total-bookings;
+        total-hours: root.stats-total-hours;
+        total-spent: root.stats-total-spent;
+        currency: root.app-settings.currency;
+        favorite-lot: root.stats-favorite-lot;
+        favorite-slot: root.stats-favorite-slot;
+        average-duration: root.stats-average-duration;
+        bookings-this-month: root.stats-bookings-this-month;
+        monthly-breakdown: root.stats-monthly-breakdown;
+
+        close-panel => { root.navigate-back(); }
+        refresh => { root.refresh-parking(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HISTORY VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.History : BookingHistoryPanel {
+        bookings: root.history-bookings;
+        current-filter <=> root.history-filter;
+        is-loading: root.is-loading;
+
+        close-panel => { root.navigate-back(); }
+        filter-changed(f) => { root.filter-history(f); }
+        view-booking-details(id) => { root.view-booking-details(id); }
+        cancel-booking(id) => { root.cancel-booking(id); }
+        extend-booking(id) => { root.extend-booking(id); }
+        refresh => { root.refresh-parking(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PAYMENT VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Payment : PaymentPanel {
+        payment-methods: root.payment-methods;
+        summary: root.payment-summary;
+        selected-method-id <=> root.selected-payment-method-id;
+
+        close-panel => { root.navigate-back(); }
+        select-method(id) => { root.select-payment-method(id); }
+        process-payment => { root.process-payment(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ADMIN VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Admin : AdminDashboard {
+        stats: root.admin-stats;
+        slots: root.admin-slots;
+        currency: root.app-settings.currency;
+
+        close-panel => { root.navigate-back(); }
+        refresh => { root.admin-refresh(); }
+        toggle-slot-maintenance(id) => { root.admin-toggle-slot-maintenance(id); }
+        force-release-slot(id) => { root.admin-force-release-slot(id); }
+        view-slot-details(id) => { root.admin-view-slot-details(id); }
+        export-report => { root.admin-export-report(); }
+        manage-pricing => { root.admin-manage-pricing(); }
+        view-all-bookings => { root.admin-view-all-bookings(); }
+        send-announcement => { root.admin-send-announcement(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CALENDAR VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Calendar : CalendarView {
+        month-year: root.calendar-month-year;
+        calendar-days: root.calendar-days;
+        selected-day <=> root.calendar-selected-day;
+        available-time-slots: root.calendar-time-slots;
+        upcoming-bookings: root.scheduled-bookings;
+        selected-date-display: root.calendar-selected-date-display;
+
+        close-panel => { root.navigate-back(); }
+        previous-month => { root.calendar-previous-month(); }
+        next-month => { root.calendar-next-month(); }
+        day-selected(day) => { root.calendar-select-day(day); }
+        time-slot-selected(idx) => { root.calendar-select-time-slot(idx); }
+        book-time-slot(day, idx) => { root.calendar-book-slot(day, idx); }
+        cancel-scheduled-booking(id) => { root.calendar-cancel-scheduled-booking(id); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FAVORITES VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Favorites : FavoritesPanel {
+        favorites: root.favorite-spots;
+        currency: root.app-settings.currency;
+
+        close-panel => { root.navigate-back(); }
+        quick-book-spot(id) => { root.quick-book-favorite(id); }
+        remove-favorite(id) => { root.remove-favorite(id); }
+        save-nickname(id, name) => { root.save-favorite-nickname(id, name); }
+        add-new-favorite => { root.current-view = AppView.Parking; }
+        refresh => { root.refresh-parking(); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NOTIFICATIONS VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    if current-view == AppView.Notifications : NotificationsPanel {
+        notifications: root.notifications;
+        settings: root.reminder-settings;
+        unread-count: root.unread-notifications-count;
+
+        close-panel => { root.navigate-back(); }
+        mark-all-read => { root.mark-all-notifications-read(); }
+        mark-notification-read(id) => { root.mark-notification-read(id); }
+        dismiss-notification(id) => { root.dismiss-notification(id); }
+        perform-notification-action(id, data) => { root.notification-action(id, data); }
+        update-reminder-setting(key, value) => { root.update-reminder-setting(key, value); }
+        update-reminder-time(key, minutes) => { root.update-reminder-time(key, minutes); }
+    }
+
+    } // End of main VerticalLayout
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCREENSHOT NOTIFICATION OVERLAY
+    // ═══════════════════════════════════════════════════════════════════════
+    if root.show-screenshot-notification : Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: parent.height - self.height - 20px;
+        width: 360px;
+        height: 72px;
+        background: #1e1e1e;
+        border-radius: 12px;
+        border-width: 1px;
+        border-color: Theme.secondary.transparentize(0.5);
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #000000.transparentize(0.3);
+        drop-shadow-offset-y: 4px;
+
+        // Animate in
+        animate y { duration: 300ms; easing: ease-out; }
+        animate opacity { duration: 300ms; }
+
+        HorizontalLayout {
+            padding: 12px;
+            spacing: 12px;
+
+            // Success icon (graphical checkmark)
+            Rectangle {
+                width: 44px;
+                height: 44px;
+                border-radius: 22px;
+                background: Theme.secondary.transparentize(0.85);
+
+                // Checkmark shape using rectangles
+                Rectangle {
+                    width: 18px;
+                    height: 18px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+
+                    // Short leg of checkmark
+                    Rectangle {
+                        width: 3px;
+                        height: 8px;
+                        background: Theme.secondary;
+                        border-radius: 1.5px;
+                        x: 2px;
+                        y: 7px;
+                    }
+                    // Long leg of checkmark
+                    Rectangle {
+                        width: 3px;
+                        height: 14px;
+                        background: Theme.secondary;
+                        border-radius: 1.5px;
+                        x: 8px;
+                        y: 2px;
+                    }
+                }
+            }
+
+            // Text content
+            VerticalLayout {
+                alignment: center;
+                spacing: 4px;
+                horizontal-stretch: 1;
+
+                Text {
+                    text: "Screenshot Saved!";
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                }
+
+                Text {
+                    text: root.screenshot-path;
+                    font-size: 11px;
+                    color: Theme.text-secondary;
+                    overflow: elide;
+                }
+            }
+
+            // Close button
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 14px;
+                background: notif-close.has-hover ? Theme.surface-elevated : transparent;
+
+                notif-close := TouchArea {
+                    clicked => { root.show-screenshot-notification = false; }
+                    mouse-cursor: pointer;
+                }
+
+                Text {
+                    text: "✕";
+                    font-size: 12px;
+                    color: notif-close.has-hover ? Theme.text-primary : Theme.text-tertiary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCREENSHOT TOOLTIP OVERLAY (at root level to avoid clipping)
+    // ═══════════════════════════════════════════════════════════════════════
+    if screenshot-btn.has-hover : Rectangle {
+        x: 4px;
+        y: 36px;  // Below the title bar (32px title bar + 4px gap)
+        width: 120px;
+        height: 30px;
+        background: #2a2a2a;
+        border-radius: 6px;
+        border-width: 1px;
+        border-color: Theme.primary.transparentize(0.6);
+        drop-shadow-blur: 8px;
+        drop-shadow-color: #000000.transparentize(0.4);
+        drop-shadow-offset-y: 2px;
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: 6px;
+            padding-left: 8px;
+            padding-right: 8px;
+
+            // Small camera icon
+            Rectangle {
+                width: 14px;
+                height: 10px;
+                border-radius: 2px;
+                background: Theme.primary;
+                y: (parent.height - self.height) / 2;
+
+                Rectangle {
+                    width: 5px;
+                    height: 5px;
+                    border-radius: 2.5px;
+                    background: Theme.on-primary;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+
+            Text {
+                text: "Screenshot";
+                font-size: 11px;
+                font-weight: 500;
+                color: Theme.text-primary;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TOAST NOTIFICATIONS OVERLAY
+    // ═══════════════════════════════════════════════════════════════════════
+    ToastContainer {
+        x: (parent.width - self.width) / 2;
+        y: parent.height - self.height - 100px;
+        toasts: root.toasts;
+        dismiss-toast(id) => { root.dismiss-toast(id); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DIALOG OVERLAYS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Booking Confirmation Dialog
+    if root.show-booking-confirmation : BookingConfirmationDialog {
+        is-visible: true;
+        slot-number: root.confirm-slot-number;
+        floor-name: root.confirm-floor-name;
+        start-time: root.confirm-start-time;
+        end-time: root.confirm-end-time;
+        duration-minutes: root.confirm-duration-minutes;
+        license-plate: root.confirm-license-plate;
+        total-cost: root.confirm-total-cost;
+        is-loading: root.confirm-is-loading;
+
+        confirm => {
+            root.show-booking-confirmation = false;
+            root.confirm-booking();
+        }
+        cancel => { root.show-booking-confirmation = false; }
+    }
+
+    // Cancel Booking Confirmation Dialog
+    if root.show-cancel-confirmation : CancelBookingDialog {
+        is-visible: true;
+        slot-number: root.cancel-slot-number;
+        booking-id: root.cancel-booking-id;
+        end-time: root.cancel-end-time;
+        is-loading: root.cancel-is-loading;
+
+        confirm => {
+            root.show-cancel-confirmation = false;
+            root.confirm-cancel-booking();
+        }
+        cancel => { root.show-cancel-confirmation = false; }
+    }
+
+    // Success Dialog
+    if root.show-success-dialog : SuccessDialog {
+        is-visible: true;
+        title: root.dialog-title;
+        message: root.dialog-message;
+
+        close => { root.show-success-dialog = false; }
+    }
+
+    // Error Dialog
+    if root.show-error-dialog : ErrorDialog {
+        is-visible: true;
+        title: root.dialog-title;
+        message: root.dialog-message;
+
+        close => { root.show-error-dialog = false; }
+        retry => {
+            root.show-error-dialog = false;
+            root.refresh-parking();
+        }
+    }
+
+    // Loading Overlay
+    if root.show-loading-overlay : LoadingOverlay {
+        is-visible: true;
+        message: root.dialog-message != "" ? root.dialog-message : "Laden...";
+    }
+}

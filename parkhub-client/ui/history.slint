@@ -1,0 +1,523 @@
+// Booking History View - View past and upcoming bookings
+
+import { Theme } from "theme.slint";
+import { Tr } from "i18n.slint";
+import { Button, Card } from "components/mod.slint";
+import { PhosphorIcons, Icon } from "icons.slint";
+
+// Booking history item
+export struct HistoryBooking {
+    id: string,
+    slot-number: int,
+    floor-name: string,
+    lot-name: string,
+    license-plate: string,
+    start-time: string,
+    end-time: string,
+    date: string,
+    status: string,
+    cost: string,
+    can-cancel: bool,
+    can-extend: bool,
+}
+
+// Filter options
+export enum HistoryFilter {
+    All,
+    Active,
+    Completed,
+    Cancelled,
+}
+
+// Filter chip component
+component FilterChip inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected: false;
+
+    callback clicked();
+
+    height: 32px;
+    border-radius: 16px;
+    background: root.selected ? Theme.primary : Theme.surface;
+    border-width: root.selected ? 0 : 1px;
+    border-color: Theme.border;
+    padding-left: 16px;
+    padding-right: 16px;
+
+    animate background { duration: 150ms; }
+
+    TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        alignment: center;
+
+        Text {
+            text: root.label;
+            font-size: 13px;
+            font-weight: root.selected ? 600 : 400;
+            color: root.selected ? white : Theme.text-secondary;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// History item card
+component HistoryItem inherits Rectangle {
+    in property <HistoryBooking> booking;
+
+    callback view-details();
+    callback cancel-booking();
+    callback extend-booking();
+
+    property <color> status-color: booking.status == "active" ? Theme.secondary :
+                                   booking.status == "confirmed" ? Theme.info :
+                                   booking.status == "completed" ? Theme.text-tertiary :
+                                   booking.status == "cancelled" ? Theme.error :
+                                   Theme.text-tertiary;
+
+    height: 120px;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: booking.status == "active" ? Theme.secondary.transparentize(0.7) : Theme.border;
+
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Slot number
+        Rectangle {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            background: booking.status == "active" ? Theme.secondary.transparentize(0.85) :
+                        booking.status == "confirmed" ? Theme.info.transparentize(0.85) :
+                        Theme.surface-elevated;
+            y: (parent.height - self.height) / 2;
+
+            Text {
+                text: booking.slot-number;
+                font-size: 22px;
+                font-weight: 800;
+                color: booking.status == "active" ? Theme.secondary :
+                       booking.status == "confirmed" ? Theme.info :
+                       Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Details
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: booking.lot-name;
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Status badge
+                Rectangle {
+                    width: 70px;
+                    height: 20px;
+                    border-radius: 4px;
+                    background: root.status-color.transparentize(0.85);
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: booking.status == "active" ? "Aktiv" :
+                              booking.status == "confirmed" ? "Bestätigt" :
+                              booking.status == "completed" ? "Beendet" :
+                              booking.status == "cancelled" ? "Storniert" :
+                              booking.status;
+                        font-size: 10px;
+                        font-weight: 600;
+                        color: root.status-color;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: booking.floor-name + " • " + booking.date;
+                font-size: 13px;
+                color: Theme.text-secondary;
+            }
+
+            Text {
+                text: booking.start-time + " - " + booking.end-time;
+                font-size: 13px;
+                color: Theme.text-secondary;
+            }
+
+            if booking.license-plate != "" : Text {
+                text: booking.license-plate;
+                font-size: 12px;
+                color: Theme.text-tertiary;
+            }
+        }
+
+        // Right side - cost and actions
+        VerticalLayout {
+            alignment: center;
+            spacing: 8px;
+
+            Text {
+                text: booking.cost;
+                font-size: 16px;
+                font-weight: 700;
+                color: Theme.primary;
+                horizontal-alignment: right;
+            }
+
+            if booking.can-extend || booking.can-cancel : HorizontalLayout {
+                spacing: 4px;
+
+                if booking.can-extend : Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: extend-touch.has-hover ? Theme.primary.transparentize(0.8) : transparent;
+
+                    extend-touch := TouchArea {
+                        clicked => { root.extend-booking(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Plus icon
+                    Rectangle {
+                        width: 12px;
+                        height: 2px;
+                        x: 10px;
+                        y: 15px;
+                        background: Theme.primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 12px;
+                        x: 15px;
+                        y: 10px;
+                        background: Theme.primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                if booking.can-cancel : Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: cancel-touch.has-hover ? Theme.error.transparentize(0.8) : transparent;
+
+                    cancel-touch := TouchArea {
+                        clicked => { root.cancel-booking(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // X icon
+                    Rectangle {
+                        width: 12px;
+                        height: 2px;
+                        x: 10px;
+                        y: 15px;
+                        background: Theme.error;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 12px;
+                        x: 15px;
+                        y: 10px;
+                        background: Theme.error;
+                        border-radius: 1px;
+                    }
+                }
+            }
+        }
+    }
+
+    TouchArea {
+        clicked => { root.view-details(); }
+        mouse-cursor: pointer;
+    }
+}
+
+// Main booking history panel
+export component BookingHistoryPanel inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[HistoryBooking]> bookings: [];
+    in-out property <HistoryFilter> current-filter: HistoryFilter.All;
+    in property <bool> is-loading: false;
+
+    // Callbacks
+    callback close-panel();
+    callback filter-changed(HistoryFilter);
+    callback view-booking-details(string);
+    callback cancel-booking(string);
+    callback extend-booking(string);
+    callback refresh();
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Buchungsverlauf";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Refresh button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: refresh-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    refresh-touch := TouchArea {
+                        clicked => { root.refresh(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Refresh icon
+                    Rectangle {
+                        width: 18px;
+                        height: 18px;
+                        x: 9px;
+                        y: 9px;
+                        border-radius: 9px;
+                        border-width: 2px;
+                        border-color: Theme.text-secondary;
+                        background: transparent;
+                    }
+                }
+            }
+        }
+
+        // Filter bar
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            // Bottom border line
+            Rectangle {
+                width: parent.width;
+                height: 1px;
+                y: parent.height - 1px;
+                background: Theme.border;
+            }
+
+            HorizontalLayout {
+                padding-left: Theme.spacing-md;
+                padding-right: Theme.spacing-md;
+                spacing: 8px;
+
+                FilterChip {
+                    label: "Alle";
+                    selected: root.current-filter == HistoryFilter.All;
+                    clicked => {
+                        root.current-filter = HistoryFilter.All;
+                        root.filter-changed(HistoryFilter.All);
+                    }
+                }
+
+                FilterChip {
+                    label: "Aktiv";
+                    selected: root.current-filter == HistoryFilter.Active;
+                    clicked => {
+                        root.current-filter = HistoryFilter.Active;
+                        root.filter-changed(HistoryFilter.Active);
+                    }
+                }
+
+                FilterChip {
+                    label: "Beendet";
+                    selected: root.current-filter == HistoryFilter.Completed;
+                    clicked => {
+                        root.current-filter = HistoryFilter.Completed;
+                        root.filter-changed(HistoryFilter.Completed);
+                    }
+                }
+
+                FilterChip {
+                    label: "Storniert";
+                    selected: root.current-filter == HistoryFilter.Cancelled;
+                    clicked => {
+                        root.current-filter = HistoryFilter.Cancelled;
+                        root.filter-changed(HistoryFilter.Cancelled);
+                    }
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: 12px;
+
+                // Loading state
+                if root.is-loading : Card {
+                    VerticalLayout {
+                        padding: 32px;
+                        alignment: center;
+
+                        Text {
+                            text: "Laden...";
+                            font-size: 14px;
+                            color: Theme.text-secondary;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                // Empty state
+                if !root.is-loading && bookings.length == 0 : Card {
+                    VerticalLayout {
+                        padding: 32px;
+                        alignment: center;
+                        spacing: 16px;
+
+                        // Empty icon
+                        Rectangle {
+                            width: 64px;
+                            height: 64px;
+                            border-radius: 32px;
+                            background: Theme.surface-elevated;
+                            x: (parent.width - self.width - 64px) / 2;
+
+                            // List icon
+                            Rectangle {
+                                width: 24px;
+                                height: 3px;
+                                x: 20px;
+                                y: 22px;
+                                background: Theme.text-tertiary;
+                                border-radius: 1.5px;
+                            }
+                            Rectangle {
+                                width: 20px;
+                                height: 3px;
+                                x: 20px;
+                                y: 30px;
+                                background: Theme.text-tertiary;
+                                border-radius: 1.5px;
+                            }
+                            Rectangle {
+                                width: 16px;
+                                height: 3px;
+                                x: 20px;
+                                y: 38px;
+                                background: Theme.text-tertiary;
+                                border-radius: 1.5px;
+                            }
+                        }
+
+                        Text {
+                            text: root.current-filter == HistoryFilter.All ? "Keine Buchungen" :
+                                  root.current-filter == HistoryFilter.Active ? "Keine aktiven Buchungen" :
+                                  root.current-filter == HistoryFilter.Completed ? "Keine abgeschlossenen Buchungen" :
+                                  "Keine stornierten Buchungen";
+                            font-size: 16px;
+                            font-weight: 500;
+                            color: Theme.text-primary;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Deine Buchungen erscheinen hier.";
+                            font-size: 13px;
+                            color: Theme.text-tertiary;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                // Booking list
+                if !root.is-loading : VerticalLayout {
+                    spacing: 12px;
+
+                    for booking in root.bookings : HistoryItem {
+                        booking: booking;
+
+                        view-details => { root.view-booking-details(booking.id); }
+                        cancel-booking => { root.cancel-booking(booking.id); }
+                        extend-booking => { root.extend-booking(booking.id); }
+                    }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

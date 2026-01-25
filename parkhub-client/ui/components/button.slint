@@ -1,0 +1,67 @@
+// Button component matching securanido design
+
+import { Theme } from "../theme.slint";
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <string> icon: "";
+    in property <bool> primary: false;
+    in property <bool> secondary: false;
+    in property <bool> danger: false;
+    in property <bool> disabled: false;
+    in property <bool> loading: false;
+
+    callback clicked();
+
+    min-height: Theme.button-height;
+    horizontal-stretch: 1;
+    border-radius: Theme.radius-lg;
+
+    background: root.disabled ? Theme.surface :
+                root.primary ? (touch.pressed ? Theme.primary-hover : Theme.primary) :
+                root.secondary ? (touch.pressed ? Theme.secondary-hover : Theme.secondary) :
+                root.danger ? Theme.error :
+                (touch.pressed ? Theme.surface-elevated : Theme.surface);
+
+    border-width: root.primary || root.secondary || root.danger ? 0 : 1px;
+    border-color: Theme.border;
+
+    animate background { duration: Theme.animation-fast; }
+
+    touch := TouchArea {
+        enabled: !root.disabled && !root.loading;
+        clicked => { root.clicked(); }
+        mouse-cursor: root.disabled ? default : pointer;
+    }
+
+    HorizontalLayout {
+        alignment: center;
+        spacing: Theme.spacing-sm;
+        padding-left: Theme.spacing-lg;
+        padding-right: Theme.spacing-lg;
+
+        if root.loading : Text {
+            text: "...";
+            font-size: Theme.font-size-md;
+            color: root.primary || root.secondary || root.danger ? Theme.on-primary : Theme.text-primary;
+            vertical-alignment: center;
+        }
+
+        if root.icon != "" && !root.loading : Text {
+            text: root.icon;
+            font-size: Theme.font-size-md;
+            color: root.primary || root.secondary || root.danger ? Theme.on-primary : Theme.text-primary;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: root.text;
+            font-size: Theme.font-size-md;
+            font-weight: 500;
+            color: root.disabled ? Theme.text-muted :
+                   root.primary || root.secondary || root.danger ? Theme.on-primary :
+                   Theme.text-primary;
+            vertical-alignment: center;
+        }
+    }
+}

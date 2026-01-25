@@ -1,0 +1,873 @@
+// Notifications - Booking reminders and push notifications management
+
+import { Theme } from "theme.slint";
+import { Button, Card } from "components/mod.slint";
+
+// Notification types
+export enum NotificationType {
+    BookingReminder,
+    BookingConfirmed,
+    BookingCancelled,
+    BookingExpiringSoon,
+    PaymentReceived,
+    SlotAvailable,
+    SystemAnnouncement,
+    PriceAlert,
+}
+
+// Notification data
+export struct NotificationItem {
+    id: string,
+    notification-type: NotificationType,
+    title: string,
+    message: string,
+    timestamp: string,
+    is-read: bool,
+    action-text: string,
+    action-data: string,
+}
+
+// Reminder settings
+export struct ReminderSettings {
+    booking-reminder-enabled: bool,
+    reminder-minutes-before: int,
+    expiry-warning-enabled: bool,
+    expiry-minutes-before: int,
+    slot-available-alerts: bool,
+    price-alerts: bool,
+    system-announcements: bool,
+}
+
+// Notification type icon and color mapping
+component NotificationIcon inherits Rectangle {
+    in property <NotificationType> notification-type;
+
+    property <color> icon-color: root.notification-type == NotificationType.BookingReminder ? Theme.primary :
+                                 root.notification-type == NotificationType.BookingConfirmed ? Theme.secondary :
+                                 root.notification-type == NotificationType.BookingCancelled ? Theme.error :
+                                 root.notification-type == NotificationType.BookingExpiringSoon ? Theme.warning :
+                                 root.notification-type == NotificationType.PaymentReceived ? Theme.secondary :
+                                 root.notification-type == NotificationType.SlotAvailable ? Theme.info :
+                                 root.notification-type == NotificationType.SystemAnnouncement ? Theme.primary :
+                                 Theme.warning;
+
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: root.icon-color.transparentize(0.9);
+
+    // Bell icon for reminders
+    if root.notification-type == NotificationType.BookingReminder : Rectangle {
+        // Bell body
+        Rectangle {
+            width: 16px;
+            height: 14px;
+            x: 14px;
+            y: 12px;
+            border-radius: 6px;
+            background: root.icon-color;
+        }
+        // Bell clapper
+        Rectangle {
+            width: 4px;
+            height: 4px;
+            x: 20px;
+            y: 28px;
+            border-radius: 2px;
+            background: root.icon-color;
+        }
+    }
+
+    // Checkmark for confirmed
+    if root.notification-type == NotificationType.BookingConfirmed : Rectangle {
+        Rectangle {
+            width: 3px;
+            height: 10px;
+            x: 16px;
+            y: 18px;
+            background: root.icon-color;
+            border-radius: 1.5px;
+        }
+        Rectangle {
+            width: 3px;
+            height: 16px;
+            x: 22px;
+            y: 14px;
+            background: root.icon-color;
+            border-radius: 1.5px;
+        }
+    }
+
+    // X for cancelled
+    if root.notification-type == NotificationType.BookingCancelled : Rectangle {
+        Rectangle {
+            width: 18px;
+            height: 3px;
+            x: 13px;
+            y: 21px;
+            background: root.icon-color;
+            border-radius: 1.5px;
+        }
+        Rectangle {
+            width: 3px;
+            height: 18px;
+            x: 21px;
+            y: 13px;
+            background: root.icon-color;
+            border-radius: 1.5px;
+        }
+    }
+
+    // Clock for expiring
+    if root.notification-type == NotificationType.BookingExpiringSoon : Rectangle {
+        Rectangle {
+            width: 20px;
+            height: 20px;
+            x: 12px;
+            y: 12px;
+            border-radius: 10px;
+            border-width: 2px;
+            border-color: root.icon-color;
+            background: transparent;
+        }
+        Rectangle {
+            width: 2px;
+            height: 8px;
+            x: 21px;
+            y: 16px;
+            background: root.icon-color;
+            border-radius: 1px;
+        }
+        Rectangle {
+            width: 6px;
+            height: 2px;
+            x: 21px;
+            y: 22px;
+            background: root.icon-color;
+            border-radius: 1px;
+        }
+    }
+
+    // Money for payment
+    if root.notification-type == NotificationType.PaymentReceived : Rectangle {
+        Rectangle {
+            width: 16px;
+            height: 16px;
+            x: 14px;
+            y: 14px;
+            border-radius: 8px;
+            border-width: 2px;
+            border-color: root.icon-color;
+            background: transparent;
+        }
+        Text {
+            text: "€";
+            font-size: 10px;
+            font-weight: 700;
+            color: root.icon-color;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Parking icon for slot available
+    if root.notification-type == NotificationType.SlotAvailable : Rectangle {
+        Text {
+            text: "P";
+            font-size: 18px;
+            font-weight: 700;
+            color: root.icon-color;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    // Megaphone for announcements
+    if root.notification-type == NotificationType.SystemAnnouncement : Rectangle {
+        Rectangle {
+            width: 8px;
+            height: 10px;
+            x: 14px;
+            y: 17px;
+            background: root.icon-color;
+            border-radius: 2px;
+        }
+        Rectangle {
+            width: 12px;
+            height: 14px;
+            x: 18px;
+            y: 15px;
+            background: root.icon-color;
+            border-radius: 4px;
+        }
+    }
+
+    // Tag for price alerts
+    if root.notification-type == NotificationType.PriceAlert : Rectangle {
+        Rectangle {
+            width: 18px;
+            height: 14px;
+            x: 11px;
+            y: 15px;
+            background: root.icon-color;
+            border-radius: 4px;
+        }
+        Rectangle {
+            width: 4px;
+            height: 4px;
+            x: 24px;
+            y: 20px;
+            border-radius: 2px;
+            background: Theme.surface;
+        }
+    }
+}
+
+// Single notification item
+component NotificationCard inherits Rectangle {
+    in property <NotificationItem> notification;
+
+    callback mark-read();
+    callback perform-action();
+    callback dismiss();
+
+    height: notification.action-text != "" ? 100px : 80px;
+    border-radius: 12px;
+    background: notification.is-read ? Theme.surface : Theme.surface-elevated;
+    border-width: notification.is-read ? 0 : 1px;
+    border-color: Theme.primary.transparentize(0.7);
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        NotificationIcon {
+            notification-type: notification.notification-type;
+            y: (parent.height - self.height) / 2;
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: notification.title;
+                    font-size: 14px;
+                    font-weight: notification.is-read ? 400 : 600;
+                    color: Theme.text-primary;
+                    overflow: elide;
+                }
+
+                // Unread indicator
+                if !notification.is-read : Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: Theme.primary;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+
+            Text {
+                text: notification.message;
+                font-size: 12px;
+                color: Theme.text-secondary;
+                overflow: elide;
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: notification.timestamp;
+                    font-size: 11px;
+                    color: Theme.text-tertiary;
+                    vertical-alignment: center;
+                }
+
+                if notification.action-text != "" : Rectangle {
+                    height: 24px;
+                    width: 80px;
+                    border-radius: 6px;
+                    background: action-touch.has-hover ? Theme.primary : Theme.primary.transparentize(0.15);
+
+                    action-touch := TouchArea {
+                        clicked => { root.perform-action(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: notification.action-text;
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: Theme.on-primary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // Dismiss button
+        Rectangle {
+            width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            background: dismiss-touch.has-hover ? Theme.surface-elevated : transparent;
+            y: 6px;
+
+            dismiss-touch := TouchArea {
+                clicked => { root.dismiss(); }
+                mouse-cursor: pointer;
+            }
+
+            // X icon
+            Rectangle {
+                width: 10px;
+                height: 2px;
+                x: 9px;
+                y: 13px;
+                background: Theme.text-tertiary;
+                border-radius: 1px;
+            }
+            Rectangle {
+                width: 2px;
+                height: 10px;
+                x: 13px;
+                y: 9px;
+                background: Theme.text-tertiary;
+                border-radius: 1px;
+            }
+        }
+    }
+}
+
+// Toggle switch for settings
+component SettingsToggle inherits Rectangle {
+    in property <string> label;
+    in property <string> description: "";
+    in-out property <bool> enabled: false;
+
+    callback toggled(bool);
+
+    height: description != "" ? 64px : 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 12px;
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: root.label;
+                font-size: 14px;
+                font-weight: 500;
+                color: Theme.text-primary;
+            }
+
+            if root.description != "" : Text {
+                text: root.description;
+                font-size: 11px;
+                color: Theme.text-tertiary;
+            }
+        }
+
+        // Toggle switch
+        Rectangle {
+            width: 48px;
+            height: 28px;
+            border-radius: 14px;
+            background: root.enabled ? Theme.primary : Theme.surface-elevated;
+            y: (parent.height - self.height) / 2;
+
+            animate background { duration: 200ms; }
+
+            toggle-touch := TouchArea {
+                clicked => {
+                    root.enabled = !root.enabled;
+                    root.toggled(root.enabled);
+                }
+                mouse-cursor: pointer;
+            }
+
+            // Toggle knob
+            Rectangle {
+                width: 22px;
+                height: 22px;
+                x: root.enabled ? 23px : 3px;
+                y: 3px;
+                border-radius: 11px;
+                background: white;
+                drop-shadow-blur: 4px;
+                drop-shadow-color: #000000.transparentize(0.8);
+
+                animate x { duration: 200ms; easing: ease-out; }
+            }
+        }
+    }
+}
+
+// Reminder time selector
+component ReminderTimeSelector inherits Rectangle {
+    in property <string> label;
+    in property <[int]> options: [5, 15, 30, 60];
+    in-out property <int> selected-minutes: 15;
+
+    callback time-changed(int);
+
+    height: 80px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            font-size: 14px;
+            font-weight: 500;
+            color: Theme.text-primary;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            for minutes in root.options : Rectangle {
+                horizontal-stretch: 1;
+                height: 36px;
+                border-radius: 8px;
+                background: minutes == root.selected-minutes ? Theme.primary :
+                           time-touch.has-hover ? Theme.surface-elevated : Theme.background;
+                border-width: minutes == root.selected-minutes ? 0 : 1px;
+                border-color: Theme.border;
+
+                time-touch := TouchArea {
+                    clicked => {
+                        root.selected-minutes = minutes;
+                        root.time-changed(minutes);
+                    }
+                    mouse-cursor: pointer;
+                }
+
+                Text {
+                    text: minutes < 60 ? minutes + " Min" : (minutes / 60) + " Std";
+                    font-size: 12px;
+                    font-weight: minutes == root.selected-minutes ? 600 : 400;
+                    color: minutes == root.selected-minutes ? Theme.on-primary : Theme.text-secondary;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+// Main notifications panel
+export component NotificationsPanel inherits Rectangle {
+    background: Theme.background;
+
+    // Properties
+    in property <[NotificationItem]> notifications: [];
+    in property <ReminderSettings> settings: {
+        booking-reminder-enabled: true,
+        reminder-minutes-before: 15,
+        expiry-warning-enabled: true,
+        expiry-minutes-before: 10,
+        slot-available-alerts: false,
+        price-alerts: false,
+        system-announcements: true,
+    };
+    in property <int> unread-count: 0;
+    in-out property <int> active-tab: 0; // 0 = notifications, 1 = settings
+
+    // Callbacks
+    callback close-panel();
+    callback mark-all-read();
+    callback mark-notification-read(string);
+    callback dismiss-notification(string);
+    callback perform-notification-action(string, string);
+    callback update-reminder-setting(string, bool);
+    callback update-reminder-time(string, int);
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Header
+        Rectangle {
+            height: 56px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-md;
+
+                // Back button
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: back-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    back-touch := TouchArea {
+                        clicked => { root.close-panel(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Back arrow
+                    Rectangle {
+                        width: 10px;
+                        height: 2px;
+                        x: 10px;
+                        y: 17px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 13px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 7px;
+                        height: 2px;
+                        x: 10px;
+                        y: 21px;
+                        background: Theme.text-primary;
+                        border-radius: 1px;
+                    }
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: "Benachrichtigungen";
+                    font-size: Theme.font-size-lg;
+                    font-weight: 600;
+                    color: Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Mark all read button
+                if root.unread-count > 0 && root.active-tab == 0 : Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 18px;
+                    background: mark-touch.has-hover ? Theme.surface-elevated : transparent;
+
+                    mark-touch := TouchArea {
+                        clicked => { root.mark-all-read(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    // Double checkmark icon
+                    Rectangle {
+                        width: 8px;
+                        height: 2px;
+                        x: 10px;
+                        y: 20px;
+                        background: Theme.text-secondary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 10px;
+                        x: 14px;
+                        y: 12px;
+                        background: Theme.text-secondary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 6px;
+                        height: 2px;
+                        x: 18px;
+                        y: 18px;
+                        background: Theme.text-secondary;
+                        border-radius: 1px;
+                    }
+                    Rectangle {
+                        width: 2px;
+                        height: 8px;
+                        x: 22px;
+                        y: 12px;
+                        background: Theme.text-secondary;
+                        border-radius: 1px;
+                    }
+                }
+            }
+        }
+
+        // Tab bar
+        Rectangle {
+            height: 44px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 0;
+
+                // Notifications tab
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+
+                    notif-tab := TouchArea {
+                        clicked => { root.active-tab = 0; }
+                        mouse-cursor: pointer;
+                    }
+
+                    VerticalLayout {
+                        alignment: end;
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 6px;
+
+                            Text {
+                                text: "Alle";
+                                font-size: 14px;
+                                font-weight: root.active-tab == 0 ? 600 : 400;
+                                color: root.active-tab == 0 ? Theme.primary : Theme.text-secondary;
+                                vertical-alignment: center;
+                            }
+
+                            if root.unread-count > 0 : Rectangle {
+                                width: 20px;
+                                height: 18px;
+                                border-radius: 9px;
+                                background: Theme.primary;
+                                y: (parent.height - self.height) / 2;
+
+                                Text {
+                                    text: root.unread-count > 99 ? "99+" : root.unread-count;
+                                    font-size: 10px;
+                                    font-weight: 600;
+                                    color: Theme.on-primary;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+
+                        // Active indicator
+                        Rectangle {
+                            height: 3px;
+                            border-radius: 1.5px;
+                            background: root.active-tab == 0 ? Theme.primary : transparent;
+                        }
+                    }
+                }
+
+                // Settings tab
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+
+                    settings-tab := TouchArea {
+                        clicked => { root.active-tab = 1; }
+                        mouse-cursor: pointer;
+                    }
+
+                    VerticalLayout {
+                        alignment: end;
+
+                        Text {
+                            text: "Einstellungen";
+                            font-size: 14px;
+                            font-weight: root.active-tab == 1 ? 600 : 400;
+                            color: root.active-tab == 1 ? Theme.primary : Theme.text-secondary;
+                            horizontal-alignment: center;
+                        }
+
+                        // Active indicator
+                        Rectangle {
+                            height: 3px;
+                            border-radius: 1.5px;
+                            background: root.active-tab == 1 ? Theme.primary : transparent;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Content
+        Flickable {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
+
+                // Notifications list
+                if root.active-tab == 0 : VerticalLayout {
+                    spacing: 10px;
+
+                    if root.notifications.length > 0 : VerticalLayout {
+                        spacing: 10px;
+
+                        for notification in root.notifications : NotificationCard {
+                            notification: notification;
+
+                            mark-read => { root.mark-notification-read(notification.id); }
+                            dismiss => { root.dismiss-notification(notification.id); }
+                            perform-action => { root.perform-notification-action(notification.id, notification.action-data); }
+                        }
+                    }
+
+                    // Empty state
+                    if root.notifications.length == 0 : Card {
+                        VerticalLayout {
+                            padding: 40px;
+                            alignment: center;
+                            spacing: 16px;
+
+                            // Bell icon
+                            Rectangle {
+                                width: 64px;
+                                height: 64px;
+                                border-radius: 32px;
+                                background: Theme.primary.transparentize(0.9);
+                                x: (parent.width - self.width - 80px) / 2;
+
+                                Rectangle {
+                                    width: 24px;
+                                    height: 20px;
+                                    x: 20px;
+                                    y: 18px;
+                                    border-radius: 8px;
+                                    background: Theme.primary;
+                                }
+                                Rectangle {
+                                    width: 6px;
+                                    height: 6px;
+                                    x: 29px;
+                                    y: 40px;
+                                    border-radius: 3px;
+                                    background: Theme.primary;
+                                }
+                            }
+
+                            Text {
+                                text: "Keine Benachrichtigungen";
+                                font-size: 18px;
+                                font-weight: 600;
+                                color: Theme.text-primary;
+                                horizontal-alignment: center;
+                            }
+
+                            Text {
+                                text: "Du bist auf dem neuesten Stand!";
+                                font-size: 13px;
+                                color: Theme.text-tertiary;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Settings content
+                if root.active-tab == 1 : VerticalLayout {
+                    spacing: 16px;
+
+                    Card {
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 16px;
+
+                            Text {
+                                text: "Buchungserinnerungen";
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: Theme.text-primary;
+                            }
+
+                            SettingsToggle {
+                                label: "Erinnerung vor Buchungsbeginn";
+                                description: "Erhalte eine Erinnerung bevor deine Buchung beginnt";
+                                enabled: root.settings.booking-reminder-enabled;
+                                toggled(value) => { root.update-reminder-setting("booking-reminder", value); }
+                            }
+
+                            if root.settings.booking-reminder-enabled : ReminderTimeSelector {
+                                label: "Erinnerungszeit";
+                                options: [5, 15, 30, 60];
+                                selected-minutes: root.settings.reminder-minutes-before;
+                                time-changed(minutes) => { root.update-reminder-time("reminder-before", minutes); }
+                            }
+
+                            Rectangle { height: 1px; background: Theme.border; }
+
+                            SettingsToggle {
+                                label: "Warnung vor Buchungsende";
+                                description: "Erhalte eine Warnung bevor deine Buchung abläuft";
+                                enabled: root.settings.expiry-warning-enabled;
+                                toggled(value) => { root.update-reminder-setting("expiry-warning", value); }
+                            }
+
+                            if root.settings.expiry-warning-enabled : ReminderTimeSelector {
+                                label: "Warnungszeit";
+                                options: [5, 10, 15, 30];
+                                selected-minutes: root.settings.expiry-minutes-before;
+                                time-changed(minutes) => { root.update-reminder-time("expiry-before", minutes); }
+                            }
+                        }
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 16px;
+
+                            Text {
+                                text: "Weitere Benachrichtigungen";
+                                font-size: 16px;
+                                font-weight: 600;
+                                color: Theme.text-primary;
+                            }
+
+                            SettingsToggle {
+                                label: "Verfügbarkeitsbenachrichtigungen";
+                                description: "Benachrichtigung wenn Lieblingsplätze frei werden";
+                                enabled: root.settings.slot-available-alerts;
+                                toggled(value) => { root.update-reminder-setting("slot-available", value); }
+                            }
+
+                            Rectangle { height: 1px; background: Theme.border; }
+
+                            SettingsToggle {
+                                label: "Preisalarme";
+                                description: "Benachrichtigung bei Preisänderungen";
+                                enabled: root.settings.price-alerts;
+                                toggled(value) => { root.update-reminder-setting("price-alerts", value); }
+                            }
+
+                            Rectangle { height: 1px; background: Theme.border; }
+
+                            SettingsToggle {
+                                label: "Systemmitteilungen";
+                                description: "Wichtige Ankündigungen und Updates";
+                                enabled: root.settings.system-announcements;
+                                toggled(value) => { root.update-reminder-setting("system-announcements", value); }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom padding
+                Rectangle {
+                    height: 20px;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,74 @@
+[package]
+name = "parkhub-server"
+description = "ParkHub Server - Database and API server with LAN autodiscovery"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "parkhub-server"
+path = "src/main.rs"
+
+[dependencies]
+parkhub-common.workspace = true
+
+# Async runtime
+tokio.workspace = true
+
+# Database - Pure Rust embedded
+redb.workspace = true
+
+# HTTP API
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+
+# Security - TLS certificates
+rcgen.workspace = true
+rustls.workspace = true
+rustls-pemfile.workspace = true
+argon2.workspace = true
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+
+# Network discovery (mDNS/DNS-SD)
+mdns-sd.workspace = true
+
+# Logging
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Error handling
+thiserror.workspace = true
+anyhow.workspace = true
+
+# Config
+toml = "0.8"
+directories = "5"
+hostname = "0.4"
+
+# Crypto for certificate fingerprints
+ring = "0.17"
+
+# UI for server onboarding (optional, can be disabled)
+slint = { version = "1.14", default-features = false, features = [
+    "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2"
+], optional = true }
+
+[build-dependencies]
+slint-build = { version = "1.14", optional = true }
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
+
+[features]
+default = ["gui"]
+gui = ["slint", "slint-build"]
+headless = []

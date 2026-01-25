@@ -1,87 +1,50 @@
-[package]
-name = "parkhub"
+[workspace]
+members = [
+    "parkhub-common",
+    "parkhub-server",
+    "parkhub-client",
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
-description = "ParkHub - Open source parking lot management with client-server architecture"
 authors = ["nash87"]
 license = "MIT"
 repository = "https://github.com/nash87/parkhub"
 
-[[bin]]
-name = "parkhub"
-path = "src/main.rs"
-
-[dependencies]
-# UI Framework - using same version and features as pmos-controller for consistency
-slint = { version = "1.14", default-features = false, features = [
-    "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2", "raw-window-handle-06"
-] }
-
-# Raw window handle for Windows API access
-raw-window-handle = "0.6"
-
-# Async runtime
-tokio = { version = "1", features = ["full", "rt-multi-thread"] }
-
-# HTTP Client (for future backend integration)
-reqwest = { version = "0.12", features = ["json", "rustls-tls", "cookies"] }
-
-# OAuth2 (for future Google auth)
-oauth2 = "4.4"
-
-# Serialization
+[workspace.dependencies]
+# Shared dependencies across crates
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
-
-# Date/Time
 chrono = { version = "0.4", features = ["serde"] }
-
-# UUID
 uuid = { version = "1", features = ["v4", "serde"] }
-
-# Local storage paths
-directories = "5"
-
-# Logging
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# Error handling
 thiserror = "2"
 anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 
-# Random for mock data
-rand = "0.8"
+# Database - Pure Rust embedded database
+redb = "2"
 
-# Screenshot capture
-screenshots = "0.8"
+# HTTP/API
+axum = { version = "0.7", features = ["tokio", "json"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 
-# Local SQLite database
-rusqlite = { version = "0.32", features = ["bundled"] }
+# Security
+rcgen = "0.13"
+rustls = "0.23"
+rustls-pemfile = "2"
+argon2 = "0.5"
 
-# Parking validation
-validator = { version = "0.19", features = ["derive"] }
+# Network discovery
+mdns-sd = "0.11"
 
-[build-dependencies]
-slint-build = "1.14"
-
-[target.'cfg(windows)'.build-dependencies]
-winres = "0.1"
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = [
-    "Win32_UI_HiDpi",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_Foundation",
-    "Win32_Graphics_Gdi",
-    "Win32_UI_Input_KeyboardAndMouse"
-] }
-
-# Dev dependencies for headless testing
-[dev-dependencies]
-regex = "1"
-tempfile = "3"
+# Internal crates
+parkhub-common = { path = "parkhub-common" }
 
 [profile.release]
 lto = "thin"

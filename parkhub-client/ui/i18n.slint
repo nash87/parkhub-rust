@@ -1,0 +1,239 @@
+// Internationalization - Translation strings (DE/EN)
+// Full coverage for German (default) and English
+
+export global Tr {
+    // Current locale: "de" or "en"
+    in-out property <string> locale: "de";
+
+    // =========================================================================
+    // Login screen
+    // =========================================================================
+    out property <string> login-title: locale == "de" ? "Securanido Parking" : "Securanido Parking";
+    out property <string> login-subtitle: locale == "de" ?
+        "Buchen Sie Ihren Parkplatz" : "Book your parking spot";
+    out property <string> login-google-button: locale == "de" ?
+        "Mit Google anmelden" : "Sign in with Google";
+    out property <string> login-signing-in: locale == "de" ?
+        "Anmeldung..." : "Signing in...";
+    out property <string> login-dev-mode: locale == "de" ?
+        "Entwicklungsmodus" : "Development Mode";
+    out property <string> login-quick-login: locale == "de" ?
+        "Schnellanmeldung (nur Entwicklung)" : "Quick login (dev only)";
+    out property <string> login-failed: locale == "de" ?
+        "Anmeldung fehlgeschlagen" : "Login failed";
+
+    // =========================================================================
+    // Parking view
+    // =========================================================================
+    out property <string> parking-title: locale == "de" ?
+        "Parkplatz" : "Parking Lot";
+    out property <string> parking-select-slot: locale == "de" ?
+        "Parkplatz auswaehlen" : "Select a parking spot";
+    out property <string> parking-available: locale == "de" ?
+        "Verfuegbar" : "Available";
+    out property <string> parking-occupied: locale == "de" ?
+        "Belegt" : "Occupied";
+    out property <string> parking-my-booking: locale == "de" ?
+        "Meine Buchung" : "My Booking";
+    out property <string> parking-selected: locale == "de" ?
+        "Ausgewaehlt" : "Selected";
+    out property <string> parking-book-now: locale == "de" ?
+        "Jetzt buchen" : "Book Now";
+    out property <string> parking-confirm: locale == "de" ?
+        "Buchung bestaetigen" : "Confirm Booking";
+    out property <string> parking-cancel: locale == "de" ?
+        "Stornieren" : "Cancel";
+    out property <string> parking-start-time: locale == "de" ?
+        "Startzeit" : "Start Time";
+    out property <string> parking-end-time: locale == "de" ?
+        "Endzeit" : "End Time";
+    out property <string> parking-duration: locale == "de" ?
+        "Dauer" : "Duration";
+    out property <string> parking-license-plate: locale == "de" ?
+        "Kennzeichen (optional)" : "License Plate (optional)";
+    out property <string> parking-estimated-cost: locale == "de" ?
+        "Geschaetzte Kosten" : "Estimated Cost";
+    out property <string> parking-slots-available: locale == "de" ?
+        "verfuegbar" : "available";
+    out property <string> parking-disabled: locale == "de" ?
+        "Gesperrt" : "Disabled";
+    out property <string> parking-refresh: locale == "de" ?
+        "Aktualisieren" : "Refresh";
+
+    // =========================================================================
+    // Tabs
+    // =========================================================================
+    out property <string> tab-lot: locale == "de" ?
+        "Parkplatz" : "Lot";
+    out property <string> tab-calendar: locale == "de" ?
+        "Kalender" : "Calendar";
+    out property <string> tab-bookings: locale == "de" ?
+        "Buchungen" : "Bookings";
+
+    // =========================================================================
+    // Calendar / Bookings
+    // =========================================================================
+    out property <string> calendar-title: locale == "de" ?
+        "Kalender" : "Calendar";
+    out property <string> calendar-my-bookings: locale == "de" ?
+        "Meine Buchungen" : "My Bookings";
+    out property <string> calendar-no-bookings: locale == "de" ?
+        "Keine anstehenden Buchungen" : "No upcoming bookings";
+    out property <string> calendar-coming-soon: locale == "de" ?
+        "Demnächst verfügbar" : "Coming Soon";
+    out property <string> calendar-desc: locale == "de" ?
+        "Hier können Sie zukünftig Parkplätze im Voraus reservieren" :
+        "Reserve parking spots in advance with our calendar feature";
+    out property <string> calendar-upcoming: locale == "de" ?
+        "Anstehend" : "Upcoming";
+    out property <string> booking-active: locale == "de" ?
+        "Aktiv" : "Active";
+    out property <string> booking-completed: locale == "de" ?
+        "Abgeschlossen" : "Completed";
+    out property <string> booking-cancelled: locale == "de" ?
+        "Storniert" : "Cancelled";
+
+    // =========================================================================
+    // Layout Editor
+    // =========================================================================
+    out property <string> editor-title: locale == "de" ?
+        "Layout-Editor" : "Layout Editor";
+    out property <string> editor-elements: locale == "de" ?
+        "Elemente" : "Elements";
+    out property <string> editor-slot: locale == "de" ?
+        "Platz" : "Slot";
+    out property <string> editor-handicap: locale == "de" ?
+        "Behindert" : "Handicap";
+    out property <string> editor-electric: locale == "de" ?
+        "E-Laden" : "Electric";
+    out property <string> editor-motorcycle: locale == "de" ?
+        "Motorrad" : "Motorcycle";
+    out property <string> editor-wall: locale == "de" ?
+        "Wand" : "Wall";
+    out property <string> editor-pillar: locale == "de" ?
+        "Pfeiler" : "Pillar";
+    out property <string> editor-entry: locale == "de" ?
+        "Einfahrt" : "Entry";
+    out property <string> editor-exit: locale == "de" ?
+        "Ausfahrt" : "Exit";
+    out property <string> editor-lane: locale == "de" ?
+        "Fahrspur" : "Lane";
+    out property <string> editor-save: locale == "de" ?
+        "Speichern" : "Save";
+    out property <string> editor-load: locale == "de" ?
+        "Laden" : "Load";
+    out property <string> editor-clear: locale == "de" ?
+        "Leeren" : "Clear";
+    out property <string> editor-layouts: locale == "de" ?
+        "Layouts" : "Layouts";
+    out property <string> editor-saved-layouts: locale == "de" ?
+        "Gespeicherte Layouts" : "Saved Layouts";
+    out property <string> editor-no-layouts: locale == "de" ?
+        "Noch keine Layouts gespeichert" : "No saved layouts yet";
+    out property <string> editor-elements-count: locale == "de" ?
+        "Elemente" : "elements";
+    out property <string> editor-next-slot: locale == "de" ?
+        "Naechster Platz" : "Next Slot";
+    out property <string> editor-click-to-place: locale == "de" ?
+        "Klicken zum Platzieren" : "Click to place";
+    out property <string> editor-drag-to-move: locale == "de" ?
+        "Ziehen zum Verschieben" : "Drag to move";
+    out property <string> editor-rotate: locale == "de" ?
+        "Drehen" : "Rotate";
+    out property <string> editor-delete: locale == "de" ?
+        "Loeschen" : "Delete";
+    out property <string> editor-grid: locale == "de" ?
+        "Raster" : "Grid";
+    out property <string> editor-zoom-in: locale == "de" ?
+        "Vergroessern" : "Zoom In";
+    out property <string> editor-zoom-out: locale == "de" ?
+        "Verkleinern" : "Zoom Out";
+
+    // =========================================================================
+    // Common / General
+    // =========================================================================
+    out property <string> common-refresh: locale == "de" ?
+        "Aktualisieren" : "Refresh";
+    out property <string> common-logout: locale == "de" ?
+        "Abmelden" : "Logout";
+    out property <string> common-settings: locale == "de" ?
+        "Einstellungen" : "Settings";
+    out property <string> common-loading: locale == "de" ?
+        "Laedt..." : "Loading...";
+    out property <string> common-error: locale == "de" ?
+        "Fehler" : "Error";
+    out property <string> common-success: locale == "de" ?
+        "Erfolgreich" : "Success";
+    out property <string> common-save: locale == "de" ?
+        "Speichern" : "Save";
+    out property <string> common-cancel: locale == "de" ?
+        "Abbrechen" : "Cancel";
+    out property <string> common-close: locale == "de" ?
+        "Schliessen" : "Close";
+    out property <string> common-confirm: locale == "de" ?
+        "Bestaetigen" : "Confirm";
+    out property <string> common-back: locale == "de" ?
+        "Zurueck" : "Back";
+    out property <string> common-ok: locale == "de" ?
+        "OK" : "OK";
+    out property <string> common-yes: locale == "de" ?
+        "Ja" : "Yes";
+    out property <string> common-no: locale == "de" ?
+        "Nein" : "No";
+
+    // =========================================================================
+    // Duration labels
+    // =========================================================================
+    out property <string> time-15m: locale == "de" ?
+        "15 Min" : "15 min";
+    out property <string> time-30m: locale == "de" ?
+        "30 Min" : "30 min";
+    out property <string> time-1h: locale == "de" ?
+        "1 Std" : "1 hr";
+    out property <string> time-2h: locale == "de" ?
+        "2 Std" : "2 hrs";
+    out property <string> time-4h: locale == "de" ?
+        "4 Std" : "4 hrs";
+    out property <string> time-8h: locale == "de" ?
+        "8 Std" : "8 hrs";
+    out property <string> time-1d: locale == "de" ?
+        "1 Tag" : "1 day";
+
+    // =========================================================================
+    // Dev mode
+    // =========================================================================
+    out property <string> dev-mode-label: locale == "de" ?
+        "ENTWICKLUNG" : "DEVELOPMENT";
+    out property <string> dev-switch: locale == "de" ?
+        "Wechseln" : "Switch";
+    out property <string> dev-local: locale == "de" ?
+        "Lokal" : "Local";
+    out property <string> dev-production: locale == "de" ?
+        "Produktion" : "Production";
+    out property <string> dev-server: locale == "de" ?
+        "Server" : "Server";
+
+    // =========================================================================
+    // Slot types for legend
+    // =========================================================================
+    out property <string> slot-regular: locale == "de" ?
+        "Standard" : "Regular";
+    out property <string> slot-handicap: locale == "de" ?
+        "Behindertenparkplatz" : "Handicap Parking";
+    out property <string> slot-electric: locale == "de" ?
+        "E-Ladestation" : "Electric Charging";
+    out property <string> slot-motorcycle: locale == "de" ?
+        "Motorrad" : "Motorcycle";
+
+    // =========================================================================
+    // Error messages
+    // =========================================================================
+    out property <string> error-connection: locale == "de" ?
+        "Verbindungsfehler" : "Connection Error";
+    out property <string> error-auth: locale == "de" ?
+        "Authentifizierungsfehler" : "Authentication Error";
+    out property <string> error-booking: locale == "de" ?
+        "Buchung fehlgeschlagen" : "Booking Failed";
+    out property <string> error-slot-unavailable: locale == "de" ?
+        "Platz nicht mehr verfuegbar" : "Slot no longer available";
+}
