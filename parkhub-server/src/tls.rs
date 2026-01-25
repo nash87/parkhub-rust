@@ -4,9 +4,7 @@
 
 use anyhow::{Context, Result};
 use rcgen::{CertifiedKey, generate_simple_self_signed};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::path::Path;
-use std::sync::Arc;
 
 /// Load existing TLS config or create new self-signed certificate
 pub async fn load_or_create_tls_config(

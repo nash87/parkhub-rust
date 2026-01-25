@@ -1,0 +1,339 @@
+// ParkHub Server - Setup Wizard UI
+
+import { Button, LineEdit, CheckBox, VerticalBox, HorizontalBox, GridBox, GroupBox } from "std-widgets.slint";
+
+// Theme colors
+global Theme {
+    out property <color> background: #1a1a2e;
+    out property <color> surface: #16213e;
+    out property <color> primary: #0f3460;
+    out property <color> accent: #e94560;
+    out property <color> text: #eaeaea;
+    out property <color> text-muted: #8b8b8b;
+    out property <color> success: #00b894;
+    out property <color> border: #2a2a4a;
+}
+
+// Styled components
+component StyledButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: false;
+    callback clicked;
+
+    height: 40px;
+    min-width: 120px;
+    border-radius: 6px;
+    background: primary ? Theme.accent : Theme.primary;
+
+    animate background { duration: 150ms; }
+
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+        mouse-cursor: pointer;
+    }
+
+    Text {
+        text: root.text;
+        color: Theme.text;
+        font-size: 14px;
+        font-weight: 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    states [
+        hover when ta.has-hover: {
+            background: primary ? Theme.accent.darker(10%) : Theme.primary.darker(10%);
+        }
+    ]
+}
+
+component StyledInput inherits Rectangle {
+    in property <string> placeholder;
+    in property <bool> password: false;
+    in-out property <string> text;
+
+    height: 44px;
+    border-radius: 6px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    LineEdit {
+        x: 12px;
+        width: parent.width - 24px;
+        height: parent.height;
+        text <=> root.text;
+        placeholder-text: root.placeholder;
+        input-type: root.password ? InputType.password : InputType.text;
+        font-size: 14px;
+    }
+}
+
+component StepIndicator inherits HorizontalLayout {
+    in property <int> current-step: 0;
+    in property <int> total-steps: 4;
+
+    spacing: 8px;
+    alignment: center;
+
+    for step in total-steps: Rectangle {
+        width: current-step == step ? 24px : 8px;
+        height: 8px;
+        border-radius: 4px;
+        background: current-step >= step ? Theme.accent : Theme.border;
+        animate width { duration: 200ms; }
+        animate background { duration: 200ms; }
+    }
+}
+
+// Main Setup Wizard
+export component SetupWizard inherits Window {
+    title: "ParkHub Server Setup";
+    min-width: 500px;
+    min-height: 450px;
+    background: Theme.background;
+
+    // Properties
+    in-out property <int> current-step: 0;
+    in-out property <string> server-name: "ParkHub Server";
+    in-out property <string> admin-username: "admin";
+    in-out property <string> admin-password: "";
+    in-out property <string> admin-password-confirm: "";
+    in-out property <int> port: 7878;
+    in-out property <bool> enable-tls: true;
+    in-out property <bool> enable-mdns: true;
+    in-out property <string> error-message: "";
+    in-out property <string> local-ip: "192.168.x.x";
+    in-out property <bool> password-valid: false;  // Set from Rust when password length >= 4
+
+    // Callbacks
+    callback finish-setup();
+    callback cancel-setup();
+
+    VerticalLayout {
+        padding: 32px;
+        spacing: 24px;
+
+        // Header
+        Text {
+            text: "ParkHub Server Setup";
+            font-size: 24px;
+            font-weight: 700;
+            color: Theme.text;
+            horizontal-alignment: center;
+        }
+
+        // Step indicator
+        StepIndicator {
+            current-step: root.current-step;
+            total-steps: 4;
+        }
+
+        // Content area
+        Rectangle {
+            vertical-stretch: 1;
+            background: Theme.surface;
+            border-radius: 12px;
+
+            // Step 0: Welcome
+            if current-step == 0: VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+                alignment: center;
+
+                Text {
+                    text: "Welcome to ParkHub Server";
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: Theme.text;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This wizard will help you configure your parking management server.\n\nThe server will:\n• Store parking lot data and bookings\n• Provide API for client applications\n• Broadcast on local network for easy discovery";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+
+            // Step 1: Server Name
+            if current-step == 1: VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Server Configuration";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                Text {
+                    text: "Choose a name for this server (visible to clients):";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                }
+
+                StyledInput {
+                    placeholder: "Server name";
+                    text <=> root.server-name;
+                }
+
+                Text {
+                    text: "Port number:";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                }
+
+                StyledInput {
+                    placeholder: "7878";
+                    text: root.port == 0 ? "" : "\{root.port}";
+                }
+            }
+
+            // Step 2: Admin Account
+            if current-step == 2: VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Administrator Account";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                Text {
+                    text: "Create the admin account for server management:";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                }
+
+                StyledInput {
+                    placeholder: "Username";
+                    text <=> root.admin-username;
+                }
+
+                StyledInput {
+                    placeholder: "Password";
+                    password: true;
+                    text <=> root.admin-password;
+                }
+
+                StyledInput {
+                    placeholder: "Confirm password";
+                    password: true;
+                    text <=> root.admin-password-confirm;
+                }
+
+                if root.error-message != "": Text {
+                    text: root.error-message;
+                    font-size: 12px;
+                    color: Theme.accent;
+                }
+            }
+
+            // Step 3: Network Settings
+            if current-step == 3: VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Network Settings";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    CheckBox {
+                        text: "Enable TLS (HTTPS)";
+                        checked <=> root.enable-tls;
+                    }
+                }
+
+                Text {
+                    text: "Encrypts all connections (recommended)";
+                    font-size: 12px;
+                    color: Theme.text-muted;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    CheckBox {
+                        text: "Enable network discovery (mDNS)";
+                        checked <=> root.enable-mdns;
+                    }
+                }
+
+                Text {
+                    text: "Allows clients to find this server automatically";
+                    font-size: 12px;
+                    color: Theme.text-muted;
+                }
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border;
+                }
+
+                Text {
+                    text: "Server will be available at:";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                }
+
+                Text {
+                    text: (root.enable-tls ? "https://" : "http://") + root.local-ip + ":" + root.port;
+                    font-size: 16px;
+                    font-weight: 500;
+                    color: Theme.success;
+                }
+            }
+        }
+
+        // Navigation buttons
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: end;
+
+            if current-step > 0: StyledButton {
+                text: "Back";
+                clicked => {
+                    root.current-step = root.current-step - 1;
+                    root.error-message = "";
+                }
+            }
+
+            StyledButton {
+                text: current-step < 3 ? "Next" : "Finish Setup";
+                primary: true;
+                clicked => {
+                    if current-step == 2 {
+                        // Validate passwords
+                        if root.admin-password == "" {
+                            root.error-message = "Password is required";
+                        } else if root.admin-password != root.admin-password-confirm {
+                            root.error-message = "Passwords do not match";
+                        } else {
+                            root.error-message = "";
+                            root.current-step = root.current-step + 1;
+                        }
+                    } else if current-step < 3 {
+                        root.current-step = root.current-step + 1;
+                    } else {
+                        root.finish-setup();
+                    }
+                }
+            }
+        }
+    }
+}
