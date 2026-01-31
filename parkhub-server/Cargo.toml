@@ -35,7 +35,8 @@ uuid.workspace = true
 rcgen.workspace = true
 rustls.workspace = true
 rustls-pemfile.workspace = true
-argon2.workspace = true
+argon2 = { version = "0.5", features = ["std", "rand"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 
 # Network discovery (mDNS/DNS-SD)
