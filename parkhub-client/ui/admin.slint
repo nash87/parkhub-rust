@@ -25,6 +25,36 @@ export struct AdminSlotInfo {
     maintenance-note: string,
 }
 
+// User data for admin management
+export struct AdminUserInfo {
+    id: string,
+    username: string,
+    email: string,
+    name: string,
+    initial: string,  // First letter for avatar display
+    role: string,
+    is-active: bool,
+    last-login: string,
+    created-at: string,
+}
+
+// Server configuration data
+export struct ServerConfigData {
+    server-name: string,
+    port: int,
+    enable-tls: bool,
+    enable-mdns: bool,
+    encryption-enabled: bool,
+    session-timeout-minutes: int,
+    allow-self-registration: bool,
+    max-concurrent-sessions: int,
+    auto-backup-enabled: bool,
+    backup-retention-count: int,
+    audit-logging-enabled: bool,
+    license-plate-display: int,  // 0=show, 1=blur, 2=redact, 3=hide
+    organization-name: string,
+}
+
 // Quick stat card
 component QuickStatCard inherits Rectangle {
     in property <string> label;
@@ -321,6 +351,300 @@ component AdminSlotItem inherits Rectangle {
     }
 }
 
+// Admin user list item
+component AdminUserItem inherits Rectangle {
+    in property <AdminUserInfo> user;
+
+    callback edit-user();
+    callback delete-user();
+    callback reset-password();
+    callback toggle-active();
+
+    property <color> role-color: user.role == "Admin" ? Theme.error :
+                                 user.role == "Premium" ? Theme.warning :
+                                 Theme.secondary;
+
+    height: 72px;
+    border-radius: 10px;
+    background: item-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+    border-width: 1px;
+    border-color: !user.is-active ? Theme.text-tertiary.transparentize(0.7) : Theme.border;
+
+    item-touch := TouchArea {
+        clicked => { root.edit-user(); }
+        mouse-cursor: pointer;
+    }
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+
+        // User avatar
+        Rectangle {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            background: !user.is-active ? Theme.text-tertiary.transparentize(0.85) : root.role-color.transparentize(0.85);
+            y: (parent.height - self.height) / 2;
+
+            Text {
+                text: user.initial != "" ? user.initial : "?";
+                font-size: 18px;
+                font-weight: 700;
+                color: !user.is-active ? Theme.text-tertiary : root.role-color;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Info
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 3px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: user.name != "" ? user.name : user.username;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: !user.is-active ? Theme.text-tertiary : Theme.text-primary;
+                    vertical-alignment: center;
+                }
+
+                // Role badge
+                Rectangle {
+                    width: 56px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: root.role-color.transparentize(0.85);
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: user.role;
+                        font-size: 9px;
+                        font-weight: 600;
+                        color: root.role-color;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // Inactive badge
+                if !user.is-active : Rectangle {
+                    width: 52px;
+                    height: 18px;
+                    border-radius: 4px;
+                    background: Theme.text-tertiary.transparentize(0.85);
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: "Inaktiv";
+                        font-size: 9px;
+                        font-weight: 600;
+                        color: Theme.text-tertiary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: "@" + user.username;
+                font-size: 11px;
+                color: Theme.text-tertiary;
+            }
+
+            Text {
+                text: user.email;
+                font-size: 11px;
+                color: Theme.text-secondary;
+            }
+        }
+
+        // Actions
+        HorizontalLayout {
+            spacing: 4px;
+            y: (parent.height - 32px) / 2;
+
+            // Toggle active
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: active-touch.has-hover ? (user.is-active ? Theme.error.transparentize(0.8) : Theme.secondary.transparentize(0.8)) : transparent;
+
+                active-touch := TouchArea {
+                    clicked => { root.toggle-active(); }
+                    mouse-cursor: pointer;
+                }
+
+                // Power icon (simplified circle)
+                Rectangle {
+                    width: 14px;
+                    height: 14px;
+                    x: 9px;
+                    y: 9px;
+                    border-radius: 7px;
+                    border-width: 2px;
+                    border-color: user.is-active ? Theme.secondary : Theme.text-tertiary;
+                    background: transparent;
+                }
+                Rectangle {
+                    width: 2px;
+                    height: 6px;
+                    x: 15px;
+                    y: 6px;
+                    background: user.is-active ? Theme.secondary : Theme.text-tertiary;
+                    border-radius: 1px;
+                }
+            }
+
+            // Reset password
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: pwd-touch.has-hover ? Theme.warning.transparentize(0.8) : transparent;
+
+                pwd-touch := TouchArea {
+                    clicked => { root.reset-password(); }
+                    mouse-cursor: pointer;
+                }
+
+                // Key icon (simplified)
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    x: 8px;
+                    y: 12px;
+                    border-radius: 4px;
+                    border-width: 2px;
+                    border-color: Theme.warning;
+                    background: transparent;
+                }
+                Rectangle {
+                    width: 8px;
+                    height: 2px;
+                    x: 14px;
+                    y: 15px;
+                    background: Theme.warning;
+                    border-radius: 1px;
+                }
+            }
+
+            // Delete user
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: delete-touch.has-hover ? Theme.error.transparentize(0.8) : transparent;
+
+                delete-touch := TouchArea {
+                    clicked => { root.delete-user(); }
+                    mouse-cursor: pointer;
+                }
+
+                // Trash icon (simplified)
+                Rectangle {
+                    width: 12px;
+                    height: 10px;
+                    x: 10px;
+                    y: 13px;
+                    border-radius: 2px;
+                    background: Theme.error.transparentize(0.6);
+                }
+                Rectangle {
+                    width: 14px;
+                    height: 2px;
+                    x: 9px;
+                    y: 11px;
+                    background: Theme.error;
+                    border-radius: 1px;
+                }
+            }
+        }
+    }
+}
+
+// Tab selector for admin sections
+component AdminTabSelector inherits Rectangle {
+    in property <int> active-tab: 0;
+
+    callback tab-clicked(int);
+
+    height: 44px;
+    background: Theme.surface;
+    border-radius: 12px;
+
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 4px;
+
+        Rectangle {
+            horizontal-stretch: 1;
+            border-radius: 8px;
+            background: active-tab == 0 ? Theme.primary : transparent;
+
+            tab0-touch := TouchArea {
+                clicked => { root.tab-clicked(0); }
+                mouse-cursor: pointer;
+            }
+
+            Text {
+                text: "Dashboard";
+                font-size: 12px;
+                font-weight: active-tab == 0 ? 600 : 400;
+                color: active-tab == 0 ? Theme.background : Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            border-radius: 8px;
+            background: active-tab == 1 ? Theme.primary : transparent;
+
+            tab1-touch := TouchArea {
+                clicked => { root.tab-clicked(1); }
+                mouse-cursor: pointer;
+            }
+
+            Text {
+                text: "Benutzer";
+                font-size: 12px;
+                font-weight: active-tab == 1 ? 600 : 400;
+                color: active-tab == 1 ? Theme.background : Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            border-radius: 8px;
+            background: active-tab == 2 ? Theme.primary : transparent;
+
+            tab2-touch := TouchArea {
+                clicked => { root.tab-clicked(2); }
+                mouse-cursor: pointer;
+            }
+
+            Text {
+                text: "Einstellungen";
+                font-size: 12px;
+                font-weight: active-tab == 2 ? 600 : 400;
+                color: active-tab == 2 ? Theme.background : Theme.text-secondary;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
 // Quick action button
 component QuickActionButton inherits Rectangle {
     in property <string> label;
@@ -387,8 +711,28 @@ export component AdminDashboard inherits Rectangle {
         total-slots: 0,
     };
     in property <[AdminSlotInfo]> slots: [];
+    in property <[AdminUserInfo]> users: [];
+    in property <ServerConfigData> server-config: {
+        server-name: "",
+        port: 8443,
+        enable-tls: true,
+        enable-mdns: true,
+        encryption-enabled: true,
+        session-timeout-minutes: 60,
+        allow-self-registration: true,
+        max-concurrent-sessions: 5,
+        auto-backup-enabled: true,
+        backup-retention-count: 7,
+        audit-logging-enabled: true,
+        license-plate-display: 0,
+        organization-name: "",
+    };
     in property <string> currency: "EUR";
     in property <bool> is-loading: false;
+    in property <string> search-query: "";
+
+    // Internal state
+    property <int> active-tab: 0;
 
     // Callbacks
     callback close-panel();
@@ -400,6 +744,19 @@ export component AdminDashboard inherits Rectangle {
     callback manage-pricing();
     callback view-all-bookings();
     callback send-announcement();
+
+    // User management callbacks
+    callback load-users();
+    callback edit-user(string);
+    callback delete-user(string);
+    callback reset-user-password(string);
+    callback toggle-user-active(string);
+    callback add-user();
+    callback search-users(string);
+
+    // Config callbacks
+    callback load-server-config();
+    callback save-server-config(ServerConfigData);
 
     VerticalLayout {
         padding: 0;
@@ -492,132 +849,634 @@ export component AdminDashboard inherits Rectangle {
             }
         }
 
-        // Content
-        Flickable {
-            vertical-stretch: 1;
+        // Tab selector
+        Rectangle {
+            height: 60px;
+            background: Theme.background;
 
             VerticalLayout {
-                padding: Theme.spacing-md;
-                spacing: Theme.spacing-md;
+                padding-left: Theme.spacing-md;
+                padding-right: Theme.spacing-md;
+                padding-top: 8px;
 
-                // Quick stats row 1
-                HorizontalLayout {
-                    spacing: 10px;
-
-                    QuickStatCard {
-                        horizontal-stretch: 1;
-                        label: "BUCHUNGEN HEUTE";
-                        value: stats.total-bookings-today;
-                        change: "+12%";
-                        positive: true;
-                        accent-color: Theme.primary;
-                    }
-
-                    QuickStatCard {
-                        horizontal-stretch: 1;
-                        label: "UMSATZ HEUTE";
-                        value: stats.revenue-today + " " + root.currency;
-                        change: "+8%";
-                        positive: true;
-                        accent-color: Theme.secondary;
+                AdminTabSelector {
+                    active-tab: root.active-tab;
+                    tab-clicked(tab) => {
+                        root.active-tab = tab;
+                        if tab == 1 { root.load-users(); }
+                        if tab == 2 { root.load-server-config(); }
                     }
                 }
+            }
+        }
 
-                // Quick stats row 2
-                HorizontalLayout {
-                    spacing: 10px;
+        // Content area
+        Rectangle {
+            vertical-stretch: 1;
 
-                    QuickStatCard {
-                        horizontal-stretch: 1;
-                        label: "AKTIVE NUTZER";
-                        value: stats.active-users;
-                        accent-color: Theme.info;
-                    }
-
-                    QuickStatCard {
-                        horizontal-stretch: 1;
-                        label: "FREIE PLÄTZE";
-                        value: stats.available-slots + "/" + stats.total-slots;
-                        accent-color: stats.available-slots < 5 ? Theme.warning : Theme.secondary;
-                    }
-                }
-
-                // Occupancy bar
-                OccupancyBar {
-                    rate: stats.occupancy-rate;
-                    available: stats.available-slots;
-                    total: stats.total-slots;
-                }
-
-                // Quick actions
-                Text {
-                    text: "Schnellaktionen";
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: Theme.text-primary;
-                    padding-top: 8px;
-                }
-
-                HorizontalLayout {
-                    spacing: 10px;
-
-                    QuickActionButton {
-                        horizontal-stretch: 1;
-                        label: "Bericht";
-                        icon-text: "📊";
-                        accent-color: Theme.info;
-                        clicked => { root.export-report(); }
-                    }
-
-                    QuickActionButton {
-                        horizontal-stretch: 1;
-                        label: "Preise";
-                        icon-text: "💰";
-                        accent-color: Theme.secondary;
-                        clicked => { root.manage-pricing(); }
-                    }
-
-                    QuickActionButton {
-                        horizontal-stretch: 1;
-                        label: "Buchungen";
-                        icon-text: "📋";
-                        accent-color: Theme.primary;
-                        clicked => { root.view-all-bookings(); }
-                    }
-
-                    QuickActionButton {
-                        horizontal-stretch: 1;
-                        label: "Mitteilung";
-                        icon-text: "📢";
-                        accent-color: Theme.warning;
-                        clicked => { root.send-announcement(); }
-                    }
-                }
-
-                // Slot management
-                Text {
-                    text: "Parkplätze verwalten";
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: Theme.text-primary;
-                    padding-top: 8px;
-                }
-
+            // === TAB 0: DASHBOARD ===
+            if root.active-tab == 0 : Flickable {
                 VerticalLayout {
-                    spacing: 8px;
+                    padding: Theme.spacing-md;
+                    spacing: Theme.spacing-md;
 
-                    for slot in root.slots : AdminSlotItem {
-                        slot: slot;
+                    // Quick stats row 1
+                    HorizontalLayout {
+                        spacing: 10px;
 
-                        toggle-maintenance => { root.toggle-slot-maintenance(slot.id); }
-                        force-release => { root.force-release-slot(slot.id); }
-                        view-details => { root.view-slot-details(slot.id); }
+                        QuickStatCard {
+                            horizontal-stretch: 1;
+                            label: "BUCHUNGEN HEUTE";
+                            value: stats.total-bookings-today;
+                            change: "+12%";
+                            positive: true;
+                            accent-color: Theme.primary;
+                        }
+
+                        QuickStatCard {
+                            horizontal-stretch: 1;
+                            label: "UMSATZ HEUTE";
+                            value: stats.revenue-today + " " + root.currency;
+                            change: "+8%";
+                            positive: true;
+                            accent-color: Theme.secondary;
+                        }
                     }
-                }
 
-                // Bottom padding
-                Rectangle {
-                    height: 20px;
+                    // Quick stats row 2
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        QuickStatCard {
+                            horizontal-stretch: 1;
+                            label: "AKTIVE NUTZER";
+                            value: stats.active-users;
+                            accent-color: Theme.info;
+                        }
+
+                        QuickStatCard {
+                            horizontal-stretch: 1;
+                            label: "FREIE PLÄTZE";
+                            value: stats.available-slots + "/" + stats.total-slots;
+                            accent-color: stats.available-slots < 5 ? Theme.warning : Theme.secondary;
+                        }
+                    }
+
+                    // Occupancy bar
+                    OccupancyBar {
+                        rate: stats.occupancy-rate;
+                        available: stats.available-slots;
+                        total: stats.total-slots;
+                    }
+
+                    // Quick actions
+                    Text {
+                        text: "Schnellaktionen";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        QuickActionButton {
+                            horizontal-stretch: 1;
+                            label: "Bericht";
+                            icon-text: "📊";
+                            accent-color: Theme.info;
+                            clicked => { root.export-report(); }
+                        }
+
+                        QuickActionButton {
+                            horizontal-stretch: 1;
+                            label: "Preise";
+                            icon-text: "💰";
+                            accent-color: Theme.secondary;
+                            clicked => { root.manage-pricing(); }
+                        }
+
+                        QuickActionButton {
+                            horizontal-stretch: 1;
+                            label: "Buchungen";
+                            icon-text: "📋";
+                            accent-color: Theme.primary;
+                            clicked => { root.view-all-bookings(); }
+                        }
+
+                        QuickActionButton {
+                            horizontal-stretch: 1;
+                            label: "Mitteilung";
+                            icon-text: "📢";
+                            accent-color: Theme.warning;
+                            clicked => { root.send-announcement(); }
+                        }
+                    }
+
+                    // Slot management
+                    Text {
+                        text: "Parkplätze verwalten";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    VerticalLayout {
+                        spacing: 8px;
+
+                        for slot in root.slots : AdminSlotItem {
+                            slot: slot;
+
+                            toggle-maintenance => { root.toggle-slot-maintenance(slot.id); }
+                            force-release => { root.force-release-slot(slot.id); }
+                            view-details => { root.view-slot-details(slot.id); }
+                        }
+                    }
+
+                    Rectangle { height: 20px; }
+                }
+            }
+
+            // === TAB 1: USER MANAGEMENT ===
+            if root.active-tab == 1 : Flickable {
+                VerticalLayout {
+                    padding: Theme.spacing-md;
+                    spacing: Theme.spacing-md;
+
+                    // Header with search and add button
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        // Search box
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 40px;
+                            border-radius: 10px;
+                            background: Theme.surface;
+                            border-width: 1px;
+                            border-color: Theme.border;
+
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                spacing: 8px;
+
+                                // Search icon
+                                Rectangle {
+                                    width: 16px;
+                                    height: 16px;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 6px;
+                                    border-width: 2px;
+                                    border-color: Theme.text-tertiary;
+                                    background: transparent;
+                                }
+
+                                Text {
+                                    text: root.users.length + " Benutzer";
+                                    font-size: 13px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                    horizontal-stretch: 1;
+                                }
+                            }
+                        }
+
+                        // Add user button
+                        Rectangle {
+                            width: 120px;
+                            height: 40px;
+                            border-radius: 10px;
+                            background: add-user-touch.has-hover ? Theme.primary.darker(0.1) : Theme.primary;
+
+                            add-user-touch := TouchArea {
+                                clicked => { root.add-user(); }
+                                mouse-cursor: pointer;
+                            }
+
+                            HorizontalLayout {
+                                padding: 10px;
+                                spacing: 6px;
+
+                                Text {
+                                    text: "+";
+                                    font-size: 16px;
+                                    font-weight: 700;
+                                    color: Theme.background;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: "Hinzufügen";
+                                    font-size: 12px;
+                                    font-weight: 500;
+                                    color: Theme.background;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    // User list
+                    VerticalLayout {
+                        spacing: 8px;
+
+                        for user in root.users : AdminUserItem {
+                            user: user;
+
+                            edit-user => { root.edit-user(user.id); }
+                            delete-user => { root.delete-user(user.id); }
+                            reset-password => { root.reset-user-password(user.id); }
+                            toggle-active => { root.toggle-user-active(user.id); }
+                        }
+
+                        // Empty state
+                        if root.users.length == 0 : Rectangle {
+                            height: 120px;
+                            border-radius: 12px;
+                            background: Theme.surface;
+
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 8px;
+
+                                Text {
+                                    text: "Keine Benutzer gefunden";
+                                    font-size: 14px;
+                                    font-weight: 500;
+                                    color: Theme.text-secondary;
+                                    horizontal-alignment: center;
+                                }
+
+                                Text {
+                                    text: "Klicken Sie auf 'Hinzufügen' um einen neuen Benutzer zu erstellen";
+                                    font-size: 12px;
+                                    color: Theme.text-tertiary;
+                                    horizontal-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle { height: 20px; }
+                }
+            }
+
+            // === TAB 2: SETTINGS ===
+            if root.active-tab == 2 : Flickable {
+                VerticalLayout {
+                    padding: Theme.spacing-md;
+                    spacing: Theme.spacing-md;
+
+                    // Server info section
+                    Text {
+                        text: "Server-Konfiguration";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    Rectangle {
+                        border-radius: 12px;
+                        background: Theme.surface;
+                        height: 140px;
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 12px;
+
+                            // Server name
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Server-Name";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: server-config.server-name;
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // Organization
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Organisation";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: server-config.organization-name != "" ? server-config.organization-name : "-";
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // Port
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Port";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: server-config.port;
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // TLS status
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "TLS-Verschlüsselung";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 60px;
+                                    height: 22px;
+                                    border-radius: 4px;
+                                    background: server-config.enable-tls ? Theme.secondary.transparentize(0.85) : Theme.error.transparentize(0.85);
+
+                                    Text {
+                                        text: server-config.enable-tls ? "Aktiv" : "Aus";
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: server-config.enable-tls ? Theme.secondary : Theme.error;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Security settings
+                    Text {
+                        text: "Sicherheitseinstellungen";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    Rectangle {
+                        border-radius: 12px;
+                        background: Theme.surface;
+                        height: 160px;
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 12px;
+
+                            // Session timeout
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Session-Timeout";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: server-config.session-timeout-minutes + " Minuten";
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // Max concurrent sessions
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Max. gleichzeitige Sessions";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: server-config.max-concurrent-sessions;
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            // Self registration
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Selbstregistrierung";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 70px;
+                                    height: 22px;
+                                    border-radius: 4px;
+                                    background: server-config.allow-self-registration ? Theme.secondary.transparentize(0.85) : Theme.text-tertiary.transparentize(0.85);
+
+                                    Text {
+                                        text: server-config.allow-self-registration ? "Erlaubt" : "Deaktiv";
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: server-config.allow-self-registration ? Theme.secondary : Theme.text-tertiary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            // Audit logging
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Audit-Logging";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 60px;
+                                    height: 22px;
+                                    border-radius: 4px;
+                                    background: server-config.audit-logging-enabled ? Theme.secondary.transparentize(0.85) : Theme.text-tertiary.transparentize(0.85);
+
+                                    Text {
+                                        text: server-config.audit-logging-enabled ? "Aktiv" : "Aus";
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: server-config.audit-logging-enabled ? Theme.secondary : Theme.text-tertiary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Privacy settings
+                    Text {
+                        text: "Datenschutz";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    Rectangle {
+                        border-radius: 12px;
+                        background: Theme.surface;
+                        height: 80px;
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 12px;
+
+                            // License plate display
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Kennzeichen-Anzeige";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 80px;
+                                    height: 22px;
+                                    border-radius: 4px;
+                                    background: Theme.info.transparentize(0.85);
+
+                                    Text {
+                                        text: server-config.license-plate-display == 0 ? "Anzeigen" :
+                                              server-config.license-plate-display == 1 ? "Verschwommen" :
+                                              server-config.license-plate-display == 2 ? "Geschwärzt" : "Ausblenden";
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: Theme.info;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            // Database encryption
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Datenbank-Verschlüsselung";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 60px;
+                                    height: 22px;
+                                    border-radius: 4px;
+                                    background: server-config.encryption-enabled ? Theme.secondary.transparentize(0.85) : Theme.error.transparentize(0.85);
+
+                                    Text {
+                                        text: server-config.encryption-enabled ? "Aktiv" : "Aus";
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: server-config.encryption-enabled ? Theme.secondary : Theme.error;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Backup settings
+                    Text {
+                        text: "Backup";
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.text-primary;
+                    }
+
+                    Rectangle {
+                        border-radius: 12px;
+                        background: Theme.surface;
+                        height: 80px;
+
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 12px;
+
+                            // Auto backup
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Automatisches Backup";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+
+                                Rectangle {
+                                    width: 60px;
+                                    height: 22px;
+                                    border-radius: 4px;
+                                    background: server-config.auto-backup-enabled ? Theme.secondary.transparentize(0.85) : Theme.text-tertiary.transparentize(0.85);
+
+                                    Text {
+                                        text: server-config.auto-backup-enabled ? "Aktiv" : "Aus";
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        color: server-config.auto-backup-enabled ? Theme.secondary : Theme.text-tertiary;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                            }
+
+                            // Retention count
+                            HorizontalLayout {
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: "Backup-Aufbewahrung";
+                                    font-size: 12px;
+                                    color: Theme.text-secondary;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: server-config.backup-retention-count + " Versionen";
+                                    font-size: 13px;
+                                    font-weight: 500;
+                                    color: Theme.text-primary;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle { height: 20px; }
                 }
             }
         }

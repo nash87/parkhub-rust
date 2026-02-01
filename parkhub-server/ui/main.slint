@@ -2,30 +2,124 @@
 
 import { Button, LineEdit, CheckBox, VerticalBox, HorizontalBox, GridBox, GroupBox } from "std-widgets.slint";
 
-// Theme colors
+// Theme mode enumeration
+// 0 = Dark, 1 = Light, 2 = High Contrast, 3 = Deuteranopia, 4 = Protanopia, 5 = Tritanopia
+export global ThemeSettings {
+    in-out property <int> mode: 0;  // 0=Dark (default)
+    in-out property <float> font-scale: 1.0;  // 1.0 = normal, 1.25 = large, 1.5 = extra large
+    in-out property <bool> reduce-motion: false;
+    in-out property <bool> high-contrast-text: false;
+}
+
+// Dynamic theme colors based on mode
 global Theme {
-    out property <color> background: #1a1a2e;
-    out property <color> surface: #16213e;
-    out property <color> primary: #0f3460;
-    out property <color> accent: #e94560;
-    out property <color> text: #eaeaea;
-    out property <color> text-muted: #8b8b8b;
-    out property <color> success: #00b894;
-    out property <color> border: #2a2a4a;
+    // Background colors
+    out property <color> background:
+        ThemeSettings.mode == 1 ? #f5f5f7 :       // Light
+        ThemeSettings.mode == 2 ? #000000 :       // High Contrast
+        ThemeSettings.mode == 3 ? #1a1a2e :       // Deuteranopia (dark base)
+        ThemeSettings.mode == 4 ? #1a1a2e :       // Protanopia (dark base)
+        ThemeSettings.mode == 5 ? #1a1a2e :       // Tritanopia (dark base)
+        #1a1a2e;                                   // Dark (default)
+
+    out property <color> surface:
+        ThemeSettings.mode == 1 ? #ffffff :       // Light
+        ThemeSettings.mode == 2 ? #1a1a1a :       // High Contrast
+        ThemeSettings.mode == 3 ? #16213e :       // Deuteranopia
+        ThemeSettings.mode == 4 ? #16213e :       // Protanopia
+        ThemeSettings.mode == 5 ? #16213e :       // Tritanopia
+        #16213e;                                   // Dark
+
+    out property <color> primary:
+        ThemeSettings.mode == 1 ? #e8e8ed :       // Light
+        ThemeSettings.mode == 2 ? #333333 :       // High Contrast
+        ThemeSettings.mode == 3 ? #1e5799 :       // Deuteranopia (blue-shifted)
+        ThemeSettings.mode == 4 ? #1e5799 :       // Protanopia (blue-shifted)
+        ThemeSettings.mode == 5 ? #6b4c9a :       // Tritanopia (purple-shifted)
+        #0f3460;                                   // Dark
+
+    // Accent color - carefully chosen for each color blindness type
+    out property <color> accent:
+        ThemeSettings.mode == 1 ? #007aff :       // Light (blue)
+        ThemeSettings.mode == 2 ? #ffff00 :       // High Contrast (yellow)
+        ThemeSettings.mode == 3 ? #0077bb :       // Deuteranopia (blue - visible)
+        ThemeSettings.mode == 4 ? #0077bb :       // Protanopia (blue - visible)
+        ThemeSettings.mode == 5 ? #ee7733 :       // Tritanopia (orange - visible)
+        #e94560;                                   // Dark (red-pink)
+
+    out property <color> text:
+        ThemeSettings.mode == 1 ? #1d1d1f :       // Light
+        ThemeSettings.mode == 2 ? #ffffff :       // High Contrast
+        #eaeaea;                                   // Dark/Color blind modes
+
+    out property <color> text-muted:
+        ThemeSettings.mode == 1 ? #86868b :       // Light
+        ThemeSettings.mode == 2 ? #cccccc :       // High Contrast
+        #8b8b8b;                                   // Dark
+
+    // Success color - green alternatives for color blind users
+    out property <color> success:
+        ThemeSettings.mode == 1 ? #34c759 :       // Light
+        ThemeSettings.mode == 2 ? #00ff00 :       // High Contrast
+        ThemeSettings.mode == 3 ? #33bbee :       // Deuteranopia (cyan instead of green)
+        ThemeSettings.mode == 4 ? #33bbee :       // Protanopia (cyan instead of green)
+        ThemeSettings.mode == 5 ? #009988 :       // Tritanopia (teal)
+        #00b894;                                   // Dark
+
+    // Error/warning color
+    out property <color> error:
+        ThemeSettings.mode == 1 ? #ff3b30 :       // Light
+        ThemeSettings.mode == 2 ? #ff0000 :       // High Contrast
+        ThemeSettings.mode == 3 ? #cc3311 :       // Deuteranopia (darker red)
+        ThemeSettings.mode == 4 ? #ee7733 :       // Protanopia (orange)
+        ThemeSettings.mode == 5 ? #cc3311 :       // Tritanopia
+        #e94560;                                   // Dark
+
+    out property <color> warning:
+        ThemeSettings.mode == 1 ? #ff9500 :       // Light
+        ThemeSettings.mode == 2 ? #ffff00 :       // High Contrast
+        ThemeSettings.mode == 3 ? #ee7733 :       // Deuteranopia
+        ThemeSettings.mode == 4 ? #eecc66 :       // Protanopia
+        ThemeSettings.mode == 5 ? #997700 :       // Tritanopia
+        #f39c12;                                   // Dark
+
+    out property <color> border:
+        ThemeSettings.mode == 1 ? #d1d1d6 :       // Light
+        ThemeSettings.mode == 2 ? #ffffff :       // High Contrast
+        #2a2a4a;                                   // Dark
+
+    // Font sizes with scaling
+    out property <length> font-small: 12px * ThemeSettings.font-scale;
+    out property <length> font-normal: 14px * ThemeSettings.font-scale;
+    out property <length> font-medium: 16px * ThemeSettings.font-scale;
+    out property <length> font-large: 18px * ThemeSettings.font-scale;
+    out property <length> font-xlarge: 24px * ThemeSettings.font-scale;
+    out property <length> font-title: 28px * ThemeSettings.font-scale;
+
+    // Animation duration (respects reduce-motion preference)
+    out property <duration> animation-fast: ThemeSettings.reduce-motion ? 0ms : 150ms;
+    out property <duration> animation-normal: ThemeSettings.reduce-motion ? 0ms : 250ms;
+    out property <duration> animation-slow: ThemeSettings.reduce-motion ? 0ms : 400ms;
+
+    // Border width for high contrast
+    out property <length> border-width: ThemeSettings.mode == 2 ? 2px : 1px;
 }
 
 // Styled components
 component StyledButton inherits Rectangle {
     in property <string> text;
     in property <bool> primary: false;
+    in property <bool> danger: false;
     callback clicked;
 
-    height: 40px;
+    height: 40px * ThemeSettings.font-scale;
     min-width: 120px;
     border-radius: 6px;
-    background: primary ? Theme.accent : Theme.primary;
+    background: danger ? Theme.error : (primary ? Theme.accent : Theme.primary);
+    border-width: Theme.border-width;
+    border-color: danger ? Theme.error.darker(20%) : (primary ? Theme.accent.darker(20%) : Theme.border);
 
-    animate background { duration: 150ms; }
+    animate background { duration: Theme.animation-fast; }
 
     ta := TouchArea {
         clicked => { root.clicked(); }
@@ -35,7 +129,7 @@ component StyledButton inherits Rectangle {
     Text {
         text: root.text;
         color: Theme.text;
-        font-size: 14px;
+        font-size: Theme.font-normal;
         font-weight: 500;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -43,7 +137,7 @@ component StyledButton inherits Rectangle {
 
     states [
         hover when ta.has-hover: {
-            background: primary ? Theme.accent.darker(10%) : Theme.primary.darker(10%);
+            background: danger ? Theme.error.darker(10%) : (primary ? Theme.accent.darker(10%) : Theme.primary.darker(10%));
         }
     ]
 }
@@ -53,20 +147,312 @@ component StyledInput inherits Rectangle {
     in property <bool> password: false;
     in-out property <string> text;
 
-    height: 44px;
+    height: 44px * ThemeSettings.font-scale;
     border-radius: 6px;
     background: Theme.surface;
-    border-width: 1px;
+    border-width: Theme.border-width;
     border-color: Theme.border;
 
+    // Simplified: just a basic LineEdit, no password masking (software renderer issue)
     LineEdit {
         x: 12px;
         width: parent.width - 24px;
         height: parent.height;
         text <=> root.text;
-        placeholder-text: root.placeholder;
-        input-type: root.password ? InputType.password : InputType.text;
-        font-size: 14px;
+        placeholder-text: root.password ? root.placeholder + " (visible)" : root.placeholder;
+        input-type: InputType.text;
+        font-size: Theme.font-normal / 1px * 1px;
+    }
+}
+
+// Accessibility Settings Panel Component
+component AccessibilityPanel inherits Rectangle {
+    in-out property <bool> panel-visible: false;
+    callback close();
+
+    background: #000000.transparentize(0.5);
+
+    if root.panel-visible: Rectangle {
+        width: 380px;
+        height: 480px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        background: Theme.surface;
+        border-radius: 12px;
+        border-width: Theme.border-width;
+        border-color: Theme.border;
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 16px;
+
+            // Header
+            HorizontalLayout {
+                Text {
+                    text: "Accessibility Settings";
+                    font-size: Theme.font-large;
+                    font-weight: 600;
+                    color: Theme.text;
+                    horizontal-stretch: 1;
+                }
+
+                // Close button
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 16px;
+                    background: close-ta.has-hover ? Theme.primary : transparent;
+
+                    close-ta := TouchArea {
+                        clicked => { root.close(); }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: "X";
+                        font-size: Theme.font-normal;
+                        color: Theme.text-muted;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // Theme Mode Selection
+            Text {
+                text: "Color Theme";
+                font-size: Theme.font-normal;
+                font-weight: 500;
+                color: Theme.text;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                for theme-option in [
+                    { name: "Dark", value: 0 },
+                    { name: "Light", value: 1 },
+                    { name: "High Contrast", value: 2 }
+                ]: Rectangle {
+                    height: 36px;
+                    horizontal-stretch: 1;
+                    border-radius: 6px;
+                    background: ThemeSettings.mode == theme-option.value ? Theme.accent : Theme.primary;
+                    border-width: Theme.border-width;
+                    border-color: ThemeSettings.mode == theme-option.value ? Theme.accent : Theme.border;
+
+                    TouchArea {
+                        clicked => { ThemeSettings.mode = theme-option.value; }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: theme-option.name;
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // Color Blindness Options
+            Text {
+                text: "Color Vision";
+                font-size: Theme.font-normal;
+                font-weight: 500;
+                color: Theme.text;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                for cb-option in [
+                    { name: "Normal", value: 0 },
+                    { name: "Deuteranopia", value: 3 },
+                    { name: "Protanopia", value: 4 },
+                    { name: "Tritanopia", value: 5 }
+                ]: Rectangle {
+                    height: 36px;
+                    horizontal-stretch: 1;
+                    border-radius: 6px;
+                    background: ThemeSettings.mode == cb-option.value ? Theme.accent : Theme.primary;
+                    border-width: Theme.border-width;
+                    border-color: ThemeSettings.mode == cb-option.value ? Theme.accent : Theme.border;
+
+                    TouchArea {
+                        clicked => { ThemeSettings.mode = cb-option.value; }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: cb-option.name;
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // Font Size
+            Text {
+                text: "Text Size";
+                font-size: Theme.font-normal;
+                font-weight: 500;
+                color: Theme.text;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                for size-option in [
+                    { name: "Normal", value: 1.0 },
+                    { name: "Large", value: 1.25 },
+                    { name: "Extra Large", value: 1.5 }
+                ]: Rectangle {
+                    height: 36px;
+                    horizontal-stretch: 1;
+                    border-radius: 6px;
+                    background: ThemeSettings.font-scale == size-option.value ? Theme.accent : Theme.primary;
+                    border-width: Theme.border-width;
+                    border-color: ThemeSettings.font-scale == size-option.value ? Theme.accent : Theme.border;
+
+                    TouchArea {
+                        clicked => { ThemeSettings.font-scale = size-option.value; }
+                        mouse-cursor: pointer;
+                    }
+
+                    Text {
+                        text: size-option.name;
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            // Additional Options
+            Text {
+                text: "Motion & Display";
+                font-size: Theme.font-normal;
+                font-weight: 500;
+                color: Theme.text;
+            }
+
+            // Reduce Motion Toggle
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: start;
+
+                Rectangle {
+                    width: 48px;
+                    height: 28px;
+                    border-radius: 14px;
+                    background: ThemeSettings.reduce-motion ? Theme.accent : Theme.primary;
+                    border-width: Theme.border-width;
+                    border-color: Theme.border;
+
+                    animate background { duration: Theme.animation-fast; }
+
+                    Rectangle {
+                        width: 22px;
+                        height: 22px;
+                        y: 3px;
+                        x: ThemeSettings.reduce-motion ? parent.width - self.width - 3px : 3px;
+                        border-radius: 11px;
+                        background: Theme.text;
+
+                        animate x { duration: Theme.animation-fast; }
+                    }
+
+                    TouchArea {
+                        clicked => { ThemeSettings.reduce-motion = !ThemeSettings.reduce-motion; }
+                        mouse-cursor: pointer;
+                    }
+                }
+
+                Text {
+                    text: "Reduce animations";
+                    font-size: Theme.font-normal;
+                    color: Theme.text;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Color Preview
+            Text {
+                text: "Color Preview";
+                font-size: Theme.font-normal;
+                font-weight: 500;
+                color: Theme.text;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 32px;
+                    border-radius: 4px;
+                    background: Theme.accent;
+
+                    Text {
+                        text: "Primary";
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 32px;
+                    border-radius: 4px;
+                    background: Theme.success;
+
+                    Text {
+                        text: "Success";
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 32px;
+                    border-radius: 4px;
+                    background: Theme.error;
+
+                    Text {
+                        text: "Error";
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 32px;
+                    border-radius: 4px;
+                    background: Theme.warning;
+
+                    Text {
+                        text: "Warning";
+                        font-size: Theme.font-small;
+                        color: Theme.text;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -90,8 +476,8 @@ component StepIndicator inherits HorizontalLayout {
 // Main Setup Wizard
 export component SetupWizard inherits Window {
     title: "ParkHub Server Setup";
-    min-width: 500px;
-    min-height: 450px;
+    min-width: 520px;
+    min-height: 520px;
     background: Theme.background;
 
     // Properties
@@ -103,13 +489,29 @@ export component SetupWizard inherits Window {
     in-out property <int> port: 7878;
     in-out property <bool> enable-tls: true;
     in-out property <bool> enable-mdns: true;
+    in-out property <bool> enable-encryption: true;
+    in-out property <string> encryption-passphrase: "";
+    in-out property <string> encryption-passphrase-confirm: "";
     in-out property <string> error-message: "";
     in-out property <string> local-ip: "192.168.x.x";
-    in-out property <bool> password-valid: false;  // Set from Rust when password length >= 4
+    in-out property <bool> password-valid: false;
+
+    // Database location
+    in-out property <string> database-location: "./parkhub-data";
+    in-out property <bool> use-portable-mode: true;
+
+    // User import options
+    in-out property <bool> generate-dummy-users: false;
+    in-out property <int> dummy-user-count: 50;
+    in-out property <int> username-style: 0;  // 0=ab, 1=a.b, 2=ab, 3=ab
+
+    // Privacy options
+    in-out property <int> license-plate-display: 0;  // 0=show, 1=blur, 2=redact, 3=hide
 
     // Callbacks
     callback finish-setup();
     callback cancel-setup();
+    callback browse-database-location();
 
     VerticalLayout {
         padding: 32px;
@@ -127,7 +529,7 @@ export component SetupWizard inherits Window {
         // Step indicator
         StepIndicator {
             current-step: root.current-step;
-            total-steps: 4;
+            total-steps: 7;
         }
 
         // Content area
@@ -139,8 +541,8 @@ export component SetupWizard inherits Window {
             // Step 0: Welcome
             if current-step == 0: VerticalLayout {
                 padding: 24px;
-                spacing: 16px;
-                alignment: center;
+                spacing: 12px;
+                alignment: start;
 
                 Text {
                     text: "Welcome to ParkHub Server";
@@ -151,18 +553,36 @@ export component SetupWizard inherits Window {
                 }
 
                 Text {
-                    text: "This wizard will help you configure your parking management server.\n\nThe server will:\n• Store parking lot data and bookings\n• Provide API for client applications\n• Broadcast on local network for easy discovery";
+                    text: "A modern, secure parking management solution.";
                     font-size: 14px;
+                    color: Theme.text-muted;
+                    horizontal-alignment: center;
+                }
+
+                Rectangle { height: 8px; }
+
+                Text {
+                    text: "✓ Secure AES-256 encrypted database\n✓ TLS-encrypted network communication\n✓ GDPR-compliant data handling\n✓ Automatic LAN server discovery\n✓ Modern REST API for client apps";
+                    font-size: 13px;
+                    color: Theme.success;
+                    wrap: word-wrap;
+                }
+
+                Rectangle { height: 8px; }
+
+                Text {
+                    text: "This wizard will configure your server in a few simple steps. Your data stays local and private.";
+                    font-size: 12px;
                     color: Theme.text-muted;
                     horizontal-alignment: center;
                     wrap: word-wrap;
                 }
             }
 
-            // Step 1: Server Name
+            // Step 1: Server Configuration
             if current-step == 1: VerticalLayout {
                 padding: 24px;
-                spacing: 16px;
+                spacing: 12px;
 
                 Text {
                     text: "Server Configuration";
@@ -172,7 +592,7 @@ export component SetupWizard inherits Window {
                 }
 
                 Text {
-                    text: "Choose a name for this server (visible to clients):";
+                    text: "Server name (visible to clients):";
                     font-size: 14px;
                     color: Theme.text-muted;
                 }
@@ -182,15 +602,51 @@ export component SetupWizard inherits Window {
                     text <=> root.server-name;
                 }
 
-                Text {
-                    text: "Port number:";
-                    font-size: 14px;
-                    color: Theme.text-muted;
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 4px;
+
+                        Text {
+                            text: "Port:";
+                            font-size: 14px;
+                            color: Theme.text-muted;
+                        }
+
+                        StyledInput {
+                            placeholder: "7878";
+                            text: root.port == 0 ? "" : "\{root.port}";
+                        }
+                    }
                 }
 
-                StyledInput {
-                    placeholder: "7878";
-                    text: root.port == 0 ? "" : "\{root.port}";
+                Rectangle { height: 4px; }
+
+                Text {
+                    text: "Database Location";
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: Theme.text;
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+
+                    CheckBox {
+                        text: "Portable mode (store data next to executable)";
+                        checked <=> root.use-portable-mode;
+                    }
+                }
+
+                Text {
+                    text: root.use-portable-mode
+                        ? "Data will be stored in ./parkhub-data/ folder"
+                        : "Data will be stored in system AppData folder";
+                    font-size: 11px;
+                    color: Theme.text-muted;
                 }
             }
 
@@ -236,8 +692,76 @@ export component SetupWizard inherits Window {
                 }
             }
 
-            // Step 3: Network Settings
+            // Step 3: Database Encryption
             if current-step == 3: VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Database Encryption";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    CheckBox {
+                        text: "Enable database encryption";
+                        checked <=> root.enable-encryption;
+                    }
+                }
+
+                Text {
+                    text: "Encrypts all data at rest using AES-256 (recommended)";
+                    font-size: 12px;
+                    color: Theme.text-muted;
+                }
+
+                if root.enable-encryption: VerticalLayout {
+                    spacing: 12px;
+
+                    Text {
+                        text: "Encryption passphrase:";
+                        font-size: 14px;
+                        color: Theme.text-muted;
+                    }
+
+                    StyledInput {
+                        placeholder: "Passphrase (min 8 characters)";
+                        password: true;
+                        text <=> root.encryption-passphrase;
+                    }
+
+                    StyledInput {
+                        placeholder: "Confirm passphrase";
+                        password: true;
+                        text <=> root.encryption-passphrase-confirm;
+                    }
+
+                    Rectangle {
+                        height: 8px;
+                    }
+
+                    Text {
+                        text: "⚠️ IMPORTANT: Store this passphrase safely!\nIt's required every time you start the server.\nIf lost, your data cannot be recovered.";
+                        font-size: 12px;
+                        color: Theme.accent;
+                        wrap: word-wrap;
+                    }
+                }
+
+                if root.error-message != "": Text {
+                    text: root.error-message;
+                    font-size: 12px;
+                    color: Theme.accent;
+                }
+            }
+
+            // Step 4: Network Settings
+            if current-step == 4: VerticalLayout {
                 padding: 24px;
                 spacing: 16px;
 
@@ -298,6 +822,302 @@ export component SetupWizard inherits Window {
                     color: Theme.success;
                 }
             }
+
+            // Step 5: Sample Data / Dummy Users
+            if current-step == 5: VerticalLayout {
+                padding: 20px;
+                spacing: 10px;
+
+                Text {
+                    text: "Sample Data & Privacy";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                // Dummy users checkbox
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+
+                    CheckBox {
+                        text: "Generate 50 dummy users for testing";
+                        checked <=> root.generate-dummy-users;
+                    }
+                }
+
+                if root.generate-dummy-users: VerticalLayout {
+                    spacing: 8px;
+
+                    Text {
+                        text: "Password for all: 12351235";
+                        font-size: 12px;
+                        font-weight: 500;
+                        color: Theme.accent;
+                    }
+
+                    Text {
+                        text: "Username style:";
+                        font-size: 12px;
+                        color: Theme.text-muted;
+                    }
+
+                    // Username style selector
+                    HorizontalLayout {
+                        spacing: 6px;
+
+                        Rectangle {
+                            width: 70px;
+                            height: 28px;
+                            border-radius: 4px;
+                            background: root.username-style == 0 ? Theme.accent : Theme.surface;
+                            border-width: 1px;
+                            border-color: root.username-style == 0 ? Theme.accent : Theme.border;
+
+                            TouchArea {
+                                clicked => { root.username-style = 0; }
+                            }
+
+                            Text {
+                                text: "ah1";
+                                font-size: 11px;
+                                color: Theme.text;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            width: 90px;
+                            height: 28px;
+                            border-radius: 4px;
+                            background: root.username-style == 1 ? Theme.accent : Theme.surface;
+                            border-width: 1px;
+                            border-color: root.username-style == 1 ? Theme.accent : Theme.border;
+
+                            TouchArea {
+                                clicked => { root.username-style = 1; }
+                            }
+
+                            Text {
+                                text: "alex.smith1";
+                                font-size: 11px;
+                                color: Theme.text;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            width: 70px;
+                            height: 28px;
+                            border-radius: 4px;
+                            background: root.username-style == 2 ? Theme.accent : Theme.surface;
+                            border-width: 1px;
+                            border-color: root.username-style == 2 ? Theme.accent : Theme.border;
+
+                            TouchArea {
+                                clicked => { root.username-style = 2; }
+                            }
+
+                            Text {
+                                text: "asmith1";
+                                font-size: 11px;
+                                color: Theme.text;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Rectangle {
+                            width: 70px;
+                            height: 28px;
+                            border-radius: 4px;
+                            background: root.username-style == 3 ? Theme.accent : Theme.surface;
+                            border-width: 1px;
+                            border-color: root.username-style == 3 ? Theme.accent : Theme.border;
+
+                            TouchArea {
+                                clicked => { root.username-style = 3; }
+                            }
+
+                            Text {
+                                text: "alexs1";
+                                font-size: 11px;
+                                color: Theme.text;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                Rectangle { height: 4px; }
+
+                // License plate privacy
+                Text {
+                    text: "License Plate Display";
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: Theme.text;
+                }
+
+                HorizontalLayout {
+                    spacing: 6px;
+
+                    Rectangle {
+                        width: 60px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: root.license-plate-display == 0 ? Theme.accent : Theme.surface;
+                        border-width: 1px;
+                        border-color: root.license-plate-display == 0 ? Theme.accent : Theme.border;
+
+                        TouchArea {
+                            clicked => { root.license-plate-display = 0; }
+                        }
+
+                        Text {
+                            text: "Show";
+                            font-size: 11px;
+                            color: Theme.text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 60px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: root.license-plate-display == 1 ? Theme.accent : Theme.surface;
+                        border-width: 1px;
+                        border-color: root.license-plate-display == 1 ? Theme.accent : Theme.border;
+
+                        TouchArea {
+                            clicked => { root.license-plate-display = 1; }
+                        }
+
+                        Text {
+                            text: "Blur";
+                            font-size: 11px;
+                            color: Theme.text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 60px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: root.license-plate-display == 2 ? Theme.accent : Theme.surface;
+                        border-width: 1px;
+                        border-color: root.license-plate-display == 2 ? Theme.accent : Theme.border;
+
+                        TouchArea {
+                            clicked => { root.license-plate-display = 2; }
+                        }
+
+                        Text {
+                            text: "AB-***";
+                            font-size: 11px;
+                            color: Theme.text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Rectangle {
+                        width: 60px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: root.license-plate-display == 3 ? Theme.accent : Theme.surface;
+                        border-width: 1px;
+                        border-color: root.license-plate-display == 3 ? Theme.accent : Theme.border;
+
+                        TouchArea {
+                            clicked => { root.license-plate-display = 3; }
+                        }
+
+                        Text {
+                            text: "Hide";
+                            font-size: 11px;
+                            color: Theme.text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                Text {
+                    text: root.license-plate-display == 0 ? "Full plates visible to all users" :
+                          root.license-plate-display == 1 ? "Plates blurred, visible on hover" :
+                          root.license-plate-display == 2 ? "Partial redaction (AB-1**-CD)" :
+                          "Plates hidden, admin only";
+                    font-size: 10px;
+                    color: Theme.text-muted;
+                }
+            }
+
+            // Step 6: About & Compliance
+            if current-step == 6: VerticalLayout {
+                padding: 20px;
+                spacing: 8px;
+
+                Text {
+                    text: "About ParkHub";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                Text {
+                    text: "ParkHub v1.0 - Modern Parking Management";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                }
+
+                Rectangle { height: 4px; }
+
+                // Technology stack
+                Text {
+                    text: "Technology Stack";
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: Theme.text;
+                }
+                Text {
+                    text: "• Rust backend (memory-safe, high performance)\n• Slint UI framework (native, cross-platform)\n• redb embedded database (ACID-compliant)\n• AES-256-GCM encryption at rest\n• TLS 1.3 for network security\n• Argon2 password hashing";
+                    font-size: 11px;
+                    color: Theme.text-muted;
+                    wrap: word-wrap;
+                }
+
+                // Security & Compliance
+                Text {
+                    text: "Security & Compliance";
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: Theme.text;
+                }
+                Text {
+                    text: "✓ GDPR-compliant data handling\n✓ Local-first architecture (your data stays with you)\n✓ Industry-standard encryption (AES-256)\n✓ Secure password storage (Argon2)\n✓ No telemetry or data collection";
+                    font-size: 11px;
+                    color: Theme.success;
+                    wrap: word-wrap;
+                }
+
+                Rectangle { height: 4px; }
+
+                Text {
+                    text: "Made with ❤️ by developers who care about privacy.\nFully AI-assisted development. Open source on GitHub.";
+                    font-size: 11px;
+                    color: Theme.text-muted;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
         }
 
         // Navigation buttons
@@ -314,11 +1134,11 @@ export component SetupWizard inherits Window {
             }
 
             StyledButton {
-                text: current-step < 3 ? "Next" : "Finish Setup";
+                text: current-step < 6 ? "Next" : "Finish Setup";
                 primary: true;
                 clicked => {
                     if current-step == 2 {
-                        // Validate passwords
+                        // Validate admin passwords
                         if root.admin-password == "" {
                             root.error-message = "Password is required";
                         } else if root.admin-password != root.admin-password-confirm {
@@ -327,10 +1147,537 @@ export component SetupWizard inherits Window {
                             root.error-message = "";
                             root.current-step = root.current-step + 1;
                         }
-                    } else if current-step < 3 {
+                    } else if current-step == 3 {
+                        // Validate encryption passphrase
+                        if root.enable-encryption {
+                            if root.encryption-passphrase.character-count < 8 {
+                                root.error-message = "Passphrase must be at least 8 characters";
+                            } else if root.encryption-passphrase != root.encryption-passphrase-confirm {
+                                root.error-message = "Passphrases do not match";
+                            } else {
+                                root.error-message = "";
+                                root.current-step = root.current-step + 1;
+                            }
+                        } else {
+                            root.error-message = "";
+                            root.current-step = root.current-step + 1;
+                        }
+                    } else if current-step < 6 {
                         root.current-step = root.current-step + 1;
                     } else {
                         root.finish-setup();
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Server Status Window - shown when server is running
+export component ServerStatus inherits Window {
+    title: "ParkHub Server";
+    min-width: 400px;
+    min-height: 380px;
+    background: Theme.background;
+
+    // Server state
+    in property <string> server-name: "ParkHub Server";
+    in property <string> server-url: "https://localhost:7878";
+    in property <bool> is-running: true;
+    in property <bool> tls-enabled: true;
+    in property <bool> mdns-enabled: true;
+    in property <bool> encryption-enabled: true;
+
+    // Statistics
+    in property <int> user-count: 0;
+    in property <int> booking-count: 0;
+    in property <int> parking-lot-count: 0;
+    in property <int> slot-count: 0;
+    in property <int> session-count: 0;
+
+    // Close dialog state
+    in-out property <bool> show-close-dialog: false;
+    in-out property <bool> remember-close-choice: false;
+    in-out property <string> close-behavior: "ask"; // "ask", "minimize", "exit"
+
+    // Accessibility panel state
+    in-out property <bool> show-accessibility-panel: false;
+
+    // Callbacks
+    callback minimize-to-tray();
+    callback stop-server();
+    callback open-data-folder();
+    callback close-requested(); // Called when user clicks X
+    callback save-accessibility-settings(); // Save theme settings
+
+    VerticalLayout {
+        padding: 24px;
+        spacing: 16px;
+
+        // Header with logo and status
+        HorizontalLayout {
+            spacing: 16px;
+            alignment: center;
+
+            // Logo
+            Rectangle {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+                background: Theme.accent;
+
+                Text {
+                    text: "P";
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: Theme.text;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            VerticalLayout {
+                spacing: 4px;
+                alignment: center;
+
+                Text {
+                    text: root.server-name;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+
+                    // Status indicator
+                    Rectangle {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 5px;
+                        background: root.is-running ? Theme.success : Theme.accent;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: root.is-running ? "Running" : "Stopped";
+                        font-size: 14px;
+                        color: root.is-running ? Theme.success : Theme.accent;
+                    }
+                }
+            }
+        }
+
+        // Server URL
+        Rectangle {
+            height: 50px;
+            border-radius: 8px;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: 8px;
+                padding-left: 12px;
+                spacing: 2px;
+
+                Text {
+                    text: "Server URL";
+                    font-size: 11px;
+                    color: Theme.text-muted;
+                }
+
+                Text {
+                    text: root.server-url;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: Theme.success;
+                }
+            }
+        }
+
+        // Feature indicators
+        HorizontalLayout {
+            spacing: 8px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 32px;
+                border-radius: 6px;
+                background: root.tls-enabled ? Theme.success.transparentize(0.85) : Theme.surface;
+                border-width: 1px;
+                border-color: root.tls-enabled ? Theme.success.transparentize(0.5) : Theme.border;
+
+                Text {
+                    text: root.tls-enabled ? "TLS" : "TLS Off";
+                    font-size: 11px;
+                    font-weight: 500;
+                    color: root.tls-enabled ? Theme.success : Theme.text-muted;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 32px;
+                border-radius: 6px;
+                background: root.mdns-enabled ? Theme.success.transparentize(0.85) : Theme.surface;
+                border-width: 1px;
+                border-color: root.mdns-enabled ? Theme.success.transparentize(0.5) : Theme.border;
+
+                Text {
+                    text: root.mdns-enabled ? "mDNS" : "mDNS Off";
+                    font-size: 11px;
+                    font-weight: 500;
+                    color: root.mdns-enabled ? Theme.success : Theme.text-muted;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 32px;
+                border-radius: 6px;
+                background: root.encryption-enabled ? Theme.success.transparentize(0.85) : Theme.surface;
+                border-width: 1px;
+                border-color: root.encryption-enabled ? Theme.success.transparentize(0.5) : Theme.border;
+
+                Text {
+                    text: root.encryption-enabled ? "Encrypted" : "Unencrypted";
+                    font-size: 11px;
+                    font-weight: 500;
+                    color: root.encryption-enabled ? Theme.success : Theme.text-muted;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Statistics
+        Rectangle {
+            vertical-stretch: 1;
+            border-radius: 8px;
+            background: Theme.surface;
+
+            VerticalLayout {
+                padding: 12px;
+                spacing: 8px;
+
+                Text {
+                    text: "Database Statistics";
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+
+                GridLayout {
+                    spacing: 8px;
+                    Row {
+                        Text { text: "Users:"; color: Theme.text-muted; font-size: 13px; }
+                        Text { text: root.user-count; color: Theme.text; font-size: 13px; font-weight: 500; }
+                    }
+                    Row {
+                        Text { text: "Bookings:"; color: Theme.text-muted; font-size: 13px; }
+                        Text { text: root.booking-count; color: Theme.text; font-size: 13px; font-weight: 500; }
+                    }
+                    Row {
+                        Text { text: "Parking Lots:"; color: Theme.text-muted; font-size: 13px; }
+                        Text { text: root.parking-lot-count; color: Theme.text; font-size: 13px; font-weight: 500; }
+                    }
+                    Row {
+                        Text { text: "Slots:"; color: Theme.text-muted; font-size: 13px; }
+                        Text { text: root.slot-count; color: Theme.text; font-size: 13px; font-weight: 500; }
+                    }
+                    Row {
+                        Text { text: "Active Sessions:"; color: Theme.text-muted; font-size: 13px; }
+                        Text { text: root.session-count; color: Theme.text; font-size: 13px; font-weight: 500; }
+                    }
+                }
+            }
+        }
+
+        // Action buttons
+        HorizontalLayout {
+            spacing: 8px;
+
+            // Accessibility button
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                border-radius: 6px;
+                background: a11y-ta.has-hover ? Theme.primary.darker(10%) : Theme.primary;
+                border-width: Theme.border-width;
+                border-color: Theme.border;
+
+                a11y-ta := TouchArea {
+                    clicked => { root.show-accessibility-panel = true; }
+                    mouse-cursor: pointer;
+                }
+
+                // Accessibility icon (eye symbol)
+                Text {
+                    text: "\u{2022}"; // Unicode dot as placeholder
+                    font-size: Theme.font-large;
+                    color: Theme.text;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                // Circular indicator
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 12px;
+                    border-width: 2px;
+                    border-color: Theme.text;
+                    background: transparent;
+                }
+            }
+
+            StyledButton {
+                horizontal-stretch: 1;
+                text: "Open Data Folder";
+                clicked => { root.open-data-folder(); }
+            }
+
+            StyledButton {
+                horizontal-stretch: 1;
+                text: "Minimize to Tray";
+                primary: true;
+                clicked => { root.minimize-to-tray(); }
+            }
+        }
+
+        // Stop server button
+        Rectangle {
+            height: 36px;
+            border-radius: 6px;
+            background: stop-ta.has-hover ? Theme.accent.transparentize(0.8) : transparent;
+            border-width: 1px;
+            border-color: Theme.accent.transparentize(0.5);
+
+            stop-ta := TouchArea {
+                clicked => { root.stop-server(); }
+                mouse-cursor: pointer;
+            }
+
+            Text {
+                text: "Stop Server and Exit";
+                font-size: 13px;
+                color: Theme.accent;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Accessibility settings panel
+    if root.show-accessibility-panel: AccessibilityPanel {
+        panel-visible: root.show-accessibility-panel;
+        close => {
+            root.show-accessibility-panel = false;
+            root.save-accessibility-settings();
+        }
+    }
+
+    // Close confirmation dialog overlay
+    if root.show-close-dialog: Rectangle {
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+        background: #000000.transparentize(0.5);
+
+        // Dialog box
+        Rectangle {
+            width: 320px;
+            height: 220px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: Theme.surface;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Close Application?";
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: Theme.text;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "What would you like to do?";
+                    font-size: 14px;
+                    color: Theme.text-muted;
+                    horizontal-alignment: center;
+                }
+
+                // Remember choice checkbox
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 8px;
+
+                    remember-checkbox := Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 4px;
+                        border-width: 2px;
+                        border-color: root.remember-close-choice ? Theme.accent : Theme.border;
+                        background: root.remember-close-choice ? Theme.accent : transparent;
+
+                        TouchArea {
+                            clicked => {
+                                root.remember-close-choice = !root.remember-close-choice;
+                            }
+                            mouse-cursor: pointer;
+                        }
+
+                        if root.remember-close-choice: Text {
+                            text: "\u{2713}";
+                            font-size: 14px;
+                            color: Theme.text;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Text {
+                        text: "Remember my choice";
+                        font-size: 13px;
+                        color: Theme.text-muted;
+                        vertical-alignment: center;
+
+                        TouchArea {
+                            clicked => {
+                                root.remember-close-choice = !root.remember-close-choice;
+                            }
+                            mouse-cursor: pointer;
+                        }
+                    }
+                }
+
+                // Buttons
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: center;
+
+                    StyledButton {
+                        text: "Minimize to Tray";
+                        primary: true;
+                        clicked => {
+                            if root.remember-close-choice {
+                                root.close-behavior = "minimize";
+                            }
+                            root.show-close-dialog = false;
+                            root.minimize-to-tray();
+                        }
+                    }
+
+                    StyledButton {
+                        text: "Exit";
+                        clicked => {
+                            if root.remember-close-choice {
+                                root.close-behavior = "exit";
+                            }
+                            root.show-close-dialog = false;
+                            root.stop-server();
+                        }
+                    }
+                }
+
+                // Cancel link
+                Text {
+                    text: "Cancel";
+                    font-size: 12px;
+                    color: Theme.text-muted;
+                    horizontal-alignment: center;
+
+                    TouchArea {
+                        clicked => {
+                            root.show-close-dialog = false;
+                        }
+                        mouse-cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Passphrase dialog for runtime database unlock
+export component PassphraseDialog inherits Window {
+    title: "ParkHub Server - Enter Passphrase";
+    min-width: 400px;
+    min-height: 200px;
+    background: Theme.background;
+
+    in-out property <string> passphrase: "";
+    in-out property <string> error-message: "";
+
+    callback submit(string);
+    callback cancel();
+
+    VerticalLayout {
+        padding: 24px;
+        spacing: 16px;
+
+        Text {
+            text: "Database Passphrase Required";
+            font-size: 18px;
+            font-weight: 600;
+            color: Theme.text;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "Enter your database encryption passphrase to start the server:";
+            font-size: 14px;
+            color: Theme.text-muted;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+
+        StyledInput {
+            placeholder: "Passphrase";
+            password: true;
+            text <=> root.passphrase;
+        }
+
+        if root.error-message != "": Text {
+            text: root.error-message;
+            font-size: 12px;
+            color: Theme.accent;
+            horizontal-alignment: center;
+        }
+
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: center;
+
+            StyledButton {
+                text: "Cancel";
+                clicked => { root.cancel(); }
+            }
+
+            StyledButton {
+                text: "Unlock";
+                primary: true;
+                clicked => {
+                    if root.passphrase != "" {
+                        root.submit(root.passphrase);
+                    } else {
+                        root.error-message = "Please enter a passphrase";
                     }
                 }
             }

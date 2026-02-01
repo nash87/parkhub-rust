@@ -1,8 +1,9 @@
 // Connect Screen - Server Discovery and Connection
 //
 // Shows discovered servers via mDNS and allows manual connection.
+// Note: Hover effects removed due to software renderer compatibility issues
 
-import { Theme } from "theme.slint";
+import { Theme, ThemeSettings } from "theme.slint";
 import { LineEdit, Button } from "std-widgets.slint";
 
 export struct DiscoveredServer {
@@ -24,7 +25,7 @@ export component ConnectScreen inherits Rectangle {
     in property <string> error-message: "";
     in-out property <string> manual-host: "";
     in-out property <int> manual-port: 7878;
-    in-out property <bool> manual-tls: true;
+    in-out property <bool> manual-tls: false;
 
     // Callbacks
     callback refresh-servers();
@@ -36,10 +37,10 @@ export component ConnectScreen inherits Rectangle {
         spacing: 0;
         padding: 0;
 
-        // Header
+        // Header with accent color (red-pink)
         Rectangle {
             height: 180px;
-            background: Theme.primary;
+            background: Theme.accent;
 
             VerticalLayout {
                 alignment: center;
@@ -50,13 +51,13 @@ export component ConnectScreen inherits Rectangle {
                     width: 80px;
                     height: 80px;
                     border-radius: 40px;
-                    background: white.transparentize(0.1);
+                    background: #ffffff;
 
                     Text {
                         text: "P";
                         font-size: 42px;
                         font-weight: 700;
-                        color: Theme.primary;
+                        color: Theme.accent;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
@@ -73,7 +74,7 @@ export component ConnectScreen inherits Rectangle {
                 Text {
                     text: "Connect to a server";
                     font-size: 14px;
-                    color: white.transparentize(0.2);
+                    color: #cccccc;
                     horizontal-alignment: center;
                 }
             }
@@ -91,7 +92,7 @@ export component ConnectScreen inherits Rectangle {
                 // Error message
                 if root.error-message != "" : Rectangle {
                     height: 44px;
-                    background: Theme.error.transparentize(0.9);
+                    background: #3d1f2a;
                     border-radius: 8px;
 
                     HorizontalLayout {
@@ -126,7 +127,7 @@ export component ConnectScreen inherits Rectangle {
                             width: 32px;
                             height: 32px;
                             border-radius: 16px;
-                            background: refresh-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+                            background: Theme.surface;
 
                             refresh-touch := TouchArea {
                                 enabled: !root.is-scanning;
@@ -137,7 +138,7 @@ export component ConnectScreen inherits Rectangle {
                             Text {
                                 text: root.is-scanning ? "..." : "\u{21bb}";
                                 font-size: 16px;
-                                color: Theme.primary;
+                                color: Theme.accent;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }
@@ -195,7 +196,7 @@ export component ConnectScreen inherits Rectangle {
                                     width: 8px;
                                     height: 8px;
                                     border-radius: 4px;
-                                    background: Theme.primary.transparentize(0.5);
+                                    background: Theme.accent;
                                 }
                             }
                         }
@@ -204,10 +205,10 @@ export component ConnectScreen inherits Rectangle {
                     // Server cards
                     for server in root.discovered-servers : Rectangle {
                         height: 72px;
-                        background: server-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+                        background: Theme.surface;
                         border-radius: 12px;
-                        border-width: server-touch.has-hover ? 2px : 1px;
-                        border-color: server-touch.has-hover ? Theme.primary : Theme.border;
+                        border-width: 1px;
+                        border-color: Theme.border;
 
                         server-touch := TouchArea {
                             enabled: !root.is-connecting;
@@ -224,7 +225,7 @@ export component ConnectScreen inherits Rectangle {
                                 width: 40px;
                                 height: 40px;
                                 border-radius: 8px;
-                                background: Theme.primary.transparentize(0.9);
+                                background: Theme.primary;
 
                                 Text {
                                     text: server.tls ? "\u{1f512}" : "\u{1f513}";
@@ -262,7 +263,7 @@ export component ConnectScreen inherits Rectangle {
                                 Text {
                                     text: "\u{2192}";
                                     font-size: 18px;
-                                    color: Theme.primary;
+                                    color: Theme.accent;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
                                 }
@@ -377,10 +378,10 @@ export component ConnectScreen inherits Rectangle {
                             Rectangle {
                                 width: 80px;
                                 height: 44px;
-                                background: tls-touch.has-hover ? Theme.surface-elevated : Theme.surface;
+                                background: Theme.surface;
                                 border-radius: 8px;
                                 border-width: 1px;
-                                border-color: root.manual-tls ? Theme.primary : Theme.border;
+                                border-color: Theme.border;
 
                                 tls-touch := TouchArea {
                                     clicked => { root.manual-tls = !root.manual-tls; }
@@ -400,17 +401,17 @@ export component ConnectScreen inherits Rectangle {
                                         text: root.manual-tls ? "HTTPS" : "HTTP";
                                         font-size: 13px;
                                         font-weight: 500;
-                                        color: root.manual-tls ? Theme.primary : Theme.text-secondary;
+                                        color: Theme.text-secondary;
                                     }
                                 }
                             }
                         }
                     }
 
-                    // Connect button
+                    // Connect button with accent color
                     Rectangle {
                         height: 50px;
-                        background: connect-touch.has-hover ? Theme.primary.darker(10%) : Theme.primary;
+                        background: Theme.accent;
                         border-radius: 12px;
 
                         connect-touch := TouchArea {

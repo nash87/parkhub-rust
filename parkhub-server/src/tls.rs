@@ -5,11 +5,25 @@
 use anyhow::{Context, Result};
 use rcgen::{CertifiedKey, generate_simple_self_signed};
 use std::path::Path;
+use std::sync::Once;
+
+/// Ensure the Rustls crypto provider is installed (only once)
+static CRYPTO_PROVIDER_INIT: Once = Once::new();
+
+fn ensure_crypto_provider() {
+    CRYPTO_PROVIDER_INIT.call_once(|| {
+        // Install the ring crypto provider for Rustls
+        let _ = rustls::crypto::ring::default_provider().install_default();
+    });
+}
 
 /// Load existing TLS config or create new self-signed certificate
 pub async fn load_or_create_tls_config(
     data_dir: &Path,
 ) -> Result<axum_server::tls_rustls::RustlsConfig> {
+    // Ensure crypto provider is initialized
+    ensure_crypto_provider();
+
     let cert_path = data_dir.join("server.crt");
     let key_path = data_dir.join("server.key");
 

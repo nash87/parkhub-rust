@@ -4,9 +4,9 @@
 
 fn main() {
     // Compile Slint UI files with Phosphor icon font
-    // Include the fonts directory so Slint can find and embed Phosphor.ttf
+    // Use EmbedFiles which is more compatible
     let config = slint_build::CompilerConfiguration::new()
-        .embed_resources(slint_build::EmbedResourcesKind::EmbedForSoftwareRenderer)
+        .embed_resources(slint_build::EmbedResourcesKind::EmbedFiles)
         .with_include_paths(vec![std::path::PathBuf::from("fonts")]);
 
     slint_build::compile_with_config("ui/main.slint", config).expect("Slint compilation failed");

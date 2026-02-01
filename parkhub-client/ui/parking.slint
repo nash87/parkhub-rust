@@ -222,8 +222,8 @@ component ParkingSlot inherits Rectangle {
     property <bool> is-interactive: status != SlotStatus.Disabled && status != SlotStatus.Occupied;
     property <bool> is-hovered: touch.has-hover && is-interactive;
 
-    width: 72px;
-    height: 130px;
+    width: 68px;
+    height: 120px;
     border-radius: 6px;
     background: #1a1a1a;
     border-width: status == SlotStatus.Selected ? 3px :
@@ -730,11 +730,11 @@ export component ParkingView inherits Rectangle {
                                 // Top row - slots 1-5 (row 0)
                                 HorizontalLayout {
                                     alignment: center;
-                                    spacing: 8px;
+                                    spacing: 6px;
 
                                     for slot in root.slots : Rectangle {
-                                        width: slot.row == 0 ? 72px : 0;
-                                        height: slot.row == 0 ? 130px : 0;
+                                        width: slot.row == 0 ? 68px : 0;
+                                        height: slot.row == 0 ? 120px : 0;
                                         visible: slot.row == 0;
                                         background: transparent;
 
@@ -778,11 +778,11 @@ export component ParkingView inherits Rectangle {
                                 // Bottom row - slots 6-10 (row 1)
                                 HorizontalLayout {
                                     alignment: center;
-                                    spacing: 8px;
+                                    spacing: 6px;
 
                                     for slot in root.slots : Rectangle {
-                                        width: slot.row == 1 ? 72px : 0;
-                                        height: slot.row == 1 ? 130px : 0;
+                                        width: slot.row == 1 ? 68px : 0;
+                                        height: slot.row == 1 ? 120px : 0;
                                         visible: slot.row == 1;
                                         background: transparent;
 
