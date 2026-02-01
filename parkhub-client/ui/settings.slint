@@ -1,6 +1,6 @@
 // Settings Panel - User preferences and app settings
 
-import { Theme } from "theme.slint";
+import { Theme, ThemeSettings } from "theme.slint";
 import { Tr } from "i18n.slint";
 import { Button, Card } from "components/mod.slint";
 import { PhosphorIcons, Icon } from "icons.slint";
@@ -480,6 +480,130 @@ export component SettingsPanel inherits Rectangle {
                                         color: Theme.text-primary;
                                         horizontal-alignment: center;
                                         vertical-alignment: center;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // ACCESSIBILITY SECTION
+                // ═══════════════════════════════════════════════════════════════
+                VerticalLayout {
+                    spacing: 8px;
+
+                    SectionHeader {
+                        title: "Barrierefreiheit";
+                        icon-text: "👁️";
+                    }
+
+                    Card {
+                        VerticalLayout {
+                            padding: 4px;
+                            spacing: 0;
+
+                            // Font Size
+                            VerticalLayout {
+                                padding: 12px;
+                                spacing: 8px;
+
+                                Text {
+                                    text: "Textgröße";
+                                    font-size: Theme.font-size-sm;
+                                    color: Theme.text-primary;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: 6px;
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: Theme.radius-md;
+                                        background: ThemeSettings.font-scale < 1.1 ? Theme.primary : Theme.surface;
+                                        border-width: 1px;
+                                        border-color: ThemeSettings.font-scale < 1.1 ? Theme.primary : Theme.border;
+
+                                        TouchArea {
+                                            clicked => {
+                                                ThemeSettings.font-scale = 1.0;
+                                                root.setting-changed("font_scale", "1.0");
+                                            }
+                                            mouse-cursor: pointer;
+                                        }
+
+                                        Text {
+                                            text: "Normal";
+                                            font-size: Theme.font-size-xs;
+                                            color: Theme.text-primary;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: Theme.radius-md;
+                                        background: ThemeSettings.font-scale >= 1.1 && ThemeSettings.font-scale < 1.4 ? Theme.primary : Theme.surface;
+                                        border-width: 1px;
+                                        border-color: ThemeSettings.font-scale >= 1.1 && ThemeSettings.font-scale < 1.4 ? Theme.primary : Theme.border;
+
+                                        TouchArea {
+                                            clicked => {
+                                                ThemeSettings.font-scale = 1.25;
+                                                root.setting-changed("font_scale", "1.25");
+                                            }
+                                            mouse-cursor: pointer;
+                                        }
+
+                                        Text {
+                                            text: "Groß";
+                                            font-size: Theme.font-size-xs;
+                                            color: Theme.text-primary;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        horizontal-stretch: 1;
+                                        height: 36px;
+                                        border-radius: Theme.radius-md;
+                                        background: ThemeSettings.font-scale >= 1.4 ? Theme.primary : Theme.surface;
+                                        border-width: 1px;
+                                        border-color: ThemeSettings.font-scale >= 1.4 ? Theme.primary : Theme.border;
+
+                                        TouchArea {
+                                            clicked => {
+                                                ThemeSettings.font-scale = 1.5;
+                                                root.setting-changed("font_scale", "1.5");
+                                            }
+                                            mouse-cursor: pointer;
+                                        }
+
+                                        Text {
+                                            text: "Sehr groß";
+                                            font-size: Theme.font-size-xs;
+                                            color: Theme.text-primary;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Reduce Motion
+                            SettingsRow {
+                                label: "Animationen reduzieren";
+                                description: "Weniger Bewegung für bessere Verträglichkeit";
+
+                                ToggleSwitch {
+                                    checked: ThemeSettings.reduce-motion;
+                                    toggled(val) => {
+                                        ThemeSettings.reduce-motion = val;
+                                        root.setting-changed("reduce_motion", val ? "true" : "false");
                                     }
                                 }
                             }

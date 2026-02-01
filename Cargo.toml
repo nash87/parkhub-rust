@@ -28,6 +28,13 @@ tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 # Database - Pure Rust embedded database
 redb = "2"
 
+# Encryption utilities (for application-level encryption)
+aes-gcm = "0.10"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+sha2 = "0.10"
+rand = "0.8"
+zeroize = { version = "1", features = ["derive"] }
+
 # HTTP/API
 axum = { version = "0.7", features = ["tokio", "json"] }
 tower = "0.5"
@@ -36,7 +43,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 
 # Security
 rcgen = "0.13"
-rustls = "0.23"
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pemfile = "2"
 argon2 = { version = "0.5", features = ["std", "rand"] }
 

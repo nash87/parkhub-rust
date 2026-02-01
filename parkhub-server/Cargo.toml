@@ -17,8 +17,13 @@ parkhub-common.workspace = true
 # Async runtime
 tokio.workspace = true
 
-# Database - Pure Rust embedded
+# Database - Pure Rust embedded with app-level encryption
 redb.workspace = true
+aes-gcm.workspace = true
+pbkdf2.workspace = true
+sha2.workspace = true
+rand.workspace = true
+zeroize.workspace = true
 
 # HTTP API
 axum.workspace = true
@@ -63,13 +68,27 @@ slint = { version = "1.14", default-features = false, features = [
     "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2"
 ], optional = true }
 
+# System tray support
+tray-icon = { version = "0.18", optional = true }
+
 [build-dependencies]
 slint-build = { version = "1.14", optional = true }
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_UI_Shell",
+    "Win32_UI_HiDpi"
+] }
+
 [features]
 default = ["gui"]
-gui = ["slint", "slint-build"]
+gui = ["slint", "slint-build", "tray-icon"]
 headless = []
+
+[dev-dependencies]
+tempfile = "3"

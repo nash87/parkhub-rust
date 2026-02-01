@@ -286,12 +286,17 @@ export component StatisticsPanel inherits Rectangle {
                 }
 
                 // Monthly breakdown chart
-                Text {
-                    text: "Buchungen pro Monat";
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: Theme.text-primary;
-                    padding-top: Theme.spacing-sm;
+                Rectangle {
+                    height: self.preferred-height;
+                    VerticalLayout {
+                        padding-top: Theme.spacing-sm;
+                        Text {
+                            text: "Buchungen pro Monat";
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                        }
+                    }
                 }
 
                 MiniBarChart {
@@ -299,12 +304,17 @@ export component StatisticsPanel inherits Rectangle {
                 }
 
                 // Additional insights
-                Text {
-                    text: "Einblicke";
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: Theme.text-primary;
-                    padding-top: Theme.spacing-sm;
+                Rectangle {
+                    height: self.preferred-height;
+                    VerticalLayout {
+                        padding-top: Theme.spacing-sm;
+                        Text {
+                            text: "Einblicke";
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: Theme.text-primary;
+                        }
+                    }
                 }
 
                 Card {

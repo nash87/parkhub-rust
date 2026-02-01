@@ -41,8 +41,6 @@ component FilterChip inherits Rectangle {
     background: root.selected ? Theme.primary : Theme.surface;
     border-width: root.selected ? 0 : 1px;
     border-color: Theme.border;
-    padding-left: 16px;
-    padding-right: 16px;
 
     animate background { duration: 150ms; }
 
@@ -53,6 +51,8 @@ component FilterChip inherits Rectangle {
 
     HorizontalLayout {
         alignment: center;
+        padding-left: 16px;
+        padding-right: 16px;
 
         Text {
             text: root.label;

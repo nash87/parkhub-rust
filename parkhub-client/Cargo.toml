@@ -16,7 +16,7 @@ parkhub-common.workspace = true
 
 # UI Framework
 slint = { version = "1.14", default-features = false, features = [
-    "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2", "raw-window-handle-06"
+    "backend-winit", "renderer-femtovg", "renderer-skia", "renderer-software", "compat-1-2", "raw-window-handle-06"
 ] }
 raw-window-handle = "0.6"
 

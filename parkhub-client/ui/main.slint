@@ -1,6 +1,6 @@
 // Main Window - Application entry point
 
-import { Theme } from "theme.slint";
+import { Theme, ThemeSettings } from "theme.slint";
 import { Tr } from "i18n.slint";
 import { PhosphorIcons, Icon } from "icons.slint";
 import { ConnectScreen, DiscoveredServer } from "connect.slint";
@@ -15,14 +15,14 @@ import { ToastContainer, ToastData, ToastType } from "toast.slint";
 import { BookingHistoryPanel, HistoryBooking, HistoryFilter } from "history.slint";
 import { FloorList, FloorTabs, FloorDropdown, FloorOverview, FloorInfo } from "floor_selector.slint";
 import { PaymentPanel, PaymentMethodInfo, PaymentSummary } from "payment.slint";
-import { AdminDashboard, AdminStats, AdminSlotInfo } from "admin.slint";
+import { AdminDashboard, AdminStats, AdminSlotInfo, AdminUserInfo, ServerConfigData } from "admin.slint";
 import { CalendarView, CalendarDay, TimeSlotOption, ScheduledBooking } from "calendar.slint";
 import { FavoritesPanel, FavoriteSpot } from "favorites.slint";
 import { NotificationsPanel, NotificationItem, NotificationType, ReminderSettings } from "notifications.slint";
 
-export { Theme, Tr, PhosphorIcons, Icon, DiscoveredServer, DevUser, ParkingSlotData, BookingData, DurationOption, SlotStatus, LayoutElement, SavedLayout, ElementType }
+export { Theme, ThemeSettings, Tr, PhosphorIcons, Icon, DiscoveredServer, DevUser, ParkingSlotData, BookingData, DurationOption, SlotStatus, LayoutElement, SavedLayout, ElementType }
 export { AppSettings, VehicleInfo, MonthlyStatData, ToastData, ToastType, HistoryBooking, HistoryFilter, FloorInfo }
-export { PaymentMethodInfo, PaymentSummary, AdminStats, AdminSlotInfo, CalendarDay, TimeSlotOption, ScheduledBooking }
+export { PaymentMethodInfo, PaymentSummary, AdminStats, AdminSlotInfo, AdminUserInfo, ServerConfigData, CalendarDay, TimeSlotOption, ScheduledBooking }
 export { FavoriteSpot, NotificationItem, NotificationType, ReminderSettings }
 
 export enum AppView {
@@ -93,6 +93,11 @@ export component MainWindow inherits Window {
     in property <[DevUser]> dev-users: [];
     in property <string> server-mode: "local";
     in property <string> server-url: "http://localhost:3000";
+    in-out property <bool> show-register: false;
+    in-out property <string> login-username: "";
+    in-out property <string> login-password: "";
+    in-out property <string> register-email: "";
+    in-out property <string> register-name: "";
 
     // Parking state
     in property <string> lot-name: "Home Parking";
@@ -115,6 +120,9 @@ export component MainWindow inherits Window {
     callback disconnect-from-server();
 
     // Login callbacks
+    callback login(string, string);  // username, password
+    callback register(string, string, string, string);  // username, password, email, name
+    callback toggle-register();
     callback google-login();
     callback dev-login(string);
     callback toggle-server-mode();
@@ -127,6 +135,9 @@ export component MainWindow inherits Window {
     callback refresh-parking();
     callback parking-tab-changed(int);
     callback open-layout-editor();
+
+    // Settings callbacks
+    callback setting-changed(string, string);  // key, value - for accessibility settings persistence
 
     // Layout editor state
     in property <[LayoutElement]> layout-elements: [];
@@ -217,6 +228,22 @@ export component MainWindow inherits Window {
         total-slots: 0,
     };
     in property <[AdminSlotInfo]> admin-slots: [];
+    in property <[AdminUserInfo]> admin-users: [];
+    in property <ServerConfigData> admin-server-config: {
+        server-name: "",
+        port: 8443,
+        enable-tls: true,
+        enable-mdns: true,
+        encryption-enabled: true,
+        session-timeout-minutes: 60,
+        allow-self-registration: true,
+        max-concurrent-sessions: 5,
+        auto-backup-enabled: true,
+        backup-retention-count: 7,
+        audit-logging-enabled: true,
+        license-plate-display: 0,
+        organization-name: "",
+    };
 
     // Calendar state
     in property <string> calendar-month-year: "Januar 2026";
@@ -321,6 +348,19 @@ export component MainWindow inherits Window {
     callback admin-view-all-bookings();
     callback admin-send-announcement();
 
+    // Admin user management callbacks
+    callback admin-load-users();
+    callback admin-edit-user(string);
+    callback admin-delete-user(string);
+    callback admin-reset-user-password(string);
+    callback admin-toggle-user-active(string);
+    callback admin-add-user();
+    callback admin-search-users(string);
+
+    // Admin server config callbacks
+    callback admin-load-server-config();
+    callback admin-save-server-config(ServerConfigData);
+
     // Calendar callbacks
     callback calendar-previous-month();
     callback calendar-next-month();
@@ -358,6 +398,7 @@ export component MainWindow inherits Window {
 
         // ═══════════════════════════════════════════════════════════════════════
         // CUSTOM TITLE BAR (Windows-style)
+        // Note: Hover effects removed for software renderer compatibility
         // ═══════════════════════════════════════════════════════════════════════
         Rectangle {
             height: 32px;
@@ -371,7 +412,7 @@ export component MainWindow inherits Window {
                 Rectangle {
                     width: 40px;
                     height: 32px;
-                    background: screenshot-btn.has-hover ? Theme.primary.transparentize(0.85) : transparent;
+                    background: transparent;
                     border-radius: 4px;
 
                     screenshot-btn := TouchArea {
@@ -379,53 +420,48 @@ export component MainWindow inherits Window {
                         clicked => { root.take-screenshot(); }
                     }
 
-                    // Camera icon - more visible
+                    // Camera icon
                     HorizontalLayout {
                         alignment: center;
                         padding-top: 6px;
 
-                        // Camera body
                         Rectangle {
                             width: 18px;
                             height: 14px;
-                            background: screenshot-btn.has-hover ? Theme.primary : #888888;
+                            background: #888888;
                             border-radius: 3px;
 
-                            // Lens
                             Rectangle {
                                 width: 8px;
                                 height: 8px;
                                 border-radius: 4px;
-                                background: screenshot-btn.has-hover ? Theme.on-primary : #555555;
+                                background: #555555;
                                 x: (parent.width - self.width) / 2;
                                 y: (parent.height - self.height) / 2;
 
-                                // Lens inner
                                 Rectangle {
                                     width: 4px;
                                     height: 4px;
                                     border-radius: 2px;
-                                    background: screenshot-btn.has-hover ? Theme.primary : #888888;
+                                    background: #888888;
                                     x: (parent.width - self.width) / 2;
                                     y: (parent.height - self.height) / 2;
                                 }
                             }
 
-                            // Flash
                             Rectangle {
                                 width: 4px;
                                 height: 3px;
-                                background: screenshot-btn.has-hover ? Theme.warning : #666666;
+                                background: #666666;
                                 border-radius: 1px;
                                 x: parent.width - self.width - 2px;
                                 y: 2px;
                             }
                         }
                     }
-
                 }
 
-                // Title bar drag area (pointer-event for immediate drag on mouse down)
+                // Title bar drag area
                 Rectangle {
                     horizontal-stretch: 1;
                     background: transparent;
@@ -434,7 +470,6 @@ export component MainWindow inherits Window {
                         padding-left: 6px;
                         spacing: 8px;
 
-                        // App icon
                         Rectangle {
                             width: 18px;
                             height: 18px;
@@ -461,7 +496,6 @@ export component MainWindow inherits Window {
                         }
                     }
 
-                    // TouchArea for drag - use pointer-event for mouse down detection
                     title-bar-drag := TouchArea {
                         mouse-cursor: default;
                         pointer-event(event) => {
@@ -473,22 +507,20 @@ export component MainWindow inherits Window {
                     }
                 }
 
-                // Window controls (Windows 11 style)
+                // Window controls (Windows 11 style - no hover effects)
                 HorizontalLayout {
                     spacing: 0;
 
-                    // Minimize button
                     Rectangle {
                         width: 46px;
                         height: 32px;
-                        background: min-btn.has-hover ? #3d3d40 : transparent;
+                        background: transparent;
 
                         min-btn := TouchArea {
                             mouse-cursor: pointer;
                             clicked => { root.minimize-window(); }
                         }
 
-                        // Minimize line
                         Rectangle {
                             width: 10px;
                             height: 1px;
@@ -498,18 +530,16 @@ export component MainWindow inherits Window {
                         }
                     }
 
-                    // Maximize button
                     Rectangle {
                         width: 46px;
                         height: 32px;
-                        background: max-btn.has-hover ? #3d3d40 : transparent;
+                        background: transparent;
 
                         max-btn := TouchArea {
                             mouse-cursor: pointer;
                             clicked => { root.maximize-window(); }
                         }
 
-                        // Maximize square outline
                         Rectangle {
                             width: 10px;
                             height: 10px;
@@ -521,23 +551,21 @@ export component MainWindow inherits Window {
                         }
                     }
 
-                    // Close button (red on hover)
                     Rectangle {
                         width: 46px;
                         height: 32px;
-                        background: close-btn.has-hover ? #e81123 : transparent;
+                        background: #c42b1c;
 
                         close-btn := TouchArea {
                             mouse-cursor: pointer;
                             clicked => { root.close-window(); }
                         }
 
-                        // X icon using text
                         Text {
                             text: "✕";
                             font-size: 12px;
                             font-weight: 400;
-                            color: close-btn.has-hover ? white : #cccccc;
+                            color: white;
                             horizontal-alignment: center;
                             vertical-alignment: center;
                         }
@@ -569,7 +597,15 @@ export component MainWindow inherits Window {
         dev-users: root.dev-users;
         server-mode: root.server-mode;
         server-url: root.server-url;
+        show-register <=> root.show-register;
+        username <=> root.login-username;
+        password <=> root.login-password;
+        register-email <=> root.register-email;
+        register-name <=> root.register-name;
 
+        login(username, password) => { root.login(username, password); }
+        register(username, password, email, name) => { root.register(username, password, email, name); }
+        toggle-register => { root.toggle-register(); }
         google-login => { root.google-login(); }
         dev-login(user-id) => { root.dev-login(user-id); }
         toggle-server-mode => { root.toggle-server-mode(); }
@@ -633,7 +669,7 @@ export component MainWindow inherits Window {
                     width: 40px;
                     height: 40px;
                     border-radius: 20px;
-                    background: logout-touch.has-hover ? Theme.error.transparentize(0.9) : transparent;
+                    background: transparent;
 
                     logout-touch := TouchArea {
                         clicked => { root.logout(); }
@@ -647,40 +683,35 @@ export component MainWindow inherits Window {
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
 
-                        // Door frame
                         Rectangle {
                             width: 10px;
                             height: 18px;
                             x: 0;
                             y: 1px;
                             border-width: 2px;
-                            border-color: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            border-color: Theme.error;
                             border-radius: 2px;
                             background: transparent;
                         }
 
-                        // Arrow pointing right (exit)
                         Rectangle {
                             width: 8px;
                             height: 2px;
-                            background: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            background: Theme.error;
                             x: 10px;
                             y: 9px;
                         }
-                        // Arrow head top
                         Rectangle {
                             width: 5px;
                             height: 2px;
-                            background: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            background: Theme.error;
                             x: 14px;
                             y: 6px;
-                            // Rotation not available, use positioning
                         }
-                        // Arrow head bottom
                         Rectangle {
                             width: 5px;
                             height: 2px;
-                            background: logout-touch.has-hover ? Theme.error : Theme.text-secondary;
+                            background: Theme.error;
                             x: 14px;
                             y: 12px;
                         }
@@ -838,6 +869,7 @@ export component MainWindow inherits Window {
         save-settings(s) => { root.save-settings(s); }
         toggle-dark-mode => { root.toggle-dark-mode(); }
         change-language(lang) => { root.change-language(lang); }
+        setting-changed(key, value) => { root.setting-changed(key, value); }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -905,6 +937,8 @@ export component MainWindow inherits Window {
     if current-view == AppView.Admin : AdminDashboard {
         stats: root.admin-stats;
         slots: root.admin-slots;
+        users: root.admin-users;
+        server-config: root.admin-server-config;
         currency: root.app-settings.currency;
 
         close-panel => { root.navigate-back(); }
@@ -916,6 +950,19 @@ export component MainWindow inherits Window {
         manage-pricing => { root.admin-manage-pricing(); }
         view-all-bookings => { root.admin-view-all-bookings(); }
         send-announcement => { root.admin-send-announcement(); }
+
+        // User management callbacks
+        load-users => { root.admin-load-users(); }
+        edit-user(id) => { root.admin-edit-user(id); }
+        delete-user(id) => { root.admin-delete-user(id); }
+        reset-user-password(id) => { root.admin-reset-user-password(id); }
+        toggle-user-active(id) => { root.admin-toggle-user-active(id); }
+        add-user => { root.admin-add-user(); }
+        search-users(query) => { root.admin-search-users(query); }
+
+        // Server config callbacks
+        load-server-config => { root.admin-load-server-config(); }
+        save-server-config(config) => { root.admin-save-server-config(config); }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1057,7 +1104,7 @@ export component MainWindow inherits Window {
                 width: 28px;
                 height: 28px;
                 border-radius: 14px;
-                background: notif-close.has-hover ? Theme.surface-elevated : transparent;
+                background: Theme.surface-elevated;
 
                 notif-close := TouchArea {
                     clicked => { root.show-screenshot-notification = false; }
@@ -1067,7 +1114,7 @@ export component MainWindow inherits Window {
                 Text {
                     text: "✕";
                     font-size: 12px;
-                    color: notif-close.has-hover ? Theme.text-primary : Theme.text-tertiary;
+                    color: Theme.text-primary;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
@@ -1075,55 +1122,7 @@ export component MainWindow inherits Window {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // SCREENSHOT TOOLTIP OVERLAY (at root level to avoid clipping)
-    // ═══════════════════════════════════════════════════════════════════════
-    if screenshot-btn.has-hover : Rectangle {
-        x: 4px;
-        y: 36px;  // Below the title bar (32px title bar + 4px gap)
-        width: 120px;
-        height: 30px;
-        background: #2a2a2a;
-        border-radius: 6px;
-        border-width: 1px;
-        border-color: Theme.primary.transparentize(0.6);
-        drop-shadow-blur: 8px;
-        drop-shadow-color: #000000.transparentize(0.4);
-        drop-shadow-offset-y: 2px;
-
-        HorizontalLayout {
-            alignment: center;
-            spacing: 6px;
-            padding-left: 8px;
-            padding-right: 8px;
-
-            // Small camera icon
-            Rectangle {
-                width: 14px;
-                height: 10px;
-                border-radius: 2px;
-                background: Theme.primary;
-                y: (parent.height - self.height) / 2;
-
-                Rectangle {
-                    width: 5px;
-                    height: 5px;
-                    border-radius: 2.5px;
-                    background: Theme.on-primary;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
-            }
-
-            Text {
-                text: "Screenshot";
-                font-size: 11px;
-                font-weight: 500;
-                color: Theme.text-primary;
-                vertical-alignment: center;
-            }
-        }
-    }
+    // Screenshot tooltip removed for software renderer compatibility
 
     // ═══════════════════════════════════════════════════════════════════════
     // TOAST NOTIFICATIONS OVERLAY
