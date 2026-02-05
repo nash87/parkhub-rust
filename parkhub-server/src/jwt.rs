@@ -67,7 +67,7 @@ pub enum TokenType {
 }
 
 /// Token pair (access + refresh)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TokenPair {
     pub access_token: String,
     pub refresh_token: String,
@@ -294,11 +294,15 @@ mod tests {
             .generate_tokens(&user_id, "testuser", "admin")
             .expect("Failed to generate tokens");
 
+        // Wait 1 second so tokens have different iat/exp
+        std::thread::sleep(std::time::Duration::from_secs(1));
+
         let new_tokens = jwt
             .refresh_tokens(&tokens.refresh_token)
             .expect("Failed to refresh tokens");
 
         assert!(!new_tokens.access_token.is_empty());
+        // Tokens should be different after refresh (different iat timestamp)
         assert_ne!(new_tokens.access_token, tokens.access_token);
     }
 

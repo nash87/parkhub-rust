@@ -14,10 +14,19 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 mod api;
+mod audit;
 mod config;
 mod db;
 mod discovery;
+mod error;
+mod health;
+mod jwt;
+mod metrics;
+mod openapi;
+mod rate_limit;
+mod requests;
 mod tls;
+mod validation;
 
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};

@@ -210,10 +210,8 @@ pub mod events {
             .log()
     }
 
-    pub fn login_failed(username: &str, ip: IpAddr, reason: &str) -> AuditEntry {
+    pub fn login_failed(_username: &str, ip: IpAddr, reason: &str) -> AuditEntry {
         AuditEntry::new(AuditEventType::LoginFailed)
-            .username
-            .map(|_| ()) // Clear username for privacy
             .ip(ip)
             .error(reason)
             .log()

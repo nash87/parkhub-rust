@@ -3,8 +3,8 @@
 //! Provides configurable rate limiting using the Governor library.
 
 use axum::{
-    extract::ConnectInfo,
-    http::{Request, StatusCode},
+    body::Body,
+    http::Request,
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -14,7 +14,7 @@ use governor::{
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter,
 };
-use std::{net::SocketAddr, num::NonZeroU32, sync::Arc, time::Duration};
+use std::{net::SocketAddr, num::NonZeroU32, sync::Arc};
 
 use crate::error::AppError;
 
@@ -51,14 +51,11 @@ pub fn create_rate_limiter(config: &RateLimitConfig) -> Arc<GlobalRateLimiter> {
 }
 
 /// Rate limiting middleware
-pub async fn rate_limit_middleware<B>(
+pub async fn rate_limit_middleware(
     rate_limiter: Arc<GlobalRateLimiter>,
-    request: Request<B>,
-    next: Next<B>,
-) -> Response
-where
-    B: Send,
-{
+    request: Request<Body>,
+    next: Next,
+) -> Response {
     match rate_limiter.check() {
         Ok(_) => next.run(request).await,
         Err(_) => {

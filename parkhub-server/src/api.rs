@@ -7,16 +7,22 @@ use axum::{
     extract::{Path, State},
     http::{header, Request, StatusCode},
     middleware::{self, Next},
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{delete, get, post},
     Extension, Json, Router,
 };
 use chrono::{Duration, Utc};
+use metrics_exporter_prometheus::PrometheusHandle;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
+
+use crate::metrics;
+use crate::openapi::ApiDoc;
 
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
@@ -36,11 +42,16 @@ pub struct AuthUser {
     pub user_id: Uuid,
 }
 
-/// Create the API router
+/// Create the API router with OpenAPI docs and metrics
 pub fn create_router(state: SharedState) -> Router {
+    // Initialize Prometheus metrics
+    let metrics_handle = metrics::init_metrics();
+
     // Public routes (no auth required)
     let public_routes = Router::new()
         .route("/health", get(health_check))
+        .route("/health/live", get(liveness_check))
+        .route("/health/ready", get(readiness_check))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
         .route("/api/v1/auth/login", post(login))
@@ -66,9 +77,22 @@ pub fn create_router(state: SharedState) -> Router {
             auth_middleware,
         ));
 
+    // Clone handle for the closure
+    let metrics_handle_clone = metrics_handle.clone();
+
     Router::new()
         .merge(public_routes)
         .merge(protected_routes)
+        // Prometheus metrics endpoint
+        .route("/metrics", get(move || async move {
+            (
+                StatusCode::OK,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                metrics_handle_clone.render(),
+            )
+        }))
+        // Swagger UI
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(
@@ -134,6 +158,26 @@ async fn auth_middleware(
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+/// Kubernetes liveness probe - just checks if the service is running
+async fn liveness_check() -> StatusCode {
+    StatusCode::OK
+}
+
+/// Kubernetes readiness probe - checks if the service can handle traffic
+async fn readiness_check(State(state): State<SharedState>) -> impl IntoResponse {
+    let state = state.read().await;
+    match state.db.stats().await {
+        Ok(_) => (StatusCode::OK, Json(serde_json::json!({"ready": true}))),
+        Err(e) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "ready": false,
+                "reason": format!("Database unavailable: {}", e)
+            })),
+        ),
+    }
 }
 
 async fn handshake(
