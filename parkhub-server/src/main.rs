@@ -25,6 +25,7 @@ mod metrics;
 mod openapi;
 mod rate_limit;
 mod requests;
+mod static_files;
 mod tls;
 mod validation;
 
