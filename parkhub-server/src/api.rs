@@ -23,6 +23,7 @@ use uuid::Uuid;
 
 use crate::metrics;
 use crate::openapi::ApiDoc;
+use crate::static_files;
 
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
@@ -93,6 +94,8 @@ pub fn create_router(state: SharedState) -> Router {
         }))
         // Swagger UI
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        // Static files (web frontend) - fallback for all other routes
+        .fallback(static_files::static_handler)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(

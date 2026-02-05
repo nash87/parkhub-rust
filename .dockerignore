@@ -1,0 +1,29 @@
+# Build artifacts
+target/
+parkhub-web/node_modules/
+parkhub-web/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Local config
+config.toml
+*.redb
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Tests
+tests/

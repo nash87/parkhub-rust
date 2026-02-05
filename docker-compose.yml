@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  parkhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parkhub
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - parkhub-data:/data
+    environment:
+      - PARKHUB_HOST=0.0.0.0
+      - PARKHUB_PORT=8080
+      - RUST_LOG=info
+      # Optional: Enable HTTPS
+      # - PARKHUB_TLS_ENABLED=true
+      # - PARKHUB_TLS_CERT=/data/cert.pem
+      # - PARKHUB_TLS_KEY=/data/key.pem
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.parkhub.rule=Host(`parkhub.local`)"
+      - "traefik.http.services.parkhub.loadbalancer.server.port=8080"
+
+volumes:
+  parkhub-data:
+    driver: local
