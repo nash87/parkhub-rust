@@ -64,6 +64,33 @@ hostname = "0.4"
 # Crypto for certificate fingerprints
 ring = "0.17"
 
+# === PHASE 1: Stabilization ===
+# Input validation
+validator = { version = "0.18", features = ["derive"] }
+
+# OpenAPI documentation
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "8", features = ["axum"] }
+
+# === PHASE 2: Production Ready ===
+# JWT Authentication
+jsonwebtoken = "9"
+
+# Rate limiting
+tower_governor = "0.4"
+governor = "0.7"
+
+# Metrics
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+
+# Health checks
+axum-extra = { version = "0.9", features = ["typed-header"] }
+
+# === PHASE 3: Features ===
+# Background jobs (for cleanup, notifications)
+tokio-cron-scheduler = "0.13"
+
 # UI for server onboarding (optional, can be disabled)
 slint = { version = "1.14", default-features = false, features = [
     "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2"
