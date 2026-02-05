@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles */
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500;
+  }
+  
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-md p-6;
+  }
+  
+  .input {
+    @apply block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500;
+  }
+  
+  .slot {
+    @apply w-16 h-20 rounded-lg flex items-center justify-center font-bold text-white cursor-pointer transition-transform hover:scale-105;
+  }
+  
+  .slot-available {
+    @apply bg-parking-available;
+  }
+  
+  .slot-occupied {
+    @apply bg-parking-occupied cursor-not-allowed;
+  }
+  
+  .slot-reserved {
+    @apply bg-parking-reserved;
+  }
+  
+  .slot-disabled {
+    @apply bg-parking-disabled cursor-not-allowed;
+  }
+}
