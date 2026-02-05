@@ -174,6 +174,7 @@ async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse<Ser
             parking_lots: 0,
             slots: 0,
             sessions: 0,
+            vehicles: 0,
         });
 
     Json(ApiResponse::success(ServerStatus {

@@ -1210,7 +1210,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
 async fn create_sample_parking_lot(db: &Database) -> Result<()> {
     use chrono::Utc;
     use parkhub_common::models::{
-        DayHours, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo,
+        LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo,
         PricingRate, SlotFeature, SlotPosition, SlotStatus, SlotType,
     };
     use uuid::Uuid;
