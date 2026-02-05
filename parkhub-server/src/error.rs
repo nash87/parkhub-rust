@@ -24,7 +24,7 @@ pub struct ApiError {
 }
 
 /// Field-level validation error
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct FieldError {
     /// Field name
     pub field: String,
