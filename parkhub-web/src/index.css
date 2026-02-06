@@ -2,49 +2,254 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles */
+@layer base {
+  :root {
+    --color-primary: 59 130 246;
+    --color-success: 34 197 94;
+    --color-danger: 239 68 68;
+    --color-warning: 245 158 11;
+  }
+  
+  html {
+    @apply scroll-smooth antialiased;
+  }
+  
+  body {
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+  }
+}
+
 @layer components {
+  /* Buttons */
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 
+           rounded-xl font-medium text-sm
+           transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed
+           active:scale-[0.98];
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
+    @apply bg-primary-600 text-white 
+           hover:bg-primary-700 
+           focus:ring-primary-500
+           dark:bg-primary-500 dark:hover:bg-primary-600;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300 focus:ring-gray-500;
+    @apply bg-gray-100 text-gray-700 
+           hover:bg-gray-200 
+           focus:ring-gray-500
+           dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent text-gray-600 
+           hover:bg-gray-100 
+           focus:ring-gray-500
+           dark:text-gray-400 dark:hover:bg-gray-800;
   }
   
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply bg-red-600 text-white 
+           hover:bg-red-700 
+           focus:ring-red-500;
   }
   
+  .btn-icon {
+    @apply p-2.5 rounded-xl;
+  }
+  
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3 text-base rounded-2xl;
+  }
+
+  /* Cards */
   .card {
-    @apply bg-white rounded-xl shadow-md p-6;
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100
+           dark:bg-gray-900 dark:border-gray-800;
   }
   
+  .card-hover {
+    @apply card transition-all duration-200
+           hover:shadow-md hover:border-gray-200 hover:-translate-y-0.5
+           dark:hover:border-gray-700;
+  }
+
+  /* Inputs */
   .input {
-    @apply block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500;
+    @apply block w-full px-4 py-2.5 
+           bg-white dark:bg-gray-900
+           border border-gray-200 dark:border-gray-700
+           rounded-xl text-gray-900 dark:text-gray-100
+           placeholder:text-gray-400 dark:placeholder:text-gray-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500
+           transition-colors duration-200;
   }
   
+  .input-error {
+    @apply border-red-500 focus:ring-red-500/20 focus:border-red-500;
+  }
+
+  /* Labels */
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+
+  /* Parking Slots */
   .slot {
-    @apply w-16 h-20 rounded-lg flex items-center justify-center font-bold text-white cursor-pointer transition-transform hover:scale-105;
+    @apply relative w-14 h-16 rounded-xl 
+           flex flex-col items-center justify-center 
+           font-semibold text-sm text-white
+           transition-all duration-200
+           cursor-pointer select-none;
   }
   
   .slot-available {
-    @apply bg-parking-available;
+    @apply bg-emerald-500 hover:bg-emerald-600 hover:scale-105 active:scale-100;
   }
   
   .slot-occupied {
-    @apply bg-parking-occupied cursor-not-allowed;
+    @apply bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed;
   }
   
   .slot-reserved {
-    @apply bg-parking-reserved;
+    @apply bg-amber-500 hover:bg-amber-600;
+  }
+  
+  .slot-selected {
+    @apply ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900 scale-105;
   }
   
   .slot-disabled {
-    @apply bg-parking-disabled cursor-not-allowed;
+    @apply bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed;
   }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 
+           rounded-full text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
+  }
+  
+  .badge-error {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+  }
+  
+  .badge-info {
+    @apply bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400;
+  }
+  
+  .badge-gray {
+    @apply bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400;
+  }
+
+  /* Stats Card */
+  .stat-card {
+    @apply card p-6;
+  }
+  
+  .stat-value {
+    @apply text-3xl font-bold tracking-tight;
+  }
+  
+  .stat-label {
+    @apply text-sm text-gray-500 dark:text-gray-400 mt-1;
+  }
+
+  /* Skeleton Loading */
+  .skeleton {
+    @apply bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-gray-100 dark:border-gray-800;
+  }
+
+  /* Progress Bar */
+  .progress {
+    @apply h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden;
+  }
+  
+  .progress-bar {
+    @apply h-full rounded-full transition-all duration-500;
+  }
+
+  /* Avatar */
+  .avatar {
+    @apply w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 
+           flex items-center justify-center 
+           text-primary-600 dark:text-primary-400 font-medium;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-xs font-medium 
+           bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900
+           rounded-lg shadow-lg
+           opacity-0 invisible transition-all duration-200;
+  }
+  
+  .has-tooltip:hover .tooltip {
+    @apply opacity-100 visible;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out;
 }

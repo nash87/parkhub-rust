@@ -1,0 +1,23 @@
+{
+  "name": "parkhub",
+  "version": "1.0.0",
+  "description": "Open source parking lot management system with client-server architecture.",
+  "main": "parkhub-test.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@192.168.178.220:florian/parkhub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.58.1"
+  }
+}
