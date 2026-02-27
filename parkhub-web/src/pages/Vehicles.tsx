@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Car, Plus, Trash, SpinnerGap, Star, X } from '@phosphor-icons/react';
+import { Car, Plus, Trash, SpinnerGap, Star, X, Warning } from '@phosphor-icons/react';
 import { api, Vehicle } from '../api/client';
 import toast from 'react-hot-toast';
 
@@ -15,6 +15,8 @@ export function VehiclesPage() {
     color: '',
   });
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadVehicles();
@@ -52,6 +54,7 @@ export function VehiclesPage() {
   }
 
   async function handleDelete(id: string) {
+    setDeleting(true);
     const res = await api.deleteVehicle(id);
     if (res.success) {
       setVehicles(vehicles.filter(v => v.id !== id));
@@ -59,12 +62,15 @@ export function VehiclesPage() {
     } else {
       toast.error('Löschen fehlgeschlagen');
     }
+    setDeleting(false);
+    setConfirmDeleteId(null);
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label="Fahrzeuge werden geladen">
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <span className="sr-only">Fahrzeuge werden geladen…</span>
       </div>
     );
   }
@@ -112,22 +118,26 @@ export function VehiclesPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
                 Neues Fahrzeug
               </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4" aria-label="Fahrzeug hinzufügen">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Kennzeichen *</label>
+                    <label htmlFor="veh-plate" className="label">Kennzeichen *</label>
                     <input
+                      id="veh-plate"
                       type="text"
                       value={formData.license_plate}
                       onChange={(e) => setFormData({ ...formData, license_plate: e.target.value.toUpperCase() })}
                       placeholder="M-AB 1234"
                       className="input"
                       required
+                      autoFocus
+                      autoComplete="off"
                     />
                   </div>
                   <div>
-                    <label className="label">Marke</label>
+                    <label htmlFor="veh-make" className="label">Marke</label>
                     <input
+                      id="veh-make"
                       type="text"
                       value={formData.make}
                       onChange={(e) => setFormData({ ...formData, make: e.target.value })}
@@ -136,8 +146,9 @@ export function VehiclesPage() {
                     />
                   </div>
                   <div>
-                    <label className="label">Modell</label>
+                    <label htmlFor="veh-model" className="label">Modell</label>
                     <input
+                      id="veh-model"
                       type="text"
                       value={formData.model}
                       onChange={(e) => setFormData({ ...formData, model: e.target.value })}
@@ -146,8 +157,9 @@ export function VehiclesPage() {
                     />
                   </div>
                   <div>
-                    <label className="label">Farbe</label>
+                    <label htmlFor="veh-color" className="label">Farbe</label>
                     <input
+                      id="veh-color"
                       type="text"
                       value={formData.color}
                       onChange={(e) => setFormData({ ...formData, color: e.target.value })}
@@ -222,10 +234,11 @@ export function VehiclesPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleDelete(vehicle.id)}
+                  onClick={() => setConfirmDeleteId(vehicle.id)}
+                  aria-label={`Fahrzeug ${vehicle.license_plate} löschen`}
                   className="btn btn-ghost btn-icon text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
-                  <Trash weight="regular" className="w-5 h-5" />
+                  <Trash weight="regular" className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
               
@@ -241,6 +254,76 @@ export function VehiclesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+          >
+            <motion.div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setConfirmDeleteId(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-md card p-6 shadow-2xl"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+                  <Warning weight="fill" className="w-6 h-6 text-red-600 dark:text-red-400" aria-hidden="true" />
+                </div>
+                <div className="flex-1">
+                  <h3 id="delete-dialog-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Fahrzeug löschen?
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Das Fahrzeug{' '}
+                    <strong>{vehicles.find(v => v.id === confirmDeleteId)?.license_plate}</strong>{' '}
+                    wird dauerhaft entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="btn btn-secondary"
+                  autoFocus
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+                  disabled={deleting}
+                  aria-busy={deleting}
+                  className="btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-60"
+                >
+                  {deleting ? (
+                    <>
+                      <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" aria-hidden="true" />
+                      <span>Wird gelöscht…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash weight="bold" className="w-4 h-4" aria-hidden="true" />
+                      Löschen
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

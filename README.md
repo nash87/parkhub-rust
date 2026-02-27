@@ -1,117 +1,176 @@
-# ParkHub
+# ParkHub Rust — Self-Hosted Parking Management
 
-Open source parking lot management system with client-server architecture.
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Rust 1.83+](https://img.shields.io/badge/rust-1.83%2B-orange.svg)](https://www.rust-lang.org/)
+[![React 19](https://img.shields.io/badge/react-19-61dafb.svg)](https://react.dev/)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ed.svg)](docker-compose.yml)
+[![GDPR Compliant](https://img.shields.io/badge/DSGVO-konform-green.svg)](docs/GDPR.md)
+
+> **ParkHub — Ihre Parkplatzverwaltung. Ihre Daten. Ihr Server.**
+> Keine Cloud. Keine Drittanbieter. DSGVO-konform durch Design.
+> ParkHub ist eine selbst gehostete Open-Source-Lösung für die Verwaltung von Parkplätzen,
+> Buchungen und Fahrzeugen — vollständig unter Ihrer Kontrolle, auf Ihrer eigenen Infrastruktur.
+
+ParkHub is a self-hosted, on-premise parking management platform built with Rust (Axum 0.7) on
+the backend and React 19 + TypeScript on the frontend. All data is stored in an embedded
+[redb](https://github.com/cberner/redb) database with optional AES-256-GCM encryption at rest.
+No external database server required, no cloud dependencies, no third-party data processors.
 
 ## Features
 
-- **Server Application** - Database server with HTTP API and LAN autodiscovery
-  - Setup wizard for easy configuration
-  - TLS encryption with self-signed certificates
-  - mDNS/DNS-SD for automatic network discovery
-  - Embedded database (redb) - no external database required
-  - Headless and GUI modes
+| Feature | Status |
+|---|---|
+| Parking lot management with visual slot layout editor | Done |
+| Interactive slot grid (available / occupied / reserved / favorites) | Done |
+| Booking flow: lot -> slot -> duration -> vehicle -> confirm | Done |
+| Booking cancellation and booking history | Done |
+| Vehicle registry (license plate, make, model, color, default flag) | Done |
+| JWT-based session authentication (24 h expiry) | Done |
+| User registration and login (username or email) | Done |
+| Role-based access control (user / admin / superadmin) | Done |
+| Admin dashboard: stats, lot management, inline layout editor | Done |
+| GDPR Art. 15 — full data export as JSON | Done |
+| GDPR Art. 17 — account erasure (anonymizes PII, retains booking records per §147 AO) | Done |
+| Impressum editor (DDG §5) — configurable via admin panel | Done |
+| German legal templates: Impressum, Datenschutz, AGB, AVV | Done |
+| Prometheus metrics endpoint (`/metrics`) | Done |
+| Swagger UI at `/swagger-ui` | Done |
+| Kubernetes health probes (`/health`, `/health/live`, `/health/ready`) | Done |
+| mDNS LAN autodiscovery | Done |
+| TLS 1.3 (auto-generated self-signed cert or bring-your-own) | Done |
+| Argon2id password hashing | Done |
+| AES-256-GCM database encryption at rest (optional) | Done |
+| Security headers (CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy) | Done |
+| Rate limiting: 5 login attempts/min per IP, 100 req/s global | Done |
+| Dark mode and light mode | Done |
+| Mobile-responsive UI | Done |
+| Docker Compose deployment | Done |
+| Kubernetes deployment | Done |
+| Windows GUI (system tray, setup wizard) | Done |
+| Headless / unattended server mode | Done |
+| Automatic daily backups with configurable retention | Done |
+| Audit logging | Done |
+| Accessibility (ARIA labels, keyboard navigation, screen reader support) | Done |
+| Token refresh | Planned |
+| Full admin user management UI | Planned |
+| Admin booking overview UI | Planned |
+| Email notifications (SMTP) | Planned |
 
-- **Client Application** - Desktop application for parking management
-  - Automatic server discovery on local network
-  - Manual server connection option
-  - Modern Slint UI
-
-## Installation
-
-### Portable Mode
-
-Both server and client support portable mode - just extract and run:
-
-1. Download the release for your platform
-2. Extract to any folder
-3. Create a `parkhub-data` folder next to the executable (for server)
-4. Run the application
-
-Data will be stored in the `parkhub-data` folder, making it easy to move or backup.
-
-### Standard Installation
-
-If no `parkhub-data` folder exists, the application uses system directories:
-- Windows: `%APPDATA%\parkhub\ParkHub Server`
-- Linux: `~/.local/share/ParkHub Server`
-- macOS: `~/Library/Application Support/com.parkhub.ParkHub-Server`
-
-## Building from Source
-
-### Prerequisites
-
-- Rust 1.75 or later
-- For GUI builds: CMake and system dependencies for Slint
-
-### Build Commands
+## Quick Start (3 commands)
 
 ```bash
-# Build everything
-cargo build --release --workspace
-
-# Build server only (headless mode)
-cargo build --release --package parkhub-server --no-default-features --features headless
-
-# Build server with GUI
-cargo build --release --package parkhub-server --features gui
-
-# Build client
-cargo build --release --package parkhub-client
+git clone https://github.com/nash87/parkhub
+cd parkhub
+docker compose up -d
 ```
 
-## Configuration
+Open `http://localhost:8080` in your browser.
+Default credentials: username `admin`, password `admin`.
 
-### Server Configuration
+> Change the admin password immediately after first login.
 
-On first run, the server will:
-1. Show setup wizard (GUI mode) or use defaults (headless mode)
-2. Create configuration in `config.toml`
-3. Generate TLS certificates
+To run without Docker:
 
-Configuration options in `config.toml`:
-```toml
-server_name = "ParkHub Server"
-port = 7878
-enable_tls = true
-enable_mdns = true
-admin_username = "admin"
-admin_password_hash = "..."
+```bash
+cargo build --release --package parkhub-server
+./target/release/parkhub-server --headless --unattended
 ```
 
-### Client Configuration
+## Screenshots
 
-The client automatically discovers servers on the local network via mDNS.
-For remote servers, use the manual connection option with the server's IP address.
+Screenshots are in the `screenshots/` directory.
+
+| File | Description |
+|---|---|
+| `screenshots/01-login.png` | Login page |
+| `screenshots/02-register.png` | Registration |
+| `screenshots/05-dashboard.png` | Dashboard with occupancy stats and lot overview |
+| `screenshots/06-book.png` | Booking flow with slot selection grid |
+| `screenshots/07-bookings.png` | Active and past bookings |
+| `screenshots/08-vehicles.png` | Vehicle management |
+| `screenshots/09-admin.png` | Admin panel |
+| `screenshots/10-dark-mode.png` | Dark mode |
 
 ## Architecture
 
 ```
-parkhub/
-  parkhub-common/     # Shared types and protocol definitions
-  parkhub-server/     # Server application
-  parkhub-client/     # Client application
+Browser
+  |
+  +-- React 19 SPA (TypeScript + Tailwind CSS)
+  |     Served as static files embedded in the Rust binary
+  |
+  +-- HTTP/HTTPS --> Axum 0.7 (Rust)
+                      |
+                      +-- /api/v1/*    REST API (auth required)
+                      +-- /metrics     Prometheus (no auth)
+                      +-- /swagger-ui  OpenAPI docs
+                      +-- /health*     Health probes
+                      |
+                      +-- redb (embedded single-file database)
+                            Optional: AES-256-GCM encryption at rest
+                            Data dir: ./data/ (portable) or /data (Docker)
 ```
 
-## API
+The server binary embeds the compiled React frontend — no separate web server or
+reverse proxy is required for single-host deployments.
 
-The server provides a REST API at `http(s)://host:port/api/v1/`:
+## Installation
 
-- `POST /handshake` - Protocol handshake
-- `POST /api/v1/auth/login` - User authentication
-- `GET /api/v1/users/me` - Current user info
-- `GET /api/v1/lots` - List parking lots
-- `GET /api/v1/lots/{id}/slots` - List slots in a lot
-- `GET /api/v1/bookings` - List bookings
-- `POST /api/v1/bookings` - Create booking
-- `DELETE /api/v1/bookings/{id}` - Cancel booking
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for full instructions:
+- Docker Compose (recommended)
+- Kubernetes with Flux GitOps
+- Bare metal build from source
+- TLS setup and reverse proxy configuration (nginx, Caddy, Traefik)
+
+## Configuration
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
+
+Key environment variables for Docker:
+
+| Variable | Default | Description |
+|---|---|---|
+| `PARKHUB_HOST` | `0.0.0.0` | Bind address |
+| `PARKHUB_PORT` | `8080` | Listen port |
+| `PARKHUB_DB_PASSPHRASE` | — | AES-256-GCM passphrase (enables encryption) |
+| `RUST_LOG` | `info` | Log level (`debug`, `info`, `warn`, `error`) |
+
+## Security
+
+- **Passwords**: Argon2id hashing (never stored in plaintext)
+- **Database**: optional AES-256-GCM encryption at rest via PBKDF2-derived key
+- **Transport**: TLS 1.3 auto-generated or custom certificate
+- **Rate limiting**: 5 login/register attempts per minute per IP, 100 req/s global burst 200
+- **Security headers**: Content-Security-Policy, X-Frame-Options: DENY, Referrer-Policy, Permissions-Policy
+- **Request size**: 1 MiB limit on all request bodies
+- **CORS**: same-origin only (localhost allowed in development)
+- **RBAC**: user / admin / superadmin roles enforced on each endpoint
+
+See [docs/SECURITY.md](docs/SECURITY.md) for the full security model.
+
+## GDPR and German Legal Compliance
+
+ParkHub is designed for on-premise deployment in German-regulated environments:
+
+- **Data sovereignty**: all data stays on your server — no cloud, no third-party processors
+- **Art. 15 (Auskunft)**: users export their full data as a JSON file from the UI
+- **Art. 17 (Loschung)**: account deletion anonymizes all PII; booking records are retained
+  per German tax law (§147 AO, 10-year accounting record retention)
+- **DDG §5 (Impressum)**: configurable from the admin panel, always publicly accessible
+- **Legal templates** in `legal/`: Impressum, Datenschutz, AGB, AVV — ready to customize
+
+See [docs/GDPR.md](docs/GDPR.md) for the operator compliance checklist.
+
+## API Reference
+
+Swagger UI is available at `/swagger-ui` when the server is running.
+
+See [docs/API.md](docs/API.md) for the complete REST API reference with curl examples.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-  
-  
-#  
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).

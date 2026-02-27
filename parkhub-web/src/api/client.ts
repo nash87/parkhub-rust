@@ -141,6 +141,47 @@ class ApiClient {
     });
   }
 
+  // Lot detailed (mock)
+  async getLotDetailed(id: string): Promise<ApiResponse<ParkingLotDetailed>> {
+    return {
+      success: true,
+      data: {
+        id: 'lot-1',
+        name: 'Firmenparkplatz',
+        address: 'Hauptstraße 1',
+        total_slots: 13,
+        available_slots: 8,
+        layout: {
+          roadLabel: 'Fahrweg',
+          rows: [
+            {
+              id: 'row-a',
+              side: 'top',
+              label: 'Reihe A',
+              slots: Array.from({ length: 6 }, (_, i) => ({
+                id: `slot-a-${i}`,
+                number: String(45 + i),
+                status: (i === 2 ? 'occupied' : i === 4 ? 'reserved' : 'available') as SlotConfig['status'],
+                vehiclePlate: i === 2 ? 'M-AB 1234' : undefined,
+              })),
+            },
+            {
+              id: 'row-b',
+              side: 'bottom',
+              label: 'Reihe B',
+              slots: Array.from({ length: 7 }, (_, i) => ({
+                id: `slot-b-${i}`,
+                number: String(51 + i),
+                status: (i === 1 ? 'occupied' : i === 5 ? 'occupied' : i === 3 ? 'disabled' : 'available') as SlotConfig['status'],
+                vehiclePlate: i === 1 ? 'S-XY 5678' : i === 5 ? 'HH-CD 9012' : undefined,
+              })),
+            },
+          ],
+        },
+      },
+    };
+  }
+
   // Health
   async health() {
     return this.request<{ status: string }>('/health');
@@ -227,4 +268,29 @@ export interface CreateVehicleData {
   make?: string;
   model?: string;
   color?: string;
+}
+
+// Parking lot layout configuration
+export interface LotLayout {
+  rows: LotRow[];
+  roadLabel?: string;
+}
+
+export interface LotRow {
+  id: string;
+  side: 'top' | 'bottom';
+  slots: SlotConfig[];
+  label?: string;
+}
+
+export interface SlotConfig {
+  id: string;
+  number: string;
+  status: 'available' | 'occupied' | 'reserved' | 'disabled' | 'blocked';
+  vehiclePlate?: string;
+  bookedBy?: string;
+}
+
+export interface ParkingLotDetailed extends ParkingLot {
+  layout?: LotLayout;
 }

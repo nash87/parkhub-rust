@@ -55,8 +55,9 @@ export function BookingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label="Buchungen werden geladen">
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <span className="sr-only">Buchungen werden geladen…</span>
       </div>
     );
   }
@@ -80,20 +81,20 @@ export function BookingsPage() {
       </div>
 
       {/* Active Bookings */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Clock weight="fill" className="w-5 h-5 text-primary-600" />
+      <section aria-labelledby="active-bookings-heading">
+        <h2 id="active-bookings-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Clock weight="fill" className="w-5 h-5 text-primary-600" aria-hidden="true" />
           Aktive Buchungen
-          <span className="badge badge-info">{activeBookings.length}</span>
+          <span className="badge badge-info" aria-label={`${activeBookings.length} aktive Buchungen`}>{activeBookings.length}</span>
         </h2>
-        
+
         {activeBookings.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="card p-12 text-center"
           >
-            <CalendarBlank weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+            <CalendarBlank weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" aria-hidden="true" />
             <p className="text-gray-500 dark:text-gray-400">
               Keine aktiven Buchungen
             </p>
@@ -161,13 +162,18 @@ export function BookingsPage() {
                         <button
                           onClick={() => handleCancel(booking.id)}
                           disabled={cancelling === booking.id}
+                          aria-label={`Buchung für ${booking.lot_name} Platz ${booking.slot_number} stornieren`}
+                          aria-busy={cancelling === booking.id}
                           className="btn btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
                           {cancelling === booking.id ? (
-                            <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" />
+                            <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" aria-hidden="true" />
                           ) : (
-                            <X weight="bold" className="w-5 h-5" />
+                            <X weight="bold" className="w-5 h-5" aria-hidden="true" />
                           )}
+                          <span className="sr-only">
+                            {cancelling === booking.id ? 'Stornierung läuft…' : 'Stornieren'}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -177,16 +183,16 @@ export function BookingsPage() {
             </AnimatePresence>
           </div>
         )}
-      </div>
+      </section>
 
       {/* Past Bookings */}
       {pastBookings.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <CalendarBlank weight="regular" className="w-5 h-5 text-gray-400" />
+        <section aria-labelledby="past-bookings-heading">
+          <h2 id="past-bookings-heading" className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <CalendarBlank weight="regular" className="w-5 h-5 text-gray-400" aria-hidden="true" />
             Vergangene Buchungen
           </h2>
-          
+
           <div className="space-y-3">
             {pastBookings.slice(0, 10).map((booking, index) => (
               <motion.div
@@ -198,32 +204,32 @@ export function BookingsPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-xl flex items-center justify-center" aria-hidden="true">
                       <span className="text-sm font-bold text-gray-500 dark:text-gray-400">
                         {booking.slot_number}
                       </span>
                     </div>
                     <div>
                       <p className="font-medium text-gray-700 dark:text-gray-300">
-                        {booking.lot_name}
+                        {booking.lot_name} — Platz {booking.slot_number}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {format(new Date(booking.start_time), 'd. MMM yyyy', { locale: de })}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className={`badge ${
                     booking.status === 'completed' ? 'badge-success' : 'badge-gray'
                   }`}>
                     {booking.status === 'completed' ? (
                       <>
-                        <CheckCircle weight="fill" className="w-3 h-3" />
+                        <CheckCircle weight="fill" className="w-3 h-3" aria-hidden="true" />
                         Abgeschlossen
                       </>
                     ) : (
                       <>
-                        <XCircle weight="fill" className="w-3 h-3" />
+                        <XCircle weight="fill" className="w-3 h-3" aria-hidden="true" />
                         Storniert
                       </>
                     )}
@@ -232,7 +238,7 @@ export function BookingsPage() {
               </motion.div>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   );

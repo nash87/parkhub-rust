@@ -12,14 +12,16 @@ import {
   TrendUp,
   CaretRight,
 } from '@phosphor-icons/react';
-import { api, ParkingLot, Booking } from '../api/client';
+import { api, ParkingLot, ParkingLotDetailed, Booking } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { ParkingLotGrid } from '../components/ParkingLotGrid';
 import { format, formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 export function DashboardPage() {
   const { user } = useAuth();
   const [lots, setLots] = useState<ParkingLot[]>([]);
+  const [detailedLots, setDetailedLots] = useState<ParkingLotDetailed[]>([]);
   const [activeBookings, setActiveBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +36,17 @@ export function DashboardPage() {
         api.getBookings(),
       ]);
 
-      if (lotsRes.success && lotsRes.data) setLots(lotsRes.data);
+      if (lotsRes.success && lotsRes.data) {
+        setLots(lotsRes.data);
+        // Load detailed lot data for grid view
+        const detailedPromises = lotsRes.data.map((lot) => api.getLotDetailed(lot.id));
+        const detailedResults = await Promise.all(detailedPromises);
+        setDetailedLots(
+          detailedResults
+            .filter((r) => r.success && r.data)
+            .map((r) => r.data!)
+        );
+      }
       if (bookingsRes.success && bookingsRes.data) {
         setActiveBookings(bookingsRes.data.filter(b => b.status === 'active'));
       }
@@ -62,14 +74,15 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-8 w-64 skeleton" />
+      <div className="space-y-6" role="status" aria-label="Dashboard wird geladen" aria-busy="true">
+        <div className="h-8 w-64 skeleton" aria-hidden="true" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-32 skeleton rounded-2xl" />
+            <div key={i} className="h-32 skeleton rounded-2xl" aria-hidden="true" />
           ))}
         </div>
-        <div className="h-64 skeleton rounded-2xl" />
+        <div className="h-64 skeleton rounded-2xl" aria-hidden="true" />
+        <span className="sr-only">Dashboard wird geladen…</span>
       </div>
     );
   }
@@ -114,10 +127,17 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="progress">
+            <div
+              className="progress"
+              role="progressbar"
+              aria-valuenow={availableSlots}
+              aria-valuemin={0}
+              aria-valuemax={totalSlots}
+              aria-label={`${availableSlots} von ${totalSlots} Plätzen verfügbar`}
+            >
               <div
                 className="progress-bar bg-emerald-500"
-                style={{ width: `${(availableSlots / totalSlots) * 100}%` }}
+                style={{ width: `${totalSlots > 0 ? (availableSlots / totalSlots) * 100 : 0}%` }}
               />
             </div>
           </div>
@@ -135,17 +155,24 @@ export function DashboardPage() {
                   {occupancyRate}%
                 </span>
                 <span className="flex items-center gap-1 text-sm text-emerald-600">
-                  <TrendUp weight="bold" className="w-4 h-4" />
+                  <TrendUp weight="bold" className="w-4 h-4" aria-hidden="true" />
                   Normal
                 </span>
               </div>
             </div>
             <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
-              <ChartLine weight="fill" className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              <ChartLine weight="fill" className="w-6 h-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="progress">
+            <div
+              className="progress"
+              role="progressbar"
+              aria-valuenow={occupancyRate}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Auslastung ${occupancyRate}%`}
+            >
               <div
                 className={`progress-bar ${
                   occupancyRate > 80 ? 'bg-red-500' : occupancyRate > 60 ? 'bg-amber-500' : 'bg-primary-500'
@@ -233,6 +260,23 @@ export function DashboardPage() {
         </motion.div>
       )}
 
+      {/* Parking Lot Grid Overview */}
+      {detailedLots.length > 0 && (
+        <motion.div variants={itemVariants} className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Parkplatz-Übersicht
+          </h2>
+          {detailedLots.filter((l) => l.layout).map((lot) => (
+            <div key={lot.id} className="card p-6">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                {lot.name}
+              </h3>
+              <ParkingLotGrid layout={lot.layout!} interactive={false} />
+            </div>
+          ))}
+        </motion.div>
+      )}
+
       {/* Parking Lots */}
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-6">
@@ -283,16 +327,23 @@ export function DashboardPage() {
                 
                 <div className="flex items-center justify-between">
                   <div className="flex-1 mr-4">
-                    <div className="progress h-1.5">
+                    <div
+                      className="progress h-1.5"
+                      role="progressbar"
+                      aria-valuenow={lot.available_slots}
+                      aria-valuemin={0}
+                      aria-valuemax={lot.total_slots}
+                      aria-label={`${lot.available_slots} von ${lot.total_slots} Plätzen frei`}
+                    >
                       <div
                         className={`progress-bar ${
                           lot.available_slots === 0 ? 'bg-red-500' : 'bg-emerald-500'
                         }`}
-                        style={{ width: `${(lot.available_slots / lot.total_slots) * 100}%` }}
+                        style={{ width: `${lot.total_slots > 0 ? (lot.available_slots / lot.total_slots) * 100 : 0}%` }}
                       />
                     </div>
                   </div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                  <span className="text-sm text-gray-500 dark:text-gray-400" aria-hidden="true">
                     {lot.total_slots - lot.available_slots}/{lot.total_slots}
                   </span>
                 </div>

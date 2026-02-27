@@ -5,17 +5,17 @@
 use axum::{
     body::Body,
     extract::{Path, State},
-    http::{header, Request, StatusCode},
+    http::{header, HeaderName, HeaderValue, Request, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{delete, get, post},
     Extension, Json, Router,
 };
 use chrono::{Duration, Utc};
-use metrics_exporter_prometheus::PrometheusHandle;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::CorsLayer;
+use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -25,12 +25,17 @@ use crate::metrics;
 use crate::openapi::ApiDoc;
 use crate::static_files;
 
+/// Maximum allowed request body size: 1 MiB.
+/// Prevents DoS via excessively large JSON payloads.
+const MAX_REQUEST_BODY_BYTES: usize = 1024 * 1024; // 1 MiB
+
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
     HandshakeRequest, HandshakeResponse, LoginRequest, LoginResponse, ParkingLot, ParkingSlot,
     PaymentStatus, RefreshTokenRequest, RegisterRequest, ServerStatus, SlotStatus, User,
     UserPreferences, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::db::Session;
 use crate::AppState;
@@ -57,11 +62,16 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/status", get(server_status))
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/register", post(register))
-        .route("/api/v1/auth/refresh", post(refresh_token));
+        .route("/api/v1/auth/refresh", post(refresh_token))
+        // Legal — public (DDG § 5 requires Impressum to be freely accessible)
+        .route("/api/v1/legal/impressum", get(get_impressum));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
         .route("/api/v1/users/me", get(get_current_user))
+        .route("/api/v1/users/me/export", get(gdpr_export_data))
+        .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
+        // Admin-only: retrieve any user by ID
         .route("/api/v1/users/:id", get(get_user))
         .route("/api/v1/lots", get(list_lots).post(create_lot))
         .route("/api/v1/lots/:id", get(get_lot))
@@ -73,6 +83,8 @@ pub fn create_router(state: SharedState) -> Router {
         )
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
         .route("/api/v1/vehicles/:id", delete(delete_vehicle))
+        // Admin-only: update Impressum settings
+        .route("/api/v1/admin/impressum", get(get_impressum_admin).put(update_impressum))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -98,12 +110,79 @@ pub fn create_router(state: SharedState) -> Router {
         .fallback(static_files::static_handler)
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+        // Security headers applied to every response
+        .layer(axum::middleware::from_fn(security_headers_middleware))
+        // Restrict request body size to prevent DoS via large payloads
+        .layer(RequestBodyLimitLayer::new(MAX_REQUEST_BODY_BYTES))
+        // CORS: same-origin by default; no wildcard
         .layer(
             CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
+                .allow_origin(tower_http::cors::AllowOrigin::predicate(
+                    |origin: &HeaderValue, _req_parts: &axum::http::request::Parts| {
+                        // Allow requests with no Origin header (same-origin, curl, mobile)
+                        // and explicitly allow localhost origins during development.
+                        // In production, the SPA is served from the same origin, so
+                        // cross-origin requests are not expected.
+                        let s = origin.to_str().unwrap_or("");
+                        s.starts_with("http://localhost:")
+                            || s.starts_with("https://localhost:")
+                            || s.starts_with("http://127.0.0.1:")
+                    },
+                ))
+                .allow_methods([
+                    axum::http::Method::GET,
+                    axum::http::Method::POST,
+                    axum::http::Method::PUT,
+                    axum::http::Method::DELETE,
+                    axum::http::Method::OPTIONS,
+                ])
+                .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
+                .allow_credentials(false),
         )
+}
+
+/// Middleware that adds security-related response headers to every request.
+///
+/// - `X-Content-Type-Options`: prevents MIME sniffing
+/// - `X-Frame-Options`: prevents clickjacking
+/// - `Content-Security-Policy`: restricts resource origins
+/// - `Referrer-Policy`: limits referrer leakage
+/// - `Permissions-Policy`: disables unneeded browser features
+async fn security_headers_middleware(request: Request<Body>, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+
+    // Safety: all header names and values below are valid ASCII strings.
+    headers.insert(
+        HeaderName::from_static("x-content-type-options"),
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        HeaderName::from_static("x-frame-options"),
+        HeaderValue::from_static("DENY"),
+    );
+    headers.insert(
+        HeaderName::from_static("content-security-policy"),
+        HeaderValue::from_static(
+            "default-src 'self'; \
+             script-src 'self' 'unsafe-inline'; \
+             style-src 'self' 'unsafe-inline'; \
+             img-src 'self' data:; \
+             font-src 'self'; \
+             connect-src 'self'; \
+             frame-ancestors 'none'",
+        ),
+    );
+    headers.insert(
+        HeaderName::from_static("referrer-policy"),
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
+    headers.insert(
+        HeaderName::from_static("permissions-policy"),
+        HeaderValue::from_static("geolocation=(), camera=(), microphone=()"),
+    );
+
+    response
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -168,18 +247,21 @@ async fn liveness_check() -> StatusCode {
     StatusCode::OK
 }
 
-/// Kubernetes readiness probe - checks if the service can handle traffic
+/// Kubernetes readiness probe - checks if the service can handle traffic.
+///
+/// Returns only a boolean `ready` field. Internal error details are logged
+/// server-side but never exposed in the response body.
 async fn readiness_check(State(state): State<SharedState>) -> impl IntoResponse {
     let state = state.read().await;
     match state.db.stats().await {
         Ok(_) => (StatusCode::OK, Json(serde_json::json!({"ready": true}))),
-        Err(e) => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({
-                "ready": false,
-                "reason": format!("Database unavailable: {}", e)
-            })),
-        ),
+        Err(e) => {
+            tracing::error!("Readiness check failed: {}", e);
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"ready": false})),
+            )
+        }
     }
 }
 
@@ -293,7 +375,8 @@ async fn login(
     }
 
     // Create session
-    let session = Session::new(user.id, 24); // 24 hour session
+    let role_str = format!("{:?}", user.role).to_lowercase();
+    let session = Session::new(user.id, 24, &user.username, &role_str); // 24 hour session
     let access_token = Uuid::new_v4().to_string();
 
     if let Err(e) = state_guard.db.save_session(&access_token, &session).await {
@@ -304,7 +387,7 @@ async fn login(
         );
     }
 
-    // Create response (remove password_hash from response)
+    // Create response — never send password_hash to clients
     let mut response_user = user.clone();
     response_user.password_hash = String::new();
 
@@ -356,7 +439,10 @@ async fn register(
     }
 
     // Hash password
-    let password_hash = hash_password(&request.password);
+    let password_hash = match hash_password(&request.password) {
+        Ok(h) => h,
+        Err(e) => return e,
+    };
 
     // Create user
     let now = Utc::now();
@@ -385,7 +471,8 @@ async fn register(
     }
 
     // Create session
-    let session = Session::new(user.id, 24);
+    let role_str = format!("{:?}", user.role).to_lowercase();
+    let session = Session::new(user.id, 24, &user.username, &role_str);
     let access_token = Uuid::new_v4().to_string();
 
     if let Err(e) = state_guard.db.save_session(&access_token, &session).await {
@@ -396,7 +483,7 @@ async fn register(
         );
     }
 
-    // Create response
+    // Create response — never send password_hash to clients
     let mut response_user = user.clone();
     response_user.password_hash = String::new();
 
@@ -456,11 +543,34 @@ async fn get_current_user(
     }
 }
 
+/// Retrieve a user by ID.
+///
+/// Restricted to Admin and SuperAdmin roles. Regular users must use
+/// `GET /api/v1/users/me` to access their own profile.
 async fn get_user(
     State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<User>>) {
     let state = state.read().await;
+
+    // Verify caller is an admin before exposing arbitrary user records.
+    let caller = match state.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+
+    if caller.role != UserRole::Admin && caller.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+        );
+    }
 
     match state.db.get_user(&id).await {
         Ok(Some(mut user)) => {
@@ -604,7 +714,12 @@ async fn create_booking(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateBookingRequest>,
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
-    let state_guard = state.read().await;
+    // Use a WRITE lock for the entire booking creation to prevent race
+    // conditions where two concurrent requests book the same slot simultaneously.
+    // Both would read SlotStatus::Available, and both would succeed — leaving the
+    // slot double-booked. Holding the write lock ensures only one request can
+    // complete the check-and-update atomically.
+    let state_guard = state.write().await;
 
     // Check if slot exists and is available
     let slot = match state_guard
@@ -644,7 +759,16 @@ async fn create_booking(
         .get_vehicle(&req.vehicle_id.to_string())
         .await
     {
-        Ok(Some(v)) => v,
+        Ok(Some(v)) => {
+            // Verify the vehicle belongs to the authenticated user.
+            if v.user_id != auth_user.user_id {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error("FORBIDDEN", "Vehicle does not belong to you")),
+                );
+            }
+            v
+        }
         _ => Vehicle {
             id: req.vehicle_id,
             user_id: auth_user.user_id,
@@ -657,6 +781,14 @@ async fn create_booking(
             created_at: Utc::now(),
         },
     };
+
+    // Validate duration is positive before arithmetic
+    if req.duration_minutes <= 0 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_INPUT", "Duration must be positive")),
+        );
+    }
 
     // Calculate end time and pricing
     let end_time = req.start_time + Duration::minutes(req.duration_minutes as i64);
@@ -701,10 +833,24 @@ async fn create_booking(
         );
     }
 
-    // Update slot status
+    // Update slot status atomically within the same write-lock scope.
+    // Failure here is logged but does not roll back the booking — the booking
+    // record is the source of truth; slot status is a cache.
     let mut updated_slot = slot;
     updated_slot.status = SlotStatus::Reserved;
-    let _ = state_guard.db.save_parking_slot(&updated_slot).await;
+    if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
+        tracing::error!(
+            "Failed to update slot status for booking {}: {}",
+            booking.id, e
+        );
+    }
+
+    tracing::info!(
+        user_id = %auth_user.user_id,
+        booking_id = %booking.id,
+        slot_id = %booking.slot_id,
+        "Booking created"
+    );
 
     (StatusCode::CREATED, Json(ApiResponse::success(booking)))
 }
@@ -745,7 +891,9 @@ async fn cancel_booking(
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.read().await;
+    // Use write lock so the booking status update and slot status update are
+    // made while no other booking creation can interleave.
+    let state_guard = state.write().await;
 
     let booking = match state_guard.db.get_booking(&id).await {
         Ok(Some(b)) => b,
@@ -771,6 +919,14 @@ async fn cancel_booking(
         );
     }
 
+    // Only Confirmed or Pending bookings can be cancelled.
+    if booking.status == BookingStatus::Cancelled {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error("ALREADY_CANCELLED", "Booking is already cancelled")),
+        );
+    }
+
     let mut updated_booking = booking.clone();
     updated_booking.status = BookingStatus::Cancelled;
     updated_booking.updated_at = Utc::now();
@@ -786,15 +942,26 @@ async fn cancel_booking(
         );
     }
 
-    // Free up the slot
+    // Free up the slot — only restore to Available if it was Reserved.
+    // Slots in Maintenance or Disabled state must remain as-is.
     if let Ok(Some(mut slot)) = state_guard
         .db
         .get_parking_slot(&booking.slot_id.to_string())
         .await
     {
-        slot.status = SlotStatus::Available;
-        let _ = state_guard.db.save_parking_slot(&slot).await;
+        if slot.status == SlotStatus::Reserved {
+            slot.status = SlotStatus::Available;
+            if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+                tracing::error!("Failed to restore slot status after cancellation: {}", e);
+            }
+        }
     }
+
+    tracing::info!(
+        user_id = %auth_user.user_id,
+        booking_id = %id,
+        "Booking cancelled"
+    );
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
@@ -843,19 +1010,75 @@ async fn create_vehicle(
     (StatusCode::CREATED, Json(ApiResponse::success(vehicle)))
 }
 
+/// Delete a vehicle owned by the authenticated user.
+///
+/// Only the vehicle's owner may delete it. Returns 404 if the vehicle does not
+/// exist or 403 if it belongs to another user.
 async fn delete_vehicle(
-    State(_state): State<SharedState>,
-    Extension(_auth_user): Extension<AuthUser>,
-    Path(_id): Path<String>,
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    (StatusCode::OK, Json(ApiResponse::success(())))
+    let state_guard = state.read().await;
+
+    // Fetch the vehicle first to verify ownership.
+    let vehicle = match state_guard.db.get_vehicle(&id).await {
+        Ok(Some(v)) => v,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Vehicle not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching vehicle: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Ownership check — prevent users from deleting other users' vehicles.
+    if vehicle.user_id != auth_user.user_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    match state_guard.db.delete_vehicle(&id).await {
+        Ok(true) => {
+            tracing::info!(
+                user_id = %auth_user.user_id,
+                vehicle_id = %id,
+                "Vehicle deleted"
+            );
+            (StatusCode::OK, Json(ApiResponse::success(())))
+        }
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Vehicle not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete vehicle {}: {}", id, e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete vehicle")),
+            )
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PASSWORD UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════════
 
-fn hash_password(password: &str) -> String {
+/// Hash a password using Argon2id.
+///
+/// Returns `Err` on the (extremely unlikely) event that hashing fails so the
+/// caller can propagate a proper HTTP 500 instead of panicking.
+fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
@@ -865,8 +1088,14 @@ fn hash_password(password: &str) -> String {
     let argon2 = Argon2::default();
     argon2
         .hash_password(password.as_bytes(), &salt)
-        .expect("Failed to hash password")
-        .to_string()
+        .map(|h| h.to_string())
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            )
+        })
 }
 
 fn verify_password(password: &str, hash: &str) -> bool {
@@ -883,4 +1112,201 @@ fn verify_password(password: &str, hash: &str) -> bool {
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEGAL / IMPRESSUM (DDG § 5)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// DDG § 5 Impressum fields stored as settings keys with "impressum_" prefix
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct ImpressumData {
+    pub provider_name: String,
+    pub provider_legal_form: String,
+    pub street: String,
+    pub zip_city: String,
+    pub country: String,
+    pub email: String,
+    pub phone: String,
+    pub register_court: String,
+    pub register_number: String,
+    pub vat_id: String,
+    pub responsible_person: String,
+    pub custom_text: String,
+}
+
+const IMPRESSUM_FIELDS: &[&str] = &[
+    "provider_name", "provider_legal_form", "street", "zip_city", "country",
+    "email", "phone", "register_court", "register_number", "vat_id",
+    "responsible_person", "custom_text",
+];
+
+/// Public Impressum endpoint — no auth required (DDG § 5)
+async fn get_impressum(
+    State(state): State<SharedState>,
+) -> Json<serde_json::Value> {
+    let state = state.read().await;
+    let mut data = serde_json::json!({});
+
+    for field in IMPRESSUM_FIELDS {
+        let key = format!("impressum_{}", field);
+        let value = state.db.get_setting(&key).await.unwrap_or(None).unwrap_or_default();
+        data[field] = serde_json::Value::String(value);
+    }
+
+    Json(data)
+}
+
+/// Admin: read Impressum settings (admin-only, protected).
+///
+/// Although the public endpoint exposes the same data, this route is kept
+/// separate so admins can fetch the current values before editing them via PUT.
+/// It is deliberately restricted to Admin/SuperAdmin.
+async fn get_impressum_admin(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let state_guard = state.read().await;
+
+    // Verify admin role.
+    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(serde_json::json!({"error": "FORBIDDEN", "message": "Admin access required"})),
+            );
+        }
+    };
+
+    if caller.role != UserRole::Admin && caller.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "FORBIDDEN", "message": "Admin access required"})),
+        );
+    }
+
+    let mut data = serde_json::json!({});
+    for field in IMPRESSUM_FIELDS {
+        let key = format!("impressum_{}", field);
+        let value = state_guard.db.get_setting(&key).await.unwrap_or(None).unwrap_or_default();
+        data[field] = serde_json::Value::String(value);
+    }
+
+    (StatusCode::OK, Json(data))
+}
+
+/// Admin: update Impressum settings
+async fn update_impressum(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(payload): Json<serde_json::Value>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    // Verify admin role
+    let user_id_str = auth_user.user_id.to_string();
+    let state_guard = state.read().await;
+    let user = match state_guard.db.get_user(&user_id_str).await {
+        Ok(Some(u)) => u,
+        _ => return (StatusCode::FORBIDDEN, Json(ApiResponse::error("FORBIDDEN", "Admin required"))),
+    };
+    drop(state_guard);
+
+    if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
+        return (StatusCode::FORBIDDEN, Json(ApiResponse::error("FORBIDDEN", "Admin required")));
+    }
+
+    let state_guard = state.read().await;
+    for field in IMPRESSUM_FIELDS {
+        if let Some(serde_json::Value::String(value)) = payload.get(*field) {
+            let key = format!("impressum_{}", field);
+            let _ = state_guard.db.set_setting(&key, value).await;
+        }
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GDPR — Art. 15 (Data Export) + Art. 17 (Right to Erasure)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// GDPR Art. 15 — Export all personal data for the authenticated user
+async fn gdpr_export_data(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> impl IntoResponse {
+    let state = state.read().await;
+    let user_id = auth_user.user_id.to_string();
+
+    let user = match state.db.get_user(&user_id).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                [(header::CONTENT_TYPE, "application/json")],
+                serde_json::to_string(&ApiResponse::<()>::error("NOT_FOUND", "User not found"))
+                    .unwrap_or_default(),
+            );
+        }
+    };
+
+    let bookings = state.db.list_bookings_by_user(&user_id).await.unwrap_or_default();
+    let vehicles = state.db.list_vehicles_by_user(&user_id).await.unwrap_or_default();
+
+    // Note: password_hash is intentionally excluded from GDPR exports.
+    // Exporting a password hash would allow offline brute-force attacks
+    // against the user's own credential — contrary to the spirit of Art. 15.
+    let export = serde_json::json!({
+        "exported_at": Utc::now().to_rfc3339(),
+        "gdpr_basis": "GDPR Art. 15 — Right of Access",
+        "profile": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "name": user.name,
+            "phone": user.phone,
+            "role": user.role,
+            "created_at": user.created_at,
+            "last_login": user.last_login,
+            "preferences": user.preferences,
+        },
+        "bookings": bookings,
+        "vehicles": vehicles,
+    });
+
+    let json_str = serde_json::to_string_pretty(&export).unwrap_or_default();
+
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, "application/json"),
+        ],
+        json_str,
+    )
+}
+
+/// GDPR Art. 17 — Right to Erasure: anonymize user data, keep booking records for accounting.
+/// Removes PII (name, email, username, password, vehicles) while preserving anonymized booking
+/// records as required by German tax law (§ 147 AO — 10-year retention for accounting records).
+async fn gdpr_delete_account(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let user_id = auth_user.user_id.to_string();
+    let state_guard = state.read().await;
+
+    match state_guard.db.anonymize_user(&user_id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        ),
+        Err(e) => {
+            tracing::error!("GDPR anonymization failed for {}: {}", user_id, e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to anonymize account")),
+            )
+        }
+    }
 }

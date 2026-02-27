@@ -12,6 +12,7 @@ import { BookPage } from './pages/Book';
 import { BookingsPage } from './pages/Bookings';
 import { VehiclesPage } from './pages/Vehicles';
 import { AdminPage } from './pages/Admin';
+import { ImpressumPage } from './pages/Impressum';
 import { SpinnerGap } from '@phosphor-icons/react';
 
 const queryClient = new QueryClient({
@@ -68,6 +69,7 @@ function AppRoutes() {
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/impressum" element={<ImpressumPage />} />
 
       {/* Protected */}
       <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

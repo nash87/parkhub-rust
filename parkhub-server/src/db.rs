@@ -77,15 +77,20 @@ pub struct Session {
 }
 
 impl Session {
-    /// Create a new session with the given duration in hours
-    pub fn new(user_id: Uuid, duration_hours: i64) -> Self {
+    /// Create a new session with the given duration in hours.
+    ///
+    /// `username` and `role` are stored for audit/logging purposes.
+    pub fn new(user_id: Uuid, duration_hours: i64, username: &str, role: &str) -> Self {
         let now = Utc::now();
-        // Generate refresh token
-        let refresh_token = format!("rt_{}", Uuid::new_v4());
+        // Use cryptographically random refresh token (not a UUID — UUIDs have
+        // a fixed structure that reduces effective entropy).
+        let mut rng_bytes = [0u8; 32];
+        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut rng_bytes);
+        let refresh_token = format!("rt_{}", hex::encode(rng_bytes));
         Self {
             user_id,
-            username: String::new(), // Will be set by caller
-            role: String::new(),     // Will be set by caller
+            username: username.to_string(),
+            role: role.to_string(),
             refresh_token,
             created_at: now,
             expires_at: now + chrono::Duration::hours(duration_hours),
@@ -121,10 +126,17 @@ struct Encryptor {
     cipher: Aes256Gcm,
 }
 
+/// PBKDF2 iteration count for key derivation.
+///
+/// 600 000 iterations with HMAC-SHA-256 meets the NIST SP 800-132 (2023)
+/// recommendation. This is applied once at database open time, not on every
+/// request, so the cost is paid only once per process start.
+const PBKDF2_ITERATIONS: u32 = 600_000;
+
 impl Encryptor {
     fn new(passphrase: &str, salt: &[u8]) -> Result<Self> {
         let mut key = [0u8; 32];
-        pbkdf2_hmac::<Sha256>(passphrase.as_bytes(), salt, 100_000, &mut key);
+        pbkdf2_hmac::<Sha256>(passphrase.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
         let cipher = Aes256Gcm::new_from_slice(&key)
             .map_err(|e| anyhow!("Failed to create cipher: {}", e))?;
         Ok(Self { cipher })
@@ -755,6 +767,81 @@ impl Database {
             }
         }
         Ok(vehicles)
+    }
+
+    /// Delete a vehicle by ID
+    pub async fn delete_vehicle(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(VEHICLES)?;
+            let removed = table.remove(id)?.is_some();
+            if !removed {
+                return Ok(false);
+            }
+        }
+        write_txn.commit()?;
+        debug!("Deleted vehicle: {}", id);
+        Ok(true)
+    }
+
+    /// GDPR Art. 17 — Anonymize a user: scrub PII while keeping booking records.
+    /// Atomically replaces user's name/email/username/password with placeholder values,
+    /// removes old index entries, and deletes all linked vehicle records.
+    pub async fn anonymize_user(&self, user_id: &str) -> Result<bool> {
+        let user = match self.get_user(user_id).await? {
+            Some(u) => u,
+            None => return Ok(false),
+        };
+
+        let old_username = user.username.clone();
+        let old_email = user.email.clone();
+        let anon_id = format!("deleted-{}", &user_id.chars().take(8).collect::<String>());
+        let anon_email = format!("{}@deleted.invalid", anon_id);
+        let anon_password = format!("DELETED_{}", Uuid::new_v4());
+
+        // Anonymize user record + clean indexes atomically
+        let mut anon_user = user;
+        anon_user.name = "[Deleted User]".to_string();
+        anon_user.email = anon_email.clone();
+        anon_user.username = anon_id.clone();
+        anon_user.password_hash = anon_password;
+
+        let user_data = self.serialize(&anon_user)?;
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            // Overwrite user record
+            let mut table = write_txn.open_table(USERS)?;
+            table.insert(user_id, user_data.as_slice())?;
+
+            // Remove stale index entries and add anonymized ones
+            let mut idx = write_txn.open_table(USERS_BY_USERNAME)?;
+            let _ = idx.remove(old_username.as_str());
+            idx.insert(anon_id.as_str(), user_id)?;
+
+            let mut email_idx = write_txn.open_table(USERS_BY_EMAIL)?;
+            let _ = email_idx.remove(old_email.as_str());
+            email_idx.insert(anon_email.as_str(), user_id)?;
+        }
+        write_txn.commit()?;
+        drop(db);
+
+        // Delete all vehicles (personal data — can be deleted per GDPR Art. 17)
+        let vehicles = self.list_vehicles_by_user(user_id).await.unwrap_or_default();
+        for vehicle in vehicles {
+            let _ = self.delete_vehicle(&vehicle.id.to_string()).await;
+        }
+
+        // Scrub license plate from bookings (keep records for accounting, strip PII)
+        let bookings = self.list_bookings_by_user(user_id).await.unwrap_or_default();
+        for mut booking in bookings {
+            booking.vehicle.license_plate = "[DELETED]".to_string();
+            let _ = self.save_booking(&booking).await;
+        }
+
+        info!("GDPR anonymization completed for user: {} → {}", user_id, anon_id);
+        Ok(true)
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

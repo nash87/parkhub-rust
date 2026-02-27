@@ -29,6 +29,23 @@ export function RegisterPage() {
     return <Navigate to="/" replace />;
   }
 
+  /**
+   * Validate password strength client-side.
+   * Must match the server-side `validate_password_strength` rules in
+   * parkhub-server/src/validation.rs:
+   *   - Minimum 8 characters
+   *   - At least one lowercase letter
+   *   - At least one uppercase letter
+   *   - At least one digit
+   */
+  function validatePassword(password: string): string | null {
+    if (password.length < 8) return 'Passwort muss mindestens 8 Zeichen haben';
+    if (!/[a-z]/.test(password)) return 'Passwort muss einen Kleinbuchstaben enthalten';
+    if (!/[A-Z]/.test(password)) return 'Passwort muss einen Großbuchstaben enthalten';
+    if (!/[0-9]/.test(password)) return 'Passwort muss eine Ziffer enthalten';
+    return null;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -37,8 +54,9 @@ export function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      toast.error('Passwort muss mindestens 8 Zeichen haben');
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      toast.error(passwordError);
       return;
     }
 
