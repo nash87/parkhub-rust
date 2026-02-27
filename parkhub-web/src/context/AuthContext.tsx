@@ -1,3 +1,23 @@
+/**
+ * AuthContext — authentication state management.
+ *
+ * Token storage rationale
+ * ───────────────────────
+ * Access tokens are stored in memory (module-level `ApiClient.token`) and
+ * persisted in `localStorage` only so they survive page reloads.
+ *
+ * Why not HttpOnly cookies?
+ * This application is served as a standalone SPA that can be embedded into
+ * an Electron / Tauri desktop shell without a same-origin server to set
+ * cookies. localStorage is therefore the least-bad option for this use-case.
+ *
+ * Risk accepted: an XSS attack could steal the token from localStorage.
+ * Mitigation: the Content-Security-Policy header set by the server disallows
+ * inline scripts from external origins, significantly reducing XSS surface.
+ * Additionally, tokens expire after 24 hours.
+ *
+ * The refresh token is also stored in localStorage for the same reasons.
+ */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api, User } from '../api/client';
 

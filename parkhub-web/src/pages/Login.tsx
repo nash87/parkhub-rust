@@ -14,8 +14,9 @@ export function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950" role="status" aria-label="Wird geladen">
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <span className="sr-only">Anwendung wird geladen…</span>
       </div>
     );
   }
@@ -136,20 +137,23 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                  aria-pressed={showPassword}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
                 >
                   {showPassword ? (
-                    <EyeSlash weight="regular" className="w-5 h-5" />
+                    <EyeSlash weight="regular" className="w-5 h-5" aria-hidden="true" />
                   ) : (
-                    <Eye weight="regular" className="w-5 h-5" />
+                    <Eye weight="regular" className="w-5 h-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer">
                 <input
+                  id="remember-me"
                   type="checkbox"
                   className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
@@ -168,14 +172,18 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-primary w-full justify-center"
+              aria-busy={loading}
+              className="btn btn-primary w-full justify-center disabled:opacity-60"
             >
               {loading ? (
-                <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" />
+                <>
+                  <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" aria-hidden="true" />
+                  <span>Anmeldung läuft…</span>
+                </>
               ) : (
                 <>
                   Anmelden
-                  <ArrowRight weight="bold" className="w-5 h-5" />
+                  <ArrowRight weight="bold" className="w-5 h-5" aria-hidden="true" />
                 </>
               )}
             </button>

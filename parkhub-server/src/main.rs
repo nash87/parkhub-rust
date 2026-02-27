@@ -252,9 +252,12 @@ async fn main() -> Result<()> {
             // Use environment variable for encryption passphrase in headless mode
             config.encryption_passphrase = std::env::var("PARKHUB_DB_PASSPHRASE").ok();
             if config.encryption_enabled && config.encryption_passphrase.is_none() {
-                warn!("Database encryption enabled but PARKHUB_DB_PASSPHRASE not set");
-                warn!("Using default passphrase - NOT RECOMMENDED FOR PRODUCTION");
-                config.encryption_passphrase = Some("default-dev-passphrase".to_string());
+                anyhow::bail!(
+                    "Database encryption is enabled but PARKHUB_DB_PASSPHRASE is not set.\n\
+                     Set the PARKHUB_DB_PASSPHRASE environment variable to a strong, \
+                     randomly generated passphrase before starting the server.\n\
+                     Example: export PARKHUB_DB_PASSPHRASE=\"$(openssl rand -base64 32)\""
+                );
             }
             config.save(&config_path)?;
             info!("Default config saved. Admin credentials: admin/admin");

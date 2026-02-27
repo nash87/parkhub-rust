@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChartBar,
   Buildings,
@@ -12,7 +12,8 @@ import {
   CaretRight,
   SpinnerGap,
 } from '@phosphor-icons/react';
-import { api, ParkingLot } from '../api/client';
+import { api, ParkingLot, ParkingLotDetailed } from '../api/client';
+import { LotLayoutEditor } from '../components/LotLayoutEditor';
 
 const tabs = [
   { name: 'Übersicht', path: '/admin', icon: ChartBar },
@@ -165,6 +166,9 @@ function AdminOverview() {
 function AdminLots() {
   const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingLotId, setEditingLotId] = useState<string | null>(null);
+  const [editingLayout, setEditingLayout] = useState<ParkingLotDetailed | null>(null);
+  const [showNewEditor, setShowNewEditor] = useState(false);
 
   useEffect(() => {
     loadLots();
@@ -176,6 +180,20 @@ function AdminLots() {
       if (res.success && res.data) setLots(res.data);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleEdit(lot: ParkingLot) {
+    if (editingLotId === lot.id) {
+      setEditingLotId(null);
+      setEditingLayout(null);
+      return;
+    }
+    const res = await api.getLotDetailed(lot.id);
+    if (res.success && res.data) {
+      setEditingLotId(lot.id);
+      setEditingLayout(res.data);
+      setShowNewEditor(false);
     }
   }
 
@@ -197,38 +215,95 @@ function AdminLots() {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
           Parkplätze verwalten
         </h2>
-        <button className="btn btn-primary">
+        <button
+          onClick={() => { setShowNewEditor((p) => !p); setEditingLotId(null); }}
+          className="btn btn-primary"
+        >
           <Plus weight="bold" className="w-4 h-4" />
           Neuer Parkplatz
         </button>
       </div>
 
+      {/* New lot editor */}
+      <AnimatePresence>
+        {showNewEditor && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Neuen Parkplatz anlegen
+              </h3>
+              <LotLayoutEditor
+                onSave={(layout, name) => {
+                  console.log('New lot:', { name, layout });
+                  setShowNewEditor(false);
+                }}
+                onCancel={() => setShowNewEditor(false)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="space-y-4">
         {lots.map((lot) => (
-          <div key={lot.id} className="card-hover p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
-                  <Buildings weight="fill" className="w-6 h-6 text-gray-500" />
+          <div key={lot.id}>
+            <div className="card-hover p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
+                    <Buildings weight="fill" className="w-6 h-6 text-gray-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-white">{lot.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{lot.address}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{lot.name}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{lot.address}</p>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900 dark:text-white">
+                      {lot.available_slots}/{lot.total_slots}
+                    </p>
+                    <p className="text-xs text-gray-500">verfügbar</p>
+                  </div>
+                  <button
+                    onClick={() => handleEdit(lot)}
+                    className={`btn btn-sm ${editingLotId === lot.id ? 'btn-primary' : 'btn-secondary'}`}
+                  >
+                    Bearbeiten
+                    <CaretRight weight="bold" className={`w-4 h-4 transition-transform ${editingLotId === lot.id ? 'rotate-90' : ''}`} />
+                  </button>
                 </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="font-bold text-gray-900 dark:text-white">
-                    {lot.available_slots}/{lot.total_slots}
-                  </p>
-                  <p className="text-xs text-gray-500">verfügbar</p>
-                </div>
-                <button className="btn btn-secondary btn-sm">
-                  Bearbeiten
-                  <CaretRight weight="bold" className="w-4 h-4" />
-                </button>
               </div>
             </div>
+
+            {/* Inline editor */}
+            <AnimatePresence>
+              {editingLotId === lot.id && editingLayout && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="card p-6 mt-2 border-l-4 border-l-primary-500">
+                    <LotLayoutEditor
+                      initialLayout={editingLayout.layout}
+                      lotName={editingLayout.name}
+                      onSave={(layout, name) => {
+                        console.log('Updated lot:', { id: lot.id, name, layout });
+                        setEditingLotId(null);
+                      }}
+                      onCancel={() => setEditingLotId(null)}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         ))}
       </div>

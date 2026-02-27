@@ -19,8 +19,9 @@ Desktop.ini
 
 # Local config
 .env
-.env.local
+.env.*
 *.local.toml
+config.toml.local
 
 # Logs
 *.log
@@ -38,6 +39,24 @@ layouts/
 
 # Debug files
 *.pdb
+
+# Certificate and key files — never commit private keys
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Database files
+*.db
+*.sqlite
+*.redb
+
+# Node/frontend artifacts
+node_modules/
+dist/
+parkhub-web/dist/
 
 # Package files
 *.zip
