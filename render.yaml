@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: parkhub-rust-demo
+    runtime: docker
+    repo: https://github.com/nash87/parkhub-rust
+    branch: main
+    dockerfilePath: ./Dockerfile
+    # Render assigns PORT env var (default 10000); pass it via CLI args
+    dockerCommand: /app/parkhub-server --headless --unattended --data-dir /data --port 10000
+    plan: free
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: ALLOW_SELF_REGISTRATION
+        value: "false"
+    # Note: /data is ephemeral on Render free tier — redb resets on each restart
+    # This is intentional: demo data always starts fresh
