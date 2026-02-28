@@ -1,6 +1,18 @@
-# Contributing to ParkHub
+# Contributing to ParkHub Rust
 
 Thank you for your interest in contributing to ParkHub Rust.
+
+---
+
+## Table of Contents
+
+- [Development Setup](#development-setup)
+- [Running Tests](#running-tests)
+- [Code Style](#code-style)
+- [Project Structure](#project-structure)
+- [Pull Request Process](#pull-request-process)
+- [Reporting Bugs](#reporting-bugs)
+- [Security Vulnerabilities](#security-vulnerabilities)
 
 ---
 
@@ -8,9 +20,12 @@ Thank you for your interest in contributing to ParkHub Rust.
 
 ### Prerequisites
 
-- **Rust** 1.83 or later: `rustup update stable`
-- **Node.js** 22+ and **npm** (for the frontend)
-- **Docker** (optional, for integration testing)
+| Tool | Version | Install |
+|------|---------|---------|
+| Rust | 1.83+ | `rustup update stable` |
+| Node.js | 22+ | [nodejs.org](https://nodejs.org) |
+| npm | 10+ | bundled with Node.js |
+| Docker | optional | for integration testing |
 
 ### Clone and build
 
@@ -18,32 +33,46 @@ Thank you for your interest in contributing to ParkHub Rust.
 git clone https://github.com/nash87/parkhub
 cd parkhub
 
-# Build the web frontend
+# Build the React frontend
 cd parkhub-web
 npm ci
 npm run build
 cd ..
 
-# Build the Rust workspace
+# Build the full Rust workspace
 cargo build
 ```
 
-### Run in development
+### Run in development mode
 
-Start the backend (headless, auto-configure, no encryption for speed):
+Start the backend:
 
 ```bash
 cargo run --package parkhub-server -- --headless --unattended --debug --port 7878
 ```
 
-Start the frontend in hot-reload mode:
+Flags explained:
+- `--headless` — no GUI, console mode
+- `--unattended` — auto-configure with defaults (admin/admin, no encryption, no TLS)
+- `--debug` — verbose logging
+- `--port 7878` — avoid conflict with other local services
+
+Start the frontend with hot reload (in a separate terminal):
 
 ```bash
 cd parkhub-web
 npm run dev
 ```
 
-The frontend dev server proxies `/api/*` requests to `http://localhost:7878`.
+The Vite dev server proxies `/api/*` requests to `http://localhost:7878`.
+Open `http://localhost:5173` in your browser.
+
+### One-command dev start (with `cargo-watch`)
+
+```bash
+cargo install cargo-watch
+cargo watch -x 'run --package parkhub-server -- --headless --unattended --debug'
+```
 
 ---
 
@@ -59,20 +88,38 @@ cargo test
 cargo test --package parkhub-server
 cargo test --package parkhub-common
 
-# Run a specific test
-cargo test test_config_save_load
+# Run a specific test by name
+cargo test test_booking_creation
 
-# Run with output shown (for debugging)
+# Show println! output (for debugging test failures)
 cargo test -- --nocapture
+
+# Run with verbose output
+cargo test -- --test-output immediate
 ```
 
 ### Frontend type checking and linting
 
 ```bash
 cd parkhub-web
-npm run type-check   # TypeScript type checking
-npm run lint         # ESLint
-npm run build        # Full production build (catches type errors)
+
+# TypeScript type checking (no emit)
+npm run type-check
+
+# ESLint
+npm run lint
+
+# Production build (catches type errors and bundler warnings)
+npm run build
+```
+
+### Run all checks before submitting a PR
+
+```bash
+cargo fmt --all
+cargo clippy --workspace -- -D warnings
+cargo test --workspace
+cd parkhub-web && npm run build
 ```
 
 ---
@@ -82,13 +129,17 @@ npm run build        # Full production build (catches type errors)
 ### Rust
 
 - Format with `rustfmt` before every commit: `cargo fmt --all`
-- Pass `clippy` with no warnings: `cargo clippy --workspace -- -D warnings`
-- Every public function and module must have a doc comment (`///` or `//!`)
-- Avoid `unwrap()` in production code — use `?`, `anyhow`, or explicit error handling
+- Pass `clippy` with zero warnings: `cargo clippy --workspace -- -D warnings`
+- All public functions and modules must have doc comments (`///` or `//!`)
+- Do not use `unwrap()` in production code — use `?`, `anyhow`, or explicit `match`
 - Security-sensitive operations (password hashing, token generation) must use `OsRng`
+- No `unsafe` blocks except in proven FFI/performance-critical paths with a comment explaining why
 
 ```bash
-# Check and fix formatting
+# Check formatting
+cargo fmt --all -- --check
+
+# Fix formatting
 cargo fmt --all
 
 # Run linter
@@ -97,11 +148,11 @@ cargo clippy --workspace -- -D warnings
 
 ### TypeScript / React
 
-- Use TypeScript strict mode (already configured in `tsconfig.json`)
+- TypeScript strict mode is already configured in `tsconfig.json` — do not relax it
 - Functional components only (no class components)
-- Accessibility: every interactive element must have an `aria-label` or be associated with a
-  visible `<label>`. Follow the existing ARIA patterns in the pages
+- Every interactive element must have an `aria-label` or be associated with a `<label>`
 - No inline styles — use Tailwind CSS utility classes
+- State: use React hooks (`useState`, `useReducer`). No external state management library is needed.
 
 ---
 
@@ -109,42 +160,41 @@ cargo clippy --workspace -- -D warnings
 
 ```
 parkhub/
-  parkhub-common/        Shared types and protocol definitions (no I/O)
+  parkhub-common/           Shared types and protocol definitions (no I/O, no async)
     src/
-      lib.rs             Re-exports
-      models.rs          All data models (User, Booking, Vehicle, ...)
-      protocol.rs        API request/response types, WebSocket messages
-      error.rs           Shared error types
+      lib.rs                Re-exports
+      models.rs             All domain models: User, ParkingLot, ParkingSlot, Booking, Vehicle
+      protocol.rs           API request/response types
+      error.rs              Shared error types
 
-  parkhub-server/        Axum HTTP server
+  parkhub-server/           Axum HTTP server
     src/
-      main.rs            Startup, CLI parsing, TLS, mDNS, GUI integration
-      api.rs             All HTTP routes (public + protected)
-      config.rs          ServerConfig struct and TOML serialization
-      db.rs              redb database layer (CRUD operations)
-      auth.rs            Session management helpers
-      jwt.rs             Token utilities
-      tls.rs             Certificate generation and loading
-      rate_limit.rs      Governor-based rate limiting
-      metrics.rs         Prometheus metrics initialization
-      discovery.rs       mDNS service registration
-      audit.rs           Audit log writes
-      health.rs          Health check helpers
-      static_files.rs    Embedded React SPA serving
-      validation.rs      Input validation helpers
-      openapi.rs         utoipa OpenAPI spec definition
-      error.rs           AppError type and IntoResponse impl
+      main.rs               Startup, CLI parsing, TLS setup, mDNS, GUI integration
+      api.rs                All HTTP routes (public + protected + admin)
+      config.rs             ServerConfig struct and TOML serialization
+      db.rs                 redb database layer (all CRUD operations)
+      auth.rs               Session management helpers
+      tls.rs                TLS certificate generation and loading
+      rate_limit.rs         Governor-based rate limiting
+      metrics.rs            Prometheus metrics initialization
+      discovery.rs          mDNS service registration
+      audit.rs              Audit log write helpers
+      health.rs             Health check handlers
+      static_files.rs       Embedded React SPA serving (fallback handler)
+      validation.rs         Input validation helpers
+      openapi.rs            utoipa OpenAPI spec definition
+      error.rs              AppError type and IntoResponse implementation
 
-  parkhub-web/           React 19 frontend
+  parkhub-web/              React 19 frontend
     src/
-      api/client.ts      Typed API client (all fetch calls)
-      context/           React contexts (AuthContext)
-      components/        Reusable components (ParkingLotGrid, LotLayoutEditor, ...)
-      pages/             Page components (Dashboard, Book, Bookings, Vehicles, Admin, ...)
+      api/client.ts         Typed API client (all fetch calls go through here)
+      context/              React contexts (AuthContext)
+      components/           Reusable components (ParkingLotGrid, LotLayoutEditor, ...)
+      pages/                Page components (Dashboard, Book, Bookings, Vehicles, Admin, ...)
 
-  legal/                 German legal document templates (Markdown)
-  screenshots/           Application screenshots
-  docs/                  This documentation
+  legal/                    German legal document templates (Markdown)
+  screenshots/              Application screenshots
+  docs/                     Documentation (this directory)
 ```
 
 ---
@@ -152,14 +202,23 @@ parkhub/
 ## Pull Request Process
 
 1. **Fork** the repository and create a feature branch from `main`:
+
    ```bash
-   git checkout -b feature/my-feature
+   git checkout -b feature/my-feature-name
    ```
 
-2. **Write tests** for new functionality. PRs without tests for new code will be asked
+   Branch naming conventions:
+   - `feature/` — new functionality
+   - `fix/` — bug fixes
+   - `docs/` — documentation only
+   - `refactor/` — code changes without behavior change
+   - `security/` — security fixes (coordinate via responsible disclosure first)
+
+2. **Write tests** for any new functionality. PRs without tests for new code will be asked
    to add coverage before merging.
 
-3. **Run the full check suite** before opening a PR:
+3. **Run the full check suite**:
+
    ```bash
    cargo fmt --all
    cargo clippy --workspace -- -D warnings
@@ -167,36 +226,59 @@ parkhub/
    cd parkhub-web && npm run build
    ```
 
-4. **Commit messages** should be clear and concise. Use the imperative mood:
-   - "Add vehicle color validation" not "Added vehicle color validation"
-   - Reference issues where relevant: "Fix slot double-booking race condition (#42)"
+4. **Commit messages** — use the imperative mood, reference issues:
 
-5. **Open a PR** against `main`. Fill in the PR template:
-   - What does this change do?
+   ```
+   Add vehicle color validation
+   Fix slot double-booking race condition (#42)
+   Update GDPR export to include booking notes
+   ```
+
+5. **Open a PR** against `main`. Fill in the template:
+   - What does this change do and why?
    - How was it tested?
-   - Are there any breaking changes?
-   - Does it affect the API, config schema, or database format?
+   - Are there breaking changes (API, config schema, database format)?
+   - Does it affect GDPR or legal compliance behaviour?
 
-6. **Database schema changes** must be backwards-compatible or include a migration path.
-   The redb schema uses named tables — adding a new table is safe; removing or renaming
-   an existing table requires a migration helper.
+6. **Database schema changes**: Adding a new redb table is safe. Removing or renaming an
+   existing table requires a migration helper in `db.rs` and documentation in the PR.
 
-7. **API changes** must be backwards-compatible within a minor version. If you need to
-   break the API, update `PROTOCOL_VERSION` in `parkhub-common/src/lib.rs` and document
-   the change in `docs/CHANGELOG.md`.
+7. **API changes**: Must be backwards-compatible within a minor version. Breaking changes
+   require bumping `PROTOCOL_VERSION` in `parkhub-common/src/lib.rs` and documentation in
+   `docs/CHANGELOG.md` under a new `[Unreleased]` section.
+
+8. **One approving review** is required before merging.
+
+---
+
+## Adding a New API Endpoint
+
+1. Add the route in `api.rs` (`create_router` function) to either `public_routes` or `protected_routes`
+2. Implement the handler function in `api.rs`
+3. Add any new request/response types to `parkhub-common/src/protocol.rs` or `models.rs`
+4. Implement the database operation in `db.rs`
+5. Add the endpoint to the OpenAPI spec in `openapi.rs`
+6. Write a test in `tests/` or as a unit test in the module
+7. Document the endpoint in `docs/API.md`
 
 ---
 
 ## Reporting Bugs
 
 Open a GitHub issue with:
-- ParkHub version (`parkhub-server --version`)
+
+- ParkHub version: `./parkhub-server --version`
 - Operating system and deployment method (Docker, bare metal, etc.)
 - Steps to reproduce
-- Expected behavior vs. actual behavior
-- Relevant log output (`RUST_LOG=debug`)
+- Expected behaviour vs actual behaviour
+- Relevant log output: `RUST_LOG=debug ./parkhub-server --headless --debug`
 
-For security vulnerabilities, see [SECURITY.md](SECURITY.md) — do not open public issues.
+---
+
+## Security Vulnerabilities
+
+See [SECURITY.md](SECURITY.md). Do **not** open a public GitHub issue for security vulnerabilities.
+Use the GitHub Security Advisory process instead.
 
 ---
 
@@ -204,3 +286,5 @@ For security vulnerabilities, see [SECURITY.md](SECURITY.md) — do not open pub
 
 By contributing, you agree that your contributions will be licensed under the MIT License,
 the same license as the project.
+
+See [LICENSE](../LICENSE).
