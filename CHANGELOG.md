@@ -11,6 +11,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.1] — 2026-02-28
+
+### Fixed
+
+- **Self-registration enforcement**: `POST /api/v1/auth/register` now returns HTTP 403 `REGISTRATION_DISABLED`
+  when `allow_self_registration = false` in config. Previously the flag had no effect.
+- **Floor name UUID**: Booking confirmation response showed the internal UUID of the floor (e.g.
+  `"Floor 82936167-..."`) instead of the human-readable name. Now resolved from the lot's floors array.
+- **CI Kaniko build**: `Cargo.lock` was gitignored, causing all CI builds to fail with
+  `lstat /workspace/src/Cargo.lock: no such file or directory`. Binary crates must commit
+  their lockfile for reproducible Docker builds.
+
+---
+
 ## [1.1.0] — 2026-02-28
 
 ### Added
