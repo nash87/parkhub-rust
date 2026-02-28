@@ -190,6 +190,7 @@ pub fn create_router(state: SharedState) -> Router {
 /// - `Content-Security-Policy`: restricts resource origins
 /// - `Referrer-Policy`: limits referrer leakage
 /// - `Permissions-Policy`: disables unneeded browser features
+/// - `Strict-Transport-Security`: enforces HTTPS for 1 year including subdomains
 async fn security_headers_middleware(request: Request<Body>, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
@@ -206,8 +207,11 @@ async fn security_headers_middleware(request: Request<Body>, next: Next) -> Resp
     headers.insert(
         HeaderName::from_static("content-security-policy"),
         HeaderValue::from_static(
+            // 'unsafe-inline' removed from script-src — use nonces or hashes for
+            // any inline scripts.  style-src retains 'unsafe-inline' because React
+            // and similar frameworks inject critical CSS at runtime.
             "default-src 'self'; \
-             script-src 'self' 'unsafe-inline'; \
+             script-src 'self'; \
              style-src 'self' 'unsafe-inline'; \
              img-src 'self' data:; \
              font-src 'self'; \
@@ -222,6 +226,10 @@ async fn security_headers_middleware(request: Request<Body>, next: Next) -> Resp
     headers.insert(
         HeaderName::from_static("permissions-policy"),
         HeaderValue::from_static("geolocation=(), camera=(), microphone=()"),
+    );
+    headers.insert(
+        HeaderName::from_static("strict-transport-security"),
+        HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
     );
 
     response
@@ -1091,6 +1099,17 @@ async fn create_booking(
         );
     }
 
+    // Validate start_time is in the future (at least 1 minute from now)
+    if req.start_time <= Utc::now() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_BOOKING_TIME",
+                "Booking start time must be in the future",
+            )),
+        );
+    }
+
     // Calculate end time and pricing
     let end_time = req.start_time + Duration::minutes(req.duration_minutes as i64);
     let base_price = (req.duration_minutes as f64 / 60.0) * 2.0; // 2 EUR per hour
@@ -1135,14 +1154,18 @@ async fn create_booking(
     }
 
     // Update slot status atomically within the same write-lock scope.
-    // Failure here is logged but does not roll back the booking — the booking
-    // record is the source of truth; slot status is a cache.
+    // The slot status is a critical cache of availability — if we cannot mark it
+    // Reserved the slot will appear available and can be double-booked.
     let mut updated_slot = slot;
     updated_slot.status = SlotStatus::Reserved;
     if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
-        tracing::error!(
-            "Failed to update slot status for booking {}: {}",
-            booking.id, e
+        tracing::error!("Failed to update slot status after booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SLOT_UPDATE_FAILED",
+                "Booking created but slot status could not be updated. Please contact support.",
+            )),
         );
     }
 
@@ -1152,6 +1175,34 @@ async fn create_booking(
         slot_id = %booking.slot_id,
         "Booking created"
     );
+
+    // Send booking confirmation email (non-blocking, fire-and-forget).
+    // TODO: Implement crate::email::send_booking_confirmation(config, email, name, booking)
+    // when a dedicated booking confirmation template is available.  For now we use the
+    // generic send_email helper with a minimal body so the wiring is in place.
+    {
+        let user_email_opt = state_guard
+            .db
+            .get_user(&auth_user.user_id.to_string())
+            .await
+            .ok()
+            .flatten()
+            .map(|u| (u.email, u.name));
+
+        if let Some((user_email, user_name)) = user_email_opt {
+            let booking_id_str = booking.id.to_string();
+            tokio::spawn(async move {
+                let subject = format!("Booking confirmation — {}", booking_id_str);
+                let html = format!(
+                    "<p>Dear {},</p><p>Your booking <strong>{}</strong> has been confirmed.</p>",
+                    user_name, booking_id_str
+                );
+                if let Err(e) = crate::email::send_email(&user_email, &subject, &html).await {
+                    tracing::warn!("Failed to send booking confirmation email: {}", e);
+                }
+            });
+        }
+    }
 
     (StatusCode::CREATED, Json(ApiResponse::success(booking)))
 }

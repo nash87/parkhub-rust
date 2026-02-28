@@ -10,6 +10,7 @@ use axum::{
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -30,8 +31,16 @@ pub struct JwtConfig {
 
 impl Default for JwtConfig {
     fn default() -> Self {
+        // Generate a 256-bit (32-byte) cryptographically random secret and hex-encode it.
+        // This provides ~128 bits of effective security vs. a UUID which has only 122 bits
+        // of entropy and a fixed structure that reduces its unpredictability as a HMAC key.
+        let secret = {
+            let mut rng = rand::thread_rng();
+            let bytes: Vec<u8> = (0..32).map(|_| rng.gen::<u8>()).collect();
+            hex::encode(bytes)
+        };
         Self {
-            secret: Uuid::new_v4().to_string(), // Generate random secret
+            secret,
             access_token_expiry_hours: 24,
             refresh_token_expiry_days: 30,
             issuer: "parkhub".to_string(),
