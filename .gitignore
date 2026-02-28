@@ -1,6 +1,6 @@
 # Rust build artifacts
 /target/
-Cargo.lock
+# Cargo.lock is intentionally committed (binary crate — reproducible Docker builds)
 
 # IDE
 .idea/
