@@ -14,10 +14,12 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY parkhub-common/Cargo.toml ./parkhub-common/
 COPY parkhub-server/Cargo.toml ./parkhub-server/
+COPY parkhub-client/Cargo.toml ./parkhub-client/
 # Create dummy sources for dependency caching
-RUN mkdir -p parkhub-common/src parkhub-server/src && \
+RUN mkdir -p parkhub-common/src parkhub-server/src parkhub-client/src && \
     echo "pub fn dummy() {}" > parkhub-common/src/lib.rs && \
-    echo "fn main() {}" > parkhub-server/src/main.rs
+    echo "fn main() {}" > parkhub-server/src/main.rs && \
+    echo "fn main() {}" > parkhub-client/src/main.rs
 # Build dependencies only
 RUN cargo build --release --package parkhub-server 2>/dev/null || true
 # Copy real sources
