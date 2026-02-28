@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Car, Eye, EyeSlash, ArrowRight, SpinnerGap, User, Envelope, Lock } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 
 export function RegisterPage() {
   const { register, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -62,7 +62,6 @@ export function RegisterPage() {
 
     setLoading(true);
     const success = await register({
-      username: formData.username,
       email: formData.email,
       password: formData.password,
       name: formData.name,
@@ -70,8 +69,9 @@ export function RegisterPage() {
 
     if (success) {
       toast.success('Willkommen bei ParkHub!');
+      navigate('/', { replace: true });
     } else {
-      toast.error('Registrierung fehlgeschlagen');
+      toast.error('Registrierung fehlgeschlagen. Bitte prüfen Sie Ihre Eingaben.');
     }
     setLoading(false);
   }
@@ -128,98 +128,106 @@ export function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="label">Vollständiger Name</label>
+              <label htmlFor="reg-name" className="label">Vollständiger Name</label>
               <div className="relative">
-                <User weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <User weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
                 <input
+                  id="reg-name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="input pl-11"
                   placeholder="Max Mustermann"
                   required
+                  autoComplete="name"
+                  autoFocus
                 />
               </div>
             </div>
 
             <div>
-              <label className="label">Benutzername</label>
+              <label htmlFor="reg-email" className="label">E-Mail</label>
               <div className="relative">
-                <User weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Envelope weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
                 <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="input pl-11"
-                  placeholder="maxmuster"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="label">E-Mail</label>
-              <div className="relative">
-                <Envelope weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
+                  id="reg-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="input pl-11"
                   placeholder="max@beispiel.de"
                   required
+                  autoComplete="email"
                 />
               </div>
             </div>
 
             <div>
-              <label className="label">Passwort</label>
+              <label htmlFor="reg-password" className="label">Passwort</label>
               <div className="relative">
-                <Lock weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
                 <input
+                  id="reg-password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="input pl-11 pr-12"
                   placeholder="••••••••"
                   required
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                  aria-pressed={showPassword}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 rounded"
                 >
-                  {showPassword ? <EyeSlash className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeSlash weight="regular" className="w-5 h-5" aria-hidden="true" /> : <Eye weight="regular" className="w-5 h-5" aria-hidden="true" />}
                 </button>
               </div>
+              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                Mindestens 8 Zeichen, Groß- und Kleinbuchstaben sowie eine Ziffer
+              </p>
             </div>
 
             <div>
-              <label className="label">Passwort bestätigen</label>
+              <label htmlFor="reg-confirm-password" className="label">Passwort bestätigen</label>
               <div className="relative">
-                <Lock weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Lock weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
                 <input
+                  id="reg-confirm-password"
                   type={showPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   className="input pl-11"
                   placeholder="••••••••"
                   required
+                  autoComplete="new-password"
                 />
               </div>
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="mt-1.5 text-sm text-red-600 dark:text-red-400" role="alert">
+                  Passwörter stimmen nicht überein
+                </p>
+              )}
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="btn btn-primary w-full justify-center mt-6"
+              aria-busy={loading}
+              className="btn btn-primary w-full justify-center mt-6 disabled:opacity-60"
             >
               {loading ? (
-                <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" />
+                <>
+                  <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" aria-hidden="true" />
+                  <span>Registrierung läuft…</span>
+                </>
               ) : (
                 <>
                   Registrieren
-                  <ArrowRight weight="bold" className="w-5 h-5" />
+                  <ArrowRight weight="bold" className="w-5 h-5" aria-hidden="true" />
                 </>
               )}
             </button>
