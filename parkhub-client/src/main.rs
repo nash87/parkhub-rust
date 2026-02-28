@@ -53,6 +53,8 @@ struct AppState {
     discovered_servers: Vec<parkhub_common::ServerInfo>,
     /// Whether we're currently scanning
     is_scanning: bool,
+    /// Cached full user list for search filtering
+    admin_users_cache: Vec<parkhub_common::User>,
 }
 
 #[tokio::main]
@@ -81,6 +83,7 @@ async fn main() -> Result<()> {
         server: None,
         discovered_servers: vec![],
         is_scanning: false,
+        admin_users_cache: vec![],
     }));
 
     // Create UI
@@ -532,10 +535,24 @@ async fn main() -> Result<()> {
         let ui_weak = ui_weak_admin1.clone();
 
         tokio::spawn(async move {
-            let state = state.read().await;
-            if let Some(ref server) = state.server {
-                match server.list_users().await {
+            let users_result = {
+                let state = state.read().await;
+                if let Some(ref server) = state.server {
+                    Some(server.list_users().await)
+                } else {
+                    None
+                }
+            };
+
+            if let Some(result) = users_result {
+                match result {
                     Ok(users) => {
+                        // Save to cache for search filtering
+                        {
+                            let mut state = state.write().await;
+                            state.admin_users_cache = users.clone();
+                        }
+
                         if let Some(ui) = ui_weak.upgrade() {
                             let user_data: Vec<AdminUserInfo> = users
                                 .iter()
@@ -743,12 +760,51 @@ async fn main() -> Result<()> {
 
     // Search users callback
     let ui_weak_admin7 = ui.as_weak();
+    let state_for_search = state.clone();
     ui.on_admin_search_users(move |query| {
+        let query = query.to_lowercase();
         info!("Search users: {}", query);
-        // TODO: Implement search filtering
-        if let Some(_ui) = ui_weak_admin7.upgrade() {
-            // Will be implemented with search functionality
-        }
+        let state = state_for_search.clone();
+        let ui_weak = ui_weak_admin7.clone();
+
+        tokio::spawn(async move {
+            let state = state.read().await;
+            let users = &state.admin_users_cache;
+            let filtered: Vec<AdminUserInfo> = users.iter()
+                .filter(|u| {
+                    query.is_empty()
+                        || u.username.to_lowercase().contains(&query)
+                        || u.email.to_lowercase().contains(&query)
+                        || u.name.to_lowercase().contains(&query)
+                })
+                .map(|u| AdminUserInfo {
+                    id: SharedString::from(u.id.to_string()),
+                    username: SharedString::from(&u.username),
+                    email: SharedString::from(&u.email),
+                    name: SharedString::from(&u.name),
+                    initial: SharedString::from(
+                        u.name.chars().next()
+                            .or_else(|| u.username.chars().next())
+                            .map(|c| c.to_uppercase().to_string())
+                            .unwrap_or_else(|| "?".to_string()),
+                    ),
+                    role: SharedString::from(format!("{:?}", u.role)),
+                    is_active: u.is_active,
+                    last_login: SharedString::from(
+                        u.last_login
+                            .map(|dt| dt.format("%d.%m.%Y %H:%M").to_string())
+                            .unwrap_or_else(|| "-".to_string()),
+                    ),
+                    created_at: SharedString::from(
+                        u.created_at.format("%d.%m.%Y").to_string(),
+                    ),
+                })
+                .collect();
+
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.set_admin_users(ModelRc::new(VecModel::from(filtered)));
+            }
+        });
     });
 
     // =========================================================================

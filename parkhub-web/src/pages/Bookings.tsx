@@ -13,6 +13,8 @@ import {
   Warning,
   Receipt,
   CalendarPlus,
+  MagnifyingGlass,
+  Funnel,
 } from '@phosphor-icons/react';
 import { api, Booking } from '../api/client';
 import toast from 'react-hot-toast';
@@ -57,6 +59,12 @@ export function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+  const [filterSearch, setFilterSearch] = useState<string>('');
+
   useEffect(() => {
     loadBookings();
   }, []);
@@ -86,8 +94,32 @@ export function BookingsPage() {
     setCancelling(null);
   }
 
-  const activeBookings = bookings.filter(b => b.status === 'active');
-  const pastBookings = bookings.filter(b => b.status !== 'active');
+  // Client-side filtering
+  const filteredBookings = bookings.filter((b) => {
+    if (filterStatus && b.status !== filterStatus) return false;
+    if (filterDateFrom && b.start_time < filterDateFrom) return false;
+    if (filterDateTo && b.start_time > filterDateTo + 'T23:59:59') return false;
+    if (filterSearch) {
+      const q = filterSearch.toLowerCase();
+      if (
+        !b.slot_number.toLowerCase().includes(q) &&
+        !b.lot_name.toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
+  const hasFilters = filterStatus || filterDateFrom || filterDateTo || filterSearch;
+
+  function resetFilters() {
+    setFilterStatus('');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+    setFilterSearch('');
+  }
+
+  const activeBookings = filteredBookings.filter(b => b.status === 'active');
+  const pastBookings = filteredBookings.filter(b => b.status !== 'active');
 
   if (loading) {
     return (
@@ -114,6 +146,93 @@ export function BookingsPage() {
           <ArrowClockwise weight="bold" className="w-4 h-4" />
           Aktualisieren
         </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div className="card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Funnel weight="fill" className="w-4 h-4 text-gray-400" aria-hidden="true" />
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter</span>
+          {hasFilters && (
+            <button
+              onClick={resetFilters}
+              className="ml-auto text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
+              aria-label="Filter zurücksetzen"
+            >
+              <X weight="bold" className="w-3 h-3" aria-hidden="true" />
+              Filter zurücksetzen
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Status filter */}
+          <div>
+            <label htmlFor="booking-filter-status" className="label text-xs">Status</label>
+            <select
+              id="booking-filter-status"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="input text-sm py-2"
+            >
+              <option value="">Alle</option>
+              <option value="active">Aktiv</option>
+              <option value="completed">Abgeschlossen</option>
+              <option value="cancelled">Storniert</option>
+            </select>
+          </div>
+
+          {/* Date From */}
+          <div>
+            <label htmlFor="booking-filter-from" className="label text-xs">Von Datum</label>
+            <input
+              id="booking-filter-from"
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="input text-sm py-2"
+            />
+          </div>
+
+          {/* Date To */}
+          <div>
+            <label htmlFor="booking-filter-to" className="label text-xs">Bis Datum</label>
+            <input
+              id="booking-filter-to"
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="input text-sm py-2"
+            />
+          </div>
+
+          {/* Text search */}
+          <div>
+            <label htmlFor="booking-filter-search" className="label text-xs">Suche</label>
+            <div className="relative">
+              <MagnifyingGlass
+                weight="bold"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                aria-hidden="true"
+              />
+              <input
+                id="booking-filter-search"
+                type="search"
+                value={filterSearch}
+                onChange={(e) => setFilterSearch(e.target.value)}
+                placeholder="Stellplatz oder Parkplatz…"
+                className="input text-sm py-2 pl-9"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Result count */}
+        {hasFilters && (
+          <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            {filteredBookings.length} von {bookings.length} Buchungen angezeigt
+          </p>
+        )}
       </div>
 
       {/* Active Bookings */}

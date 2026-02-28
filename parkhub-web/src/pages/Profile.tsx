@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -11,6 +11,10 @@ import {
   Warning,
   SpinnerGap,
   X,
+  PencilSimple,
+  Phone,
+  Image,
+  FloppyDisk,
 } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +27,39 @@ export function ProfilePage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Profile editing state
+  const [editName, setEditName] = useState(user?.name ?? '');
+  const [editPhone, setEditPhone] = useState(user?.phone ?? '');
+  const [editPicture, setEditPicture] = useState(user?.picture ?? '');
+  const [saving, setSaving] = useState(false);
+
+  // Sync form fields when user loads (e.g. on initial mount)
+  useEffect(() => {
+    if (user) {
+      setEditName(user.name ?? '');
+      setEditPhone(user.phone ?? '');
+      setEditPicture(user.picture ?? '');
+    }
+  }, [user?.id]);
+
+  async function handleSaveProfile() {
+    setSaving(true);
+    try {
+      const res = await api.updateProfile({
+        name: editName.trim() || undefined,
+        phone: editPhone.trim() || undefined,
+        picture: editPicture.trim() || undefined,
+      });
+      if (res.success) {
+        toast.success('Profil gespeichert');
+      } else {
+        toast.error(res.error?.message ?? 'Speichern fehlgeschlagen');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleExportData() {
     setExporting(true);
@@ -144,6 +181,97 @@ export function ProfilePage() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Edit Profile */}
+      <div className="card p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <PencilSimple weight="fill" className="w-5 h-5 text-primary-600" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Profil bearbeiten
+          </h2>
+        </div>
+
+        <div className="space-y-4">
+          {/* Name */}
+          <div>
+            <label htmlFor="edit-name" className="label flex items-center gap-1.5">
+              <User weight="regular" className="w-4 h-4 text-gray-400" aria-hidden="true" />
+              Name
+            </label>
+            <input
+              id="edit-name"
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Vollständiger Name"
+              className="input"
+              autoComplete="name"
+            />
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label htmlFor="edit-phone" className="label flex items-center gap-1.5">
+              <Phone weight="regular" className="w-4 h-4 text-gray-400" aria-hidden="true" />
+              Telefonnummer
+            </label>
+            <input
+              id="edit-phone"
+              type="tel"
+              value={editPhone}
+              onChange={(e) => setEditPhone(e.target.value)}
+              placeholder="+49 123 456789"
+              className="input"
+              autoComplete="tel"
+            />
+          </div>
+
+          {/* Picture URL */}
+          <div>
+            <label htmlFor="edit-picture" className="label flex items-center gap-1.5">
+              <Image weight="regular" className="w-4 h-4 text-gray-400" aria-hidden="true" />
+              Profilbild-URL
+            </label>
+            <input
+              id="edit-picture"
+              type="url"
+              value={editPicture}
+              onChange={(e) => setEditPicture(e.target.value)}
+              placeholder="https://example.com/avatar.jpg"
+              className="input"
+              autoComplete="photo"
+            />
+            {editPicture && (
+              <div className="mt-2 flex items-center gap-3">
+                <img
+                  src={editPicture}
+                  alt="Vorschau Profilbild"
+                  className="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-gray-700"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">Vorschau</p>
+              </div>
+            )}
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={handleSaveProfile}
+              disabled={saving}
+              aria-busy={saving}
+              className="btn btn-primary"
+            >
+              {saving ? (
+                <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <FloppyDisk weight="bold" className="w-4 h-4" aria-hidden="true" />
+              )}
+              {saving ? 'Speichern…' : 'Änderungen speichern'}
+            </button>
+          </div>
         </div>
       </div>
 

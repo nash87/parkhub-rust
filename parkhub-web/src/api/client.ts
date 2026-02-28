@@ -106,6 +106,13 @@ class ApiClient {
     return this.request<User>('/api/v1/users/me');
   }
 
+  async updateProfile(data: { name?: string; phone?: string; picture?: string }) {
+    return this.request<User>('/api/v1/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Lots
   async getLots() {
     return this.request<ParkingLot[]>('/api/v1/lots');
@@ -260,6 +267,8 @@ export interface User {
   name: string;
   role: 'user' | 'admin' | 'superadmin';
   created_at: string;
+  phone?: string;
+  picture?: string;
 }
 
 export interface AuthTokens {
