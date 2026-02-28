@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.0.0-brightgreen.svg?style=for-the-badge" alt="v1.0.0"></a>
+  <a href="docs/CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.0.0-brightgreen.svg?style=for-the-badge" alt="v1.0.0"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -24,7 +24,7 @@
   <a href="docs/API.md">API Reference</a> ·
   <a href="docs/GDPR.md">GDPR Guide</a> ·
   <a href="docs/CONFIGURATION.md">Configuration</a> ·
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="docs/CHANGELOG.md">Changelog</a>
 </p>
 
 ---
@@ -295,7 +295,7 @@ See [docs/API.md](docs/API.md) for the complete REST API reference with curl exa
 | [docs/API.md](docs/API.md) | Full REST API reference with curl examples |
 | [docs/GDPR.md](docs/GDPR.md) | Operator DSGVO compliance checklist |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model and responsible disclosure |
-| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Release history |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Development setup and PR process |
 | [legal/impressum-template.md](legal/impressum-template.md) | German Impressum template (DDG §5) |
 | [legal/datenschutz-template.md](legal/datenschutz-template.md) | Datenschutzerklarung template |

@@ -1,219 +1,329 @@
-# GDPR / DSGVO Operator Compliance Guide
+# GDPR / DSGVO Operator Compliance Guide — ParkHub Rust
 
-This guide is for operators deploying ParkHub for users in the European Union,
-in particular for German-regulated environments.
+This guide is addressed to operators deploying ParkHub in the European Union (EU) or
+European Economic Area (EEA), where the General Data Protection Regulation (DSGVO —
+Datenschutz-Grundverordnung) applies.
 
----
-
-## Warum On-Premise DSGVO-Konformität vereinfacht
-
-ParkHub wird On-Premise betrieben — alle Daten bleiben auf Ihrem eigenen Server.
-
-Das bedeutet:
-
-- **Kein Auftragsverarbeitungsvertrag (AVV) mit Drittanbietern** für die Kerndaten, weil keine
-  Daten an Cloud-Dienste oder Dritte übermittelt werden.
-- **Volle Kontrolle über Speicherort, Verschlüsselung und Zugriff** auf alle personenbezogenen Daten.
-- **Keine Abhängigkeit** von externen Datenschutzrichtlinien (AWS, Google Cloud, etc.).
-
-> Ausnahme: Wenn Sie SMTP für E-Mail-Benachrichtigungen konfigurieren, wird Ihr SMTP-Anbieter
-> zum Auftragsverarbeiter und benötigt einen AVV. Vorlage: `legal/avv-template.md`.
+**This document is informational and does not constitute legal advice. Consult a
+qualified data protection attorney (Datenschutzbeauftragter) for binding guidance.**
 
 ---
 
-## Welche Daten werden gespeichert
+## Why On-Premise Simplifies GDPR
 
-### Nutzerkonto (Art. 6 Abs. 1 lit. b DSGVO — Vertragserfüllung)
+ParkHub is designed for on-premise, self-hosted deployment. All data stays on your server.
 
-| Datenfeld | Zweck |
-|---|---|
-| Name | Identifizierung, Anzeige im UI |
-| E-Mail-Adresse | Kontozugang, Benachrichtigungen |
-| Benutzername | Login-Kennung |
-| Passwort-Hash (Argon2id) | Authentifizierung. Kein Klartext-Passwort gespeichert |
-| Rolle (user/admin/superadmin) | Zugriffskontrolle |
-| Erstellungsdatum | Systemprotokoll |
-| Letzter Login | Sicherheitsprotokoll |
-| Nutzerpräferenzen | Personalisierung (Sprache, Theme, Standard-Fahrzeug) |
+| Aspect | Benefit |
+|--------|---------|
+| No cloud upload | No Auftragsverarbeitungsvertrag (AVV) needed for the core system |
+| No third-party SaaS | No dependency on external privacy policies (AWS, Google, etc.) |
+| Full control | You control storage location, encryption, access, and retention |
+| Zero CDN | All assets are embedded in the server binary — no external requests at runtime |
 
-### Buchungsdaten (Art. 6 Abs. 1 lit. b DSGVO — Vertragserfüllung)
-
-| Datenfeld | Zweck |
-|---|---|
-| Buchungs-ID, Slot-ID, Lot-ID | Eindeutige Identifizierung der Buchung |
-| Kennzeichen des Fahrzeugs | Nachweis der Parkberechtigung |
-| Start- und Endzeit | Vertragsdurchführung |
-| Preis, Steuer, Währung | Abrechnungsnachweis |
-| Status (confirmed/cancelled/completed) | Vertragszustand |
-| Erstellungszeitpunkt | Buchungsprotokoll |
-
-**Aufbewahrungspflicht**: Buchungsbelege unterliegen §147 AO (10 Jahre Aufbewahrung für
-steuerrelevante Unterlagen). Die Löschfunktion anonymisiert das Kennzeichen, löscht aber
-die Buchungsrecords nicht vollständig.
-
-### Fahrzeugdaten (Art. 6 Abs. 1 lit. b DSGVO)
-
-| Datenfeld | Zweck |
-|---|---|
-| Kennzeichen | Buchungsverknüpfung |
-| Marke, Modell, Farbe | Fahrzeugidentifizierung (optional) |
-
-### Technische Protokolldaten (Art. 6 Abs. 1 lit. f DSGVO — berechtigtes Interesse)
-
-- IP-Adressen aus HTTP-Requests (in der `RUST_LOG`-Ausgabe)
-- Speicherdauer: Konfigurierbar über Log-Rotation, empfohlen 30 Tage
-
-### Keine weiteren Daten
-
-ParkHub verwendet:
-- **Keine Cookies** (nur `localStorage` für den Auth-Token — technisch notwendig)
-- **Kein Google Analytics** oder andere Tracking-Tools
-- **Keine CDN-Ressourcen** — alle Assets sind im Binary eingebettet
-- **Keine externen Fonts** oder API-Aufrufe
+> **Exception**: If you configure SMTP email notifications, your SMTP provider becomes
+> a data processor and requires an AVV. A template is provided in `legal/avv-template.md`.
 
 ---
 
-## Nutzerrechte und ihre Umsetzung
+## Data Inventory
 
-### Art. 15 — Auskunftsrecht
+### User Accounts (Art. 6 Abs. 1 lit. b DSGVO — contract performance)
 
-Nutzer können unter **Profil → Datenschutz → Daten exportieren** (oder via API) alle
-ihre gespeicherten Daten als JSON-Datei herunterladen.
+| Data Field | Purpose | Retention |
+|-----------|---------|-----------|
+| Name | Display in UI, booking records | Until account deletion |
+| Email address | Login, notifications | Until account deletion |
+| Username | Login identifier | Until account deletion |
+| Password hash (Argon2id) | Authentication. No plaintext stored | Until account deletion |
+| Role (user/admin/superadmin) | Access control | Until account deletion |
+| Account creation date | Audit trail | Until account deletion |
+| Last login timestamp | Security audit | Until account deletion |
+| User preferences | Personalization (language, theme, default vehicle) | Until account deletion |
 
-**API-Endpunkt**: `GET /api/v1/users/me/export`
+### Booking Records (Art. 6 Abs. 1 lit. b + lit. c DSGVO)
 
-Der Export enthält: Profil, alle Buchungen, alle Fahrzeuge. Das Passwort-Hash wird
-aus Sicherheitsgründen bewusst ausgeschlossen.
+| Data Field | Purpose | Retention |
+|-----------|---------|-----------|
+| Booking ID, slot ID, lot ID | Unique booking identification | 10 years (§147 AO) |
+| Licence plate | Proof of parking authorization | 10 years (§147 AO, anonymized on erasure) |
+| Start and end time | Contract fulfillment | 10 years (§147 AO) |
+| Price, tax, currency | Accounting record | 10 years (§147 AO) |
+| Status (confirmed/cancelled/completed) | Contract state | 10 years (§147 AO) |
+| Creation timestamp | Booking log | 10 years (§147 AO) |
 
-### Art. 16 — Berichtigungsrecht
+**German tax law**: §147 AO (Abgabenordnung) requires 10-year retention of accounting
+records. Booking records with pricing data fall under this obligation for commercial
+operations. The erasure endpoint anonymizes PII but retains the booking record structure.
 
-Nutzer können Profilfelder (Name, E-Mail) in den Einstellungen selbst ändern.
-Admins können alle Nutzerfelder bearbeiten.
+### Vehicle Data (Art. 6 Abs. 1 lit. b DSGVO)
 
-### Art. 17 — Löschungsrecht (Recht auf Vergessenwerden)
+| Data Field | Purpose | Retention |
+|-----------|---------|-----------|
+| Licence plate | Booking linkage | Until vehicle deleted / account erasure |
+| Make, model, color | Vehicle identification (optional) | Until vehicle deleted |
 
-**API-Endpunkt**: `DELETE /api/v1/users/me/delete`
+### Technical Log Data (Art. 6 Abs. 1 lit. f DSGVO — legitimate interest)
 
-Was die Löschfunktion tut:
-1. Name, E-Mail, Benutzername, Telefon, Profilbild → ersetzt durch `[DELETED]`
-2. Alle registrierten Fahrzeuge werden vollständig gelöscht
-3. Buchungsrecords bleiben erhalten, aber das Kennzeichen wird zu `[DELETED]`
-4. Alle aktiven Sessions werden ungültig
-
-**Warum werden Buchungen nicht vollständig gelöscht?**
-Deutsche Steuerrecht (§147 AO) schreibt eine 10-jährige Aufbewahrungspflicht für
-Buchungsbelege vor. Die Anonymisierung entfernt alle personenbezogenen Informationen
-aus den Buchungsrecords bei gleichzeitiger Einhaltung der Aufbewahrungspflicht.
-
-### Art. 18 — Einschränkung der Verarbeitung
-
-Nicht automatisiert implementiert. Handhaben Sie Anfragen zur Einschränkung manuell
-über die Datenbank-Administration oder durch Deaktivierung des Benutzerkontos.
-
-### Art. 20 — Datenübertragbarkeit
-
-Der Art.-15-Export (`GET /api/v1/users/me/export`) liefert die Daten im maschinenlesbaren
-JSON-Format — erfüllt Art. 20.
-
-### Art. 21 — Widerspruchsrecht
-
-Für Verarbeitungen auf Basis berechtigten Interesses (Art. 6 lit. f — Protokolldaten):
-Richten Sie ein Verfahren für Widersprüche per E-Mail ein (Kontaktadresse im Impressum).
+| Data | Purpose | Recommended Retention |
+|------|---------|----------------------|
+| IP addresses in HTTP request logs | Security, abuse prevention | 30 days (configure via log rotation) |
+| Audit log entries (login, booking, deletion) | Security audit trail | 90 days to 1 year |
 
 ---
 
-## Konfiguration zum Datenschutz
+## What ParkHub Does NOT Collect
 
-### Kennzeichen-Anzeige einschränken
+| Item | Status |
+|------|--------|
+| Cookies | None — only `localStorage` is used for the Bearer token (technically necessary) |
+| Analytics / tracking pixels | None |
+| External CDN requests | None — all assets embedded in the binary |
+| External font requests | None |
+| Third-party scripts | None |
+| Advertising IDs | None |
 
-In `config.toml` (oder über die Benutzeroberfläche):
+ParkHub therefore requires no cookie consent banner for core functionality (TTDSG §25).
+
+---
+
+## User Rights Implementation
+
+### Art. 15 — Right of Access (Auskunftsrecht)
+
+Users can download all their personal data as a JSON file.
+
+**User-facing path**: Profile → Privacy → Export My Data
+
+**API endpoint**: `GET /api/v1/users/me/export`
+
+The export includes: user profile, all bookings, all vehicles. Password hash is
+intentionally excluded from exports.
+
+**Operator action required**: None. Implemented out of the box.
+
+---
+
+### Art. 16 — Right to Rectification (Berichtigungsrecht)
+
+Users can update their profile (name, email) via the Settings page.
+Administrators can update any user field via `PATCH /api/v1/admin/users/:id`.
+
+**Operator action required**: None. Implemented out of the box.
+
+---
+
+### Art. 17 — Right to Erasure (Recht auf Vergessenwerden)
+
+**API endpoint**: `DELETE /api/v1/users/me/delete`
+
+What the endpoint does:
+
+1. Replaces `name`, `email`, `username`, `phone`, `picture` with `[DELETED]`
+2. Deletes all registered vehicles
+3. Retains booking records but replaces `license_plate` with `[DELETED]`
+   (§147 AO compliance — 10-year retention of accounting records)
+4. Invalidates all active sessions
+
+Why booking records are not fully deleted: German tax law (§147 AO) requires
+10-year retention of booking records for commercial parking operations. The anonymization
+procedure removes all personal identifiers while satisfying the retention obligation.
+
+**Operator action required**: None. However, consider documenting this retention
+rationale in your Datenschutzerklärung (Privacy Policy).
+
+---
+
+### Art. 18 — Right to Restriction of Processing
+
+Not automatically implemented. Handle restriction requests manually by deactivating
+the user's account (`PATCH /api/v1/admin/users/:id/status` with `is_active: false`)
+and documenting the restriction in your internal processes.
+
+---
+
+### Art. 20 — Right to Data Portability (Datenübertragbarkeit)
+
+The Art. 15 export (`GET /api/v1/users/me/export`) delivers data in machine-readable
+JSON format. This satisfies Art. 20.
+
+**Operator action required**: None.
+
+---
+
+### Art. 21 — Right to Object (Widerspruchsrecht)
+
+For processing on the basis of legitimate interest (Art. 6 lit. f — log data):
+Establish an email-based process for objections. Add the contact address to your Impressum.
+
+---
+
+## Data Retention Configuration
+
+### Licence Plate Display
+
+Restrict how licence plates are displayed to other users:
 
 ```toml
-# 0 = anzeigen (Standard)
-# 1 = unscharf anzeigen
-# 2 = zensieren (zeigt ***)
-# 3 = ausblenden
+# config.toml
+# 0 = show full plate
+# 1 = blur
+# 2 = redact (display as ***)
+# 3 = hide entirely
 license_plate_display = 2
 ```
 
-### Selbstregistrierung deaktivieren
+### Self-Registration
+
+Default is `false` — users are created only by administrators:
 
 ```toml
 allow_self_registration = false
 ```
 
-Standardmäßig deaktiviert. Neue Nutzer werden ausschließlich vom Administrator angelegt.
-
-### Session-Timeout
+### Session Timeout
 
 ```toml
-session_timeout_minutes = 60  # 0 = nie
+session_timeout_minutes = 60   # 0 = never expire
 ```
 
-### Audit-Logging
+### Audit Logging
 
 ```toml
 audit_logging_enabled = true
 ```
 
-Protokolliert sicherheitsrelevante Ereignisse (Login, Buchungserstellung, Kontolöschung).
+Logs: logins, booking creation/cancellation, account deletion events.
+
+### Log Retention
+
+ParkHub outputs logs to stdout via `tracing`. Configure log retention at the
+infrastructure level (Docker log rotation, journald, or a log aggregator):
+
+```yaml
+# docker-compose.yml logging configuration
+services:
+  parkhub:
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "7"
+```
 
 ---
 
-## Impressum konfigurieren (DDG §5)
+## Impressum (DDG §5)
 
-Das Impressum ist gesetzlich vorgeschrieben und muss frei zugänglich sein.
+The Impressum (Provider Identification) is legally required for all commercial digital
+services in Germany. ParkHub makes it easy:
 
-1. Melden Sie sich als Administrator an
-2. Navigieren Sie zu **Admin → Impressum** (oder `PUT /api/v1/admin/impressum`)
-3. Füllen Sie alle Pflichtfelder aus (Anbieter, Anschrift, E-Mail)
-4. Das Impressum ist automatisch unter `/impressum` öffentlich erreichbar
+1. Log in as an administrator
+2. Navigate to **Admin → Impressum** (or call `PUT /api/v1/admin/impressum`)
+3. Fill in all required fields
+4. The Impressum is automatically available at `/impressum` (no login required)
 
-**Vorlage**: `legal/impressum-template.md`
+**Required fields** (DDG §5):
+- Provider name and legal form
+- Full postal address (street, postal code, city, country)
+- Email address
+- Phone number
+- For GmbH/AG: company register court and number, VAT ID, managing directors
 
----
-
-## Datenschutzerklärung und AGB
-
-ParkHub liefert fertige Vorlagen im Verzeichnis `legal/`:
-
-| Datei | Inhalt |
-|---|---|
-| `legal/impressum-template.md` | Pflichtangaben nach DDG §5 |
-| `legal/datenschutz-template.md` | DSGVO-konforme Datenschutzerklärung |
-| `legal/agb-template.md` | Allgemeine Geschäftsbedingungen (BGB §§305-310) |
-| `legal/avv-template.md` | Auftragsverarbeitungsvertrag (falls SMTP genutzt wird) |
-
-Passen Sie die Vorlagen an Ihre konkrete Situation an. Für rechtssichere Formulierungen
-empfehlen wir die Beratung durch einen auf IT-Recht spezialisierten Rechtsanwalt.
+**Template**: `legal/impressum-template.md`
 
 ---
 
-## Checkliste vor dem Produktivbetrieb
+## Legal Document Templates
 
-- [ ] Admin-Passwort von `admin` auf ein starkes Passwort geändert
-- [ ] Impressum vollständig ausgefüllt (`/impressum` erreichbar und vollständig)
-- [ ] Datenschutzerklärung erstellt und verlinkt
-- [ ] AGB erstellt (falls Buchungen gegen Entgelt)
-- [ ] Verschlüsselung aktiviert (`encryption_enabled = true`, starkes `PARKHUB_DB_PASSPHRASE`)
-- [ ] TLS aktiv (eigenes Zertifikat oder über Reverse Proxy)
-- [ ] `allow_self_registration` auf `false` (sofern kein offenes System gewünscht)
-- [ ] Kennzeichen-Anzeige-Einstellung geprüft (`license_plate_display`)
-- [ ] Session-Timeout gesetzt (`session_timeout_minutes`)
-- [ ] Backup-Strategie implementiert (automatische Backups + Off-Site-Kopie)
-- [ ] Audit-Logging aktiviert
-- [ ] Verzeichnis der Verarbeitungstätigkeiten (VVT) aktualisiert (Art. 30 DSGVO)
-- [ ] Falls SMTP verwendet: AVV mit E-Mail-Anbieter abgeschlossen
+| File | Content |
+|------|---------|
+| `legal/impressum-template.md` | DDG §5 provider identification |
+| `legal/datenschutz-template.md` | DSGVO-compliant privacy policy |
+| `legal/agb-template.md` | General Terms and Conditions |
+| `legal/avv-template.md` | Data Processing Agreement (for SMTP providers) |
+
+Adapt all templates to your organization's specific situation. For legally binding
+wording, consult an attorney specializing in IT law (IT-Recht).
 
 ---
 
-## Technische Schutzmaßnahmen (Art. 32 DSGVO)
+## Technical and Organizational Measures (TOMs, Art. 32 DSGVO)
 
-| Maßnahme | Umsetzung in ParkHub |
-|---|---|
-| Pseudonymisierung | Kennzeichen-Anzeige konfigurierbar, Anonymisierung bei Kontolöschung |
-| Verschlüsselung | TLS 1.3 für Transport, AES-256-GCM optional für Datenbank at rest |
-| Verfügbarkeit | Health-Endpunkte, automatische Backups, Docker Restart-Policy |
-| Integrität | Argon2id für Passwörter, keine SQL-Injection-Angriffsfläche (redb) |
-| Zugangskontrolle | RBAC (user/admin/superadmin), Session-Timeout, Rate Limiting |
-| Protokollierung | Audit-Logging, strukturiertes Tracing mit `tracing-subscriber` |
+| Measure | Implementation in ParkHub Rust |
+|---------|-------------------------------|
+| Encryption in transit | TLS 1.3 (auto-generated or custom cert) |
+| Encryption at rest | AES-256-GCM (optional, PBKDF2-SHA256 key derivation) |
+| Pseudonymization | Configurable licence plate display; anonymization on erasure |
+| Access control | RBAC (user/admin/superadmin), session timeout, rate limiting |
+| Integrity | Argon2id passwords; no SQL injection surface (redb embedded, no SQL) |
+| Availability | Health endpoints, automatic daily backups, Docker restart policy |
+| Audit trail | Structured audit log for all security-relevant events |
+| Memory safety | Written in Rust — no buffer overflows, no use-after-free |
+| Supply chain | All dependencies compiled into a static musl binary |
+
+---
+
+## Pre-Production Checklist (DSGVO Compliance)
+
+Before going live with ParkHub in a production environment:
+
+**Legal setup**
+- [ ] Impressum fully filled in (Admin → Impressum). Verify `/impressum` is publicly reachable
+- [ ] Datenschutzerklärung (Privacy Policy) drafted, adapted, and published
+- [ ] AGB created and published (if paid parking / commercial service)
+- [ ] AVV signed with SMTP provider (if email notifications are enabled)
+- [ ] Verzeichnis der Verarbeitungstätigkeiten (VVT) updated per Art. 30 DSGVO
+
+**Technical security**
+- [ ] Default admin password changed from `admin` to a strong unique password
+- [ ] AES-256-GCM encryption enabled (`encryption_enabled = true`, strong `PARKHUB_DB_PASSPHRASE`)
+- [ ] TLS active (own cert, reverse proxy, or auto-generated self-signed)
+- [ ] `allow_self_registration = false` (unless open registration is intentional)
+- [ ] Licence plate display setting reviewed (`license_plate_display`)
+- [ ] Session timeout configured (`session_timeout_minutes`)
+- [ ] Audit logging enabled (`audit_logging_enabled = true`)
+- [ ] Log retention policy implemented (rotate logs, discard after 30–90 days)
+
+**Operations**
+- [ ] Backup strategy implemented and tested (automatic daily + off-site copy)
+- [ ] Data export tested: `GET /api/v1/users/me/export` → verify JSON completeness
+- [ ] Data erasure tested: `DELETE /api/v1/users/me/delete` → verify PII removed, bookings retained
+- [ ] Health endpoints return 200: `/health/live`, `/health/ready`
+
+---
+
+## Responding to Data Subject Access Requests (DSAR)
+
+When a user submits a DSAR (Art. 15 or Art. 20 request):
+
+1. **Verify identity** — confirm the request comes from the account holder (e.g. via the registered email)
+2. **Export data** — use `GET /api/v1/users/me/export` or export as admin on their behalf
+3. **Provide within 30 days** — DSGVO requires a response within 1 calendar month
+4. **Format** — the JSON export is machine-readable and satisfies both Art. 15 and Art. 20
+
+For erasure requests (Art. 17):
+- Use `DELETE /api/v1/users/me/delete` (anonymizes, retains booking records per §147 AO)
+- Document the erasure in your internal DSAR handling log
+- Inform the user of the retention limitation and its legal basis (§147 AO)
+
+---
+
+## Cookie Policy (TTDSG §25)
+
+ParkHub does not set any cookies. The Bearer token is stored in `localStorage` — this is
+technically necessary for session management and does not require consent under TTDSG §25.
+
+No tracking, analytics, or advertising technologies are used.
+
+---
+
+## Data Protection Officer (DSB)
+
+Under Art. 37 DSGVO, appointing a Data Protection Officer (Datenschutzbeauftragter) is
+mandatory for:
+- Public authorities
+- Organizations processing special categories of data (Art. 9) at scale
+- Organizations systematically monitoring individuals at large scale
+
+For most small-to-medium organizations using ParkHub for internal parking management,
+appointment is not mandatory. Consult your legal advisor.
