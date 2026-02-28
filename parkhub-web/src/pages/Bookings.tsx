@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarBlank,
@@ -11,6 +12,7 @@ import {
   ArrowClockwise,
   Warning,
   Receipt,
+  CalendarPlus,
 } from '@phosphor-icons/react';
 import { api, Booking } from '../api/client';
 import toast from 'react-hot-toast';
@@ -129,9 +131,16 @@ export function BookingsPage() {
             className="card p-12 text-center"
           >
             <CalendarBlank weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" aria-hidden="true" />
-            <p className="text-gray-500 dark:text-gray-400">
-              Keine aktiven Buchungen
+            <p className="text-gray-700 dark:text-gray-300 font-medium mb-1">
+              Noch keine Buchungen
             </p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+              Buchen Sie jetzt einen Parkplatz, um loszulegen.
+            </p>
+            <Link to="/book" className="btn btn-primary inline-flex">
+              <CalendarPlus weight="bold" className="w-5 h-5" aria-hidden="true" />
+              Jetzt Parkplatz buchen
+            </Link>
           </motion.div>
         ) : (
           <div className="space-y-4">

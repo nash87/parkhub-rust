@@ -133,8 +133,9 @@ export function BookPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label="Buchungsformular wird geladen">
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <span className="sr-only">Wird geladen…</span>
       </div>
     );
   }

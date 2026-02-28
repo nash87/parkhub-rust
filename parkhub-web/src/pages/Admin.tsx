@@ -286,6 +286,29 @@ function AdminLots() {
         )}
       </AnimatePresence>
 
+      {lots.length === 0 && !showNewEditor && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card p-12 text-center"
+        >
+          <Buildings weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" aria-hidden="true" />
+          <p className="text-gray-700 dark:text-gray-300 font-medium mb-1">
+            Noch keine Parkplätze angelegt
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Erstellen Sie Ihren ersten Parkplatz, um das System zu nutzen.
+          </p>
+          <button
+            onClick={() => setShowNewEditor(true)}
+            className="btn btn-primary inline-flex"
+          >
+            <Plus weight="bold" className="w-4 h-4" aria-hidden="true" />
+            Ersten Parkplatz erstellen
+          </button>
+        </motion.div>
+      )}
+
       <div className="space-y-4">
         {lots.map((lot) => (
           <div key={lot.id}>
