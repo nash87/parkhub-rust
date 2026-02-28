@@ -11,15 +11,17 @@ FROM rust:alpine AS rust-builder
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig cmake make perl clang
 WORKDIR /app
 # Copy manifests first for layer caching
+# Note: parkhub-client is a desktop GUI app with heavy deps (Slint/GTK/GObject)
+# that cannot build in Alpine. We rewrite Cargo.toml to exclude it from the
+# workspace so only parkhub-common and parkhub-server are resolved.
 COPY Cargo.toml Cargo.lock ./
+RUN sed -i '/"parkhub-client"/d' Cargo.toml
 COPY parkhub-common/Cargo.toml ./parkhub-common/
 COPY parkhub-server/Cargo.toml ./parkhub-server/
-COPY parkhub-client/Cargo.toml ./parkhub-client/
 # Create dummy sources for dependency caching
-RUN mkdir -p parkhub-common/src parkhub-server/src parkhub-client/src && \
+RUN mkdir -p parkhub-common/src parkhub-server/src && \
     echo "pub fn dummy() {}" > parkhub-common/src/lib.rs && \
-    echo "fn main() {}" > parkhub-server/src/main.rs && \
-    echo "fn main() {}" > parkhub-client/src/main.rs
+    echo "fn main() {}" > parkhub-server/src/main.rs
 # Build dependencies only
 RUN cargo build --release --package parkhub-server 2>/dev/null || true
 # Copy real sources
