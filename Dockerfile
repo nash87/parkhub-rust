@@ -8,7 +8,7 @@ RUN npm run build
 
 # Build stage - Rust Server
 FROM rust:alpine AS rust-builder
-RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig cmake make perl clang
+RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig cmake make perl clang curl
 WORKDIR /app
 # Copy manifests first for layer caching
 # Note: parkhub-client is a desktop GUI app with heavy deps (Slint/GTK/GObject)
