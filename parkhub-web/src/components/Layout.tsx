@@ -308,13 +308,17 @@ export function Layout({ children }: LayoutProps) {
           </p>
           <nav aria-label="Rechtliche Links" className="flex items-center gap-4 flex-wrap justify-center">
             <a
-              href="/impressum"
+              href="https://nash87.github.io/legal/impressum.html"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               Impressum
             </a>
             <a
-              href="/datenschutz"
+              href="https://nash87.github.io/legal/datenschutz.html"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               Datenschutz
