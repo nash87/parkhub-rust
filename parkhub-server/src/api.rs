@@ -461,6 +461,17 @@ async fn register(
 ) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
     let state_guard = state.read().await;
 
+    // Enforce allow_self_registration setting
+    if !state_guard.config.allow_self_registration {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error(
+                "REGISTRATION_DISABLED",
+                "Self-registration is disabled. Contact an administrator.",
+            )),
+        );
+    }
+
     // Check if email already exists
     if let Ok(Some(_)) = state_guard.db.get_user_by_email(&request.email).await {
         return (
@@ -1116,6 +1127,21 @@ async fn create_booking(
     let tax = base_price * 0.1;
     let total = base_price + tax;
 
+    // Look up human-readable floor name from the lot's floors list
+    let floor_name = if let Ok(Some(lot)) = state_guard
+        .db
+        .get_parking_lot(&req.lot_id.to_string())
+        .await
+    {
+        lot.floors
+            .iter()
+            .find(|f| f.id == slot.floor_id)
+            .map(|f| f.name.clone())
+            .unwrap_or_else(|| "Level 1".to_string())
+    } else {
+        "Level 1".to_string()
+    };
+
     let now = Utc::now();
     let booking = Booking {
         id: Uuid::new_v4(),
@@ -1123,7 +1149,7 @@ async fn create_booking(
         lot_id: req.lot_id,
         slot_id: req.slot_id,
         slot_number: slot.slot_number,
-        floor_name: format!("Floor {}", slot.floor_id),
+        floor_name,
         vehicle,
         start_time: req.start_time,
         end_time,
