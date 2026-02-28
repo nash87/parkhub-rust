@@ -89,20 +89,43 @@ pub mod per_ip {
         Arc::new(RateLimiter::dashmap(quota))
     }
 
-    /// Extract client IP from request
+    /// Extract client IP from request.
+    ///
+    /// Only trusts the `X-Forwarded-For` header when the direct peer is a
+    /// private/loopback address (i.e., a trusted reverse proxy on the LAN).
+    /// Trusting the header unconditionally allows any remote client to spoof
+    /// an arbitrary source IP and bypass per-IP rate limiting.
     pub fn get_client_ip(addr: Option<&SocketAddr>, forwarded_for: Option<&str>) -> IpAddr {
-        // Check X-Forwarded-For header first (for proxied requests)
-        if let Some(forwarded) = forwarded_for {
-            if let Some(first_ip) = forwarded.split(',').next() {
-                if let Ok(ip) = first_ip.trim().parse::<IpAddr>() {
-                    return ip;
+        let peer_ip = addr.map(|a| a.ip());
+
+        // Only honour X-Forwarded-For when the request arrives from a trusted
+        // proxy (private network or loopback).  Requests from public IPs use
+        // their direct peer address regardless of the header value.
+        let is_trusted_proxy = peer_ip.map(|ip| is_private_ip(&ip)).unwrap_or(false);
+
+        if is_trusted_proxy {
+            if let Some(forwarded) = forwarded_for {
+                if let Some(first_ip) = forwarded.split(',').next() {
+                    if let Ok(ip) = first_ip.trim().parse::<IpAddr>() {
+                        return ip;
+                    }
                 }
             }
         }
 
         // Fall back to direct connection IP
-        addr.map(|a| a.ip())
-            .unwrap_or_else(|| IpAddr::from([127, 0, 0, 1]))
+        peer_ip.unwrap_or_else(|| IpAddr::from([127, 0, 0, 1]))
+    }
+
+    /// Returns true if `ip` is a private, loopback, or link-local address —
+    /// i.e., an address that can only originate from a trusted internal host.
+    fn is_private_ip(ip: &IpAddr) -> bool {
+        match ip {
+            IpAddr::V4(ipv4) => {
+                ipv4.is_private() || ipv4.is_loopback() || ipv4.is_link_local()
+            }
+            IpAddr::V6(ipv6) => ipv6.is_loopback(),
+        }
     }
 }
 
