@@ -3,7 +3,8 @@
 > **Anleitung für Betreiber:** Passen Sie diese Vorlage an Ihre konkrete Nutzungssituation an.
 > Für gewerbliche Angebote empfehlen wir die Überprüfung durch einen Rechtsanwalt.
 >
-> **Rechtliche Grundlage:** §§ 305–310 BGB (AGB-Recht), §§ 241 ff. BGB (Schuldverhältnisse)
+> **Rechtliche Grundlage:** §§ 305–310 BGB (AGB-Recht), §§ 241 ff. BGB (Schuldverhältnisse),
+> §§ 312, 312g, 355, 356 BGB (Fernabsatz / Verbraucherrechte), Anlage 1 zu § 246a EGBGB
 
 ---
 
@@ -53,76 +54,133 @@ zusätzliche Gebühren auslösen.
 
 ---
 
-## § 4 Stornierung und Widerrufsrecht
+## § 4 Stornierung und Rücktritt
 
 ### 4.1 Stornierung durch den Nutzer
 
-(1) Buchungen können bis [X Stunden/Tage] vor Buchungsbeginn kostenfrei storniert werden.
+(1) Buchungen können bis zu einem vom Betreiber festgelegten Zeitpunkt vor Buchungsbeginn
+kostenfrei storniert werden. Die genaue Frist entnehmen Sie bitte den Buchungsdetails oder
+dem Buchungsformular.
 
-(2) Bei Stornierung nach dieser Frist fällt eine Stornogebühr von [X % des Buchungspreises]
-an (oder: keine Rückerstattung).
+(2) Bei Stornierung nach dieser Frist können Stornogebühren anfallen. Der Betreiber legt
+die Stornokonditionen in seinen Preisangaben fest.
 
-### 4.2 Widerrufsrecht (Verbraucher)
+(3) Eine Stornierung ist über die App-Funktion „Buchung stornieren" oder per E-Mail an
+[E-Mail-Adresse des Betreibers] möglich.
 
-Wenn Sie Verbraucher sind (§ 13 BGB), steht Ihnen ein gesetzliches Widerrufsrecht zu:
+### 4.2 Rücktritt durch den Betreiber
 
-**Widerrufsbelehrung:**
+Der Betreiber kann vom Vertrag zurücktreten, wenn:
+- der gebuchte Stellplatz aus technischen Gründen nicht verfügbar ist,
+- oder ein sonstiger wichtiger Grund vorliegt.
 
-Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen Vertrag zu
-widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsschlusses.
-
-Um Ihr Widerrufsrecht auszuüben, müssen Sie uns ([Betreiber, Adresse, E-Mail]) mittels
-einer eindeutigen Erklärung (z. B. ein per Post versandter Brief oder eine E-Mail) über
-Ihren Entschluss, diesen Vertrag zu widerrufen, informieren.
-
-**Erlöschen des Widerrufsrechts:**
-Das Widerrufsrecht erlischt bei Dienstleistungen, wenn der Vertrag vollständig erfüllt ist
-und mit der Ausführung erst begonnen wurde, nachdem der Verbraucher dazu seine ausdrückliche
-Zustimmung gegeben hat (§ 356 Abs. 4 BGB).
+In diesem Fall wird der Betreiber den Nutzer unverzüglich informieren und bereits geleistete
+Zahlungen erstatten.
 
 ---
 
-## § 5 Preise und Zahlung
+## § 5 Widerrufsrecht (Verbraucher)
+
+*(Dieser Paragraph gilt nur für Verbraucher im Sinne von § 13 BGB.)*
+
+### 5.1 Widerrufsbelehrung
+
+Sie haben das Recht, binnen **vierzehn Tagen** ohne Angabe von Gründen diesen Vertrag zu
+widerrufen. Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag des Vertragsschlusses
+(Buchungsbestätigung).
+
+Um Ihr Widerrufsrecht auszuüben, müssen Sie uns
+
+**[Name des Betreibers]**
+**[Adresse]**
+**E-Mail: [E-Mail-Adresse]**
+
+mittels einer eindeutigen Erklärung (z. B. per E-Mail oder Brief) über Ihren Entschluss,
+diesen Vertrag zu widerrufen, informieren. Sie können das gesetzliche Muster-Widerrufsformular
+(gemäß Anlage 1 zu § 246a EGBGB) verwenden, das jedoch nicht vorgeschrieben ist.
+
+Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über die Ausübung
+des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.
+
+### 5.2 Folgen des Widerrufs
+
+Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir von Ihnen
+erhalten haben, unverzüglich und spätestens binnen vierzehn Tagen ab Eingang Ihrer
+Widerrufsmitteilung zurückzuzahlen. Für die Rückzahlung verwenden wir dasselbe
+Zahlungsmittel wie bei der ursprünglichen Transaktion.
+
+### 5.3 Erlöschen des Widerrufsrechts
+
+Das Widerrufsrecht erlischt gemäß § 356 Abs. 4 BGB vorzeitig, wenn:
+- der Parkzeitraum zum Zeitpunkt des Widerrufs bereits begonnen hat **und**
+- Sie bei der Buchung ausdrücklich zugestimmt haben, dass die Dienstleistung vor Ablauf
+  der Widerrufsfrist beginnt **und** bestätigt haben, dass Sie dadurch Ihr Widerrufsrecht
+  verlieren.
+
+Das entsprechende Einverständnis geben Sie bei der Buchung ab, indem Sie die
+entsprechende Checkbox aktivieren.
+
+---
+
+## § 6 Preise und Zahlungsbedingungen
 
 (1) Es gelten die zum Zeitpunkt der Buchung angezeigten Preise.
 
-(2) Alle Preise verstehen sich [inklusive / zuzüglich] der gesetzlichen Mehrwertsteuer.
+(2) Alle Preise verstehen sich [inklusive / zuzüglich] der gesetzlichen Mehrwertsteuer
+(aktuell 19 % bzw. 7 % für ermäßigte Leistungen).
 
-(3) Die Zahlung erfolgt [Zahlungsmodalitäten des Betreibers einfügen].
+(3) Die Zahlung erfolgt [Zahlungsmodalitäten des Betreibers einfügen, z. B. Vorauskasse,
+Lastschrift, Überweisung].
+
+(4) Bei Zahlungsverzug ist der Betreiber berechtigt, den gesetzlichen Verzugszins gemäß
+§ 288 BGB zu berechnen (aktuell: 5 Prozentpunkte über dem Basiszinssatz für Verbraucher,
+9 Prozentpunkte für Unternehmer).
 
 ---
 
-## § 6 Haftung
+## § 7 Haftung
 
 (1) Der Betreiber haftet nicht für Schäden an Fahrzeugen oder eingebrachten Gegenständen,
 es sei denn, diese beruhen auf vorsätzlichem oder grob fahrlässigem Verhalten des
 Betreibers oder seiner Erfüllungsgehilfen.
 
-(2) Die Haftung für leichte Fahrlässigkeit ist auf vorhersehbare, vertragstypische Schäden
-begrenzt.
+(2) Die Haftung für leichte Fahrlässigkeit ist beschränkt auf vorhersehbare,
+vertragstypische Schäden.
 
 (3) Die vorstehenden Haftungsbeschränkungen gelten nicht bei Verletzung von Leben, Körper
-oder Gesundheit.
+oder Gesundheit, bei Verletzung wesentlicher Vertragspflichten (Kardinalpflichten) sowie
+bei Haftung nach dem Produkthaftungsgesetz.
+
+(4) Der Nutzer ist für die Richtigkeit seiner Buchungsangaben (insbesondere Kennzeichen
+und Zeitraum) selbst verantwortlich.
 
 ---
 
-## § 7 Datenschutz
+## § 8 Datenschutz
 
 Informationen zur Verarbeitung personenbezogener Daten finden Sie in unserer
-Datenschutzerklärung unter [URL/Link zur Datenschutzerklärung].
+Datenschutzerklärung unter [URL/Link zur Datenschutzerklärung] sowie unter `/datenschutz`
+in der App.
 
 ---
 
-## § 8 Schlussbestimmungen
+## § 9 Schlussbestimmungen
 
-(1) Es gilt das Recht der Bundesrepublik Deutschland.
+(1) Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts (CISG).
 
 (2) Gerichtsstand für Kaufleute und juristische Personen des öffentlichen Rechts ist
-[Ort des Betreibers].
+der Sitz des Betreibers (siehe Impressum).
 
-(3) Sollten einzelne Bestimmungen dieser AGB unwirksam sein, bleibt die Wirksamkeit der
-übrigen Bestimmungen davon unberührt.
+(3) Für Streitigkeiten mit Verbrauchern weisen wir auf die Online-Streitbeilegungsplattform
+der EU hin: https://ec.europa.eu/consumers/odr. Der Betreiber ist [zur Teilnahme verpflichtet /
+nicht zur Teilnahme verpflichtet und nimmt nicht teil — bitte anpassen].
+
+(4) Sollten einzelne Bestimmungen dieser AGB unwirksam sein, bleibt die Wirksamkeit der
+übrigen Bestimmungen davon unberührt. Anstelle der unwirksamen Bestimmung gilt die
+gesetzliche Regelung.
 
 ---
 
-*Vorlage für ParkHub-Betreiber — kein Rechtsrat. Individuelle rechtliche Beratung empfohlen.*
+*Vorlage für ParkHub-Betreiber — kein Rechtsrat. Individuelle rechtliche Beratung empfohlen.
+Stand: 2026. Diese Vorlage berücksichtigt das BGB in der aktuellen Fassung sowie die
+EU-Verbraucherrechterichtlinie (2011/83/EU) umgesetzt in deutsches Recht.*

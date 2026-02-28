@@ -1,7 +1,7 @@
 # Security Audit — parkhub-rust
 
-**Audit Date:** 2026-02-27
-**Scope:** Full codebase audit covering secrets, .gitignore, Rust dependencies, OWASP Top 10, and security headers.
+**Audit Date:** 2026-02-28
+**Scope:** Full codebase audit covering secrets, .gitignore, Rust dependencies, OWASP Top 10, security headers, rate limiting, and GDPR compliance.
 
 ---
 
@@ -272,6 +272,52 @@ For external/public deployments, replace the auto-generated self-signed certific
 
 ---
 
+## 8. Rate Limiting — Known Gap
+
+### ⚠️ Auth route rate limiting NOT wired (Known Limitation)
+
+**Status:** `EndpointRateLimiters` in `rate_limit.rs` is fully implemented with correct per-IP
+limits (5 login/min, 3 register/min) but is **not attached** to the `create_router()` function.
+
+**Current exposure:** Brute-force login is limited only by the global request body size check (1 MiB)
+and the overall server throughput. There is no per-IP login throttle at the Rust layer.
+
+**Mitigation for operators:** Must deploy behind a reverse proxy that enforces per-IP rate limits:
+
+```nginx
+# nginx example — limit login/register to 10 req/min per IP
+limit_req_zone $binary_remote_addr zone=parkhub_auth:10m rate=10r/m;
+
+location /api/v1/auth/login    { limit_req zone=parkhub_auth burst=5 nodelay; proxy_pass http://parkhub; }
+location /api/v1/auth/register { limit_req zone=parkhub_auth burst=5 nodelay; proxy_pass http://parkhub; }
+```
+
+**Future fix:** Wire `EndpointRateLimiters::new()` into `create_router()` as a per-route middleware
+layer using `axum::middleware::from_fn_with_state`.
+
+---
+
+## 9. GDPR Endpoint Completeness
+
+### `GET /api/v1/users/me/export` ✅ Complete
+
+The export handler (`gdpr_export_data` in `api.rs`) includes:
+- Profile (id, username, email, name, phone, role, created_at, last_login, preferences)
+- All bookings (via `list_bookings_by_user`)
+- All vehicles (via `list_vehicles_by_user`)
+- Password hash intentionally excluded (correct — exporting a hash enables offline brute-force)
+
+**Note:** Absences (homeoffice/vacation) are not currently a feature in the Rust version — no gap.
+
+### `DELETE /api/v1/users/me/delete` ✅ Complete (anonymization)
+
+- Anonymizes user PII: name, email, username, password
+- Deletes vehicles and sessions
+- Preserves anonymized booking records (correct — § 147 AO 10-year retention)
+- Returns `200 OK` on success
+
+---
+
 ## Operator Security Checklist
 
 Before going to production, operators must:
@@ -279,6 +325,8 @@ Before going to production, operators must:
 - [ ] Set `PARKHUB_DB_PASSPHRASE` environment variable (strong random passphrase, at least 32 bytes)
 - [ ] Change the default admin password immediately after first-run setup
 - [ ] Replace the auto-generated self-signed TLS certificate with a trusted CA certificate
-- [ ] Deploy behind a reverse proxy with per-IP rate limiting on `/api/v1/auth/login` and `/api/v1/auth/register`
+- [ ] **Deploy behind a reverse proxy with per-IP rate limiting on `/api/v1/auth/login` and `/api/v1/auth/register`** (the internal rate limiter is not yet wired — see section 8)
 - [ ] Remove `Cargo.lock` from `.gitignore` and run `cargo audit` in CI to track dependency CVEs
 - [ ] Wire the existing `audit.rs` infrastructure to API handlers for complete audit trail
+- [ ] Fill in and deploy legal templates from `legal/` directory (impressum, datenschutz, AGB, AVV, cookie policy)
+- [ ] Review and deploy the Widerrufsbelehrung template if offering bookings to consumers (B2C)
