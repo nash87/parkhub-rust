@@ -194,13 +194,20 @@ export function VehiclesPage() {
           animate={{ opacity: 1, y: 0 }}
           className="card p-12 text-center"
         >
-          <Car weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 mb-2">
-            Keine Fahrzeuge registriert
+          <Car weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" aria-hidden="true" />
+          <p className="text-gray-700 dark:text-gray-300 font-medium mb-1">
+            Noch kein Fahrzeug registriert
           </p>
-          <p className="text-sm text-gray-400 dark:text-gray-500">
-            Fügen Sie Ihr erstes Fahrzeug hinzu, um schneller buchen zu können
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            Fügen Sie Ihr erstes Fahrzeug hinzu, um schneller buchen zu können.
           </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="btn btn-primary inline-flex"
+          >
+            <Plus weight="bold" className="w-4 h-4" aria-hidden="true" />
+            Fahrzeug hinzufügen
+          </button>
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

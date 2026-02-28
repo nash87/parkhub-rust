@@ -12,7 +12,6 @@ import {
   Sun,
   List,
   X,
-  Bell,
   User,
   CaretDown,
 } from '@phosphor-icons/react';
@@ -138,12 +137,6 @@ export function Layout({ children }: LayoutProps) {
                 )}
               </button>
 
-              {/* Notifications */}
-              <button className="btn btn-ghost btn-icon relative" aria-label="Benachrichtigungen">
-                <Bell weight="regular" className="w-5 h-5" aria-hidden="true" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />
-              </button>
-
               {/* User Menu */}
               <div className="relative hidden md:block" ref={userMenuRef}>
                 <button
@@ -247,18 +240,36 @@ export function Layout({ children }: LayoutProps) {
                 })}
                 {isAdmin && adminNav.map((item) => {
                   const Icon = item.icon;
+                  const isActive = location.pathname.startsWith(item.href);
                   return (
                     <Link
                       key={item.href}
                       to={item.href}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
+                        isActive
+                          ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                      }`}
                     >
-                      <Icon weight="regular" className="w-5 h-5" aria-hidden="true" />
+                      <Icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
                       {item.name}
                     </Link>
                   );
                 })}
-                <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
+                  <Link
+                    to="/profile"
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
+                      location.pathname === '/profile'
+                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
+                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                    }`}
+                    aria-current={location.pathname === '/profile' ? 'page' : undefined}
+                  >
+                    <User weight={location.pathname === '/profile' ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
+                    Profil
+                  </Link>
                   <button
                     onClick={logout}
                     className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"

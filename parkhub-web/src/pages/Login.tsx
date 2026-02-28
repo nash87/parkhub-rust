@@ -33,7 +33,7 @@ export function LoginPage() {
     if (success) {
       toast.success('Willkommen zurück!');
     } else {
-      toast.error('Ungültige Anmeldedaten');
+      toast.error('E-Mail oder Passwort ist falsch');
     }
     setLoading(false);
   }

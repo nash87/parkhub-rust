@@ -11,6 +11,8 @@ import {
   Warning,
   TrendUp,
   CaretRight,
+  Car,
+  ListChecks,
 } from '@phosphor-icons/react';
 import { api, ParkingLot, ParkingLotDetailed, Booking } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -284,7 +286,18 @@ export function DashboardPage() {
             Parkplätze
           </h2>
         </div>
-        
+
+        {lots.length === 0 ? (
+          <div className="card p-12 text-center">
+            <Buildings weight="light" className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" aria-hidden="true" />
+            <p className="text-gray-700 dark:text-gray-300 font-medium mb-1">
+              Keine Parkplätze verfügbar
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Es sind noch keine Parkplätze angelegt. Bitte kontaktieren Sie einen Administrator.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {lots.map((lot, index) => (
             <motion.div
@@ -351,15 +364,16 @@ export function DashboardPage() {
             </motion.div>
           ))}
         </div>
+        )}
       </motion.div>
 
-      {/* Quick Action */}
-      <motion.div variants={itemVariants}>
+      {/* Quick Actions */}
+      <motion.div variants={itemVariants} className="space-y-4">
         <div className="card bg-gradient-to-r from-primary-600 to-primary-700 p-6 text-white">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
-                <CalendarPlus weight="fill" className="w-7 h-7" />
+                <CalendarPlus weight="fill" className="w-7 h-7" aria-hidden="true" />
               </div>
               <div>
                 <h3 className="font-semibold text-lg">Jetzt Parkplatz buchen</h3>
@@ -373,9 +387,39 @@ export function DashboardPage() {
               className="btn bg-white text-primary-700 hover:bg-white/90 focus:ring-white/50"
             >
               Jetzt buchen
-              <ArrowRight weight="bold" className="w-5 h-5" />
+              <ArrowRight weight="bold" className="w-5 h-5" aria-hidden="true" />
             </Link>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link
+            to="/bookings"
+            className="card-hover flex items-center gap-4 p-5"
+          >
+            <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center shrink-0">
+              <ListChecks weight="fill" className="w-6 h-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white">Meine Buchungen</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Alle Buchungen im Überblick</p>
+            </div>
+            <CaretRight weight="bold" className="w-5 h-5 text-gray-400 ml-auto shrink-0" aria-hidden="true" />
+          </Link>
+
+          <Link
+            to="/vehicles"
+            className="card-hover flex items-center gap-4 p-5"
+          >
+            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center shrink-0">
+              <Car weight="fill" className="w-6 h-6 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 dark:text-white">Fahrzeuge verwalten</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Fahrzeuge hinzufügen &amp; bearbeiten</p>
+            </div>
+            <CaretRight weight="bold" className="w-5 h-5 text-gray-400 ml-auto shrink-0" aria-hidden="true" />
+          </Link>
         </div>
       </motion.div>
     </motion.div>
