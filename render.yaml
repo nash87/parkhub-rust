@@ -1,11 +1,11 @@
 services:
   - type: web
     name: parkhub-rust-demo
-    runtime: docker
-    repo: https://github.com/nash87/parkhub-rust
-    branch: main
-    dockerfilePath: ./Dockerfile
-    # Render assigns PORT env var (default 10000); pass it via CLI args
+    # Pull pre-built image from GHCR — avoids 20-30 min Rust build on Render's infra
+    # Image is built by GitHub Actions (.github/workflows/docker-publish.yml) on every push
+    image:
+      url: ghcr.io/nash87/parkhub-rust:latest
+    # Pass CLI args since the Rust app doesn't read PORT env var
     dockerCommand: /app/parkhub-server --headless --unattended --data-dir /data --port 10000
     plan: free
     envVars:
@@ -13,5 +13,5 @@ services:
         value: info
       - key: ALLOW_SELF_REGISTRATION
         value: "false"
-    # Note: /data is ephemeral on Render free tier — redb resets on each restart
+    # /data is ephemeral on Render free tier — redb resets on each restart
     # This is intentional: demo data always starts fresh

@@ -47,14 +47,14 @@ RUN mkdir -p /data
 # Environment
 ENV PARKHUB_DATA_DIR=/data
 ENV PARKHUB_HOST=0.0.0.0
-ENV PARKHUB_PORT=8080
+ENV PARKHUB_PORT=10000
 ENV RUST_LOG=info
 
-EXPOSE 8080
+EXPOSE 10000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+# Health check — longer start-period for --unattended first-run auto-config
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
 
 # Run
 ENTRYPOINT ["/app/parkhub-server"]
