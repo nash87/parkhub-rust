@@ -45,7 +45,7 @@ systemd environments where editing a file inside a volume is inconvenient.
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `server_name` | string | `"ParkHub Server"` | Display name shown in the UI header and mDNS advertisements |
-| `port` | integer | `7878` | TCP port. Overridden by `PARKHUB_PORT` environment variable |
+| `port` | integer | `7878` | TCP port. Overridden by `PARKHUB_PORT` environment variable. **Note:** When using `--unattended` mode (Docker, headless), port defaults to `8080` unless overridden by `PARKHUB_PORT`. The config.toml default of `7878` applies only when running the GUI application locally. |
 | `enable_tls` | bool | `true` | Enable TLS 1.3. Auto-generates a self-signed cert via `rcgen` if no cert file exists |
 | `enable_mdns` | bool | `true` | Broadcast presence via mDNS for LAN autodiscovery (Bonjour / Zeroconf) |
 | `portable_mode` | bool | `true` | Store all data next to the binary instead of system directories |

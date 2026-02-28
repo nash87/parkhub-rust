@@ -74,7 +74,7 @@ Falls E-Mail-Benachrichtigungen aktiviert sind:
 | **Einschränkung** (Art. 18) | Auf Anfrage an [E-Mail] |
 | **Datenübertragbarkeit** (Art. 20) | Export als JSON-Datei verfügbar |
 | **Widerspruch** (Art. 21) | Für auf berechtigtem Interesse beruhende Verarbeitungen |
-| **Beschwerde** | Zuständige Aufsichtsbehörde: [Ihr Bundesland-Datenschutzbeauftragter] |
+| **Beschwerde** | Zuständige Aufsichtsbehörde: [Ihre zuständige Datenschutzaufsichtsbehörde]<br><br>Hinweis: Die zuständige Aufsichtsbehörde richtet sich nach dem Bundesland des Verantwortlichen. Eine vollständige Liste aller deutschen Datenschutzbehörden finden Sie unter: https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html<br><br>Beispiele:<br>- Bayern: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach<br>- NRW: Landesbeauftragte für Datenschutz und Informationsfreiheit NRW (LDI NRW)<br>- BW: Landesbeauftragter für den Datenschutz und die Informationsfreiheit (LfDI BW)<br>- Berlin: Berliner Beauftragte für Datenschutz und Informationsfreiheit |
 
 ---
 

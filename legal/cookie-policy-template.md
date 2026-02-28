@@ -34,7 +34,7 @@ Tracking-Cookies, keine Analyse-Cookies und keine Werbe-Cookies** eingesetzt.
 | **Name** | `parkhub_token` (oder `token`) |
 | **Inhalt** | JWT-Authentifizierungstoken (enthält Benutzer-ID und Ablaufzeit) |
 | **Zweck** | Technisch notwendig — ermöglicht eingeloggten Zugriff auf die Anwendung |
-| **Speicherdauer** | Bis zur Abmeldung oder bis das Token abläuft (typisch 7 Tage) |
+| **Speicherdauer** | Bis zur Abmeldung oder bis das Token abläuft (24 Stunden (konfigurierbar über `session_timeout_minutes` in der Konfigurationsdatei)) |
 | **Übermittlung** | Nur an die eigene ParkHub-Instanz (kein Drittanbieter) |
 | **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig; Art. 6 Abs. 1 lit. b DSGVO |
 

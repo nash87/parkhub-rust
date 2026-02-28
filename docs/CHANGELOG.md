@@ -9,12 +9,38 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Planned
+---
 
-- Token refresh (`POST /api/v1/auth/refresh` — currently returns 501)
-- Full admin user management UI
+## [1.1.0] — 2026-02-28
+
+### Added
+- Per-endpoint rate limiting middleware (login: 5/min, register: 3/min, forgot-password: 3/15min — all per-IP)
+- SMTP email notifications: welcome email on registration, booking confirmation
+- Password reset flow via email (`POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password`)
+- Token refresh endpoint (`POST /api/v1/auth/refresh`)
+- Booking invoice endpoint (`GET /api/v1/bookings/:id/invoice`)
+- Cookie consent UI (TTDSG §25 compliant — localStorage only, no HTTP cookies)
+- GDPR transparency page (`/transparency`)
+- Legal templates: Widerrufsbelehrung (§356 BGB) and updated cookie policy
+- Admin user management UI with role management
 - Admin booking overview UI
-- Email notifications (SMTP)
+
+### Security
+- JWT secret now uses 256-bit cryptographically random bytes (CSPRNG) instead of UUID
+- HSTS header added (`max-age=31536000; includeSubDomains; preload`)
+- CSP hardened: removed `script-src 'unsafe-inline'`
+- X-Forwarded-For only trusted from private/loopback IP ranges (proxy trust validation)
+- Past booking creation rejected (start_time must be future)
+- Slot status update failure no longer silently ignored — returns HTTP 500
+
+### Fixed
+- Docker: Dockerfile now uses `rust:alpine` (latest) for edition2024 + MSRV compatibility
+- Docker: `parkhub-client` (GUI workspace member) excluded from server build
+- Docker: `curl` added to Alpine deps for utoipa-swagger-ui asset download
+- Docker: server compiled with `--no-default-features --features headless` (no GTK/systray)
+- Docker: health checks, named volumes, restart policy
+- UX: empty states, loading states, error handling, mobile layout, accessibility polish
+- Password reset page and admin endpoint authorization checks
 
 ---
 
@@ -116,7 +142,9 @@ Initial public release.
 
 | Version | Date | Notes |
 |---------|------|-------|
+| 1.1.0 | 2026-02-28 | Security hardening, Docker fixes, legal documentation |
 | 1.0.0 | 2026-02-27 | Initial public release |
 
-[Unreleased]: https://github.com/nash87/parkhub/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/nash87/parkhub/releases/tag/v1.0.0
+[Unreleased]: https://github.com/nash87/parkhub-rust/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nash87/parkhub-rust/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/nash87/parkhub-rust/releases/tag/v1.0.0

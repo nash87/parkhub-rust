@@ -38,8 +38,8 @@ Three commands from clone to running instance.
 ### Step 1 — Clone
 
 ```bash
-git clone https://github.com/nash87/parkhub
-cd parkhub
+git clone https://github.com/nash87/parkhub-rust
+cd parkhub-rust
 ```
 
 ### Step 2 — (Optional) Create `.env` for production settings
@@ -129,8 +129,8 @@ sudo apt-get install -y nodejs
 ### Step 3 — Build ParkHub
 
 ```bash
-git clone https://github.com/nash87/parkhub
-cd parkhub
+git clone https://github.com/nash87/parkhub-rust
+cd parkhub-rust
 
 # Build the React frontend
 cd parkhub-web
@@ -313,7 +313,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: parkhub
-          image: ghcr.io/nash87/parkhub:latest
+          image: ghcr.io/nash87/parkhub:v1.1.0  # Pin to specific version; check releases for latest
           ports:
             - containerPort: 8080
           env:
