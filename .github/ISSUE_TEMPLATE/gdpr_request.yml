@@ -1,0 +1,39 @@
+name: GDPR / Privacy Request
+description: Report a GDPR compliance issue in the ParkHub software itself
+labels: ["gdpr", "privacy"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Important distinction:**
+
+        - If you want to exercise your GDPR rights (Art. 15 access, Art. 17 deletion) regarding
+          **your personal data in a specific ParkHub installation**, please contact the **operator**
+          of that installation directly. Look for the Impressum page at `/impressum` on their instance.
+          ParkHub is self-hosted software — we do not operate any installation and have no access
+          to any user data.
+
+        - Use this form only to report a **compliance issue in the ParkHub software itself**
+          (e.g., a missing anonymization, a broken GDPR export, a legal template error).
+  - type: textarea
+    id: description
+    attributes:
+      label: GDPR / privacy issue description
+      placeholder: |
+        Which GDPR article is affected?
+        What is the expected behavior?
+        What is the actual behavior?
+    validations:
+      required: true
+  - type: input
+    id: article
+    attributes:
+      label: Affected GDPR article (if known)
+      placeholder: "e.g. Art. 17, Art. 20, DDG §5"
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Confirmation
+      options:
+        - label: I understand this form is for software compliance issues, not personal data requests against a specific operator
+          required: true

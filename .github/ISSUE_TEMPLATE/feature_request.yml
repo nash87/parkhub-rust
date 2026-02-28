@@ -1,0 +1,45 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for ParkHub Rust
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe your use case clearly so we can
+        understand the problem you are trying to solve.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Use case
+      placeholder: "I need to manage parking reservations for... Currently I cannot..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      placeholder: "It would be great if ParkHub could..."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      placeholder: "I also considered... but that does not work because..."
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority for your use case
+      options:
+        - Nice to have
+        - Important
+        - Critical for my use case
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the existing issues and this has not been requested before
+          required: true

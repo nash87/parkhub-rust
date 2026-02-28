@@ -1,0 +1,65 @@
+name: Bug Report
+description: Report a bug in ParkHub Rust
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug!
+        Please fill in as much detail as possible so we can reproduce and fix the issue.
+  - type: input
+    id: version
+    attributes:
+      label: ParkHub version
+      placeholder: "v1.0.0"
+      description: "Check the `/health` endpoint or the CHANGELOG.md for the current version."
+    validations:
+      required: true
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment type
+      options:
+        - Docker Compose
+        - Kubernetes
+        - Bare metal (Linux)
+        - Windows GUI
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      placeholder: "What happened? What did you expect to happen?"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click on ...
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: "What should have happened?"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      placeholder: "Paste any relevant log output here."
+      render: text
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the existing issues and this is not a duplicate
+          required: true
+        - label: I am running the latest version
