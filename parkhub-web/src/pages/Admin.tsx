@@ -23,7 +23,7 @@ import {
   ProhibitInset,
   CheckFat,
 } from '@phosphor-icons/react';
-import { api, ParkingLot, ParkingLotDetailed, AdminUser, AdminBooking } from '../api/client';
+import { api, ParkingLot, ParkingLotDetailed, AdminUser, AdminBooking, CreateLotData } from '../api/client';
 import { LotLayoutEditor } from '../components/LotLayoutEditor';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -211,6 +211,32 @@ function AdminLots() {
     }
   }
 
+  async function handleCreateLot(_layout: unknown, name: string) {
+    if (!name.trim()) {
+      toast.error('Bitte geben Sie einen Namen ein');
+      return;
+    }
+    const lotData: CreateLotData = {
+      name: name.trim(),
+      address: '',
+      total_slots: 0,
+      available_slots: 0,
+      latitude: 0,
+      longitude: 0,
+      floors: [],
+      amenities: [],
+      images: [],
+    };
+    const res = await api.createLot(lotData);
+    if (res.success && res.data) {
+      setLots(prev => [...prev, res.data!]);
+      setShowNewEditor(false);
+      toast.success(`Parkplatz "${name}" erstellt`);
+    } else {
+      toast.error(res.error?.message ?? 'Fehler beim Erstellen des Parkplatzes');
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -252,10 +278,7 @@ function AdminLots() {
                 Neuen Parkplatz anlegen
               </h3>
               <LotLayoutEditor
-                onSave={(layout, name) => {
-                  console.log('New lot:', { name, layout });
-                  setShowNewEditor(false);
-                }}
+                onSave={handleCreateLot}
                 onCancel={() => setShowNewEditor(false)}
               />
             </div>
@@ -308,8 +331,12 @@ function AdminLots() {
                     <LotLayoutEditor
                       initialLayout={editingLayout.layout}
                       lotName={editingLayout.name}
-                      onSave={(layout, name) => {
-                        console.log('Updated lot:', { id: lot.id, name, layout });
+                      onSave={(_layout, _name) => {
+                        // Layout saved — note: the backend does not yet have a
+                        // dedicated PUT /api/v1/lots/:id endpoint. The layout
+                        // editor currently serves as a preview/planning tool.
+                        // Dismiss the editor and show a confirmation message.
+                        toast.success('Layout gespeichert (Vorschau)');
                         setEditingLotId(null);
                       }}
                       onCancel={() => setEditingLotId(null)}

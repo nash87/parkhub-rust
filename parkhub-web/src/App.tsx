@@ -17,6 +17,9 @@ import { AdminPage } from './pages/Admin';
 import { ImpressumPage } from './pages/Impressum';
 import { DatenschutzPage } from './pages/Datenschutz';
 import { AGBPage } from './pages/AGB';
+import { TransparencyPage } from './pages/Transparency';
+import { ForgotPasswordPage } from './pages/ForgotPassword';
+import { ResetPasswordPage } from './pages/ResetPassword';
 import { SpinnerGap } from '@phosphor-icons/react';
 
 const queryClient = new QueryClient({
@@ -73,9 +76,12 @@ function AppRoutes() {
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/impressum" element={<ImpressumPage />} />
       <Route path="/datenschutz" element={<DatenschutzPage />} />
       <Route path="/agb" element={<AGBPage />} />
+      <Route path="/transparency" element={<TransparencyPage />} />
 
       {/* Protected */}
       <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

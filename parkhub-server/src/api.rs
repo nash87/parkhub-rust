@@ -89,6 +89,13 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/api/v1/vehicles/:id", delete(delete_vehicle))
         // Admin-only: update Impressum settings
         .route("/api/v1/admin/impressum", get(get_impressum_admin).put(update_impressum))
+        // Admin-only: user management
+        .route("/api/v1/admin/users", get(admin_list_users))
+        .route("/api/v1/admin/users/:id/role", axum::routing::patch(admin_update_user_role))
+        .route("/api/v1/admin/users/:id/status", axum::routing::patch(admin_update_user_status))
+        .route("/api/v1/admin/users/:id", delete(admin_delete_user))
+        // Admin-only: all bookings
+        .route("/api/v1/admin/bookings", get(admin_list_bookings))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -1870,4 +1877,306 @@ async fn gdpr_delete_account(
             )
         }
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN — USER MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for updating a user's role
+#[derive(Debug, Deserialize)]
+struct UpdateUserRoleRequest {
+    role: String,
+}
+
+/// Request body for updating a user's status
+#[derive(Debug, Deserialize)]
+struct UpdateUserStatusRequest {
+    status: String,
+}
+
+/// Response type for admin user listing (includes status field)
+#[derive(Debug, Serialize)]
+struct AdminUserResponse {
+    id: String,
+    username: String,
+    email: String,
+    name: String,
+    role: String,
+    status: String,
+    created_at: chrono::DateTime<Utc>,
+}
+
+impl From<&User> for AdminUserResponse {
+    fn from(u: &User) -> Self {
+        Self {
+            id: u.id.to_string(),
+            username: u.username.clone(),
+            email: u.email.clone(),
+            name: u.name.clone(),
+            role: format!("{:?}", u.role).to_lowercase(),
+            status: if u.is_active { "active".to_string() } else { "disabled".to_string() },
+            created_at: u.created_at,
+        }
+    }
+}
+
+/// Helper: verify the caller is an admin or superadmin.
+/// Returns `Ok(())` on success, `Err(forbidden_response)` otherwise.
+async fn check_admin(
+    state: &crate::AppState,
+    auth_user: &AuthUser,
+) -> Result<(), (StatusCode, &'static str)> {
+    match state.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => Ok(()),
+        _ => Err((StatusCode::FORBIDDEN, "Admin access required")),
+    }
+}
+
+/// `GET /api/v1/admin/users` — list all users (admin only)
+async fn admin_list_users(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<AdminUserResponse>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    match state_guard.db.list_users().await {
+        Ok(users) => {
+            let response: Vec<AdminUserResponse> = users.iter().map(AdminUserResponse::from).collect();
+            (StatusCode::OK, Json(ApiResponse::success(response)))
+        }
+        Err(e) => {
+            tracing::error!("Failed to list users: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list users")),
+            )
+        }
+    }
+}
+
+/// `PATCH /api/v1/admin/users/:id/role` — update a user's role (admin only)
+async fn admin_update_user_role(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateUserRoleRequest>,
+) -> (StatusCode, Json<ApiResponse<AdminUserResponse>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut user = match state_guard.db.get_user(&id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Parse role string
+    user.role = match req.role.as_str() {
+        "admin" => UserRole::Admin,
+        "superadmin" => UserRole::SuperAdmin,
+        _ => UserRole::User,
+    };
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!("Failed to update user role: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update user")),
+        );
+    }
+
+    tracing::info!(
+        admin_id = %auth_user.user_id,
+        target_user_id = %id,
+        new_role = %req.role,
+        "Admin updated user role"
+    );
+
+    (StatusCode::OK, Json(ApiResponse::success(AdminUserResponse::from(&user))))
+}
+
+/// `PATCH /api/v1/admin/users/:id/status` — enable or disable a user account (admin only)
+async fn admin_update_user_status(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateUserStatusRequest>,
+) -> (StatusCode, Json<ApiResponse<AdminUserResponse>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut user = match state_guard.db.get_user(&id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    user.is_active = req.status == "active";
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!("Failed to update user status: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update user")),
+        );
+    }
+
+    tracing::info!(
+        admin_id = %auth_user.user_id,
+        target_user_id = %id,
+        new_status = %req.status,
+        "Admin updated user status"
+    );
+
+    (StatusCode::OK, Json(ApiResponse::success(AdminUserResponse::from(&user))))
+}
+
+/// `DELETE /api/v1/admin/users/:id` — delete a user account (admin only, GDPR anonymize)
+async fn admin_delete_user(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    // Prevent admin from deleting their own account via admin panel
+    if id == auth_user.user_id.to_string() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("CANNOT_DELETE_SELF", "You cannot delete your own account")),
+        );
+    }
+
+    match state_guard.db.anonymize_user(&id).await {
+        Ok(true) => {
+            tracing::info!(
+                admin_id = %auth_user.user_id,
+                target_user_id = %id,
+                "Admin anonymized user"
+            );
+            (StatusCode::OK, Json(ApiResponse::success(())))
+        }
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to anonymize user {}: {}", id, e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete user")),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN — BOOKING MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Response type for admin booking listing (includes user details)
+#[derive(Debug, Serialize)]
+struct AdminBookingResponse {
+    id: String,
+    user_id: String,
+    user_name: String,
+    user_email: String,
+    lot_id: String,
+    lot_name: String,
+    slot_id: String,
+    slot_number: String,
+    vehicle_plate: String,
+    start_time: chrono::DateTime<Utc>,
+    end_time: chrono::DateTime<Utc>,
+    status: String,
+    created_at: chrono::DateTime<Utc>,
+}
+
+/// `GET /api/v1/admin/bookings` — list all bookings (admin only)
+async fn admin_list_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<AdminBookingResponse>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let bookings = match state_guard.db.list_bookings().await {
+        Ok(b) => b,
+        Err(e) => {
+            tracing::error!("Failed to list bookings: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list bookings")),
+            );
+        }
+    };
+
+    // Build a response enriched with user info (best-effort: fall back to IDs if user not found)
+    let mut response = Vec::with_capacity(bookings.len());
+    for booking in bookings {
+        let (user_name, user_email) = match state_guard.db.get_user(&booking.user_id.to_string()).await {
+            Ok(Some(u)) => (u.name, u.email),
+            _ => (booking.user_id.to_string(), String::new()),
+        };
+
+        let lot_name = match state_guard.db.get_parking_lot(&booking.lot_id.to_string()).await {
+            Ok(Some(l)) => l.name,
+            _ => booking.lot_id.to_string(),
+        };
+
+        response.push(AdminBookingResponse {
+            id: booking.id.to_string(),
+            user_id: booking.user_id.to_string(),
+            user_name,
+            user_email,
+            lot_id: booking.lot_id.to_string(),
+            lot_name,
+            slot_id: booking.slot_id.to_string(),
+            slot_number: booking.slot_number.to_string(),
+            vehicle_plate: booking.vehicle.license_plate.clone(),
+            start_time: booking.start_time,
+            end_time: booking.end_time,
+            status: format!("{:?}", booking.status).to_lowercase(),
+            created_at: booking.created_at,
+        });
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(response)))
 }

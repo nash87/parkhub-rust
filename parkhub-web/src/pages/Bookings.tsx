@@ -17,6 +17,39 @@ import toast from 'react-hot-toast';
 import { format, formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 
+/**
+ * Open a booking invoice in a new tab.
+ * The invoice endpoint requires Bearer auth, so we fetch it with the token
+ * and open it as a Blob URL instead of a direct link.
+ */
+async function openInvoice(bookingId: string) {
+  const token = api.getToken();
+  if (!token) {
+    toast.error('Nicht angemeldet');
+    return;
+  }
+  try {
+    const response = await fetch(`/api/v1/bookings/${bookingId}/invoice`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      toast.error('Rechnung konnte nicht geladen werden');
+      return;
+    }
+    const html = await response.text();
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank', 'noopener,noreferrer');
+    // Revoke the URL after a short delay to free memory
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (!win) {
+      toast.error('Pop-up blockiert — bitte erlauben Sie Pop-ups für diese Seite');
+    }
+  } catch {
+    toast.error('Fehler beim Laden der Rechnung');
+  }
+}
+
 export function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,17 +255,16 @@ export function BookingsPage() {
 
                   <div className="flex items-center gap-2">
                     {booking.status === 'completed' && (
-                      <a
-                        href={`/api/v1/bookings/${booking.id}/invoice`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`Rechnung für Buchung ${booking.slot_number} herunterladen`}
+                      <button
+                        onClick={() => openInvoice(booking.id)}
+                        aria-label={`Rechnung für Buchung ${booking.slot_number} anzeigen`}
                         className="btn btn-sm btn-ghost text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
                         title="Rechnung anzeigen"
+                        type="button"
                       >
                         <Receipt weight="regular" className="w-4 h-4" aria-hidden="true" />
                         <span className="hidden sm:inline">Rechnung</span>
-                      </a>
+                      </button>
                     )}
                     <div className={`badge ${
                       booking.status === 'completed' ? 'badge-success' : 'badge-gray'

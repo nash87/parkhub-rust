@@ -87,6 +87,20 @@ class ApiClient {
     });
   }
 
+  async forgotPassword(email: string) {
+    return this.request<void>('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token: string, password: string) {
+    return this.request<void>('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  }
+
   // Users
   async getCurrentUser() {
     return this.request<User>('/api/v1/users/me');
@@ -99,6 +113,13 @@ class ApiClient {
 
   async getLot(id: string) {
     return this.request<ParkingLot>(`/api/v1/lots/${id}`);
+  }
+
+  async createLot(data: CreateLotData) {
+    return this.request<ParkingLot>('/api/v1/lots', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async getLotSlots(lotId: string) {
@@ -245,11 +266,11 @@ export interface AuthTokens {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  expires_in: number;
+  /** ISO 8601 datetime string when the access token expires */
+  expires_at: string;
 }
 
 export interface RegisterData {
-  username: string;
   email: string;
   password: string;
   name: string;
@@ -309,6 +330,22 @@ export interface CreateVehicleData {
   make?: string;
   model?: string;
   color?: string;
+}
+
+export interface CreateLotData {
+  id?: string;
+  name: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  total_slots: number;
+  available_slots: number;
+  floors?: unknown[];
+  amenities?: string[];
+  pricing?: unknown;
+  operating_hours?: unknown;
+  images?: string[];
+  status?: string;
 }
 
 // Parking lot layout configuration

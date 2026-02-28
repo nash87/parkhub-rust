@@ -76,9 +76,13 @@ export function BookPage() {
   }
 
   async function loadSlots(lotId: string) {
+    setSlots([]);
+    setSelectedSlot(null);
     const res = await api.getLotSlots(lotId);
     if (res.success && res.data) {
       setSlots(res.data);
+    } else if (!res.success) {
+      toast.error('Stellplätze konnten nicht geladen werden');
     }
   }
 
@@ -108,7 +112,17 @@ export function BookPage() {
       toast.success('Parkplatz erfolgreich gebucht!');
       navigate('/bookings');
     } else {
-      toast.error(res.error?.message || 'Buchung fehlgeschlagen');
+      const code = res.error?.code;
+      if (code === 'SLOT_UNAVAILABLE') {
+        toast.error('Dieser Stellplatz ist nicht mehr verfügbar. Bitte wählen Sie einen anderen.');
+        // Refresh slots to show updated availability
+        if (selectedLot) loadSlots(selectedLot);
+        setSelectedSlot(null);
+      } else if (code === 'FORBIDDEN') {
+        toast.error('Das Fahrzeug gehört nicht Ihrem Konto.');
+      } else {
+        toast.error(res.error?.message || 'Buchung fehlgeschlagen');
+      }
     }
     setBooking(false);
   }

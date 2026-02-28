@@ -27,7 +27,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  register: (data: { username: string; email: string; password: string; name: string }) => Promise<boolean>;
+  register: (data: { email: string; password: string; name: string }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
-  async function register(data: { username: string; email: string; password: string; name: string }): Promise<boolean> {
+  async function register(data: { email: string; password: string; name: string }): Promise<boolean> {
     const response = await api.register(data);
     if (response.success && response.data) {
       api.setToken(response.data.tokens.access_token);
