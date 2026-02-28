@@ -186,6 +186,47 @@ class ApiClient {
   async health() {
     return this.request<{ status: string }>('/health');
   }
+
+  // GDPR / User data
+  async exportUserData() {
+    return this.request<Record<string, unknown>>('/api/v1/users/me/export');
+  }
+
+  async deleteAccount() {
+    return this.request<void>('/api/v1/users/me/delete', {
+      method: 'DELETE',
+    });
+  }
+
+  // Admin — Users
+  async adminGetUsers() {
+    return this.request<AdminUser[]>('/api/v1/admin/users');
+  }
+
+  async adminUpdateUserRole(id: string, role: AdminUser['role']) {
+    return this.request<AdminUser>(`/api/v1/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async adminUpdateUserStatus(id: string, status: AdminUser['status']) {
+    return this.request<AdminUser>(`/api/v1/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async adminDeleteUser(id: string) {
+    return this.request<void>(`/api/v1/admin/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Admin — Bookings
+  async adminGetBookings() {
+    return this.request<AdminBooking[]>('/api/v1/admin/bookings');
+  }
 }
 
 export const api = new ApiClient();
@@ -293,4 +334,31 @@ export interface SlotConfig {
 
 export interface ParkingLotDetailed extends ParkingLot {
   layout?: LotLayout;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  name: string;
+  role: 'user' | 'admin' | 'superadmin';
+  status: 'active' | 'disabled';
+  created_at: string;
+}
+
+export interface AdminBooking {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  lot_id: string;
+  lot_name: string;
+  slot_id: string;
+  slot_number: string;
+  vehicle_plate?: string;
+  start_time: string;
+  end_time: string;
+  status: 'active' | 'completed' | 'cancelled';
+  booking_type?: 'one-time' | 'recurring' | 'guest';
+  created_at: string;
 }

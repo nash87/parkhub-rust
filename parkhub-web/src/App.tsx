@@ -5,14 +5,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme, applyTheme } from './stores/theme';
 import { Layout } from './components/Layout';
+import { CookieConsent } from './components/CookieConsent';
 import { LoginPage } from './pages/Login';
 import { RegisterPage } from './pages/Register';
 import { DashboardPage } from './pages/Dashboard';
 import { BookPage } from './pages/Book';
 import { BookingsPage } from './pages/Bookings';
 import { VehiclesPage } from './pages/Vehicles';
+import { ProfilePage } from './pages/Profile';
 import { AdminPage } from './pages/Admin';
 import { ImpressumPage } from './pages/Impressum';
+import { DatenschutzPage } from './pages/Datenschutz';
+import { AGBPage } from './pages/AGB';
 import { SpinnerGap } from '@phosphor-icons/react';
 
 const queryClient = new QueryClient({
@@ -70,12 +74,15 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/impressum" element={<ImpressumPage />} />
+      <Route path="/datenschutz" element={<DatenschutzPage />} />
+      <Route path="/agb" element={<AGBPage />} />
 
       {/* Protected */}
       <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/book" element={<ProtectedRoute><BookPage /></ProtectedRoute>} />
       <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
       <Route path="/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
       {/* Admin */}
       <Route path="/admin/*" element={<AdminRoute><AdminPage /></AdminRoute>} />
@@ -93,6 +100,7 @@ function App() {
         <ThemeInitializer>
           <AuthProvider>
             <AppRoutes />
+            <CookieConsent />
             <Toaster
               position="top-right"
               toastOptions={{
