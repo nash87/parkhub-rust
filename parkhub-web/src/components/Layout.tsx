@@ -291,16 +291,30 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Footer */}
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             ParkHub — Open Source Parking Management
           </p>
-          <a
-            href="/impressum"
-            className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-          >
-            Impressum
-          </a>
+          <nav aria-label="Rechtliche Links" className="flex items-center gap-4 flex-wrap justify-center">
+            <a
+              href="/impressum"
+              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              Impressum
+            </a>
+            <a
+              href="/datenschutz"
+              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              Datenschutz
+            </a>
+            <a
+              href="/agb"
+              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              AGB
+            </a>
+          </nav>
         </div>
       </footer>
     </div>

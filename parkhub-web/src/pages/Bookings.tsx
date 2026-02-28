@@ -10,6 +10,7 @@ import {
   XCircle,
   ArrowClockwise,
   Warning,
+  Receipt,
 } from '@phosphor-icons/react';
 import { api, Booking } from '../api/client';
 import toast from 'react-hot-toast';
@@ -219,20 +220,35 @@ export function BookingsPage() {
                     </div>
                   </div>
 
-                  <div className={`badge ${
-                    booking.status === 'completed' ? 'badge-success' : 'badge-gray'
-                  }`}>
-                    {booking.status === 'completed' ? (
-                      <>
-                        <CheckCircle weight="fill" className="w-3 h-3" aria-hidden="true" />
-                        Abgeschlossen
-                      </>
-                    ) : (
-                      <>
-                        <XCircle weight="fill" className="w-3 h-3" aria-hidden="true" />
-                        Storniert
-                      </>
+                  <div className="flex items-center gap-2">
+                    {booking.status === 'completed' && (
+                      <a
+                        href={`/api/v1/bookings/${booking.id}/invoice`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Rechnung für Buchung ${booking.slot_number} herunterladen`}
+                        className="btn btn-sm btn-ghost text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400"
+                        title="Rechnung anzeigen"
+                      >
+                        <Receipt weight="regular" className="w-4 h-4" aria-hidden="true" />
+                        <span className="hidden sm:inline">Rechnung</span>
+                      </a>
                     )}
+                    <div className={`badge ${
+                      booking.status === 'completed' ? 'badge-success' : 'badge-gray'
+                    }`}>
+                      {booking.status === 'completed' ? (
+                        <>
+                          <CheckCircle weight="fill" className="w-3 h-3" aria-hidden="true" />
+                          Abgeschlossen
+                        </>
+                      ) : (
+                        <>
+                          <XCircle weight="fill" className="w-3 h-3" aria-hidden="true" />
+                          Storniert
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
