@@ -382,6 +382,31 @@ impl Database {
         }
     }
 
+    /// Find a session by its refresh token (scans all sessions)
+    ///
+    /// Returns a tuple of (access_token, session) if found and not expired.
+    pub async fn get_session_by_refresh_token(
+        &self,
+        refresh_token: &str,
+    ) -> Result<Option<(String, Session)>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(SESSIONS)?;
+
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            let access_token = key.value().to_string();
+            let session: Session = self.deserialize(value.value())?;
+            if session.refresh_token == refresh_token {
+                if session.is_expired() {
+                    return Ok(None);
+                }
+                return Ok(Some((access_token, session)));
+            }
+        }
+        Ok(None)
+    }
+
     /// Delete a session
     pub async fn delete_session(&self, token: &str) -> Result<bool> {
         let db = self.inner.write().await;

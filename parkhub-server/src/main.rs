@@ -18,6 +18,7 @@ mod audit;
 mod config;
 mod db;
 mod discovery;
+mod email;
 mod error;
 mod health;
 mod jwt;

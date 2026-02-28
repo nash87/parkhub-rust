@@ -21,6 +21,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
+use crate::email;
 use crate::metrics;
 use crate::openapi::ApiDoc;
 use crate::static_files;
@@ -63,6 +64,8 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/register", post(register))
         .route("/api/v1/auth/refresh", post(refresh_token))
+        .route("/api/v1/auth/forgot-password", post(forgot_password))
+        .route("/api/v1/auth/reset-password", post(reset_password))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum));
 
@@ -81,6 +84,7 @@ pub fn create_router(state: SharedState) -> Router {
             "/api/v1/bookings/:id",
             get(get_booking).delete(cancel_booking),
         )
+        .route("/api/v1/bookings/:id/invoice", get(get_booking_invoice))
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
         .route("/api/v1/vehicles/:id", delete(delete_vehicle))
         // Admin-only: update Impressum settings
@@ -502,16 +506,275 @@ async fn register(
 }
 
 async fn refresh_token(
-    State(_state): State<SharedState>,
-    Json(_request): Json<RefreshTokenRequest>,
+    State(state): State<SharedState>,
+    Json(request): Json<RefreshTokenRequest>,
 ) -> (StatusCode, Json<ApiResponse<AuthTokens>>) {
+    let state_guard = state.read().await;
+
+    // Look up the session that holds this refresh token
+    let (old_access_token, session) =
+        match state_guard.db.get_session_by_refresh_token(&request.refresh_token).await {
+            Ok(Some(pair)) => pair,
+            Ok(None) => {
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(ApiResponse::error(
+                        "INVALID_REFRESH_TOKEN",
+                        "Refresh token is invalid or expired",
+                    )),
+                );
+            }
+            Err(e) => {
+                tracing::error!("Database error during token refresh: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+                );
+            }
+        };
+
+    // Create a fresh session (7-day expiry)
+    let new_session = Session::new(session.user_id, 168, &session.username, &session.role); // 168h = 7 days
+    let new_access_token = uuid::Uuid::new_v4().to_string();
+
+    // Save new session
+    if let Err(e) = state_guard.db.save_session(&new_access_token, &new_session).await {
+        tracing::error!("Failed to save refreshed session: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to refresh token")),
+        );
+    }
+
+    // Invalidate old session
+    drop(state_guard);
+    let state_guard = state.read().await;
+    if let Err(e) = state_guard.db.delete_session(&old_access_token).await {
+        tracing::warn!("Failed to delete old session during refresh: {}", e);
+    }
+
+    tracing::info!(
+        user_id = %session.user_id,
+        username = %session.username,
+        "Token refreshed successfully"
+    );
+
     (
-        StatusCode::NOT_IMPLEMENTED,
-        Json(ApiResponse::error(
-            "NOT_IMPLEMENTED",
-            "Token refresh not yet fully implemented",
-        )),
+        StatusCode::OK,
+        Json(ApiResponse::success(AuthTokens {
+            access_token: new_access_token,
+            refresh_token: new_session.refresh_token,
+            expires_at: new_session.expires_at,
+            token_type: "Bearer".to_string(),
+        })),
     )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PASSWORD RESET
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for the forgot-password endpoint
+#[derive(Debug, Deserialize)]
+struct ForgotPasswordRequest {
+    email: String,
+}
+
+/// Request body for the reset-password endpoint
+#[derive(Debug, Deserialize)]
+struct ResetPasswordRequest {
+    token: String,
+    password: String,
+}
+
+/// Stored data for a password-reset token (serialized to JSON in SETTINGS)
+#[derive(Debug, Serialize, Deserialize)]
+struct PasswordResetToken {
+    user_id: String,
+    expires_at: chrono::DateTime<Utc>,
+}
+
+/// `POST /api/v1/auth/forgot-password`
+///
+/// Accepts `{"email": "..."}`, generates a one-time reset token (UUID),
+/// stores it in the database with a 1-hour expiry, and sends a reset link
+/// to the user's email address.  Always returns 200 to prevent user
+/// enumeration attacks.
+async fn forgot_password(
+    State(state): State<SharedState>,
+    Json(request): Json<ForgotPasswordRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Look up the user — silently succeed even if not found (anti-enumeration)
+    let user = match state_guard.db.get_user_by_email(&request.email).await {
+        Ok(Some(u)) => u,
+        _ => {
+            tracing::info!(
+                email = %request.email,
+                "Forgot-password request for unknown email — silently accepted"
+            );
+            return (StatusCode::OK, Json(ApiResponse::success(())));
+        }
+    };
+
+    // Generate a cryptographically random token
+    let reset_token = Uuid::new_v4().to_string();
+    let expires_at = Utc::now() + Duration::hours(1);
+
+    let token_data = PasswordResetToken {
+        user_id: user.id.to_string(),
+        expires_at,
+    };
+
+    let token_json = match serde_json::to_string(&token_data) {
+        Ok(j) => j,
+        Err(e) => {
+            tracing::error!("Failed to serialize reset token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Store reset token in settings with key "pwreset:<token>"
+    let settings_key = format!("pwreset:{}", reset_token);
+    if let Err(e) = state_guard.db.set_setting(&settings_key, &token_json).await {
+        tracing::error!("Failed to store reset token: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+        );
+    }
+
+    // Build and send the reset email (gracefully degraded if SMTP not configured)
+    let app_url = std::env::var("APP_URL")
+        .unwrap_or_else(|_| "http://localhost:8443".to_string());
+    let reset_url = format!("{}/reset-password?token={}", app_url, reset_token);
+    let org_name = state_guard.config.organization_name.clone();
+
+    let html = email::build_password_reset_email(&reset_url, &org_name);
+
+    // Fire-and-forget: email errors are logged but do not fail the request
+    if let Err(e) = email::send_email(&user.email, "Reset your password", &html).await {
+        tracing::warn!(
+            user_id = %user.id,
+            error = %e,
+            "Failed to send password-reset email"
+        );
+    }
+
+    tracing::info!(
+        user_id = %user.id,
+        "Password reset token generated"
+    );
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+/// `POST /api/v1/auth/reset-password`
+///
+/// Accepts `{"token": "...", "password": "..."}`, validates the token,
+/// updates the user's password, and invalidates the token.
+async fn reset_password(
+    State(state): State<SharedState>,
+    Json(request): Json<ResetPasswordRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Retrieve token data from settings
+    let settings_key = format!("pwreset:{}", request.token);
+    let token_json = match state_guard.db.get_setting(&settings_key).await {
+        Ok(Some(v)) => v,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_TOKEN",
+                    "Reset token is invalid or has already been used",
+                )),
+            );
+        }
+    };
+
+    let token_data: PasswordResetToken = match serde_json::from_str(&token_json) {
+        Ok(d) => d,
+        Err(e) => {
+            tracing::error!("Failed to deserialize reset token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Check token expiry
+    if token_data.expires_at < Utc::now() {
+        // Clean up expired token
+        let _ = state_guard.db.set_setting(&settings_key, "").await;
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("TOKEN_EXPIRED", "Reset token has expired")),
+        );
+    }
+
+    // Validate new password (minimum 8 characters)
+    if request.password.len() < 8 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_PASSWORD",
+                "Password must be at least 8 characters long",
+            )),
+        );
+    }
+
+    // Fetch and update the user
+    let mut user = match state_guard.db.get_user(&token_data.user_id).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("INVALID_TOKEN", "User not found")),
+            );
+        }
+    };
+
+    // Hash the new password
+    let new_hash = match hash_password_simple(&request.password) {
+        Ok(h) => h,
+        Err(e) => {
+            tracing::error!("Password hashing failed: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    user.password_hash = new_hash;
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!("Failed to save updated user during password reset: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update password")),
+        );
+    }
+
+    // Invalidate the token by deleting it (write empty string as tombstone)
+    // We write "" rather than delete because redb's table API requires an existing
+    // key for in-place removal; callers treat an empty value as "not present".
+    let _ = state_guard.db.set_setting(&settings_key, "").await;
+
+    tracing::info!(
+        user_id = %user.id,
+        "Password reset successfully"
+    );
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -967,6 +1230,288 @@ async fn cancel_booking(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// INVOICE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/bookings/:id/invoice`
+///
+/// Returns an HTML invoice for the given booking.  The authenticated user must
+/// own the booking (admin users may retrieve any invoice).
+///
+/// The invoice includes:
+/// - Company/organisation name from server config
+/// - Booking reference (booking UUID)
+/// - User name and email
+/// - Parking lot name and slot number
+/// - Start / end time and duration
+/// - Itemised pricing: base price, VAT at 19% (German standard), total
+async fn get_booking_invoice(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let state_guard = state.read().await;
+
+    // Fetch the booking
+    let booking = match state_guard.db.get_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Booking not found".to_string(),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching booking for invoice: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Internal server error".to_string(),
+            );
+        }
+    };
+
+    // Ownership check — only the booking owner (or admin) may fetch the invoice
+    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Access denied".to_string(),
+            );
+        }
+    };
+
+    let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
+    if booking.user_id != auth_user.user_id && !is_admin {
+        return (
+            StatusCode::FORBIDDEN,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            "Access denied".to_string(),
+        );
+    }
+
+    // Fetch user details for the invoice
+    let booking_user = match state_guard.db.get_user(&booking.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => caller.clone(),
+    };
+
+    // Fetch parking lot name
+    let lot_name = match state_guard.db.get_parking_lot(&booking.lot_id.to_string()).await {
+        Ok(Some(lot)) => lot.name,
+        _ => "Unknown Parking Lot".to_string(),
+    };
+
+    let org_name = state_guard.config.organization_name.clone();
+    let company = if org_name.is_empty() { "ParkHub".to_string() } else { org_name };
+
+    // Calculate duration in minutes
+    let duration_minutes = (booking.end_time - booking.start_time).num_minutes();
+    let duration_hours = duration_minutes / 60;
+    let duration_mins_part = duration_minutes % 60;
+
+    // VAT breakdown (19% German standard — Umsatzsteuergesetz § 12 Abs. 1)
+    // The stored `tax` field uses 10% (from create_booking); for the invoice we
+    // display the correct 19% MwSt. breakdown on the net price.
+    let net_price = booking.pricing.base_price;
+    let vat_rate = 0.19_f64;
+    let vat_amount = net_price * vat_rate;
+    let gross_total = net_price + vat_amount;
+
+    let invoice_date = booking.created_at.format("%d.%m.%Y").to_string();
+    let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
+    let end_str = booking.end_time.format("%d.%m.%Y %H:%M").to_string();
+
+    let invoice_number = format!("INV-{}", booking.id.to_string().to_uppercase().replace('-', "").chars().take(12).collect::<String>());
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rechnung {invoice_number}</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; background: #f8f9fa; }}
+    .page {{ max-width: 800px; margin: 40px auto; background: #ffffff; padding: 60px;
+             box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-radius: 4px; }}
+    .header {{ display: flex; justify-content: space-between; align-items: flex-start;
+               border-bottom: 3px solid #1a73e8; padding-bottom: 24px; margin-bottom: 40px; }}
+    .company-name {{ font-size: 28px; font-weight: 700; color: #1a73e8; }}
+    .company-sub {{ font-size: 12px; color: #666; margin-top: 4px; }}
+    .invoice-meta {{ text-align: right; }}
+    .invoice-meta h2 {{ font-size: 22px; color: #333; }}
+    .invoice-meta p {{ font-size: 13px; color: #666; margin-top: 4px; }}
+    .section {{ margin-bottom: 32px; }}
+    .section-title {{ font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase;
+                      letter-spacing: 0.1em; margin-bottom: 8px; }}
+    .bill-to {{ background: #f8f9fa; padding: 16px 20px; border-radius: 4px; border-left: 3px solid #1a73e8; }}
+    .bill-to p {{ font-size: 14px; line-height: 1.6; color: #333; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 0; }}
+    thead tr {{ background: #1a73e8; color: white; }}
+    thead th {{ padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; }}
+    tbody tr {{ border-bottom: 1px solid #e8ecf0; }}
+    tbody tr:hover {{ background: #f8f9fa; }}
+    tbody td {{ padding: 14px 16px; font-size: 14px; color: #333; }}
+    .text-right {{ text-align: right; }}
+    .totals {{ margin-top: 0; border-top: 2px solid #e8ecf0; }}
+    .totals tr td {{ padding: 10px 16px; font-size: 14px; }}
+    .totals .total-row td {{ font-size: 16px; font-weight: 700; color: #1a73e8;
+                              border-top: 2px solid #1a73e8; padding-top: 14px; }}
+    .badge {{ display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px;
+              font-weight: 600; }}
+    .badge-confirmed {{ background: #e8f5e9; color: #2e7d32; }}
+    .footer {{ margin-top: 48px; padding-top: 24px; border-top: 1px solid #e8ecf0;
+               font-size: 11px; color: #999; text-align: center; line-height: 1.6; }}
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <div class="company-name">{company}</div>
+        <div class="company-sub">Parkverwaltungssystem</div>
+      </div>
+      <div class="invoice-meta">
+        <h2>RECHNUNG</h2>
+        <p><strong>{invoice_number}</strong></p>
+        <p>Datum: {invoice_date}</p>
+      </div>
+    </div>
+
+    <!-- Bill To -->
+    <div class="section">
+      <div class="section-title">Rechnungsempfänger</div>
+      <div class="bill-to">
+        <p><strong>{user_name}</strong></p>
+        <p>{user_email}</p>
+      </div>
+    </div>
+
+    <!-- Booking Details -->
+    <div class="section">
+      <div class="section-title">Buchungsdetails</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Beschreibung</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Buchungsnummer</td>
+            <td>{booking_id}</td>
+          </tr>
+          <tr>
+            <td>Parkhaus</td>
+            <td>{lot_name}</td>
+          </tr>
+          <tr>
+            <td>Stellplatz</td>
+            <td>Nr. {slot_number} &nbsp;·&nbsp; {floor_name}</td>
+          </tr>
+          <tr>
+            <td>Fahrzeug (Kennzeichen)</td>
+            <td>{license_plate}</td>
+          </tr>
+          <tr>
+            <td>Beginn</td>
+            <td>{start_str}</td>
+          </tr>
+          <tr>
+            <td>Ende</td>
+            <td>{end_str}</td>
+          </tr>
+          <tr>
+            <td>Dauer</td>
+            <td>{duration_hours} Std. {duration_mins_part} Min.</td>
+          </tr>
+          <tr>
+            <td>Status</td>
+            <td><span class="badge badge-confirmed">{status}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pricing -->
+    <div class="section">
+      <div class="section-title">Rechnungsbetrag</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Position</th>
+            <th class="text-right">Betrag ({currency})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Parkgebühr (Netto)</td>
+            <td class="text-right">{net_price:.2}</td>
+          </tr>
+        </tbody>
+        <tbody class="totals">
+          <tr>
+            <td>Zwischensumme (Netto)</td>
+            <td class="text-right">{net_price:.2}</td>
+          </tr>
+          <tr>
+            <td>MwSt. 19% (§ 12 UStG)</td>
+            <td class="text-right">{vat_amount:.2}</td>
+          </tr>
+          <tr class="total-row">
+            <td>Gesamtbetrag (Brutto)</td>
+            <td class="text-right">{gross_total:.2}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>{company} · Parkverwaltungssystem · Automatisch generierte Rechnung</p>
+      <p>Diese Rechnung wurde automatisch erstellt und ist ohne Unterschrift gültig.</p>
+    </div>
+
+  </div>
+</body>
+</html>"#,
+        invoice_number = invoice_number,
+        invoice_date = invoice_date,
+        company = company,
+        user_name = booking_user.name,
+        user_email = booking_user.email,
+        booking_id = booking.id,
+        lot_name = lot_name,
+        slot_number = booking.slot_number,
+        floor_name = booking.floor_name,
+        license_plate = booking.vehicle.license_plate,
+        start_str = start_str,
+        end_str = end_str,
+        duration_hours = duration_hours,
+        duration_mins_part = duration_mins_part,
+        status = format!("{:?}", booking.status),
+        currency = booking.pricing.currency,
+        net_price = net_price,
+        vat_amount = vat_amount,
+        gross_total = gross_total,
+    );
+
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        html,
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // VEHICLES
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1096,6 +1641,22 @@ fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ApiResponse
                 Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
             )
         })
+}
+
+/// Hash a password using Argon2id, returning an `anyhow::Result`.
+///
+/// Used by code paths (e.g. password reset) that cannot return the typed
+/// HTTP error tuple used by `hash_password`.
+fn hash_password_simple(password: &str) -> anyhow::Result<String> {
+    use argon2::{
+        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+        Argon2,
+    };
+    let salt = SaltString::generate(&mut OsRng);
+    Argon2::default()
+        .hash_password(password.as_bytes(), &salt)
+        .map(|h| h.to_string())
+        .map_err(|e| anyhow::anyhow!("Argon2 hashing failed: {}", e))
 }
 
 fn verify_password(password: &str, hash: &str) -> bool {
