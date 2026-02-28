@@ -163,7 +163,7 @@ class ApiClient {
   }
 
   // Lot detailed (mock)
-  async getLotDetailed(id: string): Promise<ApiResponse<ParkingLotDetailed>> {
+  async getLotDetailed(_id: string): Promise<ApiResponse<ParkingLotDetailed>> {
     return {
       success: true,
       data: {
