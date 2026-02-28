@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+
+      - name: Build server (headless)
+        run: cargo build --release --package parkhub-server --no-default-features --features headless
+
+      - name: Build client
+        run: cargo build --release --package parkhub-client
+
+      - name: Create portable package
+        run: |
+          mkdir -p parkhub-linux-x64
+          cp target/release/parkhub-server parkhub-linux-x64/
+          cp target/release/parkhub parkhub-linux-x64/
+          cp README.md LICENSE parkhub-linux-x64/
+          mkdir -p parkhub-linux-x64/parkhub-data
+          touch parkhub-linux-x64/parkhub-data/.portable
+          tar -czvf parkhub-linux-x64.tar.gz parkhub-linux-x64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parkhub-linux-x64
+          path: parkhub-linux-x64.tar.gz
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Build server (headless)
+        run: cargo build --release --package parkhub-server --no-default-features --features headless
+
+      - name: Build client
+        run: cargo build --release --package parkhub-client
+
+      - name: Create portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path parkhub-windows-x64
+          Copy-Item target/release/parkhub-server.exe parkhub-windows-x64/
+          Copy-Item target/release/parkhub.exe parkhub-windows-x64/
+          Copy-Item README.md parkhub-windows-x64/
+          Copy-Item LICENSE parkhub-windows-x64/
+          New-Item -ItemType Directory -Force -Path parkhub-windows-x64/parkhub-data
+          New-Item -ItemType File -Force -Path parkhub-windows-x64/parkhub-data/.portable
+          Compress-Archive -Path parkhub-windows-x64 -DestinationPath parkhub-windows-x64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parkhub-windows-x64
+          path: parkhub-windows-x64.zip
+
+  release:
+    name: Create Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: parkhub-linux-x64
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: parkhub-windows-x64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            parkhub-linux-x64.tar.gz
+            parkhub-windows-x64.zip
+          generate_release_notes: true
