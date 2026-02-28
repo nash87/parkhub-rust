@@ -7,7 +7,7 @@ COPY parkhub-web/ ./
 RUN npm run build
 
 # Build stage - Rust Server
-FROM rust:1.85-alpine AS rust-builder
+FROM rust:alpine AS rust-builder
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig cmake make perl clang
 WORKDIR /app
 # Copy manifests first for layer caching
