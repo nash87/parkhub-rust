@@ -11,6 +11,37 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.0] - 2026-02-28
+
+### Added
+- **Audit logging wired**: All sensitive operations (login, register, booking create/cancel, vehicle add/remove, user delete, role change, password reset, GDPR deletion) now emit structured audit log entries via the existing `audit.rs` infrastructure
+- **Booking confirmation email**: `POST /api/v1/bookings` now sends an HTML booking confirmation email (non-fatal if SMTP not configured)
+- **Profile editing**: New `PUT /api/v1/users/me` endpoint allows users to update their name, phone, and avatar URL; frontend Profile page now has an edit form
+- **Admin UI**: User management page now fully implemented — list users, change role, toggle active/inactive, delete user; Bookings overview tab added
+- **Booking filter**: Bookings page now has status/date/search filter bar (client-side filtering)
+- **Koyeb deployment**: Added `koyeb.yaml` for one-command Koyeb deployment
+
+### Fixed
+- Email verification config flag `require_email_verification` is now documented as unimplemented (not silently ignored)
+- parkhub-client: `on_admin_search_users` now implements real client-side user search filtering
+- parkhub-client: `ServerConnection::connect_with_cert()` added for proper TLS cert pinning; `connect()` documents the self-signed cert limitation
+
+---
+
+## [1.1.1] — 2026-02-28
+
+### Fixed
+
+- **Self-registration enforcement**: `POST /api/v1/auth/register` now returns HTTP 403 `REGISTRATION_DISABLED`
+  when `allow_self_registration = false` in config. Previously the flag had no effect.
+- **Floor name UUID**: Booking confirmation response showed the internal UUID of the floor (e.g.
+  `"Floor 82936167-..."`) instead of the human-readable name. Now resolved from the lot's floors array.
+- **CI Kaniko build**: `Cargo.lock` was gitignored, causing all CI builds to fail with
+  `lstat /workspace/src/Cargo.lock: no such file or directory`. Binary crates must commit
+  their lockfile for reproducible Docker builds.
+
+---
+
 ## [1.1.0] — 2026-02-28
 
 ### Added
