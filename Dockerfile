@@ -22,8 +22,8 @@ COPY parkhub-server/Cargo.toml ./parkhub-server/
 RUN mkdir -p parkhub-common/src parkhub-server/src && \
     echo "pub fn dummy() {}" > parkhub-common/src/lib.rs && \
     echo "fn main() {}" > parkhub-server/src/main.rs
-# Build dependencies only
-RUN cargo build --release --package parkhub-server 2>/dev/null || true
+# Build dependencies only (headless: no Slint GUI, no tray-icon/GTK deps)
+RUN cargo build --release --package parkhub-server --no-default-features --features headless 2>/dev/null || true
 # Copy real sources
 COPY parkhub-common/ ./parkhub-common/
 COPY parkhub-server/ ./parkhub-server/
@@ -31,7 +31,7 @@ COPY parkhub-server/ ./parkhub-server/
 COPY --from=web-builder /app/web/dist ./parkhub-web/dist/
 # Build the actual binary
 RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
-    cargo build --release --package parkhub-server
+    cargo build --release --package parkhub-server --no-default-features --features headless
 
 # Runtime stage
 FROM alpine:3.20
