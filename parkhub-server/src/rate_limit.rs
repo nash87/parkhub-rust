@@ -14,7 +14,7 @@ use governor::{
     state::{InMemoryState, NotKeyed},
     Quota, RateLimiter,
 };
-use std::{net::SocketAddr, num::NonZeroU32, sync::Arc};
+use std::{net::SocketAddr, num::NonZeroU32, sync::Arc, time::Duration};
 
 use crate::error::AppError;
 
@@ -74,9 +74,18 @@ pub mod per_ip {
 
     pub type IpRateLimiter = RateLimiter<IpAddr, DashMapStateStore<IpAddr>, DefaultClock, NoOpMiddleware>;
 
-    /// Create a per-IP rate limiter
+    /// Create a per-IP rate limiter with a per-minute quota
     pub fn create_ip_rate_limiter(requests_per_minute: u32) -> Arc<IpRateLimiter> {
         let quota = Quota::per_minute(NonZeroU32::new(requests_per_minute).unwrap());
+        Arc::new(RateLimiter::dashmap(quota))
+    }
+
+    /// Create a per-IP rate limiter with a custom period
+    /// e.g. 3 requests per 15 minutes: `create_ip_rate_limiter_with_period(3, Duration::from_secs(900))`
+    pub fn create_ip_rate_limiter_with_period(requests: u32, period: Duration) -> Arc<IpRateLimiter> {
+        let quota = Quota::with_period(period)
+            .unwrap()
+            .allow_burst(NonZeroU32::new(requests).unwrap());
         Arc::new(RateLimiter::dashmap(quota))
     }
 
@@ -97,13 +106,45 @@ pub mod per_ip {
     }
 }
 
+/// Middleware that enforces a per-IP rate limit.
+///
+/// Reads the `X-Forwarded-For` header (set by the ingress proxy) to identify
+/// the real client IP.  Falls back to the direct peer address when the header
+/// is absent.  Returns **429 Too Many Requests** when the limit is exceeded.
+pub async fn ip_rate_limit_middleware(
+    limiter: Arc<per_ip::IpRateLimiter>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    // Resolve client IP from forwarded header or peer address
+    let forwarded_for = request
+        .headers()
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_owned());
+
+    let peer_addr = request
+        .extensions()
+        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        .map(|ci| ci.0);
+
+    let client_ip = per_ip::get_client_ip(peer_addr.as_ref(), forwarded_for.as_deref());
+
+    match limiter.check_key(&client_ip) {
+        Ok(_) => next.run(request).await,
+        Err(_) => AppError::RateLimited.into_response(),
+    }
+}
+
 /// Specific rate limiters for different endpoints
 pub struct EndpointRateLimiters {
-    /// Login attempts (stricter)
+    /// Login attempts — 5 per minute per IP
     pub login: Arc<per_ip::IpRateLimiter>,
-    /// Registration (stricter)
+    /// Registration — 3 per minute per IP
     pub register: Arc<per_ip::IpRateLimiter>,
-    /// General API (relaxed)
+    /// Forgot-password — 3 per 15 minutes per IP
+    pub forgot_password: Arc<per_ip::IpRateLimiter>,
+    /// General API (relaxed global limiter)
     pub general: Arc<GlobalRateLimiter>,
 }
 
@@ -114,6 +155,11 @@ impl EndpointRateLimiters {
             login: per_ip::create_ip_rate_limiter(5),
             // 3 registrations per minute per IP
             register: per_ip::create_ip_rate_limiter(3),
+            // 3 forgot-password requests per 15 minutes per IP
+            forgot_password: per_ip::create_ip_rate_limiter_with_period(
+                3,
+                Duration::from_secs(15 * 60),
+            ),
             // 100 requests per second globally
             general: create_rate_limiter(&RateLimitConfig::default()),
         }

@@ -24,6 +24,7 @@ use uuid::Uuid;
 use crate::email;
 use crate::metrics;
 use crate::openapi::ApiDoc;
+use crate::rate_limit::{EndpointRateLimiters, ip_rate_limit_middleware};
 use crate::static_files;
 
 /// Maximum allowed request body size: 1 MiB.
@@ -54,17 +55,44 @@ pub fn create_router(state: SharedState) -> Router {
     // Initialize Prometheus metrics
     let metrics_handle = metrics::init_metrics();
 
-    // Public routes (no auth required)
+    // Instantiate per-endpoint rate limiters
+    let rate_limiters = EndpointRateLimiters::new();
+
+    // Rate-limited auth routes — each sub-router gets its own per-IP limiter applied
+    // via route_layer so only that specific route is affected.
+
+    // POST /api/v1/auth/login — 5 requests per minute per IP
+    let login_limiter = rate_limiters.login.clone();
+    let login_route = Router::new()
+        .route("/api/v1/auth/login", post(login))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(login_limiter.clone(), req, next)
+        }));
+
+    // POST /api/v1/auth/register — 3 requests per minute per IP
+    let register_limiter = rate_limiters.register.clone();
+    let register_route = Router::new()
+        .route("/api/v1/auth/register", post(register))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(register_limiter.clone(), req, next)
+        }));
+
+    // POST /api/v1/auth/forgot-password — 3 requests per 15 minutes per IP
+    let forgot_limiter = rate_limiters.forgot_password.clone();
+    let forgot_route = Router::new()
+        .route("/api/v1/auth/forgot-password", post(forgot_password))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(forgot_limiter.clone(), req, next)
+        }));
+
+    // Remaining public routes (no rate limiting needed)
     let public_routes = Router::new()
         .route("/health", get(health_check))
         .route("/health/live", get(liveness_check))
         .route("/health/ready", get(readiness_check))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
-        .route("/api/v1/auth/login", post(login))
-        .route("/api/v1/auth/register", post(register))
         .route("/api/v1/auth/refresh", post(refresh_token))
-        .route("/api/v1/auth/forgot-password", post(forgot_password))
         .route("/api/v1/auth/reset-password", post(reset_password))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum));
@@ -106,6 +134,9 @@ pub fn create_router(state: SharedState) -> Router {
 
     Router::new()
         .merge(public_routes)
+        .merge(login_route)
+        .merge(register_route)
+        .merge(forgot_route)
         .merge(protected_routes)
         // Prometheus metrics endpoint
         .route("/metrics", get(move || async move {
