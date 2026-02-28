@@ -144,8 +144,17 @@ cd parkhub-rust
 docker compose up -d
 ```
 
+> **Note:** The first `docker compose up -d` builds the Rust binary and React frontend from source.
+> This takes **5–10 minutes** depending on your machine. Subsequent starts are instant (image is cached).
+> Watch progress: `docker compose logs -f parkhub`
+
 Open **http://localhost:8080** in your browser.
 Default credentials: `admin` / `admin` — **change immediately after first login**.
+
+To use a custom admin password from the start, set it before running `up`:
+```bash
+PARKHUB_ADMIN_PASSWORD=mypassword docker compose up -d
+```
 
 To run without Docker (single binary):
 

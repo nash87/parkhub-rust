@@ -1,0 +1,9 @@
+# Copy to docker-compose.override.yml for development
+# Enables debug logging and relaxed settings for local development
+# Usage: cp docker-compose.override.yml.example docker-compose.override.yml && docker compose up -d
+version: '3.8'
+services:
+  parkhub:
+    environment:
+      RUST_LOG: debug
+      PARKHUB_ADMIN_PASSWORD: admin

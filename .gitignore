@@ -20,6 +20,8 @@ Desktop.ini
 # Local config
 .env
 .env.*
+!.env.example
+!docker-compose.override.yml.example
 *.local.toml
 config.toml.local
 
