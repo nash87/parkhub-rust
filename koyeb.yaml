@@ -1,0 +1,60 @@
+# Koyeb deployment manifest for ParkHub Rust
+# Deploy with: koyeb app deploy --file koyeb.yaml
+#
+# Prerequisites:
+#   1. Get API token: https://app.koyeb.com/account/api
+#   2. Install CLI: curl -fsSL https://raw.githubusercontent.com/koyeb/koyeb-cli/master/install.sh | sh
+#   3. Login: koyeb login
+#   4. Deploy: koyeb app deploy --file koyeb.yaml
+#
+# Notes:
+#   - Uses pre-built GHCR image (built by GitHub Actions on push)
+#   - Data directory /data is ephemeral — resets on each deploy
+#   - For persistent data, upgrade to paid plan with persistent storage
+#   - Free tier: 512MB RAM, 0.1 vCPU, sleeps after inactivity
+
+name: parkhub-rust
+
+services:
+  - name: web
+    type: web
+    docker:
+      image: ghcr.io/nash87/parkhub-rust:latest
+      command: /app/parkhub-server
+      args:
+        - --headless
+        - --unattended
+        - --data-dir
+        - /data
+        - --port
+        - "8000"
+    ports:
+      - port: 8000
+        protocol: http
+    env:
+      - key: RUST_LOG
+        value: "info"
+      - key: ALLOW_SELF_REGISTRATION
+        value: "false"
+      - key: PARKHUB_PORT
+        value: "8000"
+      - key: PARKHUB_HOST
+        value: "0.0.0.0"
+    health_checks:
+      - port: 8000
+        protocol: http
+        path: /health
+        interval: 10
+        timeout: 5
+        healthy_threshold: 1
+        unhealthy_threshold: 3
+    instance_types:
+      - type: nano
+    regions:
+      - fra
+    scaling:
+      min: 0
+      max: 1
+    routes:
+      - path: /
+        port: 8000

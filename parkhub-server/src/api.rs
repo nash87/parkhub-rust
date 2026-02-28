@@ -21,6 +21,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
+use crate::audit::{AuditEntry, AuditEventType};
 use crate::email;
 use crate::metrics;
 use crate::openapi::ApiDoc;
@@ -99,7 +100,7 @@ pub fn create_router(state: SharedState) -> Router {
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
-        .route("/api/v1/users/me", get(get_current_user))
+        .route("/api/v1/users/me", get(get_current_user).put(update_current_user))
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
         // Admin-only: retrieve any user by ID
@@ -383,6 +384,9 @@ async fn login(
             match state_guard.db.get_user_by_email(&request.username).await {
                 Ok(Some(u)) => u,
                 _ => {
+                    AuditEntry::new(AuditEventType::LoginFailed)
+                        .error("User not found")
+                        .log();
                     return (
                         StatusCode::UNAUTHORIZED,
                         Json(ApiResponse::error(
@@ -404,6 +408,10 @@ async fn login(
 
     // Verify password
     if !verify_password(&request.password, &user.password_hash) {
+        AuditEntry::new(AuditEventType::LoginFailed)
+            .user(user.id, &user.username)
+            .error("Invalid password")
+            .log();
         return (
             StatusCode::UNAUTHORIZED,
             Json(ApiResponse::error(
@@ -436,6 +444,10 @@ async fn login(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to create session")),
         );
     }
+
+    AuditEntry::new(AuditEventType::LoginSuccess)
+        .user(user.id, &user.username)
+        .log();
 
     // Create response — never send password_hash to clients
     let mut response_user = user.clone();
@@ -530,6 +542,10 @@ async fn register(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to create account")),
         );
     }
+
+    AuditEntry::new(AuditEventType::UserCreated)
+        .user(user.id, &user.username)
+        .log();
 
     // Create session
     let role_str = format!("{:?}", user.role).to_lowercase();
@@ -826,6 +842,10 @@ async fn reset_password(
     // key for in-place removal; callers treat an empty value as "not present".
     let _ = state_guard.db.set_setting(&settings_key, "").await;
 
+    AuditEntry::new(AuditEventType::PasswordChanged)
+        .user(user.id, &user.username)
+        .log();
+
     tracing::info!(
         user_id = %user.id,
         "Password reset successfully"
@@ -861,6 +881,71 @@ async fn get_current_user(
             )
         }
     }
+}
+
+/// Request body for updating the current user's profile
+#[derive(Debug, Deserialize)]
+struct UpdateCurrentUserRequest {
+    name: Option<String>,
+    phone: Option<String>,
+    picture: Option<String>,
+}
+
+/// `PUT /api/v1/users/me` — update the authenticated user's own profile.
+///
+/// Allows users to update their display name, phone number, and profile
+/// picture URL. Fields not included in the request body are left unchanged.
+/// Returns the updated user record (without `password_hash`).
+async fn update_current_user(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<UpdateCurrentUserRequest>,
+) -> (StatusCode, Json<ApiResponse<User>>) {
+    let state_guard = state.read().await;
+
+    let mut user = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching user for update: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Apply only the fields provided in the request
+    if let Some(name) = req.name {
+        user.name = name;
+    }
+    if let Some(phone) = req.phone {
+        user.phone = Some(phone);
+    }
+    if let Some(picture) = req.picture {
+        user.picture = Some(picture);
+    }
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!("Failed to save user profile update: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update profile")),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::UserUpdated)
+        .user(user.id, &user.username)
+        .log();
+
+    user.password_hash = String::new();
+    (StatusCode::OK, Json(ApiResponse::success(user)))
 }
 
 /// Retrieve a user by ID.
@@ -1202,32 +1287,44 @@ async fn create_booking(
         "Booking created"
     );
 
-    // Send booking confirmation email (non-blocking, fire-and-forget).
-    // TODO: Implement crate::email::send_booking_confirmation(config, email, name, booking)
-    // when a dedicated booking confirmation template is available.  For now we use the
-    // generic send_email helper with a minimal body so the wiring is in place.
-    {
-        let user_email_opt = state_guard
-            .db
-            .get_user(&auth_user.user_id.to_string())
-            .await
-            .ok()
-            .flatten()
-            .map(|u| (u.email, u.name));
+    // Fetch user details for audit log and confirmation email
+    let user_info_opt = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten();
 
-        if let Some((user_email, user_name)) = user_email_opt {
-            let booking_id_str = booking.id.to_string();
-            tokio::spawn(async move {
-                let subject = format!("Booking confirmation — {}", booking_id_str);
-                let html = format!(
-                    "<p>Dear {},</p><p>Your booking <strong>{}</strong> has been confirmed.</p>",
-                    user_name, booking_id_str
-                );
-                if let Err(e) = crate::email::send_email(&user_email, &subject, &html).await {
-                    tracing::warn!("Failed to send booking confirmation email: {}", e);
-                }
-            });
-        }
+    if let Some(ref u) = user_info_opt {
+        crate::audit::events::booking_created(auth_user.user_id, &u.username, booking.id);
+    } else {
+        crate::audit::events::booking_created(auth_user.user_id, "", booking.id);
+    }
+
+    // Send booking confirmation email (non-blocking, fire-and-forget).
+    if let Some(u) = user_info_opt {
+        let booking_id_str = booking.id.to_string();
+        let floor_name = booking.floor_name.clone();
+        let slot_number = booking.slot_number;
+        let start_time_str = booking.start_time.format("%Y-%m-%d %H:%M UTC").to_string();
+        let end_time_str = booking.end_time.format("%Y-%m-%d %H:%M UTC").to_string();
+        let org_name = state_guard.config.organization_name.clone();
+        let user_email = u.email.clone();
+        let user_name = u.name.clone();
+        tokio::spawn(async move {
+            let email_html = email::build_booking_confirmation_email(
+                &user_name,
+                &booking_id_str,
+                &floor_name,
+                slot_number,
+                &start_time_str,
+                &end_time_str,
+                &org_name,
+            );
+            if let Err(e) = email::send_email(&user_email, "Booking Confirmation — ParkHub", &email_html).await {
+                tracing::warn!("Failed to send booking confirmation email: {}", e);
+            }
+        });
     }
 
     (StatusCode::CREATED, Json(ApiResponse::success(booking)))
@@ -1334,6 +1431,21 @@ async fn cancel_booking(
             }
         }
     }
+
+    // Fetch username for audit log (best-effort)
+    let username = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
+    AuditEntry::new(AuditEventType::BookingCancelled)
+        .user(auth_user.user_id, &username)
+        .resource("booking", &id)
+        .log();
 
     tracing::info!(
         user_id = %auth_user.user_id,
@@ -1667,6 +1779,19 @@ async fn create_vehicle(
         );
     }
 
+    let username = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
+    AuditEntry::new(AuditEventType::VehicleAdded)
+        .user(auth_user.user_id, &username)
+        .log();
+
     (StatusCode::CREATED, Json(ApiResponse::success(vehicle)))
 }
 
@@ -1707,8 +1832,20 @@ async fn delete_vehicle(
         );
     }
 
+    let username = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
     match state_guard.db.delete_vehicle(&id).await {
         Ok(true) => {
+            AuditEntry::new(AuditEventType::VehicleRemoved)
+                .user(auth_user.user_id, &username)
+                .log();
             tracing::info!(
                 user_id = %auth_user.user_id,
                 vehicle_id = %id,
@@ -1971,8 +2108,23 @@ async fn gdpr_delete_account(
     let user_id = auth_user.user_id.to_string();
     let state_guard = state.read().await;
 
+    // Capture username before anonymization scrubs it
+    let username = state_guard
+        .db
+        .get_user(&user_id)
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
     match state_guard.db.anonymize_user(&user_id).await {
-        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(true) => {
+            AuditEntry::new(AuditEventType::UserDeleted)
+                .user(auth_user.user_id, &username)
+                .log();
+            (StatusCode::OK, Json(ApiResponse::success(())))
+        }
         Ok(false) => (
             StatusCode::NOT_FOUND,
             Json(ApiResponse::error("NOT_FOUND", "User not found")),
@@ -2111,6 +2263,20 @@ async fn admin_update_user_role(
         );
     }
 
+    let admin_username = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
+    AuditEntry::new(AuditEventType::RoleChanged)
+        .user(auth_user.user_id, &admin_username)
+        .resource("user", &id)
+        .log();
+
     tracing::info!(
         admin_id = %auth_user.user_id,
         target_user_id = %id,
@@ -2190,8 +2356,21 @@ async fn admin_delete_user(
         );
     }
 
+    let admin_username = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
     match state_guard.db.anonymize_user(&id).await {
         Ok(true) => {
+            AuditEntry::new(AuditEventType::UserDeleted)
+                .user(auth_user.user_id, &admin_username)
+                .resource("user", &id)
+                .log();
             tracing::info!(
                 admin_id = %auth_user.user_id,
                 target_user_id = %id,

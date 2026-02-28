@@ -21,13 +21,17 @@ pub struct ServerConnection {
 
 impl ServerConnection {
     /// Connect to a server
+    // NOTE: Uses danger_accept_invalid_certs for self-signed server certificates.
+    // For production use, call connect_with_cert() with the server's CA certificate.
     pub async fn connect(server_info: ServerInfo) -> Result<Self> {
         let scheme = if server_info.tls { "https" } else { "http" };
         let base_url = format!("{}://{}:{}", scheme, server_info.host, server_info.port);
 
         // Build HTTP client
+        // For LAN connections to self-signed certs, accept any cert by default.
+        // In production, provide a CA cert via connect_with_cert() instead.
         let client = Client::builder()
-            .danger_accept_invalid_certs(true) // TODO: Proper cert validation
+            .danger_accept_invalid_certs(true)
             .build()
             .context("Failed to create HTTP client")?;
 
@@ -41,6 +45,31 @@ impl ServerConnection {
         // Perform handshake
         conn.handshake().await?;
 
+        Ok(conn)
+    }
+
+    /// Connect to a server with a custom CA certificate (for self-signed certs).
+    /// This is more secure than accepting any certificate.
+    pub async fn connect_with_cert(server_info: ServerInfo, ca_cert_pem: &[u8]) -> Result<Self> {
+        let scheme = if server_info.tls { "https" } else { "http" };
+        let base_url = format!("{}://{}:{}", scheme, server_info.host, server_info.port);
+
+        let cert = reqwest::Certificate::from_pem(ca_cert_pem)
+            .context("Invalid CA certificate PEM")?;
+
+        let client = Client::builder()
+            .add_root_certificate(cert)
+            .build()
+            .context("Failed to create HTTP client with custom cert")?;
+
+        let conn = Self {
+            client,
+            base_url,
+            server_info,
+            auth_tokens: None,
+        };
+
+        conn.handshake().await?;
         Ok(conn)
     }
 
