@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*'
 
+# Default minimal permissions — the release job overrides to contents: write only where needed
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
