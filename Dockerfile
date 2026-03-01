@@ -2,12 +2,14 @@
 FROM node:22-alpine AS web-builder
 WORKDIR /app/web
 COPY parkhub-web/package*.json ./
-RUN npm ci
+ENV NODE_ENV=production
+RUN npm ci --omit=dev
 COPY parkhub-web/ ./
 RUN npm run build
 
 # Build stage - Rust Server
-FROM rust:alpine AS rust-builder
+# Pin minor version to avoid silent toolchain drift; update intentionally
+FROM rust:1-alpine AS rust-builder
 RUN apk add --no-cache musl-dev openssl-dev openssl-libs-static pkgconfig cmake make perl clang curl
 WORKDIR /app
 # Copy manifests first for layer caching
@@ -33,16 +35,20 @@ COPY --from=web-builder /app/web/dist ./parkhub-web/dist/
 RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
     cargo build --release --package parkhub-server --no-default-features --features headless
 
-# Runtime stage
+# Runtime stage — minimal Alpine, non-root user
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S parkhub && adduser -S -G parkhub parkhub
 WORKDIR /app
 
-# Copy binary
-COPY --from=rust-builder /app/target/release/parkhub-server /app/parkhub-server
+# Copy binary with correct ownership
+COPY --chown=parkhub:parkhub --from=rust-builder /app/target/release/parkhub-server /app/parkhub-server
 
-# Create data directory
-RUN mkdir -p /data
+# Create data directory owned by the non-root user
+RUN mkdir -p /data && chown parkhub:parkhub /data
+
+# Drop to non-root
+USER parkhub
 
 # Environment
 ENV PARKHUB_DATA_DIR=/data

@@ -3,20 +3,33 @@ target/
 parkhub-web/node_modules/
 parkhub-web/dist/
 
+# Root-level node_modules (e2e/test tooling)
+node_modules/
+
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
 
 # Git
 .git/
 .gitignore
+.gitattributes
 
 # Logs
 *.log
+logs/
 
-# Local config
+# Local config — never bake into image
+.env
+.env.*
 config.toml
 *.redb
 
@@ -27,3 +40,16 @@ docs/
 
 # Tests
 tests/
+parkhub-test.js
+
+# Static assets only needed for desktop client / local dev
+assets/
+fonts/
+screenshots/
+scripts/
+portable/
+
+# CI / deployment config (not needed inside the image)
+koyeb.yaml
+render.yaml
+*.bat
