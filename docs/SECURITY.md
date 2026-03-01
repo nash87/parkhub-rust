@@ -208,7 +208,7 @@ Log format: structured JSON via `tracing` to stdout.
 | Component | Security Properties |
 |-----------|---------------------|
 | Binary | Compiled as a static musl binary — no shared library vulnerabilities |
-| Docker image | Non-root user inside minimal Alpine runtime image |
+| Docker image | Minimal Alpine runtime image. The container runs as root by default — use `user: "1000:1000"` in `docker-compose.yml` and ensure `/data` is owned by that UID for production deployments |
 | TLS | `rustls` (pure Rust) — no OpenSSL dependency |
 | Cryptography | Well-audited Rust crates: `argon2`, `aes-gcm`, `pbkdf2`, `rand`, `zeroize` |
 
@@ -234,7 +234,8 @@ Key security dependencies:
 | Token refresh not implemented | Clients must re-authenticate after 24 hours. Token refresh is planned |
 | No account lockout beyond rate limiting | 5 login attempts/minute per IP. Manual deactivation via admin API |
 | Self-signed certificates trigger browser warnings | Use a reverse proxy with Let's Encrypt, or add cert to trust store |
-| Admin user management UI is a placeholder | Use the API (`GET/PATCH/DELETE /api/v1/admin/users/*`) |
+| Docker container runs as root | Add `user: "1000:1000"` in `docker-compose.yml` and `chown -R 1000:1000 /data` on the host volume for production |
+| Auth-endpoint rate limiter not wired | Deploy behind a reverse proxy (nginx, Caddy) with per-IP rate limiting. See `SECURITY-AUDIT.md` section 8 |
 
 ---
 
@@ -245,7 +246,7 @@ If you discover a security vulnerability in ParkHub:
 1. **Do not open a public GitHub issue** for security vulnerabilities
 2. For vulnerabilities in a deployed instance, email the instance operator
 3. For vulnerabilities in the open-source code, open a GitHub Security Advisory:
-   `https://github.com/nash87/parkhub/security/advisories/new`
+   `https://github.com/nash87/parkhub-rust/security/advisories/new`
 
 Please include in your report:
 - Description of the vulnerability

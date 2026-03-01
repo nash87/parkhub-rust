@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="docs/CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.0-brightgreen.svg?style=for-the-badge" alt="v1.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.0-brightgreen.svg?style=for-the-badge" alt="v1.2.0"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -151,9 +151,10 @@ docker compose up -d
 Open **http://localhost:8080** in your browser.
 Default credentials: `admin` / `admin` — **change immediately after first login**.
 
-To use a custom admin password from the start, set it before running `up`:
+To enable database encryption at rest (strongly recommended for production):
 ```bash
-PARKHUB_ADMIN_PASSWORD=mypassword docker compose up -d
+# Add to docker-compose.yml environment section:
+# - PARKHUB_DB_PASSPHRASE=your-strong-passphrase
 ```
 
 To run without Docker (single binary):
@@ -172,6 +173,8 @@ The binary serves the full React frontend — no web server or reverse proxy nee
 | Screenshot | Description |
 |---|---|
 | ![Login](screenshots/01-login.png) | Clean login page with dark/light mode |
+| ![Register](screenshots/02-register.png) | Self-registration form |
+| ![After Register](screenshots/03-after-register.png) | Dashboard immediately after registration |
 | ![Dashboard](screenshots/05-dashboard.png) | Dashboard: occupancy stats and lot overview |
 | ![Booking](screenshots/06-book.png) | Booking flow with interactive slot grid |
 | ![Bookings List](screenshots/07-bookings.png) | Active and past bookings |
@@ -234,9 +237,12 @@ Because all data stays on your server, **no Auftragsverarbeitungsvertrag (AVV) w
 
 **Legal templates included** in `legal/`:
 - `impressum-template.md` — DDG §5 Impressum
-- `datenschutz-template.md` — Datenschutzerklarung
-- `agb-template.md` — Allgemeine Geschaftsbedingungen
-- `avv-template.md` — Auftragsverarbeitungsvertrag
+- `datenschutz-template.md` — Datenschutzerklärung (Privacy Policy)
+- `agb-template.md` — Allgemeine Geschäftsbedingungen (Terms and Conditions)
+- `avv-template.md` — Auftragsverarbeitungsvertrag (Data Processing Agreement)
+- `cookie-policy-template.md` — Cookie / localStorage policy
+- `widerrufsbelehrung-template.md` — Widerrufsbelehrung (§356 BGB right of withdrawal)
+- `vvt-template.md` — Verzeichnis der Verarbeitungstätigkeiten (Art. 30 DSGVO processing record)
 
 See [docs/GDPR.md](docs/GDPR.md) for the full operator compliance checklist.
 
@@ -264,16 +270,16 @@ Key environment variables (full list in [docs/CONFIGURATION.md](docs/CONFIGURATI
 
 | Variable | Default | Description |
 |---|---|---|
-| `PARKHUB_HOST` | `0.0.0.0` | Bind address |
-| `PARKHUB_PORT` | `8080` | Listen port |
 | `PARKHUB_DB_PASSPHRASE` | — | Enables AES-256-GCM at-rest encryption |
-| `PARKHUB_TLS_CERT` | — | Path to TLS certificate (PEM) |
-| `PARKHUB_TLS_KEY` | — | Path to TLS private key (PEM) |
-| `PARKHUB_SMTP_HOST` | — | SMTP server for email notifications |
-| `PARKHUB_SMTP_PORT` | `587` | SMTP port |
-| `PARKHUB_SMTP_USER` | — | SMTP username |
-| `PARKHUB_SMTP_PASS` | — | SMTP password |
 | `RUST_LOG` | `info` | Log level (`debug`, `info`, `warn`, `error`) |
+| `SMTP_HOST` | — | SMTP server for email notifications |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USER` | — | SMTP username |
+| `SMTP_PASS` | — | SMTP password |
+| `SMTP_FROM` | — | SMTP from address |
+| `APP_URL` | — | Server base URL (used in email links) |
+
+> **Port and host** are configured via the `--port` CLI flag or the `port` field in `config.toml` (not environment variables). See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the full reference.
 
 ---
 
@@ -304,18 +310,24 @@ See [docs/API.md](docs/API.md) for the complete REST API reference with curl exa
 | [docs/API.md](docs/API.md) | Full REST API reference with curl examples |
 | [docs/GDPR.md](docs/GDPR.md) | Operator DSGVO compliance checklist |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model and responsible disclosure |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Release history |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Development setup and PR process |
+| [LICENSES.md](LICENSES.md) | Third-party dependency licenses |
 | [legal/impressum-template.md](legal/impressum-template.md) | German Impressum template (DDG §5) |
-| [legal/datenschutz-template.md](legal/datenschutz-template.md) | Datenschutzerklarung template |
+| [legal/datenschutz-template.md](legal/datenschutz-template.md) | Datenschutzerklärung template |
 | [legal/agb-template.md](legal/agb-template.md) | AGB template |
 | [legal/avv-template.md](legal/avv-template.md) | Auftragsverarbeitungsvertrag template |
+| [legal/cookie-policy-template.md](legal/cookie-policy-template.md) | Cookie / localStorage policy |
+| [legal/widerrufsbelehrung-template.md](legal/widerrufsbelehrung-template.md) | Widerrufsbelehrung (§356 BGB) |
+| [legal/vvt-template.md](legal/vvt-template.md) | Verzeichnis der Verarbeitungstätigkeiten (Art. 30 DSGVO) |
 
 ---
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+**Note on the `gui` feature**: The default build includes [Slint](https://slint.dev/) (GUI framework, GPL-3.0 community edition). Binaries built with `--features gui` (the default on Windows/macOS) are governed by GPL-3.0. Binaries built with `--no-default-features --features headless` (used in Docker and server deployments) are purely MIT. See [LICENSES.md](LICENSES.md) for the full dependency license inventory.
 
 ---
 

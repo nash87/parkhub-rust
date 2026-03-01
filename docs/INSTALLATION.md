@@ -25,8 +25,8 @@
 | Deployment | Requirements |
 |-----------|--------------|
 | Docker Compose | Docker Engine 24+, Compose v2 (`docker compose`) |
-| Bare metal / source | Rust 1.83+, Node.js 22+, npm |
-| Windows GUI build | Rust 1.83+, Node.js 22+, CMake, C++ compiler |
+| Bare metal / source | Rust 1.84+, Node.js 22+, npm |
+| Windows GUI build | Rust 1.84+, Node.js 22+, CMake, C++ compiler |
 | Kubernetes | kubectl, a running cluster, a PVC storage class |
 
 ---
@@ -42,25 +42,28 @@ git clone https://github.com/nash87/parkhub-rust
 cd parkhub-rust
 ```
 
-### Step 2 — (Optional) Create `.env` for production settings
+### Step 2 — (Optional) Enable database encryption
 
-The default `docker-compose.yml` works out of the box. For production, create a `.env` file:
+For production, set the `PARKHUB_DB_PASSPHRASE` environment variable to enable AES-256-GCM at-rest encryption.
+Edit `docker-compose.yml` and uncomment the `PARKHUB_DB_PASSPHRASE` line, then set a strong random value:
 
-```env
-PARKHUB_HOST=0.0.0.0
-PARKHUB_PORT=8080
-RUST_LOG=info
-
-# Enable AES-256-GCM database encryption (strongly recommended)
-PARKHUB_DB_PASSPHRASE=change-this-to-a-long-random-passphrase
-
-# Optional: bring-your-own TLS certificate
-# PARKHUB_TLS_ENABLED=true
-# PARKHUB_TLS_CERT=/data/cert.pem
-# PARKHUB_TLS_KEY=/data/key.pem
+```bash
+# Generate a strong random passphrase
+openssl rand -base64 32
 ```
 
-> Never commit `.env` to version control. Store the passphrase in a password manager or secret vault.
+Then in `docker-compose.yml`:
+```yaml
+    environment:
+      - RUST_LOG=info
+      - PARKHUB_DB_PASSPHRASE=your-generated-passphrase-here
+```
+
+> Never commit the passphrase to version control. Store it in a password manager or secret vault.
+
+> **Note on port configuration**: The port is set via the `--port` CLI flag in the `command` section of
+> `docker-compose.yml` (not an environment variable). To change the port, edit both the `--port` value
+> in `command` and the `ports` mapping.
 
 ### Step 3 — Start
 
@@ -73,7 +76,7 @@ docker compose up -d
 ```bash
 docker compose ps
 curl http://localhost:8080/health/live
-# {"status":"ok"}
+# HTTP 200 OK
 ```
 
 Open `http://localhost:8080` in your browser.
@@ -89,18 +92,25 @@ On first start, ParkHub automatically:
 
 ### Data Persistence
 
-The named Docker volume `parkhub-data` stores the database and all configuration:
+The named Docker volume `parkhub-data` stores the database and all configuration.
+
+> **Volume naming**: Docker Compose prefixes the volume name with the project name (the directory you
+> cloned into). If you cloned into `parkhub-rust/`, the volume is named `parkhub-rust_parkhub-data`.
+> Check with: `docker volume ls | grep parkhub`
 
 ```bash
+# Find the actual volume name
+VOLUME=$(docker volume ls --format '{{.Name}}' | grep parkhub-data)
+
 # Backup
 docker run --rm \
-  -v parkhub_parkhub-data:/data \
+  -v "$VOLUME":/data \
   -v $(pwd):/backup alpine \
   tar czf /backup/parkhub-backup-$(date +%Y%m%d).tar.gz -C /data .
 
 # Restore
 docker run --rm \
-  -v parkhub_parkhub-data:/data \
+  -v "$VOLUME":/data \
   -v $(pwd):/backup alpine \
   sh -c "cd /data && tar xzf /backup/parkhub-backup-YYYYMMDD.tar.gz"
 ```
@@ -139,7 +149,7 @@ npm run build
 cd ..
 
 # Build the server (headless, no GUI)
-cargo build --release --package parkhub-server --no-default-features
+cargo build --release --package parkhub-server --no-default-features --features headless
 ```
 
 The compiled binary is at `target/release/parkhub-server`.
@@ -313,7 +323,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: parkhub
-          image: ghcr.io/nash87/parkhub:v1.1.0  # Pin to specific version; check releases for latest
+          image: ghcr.io/nash87/parkhub-rust:v1.2.0  # Pin to specific version; check releases for latest
           ports:
             - containerPort: 8080
           env:
@@ -578,9 +588,13 @@ Backup files are stored in `data/backups/` next to the main database.
 ### Manual backup (Docker)
 
 ```bash
+# Find the volume name (project prefix varies based on clone directory name)
+VOLUME=$(docker volume ls --format '{{.Name}}' | grep parkhub-data)
+
 # Create a timestamped backup tarball
+mkdir -p backups
 docker run --rm \
-  -v parkhub_parkhub-data:/data \
+  -v "$VOLUME":/data \
   -v $(pwd)/backups:/backup alpine \
   tar czf /backup/parkhub-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
 ```
@@ -622,7 +636,7 @@ git pull
 cd parkhub-web && npm ci && npm run build && cd ..
 
 # Rebuild and restart
-cargo build --release --package parkhub-server --no-default-features
+cargo build --release --package parkhub-server --no-default-features --features headless
 sudo systemctl stop parkhub
 sudo cp target/release/parkhub-server /opt/parkhub/
 sudo systemctl start parkhub
@@ -633,7 +647,8 @@ sudo systemctl start parkhub
 Always create a manual backup before upgrading a production instance:
 
 ```bash
-docker run --rm -v parkhub_parkhub-data:/data -v $(pwd):/backup alpine \
+VOLUME=$(docker volume ls --format '{{.Name}}' | grep parkhub-data)
+docker run --rm -v "$VOLUME":/data -v $(pwd):/backup alpine \
   tar czf /backup/pre-upgrade-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
