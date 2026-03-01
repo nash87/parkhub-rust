@@ -26,8 +26,13 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Run cargo check
-        run: cargo check --workspace --all-targets
+      # Check only the server-side packages — parkhub-client has Slint/GTK deps
+      # that require a full desktop environment and cannot be checked on plain Ubuntu.
+      # The client is covered by the Windows build job in release.yml.
+      - name: Run cargo check (server + common)
+        run: |
+          cargo check --package parkhub-common --all-targets
+          cargo check --package parkhub-server --no-default-features --features headless --all-targets
 
   fmt:
     name: Cargo Format
@@ -59,8 +64,11 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+      # Clippy only for server-side packages (same reason as cargo check above)
+      - name: Run clippy (server + common)
+        run: |
+          cargo clippy --package parkhub-common --all-targets -- -D warnings
+          cargo clippy --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings
 
   test:
     name: Cargo Test
@@ -76,8 +84,10 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Run tests
-        run: cargo test --workspace
+      - name: Run tests (server + common)
+        run: |
+          cargo test --package parkhub-common
+          cargo test --package parkhub-server --no-default-features --features headless
 
   build:
     name: Cargo Build Release
@@ -93,8 +103,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build release
-        run: cargo build --release --workspace
+      # Build the headless server binary — this is what Docker ships
+      - name: Build release (headless server)
+        run: cargo build --release --package parkhub-server --no-default-features --features headless
 
   docker:
     name: Docker Build
@@ -109,10 +120,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: false
-          tags: nash87/parkhub-rust:latest
+          tags: ghcr.io/nash87/parkhub-rust:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

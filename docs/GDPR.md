@@ -241,6 +241,9 @@ services in Germany. ParkHub makes it easy:
 | `legal/datenschutz-template.md` | DSGVO-compliant privacy policy |
 | `legal/agb-template.md` | General Terms and Conditions |
 | `legal/avv-template.md` | Data Processing Agreement (for SMTP providers) |
+| `legal/cookie-policy-template.md` | Cookie / localStorage usage policy (TTDSG §25) |
+| `legal/widerrufsbelehrung-template.md` | Right of withdrawal (§356 BGB) — required for B2C bookings |
+| `legal/vvt-template.md` | Verzeichnis der Verarbeitungstätigkeiten (Art. 30 DSGVO) |
 
 Adapt all templates to your organization's specific situation. For legally binding
 wording, consult an attorney specializing in IT law (IT-Recht).
@@ -270,9 +273,10 @@ Before going live with ParkHub in a production environment:
 **Legal setup**
 - [ ] Impressum fully filled in (Admin → Impressum). Verify `/impressum` is publicly reachable
 - [ ] Datenschutzerklärung (Privacy Policy) drafted, adapted, and published
-- [ ] AGB created and published (if paid parking / commercial service)
-- [ ] AVV signed with SMTP provider (if email notifications are enabled)
-- [ ] Verzeichnis der Verarbeitungstätigkeiten (VVT) updated per Art. 30 DSGVO
+- [ ] AGB created and published (if paid parking / commercial service) — template: `legal/agb-template.md`
+- [ ] Widerrufsbelehrung added to AGB (B2C bookings) — template: `legal/widerrufsbelehrung-template.md`
+- [ ] AVV signed with SMTP provider (if email notifications are enabled) — template: `legal/avv-template.md`
+- [ ] Verzeichnis der Verarbeitungstätigkeiten (VVT) updated per Art. 30 DSGVO — template: `legal/vvt-template.md`
 
 **Technical security**
 - [ ] Default admin password changed from `admin` to a strong unique password

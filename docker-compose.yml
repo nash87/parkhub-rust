@@ -7,27 +7,24 @@ services:
       dockerfile: Dockerfile
     container_name: parkhub
     restart: unless-stopped
+    # Pass CLI flags so the server runs headless on port 8080.
+    # The port must be specified here (--port flag) because PARKHUB_PORT is not
+    # a recognized environment variable — port configuration is CLI or config.toml only.
+    command: ["/app/parkhub-server", "--headless", "--unattended", "--data-dir", "/data", "--port", "8080"]
     ports:
       - "8080:8080"
     volumes:
       - parkhub-data:/data
     environment:
-      - PARKHUB_HOST=0.0.0.0
-      - PARKHUB_PORT=8080
       - RUST_LOG=info
-      # Change PARKHUB_ADMIN_PASSWORD before first start!
-      - PARKHUB_ADMIN_PASSWORD=admin
-      # Optional: Enable database encryption at rest
+      # Enable database encryption at rest (strongly recommended for production)
       # - PARKHUB_DB_PASSPHRASE=change-me-to-a-strong-passphrase
-      # Optional: Enable HTTPS
-      # - PARKHUB_TLS_ENABLED=true
-      # - PARKHUB_TLS_CERT=/data/cert.pem
-      # - PARKHUB_TLS_KEY=/data/key.pem
-      # Optional: SMTP email
-      # - PARKHUB_SMTP_HOST=smtp.example.com
-      # - PARKHUB_SMTP_PORT=587
-      # - PARKHUB_SMTP_USER=user@example.com
-      # - PARKHUB_SMTP_PASS=secret
+      # SMTP email notifications (env var names without PARKHUB_ prefix in current version)
+      # - SMTP_HOST=smtp.example.com
+      # - SMTP_PORT=587
+      # - SMTP_USER=user@example.com
+      # - SMTP_PASS=secret
+      # - SMTP_FROM=parkhub@example.com
     networks:
       - parkhub-internal
     healthcheck:
@@ -35,7 +32,7 @@ services:
       interval: 30s
       timeout: 3s
       retries: 3
-      start_period: 10s
+      start_period: 60s
     logging:
       driver: json-file
       options:

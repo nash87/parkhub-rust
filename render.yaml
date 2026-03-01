@@ -11,7 +11,7 @@ services:
     envVars:
       - key: RUST_LOG
         value: info
-      - key: ALLOW_SELF_REGISTRATION
-        value: "false"
+      # Note: self-registration is disabled via --unattended flag (sets allow_self_registration=false in config).
+      # ALLOW_SELF_REGISTRATION is not a recognized env var — the setting lives in config.toml.
     # /data is ephemeral on Render free tier — redb resets on each restart
     # This is intentional: demo data always starts fresh

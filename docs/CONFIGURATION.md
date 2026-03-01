@@ -23,18 +23,24 @@ or auto-configures with secure defaults (headless / `--unattended` mode).
 
 ## Environment Variables
 
-These variables override or supplement `config.toml`. Use them in Docker and
-systemd environments where editing a file inside a volume is inconvenient.
+These variables are read directly from the environment at startup and override
+the corresponding `config.toml` settings where applicable.
+
+> **Note on port and host configuration**: `PARKHUB_HOST` and `PARKHUB_PORT` are **not**
+> recognized environment variables in the current release. Port and bind address are
+> configured via the CLI `--port` flag or the `port` field in `config.toml`. When using
+> Docker Compose, pass the port via the `command` override (see `docker-compose.yml`).
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `PARKHUB_DB_PASSPHRASE` | — | When encryption enabled | AES-256-GCM database encryption passphrase. Never written to disk. Supply via environment variable or GUI prompt. |
-| `PARKHUB_HOST` | `0.0.0.0` | No | Bind address for the HTTP server |
-| `PARKHUB_PORT` | `8080` | No | Listen port (overrides `port` in config.toml) |
-| `PARKHUB_TLS_ENABLED` | `false` | No | Enable TLS. Set `true` to use TLS on the port |
-| `PARKHUB_TLS_CERT` | `data/cert.pem` | No | Path to TLS certificate file |
-| `PARKHUB_TLS_KEY` | `data/key.pem` | No | Path to TLS private key file |
 | `RUST_LOG` | `info` | No | Log level and filter. Examples: `info`, `debug`, `warn`, `parkhub_server=trace` |
+| `SMTP_HOST` | — | No | SMTP server hostname for email notifications |
+| `SMTP_PORT` | `587` | No | SMTP server port |
+| `SMTP_USER` | — | No | SMTP authentication username |
+| `SMTP_PASS` | — | No | SMTP authentication password |
+| `SMTP_FROM` | — | No | From address for outgoing emails |
+| `APP_URL` | — | No | Base URL of the server, used in email links (e.g. `https://parking.example.com`) |
 
 ---
 
@@ -168,7 +174,7 @@ When `encryption_enabled = true`, ParkHub requires the passphrase at startup.
 
 ```bash
 # Docker — pass via environment variable
-docker run -e PARKHUB_DB_PASSPHRASE="my-strong-passphrase" ghcr.io/nash87/parkhub:latest
+docker run -e PARKHUB_DB_PASSPHRASE="my-strong-passphrase" ghcr.io/nash87/parkhub-rust:latest
 
 # Docker Compose — use .env file (never commit this file)
 docker compose --env-file .env up -d

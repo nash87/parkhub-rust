@@ -22,7 +22,7 @@ Thank you for your interest in contributing to ParkHub Rust.
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Rust | 1.83+ | `rustup update stable` |
+| Rust | 1.84+ | `rustup update stable` |
 | Node.js | 22+ | [nodejs.org](https://nodejs.org) |
 | npm | 10+ | bundled with Node.js |
 | Docker | optional | for integration testing |
@@ -30,8 +30,8 @@ Thank you for your interest in contributing to ParkHub Rust.
 ### Clone and build
 
 ```bash
-git clone https://github.com/nash87/parkhub
-cd parkhub
+git clone https://github.com/nash87/parkhub-rust
+cd parkhub-rust
 
 # Build the React frontend
 cd parkhub-web
