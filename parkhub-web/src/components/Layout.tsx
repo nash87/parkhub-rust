@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Coins, UserCircle,
   GearSix, SignOut, List, X, SunDim, Moon,
+  Buildings, HouseSimple, UsersThree,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useUseCase, type UseCase } from '../context/UseCaseContext';
 
 const NAV_ITEMS = [
   { to: '/', icon: House, key: 'dashboard', end: true },
@@ -20,7 +22,15 @@ export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { resolved, setTheme } = useTheme();
+  const { useCase } = useUseCase();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const useCaseIcons: Record<UseCase, React.ElementType> = {
+    business: Buildings,
+    residential: HouseSimple,
+    personal: UsersThree,
+  };
+  const UseCaseIcon = useCaseIcons[useCase];
 
   function handleLogout() {
     logout();
@@ -39,7 +49,13 @@ export function Layout() {
           <div className="w-10 h-10 rounded-xl bg-primary-800 dark:bg-surface-800 flex items-center justify-center border border-primary-700 dark:border-surface-700">
             <Car weight="fill" className="w-5 h-5 text-accent-500" />
           </div>
-          <span className="text-xl font-bold text-surface-900 dark:text-white tracking-tight font-[Outfit]">ParkHub</span>
+          <div className="min-w-0">
+            <span className="text-xl font-bold text-surface-900 dark:text-white tracking-tight font-[Outfit]">ParkHub</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <UseCaseIcon weight="regular" className="w-3 h-3 text-accent-500" />
+              <span className="text-[10px] font-medium text-surface-400 uppercase tracking-wider">{t(`useCase.${useCase}.name`)}</span>
+            </div>
+          </div>
         </div>
 
         {/* Nav */}

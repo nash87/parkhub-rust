@@ -6,8 +6,10 @@ import { languages } from '../i18n';
 import {
   Car, CalendarCheck, ChartLineUp, CoinVertical,
   ArrowRight, Globe, SunDim, Moon,
+  Buildings, House, UsersThree,
 } from '@phosphor-icons/react';
 import { useTheme } from '../context/ThemeContext';
+import { useUseCase } from '../context/UseCaseContext';
 
 const CYCLE_GREETINGS = [
   { lang: 'en', text: 'Welcome' },
@@ -26,6 +28,7 @@ export function WelcomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { resolved, setTheme } = useTheme();
+  const { useCase } = useUseCase();
   const [greetingIdx, setGreetingIdx] = useState(0);
   const [showLanguages, setShowLanguages] = useState(false);
   const [selectedLang, setSelectedLang] = useState(i18n.language?.slice(0, 2) || 'en');
@@ -111,7 +114,7 @@ export function WelcomePage() {
           transition={{ delay: 0.3 }}
           className="text-surface-500 dark:text-surface-400 text-lg text-center max-w-md mb-12"
         >
-          {t('welcome.subtitle')}
+          {t(`welcome.subtitle.${useCase}`)}
         </motion.p>
 
         {/* Feature cards */}
@@ -122,9 +125,9 @@ export function WelcomePage() {
           className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl w-full mb-12"
         >
           {[
-            { icon: CalendarCheck, title: t('welcome.features.booking'), desc: t('welcome.features.bookingDesc'), accent: 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400' },
-            { icon: CoinVertical, title: t('welcome.features.credits'), desc: t('welcome.features.creditsDesc'), accent: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' },
-            { icon: ChartLineUp, title: t('welcome.features.analytics'), desc: t('welcome.features.analyticsDesc'), accent: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
+            { icon: CalendarCheck, title: t(`welcome.features.${useCase}.booking`), desc: t(`welcome.features.${useCase}.bookingDesc`), accent: 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400' },
+            { icon: CoinVertical, title: t(`welcome.features.${useCase}.credits`), desc: t(`welcome.features.${useCase}.creditsDesc`), accent: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' },
+            { icon: ChartLineUp, title: t(`welcome.features.${useCase}.analytics`), desc: t(`welcome.features.${useCase}.analyticsDesc`), accent: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
           ].map((feat, i) => (
             <motion.div
               key={i}
