@@ -27,45 +27,45 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-dvh mesh-gradient flex items-center justify-center px-4 py-12">
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
-        <Link to="/login" className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors">
-          <ArrowLeft weight="bold" className="w-4 h-4" /> {t('auth.signIn')}
+      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
+        <Link to="/login" className="inline-flex items-center gap-2 text-xs text-surface-500 hover:text-accent-600 mb-8 transition-colors cursor-pointer uppercase tracking-wider font-semibold">
+          <ArrowLeft weight="bold" className="w-3.5 h-3.5" /> {t('auth.signIn')}
         </Link>
 
-        <div className="glass-card p-8 sm:p-10">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
-              <CarSimple weight="fill" className="w-8 h-8 text-white" />
+        <div className="glass-card p-7 sm:p-8">
+          <div className="text-center mb-7">
+            <div className="w-12 h-12 bg-primary-900 dark:bg-surface-800 flex items-center justify-center mx-auto mb-4 border border-primary-800 dark:border-surface-700">
+              <CarSimple weight="fill" className="w-6 h-6 text-accent-500" />
             </div>
-            <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('auth.register')}</h1>
-            <p className="text-surface-500 dark:text-surface-400 mt-1">{t('auth.registerSubtitle')}</p>
+            <h1 className="text-xl font-bold text-surface-900 dark:text-white tracking-tight">{t('auth.register')}</h1>
+            <p className="text-surface-500 dark:text-surface-400 mt-1 text-sm">{t('auth.registerSubtitle')}</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             {(['name', 'username', 'email'] as const).map(field => (
               <div key={field}>
-                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t(`auth.${field}`)}</label>
+                <label className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t(`auth.${field}`)}</label>
                 <input type={field === 'email' ? 'email' : 'text'} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} className="input" required />
               </div>
             ))}
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.password')}</label>
+              <label className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t('auth.password')}</label>
               <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.passwordConfirmation')}</label>
+              <label className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t('auth.passwordConfirmation')}</label>
               <input type="password" value={form.password_confirmation} onChange={e => setForm({ ...form, password_confirmation: e.target.value })} className="input" required minLength={8} />
             </div>
 
-            {error && <div className="bg-danger/10 border border-danger/20 rounded-xl px-4 py-3 text-sm text-danger font-medium">{error}</div>}
+            {error && <div className="bg-danger/10 border border-danger/20 rounded-md px-3 py-2.5 text-xs text-danger font-medium">{error}</div>}
 
-            <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 text-base">
-              {loading ? <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" /> : t('auth.signUp')}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full py-2.5 text-sm cursor-pointer">
+              {loading ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : t('auth.signUp')}
             </button>
           </form>
 
-          <p className="text-center text-sm text-surface-500 mt-6">
-            {t('auth.hasAccount')} <Link to="/login" className="text-primary-600 font-semibold">{t('auth.signIn')}</Link>
+          <p className="text-center text-xs text-surface-500 mt-5">
+            {t('auth.hasAccount')} <Link to="/login" className="text-accent-600 font-semibold cursor-pointer">{t('auth.signIn')}</Link>
           </p>
         </div>
       </motion.div>
