@@ -51,13 +51,13 @@ export const api = {
       method: 'POST', body: JSON.stringify({ username, password }),
     }),
 
-  register: (data: { username: string; email: string; password: string; name: string }) =>
+  register: (data: { username: string; email: string; password: string; password_confirmation: string; name: string }) =>
     request('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
-  me: () => request<User>('/api/v1/users/me'),
+  me: () => request<User>('/api/v1/me'),
 
   updateMe: (data: Partial<User>) =>
-    request<User>('/api/v1/users/me', { method: 'PUT', body: JSON.stringify(data) }),
+    request<User>('/api/v1/me', { method: 'PUT', body: JSON.stringify(data) }),
 
   changePassword: (current_password: string, password: string, password_confirmation: string) =>
     request('/api/v1/users/me/password', {
@@ -247,10 +247,17 @@ export interface AdminStats {
 }
 
 export interface DemoStatus {
-  timer_seconds: number;
-  votes: number;
-  vote_threshold: number;
+  enabled: boolean;
+  timer: {
+    remaining: number;
+    duration: number;
+    started_at: number;
+  };
+  votes: {
+    current: number;
+    threshold: number;
+    has_voted: boolean;
+  };
   viewers: number;
-  has_voted: boolean;
   reset?: boolean;
 }

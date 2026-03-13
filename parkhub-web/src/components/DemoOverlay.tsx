@@ -17,7 +17,7 @@ export function DemoOverlay() {
       if (res.success && res.data?.demo_mode) {
         setEnabled(true);
       }
-    }).catch(() => {});
+    }).catch(() => { /* Demo mode not available */ });
   }, []);
 
   // Poll demo status
@@ -28,7 +28,7 @@ export function DemoOverlay() {
       api.getDemoStatus().then(res => {
         if (res.success && res.data) {
           setDemo(res.data);
-          setLocalTimer(res.data.timer_seconds);
+          setLocalTimer(res.data.timer.remaining);
           if (res.data.reset) {
             window.location.reload();
           }
@@ -53,7 +53,10 @@ export function DemoOverlay() {
   const handleVote = useCallback(() => {
     api.voteDemoReset().then(res => {
       if (res.success) {
-        setDemo(prev => prev ? { ...prev, has_voted: true, votes: prev.votes + 1 } : prev);
+        setDemo(prev => prev ? {
+          ...prev,
+          votes: { ...prev.votes, has_voted: true, current: prev.votes.current + 1 },
+        } : prev);
       }
     });
   }, []);
@@ -63,7 +66,7 @@ export function DemoOverlay() {
   const minutes = Math.floor(localTimer / 60);
   const seconds = localTimer % 60;
   const isLow = localTimer < 300;
-  const voteProgress = demo.vote_threshold > 0 ? (demo.votes / demo.vote_threshold) * 100 : 0;
+  const voteProgress = demo.votes.threshold > 0 ? (demo.votes.current / demo.votes.threshold) * 100 : 0;
 
   return (
     <motion.div
@@ -116,17 +119,19 @@ export function DemoOverlay() {
                     />
                   </div>
                   <span className="text-xs font-medium text-surface-500">
-                    {t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold })}
+                    {t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })}
                   </span>
                 </div>
 
                 <button
                   onClick={handleVote}
-                  disabled={demo.has_voted}
+                  disabled={demo.votes.has_voted}
                   className="btn btn-sm btn-primary w-full disabled:opacity-50"
                 >
                   <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
-                  {demo.has_voted ? t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold }) : t('demo.voteReset')}
+                  {demo.votes.has_voted
+                    ? t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })
+                    : t('demo.voteReset')}
                 </button>
               </div>
             </motion.div>
