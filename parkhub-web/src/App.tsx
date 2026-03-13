@@ -21,6 +21,7 @@ import { TransparencyPage } from './pages/Transparency';
 import { ForgotPasswordPage } from './pages/ForgotPassword';
 import { ResetPasswordPage } from './pages/ResetPassword';
 import { SpinnerGap } from '@phosphor-icons/react';
+import { DemoOverlay } from './components/DemoOverlay';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,6 +104,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <DemoOverlay />
         <ThemeInitializer>
           <AuthProvider>
             <AppRoutes />

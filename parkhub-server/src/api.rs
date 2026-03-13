@@ -22,6 +22,7 @@ use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 use crate::audit::{AuditEntry, AuditEventType};
+use crate::demo;
 use crate::email;
 use crate::metrics;
 use crate::openapi::ApiDoc;
@@ -133,6 +134,14 @@ pub fn create_router(state: SharedState) -> Router {
             auth_middleware,
         ));
 
+    // Demo mode routes (no auth, in-memory state)
+    let demo_state = demo::new_demo_state();
+    let demo_routes = Router::new()
+        .route("/api/v1/demo/status", get(demo::demo_status))
+        .route("/api/v1/demo/vote", post(demo::demo_vote))
+        .route("/api/v1/demo/config", get(demo::demo_config))
+        .layer(Extension(demo_state));
+
     // Clone handle for the closure
     let metrics_handle_clone = metrics_handle.clone();
 
@@ -141,6 +150,7 @@ pub fn create_router(state: SharedState) -> Router {
         .merge(login_route)
         .merge(register_route)
         .merge(forgot_route)
+        .merge(demo_routes)
         .merge(protected_routes)
         // Prometheus metrics endpoint
         // WARNING: This endpoint is unauthenticated. In production, it MUST be
