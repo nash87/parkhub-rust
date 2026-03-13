@@ -92,9 +92,9 @@ export function BookingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="relative">
             <MagnifyingGlass weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-400" />
-            <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} className="input pl-8 text-sm" />
+            <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} aria-label={t('bookingFilters.searchLot')} className="input pl-8 text-sm" />
           </div>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input text-sm">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} aria-label={t('common.filter')} className="input text-sm">
             <option value="all">{t('bookingFilters.statusAll')}</option>
             <option value="active">{t('bookingFilters.statusActive')}</option>
             <option value="confirmed">{t('bookingFilters.statusConfirmed')}</option>

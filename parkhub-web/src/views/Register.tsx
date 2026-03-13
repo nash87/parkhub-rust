@@ -47,20 +47,20 @@ export function RegisterPage() {
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {(['name', 'username', 'email'] as const).map(field => (
               <div key={field}>
-                <label className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t(`auth.${field}`)}</label>
-                <input type={field === 'email' ? 'email' : 'text'} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} className="input" required />
+                <label htmlFor={`register-${field}`} className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t(`auth.${field}`)}</label>
+                <input id={`register-${field}`} type={field === 'email' ? 'email' : 'text'} autoComplete={field === 'email' ? 'email' : field === 'username' ? 'username' : 'name'} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} className="input" required />
               </div>
             ))}
             <div>
-              <label className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t('auth.password')}</label>
-              <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} />
+              <label htmlFor="register-password" className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t('auth.password')}</label>
+              <input id="register-password" type="password" autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t('auth.passwordConfirmation')}</label>
-              <input type="password" value={form.password_confirmation} onChange={e => setForm({ ...form, password_confirmation: e.target.value })} className="input" required minLength={8} />
+              <label htmlFor="register-password-confirm" className="block text-xs font-semibold text-surface-600 dark:text-surface-400 mb-1.5 uppercase tracking-wider">{t('auth.passwordConfirmation')}</label>
+              <input id="register-password-confirm" type="password" autoComplete="new-password" value={form.password_confirmation} onChange={e => setForm({ ...form, password_confirmation: e.target.value })} className="input" required minLength={8} />
             </div>
 
-            {error && <div className="bg-danger/10 border border-danger/20 rounded-md px-3 py-2.5 text-xs text-danger font-medium">{error}</div>}
+            {error && <div role="alert" className="bg-danger/10 border border-danger/20 rounded-md px-3 py-2.5 text-xs text-danger font-medium">{error}</div>}
 
             <button type="submit" disabled={loading} className="btn btn-primary w-full py-2.5 text-sm cursor-pointer">
               {loading ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : t('auth.signUp')}

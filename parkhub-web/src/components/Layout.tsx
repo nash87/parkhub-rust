@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,15 @@ export function Layout() {
   const { useCase } = useUseCase();
   const { isEnabled } = useFeatures();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleEscape = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && sidebarOpen) setSidebarOpen(false);
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [handleEscape]);
 
   const visibleNav = NAV_ITEMS.filter(item => !item.feature || isEnabled(item.feature));
 
@@ -100,6 +109,7 @@ export function Layout() {
           <button
             onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
             className="flex items-center gap-3 px-3 py-2 rounded-md text-[0.8125rem] font-medium text-surface-500 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800/60 transition-all mb-3 w-full cursor-pointer"
+            aria-label={t('common.toggleTheme') || 'Toggle theme'}
           >
             {resolved === 'dark' ? <SunDim weight="bold" className="w-[18px] h-[18px]" /> : <Moon weight="bold" className="w-[18px] h-[18px]" />}
             {resolved === 'dark' ? t('common.lightMode') || 'Light' : t('common.darkMode') || 'Dark'}

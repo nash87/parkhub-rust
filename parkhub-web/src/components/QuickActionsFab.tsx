@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,15 @@ export function QuickActionsFab() {
   const { t } = useTranslation();
   const { isEnabled } = useFeatures();
   const [open, setOpen] = useState(false);
+
+  const handleEscape = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape' && open) setOpen(false);
+  }, [open]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [handleEscape]);
 
   if (!isEnabled('fab_quick_actions')) return null;
 
@@ -58,9 +67,10 @@ export function QuickActionsFab() {
                   <Link
                     to={action.to}
                     onClick={() => setOpen(false)}
+                    aria-label={action.label}
                     className={`w-11 h-11 rounded-full ${action.color} text-white flex items-center justify-center shadow-lg active:scale-95 transition-transform cursor-pointer`}
                   >
-                    <action.icon weight="bold" className="w-5 h-5" />
+                    <action.icon weight="bold" className="w-5 h-5" aria-hidden="true" />
                   </Link>
                 </motion.div>
               ))}

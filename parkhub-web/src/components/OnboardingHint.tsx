@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { X, Lightbulb } from '@phosphor-icons/react';
 import { useFeatures } from '../context/FeaturesContext';
 
@@ -24,6 +25,7 @@ interface Props {
  * Only active when `onboarding_hints` feature is enabled.
  */
 export function OnboardingHint({ id, message, icon: Icon = Lightbulb, position = 'bottom', className = '' }: Props) {
+  const { t } = useTranslation();
   const { isEnabled } = useFeatures();
   const [visible, setVisible] = useState(false);
 
@@ -69,7 +71,7 @@ export function OnboardingHint({ id, message, icon: Icon = Lightbulb, position =
               <button
                 onClick={dismiss}
                 className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md text-accent-400 hover:text-accent-600 hover:bg-accent-100 dark:hover:bg-accent-800/30 transition-colors cursor-pointer"
-                aria-label="Dismiss hint"
+                aria-label={t('common.dismiss') || 'Dismiss'}
               >
                 <X weight="bold" className="w-3 h-3" />
               </button>
