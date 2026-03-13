@@ -408,6 +408,38 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-full);
 }
 
+/* ── Mesh gradient background (auth pages) ── */
+.mesh-gradient {
+  background-color: var(--color-surface-50);
+  background-image:
+    radial-gradient(at 20% 30%, rgba(234, 88, 12, 0.06) 0%, transparent 50%),
+    radial-gradient(at 80% 70%, rgba(100, 116, 139, 0.06) 0%, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(234, 88, 12, 0.04) 0%, transparent 50%);
+}
+
+.dark .mesh-gradient {
+  background-color: var(--color-surface-950);
+  background-image:
+    radial-gradient(at 20% 30%, rgba(234, 88, 12, 0.04) 0%, transparent 50%),
+    radial-gradient(at 80% 70%, rgba(100, 116, 139, 0.04) 0%, transparent 50%),
+    radial-gradient(at 50% 90%, rgba(234, 88, 12, 0.03) 0%, transparent 50%);
+}
+
+/* ── Glass card (register / overlays) ── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-surface-200);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-card {
+  background: rgba(23, 23, 23, 0.85);
+  border-color: var(--color-surface-800);
+}
+
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
