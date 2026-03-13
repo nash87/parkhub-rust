@@ -57,7 +57,7 @@ function Illustration({ variant }: { variant: Variant }) {
   switch (variant) {
     case 'no-bookings':
       return (
-        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" aria-hidden="true">
           {/* Calendar with parking spot */}
           <rect x="30" y="35" width="100" height="90" rx="6" className="fill-surface-100 dark:fill-surface-800 stroke-surface-300 dark:stroke-surface-700" strokeWidth="1.5" />
           <rect x="30" y="35" width="100" height="22" rx="6" className="fill-accent-100 dark:fill-accent-900/30" />
@@ -78,7 +78,7 @@ function Illustration({ variant }: { variant: Variant }) {
 
     case 'no-vehicles':
       return (
-        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" aria-hidden="true">
           {/* Car silhouette */}
           <path d="M35 100 L45 75 Q48 68 55 68 L105 68 Q112 68 115 75 L125 100" className="stroke-surface-300 dark:stroke-surface-600" strokeWidth="1.5" fill="none" />
           <rect x="30" y="100" width="100" height="25" rx="5" className="fill-surface-100 dark:fill-surface-800 stroke-surface-300 dark:stroke-surface-700" strokeWidth="1.5" />
@@ -100,7 +100,7 @@ function Illustration({ variant }: { variant: Variant }) {
 
     case 'no-transactions':
       return (
-        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" aria-hidden="true">
           {/* Coin stack */}
           <ellipse cx="65" cy="110" rx="25" ry="8" className="fill-surface-200 dark:fill-surface-700" />
           <ellipse cx="65" cy="100" rx="25" ry="8" className="fill-surface-100 dark:fill-surface-800 stroke-surface-300 dark:stroke-surface-700" strokeWidth="1" />
@@ -118,7 +118,7 @@ function Illustration({ variant }: { variant: Variant }) {
     case 'no-data':
     default:
       return (
-        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+        <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" aria-hidden="true">
           {/* Chart placeholder */}
           <rect x="30" y="40" width="100" height="80" rx="4" className="fill-surface-100 dark:fill-surface-800 stroke-surface-300 dark:stroke-surface-700" strokeWidth="1.5" />
           {/* Flat line chart */}

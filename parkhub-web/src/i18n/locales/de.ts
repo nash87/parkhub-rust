@@ -369,6 +369,10 @@ export default {
       error: 'Ein Fehler ist aufgetreten',
       success: 'Erfolg',
       noData: 'Keine Daten verfügbar',
+      dismiss: 'Schließen',
+      toggleTheme: 'Farbschema wechseln',
+      lightMode: 'Hell',
+      darkMode: 'Dunkel',
     },
     confirm: {
       cancelBookingTitle: 'Buchung stornieren',

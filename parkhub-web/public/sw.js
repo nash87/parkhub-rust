@@ -1,6 +1,9 @@
 // ParkHub Service Worker — Cache-first for static assets, network-first for API
-const CACHE_NAME = 'parkhub-v1';
+// Version is updated during build; old caches are purged on activate.
+const CACHE_VERSION = '__BUILD_HASH__';
+const CACHE_NAME = `parkhub-${CACHE_VERSION}`;
 const STATIC_ASSETS = ['/', '/favicon.svg', '/icons/icon.svg'];
+const MAX_CACHE_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

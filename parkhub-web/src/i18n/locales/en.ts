@@ -369,6 +369,10 @@ export default {
       error: 'An error occurred',
       success: 'Success',
       noData: 'No data available',
+      dismiss: 'Dismiss',
+      toggleTheme: 'Toggle theme',
+      lightMode: 'Light',
+      darkMode: 'Dark',
     },
     confirm: {
       cancelBookingTitle: 'Cancel Booking',

@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { MotionConfig } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { UseCaseProvider } from './context/UseCaseContext';
@@ -65,6 +66,7 @@ function AppRoutes() {
 
 export function App() {
   return (
+    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       <ThemeProvider>
         <UseCaseProvider>
@@ -85,5 +87,6 @@ export function App() {
         </UseCaseProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </MotionConfig>
   );
 }
