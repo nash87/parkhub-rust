@@ -49,19 +49,11 @@ export function WelcomePage() {
 
   return (
     <div className="min-h-dvh parking-grid relative overflow-hidden">
-      {/* Decorative geometric elements */}
+      {/* Subtle decorative accents */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{ rotate: [0, 90, 0] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-          className="absolute top-[10%] right-[8%] w-24 h-24 border-2 border-accent-500/15 rounded-lg"
-        />
-        <motion.div
-          animate={{ rotate: [0, -90, 0] }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-          className="absolute bottom-[15%] left-[5%] w-40 h-40 border-2 border-primary-400/10 rounded-lg"
-        />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-accent-500/30 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-accent-500/25 to-transparent" />
+        <div className="absolute top-[15%] right-[10%] w-16 h-16 border border-accent-500/10 rounded-lg" />
+        <div className="absolute bottom-[20%] left-[8%] w-24 h-24 border border-primary-400/[0.06] rounded-lg" />
       </div>
 
       {/* Theme toggle */}
