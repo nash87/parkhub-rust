@@ -28,6 +28,7 @@ mod rate_limit;
 mod requests;
 mod static_files;
 mod tls;
+pub mod utils;
 mod validation;
 
 use config::ServerConfig;
@@ -224,12 +225,28 @@ async fn main() -> Result<()> {
         config.server_name = hostname::get()
             .map(|h| h.to_string_lossy().to_string())
             .unwrap_or_else(|_| "ParkHub Server".to_string());
-        config.admin_password_hash = hash_password("admin")?;
+        let admin_password = if let Ok(pw) = std::env::var("PARKHUB_ADMIN_PASSWORD") {
+            pw
+        } else {
+            use rand::Rng;
+            let generated: String = rand::rng()
+                .sample_iter(&rand::distr::Alphanumeric)
+                .take(16)
+                .map(char::from)
+                .collect();
+            println!("╔══════════════════════════════════════════════════════════╗");
+            println!("║  GENERATED ADMIN PASSWORD: {}  ║", generated);
+            println!("║  CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!    ║");
+            println!("╚══════════════════════════════════════════════════════════╝");
+            warn!("Using auto-generated admin password. Change it immediately after first login!");
+            generated
+        };
+        config.admin_password_hash = hash_password(&admin_password)?;
         config.encryption_enabled = false; // Disable encryption for unattended setup
         config.enable_tls = false; // Disable TLS for easier initial setup
         config.generate_dummy_users = true;
         config.save(&config_path)?;
-        info!("Default config saved. Admin credentials: admin/admin");
+        info!("Default config saved. Admin user: admin");
         config
     } else {
         info!("No configuration found, running setup...");
@@ -248,8 +265,24 @@ async fn main() -> Result<()> {
             // Create default configuration in headless mode
             warn!("Running in headless mode - using default configuration");
             let mut config = ServerConfig::default();
-            // Generate a random password for headless mode
-            config.admin_password_hash = hash_password("admin")?;
+            // Generate a random password or use env var
+            let admin_password = if let Ok(pw) = std::env::var("PARKHUB_ADMIN_PASSWORD") {
+                pw
+            } else {
+                use rand::Rng;
+                let generated: String = rand::rng()
+                    .sample_iter(&rand::distr::Alphanumeric)
+                    .take(16)
+                    .map(char::from)
+                    .collect();
+                println!("╔══════════════════════════════════════════════════════════╗");
+                println!("║  GENERATED ADMIN PASSWORD: {}  ║", generated);
+                println!("║  CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!    ║");
+                println!("╚══════════════════════════════════════════════════════════╝");
+                warn!("Using auto-generated admin password. Change it immediately after first login!");
+                generated
+            };
+            config.admin_password_hash = hash_password(&admin_password)?;
             // Use environment variable for encryption passphrase in headless mode
             config.encryption_passphrase = std::env::var("PARKHUB_DB_PASSPHRASE").ok();
             if config.encryption_enabled && config.encryption_passphrase.is_none() {
@@ -261,7 +294,7 @@ async fn main() -> Result<()> {
                 );
             }
             config.save(&config_path)?;
-            info!("Default config saved. Admin credentials: admin/admin");
+            info!("Default config saved. Admin user: admin");
             config
         }
     };
@@ -369,7 +402,7 @@ async fn main() -> Result<()> {
                 Ok(tls_config) => {
                     info!("TLS enabled");
                     if let Err(e) = axum_server::bind_rustls(addr, tls_config)
-                        .serve(app.into_make_service())
+                        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
                         .await
                     {
                         tracing::error!("Server error: {}", e);
@@ -383,7 +416,7 @@ async fn main() -> Result<()> {
             warn!("TLS disabled - connections are not encrypted!");
             match tokio::net::TcpListener::bind(addr).await {
                 Ok(listener) => {
-                    if let Err(e) = axum::serve(listener, app).await {
+                    if let Err(e) = axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await {
                         tracing::error!("Server error: {}", e);
                     }
                 }
@@ -1183,14 +1216,14 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
         UserRole::User, UserRole::User, UserRole::User, UserRole::User,
         UserRole::Premium, UserRole::Admin,
     ];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     info!("Generating 50 GDPR-compliant dummy users (password: {})...", default_password);
 
     for i in 0..50 {
-        let first = first_names[rng.gen_range(0..first_names.len())];
-        let last = last_names[rng.gen_range(0..last_names.len())];
-        let role = roles[rng.gen_range(0..roles.len())].clone();
+        let first = first_names[rng.random_range(0..first_names.len())];
+        let last = last_names[rng.random_range(0..last_names.len())];
+        let role = roles[rng.random_range(0..roles.len())].clone();
 
         // Generate username based on selected style
         let username = username_style.generate(first, last, i);
@@ -1203,7 +1236,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
             password_hash: password_hash.clone(),
             name: format!("{} {}", first, last),
             picture: None,
-            phone: Some(format!("+1-555-{:04}", rng.gen_range(1000..9999))),
+            phone: Some(format!("+1-555-{:04}", rng.random_range(1000..9999))),
             role,
             created_at: Utc::now(),
             updated_at: Utc::now(),

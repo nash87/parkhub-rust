@@ -3,10 +3,8 @@
 //! Provides stateless token-based authentication using JSON Web Tokens.
 
 use axum::{
-    async_trait,
     extract::FromRequestParts,
-    http::{header::AUTHORIZATION, request::Parts, StatusCode},
-    RequestPartsExt,
+    http::{header::AUTHORIZATION, request::Parts},
 };
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
@@ -35,8 +33,8 @@ impl Default for JwtConfig {
         // This provides ~128 bits of effective security vs. a UUID which has only 122 bits
         // of entropy and a fixed structure that reduces its unpredictability as a HMAC key.
         let secret = {
-            let mut rng = rand::thread_rng();
-            let bytes: Vec<u8> = (0..32).map(|_| rng.gen::<u8>()).collect();
+            let mut rng = rand::rng();
+            let bytes: Vec<u8> = (0..32).map(|_| rng.random::<u8>()).collect();
             hex::encode(bytes)
         };
         Self {
@@ -202,7 +200,6 @@ impl AuthUser {
 }
 
 /// Extractor for authenticated requests
-#[async_trait]
 impl<S> FromRequestParts<S> for AuthUser
 where
     S: Send + Sync,
@@ -251,7 +248,6 @@ where
 #[derive(Debug, Clone)]
 pub struct OptionalAuthUser(pub Option<AuthUser>);
 
-#[async_trait]
 impl<S> FromRequestParts<S> for OptionalAuthUser
 where
     S: Send + Sync,

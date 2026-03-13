@@ -42,8 +42,8 @@ rcgen.workspace = true
 rustls.workspace = true
 rustls-pemfile.workspace = true
 argon2 = { version = "0.5", features = ["std", "rand"] }
-rand_core = { version = "0.6", features = ["getrandom"] }
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+rand_core = { version = "0.9", features = ["os_rng"] }  # updated from 0.6; getrandom renamed to os_rng in 0.9
+axum-server = { version = "0.8", features = ["tls-rustls"] }  # updated from 0.7 (matches axum 0.8)
 
 # Network discovery (mDNS/DNS-SD)
 mdns-sd.workspace = true
@@ -69,35 +69,35 @@ ring = "0.17"
 
 # === PHASE 1: Stabilization ===
 # Input validation
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }  # updated from 0.18
 
 # OpenAPI documentation
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "8", features = ["axum"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }  # updated from 8
 
 # === PHASE 2: Production Ready ===
 # JWT Authentication
-jsonwebtoken = "9"
+jsonwebtoken = "10"  # updated from 9
 
 # Rate limiting
-tower_governor = "0.4"
-governor = "0.7"
+tower_governor = "0.8"  # updated from 0.4
+governor = "0.10"  # updated from 0.7
 
 # Metrics
 metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
+metrics-exporter-prometheus = "0.18"  # updated from 0.16
 
 # Health checks
-axum-extra = { version = "0.9", features = ["typed-header"] }
+axum-extra = { version = "0.12", features = ["typed-header"] }  # updated from 0.9 (matches axum 0.8)
 
 # === PHASE 3: Features ===
 # Background jobs (for cleanup, notifications)
-tokio-cron-scheduler = "0.13"
+tokio-cron-scheduler = "0.15"  # updated from 0.13
 
 # UI for server onboarding (optional, can be disabled)
-slint = { version = "1.14", default-features = false, features = [
+slint = { version = "1.15", default-features = false, features = [
     "backend-winit", "renderer-femtovg", "renderer-software", "compat-1-2"
-], optional = true }
+], optional = true }  # updated from 1.14
 
 # System tray support
 tray-icon = { version = "0.18", optional = true }
@@ -107,7 +107,7 @@ rust-embed = "8.11.0"
 mime_guess = "2.0.5"
 
 [build-dependencies]
-slint-build = { version = "1.14", optional = true }
+slint-build = { version = "1.15", optional = true }  # updated from 1.14
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
