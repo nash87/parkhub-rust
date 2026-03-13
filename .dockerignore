@@ -48,6 +48,8 @@ assets/
 fonts/
 screenshots/
 scripts/
+!scripts/seed_demo.py
+!scripts/docker-entrypoint.sh
 portable/
 
 # CI / deployment config (not needed inside the image)
