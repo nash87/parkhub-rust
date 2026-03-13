@@ -387,13 +387,14 @@ def seed_bookings(lot_data: list[dict], users: list[dict]) -> None:
 # ─── Entry point ──────────────────────────────────────────────────────────────
 
 def main():
+    global BASE_URL, ADMIN_PASSWORD
+
     parser = argparse.ArgumentParser(description="ParkHub demo data seeder")
     parser.add_argument("--base-url",        default=BASE_URL,       help="API base URL")
     parser.add_argument("--admin-password",  default=ADMIN_PASSWORD, help="Admin password")
     parser.add_argument("--dry-run",         action="store_true",    help="Build payloads but don't call API")
     args = parser.parse_args()
 
-    global BASE_URL, ADMIN_PASSWORD
     BASE_URL       = args.base_url
     ADMIN_PASSWORD = args.admin_password
 
