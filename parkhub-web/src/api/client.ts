@@ -1,410 +1,256 @@
-/**
- * ParkHub API Client
- */
+const BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
-
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
   success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
+  data: T | null;
+  error?: { code: string; message: string };
 }
 
-class ApiClient {
-  private token: string | null = null;
+async function request<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
+  const token = localStorage.getItem('parkhub_token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(opts.headers as Record<string, string> || {}),
+  };
 
-  setToken(token: string | null) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('parkhub_token', token);
-    } else {
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, { ...opts, headers });
+
+    if (res.status === 401) {
       localStorage.removeItem('parkhub_token');
-    }
-  }
-
-  getToken(): string | null {
-    if (!this.token) {
-      this.token = localStorage.getItem('parkhub_token');
-    }
-    return this.token;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...options.headers as Record<string, string>,
-    };
-
-    const token = this.getToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      window.location.href = '/login';
+      return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
     }
 
-    try {
-      const response = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
-        headers,
-      });
+    const json = await res.json().catch(() => null);
 
-      const data = await response.json();
-      return data;
-    } catch (error) {
+    if (!res.ok) {
       return {
         success: false,
-        error: {
-          code: 'NETWORK_ERROR',
-          message: error instanceof Error ? error.message : 'Network error',
-        },
+        data: null,
+        error: json?.error || { code: `HTTP_${res.status}`, message: res.statusText },
       };
     }
-  }
 
-  // Auth
-  async login(username: string, password: string) {
-    return this.request<{ user: User; tokens: AuthTokens }>('/api/v1/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ username, password }),
-    });
-  }
-
-  async register(data: RegisterData) {
-    return this.request<{ user: User; tokens: AuthTokens }>('/api/v1/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async refreshToken(refreshToken: string) {
-    return this.request<AuthTokens>('/api/v1/auth/refresh', {
-      method: 'POST',
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-  }
-
-  async forgotPassword(email: string) {
-    return this.request<void>('/api/v1/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  }
-
-  async resetPassword(token: string, password: string) {
-    return this.request<void>('/api/v1/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ token, password }),
-    });
-  }
-
-  // Users
-  async getCurrentUser() {
-    return this.request<User>('/api/v1/users/me');
-  }
-
-  async updateProfile(data: { name?: string; phone?: string; picture?: string }) {
-    return this.request<User>('/api/v1/users/me', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  }
-
-  // Lots
-  async getLots() {
-    return this.request<ParkingLot[]>('/api/v1/lots');
-  }
-
-  async getLot(id: string) {
-    return this.request<ParkingLot>(`/api/v1/lots/${id}`);
-  }
-
-  async createLot(data: CreateLotData) {
-    return this.request<ParkingLot>('/api/v1/lots', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async getLotSlots(lotId: string) {
-    return this.request<ParkingSlot[]>(`/api/v1/lots/${lotId}/slots`);
-  }
-
-  // Bookings
-  async getBookings() {
-    return this.request<Booking[]>('/api/v1/bookings');
-  }
-
-  async createBooking(data: CreateBookingData) {
-    return this.request<Booking>('/api/v1/bookings', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async cancelBooking(id: string) {
-    return this.request<void>(`/api/v1/bookings/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Vehicles
-  async getVehicles() {
-    return this.request<Vehicle[]>('/api/v1/vehicles');
-  }
-
-  async createVehicle(data: CreateVehicleData) {
-    return this.request<Vehicle>('/api/v1/vehicles', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  }
-
-  async deleteVehicle(id: string) {
-    return this.request<void>(`/api/v1/vehicles/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Lot detailed (mock)
-  async getLotDetailed(_id: string): Promise<ApiResponse<ParkingLotDetailed>> {
-    return {
-      success: true,
-      data: {
-        id: 'lot-1',
-        name: 'Firmenparkplatz',
-        address: 'Hauptstraße 1',
-        total_slots: 13,
-        available_slots: 8,
-        layout: {
-          roadLabel: 'Fahrweg',
-          rows: [
-            {
-              id: 'row-a',
-              side: 'top',
-              label: 'Reihe A',
-              slots: Array.from({ length: 6 }, (_, i) => ({
-                id: `slot-a-${i}`,
-                number: String(45 + i),
-                status: (i === 2 ? 'occupied' : i === 4 ? 'reserved' : 'available') as SlotConfig['status'],
-                vehiclePlate: i === 2 ? 'M-AB 1234' : undefined,
-              })),
-            },
-            {
-              id: 'row-b',
-              side: 'bottom',
-              label: 'Reihe B',
-              slots: Array.from({ length: 7 }, (_, i) => ({
-                id: `slot-b-${i}`,
-                number: String(51 + i),
-                status: (i === 1 ? 'occupied' : i === 5 ? 'occupied' : i === 3 ? 'disabled' : 'available') as SlotConfig['status'],
-                vehiclePlate: i === 1 ? 'S-XY 5678' : i === 5 ? 'HH-CD 9012' : undefined,
-              })),
-            },
-          ],
-        },
-      },
-    };
-  }
-
-  // Health
-  async health() {
-    return this.request<{ status: string }>('/health');
-  }
-
-  // GDPR / User data
-  async exportUserData() {
-    return this.request<Record<string, unknown>>('/api/v1/users/me/export');
-  }
-
-  async deleteAccount() {
-    return this.request<void>('/api/v1/users/me/delete', {
-      method: 'DELETE',
-    });
-  }
-
-  // Admin — Users
-  async adminGetUsers() {
-    return this.request<AdminUser[]>('/api/v1/admin/users');
-  }
-
-  async adminUpdateUserRole(id: string, role: AdminUser['role']) {
-    return this.request<AdminUser>(`/api/v1/admin/users/${id}/role`, {
-      method: 'PATCH',
-      body: JSON.stringify({ role }),
-    });
-  }
-
-  async adminUpdateUserStatus(id: string, status: AdminUser['status']) {
-    return this.request<AdminUser>(`/api/v1/admin/users/${id}/status`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-  }
-
-  async adminDeleteUser(id: string) {
-    return this.request<void>(`/api/v1/admin/users/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Admin — Bookings
-  async adminGetBookings() {
-    return this.request<AdminBooking[]>('/api/v1/admin/bookings');
+    // Normalize: API may return { success, data } or raw data
+    if (json && typeof json === 'object' && 'success' in json) {
+      return json;
+    }
+    return { success: true, data: json as T };
+  } catch (e) {
+    return { success: false, data: null, error: { code: 'NETWORK', message: 'Network error' } };
   }
 }
 
-export const api = new ApiClient();
+// ── Auth ──
+export const api = {
+  login: (username: string, password: string) =>
+    request<{ tokens: { access_token: string } }>('/api/v1/auth/login', {
+      method: 'POST', body: JSON.stringify({ username, password }),
+    }),
 
-// Types
+  register: (data: { username: string; email: string; password: string; name: string }) =>
+    request('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+
+  me: () => request<User>('/api/v1/me'),
+
+  updateMe: (data: Partial<User>) =>
+    request<User>('/api/v1/me', { method: 'PUT', body: JSON.stringify(data) }),
+
+  changePassword: (current_password: string, password: string, password_confirmation: string) =>
+    request('/api/v1/users/me/password', {
+      method: 'PUT', body: JSON.stringify({ current_password, password, password_confirmation }),
+    }),
+
+  // ── Setup ──
+  getSetupStatus: () => request<SetupStatus>('/api/v1/setup/status'),
+  completeSetup: (data: any) => request('/api/v1/setup/complete', { method: 'POST', body: JSON.stringify(data) }),
+
+  // ── Lots ──
+  getLots: () => request<ParkingLot[]>('/api/v1/lots'),
+  getLotSlots: (lotId: string) => request<ParkingSlot[]>(`/api/v1/lots/${lotId}/slots`),
+
+  // ── Bookings ──
+  getBookings: () => request<Booking[]>('/api/v1/bookings'),
+  createBooking: (data: any) => request<Booking>('/api/v1/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  cancelBooking: (id: string) => request<void>(`/api/v1/bookings/${id}`, { method: 'DELETE' }),
+
+  // ── Vehicles ──
+  getVehicles: () => request<Vehicle[]>('/api/v1/vehicles'),
+  createVehicle: (data: any) => request<Vehicle>('/api/v1/vehicles', { method: 'POST', body: JSON.stringify(data) }),
+  deleteVehicle: (id: string) => request<void>(`/api/v1/vehicles/${id}`, { method: 'DELETE' }),
+
+  // ── Absences ──
+  listAbsences: () => request<AbsenceEntry[]>('/api/v1/absences'),
+  createAbsence: (type: string, start: string, end: string, note?: string) =>
+    request<AbsenceEntry>('/api/v1/absences', { method: 'POST', body: JSON.stringify({ absence_type: type, start_date: start, end_date: end, note }) }),
+  deleteAbsence: (id: string) => request<void>(`/api/v1/absences/${id}`, { method: 'DELETE' }),
+  teamAbsences: () => request<TeamAbsenceEntry[]>('/api/v1/absences/team'),
+  getAbsencePattern: () => request<AbsencePattern[]>('/api/v1/absences/pattern'),
+  setAbsencePattern: (type: string, weekdays: number[]) =>
+    request<AbsencePattern>('/api/v1/absences/pattern', { method: 'POST', body: JSON.stringify({ absence_type: type, weekdays }) }),
+  importAbsenceIcal: async (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const token = localStorage.getItem('parkhub_token');
+    const res = await fetch(`${BASE_URL}/api/v1/absences/import`, {
+      method: 'POST', body: fd,
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+    return res.json();
+  },
+
+  // ── Credits ──
+  getUserCredits: () => request<UserCredits>('/api/v1/user/credits'),
+  getUserStats: () => request<UserStats>('/api/v1/user/stats'),
+
+  // ── Admin ──
+  adminStats: () => request<AdminStats>('/api/v1/admin/stats'),
+  adminUsers: () => request<User[]>('/api/v1/admin/users'),
+  adminUpdateUser: (id: string, data: any) => request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminGrantCredits: (userId: string, amount: number, description?: string) =>
+    request('/api/v1/admin/users/' + userId + '/credits', { method: 'POST', body: JSON.stringify({ amount, description }) }),
+  adminRefillAll: (amount?: number) =>
+    request('/api/v1/admin/credits/refill-all', { method: 'POST', body: JSON.stringify(amount ? { amount } : {}) }),
+  adminGetSettings: () => request<Record<string, string>>('/api/v1/admin/settings'),
+  adminUpdateSettings: (data: Record<string, string>) =>
+    request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // ── Demo ──
+  getDemoConfig: () => request<{ demo_mode: boolean }>('/api/v1/demo/config'),
+  getDemoStatus: () => request<DemoStatus>('/api/v1/demo/status'),
+  voteDemoReset: () => request('/api/v1/demo/vote', { method: 'POST' }),
+};
+
+// ── Types ──
 export interface User {
   id: string;
   username: string;
   email: string;
   name: string;
-  role: 'user' | 'admin' | 'superadmin';
-  created_at: string;
-  phone?: string;
   picture?: string;
+  phone?: string;
+  role: 'user' | 'admin' | 'superadmin';
+  preferences: Record<string, any>;
+  is_active: boolean;
+  department?: string;
+  credits_balance: number;
+  credits_monthly_quota: number;
+  created_at?: string;
+  last_login?: string;
 }
 
-export interface AuthTokens {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  /** ISO 8601 datetime string when the access token expires */
-  expires_at: string;
-}
-
-export interface RegisterData {
-  email: string;
-  password: string;
-  name: string;
+export interface SetupStatus {
+  setup_complete: boolean;
+  has_admin: boolean;
+  needs_password_change?: boolean;
 }
 
 export interface ParkingLot {
   id: string;
   name: string;
-  address: string;
+  address?: string;
   total_slots: number;
   available_slots: number;
+  status: string;
 }
 
 export interface ParkingSlot {
   id: string;
   lot_id: string;
-  number: string;
-  status: 'available' | 'occupied' | 'reserved' | 'disabled';
-  floor?: number;
-  section?: string;
+  slot_number: string;
+  status: string;
+  zone_id?: string;
 }
 
 export interface Booking {
   id: string;
   user_id: string;
-  slot_id: string;
   lot_id: string;
-  slot_number: string;
+  slot_id: string;
   lot_name: string;
+  slot_number: string;
   vehicle_plate?: string;
   start_time: string;
   end_time: string;
-  status: 'active' | 'completed' | 'cancelled';
-  created_at: string;
-}
-
-export interface CreateBookingData {
-  slot_id: string;
-  start_time: string;
-  duration_minutes: number;
-  vehicle_id?: string;
-  license_plate?: string;
+  status: 'confirmed' | 'active' | 'completed' | 'cancelled';
+  booking_type?: string;
+  dauer_interval?: string;
+  notes?: string;
 }
 
 export interface Vehicle {
   id: string;
-  user_id: string;
-  license_plate: string;
+  plate: string;
   make?: string;
   model?: string;
   color?: string;
   is_default: boolean;
+  photo_url?: string;
 }
 
-export interface CreateVehicleData {
-  license_plate: string;
-  make?: string;
-  model?: string;
-  color?: string;
-}
-
-export interface CreateLotData {
-  id?: string;
-  name: string;
-  address: string;
-  latitude?: number;
-  longitude?: number;
-  total_slots: number;
-  available_slots: number;
-  floors?: unknown[];
-  amenities?: string[];
-  pricing?: unknown;
-  operating_hours?: unknown;
-  images?: string[];
-  status?: string;
-}
-
-// Parking lot layout configuration
-export interface LotLayout {
-  rows: LotRow[];
-  roadLabel?: string;
-}
-
-export interface LotRow {
-  id: string;
-  side: 'top' | 'bottom';
-  slots: SlotConfig[];
-  label?: string;
-}
-
-export interface SlotConfig {
-  id: string;
-  number: string;
-  status: 'available' | 'occupied' | 'reserved' | 'disabled' | 'blocked';
-  vehiclePlate?: string;
-  bookedBy?: string;
-}
-
-export interface ParkingLotDetailed extends ParkingLot {
-  layout?: LotLayout;
-}
-
-export interface AdminUser {
-  id: string;
-  username: string;
-  email: string;
-  name: string;
-  role: 'user' | 'admin' | 'superadmin';
-  status: 'active' | 'disabled';
-  created_at: string;
-}
-
-export interface AdminBooking {
+export interface AbsenceEntry {
   id: string;
   user_id: string;
-  user_name: string;
-  user_email: string;
-  lot_id: string;
-  lot_name: string;
-  slot_id: string;
-  slot_number: string;
-  vehicle_plate?: string;
-  start_time: string;
-  end_time: string;
-  status: 'active' | 'completed' | 'cancelled';
-  booking_type?: 'one-time' | 'recurring' | 'guest';
+  absence_type: string;
+  start_date: string;
+  end_date: string;
+  note?: string;
+  source: string;
   created_at: string;
+}
+
+export interface TeamAbsenceEntry {
+  user_name: string;
+  absence_type: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface AbsencePattern {
+  user_id: string;
+  absence_type: string;
+  weekdays: number[];
+}
+
+export interface CreditTransaction {
+  id: string;
+  amount: number;
+  type: 'grant' | 'deduction' | 'refund' | 'monthly_refill';
+  description?: string;
+  created_at: string;
+}
+
+export interface UserCredits {
+  enabled: boolean;
+  balance: number;
+  monthly_quota: number;
+  last_refilled?: string;
+  transactions: CreditTransaction[];
+}
+
+export interface UserStats {
+  total_bookings: number;
+  bookings_this_month: number;
+  homeoffice_days_this_month: number;
+  avg_duration_minutes: number;
+  favorite_slot?: string;
+}
+
+export interface AdminStats {
+  total_users: number;
+  total_lots: number;
+  total_bookings: number;
+  active_bookings: number;
+}
+
+export interface DemoStatus {
+  timer_seconds: number;
+  votes: number;
+  vote_threshold: number;
+  viewers: number;
+  has_voted: boolean;
+  reset?: boolean;
 }

@@ -1,143 +1,77 @@
-import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { useTheme, applyTheme } from './stores/theme';
+import { ThemeProvider } from './context/ThemeContext';
+import './i18n';
+
+// Pages
+import { WelcomePage } from './views/Welcome';
+import { LoginPage } from './views/Login';
+import { RegisterPage } from './views/Register';
+import { DashboardPage } from './views/Dashboard';
+import { BookingsPage } from './views/Bookings';
+import { CreditsPage } from './views/Credits';
 import { Layout } from './components/Layout';
-import { CookieConsent } from './components/CookieConsent';
-import { LoginPage } from './pages/Login';
-import { RegisterPage } from './pages/Register';
-import { DashboardPage } from './pages/Dashboard';
-import { BookPage } from './pages/Book';
-import { BookingsPage } from './pages/Bookings';
-import { VehiclesPage } from './pages/Vehicles';
-import { ProfilePage } from './pages/Profile';
-import { AdminPage } from './pages/Admin';
-import { ImpressumPage } from './pages/Impressum';
-import { DatenschutzPage } from './pages/Datenschutz';
-import { AGBPage } from './pages/AGB';
-import { TransparencyPage } from './pages/Transparency';
-import { ForgotPasswordPage } from './pages/ForgotPassword';
-import { ResetPasswordPage } from './pages/ResetPassword';
-import { SpinnerGap } from '@phosphor-icons/react';
 import { DemoOverlay } from './components/DemoOverlay';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60, // 1 minute
-      retry: 1,
-    },
-  },
-});
-
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-      <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
-    </div>
-  );
-}
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) return <LoadingScreen />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-  return <Layout>{children}</Layout>;
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingSplash />;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) return <LoadingScreen />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role !== 'admin' && user?.role !== 'superadmin') {
-    return <Navigate to="/" replace />;
-  }
-
-  return <Layout>{children}</Layout>;
+  const { user } = useAuth();
+  if (!user || !['admin', 'superadmin'].includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
 }
 
-function ThemeInitializer({ children }: { children: React.ReactNode }) {
-  const { isDark } = useTheme();
-
-  useEffect(() => {
-    applyTheme(isDark);
-  }, [isDark]);
-
-  return <>{children}</>;
+function LoadingSplash() {
+  return (
+    <div className="min-h-dvh flex items-center justify-center mesh-gradient">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow">
+          <span className="text-2xl font-black text-white tracking-tight">P</span>
+        </div>
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
+  );
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      {/* Public */}
+      <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/impressum" element={<ImpressumPage />} />
-      <Route path="/datenschutz" element={<DatenschutzPage />} />
-      <Route path="/agb" element={<AGBPage />} />
-      <Route path="/transparency" element={<TransparencyPage />} />
-
-      {/* Protected */}
-      <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/book" element={<ProtectedRoute><BookPage /></ProtectedRoute>} />
-      <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
-      <Route path="/vehicles" element={<ProtectedRoute><VehiclesPage /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-
-      {/* Admin */}
-      <Route path="/admin/*" element={<AdminRoute><AdminPage /></AdminRoute>} />
-
-      {/* Catch all */}
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route index element={<DashboardPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
+        <Route path="credits" element={<CreditsPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
-function App() {
+export function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <DemoOverlay />
-        <ThemeInitializer>
-          <AuthProvider>
-            <AppRoutes />
-            <CookieConsent />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: 'var(--toast-bg, #fff)',
-                  color: 'var(--toast-color, #1f2937)',
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.2)',
-                },
-                success: {
-                  iconTheme: {
-                    primary: '#22c55e',
-                    secondary: '#fff',
-                  },
-                },
-                error: {
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
-                  },
-                },
-              }}
-            />
-          </AuthProvider>
-        </ThemeInitializer>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppRoutes />
+          <DemoOverlay />
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              className: '!bg-surface-800 !text-white !rounded-xl !shadow-lg !text-sm !font-medium',
+              duration: 3000,
+            }}
+          />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;

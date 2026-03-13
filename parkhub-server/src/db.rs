@@ -36,6 +36,7 @@ const PARKING_SLOTS: TableDefinition<&str, &[u8]> = TableDefinition::new("parkin
 const SLOTS_BY_LOT: TableDefinition<&str, &[u8]> = TableDefinition::new("slots_by_lot");
 const VEHICLES: TableDefinition<&str, &[u8]> = TableDefinition::new("vehicles");
 const SETTINGS: TableDefinition<&str, &str> = TableDefinition::new("settings");
+const CREDIT_TRANSACTIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("credit_transactions");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -218,6 +219,7 @@ impl Database {
             let _ = write_txn.open_table(SLOTS_BY_LOT)?;
             let _ = write_txn.open_table(VEHICLES)?;
             let _ = write_txn.open_table(SETTINGS)?;
+            let _ = write_txn.open_table(CREDIT_TRANSACTIONS)?;
         }
         write_txn.commit()?;
 
@@ -931,6 +933,36 @@ impl Database {
         }
         write_txn.commit()?;
         Ok(())
+    }
+
+    // ── Credit Transactions ──
+
+    pub async fn save_credit_transaction(&self, tx: &parkhub_common::models::CreditTransaction) -> Result<()> {
+        let data = self.serialize(tx)?;
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(CREDIT_TRANSACTIONS)?;
+            table.insert(tx.id.to_string().as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    pub async fn list_credit_transactions_for_user(&self, user_id: uuid::Uuid) -> Result<Vec<parkhub_common::models::CreditTransaction>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(CREDIT_TRANSACTIONS)?;
+        let mut transactions = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let tx: parkhub_common::models::CreditTransaction = self.deserialize(value.value())?;
+            if tx.user_id == user_id {
+                transactions.push(tx);
+            }
+        }
+        transactions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        Ok(transactions)
     }
 }
 

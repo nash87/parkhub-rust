@@ -38,9 +38,10 @@ const VAT_RATE: f64 = 0.19;
 
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
-    HandshakeRequest, HandshakeResponse, LoginRequest, LoginResponse, ParkingLot, ParkingSlot,
-    PaymentStatus, RefreshTokenRequest, RegisterRequest, ServerStatus, SlotStatus, User,
-    UserPreferences, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
+    CreditTransaction, CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginRequest,
+    LoginResponse, ParkingLot, ParkingSlot, PaymentStatus, RefreshTokenRequest, RegisterRequest,
+    ServerStatus, SlotStatus, User, UserPreferences, UserRole, Vehicle, VehicleType,
+    PROTOCOL_VERSION,
 };
 use serde::{Deserialize, Serialize};
 
@@ -120,6 +121,8 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
         .route("/api/v1/vehicles/{id}", delete(delete_vehicle))
+        // Credits
+        .route("/api/v1/user/credits", get(get_user_credits))
         // Admin-only: update Impressum settings
         .route("/api/v1/admin/impressum", get(get_impressum_admin).put(update_impressum))
         // Admin-only: user management
@@ -127,6 +130,9 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/api/v1/admin/users/{id}/role", axum::routing::patch(admin_update_user_role))
         .route("/api/v1/admin/users/{id}/status", axum::routing::patch(admin_update_user_status))
         .route("/api/v1/admin/users/{id}", delete(admin_delete_user))
+        // Admin-only: credits management
+        .route("/api/v1/admin/users/{id}/credits", post(admin_grant_credits))
+        .route("/api/v1/admin/credits/refill-all", post(admin_refill_all_credits))
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
         .route_layer(middleware::from_fn_with_state(
@@ -572,6 +578,9 @@ async fn register(
         last_login: Some(now),
         preferences: UserPreferences::default(),
         is_active: true,
+        credits_balance: 10,
+        credits_monthly_quota: 10,
+        credits_last_refilled: Some(now),
     };
 
     if let Err(e) = state_guard.db.save_user(&user).await {
@@ -1286,6 +1295,53 @@ async fn create_booking(
         );
     }
 
+    // Credits check — deduct if credits system is enabled
+    let credits_enabled = state_guard
+        .db
+        .get_setting("credits_enabled")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+        == "true";
+    let credits_per_booking: i32 = state_guard
+        .db
+        .get_setting("credits_per_booking")
+        .await
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(1);
+
+    let mut booking_user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
+            );
+        }
+    };
+
+    let is_admin_user =
+        booking_user.role == UserRole::Admin || booking_user.role == UserRole::SuperAdmin;
+
+    if credits_enabled && !is_admin_user {
+        if booking_user.credits_balance < credits_per_booking {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ApiResponse::error(
+                    "INSUFFICIENT_CREDITS",
+                    "Not enough credits for this booking",
+                )),
+            );
+        }
+    }
+
     // Calculate end time and pricing
     let end_time = req.start_time + Duration::minutes(req.duration_minutes as i64);
     let base_price = (req.duration_minutes as f64 / 60.0) * 2.0; // 2 EUR per hour
@@ -1366,6 +1422,23 @@ async fn create_booking(
         slot_id = %booking.slot_id,
         "Booking created"
     );
+
+    // Deduct credits if enabled and user is not admin
+    if credits_enabled && !is_admin_user {
+        booking_user.credits_balance -= credits_per_booking;
+        let _ = state_guard.db.save_user(&booking_user).await;
+        let tx = CreditTransaction {
+            id: Uuid::new_v4(),
+            user_id: auth_user.user_id,
+            booking_id: Some(booking.id),
+            amount: -credits_per_booking,
+            transaction_type: CreditTransactionType::Deduction,
+            description: Some(format!("Booking {}", booking.id)),
+            granted_by: None,
+            created_at: Utc::now(),
+        };
+        let _ = state_guard.db.save_credit_transaction(&tx).await;
+    }
 
     // Fetch user details for audit log and confirmation email
     let user_info_opt = state_guard
@@ -1508,6 +1581,47 @@ async fn cancel_booking(
             slot.status = SlotStatus::Available;
             if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
                 tracing::error!("Failed to restore slot status after cancellation: {}", e);
+            }
+        }
+    }
+
+    // Refund credits if credits system is enabled
+    let credits_enabled = state_guard
+        .db
+        .get_setting("credits_enabled")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+        == "true";
+    if credits_enabled {
+        let credits_per_booking: i32 = state_guard
+            .db
+            .get_setting("credits_per_booking")
+            .await
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1);
+        if let Ok(Some(mut user)) = state_guard
+            .db
+            .get_user(&auth_user.user_id.to_string())
+            .await
+        {
+            if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
+                user.credits_balance += credits_per_booking;
+                let _ = state_guard.db.save_user(&user).await;
+                let tx = CreditTransaction {
+                    id: Uuid::new_v4(),
+                    user_id: auth_user.user_id,
+                    booking_id: Some(booking.id),
+                    amount: credits_per_booking,
+                    transaction_type: CreditTransactionType::Refund,
+                    description: Some(format!("Cancelled booking {}", booking.id)),
+                    granted_by: None,
+                    created_at: Utc::now(),
+                };
+                let _ = state_guard.db.save_credit_transaction(&tx).await;
             }
         }
     }
@@ -2588,4 +2702,177 @@ async fn admin_list_bookings(
     }
 
     (StatusCode::OK, Json(ApiResponse::success(response)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CREDITS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Response for user credits endpoint
+#[derive(Debug, Serialize)]
+struct UserCreditsResponse {
+    credits_balance: i32,
+    credits_monthly_quota: i32,
+    credits_last_refilled: Option<chrono::DateTime<Utc>>,
+    recent_transactions: Vec<CreditTransaction>,
+}
+
+/// `GET /api/v1/user/credits` — get current user's credit balance and history
+async fn get_user_credits(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<UserCreditsResponse>>) {
+    let state_guard = state.read().await;
+
+    let user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+    };
+
+    let transactions = state_guard
+        .db
+        .list_credit_transactions_for_user(auth_user.user_id)
+        .await
+        .unwrap_or_default();
+
+    // Return last 20 transactions
+    let recent: Vec<CreditTransaction> = transactions.into_iter().take(20).collect();
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(UserCreditsResponse {
+            credits_balance: user.credits_balance,
+            credits_monthly_quota: user.credits_monthly_quota,
+            credits_last_refilled: user.credits_last_refilled,
+            recent_transactions: recent,
+        })),
+    )
+}
+
+/// Request body for admin credit grant
+#[derive(Debug, Deserialize)]
+struct AdminGrantCreditsRequest {
+    amount: i32,
+    description: Option<String>,
+}
+
+/// `POST /api/v1/admin/users/{id}/credits` — grant credits to a user (admin only)
+async fn admin_grant_credits(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(user_id): Path<String>,
+    Json(req): Json<AdminGrantCreditsRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.write().await;
+
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut target_user = match state_guard.db.get_user(&user_id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    target_user.credits_balance += req.amount;
+    if let Err(e) = state_guard.db.save_user(&target_user).await {
+        tracing::error!("Failed to save user credits: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update credits")),
+        );
+    }
+
+    let tx = CreditTransaction {
+        id: Uuid::new_v4(),
+        user_id: target_user.id,
+        booking_id: None,
+        amount: req.amount,
+        transaction_type: CreditTransactionType::Grant,
+        description: req.description.or(Some("Admin grant".to_string())),
+        granted_by: Some(auth_user.user_id),
+        created_at: Utc::now(),
+    };
+    let _ = state_guard.db.save_credit_transaction(&tx).await;
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+/// `POST /api/v1/admin/credits/refill-all` — refill all active users' credits (admin only)
+async fn admin_refill_all_credits(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.write().await;
+
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let users = match state_guard.db.list_users().await {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::error!("Failed to list users: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list users")),
+            );
+        }
+    };
+
+    let mut refilled = 0;
+    let now = Utc::now();
+    for mut user in users {
+        if !user.is_active {
+            continue;
+        }
+        if user.role == UserRole::Admin || user.role == UserRole::SuperAdmin {
+            continue;
+        }
+        let old_balance = user.credits_balance;
+        user.credits_balance = user.credits_monthly_quota;
+        user.credits_last_refilled = Some(now);
+        if let Ok(()) = state_guard.db.save_user(&user).await {
+            let tx = CreditTransaction {
+                id: Uuid::new_v4(),
+                user_id: user.id,
+                booking_id: None,
+                amount: user.credits_monthly_quota - old_balance,
+                transaction_type: CreditTransactionType::MonthlyRefill,
+                description: Some("Monthly refill".to_string()),
+                granted_by: Some(auth_user.user_id),
+                created_at: now,
+            };
+            let _ = state_guard.db.save_credit_transaction(&tx).await;
+            refilled += 1;
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            serde_json::json!({ "users_refilled": refilled }),
+        )),
+    )
 }

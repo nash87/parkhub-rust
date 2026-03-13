@@ -356,6 +356,10 @@ async fn main() -> Result<()> {
             };
             generate_dummy_users(&db, style).await?;
         }
+
+        // Enable credits system by default
+        db.set_setting("credits_enabled", "true").await?;
+        db.set_setting("credits_per_booking", "1").await?;
     }
 
     // Start mDNS service for autodiscovery
@@ -1128,6 +1132,9 @@ async fn create_admin_user(db: &Database, config: &ServerConfig) -> Result<()> {
         last_login: None,
         preferences: UserPreferences::default(),
         is_active: true,
+        credits_balance: 0,
+        credits_monthly_quota: 0,
+        credits_last_refilled: None,
     };
 
     db.save_user(&admin_user).await?;
@@ -1244,6 +1251,9 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
             last_login: None,
             preferences: UserPreferences::default(),
             is_active: true,
+            credits_balance: rng.random_range(3..11),
+            credits_monthly_quota: 10,
+            credits_last_refilled: Some(Utc::now()),
         };
 
         db.save_user(&user).await?;
