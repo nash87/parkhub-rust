@@ -31,7 +31,7 @@ from urllib.parse import urlencode
 BASE_URL       = "http://localhost:7878"
 ADMIN_USER     = "admin"
 ADMIN_PASSWORD = "ParkHub2026!"
-ADMIN_EMAIL    = "admin@parkhub-demo.de"
+ADMIN_EMAIL    = "admin@parkhub.test"
 ADMIN_NAME     = "Administrator"
 
 # ─── German parking lots ──────────────────────────────────────────────────────
