@@ -107,7 +107,7 @@ pub async fn demo_status(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
 ) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
     if !s.enabled {
         return (
             StatusCode::FORBIDDEN,
@@ -143,7 +143,7 @@ pub async fn demo_vote(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
 ) -> impl IntoResponse {
-    let mut s = state.lock().unwrap();
+    let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
     if !s.enabled {
         return (
             StatusCode::FORBIDDEN,
@@ -190,7 +190,7 @@ pub async fn demo_vote(
 pub async fn demo_config(
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
 ) -> Json<DemoConfigResponse> {
-    let s = state.lock().unwrap();
+    let s = state.lock().unwrap_or_else(|e| e.into_inner());
     Json(DemoConfigResponse {
         demo_mode: s.enabled,
     })

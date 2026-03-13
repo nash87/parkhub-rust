@@ -8,7 +8,7 @@ import { api } from '../api/client';
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ username: '', email: '', name: '', password: '' });
+  const [form, setForm] = useState({ username: '', email: '', name: '', password: '', password_confirmation: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,6 +51,10 @@ export function RegisterPage() {
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.password')}</label>
               <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.passwordConfirmation')}</label>
+              <input type="password" value={form.password_confirmation} onChange={e => setForm({ ...form, password_confirmation: e.target.value })} className="input" required minLength={8} />
             </div>
 
             {error && <div className="bg-danger/10 border border-danger/20 rounded-xl px-4 py-3 text-sm text-danger font-medium">{error}</div>}

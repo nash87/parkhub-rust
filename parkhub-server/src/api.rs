@@ -198,6 +198,7 @@ pub fn create_router(state: SharedState) -> Router {
                     axum::http::Method::GET,
                     axum::http::Method::POST,
                     axum::http::Method::PUT,
+                    axum::http::Method::PATCH,
                     axum::http::Method::DELETE,
                     axum::http::Method::OPTIONS,
                 ])
@@ -2563,6 +2564,13 @@ async fn admin_update_user_status(
         );
     }
 
+    // Revoke all sessions when a user is disabled
+    if !user.is_active {
+        if let Err(e) = state_guard.db.delete_sessions_by_user(user.id).await {
+            tracing::error!("Failed to revoke sessions for disabled user {}: {}", id, e);
+        }
+    }
+
     tracing::info!(
         admin_id = %auth_user.user_id,
         target_user_id = %id,
@@ -2794,6 +2802,16 @@ async fn admin_grant_credits(
             );
         }
     };
+
+    if req.amount < 1 || req.amount > 10000 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                "Amount must be between 1 and 10000",
+            )),
+        );
+    }
 
     target_user.credits_balance += req.amount;
     if let Err(e) = state_guard.db.save_user(&target_user).await {

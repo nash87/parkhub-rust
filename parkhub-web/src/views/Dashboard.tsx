@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarCheck, Car, Coins, Clock, CalendarPlus, ArrowRight,
+  CalendarCheck, Car, CoinVertical, Clock, CalendarPlus, ArrowRight,
   TrendUp, MapPin,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
@@ -29,7 +29,7 @@ export function DashboardPage() {
   const name = user?.name?.split(' ')[0] || user?.username || '';
 
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+  const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
   if (loading) return (
     <div className="space-y-6">
@@ -56,13 +56,13 @@ export function DashboardPage() {
           icon={CalendarCheck}
           label={t('dashboard.activeBookings')}
           value={activeBookings.length}
-          color="primary"
+          color="accent"
         />
         <StatCard
-          icon={Coins}
+          icon={CoinVertical}
           label={t('dashboard.creditsLeft')}
           value={user?.credits_balance ?? 0}
-          color="accent"
+          color="primary"
         />
         <StatCard
           icon={TrendUp}
@@ -73,7 +73,7 @@ export function DashboardPage() {
         <StatCard
           icon={Clock}
           label={t('dashboard.nextBooking')}
-          value={activeBookings.length > 0 ? formatTime(activeBookings[0].start_time) : '—'}
+          value={activeBookings.length > 0 ? formatTime(activeBookings[0].start_time) : '\u2014'}
           color="success"
           isText
         />
@@ -85,10 +85,10 @@ export function DashboardPage() {
         <motion.div variants={item} className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <CalendarCheck weight="fill" className="w-5 h-5 text-primary-500" />
+              <CalendarCheck weight="bold" className="w-5 h-5 text-accent-500" />
               {t('dashboard.activeBookings')}
             </h2>
-            <Link to="/bookings" className="text-sm text-primary-600 hover:text-primary-500 font-medium flex items-center gap-1">
+            <Link to="/bookings" className="text-sm text-accent-600 hover:text-accent-500 font-medium flex items-center gap-1 cursor-pointer">
               {t('nav.bookings')} <ArrowRight weight="bold" className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -97,21 +97,21 @@ export function DashboardPage() {
             <div className="text-center py-12">
               <CalendarPlus weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
               <p className="text-surface-500 dark:text-surface-400 mb-4">{t('dashboard.noActiveBookings')}</p>
-              <Link to="/book" className="btn btn-primary">{t('dashboard.bookSpot')}</Link>
+              <Link to="/book" className="btn btn-primary cursor-pointer">{t('dashboard.bookSpot')}</Link>
             </div>
           ) : (
             <div className="space-y-3">
               {activeBookings.slice(0, 5).map(b => (
-                <div key={b.id} className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700/50 transition-colors">
-                  <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary-600 dark:text-primary-400">{b.slot_number}</span>
+                <div key={b.id} className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-accent-50 dark:bg-accent-900/20 flex items-center justify-center border border-accent-200 dark:border-accent-800/40">
+                    <span className="text-lg font-bold text-accent-700 dark:text-accent-400 font-[Outfit]">{b.slot_number}</span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-surface-900 dark:text-white truncate">{b.lot_name}</p>
                     <div className="flex items-center gap-2 text-sm text-surface-500 dark:text-surface-400">
                       <MapPin weight="regular" className="w-3.5 h-3.5" />
                       {t('dashboard.slot')} {b.slot_number}
-                      {b.vehicle_plate && <><span className="mx-1">·</span><Car weight="regular" className="w-3.5 h-3.5" />{b.vehicle_plate}</>}
+                      {b.vehicle_plate && <><span className="mx-1">&middot;</span><Car weight="regular" className="w-3.5 h-3.5" />{b.vehicle_plate}</>}
                     </div>
                   </div>
                   <div className="text-right">
@@ -128,30 +128,20 @@ export function DashboardPage() {
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">
             {t('dashboard.quickActions')}
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[
-              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), color: 'primary' },
-              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), color: 'accent' },
-              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), color: 'info' },
-              { to: '/credits', icon: Coins, label: t('nav.credits'), color: 'success' },
+              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), accent: 'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400' },
+              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), accent: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' },
+              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), accent: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
+              { to: '/credits', icon: CoinVertical, label: t('nav.credits'), accent: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' },
             ].map((action, i) => (
               <Link
                 key={i}
                 to={action.to}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group cursor-pointer"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  action.color === 'primary' ? 'bg-primary-100 dark:bg-primary-900/30' :
-                  action.color === 'accent' ? 'bg-accent-100 dark:bg-accent-900/30' :
-                  action.color === 'info' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                  'bg-emerald-100 dark:bg-emerald-900/30'
-                }`}>
-                  <action.icon weight="fill" className={`w-5 h-5 ${
-                    action.color === 'primary' ? 'text-primary-600 dark:text-primary-400' :
-                    action.color === 'accent' ? 'text-accent-600 dark:text-accent-400' :
-                    action.color === 'info' ? 'text-blue-600 dark:text-blue-400' :
-                    'text-emerald-600 dark:text-emerald-400'
-                  }`} />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${action.accent}`}>
+                  <action.icon weight="bold" className="w-5 h-5" />
                 </div>
                 <span className="font-medium text-surface-700 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white transition-colors">
                   {action.label}
@@ -167,14 +157,16 @@ export function DashboardPage() {
 }
 
 function StatCard({ icon: Icon, label, value, color, isText }: {
-  icon: any; label: string; value: number | string; color: string; isText?: boolean;
+  icon: React.ElementType; label: string; value: number | string; color: string; isText?: boolean;
 }) {
-  const colors: Record<string, string> = {
-    primary: 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400',
-    accent: 'bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400',
-    info: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-    success: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+  const colors: Record<string, { bg: string; text: string }> = {
+    accent: { bg: 'bg-accent-50 dark:bg-accent-900/20', text: 'text-accent-600 dark:text-accent-400' },
+    primary: { bg: 'bg-primary-100 dark:bg-primary-900/20', text: 'text-primary-600 dark:text-primary-400' },
+    info: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-600 dark:text-blue-400' },
+    success: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400' },
   };
+
+  const c = colors[color] || colors.primary;
 
   return (
     <div className="stat-card">
@@ -184,13 +176,11 @@ function StatCard({ icon: Icon, label, value, color, isText }: {
           {isText ? (
             <p className="mt-2 text-lg font-bold text-surface-900 dark:text-white">{value}</p>
           ) : (
-            <p className={`mt-2 stat-value ${color === 'primary' ? 'text-primary-600 dark:text-primary-400' : color === 'accent' ? 'text-accent-600 dark:text-accent-400' : color === 'info' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              {value}
-            </p>
+            <p className={`mt-2 stat-value ${c.text}`}>{value}</p>
           )}
         </div>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}`}>
-          <Icon weight="fill" className="w-5 h-5" />
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.bg} ${c.text}`}>
+          <Icon weight="bold" className="w-5 h-5" />
         </div>
       </div>
     </div>

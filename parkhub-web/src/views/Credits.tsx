@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Coins, ArrowDown, ArrowUp, ArrowClockwise, CalendarCheck,
-  TrendUp, Sparkle,
+  CoinVertical, ArrowDown, ArrowUp, ArrowClockwise, CalendarCheck,
+  TrendUp, Gauge,
 } from '@phosphor-icons/react';
 import { api, type UserCredits } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -43,14 +43,14 @@ export function CreditsPage() {
       {/* Header */}
       <motion.div variants={item}>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-          <Coins weight="fill" className="w-7 h-7 text-accent-500" />
+          <CoinVertical weight="bold" className="w-7 h-7 text-accent-500" />
           {t('credits.title')}
         </h1>
         <p className="text-surface-500 dark:text-surface-400 mt-1">{t('credits.subtitle')}</p>
       </motion.div>
 
       {/* Balance display — hero card */}
-      <motion.div variants={item} className="glass-card p-8 relative overflow-hidden">
+      <motion.div variants={item} className="card p-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-accent-400/10 to-transparent rounded-bl-full" />
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <div className="flex-1">
@@ -93,7 +93,7 @@ export function CreditsPage() {
               <p className="mt-2 stat-value text-primary-600 dark:text-primary-400">{quota}</p>
             </div>
             <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
-              <Sparkle weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <Gauge weight="bold" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -134,7 +134,7 @@ export function CreditsPage() {
 
         {!credits?.transactions?.length ? (
           <div className="text-center py-8">
-            <Coins weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
+            <CoinVertical weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
             <p className="text-surface-500 dark:text-surface-400">{t('credits.noTransactions')}</p>
           </div>
         ) : (

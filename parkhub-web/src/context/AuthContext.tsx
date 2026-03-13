@@ -5,7 +5,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -40,7 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, error: res.error?.message || 'Login failed' };
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await fetch(`${import.meta.env?.VITE_API_URL || ''}/api/v1/auth/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('parkhub_token')}`,
+        },
+      });
+    } catch {
+      // Ignore errors — logout should always succeed client-side
+    }
     localStorage.removeItem('parkhub_token');
     setUser(null);
   }
