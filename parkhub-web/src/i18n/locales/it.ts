@@ -54,7 +54,7 @@ export default {
       signIn: 'Accedi',
       loggingIn: 'Accesso in corso...',
       loginError: 'Credenziali non valide',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.test / ParkHub2026!',
     },
     onboarding: {
       step1Title: 'Cambia password',

@@ -54,7 +54,7 @@ export default {
       signIn: 'Giriş Yap',
       loggingIn: 'Giriş yapılıyor...',
       loginError: 'Geçersiz kimlik bilgileri',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.test / ParkHub2026!',
     },
     onboarding: {
       step1Title: 'Şifre Değiştir',
