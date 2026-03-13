@@ -3,7 +3,6 @@
 //! Provides validation for API request payloads using the validator crate.
 
 use axum::{
-    async_trait,
     extract::{rejection::JsonRejection, FromRequest, Request},
     Json,
 };
@@ -19,7 +18,6 @@ use crate::error::AppError;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValidatedJson<T>(pub T);
 
-#[async_trait]
 impl<T, S> FromRequest<S> for ValidatedJson<T>
 where
     T: DeserializeOwned + Validate,

@@ -111,7 +111,14 @@ pub fn build_booking_confirmation_email(
     end_time: &str,
     org_name: &str,
 ) -> String {
-    let org = if org_name.is_empty() { "ParkHub" } else { org_name };
+    use crate::utils::html_escape;
+    let org_raw = if org_name.is_empty() { "ParkHub" } else { org_name };
+    let org = html_escape(org_raw);
+    let user_name = html_escape(user_name);
+    let booking_id = html_escape(booking_id);
+    let floor_name = html_escape(floor_name);
+    let start_time = html_escape(start_time);
+    let end_time = html_escape(end_time);
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -165,7 +172,10 @@ pub fn build_booking_confirmation_email(
 
 /// Build a password-reset email body.
 pub fn build_password_reset_email(reset_url: &str, org_name: &str) -> String {
-    let org = if org_name.is_empty() { "ParkHub" } else { org_name };
+    use crate::utils::html_escape;
+    let org_raw = if org_name.is_empty() { "ParkHub" } else { org_name };
+    let org = html_escape(org_raw);
+    let reset_url = html_escape(reset_url);
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">

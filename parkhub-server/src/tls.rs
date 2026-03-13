@@ -43,6 +43,14 @@ pub async fn load_or_create_tls_config(
     std::fs::write(&cert_path, &cert_pem).context("Failed to write certificate")?;
     std::fs::write(&key_path, &key_pem).context("Failed to write private key")?;
 
+    // Restrict private key file permissions to owner-only (0600)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600))
+            .context("Failed to set private key file permissions to 0600")?;
+    }
+
     tracing::info!("TLS certificates saved to {}", data_dir.display());
 
     axum_server::tls_rustls::RustlsConfig::from_pem_file(&cert_path, &key_path)
@@ -65,10 +73,10 @@ fn generate_self_signed_cert() -> Result<(String, String)> {
     ];
 
     // Generate certificate
-    let CertifiedKey { cert, key_pair } = generate_simple_self_signed(subject_alt_names)
+    let CertifiedKey { cert, signing_key } = generate_simple_self_signed(subject_alt_names)
         .context("Failed to generate self-signed certificate")?;
 
-    Ok((cert.pem(), key_pair.serialize_pem()))
+    Ok((cert.pem(), signing_key.serialize_pem()))
 }
 
 /// Calculate SHA256 fingerprint of a certificate

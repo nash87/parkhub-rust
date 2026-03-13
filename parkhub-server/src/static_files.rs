@@ -4,7 +4,7 @@
 
 use axum::{
     body::Body,
-    http::{header, Request, StatusCode, Uri},
+    http::{header, StatusCode, Uri},
     response::{IntoResponse, Response},
 };
 use rust_embed::Embed;

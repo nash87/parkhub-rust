@@ -32,6 +32,9 @@ use crate::static_files;
 /// Prevents DoS via excessively large JSON payloads.
 const MAX_REQUEST_BODY_BYTES: usize = 1024 * 1024; // 1 MiB
 
+/// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
+const VAT_RATE: f64 = 0.19;
+
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
     HandshakeRequest, HandshakeResponse, LoginRequest, LoginResponse, ParkingLot, ParkingSlot,
@@ -140,6 +143,9 @@ pub fn create_router(state: SharedState) -> Router {
         .merge(forgot_route)
         .merge(protected_routes)
         // Prometheus metrics endpoint
+        // WARNING: This endpoint is unauthenticated. In production, it MUST be
+        // placed behind a reverse proxy that restricts access (e.g. only from
+        // the internal monitoring network) or gated behind admin authentication.
         .route("/metrics", get(move || async move {
             (
                 StatusCode::OK,
@@ -406,6 +412,17 @@ async fn login(
         }
     };
 
+    // Reject excessively long passwords before hashing (Argon2 CPU DoS prevention)
+    if request.password.len() > 256 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Password must not exceed 256 characters",
+            )),
+        );
+    }
+
     // Verify password
     if !verify_password(&request.password, &user.password_hash) {
         AuditEntry::new(AuditEventType::LoginFailed)
@@ -432,10 +449,11 @@ async fn login(
         );
     }
 
-    // Create session
+    // Create session using configured timeout (converted from minutes to hours, minimum 1h)
+    let session_hours = (state_guard.config.session_timeout_minutes as i64).max(60) / 60;
     let role_str = format!("{:?}", user.role).to_lowercase();
-    let session = Session::new(user.id, 24, &user.username, &role_str); // 24 hour session
-    let access_token = Uuid::new_v4().to_string();
+    let session = Session::new(user.id, session_hours, &user.username, &role_str);
+    let access_token = generate_access_token();
 
     if let Err(e) = state_guard.db.save_session(&access_token, &session).await {
         tracing::error!("Failed to save session: {}", e);
@@ -511,6 +529,17 @@ async fn register(
         counter += 1;
     }
 
+    // Reject excessively long passwords before hashing (Argon2 CPU DoS prevention)
+    if request.password.len() > 256 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Password must not exceed 256 characters",
+            )),
+        );
+    }
+
     // Hash password
     let password_hash = match hash_password(&request.password) {
         Ok(h) => h,
@@ -547,10 +576,11 @@ async fn register(
         .user(user.id, &user.username)
         .log();
 
-    // Create session
+    // Create session using configured timeout (converted from minutes to hours, minimum 1h)
+    let session_hours = (state_guard.config.session_timeout_minutes as i64).max(60) / 60;
     let role_str = format!("{:?}", user.role).to_lowercase();
-    let session = Session::new(user.id, 24, &user.username, &role_str);
-    let access_token = Uuid::new_v4().to_string();
+    let session = Session::new(user.id, session_hours, &user.username, &role_str);
+    let access_token = generate_access_token();
 
     if let Err(e) = state_guard.db.save_session(&access_token, &session).await {
         tracing::error!("Failed to save session: {}", e);
@@ -608,7 +638,7 @@ async fn refresh_token(
 
     // Create a fresh session (7-day expiry)
     let new_session = Session::new(session.user_id, 168, &session.username, &session.role); // 168h = 7 days
-    let new_access_token = uuid::Uuid::new_v4().to_string();
+    let new_access_token = generate_access_token();
 
     // Save new session
     if let Err(e) = state_guard.db.save_session(&new_access_token, &new_session).await {
@@ -691,8 +721,10 @@ async fn forgot_password(
         }
     };
 
-    // Generate a cryptographically random token
-    let reset_token = Uuid::new_v4().to_string();
+    // Generate a cryptographically random token (32 bytes, hex-encoded)
+    let mut token_bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut rand::rng(), &mut token_bytes);
+    let reset_token = hex::encode(token_bytes);
     let expires_at = Utc::now() + Duration::hours(1);
 
     let token_data = PasswordResetToken {
@@ -792,14 +824,24 @@ async fn reset_password(
         );
     }
 
-    // Validate new password (minimum 8 characters)
-    if request.password.len() < 8 {
+    // Reject excessively long passwords before hashing (Argon2 CPU DoS prevention)
+    if request.password.len() > 256 {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
-                "INVALID_PASSWORD",
-                "Password must be at least 8 characters long",
+                "INVALID_INPUT",
+                "Password must not exceed 256 characters",
             )),
+        );
+    }
+
+    // Validate new password using strong password rules
+    if let Err(e) = crate::validation::validate_password_strength(&request.password) {
+        let msg = e.message.map(|m| m.to_string())
+            .unwrap_or_else(|| "Password does not meet strength requirements".to_string());
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_PASSWORD", msg)),
         );
     }
 
@@ -841,6 +883,12 @@ async fn reset_password(
     // We write "" rather than delete because redb's table API requires an existing
     // key for in-place removal; callers treat an empty value as "not present".
     let _ = state_guard.db.set_setting(&settings_key, "").await;
+
+    // Invalidate all existing sessions for this user — a password change must
+    // force re-authentication on every device.
+    if let Err(e) = state_guard.db.delete_sessions_by_user(user.id).await {
+        tracing::warn!(user_id = %user.id, error = %e, "Failed to invalidate sessions after password reset");
+    }
 
     AuditEntry::new(AuditEventType::PasswordChanged)
         .user(user.id, &user.username)
@@ -928,7 +976,29 @@ async fn update_current_user(
         user.phone = Some(phone);
     }
     if let Some(picture) = req.picture {
-        user.picture = Some(picture);
+        // Validate picture URL: must be empty, or a well-formed http(s) URL
+        // capped at 2048 characters to prevent abuse.
+        if !picture.is_empty() {
+            if picture.len() > 2048 {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "INVALID_INPUT",
+                        "Picture URL must be at most 2048 characters",
+                    )),
+                );
+            }
+            if !picture.starts_with("https://") && !picture.starts_with("http://") {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "INVALID_INPUT",
+                        "Picture must be a valid HTTP or HTTPS URL",
+                    )),
+                );
+            }
+        }
+        user.picture = if picture.is_empty() { None } else { Some(picture) };
     }
     user.updated_at = Utc::now();
 
@@ -1209,7 +1279,7 @@ async fn create_booking(
     // Calculate end time and pricing
     let end_time = req.start_time + Duration::minutes(req.duration_minutes as i64);
     let base_price = (req.duration_minutes as f64 / 60.0) * 2.0; // 2 EUR per hour
-    let tax = base_price * 0.1;
+    let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
     // Look up human-readable floor name from the lot's floors list
@@ -1541,11 +1611,8 @@ async fn get_booking_invoice(
     let duration_mins_part = duration_minutes % 60;
 
     // VAT breakdown (19% German standard — Umsatzsteuergesetz § 12 Abs. 1)
-    // The stored `tax` field uses 10% (from create_booking); for the invoice we
-    // display the correct 19% MwSt. breakdown on the net price.
     let net_price = booking.pricing.base_price;
-    let vat_rate = 0.19_f64;
-    let vat_amount = net_price * vat_rate;
+    let vat_amount = net_price * VAT_RATE;
     let gross_total = net_price + vat_amount;
 
     let invoice_date = booking.created_at.format("%d.%m.%Y").to_string();
@@ -1553,6 +1620,15 @@ async fn get_booking_invoice(
     let end_str = booking.end_time.format("%d.%m.%Y %H:%M").to_string();
 
     let invoice_number = format!("INV-{}", booking.id.to_string().to_uppercase().replace('-', "").chars().take(12).collect::<String>());
+
+    // HTML-escape all user-controlled values to prevent stored XSS
+    use crate::utils::html_escape;
+    let company = html_escape(&company);
+    let user_name = html_escape(&booking_user.name);
+    let user_email = html_escape(&booking_user.email);
+    let lot_name = html_escape(&lot_name);
+    let floor_name = html_escape(&booking.floor_name);
+    let license_plate = html_escape(&booking.vehicle.license_plate);
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -1713,13 +1789,13 @@ async fn get_booking_invoice(
         invoice_number = invoice_number,
         invoice_date = invoice_date,
         company = company,
-        user_name = booking_user.name,
-        user_email = booking_user.email,
+        user_name = user_name,
+        user_email = user_email,
         booking_id = booking.id,
         lot_name = lot_name,
         slot_number = booking.slot_number,
-        floor_name = booking.floor_name,
-        license_plate = booking.vehicle.license_plate,
+        floor_name = floor_name,
+        license_plate = license_plate,
         start_str = start_str,
         end_str = end_str,
         duration_hours = duration_hours,
@@ -1865,6 +1941,20 @@ async fn delete_vehicle(
             )
         }
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOKEN GENERATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Generate a cryptographically random access token (32 bytes, hex-encoded).
+///
+/// UUIDs v4 have a fixed structure that reduces effective entropy to ~122 bits.
+/// Using a raw 256-bit random value is both simpler and more secure.
+fn generate_access_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::RngCore::fill_bytes(&mut rand::rng(), &mut bytes);
+    hex::encode(bytes)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2228,6 +2318,28 @@ async fn admin_update_user_role(
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    // Fetch the caller to check their role for privilege escalation prevention
+    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+
+    // Only SuperAdmin may promote users to SuperAdmin (prevent privilege escalation)
+    if req.role.as_str() == "superadmin" && caller.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error(
+                "FORBIDDEN",
+                "Only a SuperAdmin can assign the SuperAdmin role",
+            )),
+        );
     }
 
     let mut user = match state_guard.db.get_user(&id).await {

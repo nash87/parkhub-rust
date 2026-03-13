@@ -26,29 +26,29 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 
 # Database - Pure Rust embedded database
-redb = "2"
+redb = "2"  # 3.x exists but major API changes — evaluate separately
 
 # Encryption utilities (for application-level encryption)
-aes-gcm = "0.10"
-pbkdf2 = { version = "0.12", features = ["simple"] }
+aes-gcm = "0.10"  # 0.11 is RC only
+pbkdf2 = { version = "0.12", features = ["simple"] }  # 0.13 is RC only
 sha2 = "0.10"
-rand = "0.8"
+rand = "0.9"  # updated from 0.8
 zeroize = { version = "1", features = ["derive"] }
 
 # HTTP/API
-axum = { version = "0.7", features = ["tokio", "json"] }
+axum = { version = "0.8", features = ["tokio", "json"] }  # updated from 0.7
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "limit"] }
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }  # 0.13 exists but may break
 
 # Security
-rcgen = "0.13"
+rcgen = "0.14"  # updated from 0.13
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-pemfile = "2"
-argon2 = { version = "0.5", features = ["std", "rand"] }
+argon2 = { version = "0.5", features = ["std", "rand"] }  # 0.6 is RC only
 
 # Network discovery
-mdns-sd = "0.11"
+mdns-sd = "0.18"  # updated from 0.11
 
 # Internal crates
 parkhub-common = { path = "parkhub-common" }

@@ -85,7 +85,7 @@ impl Session {
         // Use cryptographically random refresh token (not a UUID — UUIDs have
         // a fixed structure that reduces effective entropy).
         let mut rng_bytes = [0u8; 32];
-        rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut rng_bytes);
+        rand::RngCore::fill_bytes(&mut rand::rng(), &mut rng_bytes);
         let refresh_token = format!("rt_{}", hex::encode(rng_bytes));
         Self {
             user_id,
@@ -144,7 +144,7 @@ impl Encryptor {
 
     fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         let mut nonce_bytes = [0u8; 12];
-        rand::thread_rng().fill_bytes(&mut nonce_bytes);
+        rand::rng().fill_bytes(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         let ciphertext = self
@@ -239,7 +239,7 @@ impl Database {
                     None => {
                         // Generate new salt
                         let mut salt = [0u8; 32];
-                        rand::thread_rng().fill_bytes(&mut salt);
+                        rand::rng().fill_bytes(&mut salt);
 
                         // Store salt
                         let write_txn = db.begin_write()?;
@@ -405,6 +405,42 @@ impl Database {
             }
         }
         Ok(None)
+    }
+
+    /// Delete all sessions belonging to a specific user.
+    ///
+    /// Scans every session, deserializes it, and removes entries whose
+    /// `user_id` matches the given ID. Returns the number of deleted sessions.
+    pub async fn delete_sessions_by_user(&self, user_id: Uuid) -> Result<u64> {
+        let db = self.inner.write().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(SESSIONS)?;
+
+        // Collect tokens to delete (cannot mutate while iterating)
+        let mut tokens_to_delete = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            let session: Session = self.deserialize(value.value())?;
+            if session.user_id == user_id {
+                tokens_to_delete.push(key.value().to_string());
+            }
+        }
+        drop(table);
+        drop(read_txn);
+
+        let count = tokens_to_delete.len() as u64;
+        if count > 0 {
+            let write_txn = db.begin_write()?;
+            {
+                let mut table = write_txn.open_table(SESSIONS)?;
+                for token in &tokens_to_delete {
+                    table.remove(token.as_str())?;
+                }
+            }
+            write_txn.commit()?;
+            debug!("Deleted {} session(s) for user {}", count, user_id);
+        }
+        Ok(count)
     }
 
     /// Delete a session

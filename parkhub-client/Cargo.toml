@@ -15,9 +15,9 @@ path = "src/main.rs"
 parkhub-common.workspace = true
 
 # UI Framework
-slint = { version = "1.14", default-features = false, features = [
+slint = { version = "1.15", default-features = false, features = [
     "backend-winit", "renderer-femtovg", "renderer-skia", "renderer-software", "compat-1-2", "raw-window-handle-06"
-] }
+] }  # updated from 1.14
 raw-window-handle = "0.6"
 
 # Async runtime
@@ -52,10 +52,10 @@ rustls.workspace = true
 rustls-pemfile.workspace = true
 
 # Random for mock data (temporary)
-rand = "0.8"
+rand = "0.9"  # updated from 0.8
 
 [build-dependencies]
-slint-build = "1.14"
+slint-build = "1.15"  # updated from 1.14
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
