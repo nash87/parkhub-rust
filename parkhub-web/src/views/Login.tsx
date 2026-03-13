@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Car, Eye, EyeSlash, SpinnerGap, ArrowLeft, Info } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
+import { useBgClass } from '../components/GenerativeBg';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -33,8 +34,10 @@ export function LoginPage() {
     setLoading(false);
   }
 
+  const bgClass = useBgClass('dots');
+
   return (
-    <div className="min-h-dvh parking-grid flex items-center justify-center px-4 py-12">
+    <div className={`min-h-dvh ${bgClass || 'parking-grid'} flex items-center justify-center px-4 py-12`}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

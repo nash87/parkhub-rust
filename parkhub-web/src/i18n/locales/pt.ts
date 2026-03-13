@@ -122,5 +122,98 @@ export default {
       resetIn: 'Reiniciando em {{seconds}}s...',
       cancel: 'Cancelar',
     },
+    features: {
+      title: 'Módulos de Funcionalidades',
+      subtitle: 'Configure quais módulos estão ativos para sua organização',
+      onboardingTitle: 'Personalize Sua Configuração',
+      onboardingSubtitle: 'Ative ou desative funcionalidades conforme suas necessidades. Alterável a qualquer momento nas Configurações.',
+      enabled: 'Ativado',
+      disabled: 'Desativado',
+      enableAll: 'Ativar Todos',
+      disableAll: 'Desativar Todos',
+      resetToPreset: 'Restaurar Modelo',
+      saveChanges: 'Salvar Alterações',
+      saved: 'Funcionalidades atualizadas',
+      categories: {
+        core: 'Principal',
+        collaboration: 'Colaboração',
+        billing: 'Faturamento e Créditos',
+        admin: 'Administração',
+        experience: 'Experiência',
+      },
+      modules: {
+        credits: {
+          name: 'Sistema de Créditos',
+          desc: 'Alocação justa de estacionamento por cota mensal de créditos.',
+          help: 'Usuários recebem um orçamento mensal de créditos. Cada reserva deduz créditos.',
+        },
+        absences: {
+          name: 'Rastreamento de Ausências',
+          desc: 'Registre dias de home office, férias e licenças médicas.',
+          help: 'Usuários podem registrar ausências e padrões recorrentes de home office. Importação de calendário (.ics) suportada.',
+        },
+        vehicles: {
+          name: 'Gestão de Veículos',
+          desc: 'Registre e gerencie veículos com placas para reservas.',
+          help: 'Usuários registram seus veículos uma vez. Na reserva, um veículo é automaticamente vinculado.',
+        },
+        analytics: {
+          name: 'Análise de Uso',
+          desc: 'Dados de ocupação em tempo real, tendências e insights.',
+          help: 'Estatísticas do painel mostram frequência de reservas e taxas de utilização.',
+        },
+        team_view: {
+          name: 'Visão da Equipe',
+          desc: 'Veja ausências e status de estacionamento dos membros da equipe.',
+          help: 'Membros da equipe podem consultar mutuamente os calendários de ausências.',
+        },
+        booking_types: {
+          name: 'Reservas Avançadas',
+          desc: 'Reservas de vários dias e agendamentos recorrentes.',
+          help: 'Permite padrões de reserva de vários dias e recorrentes (semanal/mensal).',
+        },
+        invoices: {
+          name: 'Faturas',
+          desc: 'Gere confirmações de reserva e faturas com cálculo de IVA.',
+          help: 'Cada reserva concluída pode gerar uma fatura PDF. IVA alemão (19%) suportado.',
+        },
+        self_registration: {
+          name: 'Auto-registro',
+          desc: 'Permita que novos usuários criem contas sem convite do administrador.',
+          help: 'Quando ativado, uma página de registro público fica disponível.',
+        },
+        generative_bg: {
+          name: 'Fundos Generativos',
+          desc: 'Fundos CSS dinâmicos com padrões industriais',
+          help: 'Adiciona profundidade visual com contornos topográficos, matrizes de pontos, hachura diagonal e texturas de ruído. Todos os padrões são apenas CSS sem impacto no desempenho.',
+        },
+        micro_animations: {
+          name: 'Micro-Animações',
+          desc: 'Feedback sutil de interação e design de movimento',
+          help: 'Melhora a experiência com efeitos de pressão em cartões, transições hover, revelações escalonadas e física de molas.',
+        },
+        fab_quick_actions: {
+          name: 'FAB de Ações Rápidas',
+          desc: 'Botão flutuante para reservas rápidas no celular',
+          help: 'Adiciona um botão de ação flutuante em telas móveis para acesso com um toque a reservas, veículos e créditos.',
+        },
+        rich_empty_states: {
+          name: 'Estados Vazios Enriquecidos',
+          desc: 'Ilustrações SVG para áreas de conteúdo vazias',
+          help: 'Substitui ícones genéricos por ilustrações SVG quando não há reservas, veículos ou transações.',
+        },
+        onboarding_hints: {
+          name: 'Dicas de Integração',
+          desc: 'Tooltips e tour guiado para novos usuários',
+          help: 'Mostra dicas contextuais para novos usuários na primeira visita a cada página.',
+        },
+      },
+      compliance: {
+        title: 'Transparência e Conformidade',
+        gdpr: 'Todo processamento de dados segue os princípios do RGPD. Usuários podem exportar ou excluir seus dados.',
+        audit: 'O log de auditoria rastreia todas as ações administrativas.',
+        encryption: 'Dados em repouso são criptografados com AES-256-GCM.',
+      },
+    },
   },
 };

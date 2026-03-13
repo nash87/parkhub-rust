@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { CarSimple, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
 import { api } from '../api/client';
+import { useBgClass } from '../components/GenerativeBg';
 
 export function RegisterPage() {
   const { t } = useTranslation();
@@ -25,8 +26,10 @@ export function RegisterPage() {
     setLoading(false);
   }
 
+  const bgClass = useBgClass('mesh');
+
   return (
-    <div className="min-h-dvh mesh-gradient flex items-center justify-center px-4 py-12">
+    <div className={`min-h-dvh ${bgClass || 'mesh-gradient'} flex items-center justify-center px-4 py-12`}>
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
         <Link to="/login" className="inline-flex items-center gap-2 text-xs text-surface-500 hover:text-accent-600 mb-8 transition-colors cursor-pointer uppercase tracking-wider font-semibold">
           <ArrowLeft weight="bold" className="w-3.5 h-3.5" /> {t('auth.signIn')}

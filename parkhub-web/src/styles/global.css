@@ -226,6 +226,11 @@ h1, h2, h3, h4, h5, h6 {
   border-color: var(--color-accent-400);
 }
 
+.stat-card:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 80ms;
+}
+
 .stat-card:hover::after {
   opacity: 1;
 }
@@ -426,6 +431,73 @@ h1, h2, h3, h4, h5, h6 {
     linear-gradient(90deg, var(--color-surface-900) 1px, transparent 1px);
 }
 
+/* ── Topographic contour background — engineering drawings ── */
+.topo-bg {
+  background-color: var(--color-surface-50);
+  background-image:
+    radial-gradient(ellipse 600px 200px at 20% 50%, rgba(217, 119, 6, 0.04) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 400px at 80% 20%, rgba(100, 116, 139, 0.03) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 80 Q50 60 100 80 T200 80' fill='none' stroke='%23e5e5e5' stroke-width='0.5'/%3E%3Cpath d='M0 120 Q50 100 100 120 T200 120' fill='none' stroke='%23e5e5e5' stroke-width='0.5'/%3E%3Cpath d='M0 160 Q50 140 100 160 T200 160' fill='none' stroke='%23e5e5e5' stroke-width='0.5'/%3E%3Cpath d='M0 40 Q50 20 100 40 T200 40' fill='none' stroke='%23e5e5e5' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 100% 100%, 200px 200px;
+}
+
+.dark .topo-bg {
+  background-color: var(--color-surface-950);
+  background-image:
+    radial-gradient(ellipse 600px 200px at 20% 50%, rgba(217, 119, 6, 0.03) 0%, transparent 70%),
+    radial-gradient(ellipse 400px 400px at 80% 20%, rgba(100, 116, 139, 0.03) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 80 Q50 60 100 80 T200 80' fill='none' stroke='%23262626' stroke-width='0.5'/%3E%3Cpath d='M0 120 Q50 100 100 120 T200 120' fill='none' stroke='%23262626' stroke-width='0.5'/%3E%3Cpath d='M0 160 Q50 140 100 160 T200 160' fill='none' stroke='%23262626' stroke-width='0.5'/%3E%3Cpath d='M0 40 Q50 20 100 40 T200 40' fill='none' stroke='%23262626' stroke-width='0.5'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 100% 100%, 200px 200px;
+}
+
+/* ── Dot matrix background — industrial precision ── */
+.dot-matrix {
+  background-color: var(--color-surface-50);
+  background-image:
+    radial-gradient(circle 0.75px at center, var(--color-surface-300) 0.75px, transparent 0.75px);
+  background-size: 20px 20px;
+}
+
+.dark .dot-matrix {
+  background-color: var(--color-surface-950);
+  background-image:
+    radial-gradient(circle 0.75px at center, var(--color-surface-800) 0.75px, transparent 0.75px);
+}
+
+/* ── Diagonal hatch — safety zone / industrial marking ── */
+.hatch-bg {
+  background-color: var(--color-surface-50);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    rgba(217, 119, 6, 0.03) 8px,
+    rgba(217, 119, 6, 0.03) 9px
+  );
+}
+
+.dark .hatch-bg {
+  background-color: var(--color-surface-950);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 8px,
+    rgba(217, 119, 6, 0.04) 8px,
+    rgba(217, 119, 6, 0.04) 9px
+  );
+}
+
+/* ── Noise texture overlay — adds tactile grain ── */
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* ── Accent stripe — signature industrial detail ── */
 .accent-stripe {
   position: relative;
@@ -510,6 +582,35 @@ h1, h2, h3, h4, h5, h6 {
 *:focus-visible {
   outline: 2px solid var(--color-accent-500);
   outline-offset: 2px;
+}
+
+/* ── Mobile touch targets ── */
+@media (max-width: 640px) {
+  .btn { min-height: 2.75rem; }
+  .btn-sm { min-height: 2.25rem; }
+  .input { min-height: 2.75rem; font-size: 1rem; /* prevent iOS zoom */ }
+  select.input { min-height: 2.75rem; font-size: 1rem; }
+}
+
+/* ── Safe area padding for notch/island devices ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ── Standalone PWA adjustments ── */
+@media (display-mode: standalone) {
+  body { padding-top: env(safe-area-inset-top, 0); }
+}
+
+/* ── Touch behavior — reduce 300ms delay ── */
+a, button, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* ── Prevent text selection on interactive elements ── */
+.btn, .badge, nav a, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* ── Reduced motion ── */

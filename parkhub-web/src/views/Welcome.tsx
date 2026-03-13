@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { useTheme } from '../context/ThemeContext';
 import { useUseCase } from '../context/UseCaseContext';
+import { useBgClass } from '../components/GenerativeBg';
 
 const CYCLE_GREETINGS = [
   { lang: 'en', text: 'Welcome' },
@@ -45,9 +46,10 @@ export function WelcomePage() {
   }
 
   const greeting = CYCLE_GREETINGS[greetingIdx];
+  const bgClass = useBgClass('topo');
 
   return (
-    <div className="min-h-dvh parking-grid relative overflow-hidden">
+    <div className={`min-h-dvh ${bgClass || 'parking-grid'} relative overflow-hidden`}>
       {/* Architectural accent lines */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-40 bg-gradient-to-b from-accent-500/30 to-transparent" />

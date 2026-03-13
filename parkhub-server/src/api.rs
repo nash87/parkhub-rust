@@ -101,7 +101,9 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/api/v1/auth/refresh", post(refresh_token))
         .route("/api/v1/auth/reset-password", post(reset_password))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
-        .route("/api/v1/legal/impressum", get(get_impressum));
+        .route("/api/v1/legal/impressum", get(get_impressum))
+        // Feature flags — public (frontend needs to know which features are enabled)
+        .route("/api/v1/features", get(get_features));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
@@ -133,6 +135,8 @@ pub fn create_router(state: SharedState) -> Router {
         // Admin-only: credits management
         .route("/api/v1/admin/users/{id}/credits", post(admin_grant_credits))
         .route("/api/v1/admin/credits/refill-all", post(admin_refill_all_credits))
+        // Admin-only: feature flags management
+        .route("/api/v1/admin/features", get(admin_get_features).put(admin_update_features))
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
         .route_layer(middleware::from_fn_with_state(
@@ -2893,5 +2897,153 @@ async fn admin_refill_all_credits(
         Json(ApiResponse::success(
             serde_json::json!({ "users_refilled": refilled }),
         )),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEATURE FLAGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// All available feature module IDs.
+const FEATURE_MODULES: &[&str] = &[
+    "credits",
+    "absences",
+    "vehicles",
+    "analytics",
+    "team_view",
+    "booking_types",
+    "invoices",
+    "self_registration",
+    "generative_bg",
+    "micro_animations",
+    "fab_quick_actions",
+    "rich_empty_states",
+    "onboarding_hints",
+];
+
+/// Default enabled features (business use case).
+const DEFAULT_FEATURES: &[&str] = &[
+    "credits",
+    "absences",
+    "vehicles",
+    "analytics",
+    "team_view",
+    "booking_types",
+    "invoices",
+    "generative_bg",
+    "micro_animations",
+    "fab_quick_actions",
+    "rich_empty_states",
+    "onboarding_hints",
+];
+
+const SETTINGS_FEATURES_KEY: &str = "features_enabled";
+
+/// Read enabled features from DB, falling back to defaults.
+async fn read_features(db: &crate::db::Database) -> Vec<String> {
+    match db.get_setting(SETTINGS_FEATURES_KEY).await {
+        Ok(Some(json_str)) => {
+            serde_json::from_str::<Vec<String>>(&json_str)
+                .unwrap_or_else(|_| DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect())
+        }
+        _ => DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect(),
+    }
+}
+
+/// `GET /api/v1/features` — public endpoint returning enabled features
+async fn get_features(
+    State(state): State<SharedState>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    let enabled = read_features(&state_guard.db).await;
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "enabled": enabled,
+            "available": FEATURE_MODULES,
+        }))),
+    )
+}
+
+/// `GET /api/v1/admin/features` — admin: get features with full metadata
+async fn admin_get_features(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let enabled = read_features(&state_guard.db).await;
+
+    let available: Vec<serde_json::Value> = FEATURE_MODULES
+        .iter()
+        .map(|id| {
+            serde_json::json!({
+                "id": id,
+                "enabled": enabled.contains(&id.to_string()),
+                "default_enabled": DEFAULT_FEATURES.contains(id),
+            })
+        })
+        .collect();
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "enabled": enabled,
+            "available": available,
+        }))),
+    )
+}
+
+#[derive(Deserialize)]
+struct UpdateFeaturesRequest {
+    enabled: Vec<String>,
+}
+
+/// `PUT /api/v1/admin/features` — admin: update enabled features
+async fn admin_update_features(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(body): Json<UpdateFeaturesRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.write().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    // Validate: only accept known feature IDs
+    let valid: Vec<String> = body
+        .enabled
+        .iter()
+        .filter(|id| FEATURE_MODULES.contains(&id.as_str()))
+        .cloned()
+        .collect();
+
+    let json_str = serde_json::to_string(&valid).unwrap_or_default();
+    if let Err(e) = state_guard.db.set_setting(SETTINGS_FEATURES_KEY, &json_str).await {
+        tracing::error!("Failed to save feature flags: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to save features")),
+        );
+    }
+
+    // Audit log
+    if state_guard.config.audit_logging_enabled {
+        let _entry = AuditEntry::new(AuditEventType::ConfigChanged)
+            .user(auth_user.user_id, "admin")
+            .resource("settings", "features_enabled")
+            .details(serde_json::json!({ "features": valid }))
+            .log();
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "enabled": valid,
+        }))),
     )
 }

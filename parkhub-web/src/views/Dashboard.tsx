@@ -7,11 +7,16 @@ import {
   TrendUp, MapPin,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
+import { useFeatures } from '../context/FeaturesContext';
 import { api, type Booking, type UserStats } from '../api/client';
+import { EmptyState } from '../components/EmptyState';
+import { OnboardingHint } from '../components/OnboardingHint';
+import { MicroAnimated } from '../components/MicroAnimated';
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { isEnabled } = useFeatures();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,29 +49,35 @@ export function DashboardPage() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       {/* Greeting */}
-      <motion.div variants={item}>
+      <motion.div variants={item} className="relative">
         <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-widest mb-1">
           {t('nav.dashboard')}
         </p>
         <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white tracking-tight">
           {t('dashboard.greeting', { timeOfDay, name })}
         </h1>
+        <OnboardingHint
+          id="dashboard-welcome"
+          message={t('dashboard.hintWelcome', { defaultValue: 'Welcome to your dashboard! Here you can see your active bookings, stats, and quick actions at a glance.' })}
+        />
       </motion.div>
 
       {/* Stats grid */}
-      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <motion.div variants={item} className={`grid grid-cols-2 ${isEnabled('credits') ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
         <StatCard
           icon={CalendarCheck}
           label={t('dashboard.activeBookings')}
           value={activeBookings.length}
           color="accent"
         />
-        <StatCard
-          icon={CoinVertical}
-          label={t('dashboard.creditsLeft')}
-          value={user?.credits_balance ?? 0}
-          color="primary"
-        />
+        {isEnabled('credits') && (
+          <StatCard
+            icon={CoinVertical}
+            label={t('dashboard.creditsLeft')}
+            value={user?.credits_balance ?? 0}
+            color="primary"
+          />
+        )}
         <StatCard
           icon={TrendUp}
           label={t('dashboard.thisMonth')}
@@ -97,11 +108,14 @@ export function DashboardPage() {
           </div>
 
           {activeBookings.length === 0 ? (
-            <div className="text-center py-10">
-              <CalendarPlus weight="light" className="w-14 h-14 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
-              <p className="text-surface-500 dark:text-surface-400 mb-4 text-sm">{t('dashboard.noActiveBookings')}</p>
-              <Link to="/book" className="btn btn-primary cursor-pointer">{t('dashboard.bookSpot')}</Link>
-            </div>
+            <EmptyState
+              variant="no-bookings"
+              icon={CalendarPlus}
+              title={t('dashboard.noActiveBookings')}
+              description={t('dashboard.noActiveBookingsDesc', { defaultValue: 'Book your first parking spot to get started.' })}
+              actionLabel={t('dashboard.bookSpot')}
+              actionTo="/book"
+            />
           ) : (
             <div className="space-y-2">
               {activeBookings.slice(0, 5).map(b => (
@@ -132,9 +146,9 @@ export function DashboardPage() {
           <div className="space-y-1">
             {[
               { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), accent: 'bg-accent-100 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400' },
-              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), accent: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' },
+              ...(isEnabled('vehicles') ? [{ to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), accent: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' }] : []),
               { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), accent: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
-              { to: '/credits', icon: CoinVertical, label: t('nav.credits'), accent: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' },
+              ...(isEnabled('credits') ? [{ to: '/credits', icon: CoinVertical, label: t('nav.credits'), accent: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' }] : []),
             ].map((action, i) => (
               <Link
                 key={i}
@@ -170,7 +184,7 @@ function StatCard({ icon: Icon, label, value, color, isText }: {
   const c = colors[color] || colors.primary;
 
   return (
-    <div className="stat-card">
+    <MicroAnimated className="stat-card" noPress>
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-2">{label}</p>
@@ -184,7 +198,7 @@ function StatCard({ icon: Icon, label, value, color, isText }: {
           <Icon weight="bold" className={`w-4 h-4 ${c.icon}`} />
         </div>
       </div>
-    </div>
+    </MicroAnimated>
   );
 }
 
