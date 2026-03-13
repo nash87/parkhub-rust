@@ -112,5 +112,15 @@ export default {
         feature3: 'Zarządzanie grupą',
       },
     },
+    demo: {
+      badge: 'DEMO',
+      timer: 'Reset za',
+      viewers: 'widzów',
+      voteReset: 'Głosuj za resetem',
+      votesNeeded: '{{current}}/{{needed}} głosów',
+      resetNow: 'Resetuj demo',
+      resetIn: 'Reset za {{seconds}}s...',
+      cancel: 'Anuluj',
+    },
   },
 };

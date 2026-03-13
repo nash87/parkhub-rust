@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Sparkle, Eye, Timer, ArrowsClockwise, CaretDown, CaretUp } from '@phosphor-icons/react';
+import { Sparkle, Eye, Timer, ArrowsClockwise, CaretDown, CaretUp, X } from '@phosphor-icons/react';
 import { api, type DemoStatus } from '../api/client';
 
 export function DemoOverlay() {
@@ -10,6 +10,10 @@ export function DemoOverlay() {
   const [enabled, setEnabled] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [localTimer, setLocalTimer] = useState(0);
+  const [resetCountdown, setResetCountdown] = useState<number | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const isSolo = (demo?.viewers ?? 0) <= 1;
 
   // Check if demo mode is enabled
   useEffect(() => {
@@ -49,6 +53,43 @@ export function DemoOverlay() {
     }, 1000);
     return () => clearInterval(interval);
   }, [enabled, localTimer > 0]);
+
+  // Solo reset countdown
+  const startResetCountdown = useCallback(() => {
+    setResetCountdown(10);
+    resetTimerRef.current = setInterval(() => {
+      setResetCountdown(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          // Countdown finished — trigger reset
+          clearInterval(resetTimerRef.current!);
+          resetTimerRef.current = null;
+          api.resetDemo().then(res => {
+            if (res.success) {
+              window.location.reload();
+            }
+          });
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const cancelResetCountdown = useCallback(() => {
+    if (resetTimerRef.current) {
+      clearInterval(resetTimerRef.current);
+      resetTimerRef.current = null;
+    }
+    setResetCountdown(null);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearInterval(resetTimerRef.current);
+    };
+  }, []);
 
   const handleVote = useCallback(() => {
     api.voteDemoReset().then(res => {
@@ -109,30 +150,68 @@ export function DemoOverlay() {
               className="overflow-hidden"
             >
               <div className="px-4 pb-3 pt-1 border-t border-surface-200/50 dark:border-surface-700/50">
-                {/* Vote progress */}
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="flex-1 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-primary-500 rounded-full"
-                      animate={{ width: `${voteProgress}%` }}
-                      transition={{ type: 'spring', stiffness: 100 }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-surface-500">
-                    {t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })}
-                  </span>
-                </div>
+                {isSolo ? (
+                  /* Solo mode — direct reset with countdown */
+                  resetCountdown !== null ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-surface-500">
+                          {t('demo.resetIn', { seconds: resetCountdown })}
+                        </span>
+                        <button
+                          onClick={cancelResetCountdown}
+                          className="btn btn-sm btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                        >
+                          <X weight="bold" className="w-3.5 h-3.5" />
+                          {t('demo.cancel')}
+                        </button>
+                      </div>
+                      <div className="h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-amber-500 rounded-full"
+                          initial={{ width: '100%' }}
+                          animate={{ width: '0%' }}
+                          transition={{ duration: 10, ease: 'linear' }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={startResetCountdown}
+                      className="btn btn-sm btn-primary w-full"
+                    >
+                      <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
+                      {t('demo.resetNow')}
+                    </button>
+                  )
+                ) : (
+                  /* Multi-viewer mode — voting */
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-primary-500 rounded-full"
+                          animate={{ width: `${voteProgress}%` }}
+                          transition={{ type: 'spring', stiffness: 100 }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-surface-500">
+                        {t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })}
+                      </span>
+                    </div>
 
-                <button
-                  onClick={handleVote}
-                  disabled={demo.votes.has_voted}
-                  className="btn btn-sm btn-primary w-full disabled:opacity-50"
-                >
-                  <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
-                  {demo.votes.has_voted
-                    ? t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })
-                    : t('demo.voteReset')}
-                </button>
+                    <button
+                      onClick={handleVote}
+                      disabled={demo.votes.has_voted}
+                      className="btn btn-sm btn-primary w-full disabled:opacity-50"
+                    >
+                      <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
+                      {demo.votes.has_voted
+                        ? t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })
+                        : t('demo.voteReset')}
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           )}

@@ -186,6 +186,43 @@ pub async fn demo_vote(
     .into_response()
 }
 
+/// POST /api/v1/demo/reset — solo reset (only when viewers <= 1)
+pub async fn demo_reset(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
+) -> impl IntoResponse {
+    let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
+    if !s.enabled {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "Demo mode is not enabled"})),
+        )
+            .into_response();
+    }
+
+    s.prune_viewers();
+
+    if s.viewers.len() > 1 {
+        return (
+            StatusCode::CONFLICT,
+            Json(serde_json::json!({
+                "error": "Solo reset not available with multiple viewers. Use voting instead.",
+                "viewers": s.viewers.len()
+            })),
+        )
+            .into_response();
+    }
+
+    s.reset();
+    Json(VoteResponse {
+        message: "Demo reset! Page will reload.".into(),
+        votes: 0,
+        threshold: VOTE_THRESHOLD,
+        reset: true,
+    })
+    .into_response()
+}
+
 /// GET /api/v1/demo/config
 pub async fn demo_config(
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,

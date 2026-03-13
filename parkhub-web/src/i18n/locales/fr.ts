@@ -112,5 +112,15 @@ export default {
         feature3: 'Gestion de groupe',
       },
     },
+    demo: {
+      badge: 'DEMO',
+      timer: 'Réinitialisation dans',
+      viewers: 'visiteurs',
+      voteReset: 'Voter pour réinitialiser',
+      votesNeeded: '{{current}}/{{needed}} votes',
+      resetNow: 'Réinitialiser la démo',
+      resetIn: 'Réinitialisation dans {{seconds}}s...',
+      cancel: 'Annuler',
+    },
   },
 };

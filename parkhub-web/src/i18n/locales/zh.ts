@@ -112,5 +112,15 @@ export default {
         feature3: '团队管理',
       },
     },
+    demo: {
+      badge: 'DEMO',
+      timer: '重置倒计时',
+      viewers: '访客',
+      voteReset: '投票重置',
+      votesNeeded: '{{current}}/{{needed}} 票',
+      resetNow: '重置演示',
+      resetIn: '{{seconds}}秒后重置...',
+      cancel: '取消',
+    },
   },
 };
