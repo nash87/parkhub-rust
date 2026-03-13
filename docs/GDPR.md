@@ -75,7 +75,7 @@ operations. The erasure endpoint anonymizes PII but retains the booking record s
 
 | Item | Status |
 |------|--------|
-| Cookies | None — only `localStorage` is used for the Bearer token (technically necessary) |
+| Cookies | None — `localStorage` is used for session token, theme, language, feature flags, use case, and onboarding hint dismissals (all technically necessary) |
 | Analytics / tracking pixels | None |
 | External CDN requests | None — all assets embedded in the binary |
 | External font requests | None |
@@ -314,10 +314,68 @@ For erasure requests (Art. 17):
 
 ## Cookie Policy (TTDSG §25)
 
-ParkHub does not set any cookies. The Bearer token is stored in `localStorage` — this is
-technically necessary for session management and does not require consent under TTDSG §25.
+ParkHub does not set any cookies. The following `localStorage` entries are used — all are
+technically necessary and do not require consent under TTDSG §25 Abs. 2 Nr. 2:
+
+| Key | Content | Purpose |
+|-----|---------|---------|
+| `parkhub_token` | Bearer session token | Authentication |
+| `parkhub_theme` | `light` / `dark` / `system` | Display preference |
+| `parkhub_features` | Array of enabled module IDs | Feature configuration |
+| `parkhub_usecase` | `business` / `residential` / `personal` | UI preset selection |
+| `parkhub_hint_*` | `1` (dismissed) | Onboarding tooltip state |
+| `i18nextLng` | Language code (e.g. `de`) | Language preference |
+
+The PWA service worker caches static assets only (JS, CSS, fonts, images). API responses
+and user data are **never** cached by the service worker.
 
 No tracking, analytics, or advertising technologies are used.
+
+---
+
+## Data Protection Impact Assessment (DPIA / Datenschutz-Folgenabschätzung)
+
+A DPIA (Art. 35 DSGVO) is required when data processing is "likely to result in a high
+risk to the rights and freedoms of natural persons."
+
+**For most ParkHub deployments, a DPIA is NOT required** because:
+
+- No systematic monitoring of publicly accessible areas (unless combined with CCTV)
+- No large-scale processing of special category data (Art. 9)
+- No automated decision-making with legal or similarly significant effects
+- No large-scale profiling
+
+**Consider conducting a DPIA if your deployment involves:**
+
+- Large-scale commercial parking operations (thousands of daily users)
+- License plate recognition (ALPR/ANPR) integration
+- CCTV or camera-based monitoring of parking areas
+- Combining parking data with employee monitoring or access control systems
+- Processing data of vulnerable persons (e.g., hospital parking for patients)
+
+If a DPIA is required, use your supervisory authority's DPIA template (e.g., the DSK
+Standard-Datenschutzmodell or your Landesbehörde's DSFA form). The data inventory in
+this document and the VVT template (`legal/vvt-template.md`) provide the necessary input.
+
+---
+
+## Accessibility (BFSG / EU Accessibility Act)
+
+The Barrierefreiheitsstärkungsgesetz (BFSG), implementing the EU Accessibility Act (EAA),
+has been in effect since June 28, 2025. It applies to B2C digital services offered by
+businesses with more than 10 employees or more than EUR 2 million annual turnover.
+
+**ParkHub as open-source software is not itself subject to BFSG**, but operators using it
+for consumer-facing services may be. ParkHub provides:
+
+- Semantic HTML structure (via React components)
+- ARIA labels on interactive elements (buttons, navigation, form fields)
+- Keyboard navigation support
+- High-contrast color schemes (light and dark theme)
+- Responsive design for all screen sizes
+
+**Operators should independently verify** WCAG 2.1 Level AA compliance for their specific
+deployment, particularly screen reader compatibility and custom content accessibility.
 
 ---
 
@@ -328,6 +386,9 @@ mandatory for:
 - Public authorities
 - Organizations processing special categories of data (Art. 9) at scale
 - Organizations systematically monitoring individuals at large scale
+
+Under German law (§ 38 BDSG), appointment is also mandatory when at least 20 persons are
+regularly engaged in the automated processing of personal data.
 
 For most small-to-medium organizations using ParkHub for internal parking management,
 appointment is not mandatory. Consult your legal advisor.

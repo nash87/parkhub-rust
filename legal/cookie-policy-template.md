@@ -43,11 +43,67 @@ Tracking-Cookies, keine Analyse-Cookies und keine Werbe-Cookies** eingesetzt.
 | Eigenschaft | Beschreibung |
 |-------------|-------------|
 | **Art** | localStorage-Eintrag |
-| **Name** | `parkhub_theme` (o. ä.) |
-| **Inhalt** | Benutzereinstellung „hell" oder „dunkel" |
+| **Name** | `parkhub_theme` |
+| **Inhalt** | Benutzereinstellung `light`, `dark` oder `system` |
 | **Zweck** | Speichert die bevorzugte Darstellung des Nutzers |
 | **Speicherdauer** | Dauerhaft (bis zum Löschen durch den Nutzer / Browser) |
 | **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig für gewünschte Darstellung |
+
+### 2.3 Funktionsmodule (localStorage)
+
+| Eigenschaft | Beschreibung |
+|-------------|-------------|
+| **Art** | localStorage-Eintrag |
+| **Name** | `parkhub_features` |
+| **Inhalt** | Liste aktivierter Funktionsmodule (z. B. `["vehicles","credits","analytics"]`) |
+| **Zweck** | Speichert, welche Funktionsbereiche der Nutzer aktiviert hat |
+| **Speicherdauer** | Dauerhaft (bis zum Löschen durch den Nutzer / Browser) |
+| **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig für korrekte Darstellung der Benutzeroberfläche |
+
+### 2.4 Nutzungsszenario (localStorage)
+
+| Eigenschaft | Beschreibung |
+|-------------|-------------|
+| **Art** | localStorage-Eintrag |
+| **Name** | `parkhub_usecase` |
+| **Inhalt** | Gewähltes Szenario: `business`, `residential` oder `personal` |
+| **Zweck** | Steuert die Standardkonfiguration der Benutzeroberfläche |
+| **Speicherdauer** | Dauerhaft (bis zum Löschen durch den Nutzer / Browser) |
+| **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig |
+
+### 2.5 Onboarding-Hinweise (localStorage)
+
+| Eigenschaft | Beschreibung |
+|-------------|-------------|
+| **Art** | localStorage-Einträge |
+| **Name** | `parkhub_hint_*` (z. B. `parkhub_hint_dashboard_intro`) |
+| **Inhalt** | `1` (Hinweis wurde geschlossen) |
+| **Zweck** | Verhindert wiederholtes Anzeigen bereits geschlossener Hilfehinweise |
+| **Speicherdauer** | Dauerhaft (bis zum Löschen durch den Nutzer / Browser) |
+| **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig für gewünschtes Nutzungserlebnis |
+
+### 2.6 Spracheinstellung (localStorage)
+
+| Eigenschaft | Beschreibung |
+|-------------|-------------|
+| **Art** | localStorage-Eintrag |
+| **Name** | `i18nextLng` |
+| **Inhalt** | Sprachcode (z. B. `de`, `en`, `fr`) |
+| **Zweck** | Speichert die vom Nutzer gewählte Sprache der Benutzeroberfläche |
+| **Speicherdauer** | Dauerhaft (bis zum Löschen durch den Nutzer / Browser) |
+| **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig |
+
+### 2.7 Service Worker / Cache API (PWA)
+
+| Eigenschaft | Beschreibung |
+|-------------|-------------|
+| **Art** | Browser-Cache (Cache API, gesteuert durch Service Worker) |
+| **Name** | `parkhub-v1` (Cache-Name) |
+| **Inhalt** | Statische Dateien: JavaScript, CSS, Schriftarten, Bilder, SVG-Icons, SPA-Startseite |
+| **Zweck** | Offline-Verfügbarkeit der Benutzeroberfläche; schnelleres Laden bei wiederholten Besuchen |
+| **Gespeicherte Daten** | Ausschließlich statische, nicht-personenbezogene Anwendungsdateien. **Keine API-Antworten**, keine Nutzerdaten, keine Buchungsdaten. API-Anfragen (`/api/*`) und Health-Endpunkte werden explizit vom Caching ausgeschlossen. |
+| **Speicherdauer** | Bis zum Service-Worker-Update oder manuellen Löschen der Browser-Daten |
+| **Rechtsgrundlage** | § 25 Abs. 2 Nr. 2 TTDSG — technisch notwendig für PWA-Funktionalität |
 
 ---
 
