@@ -122,5 +122,98 @@ export default {
       resetIn: '{{seconds}}秒后重置...',
       cancel: '取消',
     },
+    features: {
+      title: '功能模块',
+      subtitle: '配置组织中哪些模块处于活动状态',
+      onboardingTitle: '自定义设置',
+      onboardingSubtitle: '根据需要启用或禁用功能。随时可在设置中更改。',
+      enabled: '已启用',
+      disabled: '已禁用',
+      enableAll: '全部启用',
+      disableAll: '全部禁用',
+      resetToPreset: '重置为预设',
+      saveChanges: '保存更改',
+      saved: '功能已更新',
+      categories: {
+        core: '核心',
+        collaboration: '协作',
+        billing: '计费与积分',
+        admin: '管理',
+        experience: '体验',
+      },
+      modules: {
+        credits: {
+          name: '积分系统',
+          desc: '通过月度积分配额实现公平的停车分配。',
+          help: '用户获得月度积分预算。每次预订扣除积分。管理员可以调整配额。',
+        },
+        absences: {
+          name: '缺勤跟踪',
+          desc: '记录远程办公日、假期和病假。',
+          help: '用户可以记录缺勤和定期远程办公模式。支持日历导入(.ics)。',
+        },
+        vehicles: {
+          name: '车辆管理',
+          desc: '注册和管理带车牌号的车辆以进行预订。',
+          help: '用户注册一次车辆。预订时会自动关联车辆。',
+        },
+        analytics: {
+          name: '使用分析',
+          desc: '实时占用数据、使用趋势和洞察。',
+          help: '仪表板统计显示预订频率、高峰时段和利用率。',
+        },
+        team_view: {
+          name: '团队视图',
+          desc: '查看团队成员的缺勤和停车状态。',
+          help: '团队成员可以相互查看缺勤日历。',
+        },
+        booking_types: {
+          name: '高级预订',
+          desc: '多日预订和定期预订计划。',
+          help: '启用多日和定期（每周/每月）预订模式。',
+        },
+        invoices: {
+          name: '发票',
+          desc: '生成带增值税计算的预订确认和发票。',
+          help: '每次完成的预订可生成PDF发票。支持德国增值税（19%）。',
+        },
+        self_registration: {
+          name: '自助注册',
+          desc: '允许新用户无需管理员邀请即可创建账户。',
+          help: '启用后，将提供公开注册页面。',
+        },
+        generative_bg: {
+          name: '生成背景',
+          desc: '带工业图案的动态CSS背景',
+          help: '通过地形等高线、点阵、对角线影线和噪声纹理增加视觉深度。所有图案均为纯CSS，零性能开销。',
+        },
+        micro_animations: {
+          name: '微动画',
+          desc: '细腻的交互反馈与动效设计',
+          help: '通过卡片按压效果、悬停过渡、交错显示和弹簧物理提升用户体验。所有动画尊重减少动画偏好设置。',
+        },
+        fab_quick_actions: {
+          name: '快速操作浮动按钮',
+          desc: '移动端快速预订浮动操作按钮',
+          help: '在移动屏幕上添加浮动操作按钮，一键访问预订、车辆和积分。',
+        },
+        rich_empty_states: {
+          name: '丰富空状态',
+          desc: '空内容区域的自定义SVG插图',
+          help: '当没有预订、车辆或交易时，用专门的SVG插图替代通用图标。',
+        },
+        onboarding_hints: {
+          name: '引导提示',
+          desc: '新用户提示和引导教程',
+          help: '在每个页面的首次访问时为新用户显示上下文提示。',
+        },
+      },
+      compliance: {
+        title: '透明度与合规',
+        gdpr: '所有数据处理遵循GDPR原则。用户可随时导出或删除其数据。',
+        audit: '审计日志跟踪所有管理操作。',
+        encryption: '静态数据使用AES-256-GCM加密。',
+      },
+    },
   },
 };

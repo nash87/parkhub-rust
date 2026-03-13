@@ -122,5 +122,98 @@ export default {
       resetIn: '{{seconds}}s içinde sıfırlanıyor...',
       cancel: 'İptal',
     },
+    features: {
+      title: 'Özellik Modülleri',
+      subtitle: 'Kuruluşunuz için hangi modüllerin aktif olacağını yapılandırın',
+      onboardingTitle: 'Kurulumunuzu Özelleştirin',
+      onboardingSubtitle: 'İhtiyaçlarınıza göre özellikleri etkinleştirin veya devre dışı bırakın. Ayarlardan her zaman değiştirilebilir.',
+      enabled: 'Etkin',
+      disabled: 'Devre Dışı',
+      enableAll: 'Tümünü Etkinleştir',
+      disableAll: 'Tümünü Devre Dışı Bırak',
+      resetToPreset: 'Şablona Sıfırla',
+      saveChanges: 'Değişiklikleri Kaydet',
+      saved: 'Özellikler güncellendi',
+      categories: {
+        core: 'Temel',
+        collaboration: 'İş Birliği',
+        billing: 'Faturalandırma ve Krediler',
+        admin: 'Yönetim',
+        experience: 'Deneyim',
+      },
+      modules: {
+        credits: {
+          name: 'Kredi Sistemi',
+          desc: 'Aylık kredi kotası ile adil otopark tahsisi.',
+          help: 'Kullanıcılar aylık kredi bütçesi alır. Her rezervasyon kredi düşer.',
+        },
+        absences: {
+          name: 'Devamsızlık Takibi',
+          desc: 'Uzaktan çalışma günlerini, izinleri ve hastalıkları kaydedin.',
+          help: 'Kullanıcılar devamsızlıkları ve tekrarlayan uzaktan çalışma kalıplarını kaydedebilir. Takvim içe aktarma (.ics) desteklenir.',
+        },
+        vehicles: {
+          name: 'Araç Yönetimi',
+          desc: 'Plakalarla araçları kaydedin ve yönetin.',
+          help: 'Kullanıcılar araçlarını bir kez kaydeder. Rezervasyonda otomatik olarak bir araç bağlanır.',
+        },
+        analytics: {
+          name: 'Kullanım Analizi',
+          desc: 'Gerçek zamanlı doluluk verileri, trendler ve içgörüler.',
+          help: 'Gösterge paneli istatistikleri rezervasyon sıklığı ve kullanım oranlarını gösterir.',
+        },
+        team_view: {
+          name: 'Takım Görünümü',
+          desc: 'Takım üyelerinin devamsızlıklarını ve park durumlarını görün.',
+          help: 'Takım üyeleri birbirlerinin devamsızlık takvimlerini görebilir.',
+        },
+        booking_types: {
+          name: 'Gelişmiş Rezervasyonlar',
+          desc: 'Çok günlü rezervasyonlar ve tekrarlayan planlamalar.',
+          help: 'Çok günlü ve tekrarlayan (haftalık/aylık) rezervasyon kalıplarını etkinleştirir.',
+        },
+        invoices: {
+          name: 'Faturalar',
+          desc: 'KDV hesaplamalı rezervasyon onayları ve faturalar oluşturun.',
+          help: 'Her tamamlanan rezervasyon PDF fatura oluşturabilir. Alman KDV (%19) desteklenir.',
+        },
+        self_registration: {
+          name: 'Kendi Kendine Kayıt',
+          desc: 'Yeni kullanıcıların yönetici daveti olmadan hesap oluşturmasına izin verin.',
+          help: 'Etkinleştirildiğinde, herkese açık bir kayıt sayfası kullanılabilir.',
+        },
+        generative_bg: {
+          name: 'Üretken Arka Planlar',
+          desc: 'Endüstriyel desenli dinamik CSS arka planlar',
+          help: 'Topografik konturlar, nokta matrisleri, çapraz tarama ve gürültü dokuları ile görsel derinlik ekler. Tüm desenler yalnızca CSS ile performans etkisi sıfırdır.',
+        },
+        micro_animations: {
+          name: 'Mikro Animasyonlar',
+          desc: 'İnce etkileşim geri bildirimi ve hareket tasarımı',
+          help: 'Kart basma efektleri, hover geçişleri, kademeli açılımlar ve yay fiziği ile kullanıcı deneyimini geliştirir.',
+        },
+        fab_quick_actions: {
+          name: 'Hızlı İşlem FAB',
+          desc: 'Mobilde hızlı rezervasyon için yüzen eylem düğmesi',
+          help: 'Mobil ekranlarda rezervasyon, araç ve kredilere tek dokunuşla erişim için yüzen eylem düğmesi ekler.',
+        },
+        rich_empty_states: {
+          name: 'Zengin Boş Durumlar',
+          desc: 'Boş içerik alanları için özel SVG illüstrasyonlar',
+          help: 'Rezervasyon, araç veya işlem olmadığında genel simgeleri SVG illüstrasyonlarla değiştirir.',
+        },
+        onboarding_hints: {
+          name: 'Başlangıç İpuçları',
+          desc: 'Yeni kullanıcılar için araç ipuçları ve rehberli tur',
+          help: 'Her sayfanın ilk ziyaretinde yeni kullanıcılar için bağlamsal ipuçları gösterir.',
+        },
+      },
+      compliance: {
+        title: 'Şeffaflık ve Uyumluluk',
+        gdpr: 'Tüm veri işleme KVKK/GDPR ilkelerine uyar. Kullanıcılar verilerini istedikleri zaman dışa aktarabilir veya silebilir.',
+        audit: 'Denetim günlüğü tüm yönetim eylemlerini izler.',
+        encryption: 'Saklanan veriler AES-256-GCM ile şifrelenir.',
+      },
+    },
   },
 };

@@ -118,6 +118,12 @@ export const api = {
   adminUpdateSettings: (data: Record<string, string>) =>
     request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
+  // ── Features ──
+  getFeatures: () => request<{ enabled: string[] }>('/api/v1/features'),
+  updateFeatures: (enabled: string[]) =>
+    request('/api/v1/admin/features', { method: 'PUT', body: JSON.stringify({ enabled }) }),
+  adminGetFeatures: () => request<{ enabled: string[]; available: FeatureInfo[] }>('/api/v1/admin/features'),
+
   // ── Demo ──
   getDemoConfig: () => request<{ demo_mode: boolean }>('/api/v1/demo/config'),
   getDemoStatus: () => request<DemoStatus>('/api/v1/demo/status'),
@@ -245,6 +251,12 @@ export interface AdminStats {
   total_lots: number;
   total_bookings: number;
   active_bookings: number;
+}
+
+export interface FeatureInfo {
+  id: string;
+  category: string;
+  default_enabled: boolean;
 }
 
 export interface DemoStatus {

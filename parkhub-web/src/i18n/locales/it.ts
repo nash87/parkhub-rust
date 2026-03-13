@@ -122,5 +122,98 @@ export default {
       resetIn: 'Reimpostazione in {{seconds}}s...',
       cancel: 'Annulla',
     },
+    features: {
+      title: 'Moduli Funzionalità',
+      subtitle: 'Configura quali moduli sono attivi per la tua organizzazione',
+      onboardingTitle: 'Personalizza la Configurazione',
+      onboardingSubtitle: 'Attiva o disattiva le funzionalità in base alle tue esigenze. Modificabile in qualsiasi momento nelle Impostazioni.',
+      enabled: 'Attivato',
+      disabled: 'Disattivato',
+      enableAll: 'Attiva Tutti',
+      disableAll: 'Disattiva Tutti',
+      resetToPreset: 'Ripristina Modello',
+      saveChanges: 'Salva Modifiche',
+      saved: 'Funzionalità aggiornate',
+      categories: {
+        core: 'Principale',
+        collaboration: 'Collaborazione',
+        billing: 'Fatturazione e Crediti',
+        admin: 'Amministrazione',
+        experience: 'Esperienza',
+      },
+      modules: {
+        credits: {
+          name: 'Sistema Crediti',
+          desc: 'Assegnazione equa del parcheggio tramite quota mensile di crediti.',
+          help: 'Gli utenti ricevono un budget mensile di crediti. Ogni prenotazione deduce crediti.',
+        },
+        absences: {
+          name: 'Monitoraggio Assenze',
+          desc: 'Registra giorni di smart working, ferie e malattia.',
+          help: 'Gli utenti possono registrare assenze e modelli ricorrenti di smart working. Importazione calendario (.ics) supportata.',
+        },
+        vehicles: {
+          name: 'Gestione Veicoli',
+          desc: 'Registra e gestisci veicoli con targhe per le prenotazioni.',
+          help: 'Gli utenti registrano i loro veicoli una volta. Durante la prenotazione, un veicolo viene automaticamente collegato.',
+        },
+        analytics: {
+          name: 'Analisi Utilizzo',
+          desc: 'Dati di occupazione in tempo reale, tendenze e approfondimenti.',
+          help: 'Le statistiche della dashboard mostrano frequenza prenotazioni e tassi di utilizzo.',
+        },
+        team_view: {
+          name: 'Vista Team',
+          desc: 'Visualizza assenze e stato parcheggio dei membri del team.',
+          help: 'I membri del team possono consultare reciprocamente i calendari delle assenze.',
+        },
+        booking_types: {
+          name: 'Prenotazioni Avanzate',
+          desc: 'Prenotazioni multi-giorno e pianificazioni ricorrenti.',
+          help: 'Permette modelli di prenotazione multi-giorno e ricorrenti (settimanale/mensile).',
+        },
+        invoices: {
+          name: 'Fatture',
+          desc: 'Genera conferme di prenotazione e fatture con calcolo IVA.',
+          help: 'Ogni prenotazione completata può generare una fattura PDF. IVA tedesca (19%) supportata.',
+        },
+        self_registration: {
+          name: 'Auto-registrazione',
+          desc: 'Consenti ai nuovi utenti di creare account senza invito dell\'amministratore.',
+          help: 'Quando attivato, è disponibile una pagina di registrazione pubblica.',
+        },
+        generative_bg: {
+          name: 'Sfondi Generativi',
+          desc: 'Sfondi CSS dinamici con pattern industriali',
+          help: 'Aggiunge profondità visiva con contorni topografici, matrici di punti, tratteggio diagonale e texture di rumore. Tutti i pattern sono solo CSS senza impatto sulle prestazioni.',
+        },
+        micro_animations: {
+          name: 'Micro-Animazioni',
+          desc: 'Feedback sottile di interazione e design del movimento',
+          help: 'Migliora l\'esperienza con effetti di pressione sulle schede, transizioni hover, rivelazioni sfalsate e fisica a molla.',
+        },
+        fab_quick_actions: {
+          name: 'FAB Azioni Rapide',
+          desc: 'Pulsante flottante per prenotazioni rapide su mobile',
+          help: 'Aggiunge un pulsante di azione flottante sugli schermi mobili per accesso con un tocco a prenotazioni, veicoli e crediti.',
+        },
+        rich_empty_states: {
+          name: 'Stati Vuoti Arricchiti',
+          desc: 'Illustrazioni SVG per aree di contenuto vuote',
+          help: 'Sostituisce le icone generiche con illustrazioni SVG quando non ci sono prenotazioni, veicoli o transazioni.',
+        },
+        onboarding_hints: {
+          name: 'Suggerimenti Iniziali',
+          desc: 'Tooltip e tour guidato per nuovi utenti',
+          help: 'Mostra suggerimenti contestuali per i nuovi utenti alla loro prima visita su ogni pagina.',
+        },
+      },
+      compliance: {
+        title: 'Trasparenza e Conformità',
+        gdpr: 'Tutto il trattamento dei dati segue i principi del GDPR. Gli utenti possono esportare o eliminare i propri dati.',
+        audit: 'La registrazione di audit traccia tutte le azioni amministrative.',
+        encryption: 'I dati a riposo sono crittografati con AES-256-GCM.',
+      },
+    },
   },
 };

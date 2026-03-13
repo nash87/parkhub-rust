@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { UseCaseProvider } from './context/UseCaseContext';
+import { FeaturesProvider } from './context/FeaturesContext';
 import './i18n';
 
 // Pages
@@ -13,8 +14,10 @@ import { DashboardPage } from './views/Dashboard';
 import { BookingsPage } from './views/Bookings';
 import { CreditsPage } from './views/Credits';
 import { UseCaseSelectorPage } from './views/UseCaseSelector';
+import { AdminFeaturesPage } from './views/AdminFeatures';
 import { Layout } from './components/Layout';
 import { DemoOverlay } from './components/DemoOverlay';
+import { QuickActionsFab } from './components/QuickActionsFab';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -53,6 +56,7 @@ function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="credits" element={<CreditsPage />} />
+        <Route path="admin/features" element={<AdminRoute><AdminFeaturesPage /></AdminRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -64,8 +68,10 @@ export function App() {
     <BrowserRouter>
       <ThemeProvider>
         <UseCaseProvider>
+        <FeaturesProvider>
         <AuthProvider>
           <AppRoutes />
+          <QuickActionsFab />
           <DemoOverlay />
           <Toaster
             position="bottom-center"
@@ -75,6 +81,7 @@ export function App() {
             }}
           />
         </AuthProvider>
+        </FeaturesProvider>
         </UseCaseProvider>
       </ThemeProvider>
     </BrowserRouter>

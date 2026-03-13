@@ -69,7 +69,7 @@ export function BookingsPage() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-widest mb-1">
             {t('nav.bookings')}
@@ -77,7 +77,7 @@ export function BookingsPage() {
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white tracking-tight">{t('bookings.title')}</h1>
           <p className="text-surface-500 dark:text-surface-400 mt-0.5 text-sm">{t('bookings.subtitle')}</p>
         </div>
-        <button onClick={loadData} className="btn btn-secondary cursor-pointer">
+        <button onClick={loadData} className="btn btn-secondary cursor-pointer self-start sm:self-auto">
           <ArrowClockwise weight="bold" className="w-3.5 h-3.5" /> {t('common.refresh')}
         </button>
       </motion.div>

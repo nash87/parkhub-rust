@@ -10,12 +10,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useUseCase, type UseCase } from '../context/UseCaseContext';
+import { useFeatures, type FeatureModule } from '../context/FeaturesContext';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: { to: string; icon: React.ElementType; key: string; end?: boolean; feature?: FeatureModule }[] = [
   { to: '/', icon: House, key: 'dashboard', end: true },
   { to: '/bookings', icon: CalendarCheck, key: 'bookings' },
-  { to: '/credits', icon: Coins, key: 'credits' },
-] as const;
+  { to: '/credits', icon: Coins, key: 'credits', feature: 'credits' },
+];
 
 export function Layout() {
   const { t } = useTranslation();
@@ -23,7 +24,10 @@ export function Layout() {
   const navigate = useNavigate();
   const { resolved, setTheme } = useTheme();
   const { useCase } = useUseCase();
+  const { isEnabled } = useFeatures();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const visibleNav = NAV_ITEMS.filter(item => !item.feature || isEnabled(item.feature));
 
   const useCaseIcons: Record<UseCase, React.ElementType> = {
     business: Buildings,
@@ -63,7 +67,7 @@ export function Layout() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 space-y-0.5">
-          {NAV_ITEMS.map(item => (
+          {visibleNav.map(item => (
             <NavLink
               key={item.key}
               to={item.to}
@@ -79,7 +83,7 @@ export function Layout() {
 
           {user?.role && ['admin', 'superadmin'].includes(user.role) && (
             <NavLink
-              to="/admin"
+              to="/admin/features"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-md text-[0.8125rem] font-medium transition-all cursor-pointer ${isActive ? activeClass : inactiveClass}`
               }
@@ -181,7 +185,7 @@ export function Layout() {
                 </div>
                 <div className="divider-industrial mx-5 mb-4" />
                 <nav className="px-3 space-y-0.5">
-                  {NAV_ITEMS.map(item => (
+                  {visibleNav.map(item => (
                     <NavLink
                       key={item.key}
                       to={item.to}
@@ -195,8 +199,21 @@ export function Layout() {
                       {t(`nav.${item.key}`)}
                     </NavLink>
                   ))}
+
+                  {user?.role && ['admin', 'superadmin'].includes(user.role) && (
+                    <NavLink
+                      to="/admin/features"
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all cursor-pointer ${isActive ? activeClass : inactiveClass}`
+                      }
+                    >
+                      <GearSix weight="bold" className="w-5 h-5" />
+                      {t('nav.admin')}
+                    </NavLink>
+                  )}
                 </nav>
-                <div className="absolute bottom-4 left-3 right-3">
+                <div className="absolute bottom-4 left-3 right-3 safe-bottom">
                   <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-danger w-full cursor-pointer">
                     <SignOut weight="bold" className="w-5 h-5" /> {t('nav.logout')}
                   </button>
@@ -207,7 +224,7 @@ export function Layout() {
         </AnimatePresence>
 
         {/* Main content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] max-w-6xl mx-auto w-full">
           <Outlet />
         </main>
       </div>
