@@ -64,7 +64,7 @@ EXPOSE 10000
 
 # Health check — longer start-period for --unattended first-run + demo seeding
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:10000/health || exit 1
 
 # Entrypoint handles: start server → wait healthy → seed demo data → keep running
 CMD ["/app/docker-entrypoint.sh"]
