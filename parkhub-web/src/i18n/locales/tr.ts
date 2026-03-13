@@ -112,5 +112,15 @@ export default {
         feature3: 'Grup yönetimi',
       },
     },
+    demo: {
+      badge: 'DEMO',
+      timer: 'Sıfırlamaya',
+      viewers: 'ziyaretçi',
+      voteReset: 'Sıfırlama için oyla',
+      votesNeeded: '{{current}}/{{needed}} oy',
+      resetNow: 'Demoyu sıfırla',
+      resetIn: '{{seconds}}s içinde sıfırlanıyor...',
+      cancel: 'İptal',
+    },
   },
 };

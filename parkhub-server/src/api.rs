@@ -145,6 +145,7 @@ pub fn create_router(state: SharedState) -> Router {
     let demo_routes = Router::new()
         .route("/api/v1/demo/status", get(demo::demo_status))
         .route("/api/v1/demo/vote", post(demo::demo_vote))
+        .route("/api/v1/demo/reset", post(demo::demo_reset))
         .route("/api/v1/demo/config", get(demo::demo_config))
         .layer(Extension(demo_state));
 

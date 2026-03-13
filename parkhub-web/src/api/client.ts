@@ -122,6 +122,7 @@ export const api = {
   getDemoConfig: () => request<{ demo_mode: boolean }>('/api/v1/demo/config'),
   getDemoStatus: () => request<DemoStatus>('/api/v1/demo/status'),
   voteDemoReset: () => request('/api/v1/demo/vote', { method: 'POST' }),
+  resetDemo: () => request<{ reset: boolean }>('/api/v1/demo/reset', { method: 'POST' }),
 };
 
 // ── Types ──

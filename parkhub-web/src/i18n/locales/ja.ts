@@ -112,5 +112,15 @@ export default {
         feature3: 'グループ管理',
       },
     },
+    demo: {
+      badge: 'DEMO',
+      timer: 'リセットまで',
+      viewers: '閲覧者',
+      voteReset: 'リセットに投票',
+      votesNeeded: '{{current}}/{{needed}} 票',
+      resetNow: 'デモをリセット',
+      resetIn: '{{seconds}}秒後にリセット...',
+      cancel: 'キャンセル',
+    },
   },
 };

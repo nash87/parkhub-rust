@@ -260,6 +260,9 @@ export default {
       viewers: 'Besucher',
       voteReset: 'Für Reset stimmen',
       votesNeeded: '{{current}}/{{needed}} Stimmen',
+      resetNow: 'Demo zurücksetzen',
+      resetIn: 'Reset in {{seconds}}s...',
+      cancel: 'Abbrechen',
     },
     common: {
       refresh: 'Aktualisieren',
