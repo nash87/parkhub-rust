@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { UseCaseProvider } from './context/UseCaseContext';
 import './i18n';
 
 // Pages
@@ -11,6 +12,7 @@ import { RegisterPage } from './views/Register';
 import { DashboardPage } from './views/Dashboard';
 import { BookingsPage } from './views/Bookings';
 import { CreditsPage } from './views/Credits';
+import { UseCaseSelectorPage } from './views/UseCaseSelector';
 import { Layout } from './components/Layout';
 import { DemoOverlay } from './components/DemoOverlay';
 
@@ -29,12 +31,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function LoadingSplash() {
   return (
-    <div className="min-h-dvh flex items-center justify-center mesh-gradient">
+    <div className="min-h-dvh flex items-center justify-center parking-grid">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow">
-          <span className="text-2xl font-black text-white tracking-tight">P</span>
+        <div className="w-16 h-16 rounded-2xl bg-primary-800 dark:bg-surface-800 flex items-center justify-center shadow-lg border border-primary-700 dark:border-surface-700">
+          <span className="text-2xl font-black text-accent-500 tracking-tight font-[Outfit]">P</span>
         </div>
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-accent-500 border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   );
@@ -43,6 +45,7 @@ function LoadingSplash() {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/setup" element={<UseCaseSelectorPage />} />
       <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -60,6 +63,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
+        <UseCaseProvider>
         <AuthProvider>
           <AppRoutes />
           <DemoOverlay />
@@ -71,6 +75,7 @@ export function App() {
             }}
           />
         </AuthProvider>
+        </UseCaseProvider>
       </ThemeProvider>
     </BrowserRouter>
   );
