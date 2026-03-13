@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 # Default minimal permissions — the release job overrides to contents: write only where needed
 permissions:
