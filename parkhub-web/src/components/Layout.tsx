@@ -1,337 +1,201 @@
-import { ReactNode, useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
-  House,
-  CalendarPlus,
-  ListChecks,
-  Car,
-  GearSix,
-  SignOut,
-  Moon,
-  Sun,
-  List,
-  X,
-  User,
-  CaretDown,
+  House, CalendarCheck, Car, Calendar, Coins, UserCircle,
+  GearSix, SignOut, List, X, CarSimple, SunDim, Moon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme, applyTheme } from '../stores/theme';
+import { useTheme } from '../context/ThemeContext';
 
-interface LayoutProps {
-  children: ReactNode;
-}
+const NAV_ITEMS = [
+  { to: '/', icon: House, key: 'dashboard', end: true },
+  { to: '/bookings', icon: CalendarCheck, key: 'bookings' },
+  { to: '/credits', icon: Coins, key: 'credits' },
+] as const;
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: House },
-  { name: 'Buchen', href: '/book', icon: CalendarPlus },
-  { name: 'Buchungen', href: '/bookings', icon: ListChecks },
-  { name: 'Fahrzeuge', href: '/vehicles', icon: Car },
-];
-
-const adminNav = [
-  { name: 'Admin', href: '/admin', icon: GearSix },
-];
-
-export function Layout({ children }: LayoutProps) {
+export function Layout() {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
-  const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { isDark, toggle } = useTheme();
-  const userMenuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const { resolved, setTheme } = useTheme();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-
-  useEffect(() => {
-    applyTheme(isDark);
-  }, [isDark]);
-
-  // Close menus on route change
-  useEffect(() => {
-    setMobileMenuOpen(false);
-    setUserMenuOpen(false);
-  }, [location.pathname]);
-
-  // Close user menu on outside click
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  function handleLogout() {
+    logout();
+    navigate('/welcome');
+  }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-3" aria-label="ParkHub – Startseite">
-              <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center">
-                <Car weight="fill" className="w-5 h-5 text-white" aria-hidden="true" />
-              </div>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
-                ParkHub
+    <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 flex">
+      {/* Sidebar — desktop */}
+      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 p-4 sticky top-0 h-dvh">
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-3 mb-8">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-md shadow-primary-500/20">
+            <CarSimple weight="fill" className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 space-y-1">
+          {NAV_ITEMS.map(item => (
+            <NavLink
+              key={item.key}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800'
+                }`
+              }
+            >
+              <item.icon weight="fill" className="w-5 h-5" />
+              {t(`nav.${item.key}`)}
+            </NavLink>
+          ))}
+
+          {user?.role && ['admin', 'superadmin'].includes(user.role) && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800'
+                }`
+              }
+            >
+              <GearSix weight="fill" className="w-5 h-5" />
+              {t('nav.admin')}
+            </NavLink>
+          )}
+        </nav>
+
+        {/* Theme toggle */}
+        <button
+          onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800 transition-all mb-2"
+        >
+          {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
+          {resolved === 'dark' ? 'Light Mode' : 'Dark Mode'}
+        </button>
+
+        {/* User + logout */}
+        <div className="border-t border-surface-200 dark:border-surface-800 pt-4 mt-2">
+          <div className="flex items-center gap-3 px-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+              <span className="text-sm font-bold text-primary-700 dark:text-primary-300">
+                {(user?.name || user?.username || 'U').charAt(0).toUpperCase()}
               </span>
-            </Link>
-
-            {/* Desktop Navigation */}
-            <nav role="navigation" aria-label="Hauptnavigation" className="hidden md:flex items-center gap-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <Icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-              {isAdmin && adminNav.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    to={item.href}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <Icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Right Side */}
-            <div className="flex items-center gap-2">
-              {/* Theme Toggle */}
-              <button
-                onClick={toggle}
-                className="btn btn-ghost btn-icon"
-                aria-label={isDark ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren'}
-              >
-                {isDark ? (
-                  <Sun weight="fill" className="w-5 h-5" aria-hidden="true" />
-                ) : (
-                  <Moon weight="fill" className="w-5 h-5" aria-hidden="true" />
-                )}
-              </button>
-
-              {/* User Menu */}
-              <div className="relative hidden md:block" ref={userMenuRef}>
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  aria-expanded={userMenuOpen}
-                  aria-haspopup="menu"
-                  aria-label={`Benutzermenü für ${user?.name}`}
-                  className="flex items-center gap-2 p-1.5 pr-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <div className="avatar text-sm" aria-hidden="true">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {user?.name?.split(' ')[0]}
-                  </span>
-                  <CaretDown weight="bold" className="w-4 h-4 text-gray-400" aria-hidden="true" />
-                </button>
-
-                <AnimatePresence>
-                  {userMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      role="menu"
-                      aria-label="Benutzeroptionen"
-                      className="absolute right-0 mt-2 w-56 card p-2 shadow-lg"
-                    >
-                      <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 mb-2">
-                        <p className="font-medium text-gray-900 dark:text-white">{user?.name}</p>
-                        <p className="text-sm text-gray-500">{user?.email}</p>
-                      </div>
-                      <Link
-                        to="/profile"
-                        role="menuitem"
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      >
-                        <User weight="regular" className="w-4 h-4" aria-hidden="true" />
-                        Profil
-                      </Link>
-                      <button
-                        onClick={logout}
-                        role="menuitem"
-                        className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <SignOut weight="regular" className="w-4 h-4" aria-hidden="true" />
-                        Abmelden
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-expanded={mobileMenuOpen}
-                aria-controls="mobile-nav"
-                aria-label={mobileMenuOpen ? 'Menü schließen' : 'Menü öffnen'}
-                className="md:hidden btn btn-ghost btn-icon"
-              >
-                {mobileMenuOpen ? (
-                  <X weight="bold" className="w-5 h-5" aria-hidden="true" />
-                ) : (
-                  <List weight="bold" className="w-5 h-5" aria-hidden="true" />
-                )}
-              </button>
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{user?.name || user?.username}</p>
+              <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{user?.email}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all w-full"
+          >
+            <SignOut weight="bold" className="w-5 h-5" />
+            {t('nav.logout')}
+          </button>
         </div>
+      </aside>
 
-        {/* Mobile Navigation */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div
-              id="mobile-nav"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden overflow-hidden border-t border-gray-100 dark:border-gray-800"
+      {/* Mobile top bar */}
+      <div className="flex-1 flex flex-col">
+        <header className="lg:hidden sticky top-0 z-30 bg-white/80 dark:bg-surface-900/80 backdrop-blur-lg border-b border-surface-200 dark:border-surface-800 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon">
+                <List weight="bold" className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                  <CarSimple weight="fill" className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-bold text-surface-900 dark:text-white">ParkHub</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+              className="btn btn-ghost btn-icon"
             >
-              <nav role="navigation" aria-label="Mobile Navigation" className="px-4 py-3 space-y-1">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
-                        isActive
-                          ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <Icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-                {isAdmin && adminNav.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      to={item.href}
-                      aria-current={isActive ? 'page' : undefined}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
-                        isActive
-                          ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <Icon weight={isActive ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-                <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
-                  <Link
-                    to="/profile"
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium ${
-                      location.pathname === '/profile'
-                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                        : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
-                    }`}
-                    aria-current={location.pathname === '/profile' ? 'page' : undefined}
-                  >
-                    <User weight={location.pathname === '/profile' ? 'fill' : 'regular'} className="w-5 h-5" aria-hidden="true" />
-                    Profil
-                  </Link>
-                  <button
-                    onClick={logout}
-                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  >
-                    <SignOut weight="regular" className="w-5 h-5" aria-hidden="true" />
-                    Abmelden
+              {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
+            </button>
+          </div>
+        </header>
+
+        {/* Mobile sidebar overlay */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+                onClick={() => setSidebarOpen(false)}
+              />
+              <motion.aside
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-surface-900 z-50 p-4 lg:hidden"
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                      <CarSimple weight="fill" className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-xl font-bold text-surface-900 dark:text-white">ParkHub</span>
+                  </div>
+                  <button onClick={() => setSidebarOpen(false)} className="btn btn-ghost btn-icon">
+                    <X weight="bold" className="w-5 h-5" />
                   </button>
                 </div>
-              </nav>
-            </motion.div>
+                <nav className="space-y-1">
+                  {NAV_ITEMS.map(item => (
+                    <NavLink
+                      key={item.key}
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                          isActive
+                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                            : 'text-surface-600 dark:text-surface-400'
+                        }`
+                      }
+                    >
+                      <item.icon weight="fill" className="w-5 h-5" />
+                      {t(`nav.${item.key}`)}
+                    </NavLink>
+                  ))}
+                </nav>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-600 w-full">
+                    <SignOut weight="bold" className="w-5 h-5" /> {t('nav.logout')}
+                  </button>
+                </div>
+              </motion.aside>
+            </>
           )}
         </AnimatePresence>
-      </header>
 
-      {/* Main Content */}
-      <main className="flex-1" id="main-content">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            style={{ willChange: 'opacity, transform' }}
-            className="motion-safe:transition-all"
-          >
-            {children}
-          </motion.div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            ParkHub — Open Source Parking Management
-          </p>
-          <nav aria-label="Rechtliche Links" className="flex items-center gap-4 flex-wrap justify-center">
-            <a
-              href="https://nash87.github.io/legal/impressum.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              Impressum
-            </a>
-            <a
-              href="https://nash87.github.io/legal/datenschutz.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              Datenschutz
-            </a>
-            <a
-              href="/agb"
-              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              AGB
-            </a>
-          </nav>
-        </div>
-      </footer>
+        {/* Main content */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

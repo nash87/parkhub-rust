@@ -2,6 +2,7 @@
 target/
 parkhub-web/node_modules/
 parkhub-web/dist/
+parkhub-web-old/
 
 # Root-level node_modules (e2e/test tooling)
 node_modules/

@@ -26,7 +26,15 @@ pub struct User {
     pub last_login: Option<DateTime<Utc>>,
     pub preferences: UserPreferences,
     pub is_active: bool,
+    #[serde(default)]
+    pub credits_balance: i32,
+    #[serde(default = "default_credits_quota")]
+    pub credits_monthly_quota: i32,
+    #[serde(default)]
+    pub credits_last_refilled: Option<DateTime<Utc>>,
 }
+
+fn default_credits_quota() -> i32 { 10 }
 
 /// User role for access control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -223,6 +231,33 @@ pub struct OperatingHours {
 pub struct DayHours {
     pub open: String,
     pub close: String,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CREDITS MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Credit transaction record
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreditTransaction {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub booking_id: Option<Uuid>,
+    pub amount: i32,
+    pub transaction_type: CreditTransactionType,
+    pub description: Option<String>,
+    pub granted_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Credit transaction types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CreditTransactionType {
+    Grant,
+    Deduction,
+    Refund,
+    MonthlyRefill,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
