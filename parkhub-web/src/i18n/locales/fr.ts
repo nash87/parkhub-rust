@@ -54,7 +54,7 @@ export default {
       signIn: 'Se connecter',
       loggingIn: 'Connexion...',
       loginError: 'Identifiants invalides',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.test / ParkHub2026!',
     },
     onboarding: {
       step1Title: 'Changer le mot de passe',

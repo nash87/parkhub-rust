@@ -54,7 +54,7 @@ export default {
       signIn: 'ログイン',
       loggingIn: 'ログイン中...',
       loginError: '認証情報が無効です',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.test / ParkHub2026!',
     },
     onboarding: {
       step1Title: 'パスワード変更',

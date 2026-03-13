@@ -54,7 +54,7 @@ export default {
       signIn: 'Iniciar sessão',
       loggingIn: 'A iniciar sessão...',
       loginError: 'Credenciais inválidas',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.test / ParkHub2026!',
     },
     onboarding: {
       step1Title: 'Alterar palavra-passe',

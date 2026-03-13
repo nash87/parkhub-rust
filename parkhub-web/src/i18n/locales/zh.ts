@@ -54,7 +54,7 @@ export default {
       signIn: '登录',
       loggingIn: '正在登录...',
       loginError: '凭据无效',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.test / ParkHub2026!',
     },
     onboarding: {
       step1Title: '修改密码',
