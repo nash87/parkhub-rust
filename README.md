@@ -10,6 +10,8 @@
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.0-brightgreen.svg?style=for-the-badge" alt="v1.2.0"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
+  <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
+  <a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/OWASP-Audited-green.svg?style=for-the-badge" alt="OWASP Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
 </p>
 
@@ -23,6 +25,7 @@
   <a href="docs/INSTALLATION.md">Installation</a> ·
   <a href="docs/API.md">API Reference</a> ·
   <a href="docs/GDPR.md">GDPR Guide</a> ·
+  <a href="COMPLIANCE-REPORT.md">Compliance Report</a> ·
   <a href="docs/CONFIGURATION.md">Configuration</a> ·
   <a href="docs/CHANGELOG.md">Changelog</a>
 </p>
@@ -223,28 +226,58 @@ No external database server, no reverse proxy, no separate static file server re
 
 ---
 
-## GDPR & German Legal Compliance
+## Legal Compliance & Data Protection
 
-ParkHub is designed for on-premise deployment in German-regulated environments.
+> **Audited for German, EU, UK, US, and Swiss compliance.** See the full [Compliance Report](COMPLIANCE-REPORT.md).
+
+ParkHub is designed for on-premise deployment in regulated environments.
 Because all data stays on your server, **no Auftragsverarbeitungsvertrag (AVV) with a cloud provider is needed**.
+
+### Regulatory Coverage
+
+| Regulation | Status | Scope |
+|---|---|---|
+| **DSGVO / GDPR** (EU/EEA) | **PASS** | On-premise — no cross-border transfers |
+| **TTDSG §25** (ePrivacy) | **PASS** | No cookies, localStorage technically necessary only |
+| **DDG §5** (Provider ID) | **PASS** | Impressum template + admin-editable endpoint |
+| **BGB §§305–310** (AGB) | **PASS** | B2B + B2C terms template included |
+| **BGB §§312g, 355, 356** (Withdrawal) | **PASS** | 14-day Widerrufsbelehrung template |
+| **AO §147** (Tax retention) | **PASS** | 10-year booking retention, PII anonymized on erasure |
+| **BFSG / EU Accessibility Act** | **Documented** | Operator guidance provided |
+| **UK GDPR + PECR** | **PASS** | Compatible with EU GDPR |
+| **CCPA/CPRA** (California) | **PASS** | Self-hosted, no data sale |
+| **nDSG** (Switzerland) | **PASS** | Compatible with DSGVO |
+
+### GDPR Endpoints
 
 | GDPR Article | Endpoint | Notes |
 |---|---|---|
 | Art. 15 — Auskunftsrecht | `GET /api/v1/users/me/export` | Full JSON export: profile, bookings, vehicles |
-| Art. 17 — Recht auf Loschung | `DELETE /api/v1/users/me/delete` | Anonymizes all PII fields |
+| Art. 17 — Recht auf Löschung | `DELETE /api/v1/users/me/delete` | Anonymizes all PII fields |
 | Art. 17 + §147 AO | Booking records | Retained 10 years (German tax law), PII anonymized |
 | DDG §5 — Impressum | `GET /api/v1/legal/impressum` | Public endpoint, admin-editable |
 
-**Legal templates included** in `legal/`:
-- `impressum-template.md` — DDG §5 Impressum
-- `datenschutz-template.md` — Datenschutzerklärung (Privacy Policy)
-- `agb-template.md` — Allgemeine Geschäftsbedingungen (Terms and Conditions)
-- `avv-template.md` — Auftragsverarbeitungsvertrag (Data Processing Agreement)
-- `cookie-policy-template.md` — Cookie / localStorage policy
-- `widerrufsbelehrung-template.md` — Widerrufsbelehrung (§356 BGB right of withdrawal)
-- `vvt-template.md` — Verzeichnis der Verarbeitungstätigkeiten (Art. 30 DSGVO processing record)
+### Legal Templates (7 documents)
 
-See [docs/GDPR.md](docs/GDPR.md) for the full operator compliance checklist.
+All templates in `legal/` are ready for operator customization:
+
+| Template | Regulation | Use Case |
+|---|---|---|
+| [impressum-template.md](legal/impressum-template.md) | DDG §5 | Provider identification (mandatory for business) |
+| [datenschutz-template.md](legal/datenschutz-template.md) | Art. 13/14 DSGVO | Privacy policy |
+| [agb-template.md](legal/agb-template.md) | §§305–310 BGB | General terms and conditions |
+| [avv-template.md](legal/avv-template.md) | Art. 28 DSGVO | Data processing agreement (for SMTP provider) |
+| [cookie-policy-template.md](legal/cookie-policy-template.md) | TTDSG §25 | localStorage / service worker policy |
+| [widerrufsbelehrung-template.md](legal/widerrufsbelehrung-template.md) | §356 BGB | Right of withdrawal (B2C) |
+| [vvt-template.md](legal/vvt-template.md) | Art. 30 DSGVO | Record of processing activities |
+
+### No Cookie Consent Required
+
+ParkHub uses zero cookies. All `localStorage` entries are technically necessary (TTDSG §25 Abs. 2 Nr. 2):
+session token, theme, language, feature flags, use case preset, and onboarding hint dismissals.
+No tracking, analytics, or advertising technologies are used.
+
+See [docs/GDPR.md](docs/GDPR.md) for the full operator compliance guide and [COMPLIANCE-REPORT.md](COMPLIANCE-REPORT.md) for the detailed audit.
 
 ---
 
@@ -309,6 +342,8 @@ See [docs/API.md](docs/API.md) for the complete REST API reference with curl exa
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Every environment variable documented |
 | [docs/API.md](docs/API.md) | Full REST API reference with curl examples |
 | [docs/GDPR.md](docs/GDPR.md) | Operator DSGVO compliance checklist |
+| [COMPLIANCE-REPORT.md](COMPLIANCE-REPORT.md) | Full legal compliance audit (DSGVO, TTDSG, DDG, BGB, BFSG, international) |
+| [SECURITY-AUDIT.md](SECURITY-AUDIT.md) | OWASP Top 10 security audit |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security model and responsible disclosure |
 | [CHANGELOG.md](CHANGELOG.md) | Release history |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Development setup and PR process |
