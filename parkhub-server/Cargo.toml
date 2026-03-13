@@ -77,7 +77,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }  # updated from 8
 
 # === PHASE 2: Production Ready ===
 # JWT Authentication
-jsonwebtoken = "10"  # updated from 9
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 
 # Rate limiting
 tower_governor = "0.8"  # updated from 0.4
