@@ -37,12 +37,16 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
 
 # Runtime stage — minimal Alpine, non-root user
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates tzdata && \
+RUN apk add --no-cache ca-certificates tzdata python3 && \
     addgroup -S parkhub && adduser -S -G parkhub parkhub
 WORKDIR /app
 
 # Copy binary with correct ownership
 COPY --chown=parkhub:parkhub --from=rust-builder /app/target/release/parkhub-server /app/parkhub-server
+
+# Copy seed script and entrypoint
+COPY --chown=parkhub:parkhub scripts/seed_demo.py /app/seed_demo.py
+COPY --chown=parkhub:parkhub scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Create data directory owned by the non-root user
 RUN mkdir -p /data && chown parkhub:parkhub /data
@@ -58,9 +62,9 @@ ENV RUST_LOG=info
 
 EXPOSE 10000
 
-# Health check — longer start-period for --unattended first-run auto-config
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
+# Health check — longer start-period for --unattended first-run + demo seeding
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
 
-# Run — use CMD (not ENTRYPOINT) so Render's dockerCommand can override cleanly
-CMD ["/app/parkhub-server", "--headless", "--unattended", "--data-dir", "/data", "--port", "10000"]
+# Entrypoint handles: start server → wait healthy → seed demo data → keep running
+CMD ["/app/docker-entrypoint.sh"]
