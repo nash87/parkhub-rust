@@ -74,7 +74,8 @@ Falls E-Mail-Benachrichtigungen aktiviert sind:
 | **Einschränkung** (Art. 18) | Auf Anfrage an [E-Mail] |
 | **Datenübertragbarkeit** (Art. 20) | Export als JSON-Datei verfügbar |
 | **Widerspruch** (Art. 21) | Für auf berechtigtem Interesse beruhende Verarbeitungen |
-| **Beschwerde** | Zuständige Aufsichtsbehörde: [Ihre zuständige Datenschutzaufsichtsbehörde]<br><br>Hinweis: Die zuständige Aufsichtsbehörde richtet sich nach dem Bundesland des Verantwortlichen. Eine vollständige Liste aller deutschen Datenschutzbehörden finden Sie unter: https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html<br><br>Beispiele:<br>- Bayern: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach<br>- NRW: Landesbeauftragte für Datenschutz und Informationsfreiheit NRW (LDI NRW)<br>- BW: Landesbeauftragter für den Datenschutz und die Informationsfreiheit (LfDI BW)<br>- Berlin: Berliner Beauftragte für Datenschutz und Informationsfreiheit |
+| **Beschwerde** | Zuständige Aufsichtsbehörde: [Ihre zuständige Datenschutzaufsichtsbehörde]<br><br>Hinweis: Die zuständige Aufsichtsbehörde richtet sich nach dem Bundesland des Verantwortlichen. Eine vollständige Liste aller deutschen Datenschutzbehörden finden Sie unter: https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html<br><br>Beispiele:<br>- Bayern: Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach<br>- NRW: Landesbeauftragte für Datenschutz und Informationsfreiheit NRW (LDI NRW)<br>- BW: Landesbeauftragter für den Datenschutz und die Informationsfreiheit (LfDI BW)<br>- Berlin: Berliner Beauftragte für Datenschutz und Informationsfreiheit<br>- Niedersachsen: Landesbeauftragte für den Datenschutz Niedersachsen (LfD), Prinzenstraße 5, 30159 Hannover |
+| **Widerruf der Einwilligung** (Art. 7 Abs. 3) | Sofern die Verarbeitung auf einer Einwilligung beruht, kann diese jederzeit mit Wirkung für die Zukunft widerrufen werden. Kontakt: [E-Mail] |
 
 ---
 
@@ -90,9 +91,21 @@ Falls E-Mail-Benachrichtigungen aktiviert sind:
 
 ## 5. Cookies und lokaler Speicher
 
-**Technisch notwendige Token:**
-ParkHub verwendet localStorage (keine Cookies) für den Authentifizierungstoken.
-Dieser Token ist technisch notwendig für den Betrieb und enthält keine Tracking-Informationen.
+ParkHub verwendet **keine HTTP-Cookies**. Stattdessen wird der lokale Speicher des Browsers
+(localStorage) für folgende technisch notwendige Zwecke genutzt:
+
+| Schlüssel | Zweck | Inhalt | Rechtsgrundlage |
+|-----------|-------|--------|-----------------|
+| `parkhub_token` | Authentifizierung | Session-Token (Bearer) | § 25 Abs. 2 Nr. 2 TTDSG |
+| `parkhub_theme` | Darstellungseinstellung | `light`, `dark` oder `system` | § 25 Abs. 2 Nr. 2 TTDSG |
+| `parkhub_features` | Aktivierte Funktionsmodule | Liste der Modulnamen (z. B. `["vehicles","credits"]`) | § 25 Abs. 2 Nr. 2 TTDSG |
+| `parkhub_usecase` | Nutzungsszenario | `business`, `residential` oder `personal` | § 25 Abs. 2 Nr. 2 TTDSG |
+| `parkhub_hint_*` | Onboarding-Hinweis-Status | `1` (Hinweis geschlossen) | § 25 Abs. 2 Nr. 2 TTDSG |
+| `i18nextLng` | Spracheinstellung | Sprachcode (z. B. `de`, `en`) | § 25 Abs. 2 Nr. 2 TTDSG |
+
+Alle Einträge sind **technisch notwendig** für den ordnungsgemäßen Betrieb der Anwendung und
+enthalten keine personenbezogenen Daten (mit Ausnahme des Authentifizierungstokens, der nach
+Abmeldung gelöscht wird). Eine Einwilligung ist nach § 25 Abs. 2 Nr. 2 TTDSG nicht erforderlich.
 
 **Keine Analyse-Cookies, keine Werbe-Cookies, kein Google Analytics.**
 
