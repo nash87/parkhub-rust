@@ -71,7 +71,7 @@ export function DemoOverlay() {
       animate={{ y: 0, opacity: 1 }}
       className="fixed top-3 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="glass-card shadow-xl">
+      <div className="card shadow-xl">
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center gap-3 px-4 py-2.5 min-w-[200px]"

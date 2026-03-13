@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { CarSimple, Eye, EyeSlash, SpinnerGap, ArrowLeft, Info } from '@phosphor-icons/react';
+import { Car, Eye, EyeSlash, SpinnerGap, ArrowLeft, Info } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
@@ -15,7 +15,6 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Redirect if already logged in
   if (user) {
     navigate('/', { replace: true });
     return null;
@@ -25,7 +24,6 @@ export function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     const result = await login(username, password);
     if (result.success) {
       navigate('/', { replace: true });
@@ -36,27 +34,26 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh mesh-gradient flex items-center justify-center px-4 py-12">
+    <div className="min-h-dvh parking-grid flex items-center justify-center px-4 py-12">
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md"
       >
-        {/* Back to welcome */}
         <Link
           to="/welcome"
-          className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-accent-600 mb-8 transition-colors cursor-pointer"
         >
           <ArrowLeft weight="bold" className="w-4 h-4" />
           {t('welcome.greeting')}
         </Link>
 
-        <div className="glass-card p-8 sm:p-10">
+        <div className="card p-8 sm:p-10">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
-              <CarSimple weight="fill" className="w-8 h-8 text-white" />
+            <div className="w-14 h-14 rounded-2xl bg-primary-800 dark:bg-surface-800 flex items-center justify-center mx-auto mb-4 shadow-lg border border-primary-700 dark:border-surface-700">
+              <Car weight="fill" className="w-7 h-7 text-accent-500" />
             </div>
             <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
               {t('auth.login')}
@@ -71,11 +68,11 @@ export function LoginPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             transition={{ delay: 0.3 }}
-            className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-xl p-3 mb-6"
+            className="bg-accent-50 dark:bg-accent-900/15 border border-accent-200 dark:border-accent-800/40 rounded-xl p-3 mb-6"
           >
             <div className="flex items-start gap-2">
-              <Info weight="fill" className="w-4 h-4 text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-primary-700 dark:text-primary-300 font-mono">
+              <Info weight="fill" className="w-4 h-4 text-accent-600 dark:text-accent-400 mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-accent-800 dark:text-accent-300 font-mono">
                 {t('auth.demoHint')}
               </p>
             </div>
@@ -105,7 +102,7 @@ export function LoginPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-surface-700 dark:text-surface-300">
                   {t('auth.password')}
                 </label>
-                <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-500 font-medium">
+                <Link to="/forgot-password" className="text-sm text-accent-600 hover:text-accent-500 font-medium cursor-pointer">
                   {t('auth.forgotPassword')}
                 </Link>
               </div>
@@ -123,7 +120,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeSlash weight="regular" className="w-5 h-5" /> : <Eye weight="regular" className="w-5 h-5" />}
@@ -133,9 +130,10 @@ export function LoginPage() {
 
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
+                initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-danger/10 border border-danger/20 rounded-xl px-4 py-3 text-sm text-danger font-medium"
+                role="alert"
               >
                 {error}
               </motion.div>
@@ -144,7 +142,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading || !username || !password}
-              className="btn btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? (
                 <><SpinnerGap weight="bold" className="w-5 h-5 animate-spin" /> {t('auth.loggingIn')}</>
@@ -154,10 +152,9 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* Register link */}
           <p className="text-center text-sm text-surface-500 dark:text-surface-400 mt-6">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="text-primary-600 hover:text-primary-500 font-semibold">
+            <Link to="/register" className="text-accent-600 hover:text-accent-500 font-semibold cursor-pointer">
               {t('auth.signUp')}
             </Link>
           </p>
