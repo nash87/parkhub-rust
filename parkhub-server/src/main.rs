@@ -30,6 +30,7 @@ mod static_files;
 mod tls;
 pub mod utils;
 mod validation;
+mod demo;
 
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};
