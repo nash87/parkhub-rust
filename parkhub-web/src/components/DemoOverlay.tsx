@@ -61,7 +61,6 @@ export function DemoOverlay() {
       setResetCountdown(prev => {
         if (prev === null) return null;
         if (prev <= 1) {
-          // Countdown finished — trigger reset
           clearInterval(resetTimerRef.current!);
           resetTimerRef.current = null;
           api.resetDemo().then(res => {
@@ -111,34 +110,34 @@ export function DemoOverlay() {
 
   return (
     <motion.div
-      initial={{ y: -80, opacity: 0 }}
+      initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       className="fixed top-3 left-1/2 -translate-x-1/2 z-50"
     >
-      <div className="card shadow-xl">
+      <div className="card shadow-lg border-accent-300/50 dark:border-accent-700/50">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center gap-3 px-4 py-2.5 min-w-[200px]"
+          className="flex items-center gap-3 px-3.5 py-2 min-w-[180px] cursor-pointer"
         >
           {/* Demo badge */}
           <span className="flex items-center gap-1 badge badge-primary">
-            <Sparkle weight="fill" className="w-3 h-3 animate-pulse" />
+            <Sparkle weight="fill" className="w-2.5 h-2.5 animate-pulse" />
             {t('demo.badge')}
           </span>
 
           {/* Timer */}
-          <span className={`font-mono text-sm font-bold ${isLow ? 'text-red-500 animate-pulse' : 'text-surface-700 dark:text-surface-300'}`}>
-            <Timer weight="bold" className="w-3.5 h-3.5 inline mr-1" />
+          <span className={`font-mono text-xs font-bold ${isLow ? 'text-red-500 animate-pulse' : 'text-surface-700 dark:text-surface-300'}`}>
+            <Timer weight="bold" className="w-3 h-3 inline mr-0.5" />
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </span>
 
           {/* Viewers */}
-          <span className="flex items-center gap-1 text-xs text-surface-500">
-            <Eye weight="regular" className="w-3.5 h-3.5" />
+          <span className="flex items-center gap-1 text-[10px] text-surface-500">
+            <Eye weight="regular" className="w-3 h-3" />
             {demo.viewers}
           </span>
 
-          {collapsed ? <CaretDown weight="bold" className="w-3 h-3 text-surface-400" /> : <CaretUp weight="bold" className="w-3 h-3 text-surface-400" />}
+          {collapsed ? <CaretDown weight="bold" className="w-2.5 h-2.5 text-surface-400" /> : <CaretUp weight="bold" className="w-2.5 h-2.5 text-surface-400" />}
         </button>
 
         <AnimatePresence>
@@ -149,26 +148,25 @@ export function DemoOverlay() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="px-4 pb-3 pt-1 border-t border-surface-200/50 dark:border-surface-700/50">
+              <div className="px-3.5 pb-2.5 pt-1 border-t border-surface-200/50 dark:border-surface-700/50">
                 {isSolo ? (
-                  /* Solo mode — direct reset with countdown */
                   resetCountdown !== null ? (
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-surface-500">
+                        <span className="text-[10px] font-medium text-surface-500 uppercase tracking-wider">
                           {t('demo.resetIn', { seconds: resetCountdown })}
                         </span>
                         <button
                           onClick={cancelResetCountdown}
-                          className="btn btn-sm btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-950"
+                          className="btn btn-sm btn-ghost text-red-500 hover:bg-red-50 dark:hover:bg-red-950 cursor-pointer"
                         >
-                          <X weight="bold" className="w-3.5 h-3.5" />
+                          <X weight="bold" className="w-3 h-3" />
                           {t('demo.cancel')}
                         </button>
                       </div>
-                      <div className="h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-surface-200 dark:bg-surface-700 overflow-hidden">
                         <motion.div
-                          className="h-full bg-amber-500 rounded-full"
+                          className="h-full bg-accent-500"
                           initial={{ width: '100%' }}
                           animate={{ width: '0%' }}
                           transition={{ duration: 10, ease: 'linear' }}
@@ -178,34 +176,33 @@ export function DemoOverlay() {
                   ) : (
                     <button
                       onClick={startResetCountdown}
-                      className="btn btn-sm btn-primary w-full"
+                      className="btn btn-sm btn-primary w-full cursor-pointer"
                     >
-                      <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
+                      <ArrowsClockwise weight="bold" className="w-3 h-3" />
                       {t('demo.resetNow')}
                     </button>
                   )
                 ) : (
-                  /* Multi-viewer mode — voting */
                   <>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex-1 h-1.5 bg-surface-200 dark:bg-surface-700 overflow-hidden">
                         <motion.div
-                          className="h-full bg-primary-500 rounded-full"
+                          className="h-full bg-primary-500"
                           animate={{ width: `${voteProgress}%` }}
                           transition={{ type: 'spring', stiffness: 100 }}
                         />
                       </div>
-                      <span className="text-xs font-medium text-surface-500">
-                        {t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })}
+                      <span className="text-[10px] font-medium text-surface-500 font-mono">
+                        {demo.votes.current}/{demo.votes.threshold}
                       </span>
                     </div>
 
                     <button
                       onClick={handleVote}
                       disabled={demo.votes.has_voted}
-                      className="btn btn-sm btn-primary w-full disabled:opacity-50"
+                      className="btn btn-sm btn-primary w-full disabled:opacity-50 cursor-pointer"
                     >
-                      <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
+                      <ArrowsClockwise weight="bold" className="w-3 h-3" />
                       {demo.votes.has_voted
                         ? t('demo.votesNeeded', { current: demo.votes.current, needed: demo.votes.threshold })
                         : t('demo.voteReset')}
