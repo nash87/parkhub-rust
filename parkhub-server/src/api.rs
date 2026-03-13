@@ -108,25 +108,25 @@ pub fn create_router(state: SharedState) -> Router {
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
         // Admin-only: retrieve any user by ID
-        .route("/api/v1/users/:id", get(get_user))
+        .route("/api/v1/users/{id}", get(get_user))
         .route("/api/v1/lots", get(list_lots).post(create_lot))
-        .route("/api/v1/lots/:id", get(get_lot))
-        .route("/api/v1/lots/:id/slots", get(get_lot_slots))
+        .route("/api/v1/lots/{id}", get(get_lot))
+        .route("/api/v1/lots/{id}/slots", get(get_lot_slots))
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
-            "/api/v1/bookings/:id",
+            "/api/v1/bookings/{id}",
             get(get_booking).delete(cancel_booking),
         )
-        .route("/api/v1/bookings/:id/invoice", get(get_booking_invoice))
+        .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
-        .route("/api/v1/vehicles/:id", delete(delete_vehicle))
+        .route("/api/v1/vehicles/{id}", delete(delete_vehicle))
         // Admin-only: update Impressum settings
         .route("/api/v1/admin/impressum", get(get_impressum_admin).put(update_impressum))
         // Admin-only: user management
         .route("/api/v1/admin/users", get(admin_list_users))
-        .route("/api/v1/admin/users/:id/role", axum::routing::patch(admin_update_user_role))
-        .route("/api/v1/admin/users/:id/status", axum::routing::patch(admin_update_user_status))
-        .route("/api/v1/admin/users/:id", delete(admin_delete_user))
+        .route("/api/v1/admin/users/{id}/role", axum::routing::patch(admin_update_user_role))
+        .route("/api/v1/admin/users/{id}/status", axum::routing::patch(admin_update_user_status))
+        .route("/api/v1/admin/users/{id}", delete(admin_delete_user))
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
         .route_layer(middleware::from_fn_with_state(
@@ -1540,7 +1540,7 @@ async fn cancel_booking(
 // INVOICE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// `GET /api/v1/bookings/:id/invoice`
+/// `GET /api/v1/bookings/{id}/invoice`
 ///
 /// Returns an HTML invoice for the given booking.  The authenticated user must
 /// own the booking (admin users may retrieve any invoice).
@@ -2318,7 +2318,7 @@ async fn admin_list_users(
     }
 }
 
-/// `PATCH /api/v1/admin/users/:id/role` — update a user's role (admin only)
+/// `PATCH /api/v1/admin/users/{id}/role` — update a user's role (admin only)
 async fn admin_update_user_role(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -2409,7 +2409,7 @@ async fn admin_update_user_role(
     (StatusCode::OK, Json(ApiResponse::success(AdminUserResponse::from(&user))))
 }
 
-/// `PATCH /api/v1/admin/users/:id/status` — enable or disable a user account (admin only)
+/// `PATCH /api/v1/admin/users/{id}/status` — enable or disable a user account (admin only)
 async fn admin_update_user_status(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -2459,7 +2459,7 @@ async fn admin_update_user_status(
     (StatusCode::OK, Json(ApiResponse::success(AdminUserResponse::from(&user))))
 }
 
-/// `DELETE /api/v1/admin/users/:id` — delete a user account (admin only, GDPR anonymize)
+/// `DELETE /api/v1/admin/users/{id}` — delete a user account (admin only, GDPR anonymize)
 async fn admin_delete_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

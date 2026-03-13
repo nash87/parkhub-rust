@@ -2,8 +2,8 @@
 FROM node:22-alpine AS web-builder
 WORKDIR /app/web
 COPY parkhub-web/package*.json ./
-ENV NODE_ENV=production
-RUN npm ci --omit=dev
+# Install all deps (tsc, vite are devDependencies needed for build)
+RUN npm ci
 COPY parkhub-web/ ./
 RUN npm run build
 
@@ -62,5 +62,5 @@ EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:10000/health || exit 1
 
-# Run
-ENTRYPOINT ["/app/parkhub-server"]
+# Run — use CMD (not ENTRYPOINT) so Render's dockerCommand can override cleanly
+CMD ["/app/parkhub-server", "--headless", "--unattended", "--data-dir", "/data", "--port", "10000"]
