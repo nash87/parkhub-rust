@@ -46,7 +46,12 @@ pub fn record_http_request(method: &str, path: &str, status: u16, duration: std:
 }
 
 /// Record a database operation
-pub fn record_db_operation(operation: &str, table: &str, duration: std::time::Duration, success: bool) {
+pub fn record_db_operation(
+    operation: &str,
+    table: &str,
+    duration: std::time::Duration,
+    success: bool,
+) {
     let labels = [
         ("operation", operation.to_string()),
         ("table", table.to_string()),

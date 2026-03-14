@@ -139,7 +139,7 @@ impl Default for ServerConfig {
             admin_password_hash: String::new(), // Must be set during setup
             portable_mode: true,
             generate_dummy_users: false,
-            username_style: 0, // FirstLastLetter by default
+            username_style: 0,        // FirstLastLetter by default
             license_plate_display: 0, // Show by default
             session_timeout_minutes: 60,
             allow_self_registration: false,
@@ -257,8 +257,7 @@ mod tests {
             admin_password_hash = "hash"
         "#;
 
-        let config: ServerConfig = toml::from_str(minimal_toml)
-            .expect("Failed to deserialize");
+        let config: ServerConfig = toml::from_str(minimal_toml).expect("Failed to deserialize");
 
         // Check defaults are applied
         assert_eq!(config.server_name, "Minimal");
@@ -272,12 +271,7 @@ mod tests {
     #[test]
     fn test_license_plate_display_modes() {
         // Test each license plate display mode value
-        let modes = [
-            (0, "show"),
-            (1, "blur"),
-            (2, "redact"),
-            (3, "hide"),
-        ];
+        let modes = [(0, "show"), (1, "blur"), (2, "redact"), (3, "hide")];
 
         for (mode, _name) in modes.iter() {
             let mut config = ServerConfig::default();

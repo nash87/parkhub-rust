@@ -3,13 +3,13 @@
 //! Shared types, API models, and protocol definitions used by both
 //! the server and client applications.
 
+pub mod error;
 pub mod models;
 pub mod protocol;
-pub mod error;
 
+pub use error::*;
 pub use models::*;
 pub use protocol::*;
-pub use error::*;
 
 /// Protocol version for client-server compatibility checks
 pub const PROTOCOL_VERSION: &str = "1.0.0";

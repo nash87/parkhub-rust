@@ -170,7 +170,9 @@ pub async fn health_check(State(health): State<Arc<AppHealth>>) -> Json<HealthRe
                         } else {
                             HealthStatus::Healthy
                         };
-                        if status == HealthStatus::Degraded && overall_status == HealthStatus::Healthy {
+                        if status == HealthStatus::Degraded
+                            && overall_status == HealthStatus::Healthy
+                        {
                             overall_status = HealthStatus::Degraded;
                         }
                         checks.push(ComponentHealth {

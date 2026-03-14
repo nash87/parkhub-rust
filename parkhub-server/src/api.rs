@@ -26,7 +26,7 @@ use crate::demo;
 use crate::email;
 use crate::metrics;
 use crate::openapi::ApiDoc;
-use crate::rate_limit::{EndpointRateLimiters, ip_rate_limit_middleware};
+use crate::rate_limit::{ip_rate_limit_middleware, EndpointRateLimiters};
 use crate::static_files;
 
 /// Maximum allowed request body size: 1 MiB.
@@ -107,7 +107,10 @@ pub fn create_router(state: SharedState) -> Router {
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
-        .route("/api/v1/users/me", get(get_current_user).put(update_current_user))
+        .route(
+            "/api/v1/users/me",
+            get(get_current_user).put(update_current_user),
+        )
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
         // Admin-only: retrieve any user by ID
@@ -126,17 +129,35 @@ pub fn create_router(state: SharedState) -> Router {
         // Credits
         .route("/api/v1/user/credits", get(get_user_credits))
         // Admin-only: update Impressum settings
-        .route("/api/v1/admin/impressum", get(get_impressum_admin).put(update_impressum))
+        .route(
+            "/api/v1/admin/impressum",
+            get(get_impressum_admin).put(update_impressum),
+        )
         // Admin-only: user management
         .route("/api/v1/admin/users", get(admin_list_users))
-        .route("/api/v1/admin/users/{id}/role", axum::routing::patch(admin_update_user_role))
-        .route("/api/v1/admin/users/{id}/status", axum::routing::patch(admin_update_user_status))
+        .route(
+            "/api/v1/admin/users/{id}/role",
+            axum::routing::patch(admin_update_user_role),
+        )
+        .route(
+            "/api/v1/admin/users/{id}/status",
+            axum::routing::patch(admin_update_user_status),
+        )
         .route("/api/v1/admin/users/{id}", delete(admin_delete_user))
         // Admin-only: credits management
-        .route("/api/v1/admin/users/{id}/credits", post(admin_grant_credits))
-        .route("/api/v1/admin/credits/refill-all", post(admin_refill_all_credits))
+        .route(
+            "/api/v1/admin/users/{id}/credits",
+            post(admin_grant_credits),
+        )
+        .route(
+            "/api/v1/admin/credits/refill-all",
+            post(admin_refill_all_credits),
+        )
         // Admin-only: feature flags management
-        .route("/api/v1/admin/features", get(admin_get_features).put(admin_update_features))
+        .route(
+            "/api/v1/admin/features",
+            get(admin_get_features).put(admin_update_features),
+        )
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
         .route_layer(middleware::from_fn_with_state(
@@ -167,13 +188,16 @@ pub fn create_router(state: SharedState) -> Router {
         // WARNING: This endpoint is unauthenticated. In production, it MUST be
         // placed behind a reverse proxy that restricts access (e.g. only from
         // the internal monitoring network) or gated behind admin authentication.
-        .route("/metrics", get(move || async move {
-            (
-                StatusCode::OK,
-                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
-                metrics_handle_clone.render(),
-            )
-        }))
+        .route(
+            "/metrics",
+            get(move || async move {
+                (
+                    StatusCode::OK,
+                    [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                    metrics_handle_clone.render(),
+                )
+            }),
+        )
         // Swagger UI
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         // Static files (web frontend) - fallback for all other routes
@@ -299,7 +323,10 @@ async fn auth_middleware(
         _ => {
             return Err((
                 StatusCode::UNAUTHORIZED,
-                Json(ApiResponse::error("UNAUTHORIZED", "Invalid or expired token")),
+                Json(ApiResponse::error(
+                    "UNAUTHORIZED",
+                    "Invalid or expired token",
+                )),
             ));
         }
     };
@@ -481,7 +508,10 @@ async fn login(
         tracing::error!("Failed to save session: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create session")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create session",
+            )),
         );
     }
 
@@ -593,7 +623,10 @@ async fn register(
         tracing::error!("Failed to save user: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create account")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create account",
+            )),
         );
     }
 
@@ -611,7 +644,10 @@ async fn register(
         tracing::error!("Failed to save session: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create session")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create session",
+            )),
         );
     }
 
@@ -640,37 +676,47 @@ async fn refresh_token(
     let state_guard = state.read().await;
 
     // Look up the session that holds this refresh token
-    let (old_access_token, session) =
-        match state_guard.db.get_session_by_refresh_token(&request.refresh_token).await {
-            Ok(Some(pair)) => pair,
-            Ok(None) => {
-                return (
-                    StatusCode::UNAUTHORIZED,
-                    Json(ApiResponse::error(
-                        "INVALID_REFRESH_TOKEN",
-                        "Refresh token is invalid or expired",
-                    )),
-                );
-            }
-            Err(e) => {
-                tracing::error!("Database error during token refresh: {}", e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
-                );
-            }
-        };
+    let (old_access_token, session) = match state_guard
+        .db
+        .get_session_by_refresh_token(&request.refresh_token)
+        .await
+    {
+        Ok(Some(pair)) => pair,
+        Ok(None) => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse::error(
+                    "INVALID_REFRESH_TOKEN",
+                    "Refresh token is invalid or expired",
+                )),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error during token refresh: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
 
     // Create a fresh session (7-day expiry)
     let new_session = Session::new(session.user_id, 168, &session.username, &session.role); // 168h = 7 days
     let new_access_token = generate_access_token();
 
     // Save new session
-    if let Err(e) = state_guard.db.save_session(&new_access_token, &new_session).await {
+    if let Err(e) = state_guard
+        .db
+        .save_session(&new_access_token, &new_session)
+        .await
+    {
         tracing::error!("Failed to save refreshed session: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to refresh token")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to refresh token",
+            )),
         );
     }
 
@@ -779,8 +825,7 @@ async fn forgot_password(
     }
 
     // Build and send the reset email (gracefully degraded if SMTP not configured)
-    let app_url = std::env::var("APP_URL")
-        .unwrap_or_else(|_| "http://localhost:8443".to_string());
+    let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:8443".to_string());
     let reset_url = format!("{}/reset-password?token={}", app_url, reset_token);
     let org_name = state_guard.config.organization_name.clone();
 
@@ -845,7 +890,10 @@ async fn reset_password(
         let _ = state_guard.db.set_setting(&settings_key, "").await;
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("TOKEN_EXPIRED", "Reset token has expired")),
+            Json(ApiResponse::error(
+                "TOKEN_EXPIRED",
+                "Reset token has expired",
+            )),
         );
     }
 
@@ -862,7 +910,9 @@ async fn reset_password(
 
     // Validate new password using strong password rules
     if let Err(e) = crate::validation::validate_password_strength(&request.password) {
-        let msg = e.message.map(|m| m.to_string())
+        let msg = e
+            .message
+            .map(|m| m.to_string())
             .unwrap_or_else(|| "Password does not meet strength requirements".to_string());
         return (
             StatusCode::BAD_REQUEST,
@@ -900,7 +950,10 @@ async fn reset_password(
         tracing::error!("Failed to save updated user during password reset: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update password")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update password",
+            )),
         );
     }
 
@@ -976,7 +1029,11 @@ async fn update_current_user(
 ) -> (StatusCode, Json<ApiResponse<User>>) {
     let state_guard = state.read().await;
 
-    let mut user = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    let mut user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) => u,
         Ok(None) => {
             return (
@@ -1023,7 +1080,11 @@ async fn update_current_user(
                 );
             }
         }
-        user.picture = if picture.is_empty() { None } else { Some(picture) };
+        user.picture = if picture.is_empty() {
+            None
+        } else {
+            Some(picture)
+        };
     }
     user.updated_at = Utc::now();
 
@@ -1031,7 +1092,10 @@ async fn update_current_user(
         tracing::error!("Failed to save user profile update: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update profile")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update profile",
+            )),
         );
     }
 
@@ -1118,7 +1182,11 @@ async fn create_lot(
     let state_guard = state.read().await;
 
     // Check if user is admin
-    let user = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    let user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) => u,
         _ => {
             return (
@@ -1204,7 +1272,10 @@ async fn list_bookings(
         Ok(bookings) => Json(ApiResponse::success(bookings)),
         Err(e) => {
             tracing::error!("Database error: {}", e);
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to list bookings"))
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list bookings",
+            ))
         }
     }
 }
@@ -1264,7 +1335,10 @@ async fn create_booking(
             if v.user_id != auth_user.user_id {
                 return (
                     StatusCode::FORBIDDEN,
-                    Json(ApiResponse::error("FORBIDDEN", "Vehicle does not belong to you")),
+                    Json(ApiResponse::error(
+                        "FORBIDDEN",
+                        "Vehicle does not belong to you",
+                    )),
                 );
             }
             v
@@ -1286,7 +1360,10 @@ async fn create_booking(
     if req.duration_minutes <= 0 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("INVALID_INPUT", "Duration must be positive")),
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Duration must be positive",
+            )),
         );
     }
 
@@ -1402,7 +1479,10 @@ async fn create_booking(
         tracing::error!("Failed to save booking: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create booking")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create booking",
+            )),
         );
     }
 
@@ -1480,7 +1560,9 @@ async fn create_booking(
                 &end_time_str,
                 &org_name,
             );
-            if let Err(e) = email::send_email(&user_email, "Booking Confirmation — ParkHub", &email_html).await {
+            if let Err(e) =
+                email::send_email(&user_email, "Booking Confirmation — ParkHub", &email_html).await
+            {
                 tracing::warn!("Failed to send booking confirmation email: {}", e);
             }
         });
@@ -1557,7 +1639,10 @@ async fn cancel_booking(
     if booking.status == BookingStatus::Cancelled {
         return (
             StatusCode::CONFLICT,
-            Json(ApiResponse::error("ALREADY_CANCELLED", "Booking is already cancelled")),
+            Json(ApiResponse::error(
+                "ALREADY_CANCELLED",
+                "Booking is already cancelled",
+            )),
         );
     }
 
@@ -1700,7 +1785,11 @@ async fn get_booking_invoice(
     };
 
     // Ownership check — only the booking owner (or admin) may fetch the invoice
-    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    let caller = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) => u,
         _ => {
             return (
@@ -1727,13 +1816,21 @@ async fn get_booking_invoice(
     };
 
     // Fetch parking lot name
-    let lot_name = match state_guard.db.get_parking_lot(&booking.lot_id.to_string()).await {
+    let lot_name = match state_guard
+        .db
+        .get_parking_lot(&booking.lot_id.to_string())
+        .await
+    {
         Ok(Some(lot)) => lot.name,
         _ => "Unknown Parking Lot".to_string(),
     };
 
     let org_name = state_guard.config.organization_name.clone();
-    let company = if org_name.is_empty() { "ParkHub".to_string() } else { org_name };
+    let company = if org_name.is_empty() {
+        "ParkHub".to_string()
+    } else {
+        org_name
+    };
 
     // Calculate duration in minutes
     let duration_minutes = (booking.end_time - booking.start_time).num_minutes();
@@ -1749,7 +1846,17 @@ async fn get_booking_invoice(
     let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
     let end_str = booking.end_time.format("%d.%m.%Y %H:%M").to_string();
 
-    let invoice_number = format!("INV-{}", booking.id.to_string().to_uppercase().replace('-', "").chars().take(12).collect::<String>());
+    let invoice_number = format!(
+        "INV-{}",
+        booking
+            .id
+            .to_string()
+            .to_uppercase()
+            .replace('-', "")
+            .chars()
+            .take(12)
+            .collect::<String>()
+    );
 
     // HTML-escape all user-controlled values to prevent stored XSS
     use crate::utils::html_escape;
@@ -1962,7 +2069,10 @@ async fn list_vehicles(
         Ok(vehicles) => Json(ApiResponse::success(vehicles)),
         Err(e) => {
             tracing::error!("Database error: {}", e);
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to list vehicles"))
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list vehicles",
+            ))
         }
     }
 }
@@ -1981,7 +2091,10 @@ async fn create_vehicle(
         tracing::error!("Failed to save vehicle: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create vehicle")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create vehicle",
+            )),
         );
     }
 
@@ -2067,7 +2180,10 @@ async fn delete_vehicle(
             tracing::error!("Failed to delete vehicle {}: {}", id, e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete vehicle")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete vehicle",
+                )),
             )
         }
     }
@@ -2169,21 +2285,33 @@ pub struct ImpressumData {
 }
 
 const IMPRESSUM_FIELDS: &[&str] = &[
-    "provider_name", "provider_legal_form", "street", "zip_city", "country",
-    "email", "phone", "register_court", "register_number", "vat_id",
-    "responsible_person", "custom_text",
+    "provider_name",
+    "provider_legal_form",
+    "street",
+    "zip_city",
+    "country",
+    "email",
+    "phone",
+    "register_court",
+    "register_number",
+    "vat_id",
+    "responsible_person",
+    "custom_text",
 ];
 
 /// Public Impressum endpoint — no auth required (DDG § 5)
-async fn get_impressum(
-    State(state): State<SharedState>,
-) -> Json<serde_json::Value> {
+async fn get_impressum(State(state): State<SharedState>) -> Json<serde_json::Value> {
     let state = state.read().await;
     let mut data = serde_json::json!({});
 
     for field in IMPRESSUM_FIELDS {
         let key = format!("impressum_{}", field);
-        let value = state.db.get_setting(&key).await.unwrap_or(None).unwrap_or_default();
+        let value = state
+            .db
+            .get_setting(&key)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_default();
         data[field] = serde_json::Value::String(value);
     }
 
@@ -2202,7 +2330,11 @@ async fn get_impressum_admin(
     let state_guard = state.read().await;
 
     // Verify admin role.
-    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    let caller = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) => u,
         _ => {
             return (
@@ -2222,7 +2354,12 @@ async fn get_impressum_admin(
     let mut data = serde_json::json!({});
     for field in IMPRESSUM_FIELDS {
         let key = format!("impressum_{}", field);
-        let value = state_guard.db.get_setting(&key).await.unwrap_or(None).unwrap_or_default();
+        let value = state_guard
+            .db
+            .get_setting(&key)
+            .await
+            .unwrap_or(None)
+            .unwrap_or_default();
         data[field] = serde_json::Value::String(value);
     }
 
@@ -2240,12 +2377,20 @@ async fn update_impressum(
     let state_guard = state.read().await;
     let user = match state_guard.db.get_user(&user_id_str).await {
         Ok(Some(u)) => u,
-        _ => return (StatusCode::FORBIDDEN, Json(ApiResponse::error("FORBIDDEN", "Admin required"))),
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin required")),
+            )
+        }
     };
     drop(state_guard);
 
     if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
-        return (StatusCode::FORBIDDEN, Json(ApiResponse::error("FORBIDDEN", "Admin required")));
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Admin required")),
+        );
     }
 
     let state_guard = state.read().await;
@@ -2283,8 +2428,16 @@ async fn gdpr_export_data(
         }
     };
 
-    let bookings = state.db.list_bookings_by_user(&user_id).await.unwrap_or_default();
-    let vehicles = state.db.list_vehicles_by_user(&user_id).await.unwrap_or_default();
+    let bookings = state
+        .db
+        .list_bookings_by_user(&user_id)
+        .await
+        .unwrap_or_default();
+    let vehicles = state
+        .db
+        .list_vehicles_by_user(&user_id)
+        .await
+        .unwrap_or_default();
 
     // Note: password_hash is intentionally excluded from GDPR exports.
     // Exporting a password hash would allow offline brute-force attacks
@@ -2311,9 +2464,7 @@ async fn gdpr_export_data(
 
     (
         StatusCode::OK,
-        [
-            (header::CONTENT_TYPE, "application/json"),
-        ],
+        [(header::CONTENT_TYPE, "application/json")],
         json_str,
     )
 }
@@ -2353,7 +2504,10 @@ async fn gdpr_delete_account(
             tracing::error!("GDPR anonymization failed for {}: {}", user_id, e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to anonymize account")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to anonymize account",
+                )),
             )
         }
     }
@@ -2395,7 +2549,11 @@ impl From<&User> for AdminUserResponse {
             email: u.email.clone(),
             name: u.name.clone(),
             role: format!("{:?}", u.role).to_lowercase(),
-            status: if u.is_active { "active".to_string() } else { "disabled".to_string() },
+            status: if u.is_active {
+                "active".to_string()
+            } else {
+                "disabled".to_string()
+            },
             created_at: u.created_at,
         }
     }
@@ -2425,7 +2583,8 @@ async fn admin_list_users(
 
     match state_guard.db.list_users().await {
         Ok(users) => {
-            let response: Vec<AdminUserResponse> = users.iter().map(AdminUserResponse::from).collect();
+            let response: Vec<AdminUserResponse> =
+                users.iter().map(AdminUserResponse::from).collect();
             (StatusCode::OK, Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -2451,7 +2610,11 @@ async fn admin_update_user_role(
     }
 
     // Fetch the caller to check their role for privilege escalation prevention
-    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    let caller = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) => u,
         _ => {
             return (
@@ -2526,7 +2689,10 @@ async fn admin_update_user_role(
         "Admin updated user role"
     );
 
-    (StatusCode::OK, Json(ApiResponse::success(AdminUserResponse::from(&user))))
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(AdminUserResponse::from(&user))),
+    )
 }
 
 /// `PATCH /api/v1/admin/users/{id}/status` — enable or disable a user account (admin only)
@@ -2583,7 +2749,10 @@ async fn admin_update_user_status(
         "Admin updated user status"
     );
 
-    (StatusCode::OK, Json(ApiResponse::success(AdminUserResponse::from(&user))))
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(AdminUserResponse::from(&user))),
+    )
 }
 
 /// `DELETE /api/v1/admin/users/{id}` — delete a user account (admin only, GDPR anonymize)
@@ -2601,7 +2770,10 @@ async fn admin_delete_user(
     if id == auth_user.user_id.to_string() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("CANNOT_DELETE_SELF", "You cannot delete your own account")),
+            Json(ApiResponse::error(
+                "CANNOT_DELETE_SELF",
+                "You cannot delete your own account",
+            )),
         );
     }
 
@@ -2679,7 +2851,10 @@ async fn admin_list_bookings(
             tracing::error!("Failed to list bookings: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list bookings")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list bookings",
+                )),
             );
         }
     };
@@ -2687,12 +2862,17 @@ async fn admin_list_bookings(
     // Build a response enriched with user info (best-effort: fall back to IDs if user not found)
     let mut response = Vec::with_capacity(bookings.len());
     for booking in bookings {
-        let (user_name, user_email) = match state_guard.db.get_user(&booking.user_id.to_string()).await {
-            Ok(Some(u)) => (u.name, u.email),
-            _ => (booking.user_id.to_string(), String::new()),
-        };
+        let (user_name, user_email) =
+            match state_guard.db.get_user(&booking.user_id.to_string()).await {
+                Ok(Some(u)) => (u.name, u.email),
+                _ => (booking.user_id.to_string(), String::new()),
+            };
 
-        let lot_name = match state_guard.db.get_parking_lot(&booking.lot_id.to_string()).await {
+        let lot_name = match state_guard
+            .db
+            .get_parking_lot(&booking.lot_id.to_string())
+            .await
+        {
             Ok(Some(l)) => l.name,
             _ => booking.lot_id.to_string(),
         };
@@ -2823,7 +3003,10 @@ async fn admin_grant_credits(
         tracing::error!("Failed to save user credits: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update credits")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update credits",
+            )),
         );
     }
 
@@ -2942,10 +3125,8 @@ const SETTINGS_FEATURES_KEY: &str = "features_enabled";
 /// Read enabled features from DB, falling back to defaults.
 async fn read_features(db: &crate::db::Database) -> Vec<String> {
     match db.get_setting(SETTINGS_FEATURES_KEY).await {
-        Ok(Some(json_str)) => {
-            serde_json::from_str::<Vec<String>>(&json_str)
-                .unwrap_or_else(|_| DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect())
-        }
+        Ok(Some(json_str)) => serde_json::from_str::<Vec<String>>(&json_str)
+            .unwrap_or_else(|_| DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect()),
         _ => DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect(),
     }
 }
@@ -3023,11 +3204,18 @@ async fn admin_update_features(
         .collect();
 
     let json_str = serde_json::to_string(&valid).unwrap_or_default();
-    if let Err(e) = state_guard.db.set_setting(SETTINGS_FEATURES_KEY, &json_str).await {
+    if let Err(e) = state_guard
+        .db
+        .set_setting(SETTINGS_FEATURES_KEY, &json_str)
+        .await
+    {
         tracing::error!("Failed to save feature flags: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to save features")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save features",
+            )),
         );
     }
 

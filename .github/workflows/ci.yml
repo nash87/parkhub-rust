@@ -31,6 +31,11 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      # rust-embed needs the dist folder at compile time; create a placeholder
+      # so cargo check works without a full frontend build.
+      - name: Create placeholder web dist
+        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
       # Check only the server-side packages — parkhub-client has Slint/GTK deps
       # that require a full desktop environment and cannot be checked on plain Ubuntu.
       # The client is covered by the Windows build job in release.yml.
@@ -69,6 +74,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Create placeholder web dist
+        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
       # Clippy only for server-side packages (same reason as cargo check above)
       - name: Run clippy (server + common)
         run: |
@@ -89,6 +97,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Create placeholder web dist
+        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
       - name: Run tests (server + common)
         run: |
           cargo test --package parkhub-common
@@ -107,6 +118,9 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      - name: Create placeholder web dist
+        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
       # Build the headless server binary — this is what Docker ships
       - name: Build release (headless server)

@@ -34,7 +34,9 @@ pub struct User {
     pub credits_last_refilled: Option<DateTime<Utc>>,
 }
 
-fn default_credits_quota() -> i32 { 10 }
+fn default_credits_quota() -> i32 {
+    10
+}
 
 /// User role for access control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
@@ -501,9 +503,18 @@ mod tests {
     #[test]
     fn test_user_role_serialization() {
         assert_eq!(serde_json::to_string(&UserRole::User).unwrap(), "\"user\"");
-        assert_eq!(serde_json::to_string(&UserRole::Premium).unwrap(), "\"premium\"");
-        assert_eq!(serde_json::to_string(&UserRole::Admin).unwrap(), "\"admin\"");
-        assert_eq!(serde_json::to_string(&UserRole::SuperAdmin).unwrap(), "\"superadmin\"");
+        assert_eq!(
+            serde_json::to_string(&UserRole::Premium).unwrap(),
+            "\"premium\""
+        );
+        assert_eq!(
+            serde_json::to_string(&UserRole::Admin).unwrap(),
+            "\"admin\""
+        );
+        assert_eq!(
+            serde_json::to_string(&UserRole::SuperAdmin).unwrap(),
+            "\"superadmin\""
+        );
     }
 
     #[test]
@@ -526,9 +537,18 @@ mod tests {
 
     #[test]
     fn test_slot_status_serialization() {
-        assert_eq!(serde_json::to_string(&SlotStatus::Available).unwrap(), "\"available\"");
-        assert_eq!(serde_json::to_string(&SlotStatus::Occupied).unwrap(), "\"occupied\"");
-        assert_eq!(serde_json::to_string(&SlotStatus::Maintenance).unwrap(), "\"maintenance\"");
+        assert_eq!(
+            serde_json::to_string(&SlotStatus::Available).unwrap(),
+            "\"available\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotStatus::Occupied).unwrap(),
+            "\"occupied\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotStatus::Maintenance).unwrap(),
+            "\"maintenance\""
+        );
     }
 
     #[test]
@@ -539,9 +559,18 @@ mod tests {
 
     #[test]
     fn test_slot_type_serialization() {
-        assert_eq!(serde_json::to_string(&SlotType::Standard).unwrap(), "\"standard\"");
-        assert_eq!(serde_json::to_string(&SlotType::Handicap).unwrap(), "\"handicap\"");
-        assert_eq!(serde_json::to_string(&SlotType::Electric).unwrap(), "\"electric\"");
+        assert_eq!(
+            serde_json::to_string(&SlotType::Standard).unwrap(),
+            "\"standard\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotType::Handicap).unwrap(),
+            "\"handicap\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotType::Electric).unwrap(),
+            "\"electric\""
+        );
     }
 
     #[test]
@@ -552,10 +581,22 @@ mod tests {
 
     #[test]
     fn test_booking_status_serialization() {
-        assert_eq!(serde_json::to_string(&BookingStatus::Pending).unwrap(), "\"pending\"");
-        assert_eq!(serde_json::to_string(&BookingStatus::Active).unwrap(), "\"active\"");
-        assert_eq!(serde_json::to_string(&BookingStatus::Completed).unwrap(), "\"completed\"");
-        assert_eq!(serde_json::to_string(&BookingStatus::Cancelled).unwrap(), "\"cancelled\"");
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::Pending).unwrap(),
+            "\"pending\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::Active).unwrap(),
+            "\"active\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::Completed).unwrap(),
+            "\"completed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::Cancelled).unwrap(),
+            "\"cancelled\""
+        );
     }
 
     #[test]
@@ -588,15 +629,30 @@ mod tests {
 
     #[test]
     fn test_slot_feature_serialization() {
-        assert_eq!(serde_json::to_string(&SlotFeature::NearExit).unwrap(), "\"near_exit\"");
-        assert_eq!(serde_json::to_string(&SlotFeature::ChargingStation).unwrap(), "\"charging_station\"");
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::NearExit).unwrap(),
+            "\"near_exit\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::ChargingStation).unwrap(),
+            "\"charging_station\""
+        );
     }
 
     #[test]
     fn test_layout_element_type_serialization() {
-        assert_eq!(serde_json::to_string(&LayoutElementType::ParkingSlot).unwrap(), "\"parking_slot\"");
-        assert_eq!(serde_json::to_string(&LayoutElementType::Entrance).unwrap(), "\"entrance\"");
-        assert_eq!(serde_json::to_string(&LayoutElementType::ChargingStation).unwrap(), "\"charging_station\"");
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::ParkingSlot).unwrap(),
+            "\"parking_slot\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Entrance).unwrap(),
+            "\"entrance\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::ChargingStation).unwrap(),
+            "\"charging_station\""
+        );
     }
 
     #[test]
@@ -623,7 +679,8 @@ mod tests {
         };
 
         let json = serde_json::to_string(&request).expect("Failed to serialize");
-        let deserialized: CreateBookingRequest = serde_json::from_str(&json).expect("Failed to deserialize");
+        let deserialized: CreateBookingRequest =
+            serde_json::from_str(&json).expect("Failed to deserialize");
 
         assert_eq!(request.lot_id, deserialized.lot_id);
         assert_eq!(request.duration_minutes, deserialized.duration_minutes);

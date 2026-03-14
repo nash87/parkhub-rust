@@ -173,9 +173,11 @@ impl From<validator::ValidationErrors> for AppError {
             .flat_map(|(field, errors)| {
                 errors.iter().map(move |e| FieldError {
                     field: field.to_string(),
-                    message: e.message.as_ref().map(|m| m.to_string()).unwrap_or_else(|| {
-                        e.code.to_string()
-                    }),
+                    message: e
+                        .message
+                        .as_ref()
+                        .map(|m| m.to_string())
+                        .unwrap_or_else(|| e.code.to_string()),
                 })
             })
             .collect();
@@ -207,6 +209,9 @@ mod tests {
             AppError::NotFound("test".into()).status_code(),
             StatusCode::NOT_FOUND
         );
-        assert_eq!(AppError::RateLimited.status_code(), StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(
+            AppError::RateLimited.status_code(),
+            StatusCode::TOO_MANY_REQUESTS
+        );
     }
 }
