@@ -46,6 +46,7 @@ use parkhub_common::{
 use serde::{Deserialize, Serialize};
 
 use crate::db::Session;
+use crate::requests::VehicleRequest;
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -2080,11 +2081,19 @@ async fn list_vehicles(
 async fn create_vehicle(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
-    Json(mut vehicle): Json<Vehicle>,
+    Json(req): Json<VehicleRequest>,
 ) -> (StatusCode, Json<ApiResponse<Vehicle>>) {
-    vehicle.user_id = auth_user.user_id;
-    vehicle.id = Uuid::new_v4();
-    vehicle.created_at = Utc::now();
+    let vehicle = Vehicle {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        license_plate: req.license_plate,
+        make: req.make,
+        model: req.model,
+        color: req.color,
+        vehicle_type: req.vehicle_type.map(|t| serde_json::from_value(serde_json::Value::String(t)).unwrap_or_default()).unwrap_or_default(),
+        is_default: req.is_default,
+        created_at: Utc::now(),
+    };
 
     let state_guard = state.read().await;
     if let Err(e) = state_guard.db.save_vehicle(&vehicle).await {

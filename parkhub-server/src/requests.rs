@@ -97,13 +97,16 @@ pub struct CreateBookingRequest {
     pub duration_minutes: i32,
 
     /// Vehicle ID (for returning users)
+    #[serde(default)]
     pub vehicle_id: Option<Uuid>,
 
     /// License plate (required if no vehicle_id)
+    #[serde(default)]
     #[validate(custom(function = "validate_license_plate"))]
     pub license_plate: Option<String>,
 
     /// Optional notes
+    #[serde(default)]
     #[validate(length(max = 500, message = "Notes too long"))]
     pub notes: Option<String>,
 }
@@ -143,18 +146,22 @@ pub struct VehicleRequest {
     pub license_plate: String,
 
     /// Vehicle make (e.g., "BMW", "Toyota")
+    #[serde(default)]
     #[validate(length(max = 50, message = "Make too long"))]
     pub make: Option<String>,
 
     /// Vehicle model (e.g., "X5", "Camry")
+    #[serde(default)]
     #[validate(length(max = 50, message = "Model too long"))]
     pub model: Option<String>,
 
     /// Vehicle color
+    #[serde(default)]
     #[validate(length(max = 30, message = "Color too long"))]
     pub color: Option<String>,
 
     /// Vehicle type
+    #[serde(default)]
     pub vehicle_type: Option<String>,
 
     /// Set as default vehicle
