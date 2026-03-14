@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.3-brightgreen.svg?style=for-the-badge" alt="v1.2.3"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.5-brightgreen.svg?style=for-the-badge" alt="v1.2.5"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
@@ -22,6 +22,7 @@
 </p>
 
 <p align="center">
+  <a href="https://parkhub-rust-demo.onrender.com">Live Demo</a> ·
   <a href="docs/INSTALLATION.md">Installation</a> ·
   <a href="docs/API.md">API Reference</a> ·
   <a href="docs/GDPR.md">GDPR Guide</a> ·
