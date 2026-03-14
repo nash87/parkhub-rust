@@ -2090,7 +2090,10 @@ async fn create_vehicle(
         make: req.make,
         model: req.model,
         color: req.color,
-        vehicle_type: req.vehicle_type.map(|t| serde_json::from_value(serde_json::Value::String(t)).unwrap_or_default()).unwrap_or_default(),
+        vehicle_type: req
+            .vehicle_type
+            .map(|t| serde_json::from_value(serde_json::Value::String(t)).unwrap_or_default())
+            .unwrap_or_default(),
         is_default: req.is_default,
         created_at: Utc::now(),
     };
