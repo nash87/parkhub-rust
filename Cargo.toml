@@ -26,7 +26,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 
 # Database - Pure Rust embedded database
-redb = "2"  # 3.x exists but major API changes — evaluate separately
+redb = "3"  # 3.x exists but major API changes — evaluate separately
 
 # Encryption utilities (for application-level encryption)
 aes-gcm = "0.10"  # 0.11 is RC only
