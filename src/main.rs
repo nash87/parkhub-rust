@@ -1,4 +1,4 @@
-//! Securanido Parking Desktop Application
+//! ParkHub Parking Desktop Application
 //!
 //! A Windows desktop application for parking lot booking with mock backend.
 
@@ -85,12 +85,12 @@ async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt().with_env_filter("info").init();
 
-    info!("Starting Securanido Parking Desktop v0.1.0");
+    info!("Starting ParkHub Desktop v1.2.1");
 
     // Clean up old screenshots on startup
     {
         let screenshots_dir =
-            std::path::PathBuf::from(r"C:\dev\securanido-parking-desktop\screenshots");
+            std::path::PathBuf::from(r"C:\dev\parkhub-client\screenshots");
         if screenshots_dir.exists() {
             if let Ok(entries) = std::fs::read_dir(&screenshots_dir) {
                 let mut deleted_count = 0;
@@ -904,7 +904,7 @@ async fn main() -> Result<()> {
 
                 // Get the dev folder path (same as app source)
                 let screenshots_dir =
-                    PathBuf::from(r"C:\dev\securanido-parking-desktop\screenshots");
+                    PathBuf::from(r"C:\dev\parkhub-client\screenshots");
 
                 // Create directory if it doesn't exist
                 if let Err(e) = std::fs::create_dir_all(&screenshots_dir) {

@@ -49,7 +49,7 @@ export struct CurrentUser {
 }
 
 export component MainWindow inherits Window {
-    title: "Securanido Parking";
+    title: "ParkHub Parking";
     no-frame: true;  // Custom frameless window like pmos-controller
     min-width: 450px;
     min-height: 700px;
@@ -435,7 +435,7 @@ export component MainWindow inherits Window {
                         }
 
                         Text {
-                            text: "Securanido Parking";
+                            text: "ParkHub Parking";
                             font-size: 13px;
                             font-weight: 400;
                             color: #cccccc;
@@ -713,7 +713,7 @@ export component MainWindow inherits Window {
                         }
 
                         Text {
-                            text: root.server-mode == "local" ? "localhost" : "securanido.com";
+                            text: root.server-mode == "local" ? "localhost" : "parkhub.test";
                             font-size: Theme.font-size-xs;
                             color: Theme.text-secondary;
                             vertical-alignment: center;
