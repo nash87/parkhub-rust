@@ -7,6 +7,7 @@ services:
       url: ghcr.io/nash87/parkhub-rust:latest
     # Entrypoint: start server → wait healthy → seed demo data → keep running
     dockerCommand: /app/docker-entrypoint.sh
+    port: 10000
     plan: free
     envVars:
       - key: RUST_LOG
