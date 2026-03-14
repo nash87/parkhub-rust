@@ -1,6 +1,6 @@
 # API Reference — ParkHub Rust
 
-Full REST API reference for ParkHub Rust (Axum 0.7).
+Full REST API reference for ParkHub Rust (Axum 0.8).
 
 All API endpoints are prefixed with `/api/v1/`.
 An interactive Swagger UI is available at `/swagger-ui` when the server is running.
