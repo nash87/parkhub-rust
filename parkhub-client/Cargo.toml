@@ -34,7 +34,7 @@ chrono.workspace = true
 uuid.workspace = true
 
 # Local storage paths
-directories = "5"
+directories = "6"
 
 # Logging
 tracing.workspace = true
