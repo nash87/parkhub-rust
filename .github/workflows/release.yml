@@ -48,7 +48,7 @@ jobs:
           tar -czvf parkhub-linux-x64.tar.gz parkhub-linux-x64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: parkhub-linux-x64
           path: parkhub-linux-x64.tar.gz
@@ -84,7 +84,7 @@ jobs:
           Compress-Archive -Path parkhub-windows-x64 -DestinationPath parkhub-windows-x64.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: parkhub-windows-x64
           path: parkhub-windows-x64.zip
