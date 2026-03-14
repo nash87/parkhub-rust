@@ -58,7 +58,7 @@ export function BookingsPage() {
   const past = filtered.filter(b => b.status === 'completed' || b.status === 'cancelled');
 
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
-  const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] } } };
+  const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] as const } } };
 
   if (loading) return (
     <div className="space-y-5">

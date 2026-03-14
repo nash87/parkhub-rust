@@ -123,7 +123,7 @@ export function UseCaseSelectorPage() {
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] as const }}
           className="mb-7"
         >
           <div className="w-12 h-12 bg-primary-900 dark:bg-surface-800 flex items-center justify-center border border-primary-800 dark:border-surface-700">
