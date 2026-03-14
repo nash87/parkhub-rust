@@ -31,6 +31,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake libfontconfig1-dev
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build web frontend
+        run: |
+          cd parkhub-web
+          npm ci
+          npm run build
+
       - name: Build server (headless)
         run: cargo build --release --package parkhub-server --no-default-features --features headless
 
@@ -64,6 +75,17 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build web frontend
+        run: |
+          cd parkhub-web
+          npm ci
+          npm run build
 
       - name: Build server (headless)
         run: cargo build --release --package parkhub-server --no-default-features --features headless
