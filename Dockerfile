@@ -36,7 +36,7 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
     cargo build --release --package parkhub-server --no-default-features --features headless
 
 # Runtime stage — minimal Alpine, non-root user
-FROM alpine:3.20
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates tzdata python3 && \
     addgroup -S parkhub && adduser -S -G parkhub parkhub
 WORKDIR /app
