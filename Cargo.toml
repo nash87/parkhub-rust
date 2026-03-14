@@ -32,7 +32,7 @@ redb = "2"  # 3.x exists but major API changes — evaluate separately
 aes-gcm = "0.10"  # 0.11 is RC only
 pbkdf2 = { version = "0.12", features = ["simple"] }  # 0.13 is RC only
 sha2 = "0.10"
-rand = "0.9"  # updated from 0.8
+rand = "0.10"  # updated from 0.8
 zeroize = { version = "1", features = ["derive"] }
 
 # HTTP/API
