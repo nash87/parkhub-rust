@@ -1,5 +1,5 @@
 # Verify build script
-$exePath = "C:\dev\securanido-parking-desktop\target\release\securanido-parking.exe"
+$exePath = "C:\dev\parkhub-client\target\release\parkhub-client.exe"
 
 Write-Host "=== Build Verification ===" -ForegroundColor Cyan
 
@@ -37,7 +37,7 @@ if (Test-Path $exePath) {
 # Check assets
 Write-Host ""
 Write-Host "=== Assets ===" -ForegroundColor Cyan
-$assetsPath = "C:\dev\securanido-parking-desktop\assets"
+$assetsPath = "C:\dev\parkhub-client\assets"
 if (Test-Path $assetsPath) {
     Get-ChildItem $assetsPath | ForEach-Object {
         Write-Host "  $($_.Name) - $([math]::Round($_.Length / 1KB, 1)) KB"
@@ -47,7 +47,7 @@ if (Test-Path $assetsPath) {
 # Check config
 Write-Host ""
 Write-Host "=== Configuration ===" -ForegroundColor Cyan
-$configPath = "C:\dev\securanido-parking-desktop\config"
+$configPath = "C:\dev\parkhub-client\config"
 if (Test-Path $configPath) {
     Get-ChildItem $configPath | ForEach-Object {
         Write-Host "  $($_.Name)"

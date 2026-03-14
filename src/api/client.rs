@@ -24,7 +24,7 @@ pub struct ApiConfig {
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
-            base_url: "https://api.securanido.local".to_string(),
+            base_url: "https://api.parkhub.test".to_string(),
             timeout_secs: 30,
             max_retries: 3,
             retry_delay_ms: 1000,

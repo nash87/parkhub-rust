@@ -1,4 +1,4 @@
-# Securanido Parking Desktop - Test Dependencies
+# ParkHub Parking Desktop - Test Dependencies
 #
 # NOTE: Tests are now run using Rust's built-in test framework.
 # Run tests with: cargo test

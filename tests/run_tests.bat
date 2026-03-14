@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo Securanido Parking - Headless Test Runner
+echo ParkHub Parking - Headless Test Runner
 echo State-of-the-Art Rust Testing 2026
 echo ========================================
 echo.

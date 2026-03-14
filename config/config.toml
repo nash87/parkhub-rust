@@ -1,11 +1,11 @@
 [app]
-name = "Securanido Parking"
-version = "0.1.0"
+name = "ParkHub Parking"
+version = "1.2.1"
 
 [server]
 # Default to local development
 local_url = "http://localhost:3000"
-production_url = "https://securanido.com"
+production_url = "https://parkhub.test"
 
 # Which server to use: "local" or "production"
 active = "local"
@@ -33,7 +33,7 @@ available = ["de", "en"]
 
 [cache]
 # Local SQLite cache path (relative to app data dir)
-database = "securanido-parking.db"
+database = "parkhub.db"
 
 # Cache TTL in seconds
 ttl = 300

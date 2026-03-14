@@ -9,7 +9,7 @@ $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
 $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
 $g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
 
-# Background - Securanido brand blue
+# Background - ParkHub brand blue
 $blueBrush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(255, 41, 128, 185))
 $g.FillRectangle($blueBrush, 0, 0, $size, $size)
 
@@ -29,7 +29,7 @@ $g.FillEllipse($carBrush, 95, 225, 20, 20)
 $g.FillEllipse($carBrush, 141, 225, 20, 20)
 
 # Ensure assets directory exists
-$assetsDir = "C:\dev\securanido-parking-desktop\assets"
+$assetsDir = "C:\dev\parkhub-client\assets"
 if (-not (Test-Path $assetsDir)) {
     New-Item -ItemType Directory -Path $assetsDir -Force | Out-Null
 }

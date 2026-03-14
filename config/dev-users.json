@@ -2,7 +2,7 @@
   "users": [
     {
       "id": "dev-florian1",
-      "email": "florian1@securanido.local",
+      "email": "florian1@parkhub.test",
       "name": "Florian 1",
       "picture": null,
       "role": "user",
@@ -10,7 +10,7 @@
     },
     {
       "id": "dev-florian2",
-      "email": "florian2@securanido.local",
+      "email": "florian2@parkhub.test",
       "name": "Florian 2",
       "picture": null,
       "role": "user",
@@ -18,7 +18,7 @@
     },
     {
       "id": "dev-admin",
-      "email": "admin@securanido.local",
+      "email": "admin@parkhub.test",
       "name": "Administrator",
       "picture": null,
       "role": "admin",

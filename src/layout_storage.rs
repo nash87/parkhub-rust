@@ -112,7 +112,7 @@ pub struct LayoutStorage {
 impl LayoutStorage {
     /// Create a new layout storage manager
     pub fn new() -> Result<Self> {
-        let project_dirs = ProjectDirs::from("com", "securanido", "parking-desktop")
+        let project_dirs = ProjectDirs::from("com", "parkhub", "parkhub-client")
             .context("Failed to determine project directories")?;
 
         let layouts_dir = project_dirs.data_dir().join("layouts");
