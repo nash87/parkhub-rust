@@ -3,7 +3,7 @@
 //! Defines all API request payloads with built-in validation.
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
