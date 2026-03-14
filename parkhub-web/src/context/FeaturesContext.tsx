@@ -97,7 +97,7 @@ export function FeaturesProvider({ children }: { children: ReactNode }) {
     if (token) {
       api.getFeatures().then(res => {
         if (res.success && res.data && Array.isArray(res.data.enabled)) {
-          setFeaturesState(res.data.enabled);
+          setFeaturesState(res.data.enabled as FeatureModule[]);
           setConfigured(true);
         }
       }).catch(() => {}).finally(() => setLoading(false));
