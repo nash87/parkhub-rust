@@ -1134,7 +1134,7 @@ async fn create_admin_user(db: &Database, config: &ServerConfig) -> Result<()> {
     let admin_user = User {
         id: Uuid::new_v4(),
         username: config.admin_username.clone(),
-        email: format!("{}@localhost", config.admin_username),
+        email: format!("{}@parkhub.test", config.admin_username),
         password_hash: config.admin_password_hash.clone(),
         name: "Administrator".to_string(),
         picture: None,
