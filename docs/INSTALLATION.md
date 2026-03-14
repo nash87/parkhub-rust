@@ -85,10 +85,10 @@ Open `http://localhost:8080` in your browser.
 
 On first start, ParkHub automatically:
 
-- Creates an admin account: username `admin`, password `admin`
+- Creates an admin account with an auto-generated password (printed in the server logs)
 - Creates a sample parking lot for immediate exploration
 
-**Change the admin password immediately** after first login via the UI (Profile → Change Password) or via the API.
+To set a known admin password, add `PARKHUB_ADMIN_PASSWORD=your-password` to the environment section of `docker-compose.yml` before first start.
 
 ### Data Persistence
 
@@ -323,14 +323,11 @@ spec:
         fsGroup: 1000
       containers:
         - name: parkhub
-          image: ghcr.io/nash87/parkhub-rust:v1.2.0  # Pin to specific version; check releases for latest
+          image: ghcr.io/nash87/parkhub-rust:v1.2.3  # Pin to specific version; check releases for latest
+          args: ["--headless", "--unattended", "--port", "8080"]
           ports:
             - containerPort: 8080
           env:
-            - name: PARKHUB_HOST
-              value: "0.0.0.0"
-            - name: PARKHUB_PORT
-              value: "8080"
             - name: RUST_LOG
               value: "info"
             - name: PARKHUB_DB_PASSPHRASE
@@ -675,8 +672,8 @@ Returns HTTP 503 with `{"ready":false}` if the database is not operational.
 
 After installation, verify the following before putting ParkHub into production:
 
-- [ ] Login at `http(s)://your-host:port` succeeds with `admin` / `admin`
-- [ ] Admin password changed to a strong unique password
+- [ ] Login at `http(s)://your-host:port` succeeds with the auto-generated admin password (from server logs) or the password set via `PARKHUB_ADMIN_PASSWORD`
+- [ ] Admin password is strong (set via `PARKHUB_ADMIN_PASSWORD` or changed after first login)
 - [ ] `PARKHUB_DB_PASSPHRASE` set (database encryption enabled)
 - [ ] TLS active (self-signed, own cert, or reverse proxy)
 - [ ] `allow_self_registration = false` in `config.toml` (unless open registration is desired)

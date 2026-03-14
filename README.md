@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.0-brightgreen.svg?style=for-the-badge" alt="v1.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.3-brightgreen.svg?style=for-the-badge" alt="v1.2.3"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
@@ -152,7 +152,7 @@ docker compose up -d
 > Watch progress: `docker compose logs -f parkhub`
 
 Open **http://localhost:8080** in your browser.
-Default credentials: `admin` / `admin` — **change immediately after first login**.
+The admin password is auto-generated on first run. Check the server logs for the generated password, or set it via `PARKHUB_ADMIN_PASSWORD` environment variable.
 
 To enable database encryption at rest (strongly recommended for production):
 ```bash
@@ -163,8 +163,8 @@ To enable database encryption at rest (strongly recommended for production):
 To run without Docker (single binary):
 
 ```bash
-cargo build --release --package parkhub-server
-./target/release/parkhub-server --headless --unattended
+cargo build --release --package parkhub-server --no-default-features --features headless
+./target/release/parkhub-server --headless --unattended --port 8080
 ```
 
 The binary serves the full React frontend — no web server or reverse proxy needed.
@@ -194,7 +194,7 @@ Browser (React 19 SPA — TypeScript + Tailwind CSS)
   |  Served as static files embedded in the Rust binary
   |  Bearer token (JWT-style UUID session, 24h expiry)
   v
-Axum 0.7  (Rust 1.84+, async Tokio runtime)
+Axum 0.8  (Rust 1.84+, async Tokio runtime)
   |
   +-- /api/v1/*      REST API (auth required, RBAC enforced)
   +-- /metrics       Prometheus (unauthenticated)
@@ -310,6 +310,7 @@ Key environment variables (full list in [docs/CONFIGURATION.md](docs/CONFIGURATI
 | `SMTP_USER` | — | SMTP username |
 | `SMTP_PASS` | — | SMTP password |
 | `SMTP_FROM` | — | SMTP from address |
+| `PARKHUB_ADMIN_PASSWORD` | *(auto-generated)* | Set a known admin password instead of auto-generating one |
 | `APP_URL` | — | Server base URL (used in email links) |
 
 > **Port and host** are configured via the `--port` CLI flag or the `port` field in `config.toml` (not environment variables). See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for the full reference.
@@ -325,7 +326,7 @@ Quick example — list parking lots:
 ```bash
 TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin"}' | jq -r '.data.access_token')
+  -d '{"username":"admin","password":"YOUR_ADMIN_PASSWORD"}' | jq -r '.data.access_token')
 
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/lots
 ```
