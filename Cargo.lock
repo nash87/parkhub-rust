@@ -4890,7 +4890,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-client"
-version = "0.1.0"
+version = "1.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4912,13 +4912,13 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "uuid",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
  "winres",
 ]
 
 [[package]]
 name = "parkhub-common"
-version = "0.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "serde",
@@ -4929,7 +4929,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-server"
-version = "0.1.0"
+version = "1.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4980,7 +4980,7 @@ dependencies = [
  "utoipa-swagger-ui",
  "uuid",
  "validator",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
  "winres",
  "zeroize",
 ]
@@ -6045,7 +6045,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.4.15",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6756,6 +6756,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "psm",
+ "windows-sys 0.52.0",
  "windows-sys 0.59.0",
 ]
 

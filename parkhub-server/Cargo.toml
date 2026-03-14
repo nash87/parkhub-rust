@@ -113,7 +113,7 @@ slint-build = { version = "1.15", optional = true }  # updated from 1.14
 winres = "0.1"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.59", features = [
+windows-sys = { version = "0.61", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_Foundation",
     "Win32_UI_Shell",
