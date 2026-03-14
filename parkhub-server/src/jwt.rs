@@ -177,8 +177,7 @@ impl JwtManager {
             return Err(AppError::InvalidToken);
         }
 
-        let user_id = Uuid::parse_str(&claims.sub)
-            .map_err(|_| AppError::InvalidToken)?;
+        let user_id = Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidToken)?;
 
         self.generate_tokens(&user_id, &claims.username, &claims.role)
     }
@@ -233,8 +232,7 @@ where
             return Err(AppError::InvalidToken);
         }
 
-        let user_id = Uuid::parse_str(&claims.sub)
-            .map_err(|_| AppError::InvalidToken)?;
+        let user_id = Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidToken)?;
 
         Ok(AuthUser {
             user_id,

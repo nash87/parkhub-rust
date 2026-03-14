@@ -2,9 +2,9 @@
 //!
 //! Generates OpenAPI 3.0 specification and Swagger UI.
 
+use axum::Router;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use axum::Router;
 
 use crate::{
     error::{ApiError, FieldError},
@@ -44,34 +44,34 @@ use crate::{
             // Errors
             ApiError,
             FieldError,
-            
+
             // Auth
             LoginRequest,
             RegisterRequest,
             ChangePasswordRequest,
             RefreshTokenRequest,
             TokenPair,
-            
+
             // Bookings
             CreateBookingRequest,
             ExtendBookingRequest,
             UpdateBookingRequest,
             BookingFiltersParams,
-            
+
             // Vehicles
             VehicleRequest,
-            
+
             // Users
             UpdateProfileRequest,
             UpdatePreferencesRequest,
-            
+
             // Admin
             CreateParkingLotRequest,
             UpdateParkingLotRequest,
-            
+
             // Common
             PaginationParams,
-            
+
             // Health
             HealthResponse,
             HealthStatus,
@@ -87,8 +87,7 @@ pub struct ApiDoc;
 
 /// Create Swagger UI router
 pub fn swagger_ui() -> SwaggerUi {
-    SwaggerUi::new("/swagger-ui")
-        .url("/api-docs/openapi.json", ApiDoc::openapi())
+    SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi())
 }
 
 /// Add OpenAPI routes to router

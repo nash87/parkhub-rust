@@ -6,9 +6,8 @@
 
 use anyhow::{Context, Result};
 use lettre::{
-    message::header::ContentType,
-    transport::smtp::authentication::Credentials,
-    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+    message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
+    AsyncTransport, Message, Tokio1Executor,
 };
 use tracing::{info, warn};
 
@@ -37,8 +36,8 @@ impl SmtpConfig {
             .unwrap_or(587u16);
         let username = std::env::var("SMTP_USER").unwrap_or_default();
         let password = std::env::var("SMTP_PASS").unwrap_or_default();
-        let from = std::env::var("SMTP_FROM")
-            .unwrap_or_else(|_| format!("ParkHub <noreply@{}>", host));
+        let from =
+            std::env::var("SMTP_FROM").unwrap_or_else(|_| format!("ParkHub <noreply@{}>", host));
 
         Some(Self {
             host,
@@ -69,12 +68,7 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
     };
 
     let message = Message::builder()
-        .from(
-            config
-                .from
-                .parse()
-                .context("Invalid SMTP_FROM address")?,
-        )
+        .from(config.from.parse().context("Invalid SMTP_FROM address")?)
         .to(to.parse().context("Invalid recipient email address")?)
         .subject(subject)
         .header(ContentType::TEXT_HTML)
@@ -91,10 +85,7 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
             ))
             .build();
 
-    mailer
-        .send(message)
-        .await
-        .context("Failed to send email")?;
+    mailer.send(message).await.context("Failed to send email")?;
 
     info!(to = %to, subject = %subject, "Email sent successfully");
     Ok(())
@@ -112,7 +103,11 @@ pub fn build_booking_confirmation_email(
     org_name: &str,
 ) -> String {
     use crate::utils::html_escape;
-    let org_raw = if org_name.is_empty() { "ParkHub" } else { org_name };
+    let org_raw = if org_name.is_empty() {
+        "ParkHub"
+    } else {
+        org_name
+    };
     let org = html_escape(org_raw);
     let user_name = html_escape(user_name);
     let booking_id = html_escape(booking_id);
@@ -173,7 +168,11 @@ pub fn build_booking_confirmation_email(
 /// Build a password-reset email body.
 pub fn build_password_reset_email(reset_url: &str, org_name: &str) -> String {
     use crate::utils::html_escape;
-    let org_raw = if org_name.is_empty() { "ParkHub" } else { org_name };
+    let org_raw = if org_name.is_empty() {
+        "ParkHub"
+    } else {
+        org_name
+    };
     let org = html_escape(org_raw);
     let reset_url = html_escape(reset_url);
     format!(

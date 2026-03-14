@@ -8,7 +8,9 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::validation::{validate_booking_duration, validate_license_plate, validate_password_strength};
+use crate::validation::{
+    validate_booking_duration, validate_license_plate, validate_password_strength,
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // AUTHENTICATION REQUESTS
@@ -31,7 +33,10 @@ pub struct LoginRequest {
 pub struct RegisterRequest {
     /// Username (3-30 alphanumeric + underscore)
     #[validate(length(min = 3, max = 30, message = "Username must be 3-30 characters"))]
-    #[validate(regex(path = "*crate::validation::USERNAME_REGEX", message = "Invalid username format"))]
+    #[validate(regex(
+        path = "*crate::validation::USERNAME_REGEX",
+        message = "Invalid username format"
+    ))]
     pub username: String,
 
     /// Email address
@@ -264,8 +269,12 @@ pub struct PaginationParams {
     pub per_page: i32,
 }
 
-fn default_page() -> i32 { 1 }
-fn default_per_page() -> i32 { 20 }
+fn default_page() -> i32 {
+    1
+}
+fn default_per_page() -> i32 {
+    20
+}
 
 /// Booking list filters
 #[derive(Debug, Deserialize, Validate, ToSchema, Default)]

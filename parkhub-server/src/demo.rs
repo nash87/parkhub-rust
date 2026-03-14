@@ -3,12 +3,7 @@
 //! Activated by the `DEMO_MODE=true` environment variable (read once at startup).
 //! State is kept in-memory — ephemeral by design for free-tier hosting.
 
-use axum::{
-    extract::ConnectInfo,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::ConnectInfo, http::StatusCode, response::IntoResponse, Json};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -188,7 +183,7 @@ pub async fn demo_vote(
 
 /// POST /api/v1/demo/reset — solo reset (only when viewers <= 1)
 pub async fn demo_reset(
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    ConnectInfo(_addr): ConnectInfo<SocketAddr>,
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
 ) -> impl IntoResponse {
     let mut s = state.lock().unwrap_or_else(|e| e.into_inner());

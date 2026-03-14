@@ -42,7 +42,11 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
                 };
 
                 let mut state = state.write().await;
-                if !state.discovered_servers.iter().any(|s| s.host == "localhost" && s.port == port) {
+                if !state
+                    .discovered_servers
+                    .iter()
+                    .any(|s| s.host == "localhost" && s.port == port)
+                {
                     state.discovered_servers.push(server_info);
                     found = true;
                 }
@@ -79,7 +83,11 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
                 };
 
                 let mut state = state.write().await;
-                if !state.discovered_servers.iter().any(|s| s.host == "127.0.0.1" && s.port == port) {
+                if !state
+                    .discovered_servers
+                    .iter()
+                    .any(|s| s.host == "127.0.0.1" && s.port == port)
+                {
                     state.discovered_servers.push(server_info);
                     found = true;
                 }

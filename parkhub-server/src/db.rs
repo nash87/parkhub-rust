@@ -36,7 +36,8 @@ const PARKING_SLOTS: TableDefinition<&str, &[u8]> = TableDefinition::new("parkin
 const SLOTS_BY_LOT: TableDefinition<&str, &[u8]> = TableDefinition::new("slots_by_lot");
 const VEHICLES: TableDefinition<&str, &[u8]> = TableDefinition::new("vehicles");
 const SETTINGS: TableDefinition<&str, &str> = TableDefinition::new("settings");
-const CREDIT_TRANSACTIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("credit_transactions");
+const CREDIT_TRANSACTIONS: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("credit_transactions");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -891,19 +892,28 @@ impl Database {
         drop(db);
 
         // Delete all vehicles (personal data — can be deleted per GDPR Art. 17)
-        let vehicles = self.list_vehicles_by_user(user_id).await.unwrap_or_default();
+        let vehicles = self
+            .list_vehicles_by_user(user_id)
+            .await
+            .unwrap_or_default();
         for vehicle in vehicles {
             let _ = self.delete_vehicle(&vehicle.id.to_string()).await;
         }
 
         // Scrub license plate from bookings (keep records for accounting, strip PII)
-        let bookings = self.list_bookings_by_user(user_id).await.unwrap_or_default();
+        let bookings = self
+            .list_bookings_by_user(user_id)
+            .await
+            .unwrap_or_default();
         for mut booking in bookings {
             booking.vehicle.license_plate = "[DELETED]".to_string();
             let _ = self.save_booking(&booking).await;
         }
 
-        info!("GDPR anonymization completed for user: {} → {}", user_id, anon_id);
+        info!(
+            "GDPR anonymization completed for user: {} → {}",
+            user_id, anon_id
+        );
         Ok(true)
     }
 
@@ -937,7 +947,10 @@ impl Database {
 
     // ── Credit Transactions ──
 
-    pub async fn save_credit_transaction(&self, tx: &parkhub_common::models::CreditTransaction) -> Result<()> {
+    pub async fn save_credit_transaction(
+        &self,
+        tx: &parkhub_common::models::CreditTransaction,
+    ) -> Result<()> {
         let data = self.serialize(tx)?;
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
@@ -949,7 +962,10 @@ impl Database {
         Ok(())
     }
 
-    pub async fn list_credit_transactions_for_user(&self, user_id: uuid::Uuid) -> Result<Vec<parkhub_common::models::CreditTransaction>> {
+    pub async fn list_credit_transactions_for_user(
+        &self,
+        user_id: uuid::Uuid,
+    ) -> Result<Vec<parkhub_common::models::CreditTransaction>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
         let table = read_txn.open_table(CREDIT_TRANSACTIONS)?;

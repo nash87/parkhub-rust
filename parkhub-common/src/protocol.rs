@@ -162,7 +162,7 @@ pub enum WsMessage {
     SlotUpdate(SlotUpdateEvent),
 
     #[serde(rename = "booking_update")]
-    BookingUpdate(Booking),
+    BookingUpdate(Box<Booking>),
 
     #[serde(rename = "notification")]
     Notification(Notification),

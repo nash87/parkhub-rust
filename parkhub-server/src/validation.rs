@@ -44,19 +44,16 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 
 /// Email regex pattern
-pub static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap()
-});
+pub static EMAIL_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap());
 
 /// License plate regex (flexible for different formats)
-pub static LICENSE_PLATE_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[A-Z0-9\-\s]{2,15}$").unwrap()
-});
+pub static LICENSE_PLATE_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[A-Z0-9\-\s]{2,15}$").unwrap());
 
 /// Username regex (alphanumeric + underscore, 3-30 chars)
-pub static USERNAME_REGEX: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]{2,29}$").unwrap()
-});
+pub static USERNAME_REGEX: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"^[a-zA-Z][a-zA-Z0-9_]{2,29}$").unwrap());
 
 /// Custom validator for license plates
 pub fn validate_license_plate(plate: &str) -> Result<(), validator::ValidationError> {
@@ -86,7 +83,9 @@ pub fn validate_booking_duration(minutes: i32) -> Result<(), validator::Validati
 }
 
 /// Custom validator for future datetime
-pub fn validate_future_time(time: &chrono::DateTime<chrono::Utc>) -> Result<(), validator::ValidationError> {
+pub fn validate_future_time(
+    time: &chrono::DateTime<chrono::Utc>,
+) -> Result<(), validator::ValidationError> {
     if *time <= chrono::Utc::now() {
         let mut err = validator::ValidationError::new("not_in_future");
         err.message = Some("Time must be in the future".into());

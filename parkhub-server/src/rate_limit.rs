@@ -72,7 +72,8 @@ pub mod per_ip {
     use governor::state::keyed::DashMapStateStore;
     use std::net::IpAddr;
 
-    pub type IpRateLimiter = RateLimiter<IpAddr, DashMapStateStore<IpAddr>, DefaultClock, NoOpMiddleware>;
+    pub type IpRateLimiter =
+        RateLimiter<IpAddr, DashMapStateStore<IpAddr>, DefaultClock, NoOpMiddleware>;
 
     /// Create a per-IP rate limiter with a per-minute quota
     pub fn create_ip_rate_limiter(requests_per_minute: u32) -> Arc<IpRateLimiter> {
@@ -82,7 +83,10 @@ pub mod per_ip {
 
     /// Create a per-IP rate limiter with a custom period
     /// e.g. 3 requests per 15 minutes: `create_ip_rate_limiter_with_period(3, Duration::from_secs(900))`
-    pub fn create_ip_rate_limiter_with_period(requests: u32, period: Duration) -> Arc<IpRateLimiter> {
+    pub fn create_ip_rate_limiter_with_period(
+        requests: u32,
+        period: Duration,
+    ) -> Arc<IpRateLimiter> {
         let quota = Quota::with_period(period)
             .unwrap()
             .allow_burst(NonZeroU32::new(requests).unwrap());
@@ -121,9 +125,7 @@ pub mod per_ip {
     /// i.e., an address that can only originate from a trusted internal host.
     fn is_private_ip(ip: &IpAddr) -> bool {
         match ip {
-            IpAddr::V4(ipv4) => {
-                ipv4.is_private() || ipv4.is_loopback() || ipv4.is_link_local()
-            }
+            IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_loopback() || ipv4.is_link_local(),
             IpAddr::V6(ipv6) => ipv6.is_loopback(),
         }
     }

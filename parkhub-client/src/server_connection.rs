@@ -54,8 +54,8 @@ impl ServerConnection {
         let scheme = if server_info.tls { "https" } else { "http" };
         let base_url = format!("{}://{}:{}", scheme, server_info.host, server_info.port);
 
-        let cert = reqwest::Certificate::from_pem(ca_cert_pem)
-            .context("Invalid CA certificate PEM")?;
+        let cert =
+            reqwest::Certificate::from_pem(ca_cert_pem).context("Invalid CA certificate PEM")?;
 
         let client = Client::builder()
             .add_root_certificate(cert)
@@ -426,7 +426,10 @@ impl ServerConnection {
         if response.success {
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Password reset failed: {:?}", response.error))
+            Err(anyhow::anyhow!(
+                "Password reset failed: {:?}",
+                response.error
+            ))
         }
     }
 
@@ -477,7 +480,10 @@ impl ServerConnection {
         if response.success {
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Config update failed: {:?}", response.error))
+            Err(anyhow::anyhow!(
+                "Config update failed: {:?}",
+                response.error
+            ))
         }
     }
 
