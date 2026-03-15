@@ -715,6 +715,86 @@ impl Database {
         Ok(slots)
     }
 
+    /// Delete all parking slots belonging to a lot (cascade delete).
+    /// Removes entries from both PARKING_SLOTS and SLOTS_BY_LOT index.
+    pub async fn delete_slots_by_lot(&self, lot_id: &str) -> Result<()> {
+        let prefix = format!("{}:", lot_id);
+
+        let db = self.inner.write().await;
+
+        // First, collect all slot IDs and index keys from SLOTS_BY_LOT
+        let keys_to_delete: Vec<(String, String)> = {
+            let read_txn = db.begin_read()?;
+            let table = read_txn.open_table(SLOTS_BY_LOT)?;
+            let mut keys = Vec::new();
+            for entry in table.iter()? {
+                let (key, _value) = entry?;
+                let key_str = key.value().to_string();
+                if key_str.starts_with(&prefix) {
+                    // key format is "lot_id:slot_id"
+                    let slot_id = key_str[prefix.len()..].to_string();
+                    keys.push((key_str, slot_id));
+                }
+            }
+            keys
+        };
+
+        if keys_to_delete.is_empty() {
+            return Ok(());
+        }
+
+        // Delete all matching entries in a single write transaction
+        let write_txn = db.begin_write()?;
+        {
+            let mut slots_table = write_txn.open_table(PARKING_SLOTS)?;
+            let mut idx_table = write_txn.open_table(SLOTS_BY_LOT)?;
+            for (idx_key, slot_id) in &keys_to_delete {
+                slots_table.remove(slot_id.as_str())?;
+                idx_table.remove(idx_key.as_str())?;
+            }
+        }
+        write_txn.commit()?;
+        debug!(
+            "Cascade-deleted {} slots for lot {}",
+            keys_to_delete.len(),
+            lot_id
+        );
+        Ok(())
+    }
+
+    /// Save multiple parking slots in a single write transaction (batch insert).
+    pub async fn save_parking_slots_batch(&self, slots: &[ParkingSlot]) -> Result<()> {
+        if slots.is_empty() {
+            return Ok(());
+        }
+
+        // Pre-serialize all slots before acquiring the write lock
+        let serialized: Vec<(String, String, Vec<u8>)> = slots
+            .iter()
+            .map(|slot| {
+                let id = slot.id.to_string();
+                let lot_id = slot.lot_id.to_string();
+                let data = self.serialize(slot)?;
+                Ok((id, lot_id, data))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(PARKING_SLOTS)?;
+            let mut idx = write_txn.open_table(SLOTS_BY_LOT)?;
+            for (id, lot_id, data) in &serialized {
+                table.insert(id.as_str(), data.as_slice())?;
+                let key = format!("{}:{}", lot_id, id);
+                idx.insert(key.as_str(), data.as_slice())?;
+            }
+        }
+        write_txn.commit()?;
+        debug!("Batch-saved {} parking slots", slots.len());
+        Ok(())
+    }
+
     /// Update slot status
     pub async fn update_slot_status(
         &self,

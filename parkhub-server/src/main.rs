@@ -51,6 +51,10 @@ pub struct AppState {
     pub config: ServerConfig,
     pub db: Database,
     pub mdns: Option<MdnsService>,
+    /// Holds the cron scheduler so it is not leaked via `mem::forget`.
+    /// The scheduler runs background tasks (e.g. monthly credit refill).
+    /// Dropping it will cancel scheduled jobs.
+    pub scheduler: Option<tokio_cron_scheduler::JobScheduler>,
 }
 
 /// CLI arguments for the server
@@ -384,6 +388,7 @@ async fn main() -> Result<()> {
         config: config.clone(),
         db,
         mdns,
+        scheduler: None,
     }));
 
     // Build the API router
@@ -437,6 +442,106 @@ async fn main() -> Result<()> {
             }
         }
     });
+
+    // Start monthly credit refill cron job (1st of each month at 00:00)
+    {
+        use chrono::Datelike;
+        use tokio_cron_scheduler::{Job, JobScheduler};
+
+        let sched = JobScheduler::new().await?;
+        let state_for_cron = state.clone();
+        sched
+            .add(Job::new_async("0 0 0 1 * *", move |_uuid, _lock| {
+                let state = state_for_cron.clone();
+                Box::pin(async move {
+                    info!("Running monthly credit refill cron job...");
+                    let now = chrono::Utc::now();
+
+                    // Load users with a short-lived read lock, then release it
+                    let user_ids_to_refill: Vec<uuid::Uuid> = {
+                        let state_guard = state.read().await;
+                        let users = match state_guard.db.list_users().await {
+                            Ok(u) => u,
+                            Err(e) => {
+                                tracing::error!("Cron: failed to list users: {}", e);
+                                return;
+                            }
+                        };
+                        users
+                            .into_iter()
+                            .filter(|user| {
+                                user.is_active
+                                    && user.role != parkhub_common::UserRole::Admin
+                                    && user.role != parkhub_common::UserRole::SuperAdmin
+                                    // Idempotency: skip users already refilled this month
+                                    && !user
+                                        .credits_last_refilled
+                                        .map(|t| {
+                                            t.month() == now.month() && t.year() == now.year()
+                                        })
+                                        .unwrap_or(false)
+                            })
+                            .map(|u| u.id)
+                            .collect()
+                    }; // read lock released here
+
+                    let mut refilled = 0u32;
+                    // Process in batches with short-lived write locks
+                    for chunk in user_ids_to_refill.chunks(50) {
+                        let state_guard = state.write().await;
+                        for user_id in chunk {
+                            let mut user = match state_guard
+                                .db
+                                .get_user(&user_id.to_string())
+                                .await
+                            {
+                                Ok(Some(u)) => u,
+                                _ => continue,
+                            };
+                            // Re-check idempotency under write lock
+                            if user
+                                .credits_last_refilled
+                                .map(|t| {
+                                    t.month() == now.month() && t.year() == now.year()
+                                })
+                                .unwrap_or(false)
+                            {
+                                continue;
+                            }
+                            let old_balance = user.credits_balance;
+                            user.credits_balance = user.credits_monthly_quota;
+                            user.credits_last_refilled = Some(now);
+                            if let Ok(()) = state_guard.db.save_user(&user).await {
+                                let tx = parkhub_common::CreditTransaction {
+                                    id: uuid::Uuid::new_v4(),
+                                    user_id: user.id,
+                                    booking_id: None,
+                                    amount: user.credits_monthly_quota - old_balance,
+                                    transaction_type:
+                                        parkhub_common::CreditTransactionType::MonthlyRefill,
+                                    description: Some(
+                                        "Automated monthly refill".to_string(),
+                                    ),
+                                    granted_by: None,
+                                    created_at: now,
+                                };
+                                let _ =
+                                    state_guard.db.save_credit_transaction(&tx).await;
+                                refilled += 1;
+                            }
+                        }
+                        // write lock dropped at end of each batch iteration
+                    }
+                    info!("Monthly credit refill complete: {} users refilled", refilled);
+                })
+            })?)
+            .await?;
+        sched.start().await?;
+        info!("Credit refill scheduler started (runs 1st of each month at 00:00)");
+        // Store scheduler in AppState so it is properly dropped on shutdown
+        // instead of leaked via mem::forget.
+        state.write().await.scheduler = Some(sched);
+    }
 
     // Show status GUI or wait for shutdown signal
     #[cfg(feature = "gui")]
@@ -1337,8 +1442,8 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
             last_login: None,
             preferences: UserPreferences::default(),
             is_active: true,
-            credits_balance: rng.random_range(3..11),
-            credits_monthly_quota: 10,
+            credits_balance: rng.random_range(10..41),
+            credits_monthly_quota: 40,
             credits_last_refilled: Some(Utc::now()),
         };
 

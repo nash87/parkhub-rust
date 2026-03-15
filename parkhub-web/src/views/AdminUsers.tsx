@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, SpinnerGap, MagnifyingGlass, ShieldCheck, Coins,
-  PencilSimple, X, Check, Trash, UserCircle,
+  PencilSimple, X, Check, Trash, UserCircle, Gauge,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
 import toast from 'react-hot-toast';
@@ -18,6 +18,9 @@ export function AdminUsersPage() {
   const [creditDesc, setCreditDesc] = useState('');
   const [savingRole, setSavingRole] = useState(false);
   const [grantingCredits, setGrantingCredits] = useState(false);
+  const [editingQuotaId, setEditingQuotaId] = useState<string | null>(null);
+  const [editQuota, setEditQuota] = useState('');
+  const [savingQuota, setSavingQuota] = useState(false);
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -83,6 +86,32 @@ export function AdminUsersPage() {
       }
     } finally {
       setGrantingCredits(false);
+    }
+  }
+
+  function startEditQuota(user: User) {
+    setEditingQuotaId(user.id);
+    setEditQuota(String(user.credits_monthly_quota));
+  }
+
+  async function saveQuota(userId: string) {
+    const quota = Number(editQuota);
+    if (isNaN(quota) || quota < 0 || quota > 999) {
+      toast.error('Quota must be 0-999');
+      return;
+    }
+    setSavingQuota(true);
+    try {
+      const res = await api.adminUpdateUserQuota(userId, quota);
+      if (res.success) {
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, credits_monthly_quota: quota } : u));
+        toast.success('Quota updated');
+        setEditingQuotaId(null);
+      } else {
+        toast.error(res.error?.message || 'Failed to update quota');
+      }
+    } finally {
+      setSavingQuota(false);
     }
   }
 
@@ -183,6 +212,7 @@ export function AdminUsersPage() {
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">User</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Role</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Credits</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Quota/mo</th>
                 <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Status</th>
                 <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Actions</th>
               </tr>
@@ -228,6 +258,35 @@ export function AdminUsersPage() {
                   </td>
                   <td className="px-5 py-4">
                     <span className="text-sm font-semibold text-surface-900 dark:text-white">{user.credits_balance}</span>
+                  </td>
+                  <td className="px-5 py-4">
+                    {editingQuotaId === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={999}
+                          value={editQuota}
+                          onChange={e => setEditQuota(e.target.value)}
+                          className="input text-xs py-1 px-2 w-20"
+                        />
+                        <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600">
+                          {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+                        </button>
+                        <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400">
+                          <X weight="bold" className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => startEditQuota(user)}
+                        className="inline-flex items-center gap-1.5 text-sm text-surface-700 dark:text-surface-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        title="Edit quota"
+                      >
+                        <span className="font-semibold">{user.credits_monthly_quota}</span>
+                        <Gauge weight="bold" className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" />
+                      </button>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${

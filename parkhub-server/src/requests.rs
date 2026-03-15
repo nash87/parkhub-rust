@@ -219,6 +219,14 @@ pub struct UpdatePreferencesRequest {
 // ADMIN REQUESTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// Update user monthly credit quota (admin)
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct UpdateQuotaRequest {
+    /// Monthly credit quota (0 = unlimited/no quota, max 999)
+    #[validate(range(min = 0, max = 999, message = "Quota must be 0-999"))]
+    pub monthly_quota: i32,
+}
+
 /// Create parking lot request (admin)
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct CreateParkingLotRequest {
@@ -226,21 +234,48 @@ pub struct CreateParkingLotRequest {
     #[validate(length(min = 1, max = 100, message = "Name must be 1-100 characters"))]
     pub name: String,
 
-    /// Address
-    #[validate(length(min = 1, max = 500, message = "Address too long"))]
-    pub address: String,
+    /// Address (optional)
+    #[serde(default)]
+    #[validate(length(max = 500, message = "Address too long"))]
+    pub address: Option<String>,
 
-    /// Latitude
+    /// Latitude (optional, defaults to 0.0)
+    #[serde(default)]
     #[validate(range(min = -90.0, max = 90.0, message = "Invalid latitude"))]
-    pub latitude: f64,
+    pub latitude: Option<f64>,
 
-    /// Longitude
+    /// Longitude (optional, defaults to 0.0)
+    #[serde(default)]
     #[validate(range(min = -180.0, max = 180.0, message = "Invalid longitude"))]
-    pub longitude: f64,
+    pub longitude: Option<f64>,
 
-    /// Total number of slots
-    #[validate(range(min = 1, max = 10000, message = "Slots must be 1-10000"))]
+    /// Total number of parking slots to auto-generate
+    #[validate(range(min = 1, max = 500, message = "Slots must be 1-500"))]
     pub total_slots: i32,
+
+    /// Hourly parking rate (optional)
+    #[serde(default)]
+    #[validate(range(min = 0.0, max = 1000.0, message = "Hourly rate must be 0-1000"))]
+    pub hourly_rate: Option<f64>,
+
+    /// Daily maximum charge (optional)
+    #[serde(default)]
+    #[validate(range(min = 0.0, max = 10000.0, message = "Daily max must be 0-10000"))]
+    pub daily_max: Option<f64>,
+
+    /// Monthly pass price (optional)
+    #[serde(default)]
+    #[validate(range(min = 0.0, max = 100000.0, message = "Monthly pass must be 0-100000"))]
+    pub monthly_pass: Option<f64>,
+
+    /// Currency code (defaults to "EUR")
+    #[serde(default = "default_currency")]
+    #[validate(length(min = 3, max = 3, message = "Currency must be a 3-letter code"))]
+    pub currency: String,
+
+    /// Lot status (defaults to "open"). Valid: "open", "closed", "full", "maintenance"
+    #[serde(default)]
+    pub status: Option<String>,
 }
 
 /// Update parking lot request (admin)
@@ -251,11 +286,56 @@ pub struct UpdateParkingLotRequest {
     pub name: Option<String>,
 
     /// Address
-    #[validate(length(min = 1, max = 500, message = "Address too long"))]
+    #[validate(length(max = 500, message = "Address too long"))]
     pub address: Option<String>,
 
-    /// Lot status
+    /// Latitude
+    #[validate(range(min = -90.0, max = 90.0, message = "Invalid latitude"))]
+    pub latitude: Option<f64>,
+
+    /// Longitude
+    #[validate(range(min = -180.0, max = 180.0, message = "Invalid longitude"))]
+    pub longitude: Option<f64>,
+
+    /// Total number of slots (changing this will NOT auto-generate/remove slots)
+    #[validate(range(min = 1, max = 10000, message = "Slots must be 1-10000"))]
+    pub total_slots: Option<i32>,
+
+    /// Hourly parking rate
+    #[validate(range(min = 0.0, max = 1000.0, message = "Hourly rate must be 0-1000"))]
+    pub hourly_rate: Option<f64>,
+
+    /// Daily maximum charge
+    #[validate(range(min = 0.0, max = 10000.0, message = "Daily max must be 0-10000"))]
+    pub daily_max: Option<f64>,
+
+    /// Monthly pass price
+    #[validate(range(min = 0.0, max = 100000.0, message = "Monthly pass must be 0-100000"))]
+    pub monthly_pass: Option<f64>,
+
+    /// Currency code
+    #[validate(length(min = 3, max = 3, message = "Currency must be a 3-letter code"))]
+    pub currency: Option<String>,
+
+    /// Lot status. Valid: "open", "closed", "full", "maintenance"
     pub status: Option<String>,
+}
+
+fn default_currency() -> String {
+    "EUR".to_string()
+}
+
+/// Parse a status string into a LotStatus enum.
+/// Returns None for unrecognized values.
+pub fn parse_lot_status(s: &str) -> Option<parkhub_common::models::LotStatus> {
+    use parkhub_common::models::LotStatus;
+    match s {
+        "open" => Some(LotStatus::Open),
+        "closed" => Some(LotStatus::Closed),
+        "full" => Some(LotStatus::Full),
+        "maintenance" => Some(LotStatus::Maintenance),
+        _ => None,
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
