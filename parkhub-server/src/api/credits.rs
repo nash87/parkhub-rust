@@ -30,7 +30,7 @@ pub(crate) struct UserCreditsResponse {
 
 /// Request body for admin credit grant
 #[derive(Debug, Deserialize)]
-struct AdminGrantCreditsRequest {
+pub(crate) struct AdminGrantCreditsRequest {
     amount: i32,
     description: Option<String>,
 }

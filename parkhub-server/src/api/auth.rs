@@ -26,13 +26,13 @@ use super::{generate_access_token, hash_password, hash_password_simple, verify_p
 
 /// Request body for the forgot-password endpoint
 #[derive(Debug, Deserialize)]
-struct ForgotPasswordRequest {
+pub(crate) struct ForgotPasswordRequest {
     email: String,
 }
 
 /// Request body for the reset-password endpoint
 #[derive(Debug, Deserialize)]
-struct ResetPasswordRequest {
+pub(crate) struct ResetPasswordRequest {
     token: String,
     password: String,
 }
