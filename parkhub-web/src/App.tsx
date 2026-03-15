@@ -25,6 +25,7 @@ import { NotificationsPage } from './views/Notifications';
 import { CalendarPage } from './views/Calendar';
 import { Layout } from './components/Layout';
 import { DemoOverlay } from './components/DemoOverlay';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -84,6 +85,7 @@ function AppRoutes() {
 
 export function App() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
@@ -100,5 +102,6 @@ export function App() {
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }

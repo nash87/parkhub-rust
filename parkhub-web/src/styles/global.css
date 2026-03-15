@@ -79,7 +79,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   background: var(--color-surface-50);
   color: var(--color-surface-900);
   min-height: 100dvh;
