@@ -58,7 +58,7 @@ anyhow.workspace = true
 
 # Config
 toml = "1.0"
-directories = "5"
+directories = "6"
 hostname = "0.4"
 
 # Email — SMTP transport for password-reset and notification emails
