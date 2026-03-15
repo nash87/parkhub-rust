@@ -155,6 +155,7 @@ export function AdminUsersPage() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Search users..."
             className="input pl-9 w-64"
+            aria-label="Search users"
           />
         </div>
       </div>
@@ -183,12 +184,12 @@ export function AdminUsersPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Amount</label>
-                  <input type="number" min={1} value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="input" placeholder="10" />
+                  <label htmlFor="credit-amount" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Amount</label>
+                  <input id="credit-amount" type="number" min={1} value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="input" placeholder="10" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Description (optional)</label>
-                  <input type="text" value={creditDesc} onChange={e => setCreditDesc(e.target.value)} className="input" placeholder="Bonus credits" />
+                  <label htmlFor="credit-description" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Description (optional)</label>
+                  <input id="credit-description" type="text" value={creditDesc} onChange={e => setCreditDesc(e.target.value)} className="input" placeholder="Bonus credits" />
                 </div>
               </div>
               <div className="flex gap-3">

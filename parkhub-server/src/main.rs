@@ -490,10 +490,7 @@ async fn main() -> Result<()> {
                     for chunk in user_ids_to_refill.chunks(50) {
                         let state_guard = state.write().await;
                         for user_id in chunk {
-                            let mut user = match state_guard
-                                .db
-                                .get_user(&user_id.to_string())
-                                .await
+                            let mut user = match state_guard.db.get_user(&user_id.to_string()).await
                             {
                                 Ok(Some(u)) => u,
                                 _ => continue,
@@ -501,9 +498,7 @@ async fn main() -> Result<()> {
                             // Re-check idempotency under write lock
                             if user
                                 .credits_last_refilled
-                                .map(|t| {
-                                    t.month() == now.month() && t.year() == now.year()
-                                })
+                                .map(|t| t.month() == now.month() && t.year() == now.year())
                                 .unwrap_or(false)
                             {
                                 continue;
@@ -519,20 +514,20 @@ async fn main() -> Result<()> {
                                     amount: user.credits_monthly_quota - old_balance,
                                     transaction_type:
                                         parkhub_common::CreditTransactionType::MonthlyRefill,
-                                    description: Some(
-                                        "Automated monthly refill".to_string(),
-                                    ),
+                                    description: Some("Automated monthly refill".to_string()),
                                     granted_by: None,
                                     created_at: now,
                                 };
-                                let _ =
-                                    state_guard.db.save_credit_transaction(&tx).await;
+                                let _ = state_guard.db.save_credit_transaction(&tx).await;
                                 refilled += 1;
                             }
                         }
                         // write lock dropped at end of each batch iteration
                     }
-                    info!("Monthly credit refill complete: {} users refilled", refilled);
+                    info!(
+                        "Monthly credit refill complete: {} users refilled",
+                        refilled
+                    );
                 })
             })?)
             .await?;

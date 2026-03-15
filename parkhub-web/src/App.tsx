@@ -94,6 +94,7 @@ export function App() {
             toastOptions={{
               className: '!bg-surface-800 !text-white !rounded-xl !shadow-lg !text-sm !font-medium',
               duration: 3000,
+              ariaProps: { role: 'status', 'aria-live': 'polite' },
             }}
           />
         </AuthProvider>

@@ -194,6 +194,7 @@ export function AdminLotsPage() {
               onChange={e => setSearch(e.target.value)}
               placeholder="Search lots..."
               className="input pl-9 w-56"
+              aria-label="Search parking lots"
             />
           </div>
           <button onClick={openCreate} className="btn btn-primary">
@@ -225,8 +226,9 @@ export function AdminLotsPage() {
               {/* Row 1: Name + Address */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Name *</label>
+                  <label htmlFor="lot-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Name *</label>
                   <input
+                    id="lot-name"
                     type="text"
                     value={form.name}
                     onChange={e => updateField('name', e.target.value)}
@@ -235,8 +237,9 @@ export function AdminLotsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Address</label>
+                  <label htmlFor="lot-address" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Address</label>
                   <input
+                    id="lot-address"
                     type="text"
                     value={form.address}
                     onChange={e => updateField('address', e.target.value)}
@@ -249,8 +252,9 @@ export function AdminLotsPage() {
               {/* Row 2: Slots + Status + Currency */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Total Slots *</label>
+                  <label htmlFor="lot-total-slots" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Total Slots *</label>
                   <input
+                    id="lot-total-slots"
                     type="number"
                     min={1}
                     max={1000}
@@ -283,8 +287,9 @@ export function AdminLotsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Currency</label>
+                  <label htmlFor="lot-currency" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Currency</label>
                   <select
+                    id="lot-currency"
                     value={form.currency}
                     onChange={e => updateField('currency', e.target.value)}
                     className="input"
@@ -300,10 +305,11 @@ export function AdminLotsPage() {
               {/* Row 3: Pricing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Hourly Rate</label>
+                  <label htmlFor="lot-hourly-rate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Hourly Rate</label>
                   <div className="relative">
                     <CurrencyDollar weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
+                      id="lot-hourly-rate"
                       type="number"
                       min={0}
                       step="0.01"
@@ -315,10 +321,11 @@ export function AdminLotsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Daily Max</label>
+                  <label htmlFor="lot-daily-max" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Daily Max</label>
                   <div className="relative">
                     <CurrencyDollar weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
+                      id="lot-daily-max"
                       type="number"
                       min={0}
                       step="0.01"
@@ -330,10 +337,11 @@ export function AdminLotsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Monthly Pass</label>
+                  <label htmlFor="lot-monthly-pass" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Monthly Pass</label>
                   <div className="relative">
                     <CurrencyDollar weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
+                      id="lot-monthly-pass"
                       type="number"
                       min={0}
                       step="0.01"

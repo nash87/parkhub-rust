@@ -45,8 +45,7 @@ const ABSENCES: TableDefinition<&str, &[u8]> = TableDefinition::new("absences");
 const WAITLIST: TableDefinition<&str, &[u8]> = TableDefinition::new("waitlist");
 const GUEST_BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("guest_bookings");
 const SWAP_REQUESTS: TableDefinition<&str, &[u8]> = TableDefinition::new("swap_requests");
-const RECURRING_BOOKINGS: TableDefinition<&str, &[u8]> =
-    TableDefinition::new("recurring_bookings");
+const RECURRING_BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("recurring_bookings");
 const ANNOUNCEMENTS: TableDefinition<&str, &[u8]> = TableDefinition::new("announcements");
 const NOTIFICATIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("notifications");
 
