@@ -1,0 +1,353 @@
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Megaphone, Plus, PencilSimple, Trash, SpinnerGap, Check, X,
+  Info, Warning, WarningCircle, CheckCircle, Clock,
+} from '@phosphor-icons/react';
+import { api, type Announcement } from '../api/client';
+import toast from 'react-hot-toast';
+
+type Severity = 'info' | 'warning' | 'error' | 'success';
+
+interface AnnouncementForm {
+  title: string;
+  message: string;
+  severity: Severity;
+  active: boolean;
+  expires_at: string;
+}
+
+const emptyForm: AnnouncementForm = {
+  title: '',
+  message: '',
+  severity: 'info',
+  active: true,
+  expires_at: '',
+};
+
+const severityConfig: Record<Severity, { label: string; color: string; bg: string; icon: typeof Info }> = {
+  info:    { label: 'Info',    color: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-100 dark:bg-blue-900/30',   icon: Info },
+  warning: { label: 'Warning', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: Warning },
+  error:   { label: 'Error',   color: 'text-red-600 dark:text-red-400',     bg: 'bg-red-100 dark:bg-red-900/30',     icon: WarningCircle },
+  success: { label: 'Success', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle },
+};
+
+function SeverityBadge({ severity }: { severity: Severity }) {
+  const cfg = severityConfig[severity] || severityConfig.info;
+  const Icon = cfg.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+      <Icon weight="fill" className="w-3.5 h-3.5" />
+      {cfg.label}
+    </span>
+  );
+}
+
+function StatusBadge({ active, expiresAt }: { active: boolean; expiresAt?: string }) {
+  const isExpired = expiresAt && new Date(expiresAt) < new Date();
+  if (!active || isExpired) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400">
+        <Clock weight="fill" className="w-3.5 h-3.5" />
+        {isExpired ? 'Expired' : 'Inactive'}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+      <CheckCircle weight="fill" className="w-3.5 h-3.5" />
+      Active
+    </span>
+  );
+}
+
+export function AdminAnnouncementsPage() {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<AnnouncementForm>({ ...emptyForm });
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    try {
+      const res = await api.adminListAnnouncements();
+      if (res.success && res.data) setAnnouncements(res.data);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function openCreate() {
+    setEditingId(null);
+    setForm({ ...emptyForm });
+    setShowForm(true);
+  }
+
+  function openEdit(a: Announcement) {
+    setEditingId(a.id);
+    setForm({
+      title: a.title,
+      message: a.message,
+      severity: a.severity as Severity,
+      active: a.active,
+      expires_at: a.expires_at ? a.expires_at.slice(0, 16) : '',
+    });
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setForm({ ...emptyForm });
+  }
+
+  async function handleSave() {
+    if (!form.title.trim() || !form.message.trim()) {
+      toast.error('Title and message are required.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        message: form.message.trim(),
+        severity: form.severity,
+        active: form.active,
+        expires_at: form.expires_at || undefined,
+      };
+      const res = editingId
+        ? await api.adminUpdateAnnouncement(editingId, payload)
+        : await api.adminCreateAnnouncement(payload);
+      if (res.success) {
+        toast.success(editingId ? 'Announcement updated.' : 'Announcement created.');
+        closeForm();
+        await load();
+      } else {
+        toast.error(res.error?.message || 'Failed to save.');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Delete this announcement?')) return;
+    setDeletingId(id);
+    try {
+      const res = await api.adminDeleteAnnouncement(id);
+      if (res.success) {
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
+        toast.success('Announcement deleted.');
+        if (editingId === id) closeForm();
+      } else {
+        toast.error(res.error?.message || 'Failed to delete.');
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Megaphone weight="fill" className="w-6 h-6 text-primary-600" />
+          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Announcements</h2>
+        </div>
+        <button onClick={openCreate} className="btn btn-primary">
+          <Plus weight="bold" className="w-4 h-4" />
+          New Announcement
+        </button>
+      </div>
+
+      {/* Form (Create / Edit) */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="card p-6 space-y-5">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-white">
+                  {editingId ? 'Edit Announcement' : 'New Announcement'}
+                </h3>
+                <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
+                  <X weight="bold" className="w-5 h-5 text-surface-400" />
+                </button>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Title</label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="input"
+                  placeholder="Announcement title..."
+                />
+              </div>
+
+              {/* Message */}
+              <div>
+                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Message</label>
+                <textarea
+                  value={form.message}
+                  onChange={e => setForm(prev => ({ ...prev, message: e.target.value }))}
+                  className="input h-28 resize-y"
+                  placeholder="Announcement message..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                {/* Severity */}
+                <div>
+                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Severity</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.keys(severityConfig) as Severity[]).map(sev => {
+                      const cfg = severityConfig[sev];
+                      const Icon = cfg.icon;
+                      const isSelected = form.severity === sev;
+                      return (
+                        <button
+                          key={sev}
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, severity: sev }))}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
+                            isSelected
+                              ? `${cfg.bg} ${cfg.color} border-current`
+                              : 'border-surface-200 dark:border-surface-700 text-surface-500 dark:text-surface-400 hover:border-surface-300 dark:hover:border-surface-600'
+                          }`}
+                        >
+                          <Icon weight={isSelected ? 'fill' : 'regular'} className="w-4 h-4" />
+                          {cfg.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Active toggle */}
+                <div>
+                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Status</label>
+                  <button
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, active: !prev.active }))}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border-2 transition-all ${
+                      form.active
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-300 dark:border-green-700'
+                        : 'bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400 border-surface-200 dark:border-surface-700'
+                    }`}
+                  >
+                    {form.active ? (
+                      <><CheckCircle weight="fill" className="w-4 h-4" />Active</>
+                    ) : (
+                      <><Clock weight="fill" className="w-4 h-4" />Inactive</>
+                    )}
+                  </button>
+                </div>
+
+                {/* Expires at */}
+                <div>
+                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Expires at (optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={form.expires_at}
+                    onChange={e => setForm(prev => ({ ...prev, expires_at: e.target.value }))}
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button onClick={handleSave} disabled={saving} className="btn btn-primary">
+                  {saving
+                    ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
+                    : <Check weight="bold" className="w-4 h-4" />}
+                  {editingId ? 'Save' : 'Create'}
+                </button>
+                <button onClick={closeForm} className="btn btn-secondary">Cancel</button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Announcements List */}
+      {announcements.length === 0 && !showForm ? (
+        <div className="p-12 text-center">
+          <Megaphone weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
+          <p className="text-surface-500 dark:text-surface-400">No announcements yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {announcements.map((a, i) => (
+            <motion.div
+              key={a.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="card hover:shadow-md transition-shadow p-5"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2 flex-wrap">
+                    <h3 className="text-base font-semibold text-surface-900 dark:text-white truncate">
+                      {a.title}
+                    </h3>
+                    <SeverityBadge severity={a.severity as Severity} />
+                    <StatusBadge active={a.active} expiresAt={a.expires_at} />
+                  </div>
+                  <p className="text-sm text-surface-600 dark:text-surface-400 line-clamp-2 mb-2">
+                    {a.message}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs text-surface-400 dark:text-surface-500">
+                    <span>Created: {new Date(a.created_at).toLocaleDateString()}</span>
+                    {a.expires_at && <span>Expires: {new Date(a.expires_at).toLocaleDateString()}</span>}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => openEdit(a)}
+                    className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
+                    title="Edit"
+                  >
+                    <PencilSimple weight="bold" className="w-4.5 h-4.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(a.id)}
+                    disabled={deletingId === a.id}
+                    className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-surface-400 hover:text-red-600 disabled:opacity-50"
+                    title="Delete"
+                  >
+                    {deletingId === a.id
+                      ? <SpinnerGap weight="bold" className="w-4.5 h-4.5 animate-spin" />
+                      : <Trash weight="bold" className="w-4.5 h-4.5" />}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}

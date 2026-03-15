@@ -4,14 +4,14 @@
 
 use axum::{
     body::Body,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{header, HeaderName, HeaderValue, Request, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Extension, Json, Router,
 };
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Datelike, Duration, Timelike, Utc};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
@@ -42,6 +42,10 @@ use parkhub_common::{
     LoginResponse, ParkingLot, ParkingSlot, PaymentStatus, RefreshTokenRequest, RegisterRequest,
     ServerStatus, SlotStatus, User, UserPreferences, UserRole, Vehicle, VehicleType,
     PROTOCOL_VERSION,
+};
+use parkhub_common::models::{
+    Absence, AbsencePattern, AbsenceType, Announcement, AnnouncementSeverity, GuestBooking,
+    Notification, RecurringBooking, SwapRequest, SwapRequestStatus, WaitlistEntry,
 };
 use serde::{Deserialize, Serialize};
 
@@ -104,7 +108,9 @@ pub fn create_router(state: SharedState) -> Router {
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
         // Feature flags — public (frontend needs to know which features are enabled)
-        .route("/api/v1/features", get(get_features));
+        .route("/api/v1/features", get(get_features))
+        // Announcements — public (active announcements visible without auth)
+        .route("/api/v1/announcements/active", get(get_active_announcements));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
@@ -159,8 +165,67 @@ pub fn create_router(state: SharedState) -> Router {
             "/api/v1/admin/features",
             get(admin_get_features).put(admin_update_features),
         )
+        // Admin-only: system settings
+        .route(
+            "/api/v1/admin/settings",
+            get(admin_get_settings).put(admin_update_settings),
+        )
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
+        // Absences (user-scoped)
+        .route("/api/v1/absences", get(list_absences).post(create_absence))
+        .route("/api/v1/absences/team", get(list_team_absences))
+        .route("/api/v1/absences/pattern", get(get_absence_pattern).post(save_absence_pattern))
+        .route("/api/v1/absences/{id}", delete(delete_absence))
+        // Team view
+        .route("/api/v1/team/today", get(team_today))
+        // Admin-only: announcements management
+        .route(
+            "/api/v1/admin/announcements",
+            get(admin_list_announcements).post(admin_create_announcement),
+        )
+        .route(
+            "/api/v1/admin/announcements/{id}",
+            put(admin_update_announcement).delete(admin_delete_announcement),
+        )
+        // Notifications (user-scoped)
+        .route("/api/v1/notifications", get(list_notifications))
+        .route("/api/v1/notifications/{id}/read", put(mark_notification_read))
+        .route("/api/v1/notifications/read-all", post(mark_all_notifications_read))
+        // Waitlist
+        .route("/api/v1/waitlist", get(list_waitlist).post(join_waitlist))
+        .route("/api/v1/waitlist/{id}", delete(leave_waitlist))
+        // Swap requests
+        .route("/api/v1/swap-requests", get(list_swap_requests))
+        .route(
+            "/api/v1/bookings/{id}/swap-request",
+            post(create_swap_request),
+        )
+        .route("/api/v1/swap-requests/{id}", put(update_swap_request))
+        // Recurring bookings
+        .route(
+            "/api/v1/recurring-bookings",
+            get(list_recurring_bookings).post(create_recurring_booking),
+        )
+        .route(
+            "/api/v1/recurring-bookings/{id}",
+            delete(delete_recurring_booking),
+        )
+        // Guest bookings
+        .route("/api/v1/bookings/guest", post(create_guest_booking))
+        .route("/api/v1/admin/guest-bookings", get(admin_list_guest_bookings))
+        .route(
+            "/api/v1/admin/guest-bookings/{id}/cancel",
+            axum::routing::patch(admin_cancel_guest_booking),
+        )
+        // Quick book
+        .route("/api/v1/bookings/quick", post(quick_book))
+        // Calendar
+        .route("/api/v1/calendar/events", get(calendar_events))
+        // Admin reports
+        .route("/api/v1/admin/stats", get(admin_stats))
+        .route("/api/v1/admin/reports", get(admin_reports))
+        .route("/api/v1/admin/heatmap", get(admin_heatmap))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -1378,6 +1443,96 @@ async fn create_booking(
             )),
         );
     }
+
+    // ── Admin settings enforcement ─────────────────────────────────────────
+
+    // require_vehicle: reject if no vehicle provided
+    let require_vehicle = read_admin_setting(&state_guard.db, "require_vehicle").await;
+    if require_vehicle == "true" && req.vehicle_id == Uuid::nil() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VEHICLE_REQUIRED",
+                "A vehicle is required for booking",
+            )),
+        );
+    }
+
+    // license_plate_mode = "required": reject if plate is empty
+    let plate_mode = read_admin_setting(&state_guard.db, "license_plate_mode").await;
+    if plate_mode == "required" && req.license_plate.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "LICENSE_PLATE_REQUIRED",
+                "A license plate is required for booking",
+            )),
+        );
+    }
+
+    // min_booking_duration_hours / max_booking_duration_hours
+    let duration_hours = req.duration_minutes as f64 / 60.0;
+    let min_hours: f64 = read_admin_setting(&state_guard.db, "min_booking_duration_hours")
+        .await
+        .parse()
+        .unwrap_or(0.0);
+    if min_hours > 0.0 && duration_hours < min_hours {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "DURATION_TOO_SHORT",
+                &format!("Minimum booking duration is {} hour(s)", min_hours),
+            )),
+        );
+    }
+    let max_hours: f64 = read_admin_setting(&state_guard.db, "max_booking_duration_hours")
+        .await
+        .parse()
+        .unwrap_or(0.0);
+    if max_hours > 0.0 && duration_hours > max_hours {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "DURATION_TOO_LONG",
+                &format!("Maximum booking duration is {} hour(s)", max_hours),
+            )),
+        );
+    }
+
+    // max_bookings_per_day: count user's bookings for the same day (0 = unlimited)
+    let max_per_day: i32 = read_admin_setting(&state_guard.db, "max_bookings_per_day")
+        .await
+        .parse()
+        .unwrap_or(0);
+    if max_per_day > 0 {
+        let user_bookings = state_guard
+            .db
+            .list_bookings_by_user(&auth_user.user_id.to_string())
+            .await
+            .unwrap_or_default();
+        let booking_date = req.start_time.date_naive();
+        let same_day_count = user_bookings
+            .iter()
+            .filter(|b| {
+                b.start_time.date_naive() == booking_date
+                    && b.status != BookingStatus::Cancelled
+            })
+            .count() as i32;
+        if same_day_count >= max_per_day {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ApiResponse::error(
+                    "MAX_BOOKINGS_REACHED",
+                    &format!(
+                        "Maximum of {} booking(s) per day reached",
+                        max_per_day
+                    ),
+                )),
+            );
+        }
+    }
+
+    // ── End admin settings enforcement ──────────────────────────────────────
 
     // Credits check — deduct if credits system is enabled
     let credits_enabled = state_guard
@@ -3096,6 +3251,184 @@ async fn admin_refill_all_credits(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// All admin settings with their default values.
+const ADMIN_SETTINGS: &[(&str, &str)] = &[
+    ("company_name", "ParkHub"),
+    ("use_case", "corporate"),
+    ("self_registration", "true"),
+    ("license_plate_mode", "optional"),
+    ("display_name_format", "first_name"),
+    ("max_bookings_per_day", "0"),
+    ("allow_guest_bookings", "false"),
+    ("auto_release_minutes", "30"),
+    ("require_vehicle", "false"),
+    ("waitlist_enabled", "true"),
+    ("min_booking_duration_hours", "0"),
+    ("max_booking_duration_hours", "0"),
+    ("credits_enabled", "false"),
+    ("credits_per_booking", "1"),
+];
+
+/// Read a single admin setting from DB, falling back to its default.
+async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
+    if let Ok(Some(val)) = db.get_setting(key).await {
+        return val;
+    }
+    ADMIN_SETTINGS
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map(|(_, v)| v.to_string())
+        .unwrap_or_default()
+}
+
+/// `GET /api/v1/admin/settings` — return all settings (merged defaults + stored values)
+async fn admin_get_settings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut data = serde_json::Map::new();
+    for (key, default_val) in ADMIN_SETTINGS {
+        let value = state_guard
+            .db
+            .get_setting(key)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| default_val.to_string());
+        data.insert(key.to_string(), serde_json::Value::String(value));
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::Value::Object(data))),
+    )
+}
+
+/// Validate a settings value against its allowed options.
+fn validate_setting_value(key: &str, value: &str) -> Result<(), &'static str> {
+    match key {
+        "use_case" => {
+            if !["corporate", "university", "residential", "other"].contains(&value) {
+                return Err("use_case must be corporate, university, residential, or other");
+            }
+        }
+        "self_registration" | "allow_guest_bookings" | "require_vehicle"
+        | "waitlist_enabled" | "credits_enabled" => {
+            if value != "true" && value != "false" {
+                return Err("Value must be \"true\" or \"false\"");
+            }
+        }
+        "license_plate_mode" => {
+            if !["required", "optional", "disabled"].contains(&value) {
+                return Err("license_plate_mode must be required, optional, or disabled");
+            }
+        }
+        "display_name_format" => {
+            if !["first_name", "full_name", "username"].contains(&value) {
+                return Err("display_name_format must be first_name, full_name, or username");
+            }
+        }
+        "max_bookings_per_day" | "auto_release_minutes" | "credits_per_booking" => {
+            if value.parse::<i32>().is_err() {
+                return Err("Value must be an integer");
+            }
+        }
+        "min_booking_duration_hours" | "max_booking_duration_hours" => {
+            if value.parse::<f64>().is_err() {
+                return Err("Value must be a number");
+            }
+        }
+        "company_name" => { /* any string is fine */ }
+        _ => return Err("Unknown setting key"),
+    }
+    Ok(())
+}
+
+/// `PUT /api/v1/admin/settings` — update one or more settings (admin only)
+async fn admin_update_settings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(payload): Json<serde_json::Value>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let obj = match payload.as_object() {
+        Some(o) => o,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "Request body must be a JSON object of key-value pairs",
+                )),
+            );
+        }
+    };
+
+    let allowed_keys: Vec<&str> = ADMIN_SETTINGS.iter().map(|(k, _)| *k).collect();
+    let mut updated = serde_json::Map::new();
+
+    for (key, val) in obj {
+        if !allowed_keys.contains(&key.as_str()) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_KEY",
+                    &format!("Unknown setting: {}", key),
+                )),
+            );
+        }
+
+        let value_str = match val.as_str() {
+            Some(s) => s.to_string(),
+            None => val.to_string().trim_matches('"').to_string(),
+        };
+
+        if let Err(msg) = validate_setting_value(key, &value_str) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("VALIDATION_ERROR", msg)),
+            );
+        }
+
+        if let Err(e) = state_guard.db.set_setting(key, &value_str).await {
+            tracing::error!("Failed to save setting {}: {}", key, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to save setting")),
+            );
+        }
+
+        updated.insert(key.clone(), serde_json::Value::String(value_str));
+    }
+
+    // Audit log
+    if state_guard.config.audit_logging_enabled {
+        let _entry = AuditEntry::new(AuditEventType::ConfigChanged)
+            .user(auth_user.user_id, "admin")
+            .resource("settings", "admin_settings")
+            .details(serde_json::json!({ "updated": updated }))
+            .log();
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::Value::Object(updated))),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // FEATURE FLAGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3246,4 +3579,1803 @@ async fn admin_update_features(
             "enabled": valid,
         }))),
     )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ABSENCES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Deserialize)]
+struct AbsenceQuery {
+    #[serde(rename = "type")]
+    absence_type: Option<AbsenceType>,
+}
+
+/// `GET /api/v1/absences` — list current user's absences, optionally filtered by type
+async fn list_absences(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Query(query): Query<AbsenceQuery>,
+) -> (StatusCode, Json<ApiResponse<Vec<Absence>>>) {
+    let state_guard = state.read().await;
+    match state_guard
+        .db
+        .list_absences_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(absences) => {
+            let filtered = match query.absence_type {
+                Some(ref t) => absences.into_iter().filter(|a| &a.absence_type == t).collect(),
+                None => absences,
+            };
+            (StatusCode::OK, Json(ApiResponse::success(filtered)))
+        }
+        Err(e) => {
+            tracing::error!("Failed to list absences: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list absences")),
+            )
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct CreateAbsenceRequest {
+    absence_type: AbsenceType,
+    start_date: String,
+    end_date: String,
+    note: Option<String>,
+}
+
+/// Validate a date string is YYYY-MM-DD format.
+fn is_valid_date(s: &str) -> bool {
+    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok()
+}
+
+/// `POST /api/v1/absences` — create an absence
+async fn create_absence(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateAbsenceRequest>,
+) -> (StatusCode, Json<ApiResponse<Absence>>) {
+    if !is_valid_date(&req.start_date) || !is_valid_date(&req.end_date) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Dates must be in YYYY-MM-DD format",
+            )),
+        );
+    }
+
+    if req.start_date > req.end_date {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "start_date must not be after end_date",
+            )),
+        );
+    }
+
+    let absence = Absence {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        absence_type: req.absence_type,
+        start_date: req.start_date,
+        end_date: req.end_date,
+        note: req.note,
+        source: "manual".to_string(),
+        created_at: Utc::now(),
+    };
+
+    let state_guard = state.read().await;
+    match state_guard.db.save_absence(&absence).await {
+        Ok(()) => (StatusCode::CREATED, Json(ApiResponse::success(absence))),
+        Err(e) => {
+            tracing::error!("Failed to save absence: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to create absence")),
+            )
+        }
+    }
+}
+
+/// `DELETE /api/v1/absences/{id}` — delete own absence
+async fn delete_absence(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Verify ownership
+    let absence = match state_guard.db.get_absence(&id).await {
+        Ok(Some(a)) => a,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Absence not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching absence: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    if absence.user_id != auth_user.user_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    match state_guard.db.delete_absence(&id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Absence not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete absence: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete absence")),
+            )
+        }
+    }
+}
+
+/// `GET /api/v1/absences/team` — list all team absences
+async fn list_team_absences(
+    State(state): State<SharedState>,
+    Extension(_auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<Absence>>>) {
+    let state_guard = state.read().await;
+    match state_guard.db.list_absences_team().await {
+        Ok(absences) => (StatusCode::OK, Json(ApiResponse::success(absences))),
+        Err(e) => {
+            tracing::error!("Failed to list team absences: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list team absences")),
+            )
+        }
+    }
+}
+
+/// `GET /api/v1/absences/pattern` — get user's absence pattern
+async fn get_absence_pattern(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Option<AbsencePattern>>>) {
+    let state_guard = state.read().await;
+    let key = format!("absence_pattern:{}", auth_user.user_id);
+    match state_guard.db.get_setting(&key).await {
+        Ok(Some(json_str)) => match serde_json::from_str::<AbsencePattern>(&json_str) {
+            Ok(pattern) => (StatusCode::OK, Json(ApiResponse::success(Some(pattern)))),
+            Err(_) => (StatusCode::OK, Json(ApiResponse::success(None))),
+        },
+        Ok(None) => (StatusCode::OK, Json(ApiResponse::success(None))),
+        Err(e) => {
+            tracing::error!("Failed to get absence pattern: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to get absence pattern")),
+            )
+        }
+    }
+}
+
+/// `POST /api/v1/absences/pattern` — save user's absence pattern
+async fn save_absence_pattern(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(pattern): Json<AbsencePattern>,
+) -> (StatusCode, Json<ApiResponse<AbsencePattern>>) {
+    let state_guard = state.read().await;
+    let key = format!("absence_pattern:{}", auth_user.user_id);
+    let json_str = match serde_json::to_string(&pattern) {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("Failed to serialize absence pattern: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Serialization error")),
+            );
+        }
+    };
+
+    match state_guard.db.set_setting(&key, &json_str).await {
+        Ok(()) => (StatusCode::OK, Json(ApiResponse::success(pattern))),
+        Err(e) => {
+            tracing::error!("Failed to save absence pattern: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to save absence pattern")),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEAM VIEW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Serialize)]
+struct TeamMemberStatus {
+    user_id: Uuid,
+    name: String,
+    username: String,
+    status: String,
+    absence_type: Option<AbsenceType>,
+}
+
+/// `GET /api/v1/team/today` — return all users with their status today
+async fn team_today(
+    State(state): State<SharedState>,
+    Extension(_auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<TeamMemberStatus>>>) {
+    let state_guard = state.read().await;
+
+    let users = match state_guard.db.list_users().await {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::error!("Failed to list users: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to load users")),
+            );
+        }
+    };
+
+    let today = Utc::now().format("%Y-%m-%d").to_string();
+
+    let absences = state_guard
+        .db
+        .list_absences_team()
+        .await
+        .unwrap_or_default();
+
+    let bookings = state_guard
+        .db
+        .list_bookings()
+        .await
+        .unwrap_or_default();
+
+    let mut result = Vec::new();
+    for user in &users {
+        if !user.is_active {
+            continue;
+        }
+
+        // Check for absence today
+        let user_absence = absences.iter().find(|a| {
+            a.user_id == user.id && a.start_date <= today && a.end_date >= today
+        });
+
+        if let Some(absence) = user_absence {
+            let status = match absence.absence_type {
+                AbsenceType::Homeoffice => "homeoffice",
+                AbsenceType::Vacation => "vacation",
+                AbsenceType::Sick => "sick",
+                AbsenceType::Training => "absent",
+                AbsenceType::Other => "absent",
+            };
+            result.push(TeamMemberStatus {
+                user_id: user.id,
+                name: user.name.clone(),
+                username: user.username.clone(),
+                status: status.to_string(),
+                absence_type: Some(absence.absence_type.clone()),
+            });
+            continue;
+        }
+
+        // Check for booking today (confirmed or active)
+        let has_booking = bookings.iter().any(|b| {
+            b.user_id == user.id
+                && (b.status == BookingStatus::Confirmed || b.status == BookingStatus::Active)
+                && b.start_time.format("%Y-%m-%d").to_string() <= today
+                && b.end_time.format("%Y-%m-%d").to_string() >= today
+        });
+
+        let status = if has_booking { "parked" } else { "available" };
+        result.push(TeamMemberStatus {
+            user_id: user.id,
+            name: user.name.clone(),
+            username: user.username.clone(),
+            status: status.to_string(),
+            absence_type: None,
+        });
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(result)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANNOUNCEMENTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/announcements/active` — public, return active non-expired announcements
+async fn get_active_announcements(
+    State(state): State<SharedState>,
+) -> (StatusCode, Json<ApiResponse<Vec<Announcement>>>) {
+    let state_guard = state.read().await;
+    match state_guard.db.list_announcements().await {
+        Ok(announcements) => {
+            let now = Utc::now();
+            let active: Vec<Announcement> = announcements
+                .into_iter()
+                .filter(|a| {
+                    a.active
+                        && match a.expires_at {
+                            Some(exp) => exp > now,
+                            None => true,
+                        }
+                })
+                .collect();
+            (StatusCode::OK, Json(ApiResponse::success(active)))
+        }
+        Err(e) => {
+            tracing::error!("Failed to list announcements: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list announcements")),
+            )
+        }
+    }
+}
+
+/// `GET /api/v1/admin/announcements` — admin: list all announcements
+async fn admin_list_announcements(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<Announcement>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    match state_guard.db.list_announcements().await {
+        Ok(announcements) => (StatusCode::OK, Json(ApiResponse::success(announcements))),
+        Err(e) => {
+            tracing::error!("Failed to list announcements: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list announcements")),
+            )
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct CreateAnnouncementRequest {
+    title: String,
+    message: String,
+    severity: AnnouncementSeverity,
+    active: Option<bool>,
+    expires_at: Option<DateTime<Utc>>,
+}
+
+/// `POST /api/v1/admin/announcements` — admin: create announcement
+async fn admin_create_announcement(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateAnnouncementRequest>,
+) -> (StatusCode, Json<ApiResponse<Announcement>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let announcement = Announcement {
+        id: Uuid::new_v4(),
+        title: req.title,
+        message: req.message,
+        severity: req.severity,
+        active: req.active.unwrap_or(true),
+        created_by: Some(auth_user.user_id),
+        expires_at: req.expires_at,
+        created_at: Utc::now(),
+    };
+
+    match state_guard.db.save_announcement(&announcement).await {
+        Ok(()) => (StatusCode::CREATED, Json(ApiResponse::success(announcement))),
+        Err(e) => {
+            tracing::error!("Failed to save announcement: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to create announcement")),
+            )
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct UpdateAnnouncementRequest {
+    title: Option<String>,
+    message: Option<String>,
+    severity: Option<AnnouncementSeverity>,
+    active: Option<bool>,
+    expires_at: Option<Option<DateTime<Utc>>>,
+}
+
+/// `PUT /api/v1/admin/announcements/{id}` — admin: update announcement
+async fn admin_update_announcement(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateAnnouncementRequest>,
+) -> (StatusCode, Json<ApiResponse<Announcement>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    // Fetch all announcements and find by ID
+    let announcements = match state_guard.db.list_announcements().await {
+        Ok(a) => a,
+        Err(e) => {
+            tracing::error!("Failed to list announcements: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let mut announcement = match announcements.into_iter().find(|a| a.id.to_string() == id) {
+        Some(a) => a,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Announcement not found")),
+            );
+        }
+    };
+
+    if let Some(title) = req.title {
+        announcement.title = title;
+    }
+    if let Some(message) = req.message {
+        announcement.message = message;
+    }
+    if let Some(severity) = req.severity {
+        announcement.severity = severity;
+    }
+    if let Some(active) = req.active {
+        announcement.active = active;
+    }
+    if let Some(expires_at) = req.expires_at {
+        announcement.expires_at = expires_at;
+    }
+
+    match state_guard.db.save_announcement(&announcement).await {
+        Ok(()) => (StatusCode::OK, Json(ApiResponse::success(announcement))),
+        Err(e) => {
+            tracing::error!("Failed to update announcement: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to update announcement")),
+            )
+        }
+    }
+}
+
+/// `DELETE /api/v1/admin/announcements/{id}` — admin: delete announcement
+async fn admin_delete_announcement(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    match state_guard.db.delete_announcement(&id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Announcement not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete announcement: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete announcement")),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/notifications` — list current user's notifications (most recent 50)
+async fn list_notifications(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<Notification>>>) {
+    let state_guard = state.read().await;
+    match state_guard
+        .db
+        .list_notifications_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(mut notifications) => {
+            // Sort by created_at descending (most recent first)
+            notifications.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+            notifications.truncate(50);
+            (StatusCode::OK, Json(ApiResponse::success(notifications)))
+        }
+        Err(e) => {
+            tracing::error!("Failed to list notifications: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list notifications")),
+            )
+        }
+    }
+}
+
+/// `PUT /api/v1/notifications/{id}/read` — mark notification as read (verify ownership)
+async fn mark_notification_read(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Verify ownership by listing user's notifications
+    let notifications = match state_guard
+        .db
+        .list_notifications_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Failed to list notifications: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let owns = notifications.iter().any(|n| n.id.to_string() == id);
+    if !owns {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Notification not found")),
+        );
+    }
+
+    match state_guard.db.mark_notification_read(&id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Notification not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to mark notification read: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to mark notification read")),
+            )
+        }
+    }
+}
+
+/// `POST /api/v1/notifications/read-all` — mark all user's notifications as read
+async fn mark_all_notifications_read(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<u32>>) {
+    let state_guard = state.read().await;
+    let notifications = match state_guard
+        .db
+        .list_notifications_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Failed to list notifications: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to mark notifications read")),
+            );
+        }
+    };
+
+    let mut count = 0u32;
+    for notif in &notifications {
+        if !notif.read {
+            if let Ok(true) = state_guard
+                .db
+                .mark_notification_read(&notif.id.to_string())
+                .await
+            {
+                count += 1;
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(count)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WAITLIST
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/waitlist` — list current user's waitlist entries
+async fn list_waitlist(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<Vec<WaitlistEntry>>> {
+    let state_guard = state.read().await;
+    match state_guard
+        .db
+        .list_waitlist_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(entries) => Json(ApiResponse::success(entries)),
+        Err(e) => {
+            tracing::error!("Failed to list waitlist entries: {}", e);
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list waitlist entries",
+            ))
+        }
+    }
+}
+
+/// Request body for joining the waitlist
+#[derive(Debug, Deserialize)]
+struct JoinWaitlistRequest {
+    lot_id: Uuid,
+}
+
+/// `POST /api/v1/waitlist` — join waitlist for a lot
+async fn join_waitlist(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<JoinWaitlistRequest>,
+) -> (StatusCode, Json<ApiResponse<WaitlistEntry>>) {
+    let state_guard = state.read().await;
+
+    // Check waitlist_enabled setting
+    let waitlist_enabled = read_admin_setting(&state_guard.db, "waitlist_enabled").await;
+    if waitlist_enabled != "true" {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(
+                "WAITLIST_DISABLED",
+                "Waitlist is not enabled",
+            )),
+        );
+    }
+
+    // First-or-create: check if user already has a waitlist entry for this lot
+    let existing = state_guard
+        .db
+        .list_waitlist_by_user(&auth_user.user_id.to_string())
+        .await
+        .unwrap_or_default();
+    if let Some(entry) = existing.iter().find(|e| e.lot_id == req.lot_id) {
+        return (StatusCode::OK, Json(ApiResponse::success(entry.clone())));
+    }
+
+    let entry = WaitlistEntry {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        lot_id: req.lot_id,
+        created_at: Utc::now(),
+        notified_at: None,
+    };
+
+    if let Err(e) = state_guard.db.save_waitlist_entry(&entry).await {
+        tracing::error!("Failed to save waitlist entry: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to join waitlist",
+            )),
+        );
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(entry)))
+}
+
+/// `DELETE /api/v1/waitlist/{id}` — leave waitlist (verify ownership)
+async fn leave_waitlist(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Verify ownership
+    match state_guard.db.get_waitlist_entry(&id).await {
+        Ok(Some(entry)) => {
+            if entry.user_id != auth_user.user_id {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+                );
+            }
+        }
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Waitlist entry not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    }
+
+    match state_guard.db.delete_waitlist_entry(&id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Waitlist entry not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete waitlist entry: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to leave waitlist",
+                )),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SWAP REQUESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/swap-requests` — list user's swap requests (as requester or target)
+async fn list_swap_requests(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<Vec<SwapRequest>>> {
+    let state_guard = state.read().await;
+    match state_guard
+        .db
+        .list_swap_requests_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(requests) => Json(ApiResponse::success(requests)),
+        Err(e) => {
+            tracing::error!("Failed to list swap requests: {}", e);
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list swap requests",
+            ))
+        }
+    }
+}
+
+/// Request body for creating a swap request
+#[derive(Debug, Deserialize)]
+struct CreateSwapRequestBody {
+    target_booking_id: Uuid,
+    message: Option<String>,
+}
+
+/// `POST /api/v1/bookings/{id}/swap-request` — create a swap request
+async fn create_swap_request(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(booking_id): Path<String>,
+    Json(req): Json<CreateSwapRequestBody>,
+) -> (StatusCode, Json<ApiResponse<SwapRequest>>) {
+    let state_guard = state.read().await;
+
+    // Get requester's booking
+    let requester_booking = match state_guard.db.get_booking(&booking_id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Verify ownership of requester booking
+    if requester_booking.user_id != auth_user.user_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error(
+                "FORBIDDEN",
+                "You can only create swap requests for your own bookings",
+            )),
+        );
+    }
+
+    // Get target booking
+    let target_booking = match state_guard
+        .db
+        .get_booking(&req.target_booking_id.to_string())
+        .await
+    {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "NOT_FOUND",
+                    "Target booking not found",
+                )),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Validate: different users
+    if requester_booking.user_id == target_booking.user_id {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_SWAP",
+                "Cannot swap with your own booking",
+            )),
+        );
+    }
+
+    // Validate: same lot
+    if requester_booking.lot_id != target_booking.lot_id {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_SWAP",
+                "Bookings must be in the same lot",
+            )),
+        );
+    }
+
+    let swap_request = SwapRequest {
+        id: Uuid::new_v4(),
+        requester_booking_id: requester_booking.id,
+        target_booking_id: target_booking.id,
+        requester_id: auth_user.user_id,
+        target_id: target_booking.user_id,
+        status: SwapRequestStatus::Pending,
+        message: req.message,
+        created_at: Utc::now(),
+    };
+
+    if let Err(e) = state_guard.db.save_swap_request(&swap_request).await {
+        tracing::error!("Failed to save swap request: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create swap request",
+            )),
+        );
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(swap_request)))
+}
+
+/// Request body for accepting/declining a swap request
+#[derive(Debug, Deserialize)]
+struct UpdateSwapRequestBody {
+    action: String,
+}
+
+/// `PUT /api/v1/swap-requests/{id}` — accept or decline a swap request
+async fn update_swap_request(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateSwapRequestBody>,
+) -> (StatusCode, Json<ApiResponse<SwapRequest>>) {
+    // Use write lock for atomic swap if accepting
+    let state_guard = state.write().await;
+
+    let mut swap = match state_guard.db.get_swap_request(&id).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Swap request not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Only the target user can accept/decline
+    if swap.target_id != auth_user.user_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error(
+                "FORBIDDEN",
+                "Only the target user can respond to this swap request",
+            )),
+        );
+    }
+
+    if swap.status != SwapRequestStatus::Pending {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "ALREADY_RESOLVED",
+                "This swap request has already been resolved",
+            )),
+        );
+    }
+
+    match req.action.as_str() {
+        "accept" => {
+            // Get both bookings
+            let mut requester_booking = match state_guard
+                .db
+                .get_booking(&swap.requester_booking_id.to_string())
+                .await
+            {
+                Ok(Some(b)) => b,
+                _ => {
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::error(
+                            "SERVER_ERROR",
+                            "Requester booking not found",
+                        )),
+                    );
+                }
+            };
+
+            let mut target_booking = match state_guard
+                .db
+                .get_booking(&swap.target_booking_id.to_string())
+                .await
+            {
+                Ok(Some(b)) => b,
+                _ => {
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(ApiResponse::error(
+                            "SERVER_ERROR",
+                            "Target booking not found",
+                        )),
+                    );
+                }
+            };
+
+            // Swap slot_ids between the two bookings
+            std::mem::swap(&mut requester_booking.slot_id, &mut target_booking.slot_id);
+            std::mem::swap(
+                &mut requester_booking.slot_number,
+                &mut target_booking.slot_number,
+            );
+            std::mem::swap(
+                &mut requester_booking.floor_name,
+                &mut target_booking.floor_name,
+            );
+            let now = Utc::now();
+            requester_booking.updated_at = now;
+            target_booking.updated_at = now;
+
+            if let Err(e) = state_guard.db.save_booking(&requester_booking).await {
+                tracing::error!("Failed to save requester booking during swap: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Failed to perform swap")),
+                );
+            }
+            if let Err(e) = state_guard.db.save_booking(&target_booking).await {
+                tracing::error!("Failed to save target booking during swap: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Failed to perform swap")),
+                );
+            }
+
+            swap.status = SwapRequestStatus::Accepted;
+        }
+        "decline" => {
+            swap.status = SwapRequestStatus::Declined;
+        }
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_ACTION",
+                    "Action must be 'accept' or 'decline'",
+                )),
+            );
+        }
+    }
+
+    if let Err(e) = state_guard.db.save_swap_request(&swap).await {
+        tracing::error!("Failed to update swap request: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update swap request",
+            )),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(swap)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECURRING BOOKINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/recurring-bookings` — list user's recurring bookings
+async fn list_recurring_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<Vec<RecurringBooking>>> {
+    let state_guard = state.read().await;
+    match state_guard
+        .db
+        .list_recurring_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(bookings) => Json(ApiResponse::success(bookings)),
+        Err(e) => {
+            tracing::error!("Failed to list recurring bookings: {}", e);
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list recurring bookings",
+            ))
+        }
+    }
+}
+
+/// Request body for creating a recurring booking
+#[derive(Debug, Deserialize)]
+struct CreateRecurringBookingRequest {
+    lot_id: Uuid,
+    slot_id: Option<Uuid>,
+    days_of_week: Vec<u8>,
+    start_date: String,
+    end_date: Option<String>,
+    start_time: String,
+    end_time: String,
+    vehicle_plate: Option<String>,
+}
+
+/// `POST /api/v1/recurring-bookings` — create a recurring booking
+async fn create_recurring_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateRecurringBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<RecurringBooking>>) {
+    let state_guard = state.read().await;
+
+    let booking = RecurringBooking {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: req.slot_id,
+        days_of_week: req.days_of_week,
+        start_date: req.start_date,
+        end_date: req.end_date,
+        start_time: req.start_time,
+        end_time: req.end_time,
+        vehicle_plate: req.vehicle_plate,
+        active: true,
+        created_at: Utc::now(),
+    };
+
+    if let Err(e) = state_guard.db.save_recurring_booking(&booking).await {
+        tracing::error!("Failed to save recurring booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create recurring booking",
+            )),
+        );
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(booking)))
+}
+
+/// `DELETE /api/v1/recurring-bookings/{id}` — delete recurring booking (verify ownership)
+async fn delete_recurring_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Check ownership via listing user's recurring bookings
+    let user_bookings = state_guard
+        .db
+        .list_recurring_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+        .unwrap_or_default();
+
+    let id_uuid = match Uuid::parse_str(&id) {
+        Ok(u) => u,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("INVALID_ID", "Invalid ID format")),
+            );
+        }
+    };
+
+    if !user_bookings.iter().any(|b| b.id == id_uuid) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    match state_guard.db.delete_recurring_booking(&id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error(
+                "NOT_FOUND",
+                "Recurring booking not found",
+            )),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete recurring booking: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete recurring booking",
+                )),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GUEST BOOKINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for creating a guest booking
+#[derive(Debug, Deserialize)]
+struct CreateGuestBookingRequest {
+    lot_id: Uuid,
+    slot_id: Uuid,
+    start_time: chrono::DateTime<Utc>,
+    end_time: chrono::DateTime<Utc>,
+    guest_name: String,
+    guest_email: Option<String>,
+}
+
+/// Generate an 8-character random alphanumeric guest code
+fn generate_guest_code() -> String {
+    use rand::Rng;
+    const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let mut rng = rand::rng();
+    (0..8)
+        .map(|_| {
+            let idx = rng.random_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
+
+/// `POST /api/v1/bookings/guest` — create a guest booking
+async fn create_guest_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateGuestBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<GuestBooking>>) {
+    let state_guard = state.read().await;
+
+    // Check allow_guest_bookings setting
+    let allowed = read_admin_setting(&state_guard.db, "allow_guest_bookings").await;
+    if allowed != "true" {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(
+                "GUEST_BOOKINGS_DISABLED",
+                "Guest bookings are not enabled",
+            )),
+        );
+    }
+
+    let guest_booking = GuestBooking {
+        id: Uuid::new_v4(),
+        created_by: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: req.slot_id,
+        guest_name: req.guest_name,
+        guest_email: req.guest_email,
+        guest_code: generate_guest_code(),
+        start_time: req.start_time,
+        end_time: req.end_time,
+        vehicle_plate: None,
+        status: BookingStatus::Confirmed,
+        created_at: Utc::now(),
+    };
+
+    if let Err(e) = state_guard.db.save_guest_booking(&guest_booking).await {
+        tracing::error!("Failed to save guest booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create guest booking",
+            )),
+        );
+    }
+
+    (
+        StatusCode::CREATED,
+        Json(ApiResponse::success(guest_booking)),
+    )
+}
+
+/// `GET /api/v1/admin/guest-bookings` — admin: list all guest bookings
+async fn admin_list_guest_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<GuestBooking>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    match state_guard.db.list_guest_bookings().await {
+        Ok(bookings) => (StatusCode::OK, Json(ApiResponse::success(bookings))),
+        Err(e) => {
+            tracing::error!("Failed to list guest bookings: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list guest bookings",
+                )),
+            )
+        }
+    }
+}
+
+/// `PATCH /api/v1/admin/guest-bookings/{id}/cancel` — admin: cancel a guest booking
+async fn admin_cancel_guest_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<GuestBooking>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut booking = match state_guard.db.get_guest_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Guest booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    booking.status = BookingStatus::Cancelled;
+
+    if let Err(e) = state_guard.db.save_guest_booking(&booking).await {
+        tracing::error!("Failed to cancel guest booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to cancel guest booking",
+            )),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(booking)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUICK BOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for quick booking
+#[derive(Debug, Deserialize)]
+struct QuickBookRequest {
+    lot_id: Uuid,
+    date: Option<String>,
+    booking_type: Option<String>,
+}
+
+/// `POST /api/v1/bookings/quick` — quick book with auto-assigned slot
+async fn quick_book(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<QuickBookRequest>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    let state_guard = state.write().await;
+
+    // Find first available slot in the lot
+    let slots = match state_guard
+        .db
+        .list_slots_by_lot(&req.lot_id.to_string())
+        .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("Failed to list slots: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list slots")),
+            );
+        }
+    };
+
+    let available_slot = match slots.iter().find(|s| s.status == SlotStatus::Available) {
+        Some(s) => s.clone(),
+        None => {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::error(
+                    "NO_SLOTS_AVAILABLE",
+                    "No available slots in this lot",
+                )),
+            );
+        }
+    };
+
+    // Get user's default vehicle (or first vehicle)
+    let vehicles = state_guard
+        .db
+        .list_vehicles_by_user(&auth_user.user_id.to_string())
+        .await
+        .unwrap_or_default();
+
+    let vehicle = vehicles
+        .iter()
+        .find(|v| v.is_default)
+        .or_else(|| vehicles.first())
+        .cloned()
+        .unwrap_or(Vehicle {
+            id: Uuid::new_v4(),
+            user_id: auth_user.user_id,
+            license_plate: String::new(),
+            make: None,
+            model: None,
+            color: None,
+            vehicle_type: VehicleType::Car,
+            is_default: false,
+            created_at: Utc::now(),
+        });
+
+    // Determine booking times based on type
+    let booking_type = req.booking_type.as_deref().unwrap_or("full_day");
+    let now = Utc::now();
+    let (start_time, end_time) = match booking_type {
+        "half_day_am" => {
+            let start = now + Duration::minutes(1);
+            let end = start + Duration::hours(4);
+            (start, end)
+        }
+        "half_day_pm" => {
+            let start = now + Duration::minutes(1);
+            let end = start + Duration::hours(4);
+            (start, end)
+        }
+        _ => {
+            // full_day default: 8 hours
+            let start = now + Duration::minutes(1);
+            let end = start + Duration::hours(8);
+            (start, end)
+        }
+    };
+
+    // Look up floor name
+    let floor_name = if let Ok(Some(lot)) = state_guard
+        .db
+        .get_parking_lot(&req.lot_id.to_string())
+        .await
+    {
+        lot.floors
+            .iter()
+            .find(|f| f.id == available_slot.floor_id)
+            .map(|f| f.name.clone())
+            .unwrap_or_else(|| "Level 1".to_string())
+    } else {
+        "Level 1".to_string()
+    };
+
+    let base_price = ((end_time - start_time).num_minutes() as f64 / 60.0) * 2.0;
+    let tax = base_price * VAT_RATE;
+    let total = base_price + tax;
+
+    let booking = Booking {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: available_slot.id,
+        slot_number: available_slot.slot_number,
+        floor_name,
+        vehicle,
+        start_time,
+        end_time,
+        status: BookingStatus::Confirmed,
+        pricing: BookingPricing {
+            base_price,
+            discount: 0.0,
+            tax,
+            total,
+            currency: "EUR".to_string(),
+            payment_status: PaymentStatus::Pending,
+            payment_method: None,
+        },
+        created_at: now,
+        updated_at: now,
+        check_in_time: None,
+        check_out_time: None,
+        qr_code: Some(Uuid::new_v4().to_string()),
+        notes: Some(format!("Quick book ({})", booking_type)),
+    };
+
+    if let Err(e) = state_guard.db.save_booking(&booking).await {
+        tracing::error!("Failed to save quick booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create booking",
+            )),
+        );
+    }
+
+    // Update slot status
+    let mut updated_slot = available_slot;
+    updated_slot.status = SlotStatus::Reserved;
+    if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
+        tracing::error!("Failed to update slot status: {}", e);
+    }
+
+    tracing::info!(
+        user_id = %auth_user.user_id,
+        booking_id = %booking.id,
+        slot_id = %booking.slot_id,
+        "Quick booking created"
+    );
+
+    (StatusCode::CREATED, Json(ApiResponse::success(booking)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Query params for calendar events
+#[derive(Debug, Deserialize)]
+struct CalendarQuery {
+    from: Option<String>,
+    to: Option<String>,
+}
+
+/// Calendar event response
+#[derive(Debug, Serialize)]
+struct CalendarEvent {
+    id: String,
+    #[serde(rename = "type")]
+    event_type: String,
+    title: String,
+    start: chrono::DateTime<Utc>,
+    end: chrono::DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lot_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    slot_number: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<String>,
+}
+
+/// `GET /api/v1/calendar/events` — return user's bookings + absences as calendar events
+async fn calendar_events(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Query(query): Query<CalendarQuery>,
+) -> Json<ApiResponse<Vec<CalendarEvent>>> {
+    let state_guard = state.read().await;
+    let mut events = Vec::new();
+
+    // Parse date range for filtering
+    let from_date = query
+        .from
+        .as_deref()
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
+    let to_date = query
+        .to
+        .as_deref()
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
+
+    // Bookings as events
+    if let Ok(bookings) = state_guard
+        .db
+        .list_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        for b in bookings {
+            // Filter by date range if provided
+            if let Some(from) = from_date {
+                if b.start_time.date_naive() < from {
+                    continue;
+                }
+            }
+            if let Some(to) = to_date {
+                if b.start_time.date_naive() > to {
+                    continue;
+                }
+            }
+
+            events.push(CalendarEvent {
+                id: b.id.to_string(),
+                event_type: "booking".to_string(),
+                title: format!("Parking - Slot {}", b.slot_number),
+                start: b.start_time,
+                end: b.end_time,
+                lot_name: Some(b.floor_name.clone()),
+                slot_number: Some(b.slot_number),
+                status: Some(format!("{:?}", b.status).to_lowercase()),
+            });
+        }
+    }
+
+    // Absences as events
+    if let Ok(absences) = state_guard
+        .db
+        .list_absences_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        for a in absences {
+            let start = chrono::NaiveDate::parse_from_str(&a.start_date, "%Y-%m-%d")
+                .map(|d| d.and_hms_opt(0, 0, 0).unwrap())
+                .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
+            let end = chrono::NaiveDate::parse_from_str(&a.end_date, "%Y-%m-%d")
+                .map(|d| d.and_hms_opt(23, 59, 59).unwrap())
+                .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
+
+            if let (Ok(start_dt), Ok(end_dt)) = (start, end) {
+                // Filter by date range
+                if let Some(from) = from_date {
+                    if end_dt.date_naive() < from {
+                        continue;
+                    }
+                }
+                if let Some(to) = to_date {
+                    if start_dt.date_naive() > to {
+                        continue;
+                    }
+                }
+
+                let type_label = format!("{:?}", a.absence_type);
+                events.push(CalendarEvent {
+                    id: a.id.to_string(),
+                    event_type: "absence".to_string(),
+                    title: type_label,
+                    start: start_dt,
+                    end: end_dt,
+                    lot_name: None,
+                    slot_number: None,
+                    status: None,
+                });
+            }
+        }
+    }
+
+    // Sort by start time
+    events.sort_by(|a, b| a.start.cmp(&b.start));
+
+    Json(ApiResponse::success(events))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN REPORTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Dashboard stats response
+#[derive(Debug, Serialize)]
+struct AdminStatsResponse {
+    total_users: u64,
+    total_lots: u64,
+    total_slots: u64,
+    total_bookings: u64,
+    active_bookings: u64,
+    occupancy_percent: f64,
+}
+
+/// `GET /api/v1/admin/stats` — dashboard stats
+async fn admin_stats(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<AdminStatsResponse>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let db_stats = state_guard
+        .db
+        .stats()
+        .await
+        .unwrap_or_else(|_| crate::db::DatabaseStats {
+            users: 0,
+            bookings: 0,
+            parking_lots: 0,
+            slots: 0,
+            sessions: 0,
+            vehicles: 0,
+        });
+
+    // Count active bookings
+    let active_bookings = state_guard
+        .db
+        .list_bookings()
+        .await
+        .map(|bookings| {
+            bookings
+                .iter()
+                .filter(|b| {
+                    b.status == BookingStatus::Confirmed || b.status == BookingStatus::Active
+                })
+                .count() as u64
+        })
+        .unwrap_or(0);
+
+    let occupancy = if db_stats.slots > 0 {
+        (active_bookings as f64 / db_stats.slots as f64) * 100.0
+    } else {
+        0.0
+    };
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(AdminStatsResponse {
+            total_users: db_stats.users,
+            total_lots: db_stats.parking_lots,
+            total_slots: db_stats.slots,
+            total_bookings: db_stats.bookings,
+            active_bookings,
+            occupancy_percent: (occupancy * 100.0).round() / 100.0,
+        })),
+    )
+}
+
+/// Query params for reports
+#[derive(Debug, Deserialize)]
+struct ReportsQuery {
+    days: Option<i64>,
+}
+
+/// Booking stats by day
+#[derive(Debug, Serialize)]
+struct DailyBookingStat {
+    date: String,
+    count: usize,
+}
+
+/// `GET /api/v1/admin/reports` — booking stats by day for last N days
+async fn admin_reports(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Query(query): Query<ReportsQuery>,
+) -> (StatusCode, Json<ApiResponse<Vec<DailyBookingStat>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let days = query.days.unwrap_or(30);
+    let cutoff = Utc::now() - Duration::days(days);
+
+    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
+
+    // Group by date
+    let mut by_date: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
+    for b in &bookings {
+        if b.created_at >= cutoff {
+            let date = b.created_at.format("%Y-%m-%d").to_string();
+            *by_date.entry(date).or_insert(0) += 1;
+        }
+    }
+
+    let stats: Vec<DailyBookingStat> = by_date
+        .into_iter()
+        .map(|(date, count)| DailyBookingStat { date, count })
+        .collect();
+
+    (StatusCode::OK, Json(ApiResponse::success(stats)))
+}
+
+/// Heatmap cell: booking count by weekday x hour
+#[derive(Debug, Serialize)]
+struct HeatmapCell {
+    weekday: u32,
+    hour: u32,
+    count: usize,
+}
+
+/// `GET /api/v1/admin/heatmap` — booking counts by weekday x hour
+async fn admin_heatmap(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<HeatmapCell>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
+
+    // Build 7x24 grid (weekday 0=Mon .. 6=Sun, hour 0..23)
+    let mut grid = [[0usize; 24]; 7];
+    for b in &bookings {
+        let weekday = b.start_time.weekday().num_days_from_monday() as usize;
+        let hour = b.start_time.hour() as usize;
+        if weekday < 7 && hour < 24 {
+            grid[weekday][hour] += 1;
+        }
+    }
+
+    let cells: Vec<HeatmapCell> = grid
+        .iter()
+        .enumerate()
+        .flat_map(|(wd, hours)| {
+            hours.iter().enumerate().map(move |(h, &count)| HeatmapCell {
+                weekday: wd as u32,
+                hour: h as u32,
+                count,
+            })
+        })
+        .collect();
+
+    (StatusCode::OK, Json(ApiResponse::success(cells)))
 }

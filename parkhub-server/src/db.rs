@@ -20,7 +20,10 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-use parkhub_common::models::{Booking, ParkingLot, ParkingSlot, User, Vehicle};
+use parkhub_common::models::{
+    Absence, Announcement, Booking, GuestBooking, Notification, ParkingLot, ParkingSlot,
+    RecurringBooking, SwapRequest, User, Vehicle, WaitlistEntry,
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TABLE DEFINITIONS
@@ -38,6 +41,14 @@ const VEHICLES: TableDefinition<&str, &[u8]> = TableDefinition::new("vehicles");
 const SETTINGS: TableDefinition<&str, &str> = TableDefinition::new("settings");
 const CREDIT_TRANSACTIONS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("credit_transactions");
+const ABSENCES: TableDefinition<&str, &[u8]> = TableDefinition::new("absences");
+const WAITLIST: TableDefinition<&str, &[u8]> = TableDefinition::new("waitlist");
+const GUEST_BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("guest_bookings");
+const SWAP_REQUESTS: TableDefinition<&str, &[u8]> = TableDefinition::new("swap_requests");
+const RECURRING_BOOKINGS: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("recurring_bookings");
+const ANNOUNCEMENTS: TableDefinition<&str, &[u8]> = TableDefinition::new("announcements");
+const NOTIFICATIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("notifications");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -221,6 +232,13 @@ impl Database {
             let _ = write_txn.open_table(VEHICLES)?;
             let _ = write_txn.open_table(SETTINGS)?;
             let _ = write_txn.open_table(CREDIT_TRANSACTIONS)?;
+            let _ = write_txn.open_table(ABSENCES)?;
+            let _ = write_txn.open_table(WAITLIST)?;
+            let _ = write_txn.open_table(GUEST_BOOKINGS)?;
+            let _ = write_txn.open_table(SWAP_REQUESTS)?;
+            let _ = write_txn.open_table(RECURRING_BOOKINGS)?;
+            let _ = write_txn.open_table(ANNOUNCEMENTS)?;
+            let _ = write_txn.open_table(NOTIFICATIONS)?;
         }
         write_txn.commit()?;
 
@@ -943,6 +961,412 @@ impl Database {
         }
         write_txn.commit()?;
         Ok(())
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ABSENCE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save an absence record
+    pub async fn save_absence(&self, absence: &Absence) -> Result<()> {
+        let id = absence.id.to_string();
+        let data = self.serialize(absence)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(ABSENCES)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved absence: {}", absence.id);
+        Ok(())
+    }
+
+    /// Get an absence by ID
+    pub async fn get_absence(&self, id: &str) -> Result<Option<Absence>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(ABSENCES)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List absences for a specific user
+    pub async fn list_absences_by_user(&self, user_id: &str) -> Result<Vec<Absence>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(ABSENCES)?;
+
+        let mut absences = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let absence: Absence = self.deserialize(value.value())?;
+            if absence.user_id.to_string() == user_id {
+                absences.push(absence);
+            }
+        }
+        Ok(absences)
+    }
+
+    /// List all absences (team view)
+    pub async fn list_absences_team(&self) -> Result<Vec<Absence>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(ABSENCES)?;
+
+        let mut absences = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            absences.push(self.deserialize(value.value())?);
+        }
+        Ok(absences)
+    }
+
+    /// Delete an absence
+    pub async fn delete_absence(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(ABSENCES)?;
+            let result = table.remove(id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted absence: {}", id);
+        }
+        Ok(existed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WAITLIST OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a waitlist entry
+    pub async fn save_waitlist_entry(&self, entry: &WaitlistEntry) -> Result<()> {
+        let id = entry.id.to_string();
+        let data = self.serialize(entry)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(WAITLIST)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved waitlist entry: {}", entry.id);
+        Ok(())
+    }
+
+    /// Get a waitlist entry by ID
+    pub async fn get_waitlist_entry(&self, id: &str) -> Result<Option<WaitlistEntry>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(WAITLIST)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List waitlist entries for a user
+    pub async fn list_waitlist_by_user(&self, user_id: &str) -> Result<Vec<WaitlistEntry>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(WAITLIST)?;
+
+        let mut entries = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let waitlist_entry: WaitlistEntry = self.deserialize(value.value())?;
+            if waitlist_entry.user_id.to_string() == user_id {
+                entries.push(waitlist_entry);
+            }
+        }
+        Ok(entries)
+    }
+
+    /// Delete a waitlist entry
+    pub async fn delete_waitlist_entry(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(WAITLIST)?;
+            let result = table.remove(id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted waitlist entry: {}", id);
+        }
+        Ok(existed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GUEST BOOKING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a guest booking
+    pub async fn save_guest_booking(&self, booking: &GuestBooking) -> Result<()> {
+        let id = booking.id.to_string();
+        let data = self.serialize(booking)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(GUEST_BOOKINGS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved guest booking: {}", booking.id);
+        Ok(())
+    }
+
+    /// Get a guest booking by ID
+    pub async fn get_guest_booking(&self, id: &str) -> Result<Option<GuestBooking>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(GUEST_BOOKINGS)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List all guest bookings
+    pub async fn list_guest_bookings(&self) -> Result<Vec<GuestBooking>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(GUEST_BOOKINGS)?;
+
+        let mut bookings = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            bookings.push(self.deserialize(value.value())?);
+        }
+        Ok(bookings)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SWAP REQUEST OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a swap request
+    pub async fn save_swap_request(&self, req: &SwapRequest) -> Result<()> {
+        let id = req.id.to_string();
+        let data = self.serialize(req)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(SWAP_REQUESTS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved swap request: {}", req.id);
+        Ok(())
+    }
+
+    /// Get a swap request by ID
+    pub async fn get_swap_request(&self, id: &str) -> Result<Option<SwapRequest>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(SWAP_REQUESTS)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List swap requests involving a user (as requester or target)
+    pub async fn list_swap_requests_by_user(&self, user_id: &str) -> Result<Vec<SwapRequest>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(SWAP_REQUESTS)?;
+
+        let mut requests = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let req: SwapRequest = self.deserialize(value.value())?;
+            if req.requester_id.to_string() == user_id || req.target_id.to_string() == user_id {
+                requests.push(req);
+            }
+        }
+        Ok(requests)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // RECURRING BOOKING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a recurring booking
+    pub async fn save_recurring_booking(&self, booking: &RecurringBooking) -> Result<()> {
+        let id = booking.id.to_string();
+        let data = self.serialize(booking)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(RECURRING_BOOKINGS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved recurring booking: {}", booking.id);
+        Ok(())
+    }
+
+    /// List recurring bookings for a user
+    pub async fn list_recurring_bookings_by_user(
+        &self,
+        user_id: &str,
+    ) -> Result<Vec<RecurringBooking>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(RECURRING_BOOKINGS)?;
+
+        let mut bookings = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let booking: RecurringBooking = self.deserialize(value.value())?;
+            if booking.user_id.to_string() == user_id {
+                bookings.push(booking);
+            }
+        }
+        Ok(bookings)
+    }
+
+    /// Delete a recurring booking
+    pub async fn delete_recurring_booking(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(RECURRING_BOOKINGS)?;
+            let result = table.remove(id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted recurring booking: {}", id);
+        }
+        Ok(existed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ANNOUNCEMENT OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save an announcement
+    pub async fn save_announcement(&self, ann: &Announcement) -> Result<()> {
+        let id = ann.id.to_string();
+        let data = self.serialize(ann)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(ANNOUNCEMENTS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved announcement: {}", ann.id);
+        Ok(())
+    }
+
+    /// List all announcements
+    pub async fn list_announcements(&self) -> Result<Vec<Announcement>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(ANNOUNCEMENTS)?;
+
+        let mut announcements = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            announcements.push(self.deserialize(value.value())?);
+        }
+        Ok(announcements)
+    }
+
+    /// Delete an announcement
+    pub async fn delete_announcement(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(ANNOUNCEMENTS)?;
+            let result = table.remove(id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted announcement: {}", id);
+        }
+        Ok(existed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NOTIFICATION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a notification
+    pub async fn save_notification(&self, notification: &Notification) -> Result<()> {
+        let id = notification.id.to_string();
+        let data = self.serialize(notification)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(NOTIFICATIONS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved notification: {}", notification.id);
+        Ok(())
+    }
+
+    /// List notifications for a user
+    pub async fn list_notifications_by_user(&self, user_id: &str) -> Result<Vec<Notification>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(NOTIFICATIONS)?;
+
+        let mut notifications = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let notification: Notification = self.deserialize(value.value())?;
+            if notification.user_id.to_string() == user_id {
+                notifications.push(notification);
+            }
+        }
+        Ok(notifications)
+    }
+
+    /// Mark a notification as read
+    pub async fn mark_notification_read(&self, id: &str) -> Result<bool> {
+        let mut notification = match self.get_notification(id).await? {
+            Some(n) => n,
+            None => return Ok(false),
+        };
+
+        notification.read = true;
+        self.save_notification(&notification).await?;
+        Ok(true)
+    }
+
+    /// Get a notification by ID (helper for mark_notification_read)
+    async fn get_notification(&self, id: &str) -> Result<Option<Notification>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(NOTIFICATIONS)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
     }
 
     // ── Credit Transactions ──

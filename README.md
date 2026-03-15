@@ -59,12 +59,17 @@
 |---|---|
 | Booking flow: lot → slot → duration → vehicle → confirm | Done |
 | Quick booking (one tap, system picks best available slot) | Done |
+| Recurring bookings (weekly day-of-week patterns) | Done |
+| Guest bookings (named guest, no account required) | Done |
+| Booking swap requests between users | Done |
 | Booking cancellation with automatic slot release | Done |
 | Full booking history (active, past, cancelled) | Done |
 | Booking invoice endpoint | Done |
+| Waitlist for fully booked lots | Done |
+| Auto-release (release no-show bookings after N minutes) | Done |
 | Favorite slots per user | Done |
+| In-app notification feed | Done |
 | Email notifications (SMTP) | Planned |
-| Booking swap requests | Planned |
 
 ### Parking Lot Management
 
@@ -81,12 +86,16 @@
 | Feature | Status |
 |---|---|
 | User registration and login (username or email) | Done |
-| Role-based access control: user / admin / superadmin | Done |
+| Role-based access control: user / premium / admin / superadmin | Done |
 | JWT-style session authentication (24-hour expiry) | Done |
 | Token refresh | Done |
 | Password reset via email | Done |
 | Vehicle registry (plate, make, model, color, default flag) | Done |
 | Full admin user management (list, role change, status, delete) | Done |
+| Absence tracking (homeoffice, vacation, sick, training) | Done |
+| Absence patterns (recurring weekly homeoffice) | Done |
+| Team overview — who is in office / on vacation today | Done |
+| Credits system (monthly quota, per-booking deduction) | Done |
 
 ### GDPR & Legal
 
@@ -119,6 +128,11 @@
 | Admin dashboard with occupancy stats and lot overview | Done |
 | Inline slot layout editor | Done |
 | Admin booking overview | Done |
+| Admin reports (bookings by day, status, type) | Done |
+| Booking heatmap by weekday and hour | Done |
+| Announcements system (info, warning, error, success) | Done |
+| Admin settings (company, booking rules, credits, waitlist) | Done |
+| Guest booking management | Done |
 | Impressum editor in admin panel | Done |
 | Prometheus metrics endpoint (`/metrics`) | Done |
 | Swagger UI at `/swagger-ui` | Done |

@@ -3,20 +3,15 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarCheck, Car, CoinVertical, Clock, CalendarPlus, ArrowRight,
+  CalendarCheck, Car, Coins, Clock, CalendarPlus, ArrowRight,
   TrendUp, MapPin,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
-import { useFeatures } from '../context/FeaturesContext';
 import { api, type Booking, type UserStats } from '../api/client';
-import { EmptyState } from '../components/EmptyState';
-import { OnboardingHint } from '../components/OnboardingHint';
-import { MicroAnimated } from '../components/MicroAnimated';
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { isEnabled } = useFeatures();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,51 +28,42 @@ export function DashboardPage() {
   const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'confirmed');
   const name = user?.name?.split(' ')[0] || user?.username || '';
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
-  const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] as const } } };
+  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
+  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
   if (loading) return (
     <div className="space-y-6">
-      <div className="h-8 w-72 skeleton" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[1,2,3,4].map(i => <div key={i} className="h-24 skeleton" />)}
+      <div className="h-10 w-72 skeleton rounded-xl" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => <div key={i} className="h-28 skeleton rounded-2xl" />)}
       </div>
-      <div className="h-64 skeleton" />
+      <div className="h-64 skeleton rounded-2xl" />
     </div>
   );
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
       {/* Greeting */}
-      <motion.div variants={item} className="relative">
-        <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-widest mb-1">
-          {t('nav.dashboard')}
-        </p>
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white tracking-tight">
+      <motion.div variants={item}>
+        <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white">
           {t('dashboard.greeting', { timeOfDay, name })}
         </h1>
-        <OnboardingHint
-          id="dashboard-welcome"
-          message={t('dashboard.hintWelcome', { defaultValue: 'Welcome to your dashboard! Here you can see your active bookings, stats, and quick actions at a glance.' })}
-        />
       </motion.div>
 
       {/* Stats grid */}
-      <motion.div variants={item} className={`grid grid-cols-2 ${isEnabled('credits') ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3`}>
+      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={CalendarCheck}
           label={t('dashboard.activeBookings')}
           value={activeBookings.length}
+          color="primary"
+        />
+        <StatCard
+          icon={Coins}
+          label={t('dashboard.creditsLeft')}
+          value={user?.credits_balance ?? 0}
           color="accent"
         />
-        {isEnabled('credits') && (
-          <StatCard
-            icon={CoinVertical}
-            label={t('dashboard.creditsLeft')}
-            value={user?.credits_balance ?? 0}
-            color="primary"
-          />
-        )}
         <StatCard
           icon={TrendUp}
           label={t('dashboard.thisMonth')}
@@ -87,51 +73,50 @@ export function DashboardPage() {
         <StatCard
           icon={Clock}
           label={t('dashboard.nextBooking')}
-          value={activeBookings.length > 0 ? formatTime(activeBookings[0].start_time) : '\u2014'}
+          value={activeBookings.length > 0 ? formatTime(activeBookings[0].start_time) : '—'}
           color="success"
           isText
         />
       </motion.div>
 
       {/* Active bookings + Quick actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Active bookings */}
-        <motion.div variants={item} className="lg:col-span-2 card p-5">
+        <motion.div variants={item} className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-surface-900 dark:text-white flex items-center gap-2 uppercase tracking-wide">
-              <CalendarCheck weight="bold" className="w-4 h-4 text-accent-500" />
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
+              <CalendarCheck weight="fill" className="w-5 h-5 text-primary-500" />
               {t('dashboard.activeBookings')}
             </h2>
-            <Link to="/bookings" className="text-xs text-accent-600 hover:text-accent-500 font-semibold flex items-center gap-1 cursor-pointer uppercase tracking-wide">
-              {t('nav.bookings')} <ArrowRight weight="bold" className="w-3 h-3" />
+            <Link to="/bookings" className="text-sm text-primary-600 hover:text-primary-500 font-medium flex items-center gap-1">
+              {t('nav.bookings')} <ArrowRight weight="bold" className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {activeBookings.length === 0 ? (
-            <EmptyState
-              variant="no-bookings"
-              icon={CalendarPlus}
-              title={t('dashboard.noActiveBookings')}
-              description={t('dashboard.noActiveBookingsDesc', { defaultValue: 'Book your first parking spot to get started.' })}
-              actionLabel={t('dashboard.bookSpot')}
-              actionTo="/book"
-            />
+            <div className="text-center py-12">
+              <CalendarPlus weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
+              <p className="text-surface-500 dark:text-surface-400 mb-4">{t('dashboard.noActiveBookings')}</p>
+              <Link to="/book" className="btn btn-primary">{t('dashboard.bookSpot')}</Link>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {activeBookings.slice(0, 5).map(b => (
-                <div key={b.id} className="flex items-center gap-4 p-3 bg-surface-50 dark:bg-surface-800/40 rounded-md hover:bg-surface-100 dark:hover:bg-surface-800/70 transition-colors border border-transparent hover:border-surface-200 dark:hover:border-surface-700">
-                  <div className="w-10 h-10 bg-accent-100 dark:bg-accent-900/20 flex items-center justify-center border border-accent-200 dark:border-accent-800/40">
-                    <span className="text-sm font-bold text-accent-700 dark:text-accent-400 font-[Outfit]">{b.slot_number}</span>
+                <div key={b.id} className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700/50 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                    <span className="text-lg font-bold text-primary-600 dark:text-primary-400">{b.slot_number}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-surface-900 dark:text-white text-sm truncate">{b.lot_name}</p>
-                    <div className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400">
-                      <MapPin weight="regular" className="w-3 h-3" />
+                    <p className="font-medium text-surface-900 dark:text-white truncate">{b.lot_name}</p>
+                    <div className="flex items-center gap-2 text-sm text-surface-500 dark:text-surface-400">
+                      <MapPin weight="regular" className="w-3.5 h-3.5" />
                       {t('dashboard.slot')} {b.slot_number}
-                      {b.vehicle_plate && <><span className="mx-1">&middot;</span><Car weight="regular" className="w-3 h-3" />{b.vehicle_plate}</>}
+                      {b.vehicle_plate && <><span className="mx-1">·</span><Car weight="regular" className="w-3.5 h-3.5" />{b.vehicle_plate}</>}
                     </div>
                   </div>
-                  <span className="badge badge-success">{t('bookings.statusActive')}</span>
+                  <div className="text-right">
+                    <span className="badge badge-success">{t('bookings.statusActive')}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -139,29 +124,39 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Quick actions */}
-        <motion.div variants={item} className="card p-5">
-          <h2 className="text-sm font-semibold text-surface-900 dark:text-white mb-4 uppercase tracking-wide">
+        <motion.div variants={item} className="card p-6">
+          <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">
             {t('dashboard.quickActions')}
           </h2>
-          <div className="space-y-1">
+          <div className="space-y-3">
             {[
-              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), accent: 'bg-accent-100 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400' },
-              ...(isEnabled('vehicles') ? [{ to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), accent: 'bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' }] : []),
-              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), accent: 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' },
-              ...(isEnabled('credits') ? [{ to: '/credits', icon: CoinVertical, label: t('nav.credits'), accent: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' }] : []),
+              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), color: 'primary' },
+              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), color: 'accent' },
+              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), color: 'info' },
+              { to: '/credits', icon: Coins, label: t('nav.credits'), color: 'success' },
             ].map((action, i) => (
               <Link
                 key={i}
                 to={action.to}
-                className="flex items-center gap-3 p-2.5 rounded-md hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group cursor-pointer border border-transparent hover:border-surface-200 dark:hover:border-surface-800"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group"
               >
-                <div className={`w-9 h-9 flex items-center justify-center ${action.accent}`}>
-                  <action.icon weight="bold" className="w-4 h-4" />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  action.color === 'primary' ? 'bg-primary-100 dark:bg-primary-900/30' :
+                  action.color === 'accent' ? 'bg-accent-100 dark:bg-accent-900/30' :
+                  action.color === 'info' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                  'bg-emerald-100 dark:bg-emerald-900/30'
+                }`}>
+                  <action.icon weight="fill" className={`w-5 h-5 ${
+                    action.color === 'primary' ? 'text-primary-600 dark:text-primary-400' :
+                    action.color === 'accent' ? 'text-accent-600 dark:text-accent-400' :
+                    action.color === 'info' ? 'text-blue-600 dark:text-blue-400' :
+                    'text-emerald-600 dark:text-emerald-400'
+                  }`} />
                 </div>
-                <span className="font-medium text-surface-700 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white transition-colors text-sm">
+                <span className="font-medium text-surface-700 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white transition-colors">
                   {action.label}
                 </span>
-                <ArrowRight weight="bold" className="w-3.5 h-3.5 text-surface-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRight weight="bold" className="w-4 h-4 text-surface-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
           </div>
@@ -172,33 +167,33 @@ export function DashboardPage() {
 }
 
 function StatCard({ icon: Icon, label, value, color, isText }: {
-  icon: React.ElementType; label: string; value: number | string; color: string; isText?: boolean;
+  icon: any; label: string; value: number | string; color: string; isText?: boolean;
 }) {
-  const colors: Record<string, { bg: string; text: string; icon: string }> = {
-    accent: { bg: 'bg-accent-100 dark:bg-accent-900/20', text: 'text-accent-700 dark:text-accent-400', icon: 'text-accent-600 dark:text-accent-400' },
-    primary: { bg: 'bg-primary-100 dark:bg-primary-900/20', text: 'text-primary-700 dark:text-primary-400', icon: 'text-primary-600 dark:text-primary-400' },
-    info: { bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400', icon: 'text-blue-600 dark:text-blue-400' },
-    success: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', icon: 'text-emerald-600 dark:text-emerald-400' },
+  const colors: Record<string, string> = {
+    primary: 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400',
+    accent: 'bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400',
+    info: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+    success: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
   };
 
-  const c = colors[color] || colors.primary;
-
   return (
-    <MicroAnimated className="stat-card" noPress>
+    <div className="stat-card">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[11px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider mb-2">{label}</p>
+          <p className="text-sm font-medium text-surface-500 dark:text-surface-400">{label}</p>
           {isText ? (
-            <p className="text-lg font-bold text-surface-900 dark:text-white">{value}</p>
+            <p className="mt-2 text-lg font-bold text-surface-900 dark:text-white">{value}</p>
           ) : (
-            <p className={`stat-value ${c.text}`}>{value}</p>
+            <p className={`mt-2 stat-value ${color === 'primary' ? 'text-primary-600 dark:text-primary-400' : color === 'accent' ? 'text-accent-600 dark:text-accent-400' : color === 'info' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {value}
+            </p>
           )}
         </div>
-        <div className={`w-9 h-9 flex items-center justify-center ${c.bg}`}>
-          <Icon weight="bold" className={`w-4 h-4 ${c.icon}`} />
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}`}>
+          <Icon weight="fill" className="w-5 h-5" />
         </div>
       </div>
-    </MicroAnimated>
+    </div>
   );
 }
 
