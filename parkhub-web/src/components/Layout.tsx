@@ -192,6 +192,23 @@ export function Layout() {
                       {t(`nav.${item.key}`)}
                     </NavLink>
                   ))}
+
+                  {user?.role && ['admin', 'superadmin'].includes(user.role) && (
+                    <NavLink
+                      to="/admin"
+                      onClick={() => setSidebarOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                          isActive
+                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                            : 'text-surface-600 dark:text-surface-400'
+                        }`
+                      }
+                    >
+                      <GearSix weight="fill" className="w-5 h-5" />
+                      {t('nav.admin')}
+                    </NavLink>
+                  )}
                 </nav>
                 <div className="absolute bottom-4 left-4 right-4">
                   <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-red-600 w-full">

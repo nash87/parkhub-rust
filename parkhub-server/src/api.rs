@@ -276,13 +276,28 @@ pub fn create_router(state: SharedState) -> Router {
         .merge(forgot_route)
         .merge(demo_routes)
         .merge(protected_routes)
-        // Prometheus metrics endpoint
-        // WARNING: This endpoint is unauthenticated. In production, it MUST be
-        // placed behind a reverse proxy that restricts access (e.g. only from
-        // the internal monitoring network) or gated behind admin authentication.
+        // Prometheus metrics endpoint — protected by METRICS_TOKEN env var when set
         .route(
             "/metrics",
-            get(move || async move {
+            get(move |req: Request<Body>| async move {
+                if let Ok(expected) = std::env::var("METRICS_TOKEN") {
+                    if !expected.is_empty() {
+                        let authorized = req
+                            .headers()
+                            .get(header::AUTHORIZATION)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.strip_prefix("Bearer "))
+                            .map(|token| token == expected)
+                            .unwrap_or(false);
+                        if !authorized {
+                            return (
+                                StatusCode::UNAUTHORIZED,
+                                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                                "Unauthorized".to_string(),
+                            );
+                        }
+                    }
+                }
                 (
                     StatusCode::OK,
                     [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
