@@ -35,6 +35,9 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 flex">
+      {/* Skip to content */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">Skip to content</a>
+
       {/* Sidebar — desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 p-4 sticky top-0 h-dvh">
         {/* Logo */}
@@ -119,7 +122,7 @@ export function Layout() {
         <header className="lg:hidden sticky top-0 z-30 bg-white/80 dark:bg-surface-900/80 backdrop-blur-lg border-b border-surface-200 dark:border-surface-800 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon">
+              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon" aria-label="Open navigation menu">
                 <List weight="bold" className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
@@ -132,6 +135,7 @@ export function Layout() {
             <button
               onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
               className="btn btn-ghost btn-icon"
+              aria-label={resolved === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
               {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
             </button>
@@ -155,6 +159,8 @@ export function Layout() {
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                 className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-surface-900 z-50 p-4 lg:hidden"
+                role="dialog"
+                aria-label="Navigation menu"
               >
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
@@ -163,7 +169,7 @@ export function Layout() {
                     </div>
                     <span className="text-xl font-bold text-surface-900 dark:text-white">ParkHub</span>
                   </div>
-                  <button onClick={() => setSidebarOpen(false)} className="btn btn-ghost btn-icon">
+                  <button onClick={() => setSidebarOpen(false)} className="btn btn-ghost btn-icon" aria-label="Close navigation menu">
                     <X weight="bold" className="w-5 h-5" />
                   </button>
                 </div>
@@ -198,7 +204,7 @@ export function Layout() {
         </AnimatePresence>
 
         {/* Main content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+        <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
           <Outlet />
         </main>
       </div>

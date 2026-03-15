@@ -136,6 +136,7 @@ export function LoginPage() {
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-danger/10 border border-danger/20 rounded-xl px-4 py-3 text-sm text-danger font-medium"
+                role="alert"
               >
                 {error}
               </motion.div>

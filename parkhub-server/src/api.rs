@@ -36,17 +36,17 @@ const MAX_REQUEST_BODY_BYTES: usize = 1024 * 1024; // 1 MiB
 /// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
 const VAT_RATE: f64 = 0.19;
 
+use parkhub_common::models::{
+    Absence, AbsencePattern, AbsenceType, Announcement, AnnouncementSeverity, GuestBooking,
+    Notification, RecurringBooking, SlotPosition, SlotType, SwapRequest, SwapRequestStatus,
+    WaitlistEntry,
+};
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
     CreditTransaction, CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginRequest,
     LoginResponse, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PaymentStatus,
     PricingInfo, PricingRate, RefreshTokenRequest, RegisterRequest, ServerStatus, SlotStatus, User,
     UserPreferences, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
-};
-use parkhub_common::models::{
-    Absence, AbsencePattern, AbsenceType, Announcement, AnnouncementSeverity, GuestBooking,
-    Notification, RecurringBooking, SlotPosition, SlotType, SwapRequest, SwapRequestStatus,
-    WaitlistEntry,
 };
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -114,7 +114,10 @@ pub fn create_router(state: SharedState) -> Router {
         // Feature flags — public (frontend needs to know which features are enabled)
         .route("/api/v1/features", get(get_features))
         // Announcements — public (active announcements visible without auth)
-        .route("/api/v1/announcements/active", get(get_active_announcements));
+        .route(
+            "/api/v1/announcements/active",
+            get(get_active_announcements),
+        );
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
@@ -186,7 +189,10 @@ pub fn create_router(state: SharedState) -> Router {
         // Absences (user-scoped)
         .route("/api/v1/absences", get(list_absences).post(create_absence))
         .route("/api/v1/absences/team", get(list_team_absences))
-        .route("/api/v1/absences/pattern", get(get_absence_pattern).post(save_absence_pattern))
+        .route(
+            "/api/v1/absences/pattern",
+            get(get_absence_pattern).post(save_absence_pattern),
+        )
         .route("/api/v1/absences/{id}", delete(delete_absence))
         // Team view
         .route("/api/v1/team/today", get(team_today))
@@ -201,8 +207,14 @@ pub fn create_router(state: SharedState) -> Router {
         )
         // Notifications (user-scoped)
         .route("/api/v1/notifications", get(list_notifications))
-        .route("/api/v1/notifications/{id}/read", put(mark_notification_read))
-        .route("/api/v1/notifications/read-all", post(mark_all_notifications_read))
+        .route(
+            "/api/v1/notifications/{id}/read",
+            put(mark_notification_read),
+        )
+        .route(
+            "/api/v1/notifications/read-all",
+            post(mark_all_notifications_read),
+        )
         // Waitlist
         .route("/api/v1/waitlist", get(list_waitlist).post(join_waitlist))
         .route("/api/v1/waitlist/{id}", delete(leave_waitlist))
@@ -224,7 +236,10 @@ pub fn create_router(state: SharedState) -> Router {
         )
         // Guest bookings
         .route("/api/v1/bookings/guest", post(create_guest_booking))
-        .route("/api/v1/admin/guest-bookings", get(admin_list_guest_bookings))
+        .route(
+            "/api/v1/admin/guest-bookings",
+            get(admin_list_guest_bookings),
+        )
         .route(
             "/api/v1/admin/guest-bookings/{id}/cancel",
             axum::routing::patch(admin_cancel_guest_booking),
@@ -1268,7 +1283,11 @@ async fn create_lot(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "VALIDATION_ERROR",
-                if msg.is_empty() { "Invalid request" } else { &msg },
+                if msg.is_empty() {
+                    "Invalid request"
+                } else {
+                    &msg
+                },
             )),
         );
     }
@@ -1431,7 +1450,11 @@ async fn update_lot(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "VALIDATION_ERROR",
-                if msg.is_empty() { "Invalid request" } else { &msg },
+                if msg.is_empty() {
+                    "Invalid request"
+                } else {
+                    &msg
+                },
             )),
         );
     }
@@ -1510,7 +1533,12 @@ async fn update_lot(
 
     // Update pricing fields
     if let Some(hourly_rate) = req.hourly_rate {
-        if let Some(rate) = lot.pricing.rates.iter_mut().find(|r| r.duration_minutes == 60) {
+        if let Some(rate) = lot
+            .pricing
+            .rates
+            .iter_mut()
+            .find(|r| r.duration_minutes == 60)
+        {
             rate.price = hourly_rate;
         } else {
             lot.pricing.rates.push(PricingRate {
@@ -1835,8 +1863,7 @@ async fn create_booking(
         let same_day_count = user_bookings
             .iter()
             .filter(|b| {
-                b.start_time.date_naive() == booking_date
-                    && b.status != BookingStatus::Cancelled
+                b.start_time.date_naive() == booking_date && b.status != BookingStatus::Cancelled
             })
             .count() as i32;
         if same_day_count >= max_per_day {
@@ -1844,10 +1871,7 @@ async fn create_booking(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 Json(ApiResponse::error(
                     "MAX_BOOKINGS_REACHED",
-                    &format!(
-                        "Maximum of {} booking(s) per day reached",
-                        max_per_day
-                    ),
+                    &format!("Maximum of {} booking(s) per day reached", max_per_day),
                 )),
             );
         }
@@ -1904,16 +1928,27 @@ async fn create_booking(
 
     // Calculate end time and pricing
     let end_time = req.start_time + Duration::minutes(req.duration_minutes as i64);
-    let base_price = (req.duration_minutes as f64 / 60.0) * 2.0; // 2 EUR per hour
+
+    // Look up the lot for pricing and floor name
+    let lot_opt = state_guard
+        .db
+        .get_parking_lot(&req.lot_id.to_string())
+        .await
+        .ok()
+        .flatten();
+
+    let hourly_rate = lot_opt
+        .as_ref()
+        .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
+        .map(|r| r.price)
+        .unwrap_or(2.0);
+
+    let base_price = (req.duration_minutes as f64 / 60.0) * hourly_rate;
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
     // Look up human-readable floor name from the lot's floors list
-    let floor_name = if let Ok(Some(lot)) = state_guard
-        .db
-        .get_parking_lot(&req.lot_id.to_string())
-        .await
-    {
+    let floor_name = if let Some(lot) = &lot_opt {
         lot.floors
             .iter()
             .find(|f| f.id == slot.floor_id)
@@ -3627,10 +3662,7 @@ async fn admin_update_user_quota(
         tracing::error!("Failed to save user quota: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to update quota",
-            )),
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update quota")),
         );
     }
 
@@ -3734,8 +3766,11 @@ fn validate_setting_value(key: &str, value: &str) -> Result<(), &'static str> {
                 return Err("use_case must be corporate, university, residential, or other");
             }
         }
-        "self_registration" | "allow_guest_bookings" | "require_vehicle"
-        | "waitlist_enabled" | "credits_enabled" => {
+        "self_registration"
+        | "allow_guest_bookings"
+        | "require_vehicle"
+        | "waitlist_enabled"
+        | "credits_enabled" => {
             if value != "true" && value != "false" {
                 return Err("Value must be \"true\" or \"false\"");
             }
@@ -4019,7 +4054,10 @@ async fn list_absences(
     {
         Ok(absences) => {
             let filtered = match query.absence_type {
-                Some(ref t) => absences.into_iter().filter(|a| &a.absence_type == t).collect(),
+                Some(ref t) => absences
+                    .into_iter()
+                    .filter(|a| &a.absence_type == t)
+                    .collect(),
                 None => absences,
             };
             (StatusCode::OK, Json(ApiResponse::success(filtered)))
@@ -4028,7 +4066,10 @@ async fn list_absences(
             tracing::error!("Failed to list absences: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list absences")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list absences",
+                )),
             )
         }
     }
@@ -4091,7 +4132,10 @@ async fn create_absence(
             tracing::error!("Failed to save absence: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to create absence")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to create absence",
+                )),
             )
         }
     }
@@ -4140,7 +4184,10 @@ async fn delete_absence(
             tracing::error!("Failed to delete absence: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete absence")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete absence",
+                )),
             )
         }
     }
@@ -4158,7 +4205,10 @@ async fn list_team_absences(
             tracing::error!("Failed to list team absences: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list team absences")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list team absences",
+                )),
             )
         }
     }
@@ -4181,7 +4231,10 @@ async fn get_absence_pattern(
             tracing::error!("Failed to get absence pattern: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to get absence pattern")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to get absence pattern",
+                )),
             )
         }
     }
@@ -4212,7 +4265,10 @@ async fn save_absence_pattern(
             tracing::error!("Failed to save absence pattern: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to save absence pattern")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to save absence pattern",
+                )),
             )
         }
     }
@@ -4257,11 +4313,7 @@ async fn team_today(
         .await
         .unwrap_or_default();
 
-    let bookings = state_guard
-        .db
-        .list_bookings()
-        .await
-        .unwrap_or_default();
+    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
 
     let mut result = Vec::new();
     for user in &users {
@@ -4270,9 +4322,9 @@ async fn team_today(
         }
 
         // Check for absence today
-        let user_absence = absences.iter().find(|a| {
-            a.user_id == user.id && a.start_date <= today && a.end_date >= today
-        });
+        let user_absence = absences
+            .iter()
+            .find(|a| a.user_id == user.id && a.start_date <= today && a.end_date >= today);
 
         if let Some(absence) = user_absence {
             let status = match absence.absence_type {
@@ -4341,7 +4393,10 @@ async fn get_active_announcements(
             tracing::error!("Failed to list announcements: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list announcements")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list announcements",
+                )),
             )
         }
     }
@@ -4363,7 +4418,10 @@ async fn admin_list_announcements(
             tracing::error!("Failed to list announcements: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list announcements")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list announcements",
+                )),
             )
         }
     }
@@ -4401,12 +4459,18 @@ async fn admin_create_announcement(
     };
 
     match state_guard.db.save_announcement(&announcement).await {
-        Ok(()) => (StatusCode::CREATED, Json(ApiResponse::success(announcement))),
+        Ok(()) => (
+            StatusCode::CREATED,
+            Json(ApiResponse::success(announcement)),
+        ),
         Err(e) => {
             tracing::error!("Failed to save announcement: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to create announcement")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to create announcement",
+                )),
             )
         }
     }
@@ -4477,7 +4541,10 @@ async fn admin_update_announcement(
             tracing::error!("Failed to update announcement: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to update announcement")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to update announcement",
+                )),
             )
         }
     }
@@ -4504,7 +4571,10 @@ async fn admin_delete_announcement(
             tracing::error!("Failed to delete announcement: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete announcement")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete announcement",
+                )),
             )
         }
     }
@@ -4535,7 +4605,10 @@ async fn list_notifications(
             tracing::error!("Failed to list notifications: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list notifications")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list notifications",
+                )),
             )
         }
     }
@@ -4583,7 +4656,10 @@ async fn mark_notification_read(
             tracing::error!("Failed to mark notification read: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to mark notification read")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to mark notification read",
+                )),
             )
         }
     }
@@ -4605,7 +4681,10 @@ async fn mark_all_notifications_read(
             tracing::error!("Failed to list notifications: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to mark notifications read")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to mark notifications read",
+                )),
             );
         }
     };
@@ -4843,10 +4922,7 @@ async fn create_swap_request(
         Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(ApiResponse::error(
-                    "NOT_FOUND",
-                    "Target booking not found",
-                )),
+                Json(ApiResponse::error("NOT_FOUND", "Target booking not found")),
             );
         }
         Err(e) => {
@@ -4902,7 +4978,10 @@ async fn create_swap_request(
         );
     }
 
-    (StatusCode::CREATED, Json(ApiResponse::success(swap_request)))
+    (
+        StatusCode::CREATED,
+        Json(ApiResponse::success(swap_request)),
+    )
 }
 
 /// Request body for accepting/declining a swap request
@@ -5429,12 +5508,15 @@ async fn quick_book(
         }
     };
 
-    // Look up floor name
-    let floor_name = if let Ok(Some(lot)) = state_guard
+    // Look up floor name and pricing from the lot
+    let lot_opt = state_guard
         .db
         .get_parking_lot(&req.lot_id.to_string())
         .await
-    {
+        .ok()
+        .flatten();
+
+    let floor_name = if let Some(lot) = &lot_opt {
         lot.floors
             .iter()
             .find(|f| f.id == available_slot.floor_id)
@@ -5444,7 +5526,13 @@ async fn quick_book(
         "Level 1".to_string()
     };
 
-    let base_price = ((end_time - start_time).num_minutes() as f64 / 60.0) * 2.0;
+    let hourly_rate = lot_opt
+        .as_ref()
+        .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
+        .map(|r| r.price)
+        .unwrap_or(2.0);
+
+    let base_price = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
@@ -5783,11 +5871,14 @@ async fn admin_heatmap(
         .iter()
         .enumerate()
         .flat_map(|(wd, hours)| {
-            hours.iter().enumerate().map(move |(h, &count)| HeatmapCell {
-                weekday: wd as u32,
-                hour: h as u32,
-                count,
-            })
+            hours
+                .iter()
+                .enumerate()
+                .map(move |(h, &count)| HeatmapCell {
+                    weekday: wd as u32,
+                    hour: h as u32,
+                    count,
+                })
         })
         .collect();
 
