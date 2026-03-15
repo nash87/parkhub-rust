@@ -57,44 +57,41 @@ export function BookingsPage() {
   const upcoming = filtered.filter(b => isActiveOrConfirmed(b.status) && isFuture(new Date(b.start_time)));
   const past = filtered.filter(b => b.status === 'completed' || b.status === 'cancelled');
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
-  const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] as const } } };
+  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
+  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
   if (loading) return (
-    <div className="space-y-5">
-      <div className="h-7 w-64 skeleton" />
-      {[1,2,3].map(i => <div key={i} className="h-36 skeleton" />)}
+    <div className="space-y-6">
+      <div className="h-8 w-64 skeleton rounded-xl" />
+      {[1,2,3].map(i => <div key={i} className="h-40 skeleton rounded-2xl" />)}
     </div>
   );
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+      <motion.div variants={item} className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-widest mb-1">
-            {t('nav.bookings')}
-          </p>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white tracking-tight">{t('bookings.title')}</h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-0.5 text-sm">{t('bookings.subtitle')}</p>
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('bookings.title')}</h1>
+          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('bookings.subtitle')}</p>
         </div>
-        <button onClick={loadData} className="btn btn-secondary cursor-pointer self-start sm:self-auto">
-          <ArrowClockwise weight="bold" className="w-3.5 h-3.5" /> {t('common.refresh')}
+        <button onClick={loadData} className="btn btn-secondary">
+          <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
         </button>
       </motion.div>
 
       {/* Filters */}
       <motion.div variants={item} className="card p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Funnel weight="bold" className="w-3.5 h-3.5 text-surface-500" />
-          <span className="text-xs font-semibold text-surface-600 dark:text-surface-400 uppercase tracking-wider">{t('common.filter')}</span>
-          <span className="ml-auto text-[11px] text-surface-400 font-mono">{filtered.length}</span>
+          <Funnel weight="bold" className="w-4 h-4 text-surface-500" />
+          <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t('common.filter')}</span>
+          <span className="ml-auto text-xs text-surface-400">{t('bookingFilters.totalCount', { count: filtered.length })}</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="relative">
-            <MagnifyingGlass weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-400" />
-            <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} aria-label={t('bookingFilters.searchLot')} className="input pl-8 text-sm" />
+            <MagnifyingGlass weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} className="input pl-9 text-sm" />
           </div>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} aria-label={t('common.filter')} className="input text-sm">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input">
             <option value="all">{t('bookingFilters.statusAll')}</option>
             <option value="active">{t('bookingFilters.statusActive')}</option>
             <option value="confirmed">{t('bookingFilters.statusConfirmed')}</option>
@@ -105,11 +102,11 @@ export function BookingsPage() {
       </motion.div>
 
       {/* Active */}
-      <Section icon={Clock} title={t('bookings.active')} count={active.length} color="text-emerald-600 dark:text-emerald-400">
+      <Section icon={Clock} title={t('bookings.active')} count={active.length} color="text-emerald-600">
         {active.length === 0 ? (
           <Empty icon={CalendarBlank} text={t('bookings.noActive')} showAction t={t} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence>
               {active.map(b => (
                 <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
@@ -121,11 +118,11 @@ export function BookingsPage() {
       </Section>
 
       {/* Upcoming */}
-      <Section icon={CalendarPlus} title={t('bookings.upcoming')} count={upcoming.length} color="text-primary-600 dark:text-primary-400">
+      <Section icon={CalendarPlus} title={t('bookings.upcoming')} count={upcoming.length} color="text-primary-600">
         {upcoming.length === 0 ? (
           <Empty icon={CalendarCheck} text={t('bookings.noUpcoming')} t={t} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence>
               {upcoming.map(b => (
                 <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
@@ -141,7 +138,7 @@ export function BookingsPage() {
         {past.length === 0 ? (
           <Empty icon={CheckCircle} text={t('bookings.noPast')} t={t} />
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {past.map(b => (
               <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
                 onCancel={handleCancel} cancelling={cancelling} t={t} dateFnsLocale={dateFnsLocale} />
@@ -156,10 +153,10 @@ export function BookingsPage() {
 function Section({ icon: Icon, title, count, color, children }: any) {
   return (
     <section>
-      <h2 className="text-sm font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2 uppercase tracking-wide">
-        <Icon weight="fill" className={`w-4 h-4 ${color}`} />
+      <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
+        <Icon weight="fill" className={`w-5 h-5 ${color}`} />
         {title}
-        <span className="badge badge-gray text-[10px]">{count}</span>
+        <span className="badge badge-gray text-xs">{count}</span>
       </h2>
       {children}
     </section>
@@ -168,10 +165,10 @@ function Section({ icon: Icon, title, count, color, children }: any) {
 
 function Empty({ icon: Icon, text, showAction, t }: any) {
   return (
-    <div className="card p-10 text-center">
-      <Icon weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
-      <p className="text-surface-500 dark:text-surface-400 mb-4 text-sm">{text}</p>
-      {showAction && <Link to="/book" className="btn btn-primary cursor-pointer"><CalendarPlus weight="bold" className="w-3.5 h-3.5" />{t('bookings.bookNow')}</Link>}
+    <div className="card p-12 text-center">
+      <Icon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
+      <p className="text-surface-500 dark:text-surface-400 mb-4">{text}</p>
+      {showAction && <Link to="/book" className="btn btn-primary"><CalendarPlus weight="bold" className="w-4 h-4" />{t('bookings.bookNow')}</Link>}
     </div>
   );
 }
@@ -192,46 +189,46 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, t, dateFnsL
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -80 }}
-      className={`card p-4 border-l-3 transition-all hover:shadow-md ${
-        isPast ? 'border-l-surface-300 dark:border-l-surface-600 opacity-75' :
-        isExpiring ? 'border-l-accent-500' : 'border-l-primary-600 dark:border-l-primary-400'
+      exit={{ opacity: 0, x: -100 }}
+      className={`card p-5 border-l-4 transition-all hover:shadow-md ${
+        isPast ? 'border-l-surface-300 dark:border-l-surface-600 opacity-80' :
+        isExpiring ? 'border-l-accent-500' : 'border-l-primary-500'
       }`}
     >
-      <div className="flex items-start justify-between mb-2.5">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 flex items-center justify-center ${
-            isPast ? 'bg-surface-100 dark:bg-surface-800' : isExpiring ? 'bg-accent-100 dark:bg-accent-900/20' : 'bg-primary-100 dark:bg-primary-900/20'
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            isPast ? 'bg-surface-100 dark:bg-surface-800' : isExpiring ? 'bg-accent-100 dark:bg-accent-900/30' : 'bg-primary-100 dark:bg-primary-900/30'
           }`}>
-            <span className={`text-sm font-bold font-[Outfit] ${
-              isPast ? 'text-surface-500' : isExpiring ? 'text-accent-600 dark:text-accent-400' : 'text-primary-700 dark:text-primary-400'
+            <span className={`text-lg font-bold ${
+              isPast ? 'text-surface-500' : isExpiring ? 'text-accent-600 dark:text-accent-400' : 'text-primary-600 dark:text-primary-400'
             }`}>{booking.slot_number}</span>
           </div>
           <div>
-            <p className="font-semibold text-surface-900 dark:text-white text-sm">{booking.lot_name}</p>
-            <div className="flex items-center gap-1.5 text-xs text-surface-500 dark:text-surface-400">
-              <MapPin weight="regular" className="w-3 h-3" /> {t('dashboard.slot')} {booking.slot_number}
+            <p className="font-semibold text-surface-900 dark:text-white">{booking.lot_name}</p>
+            <div className="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400">
+              <MapPin weight="regular" className="w-3.5 h-3.5" /> {t('dashboard.slot')} {booking.slot_number}
             </div>
           </div>
         </div>
         <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-surface-600 dark:text-surface-400 mb-2.5">
+      <div className="flex items-center gap-4 text-sm text-surface-600 dark:text-surface-400 mb-3">
         {booking.vehicle_plate && (
-          <span className="flex items-center gap-1"><Car weight="regular" className="w-3.5 h-3.5" /> {booking.vehicle_plate}</span>
+          <span className="flex items-center gap-1"><Car weight="regular" className="w-4 h-4" /> {booking.vehicle_plate}</span>
         )}
-        <span className="flex items-center gap-1 font-mono">
-          <Timer weight="regular" className="w-3.5 h-3.5" />
+        <span className="flex items-center gap-1">
+          <Timer weight="regular" className="w-4 h-4" />
           {format(new Date(booking.start_time), 'HH:mm')} — {format(new Date(booking.end_time), 'HH:mm')}
         </span>
       </div>
 
-      <div className="flex items-center justify-between pt-2.5 border-t border-surface-100 dark:border-surface-800">
-        <p className={`text-xs ${isExpiring ? 'text-accent-600 dark:text-accent-400 font-medium' : 'text-surface-500 dark:text-surface-400'}`}>
-          {isExpiring && <Warning weight="fill" className="w-3 h-3 inline mr-1" />}
+      <div className="flex items-center justify-between pt-3 border-t border-surface-100 dark:border-surface-800">
+        <p className={`text-sm ${isExpiring ? 'text-accent-600 dark:text-accent-400 font-medium' : 'text-surface-500 dark:text-surface-400'}`}>
+          {isExpiring && <Warning weight="fill" className="w-3.5 h-3.5 inline mr-1" />}
           {isUpcoming
             ? t('bookings.startsIn', { time: formatDistanceToNow(new Date(booking.start_time), { addSuffix: true, locale: dateFnsLocale }) })
             : isPast
@@ -243,11 +240,11 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, t, dateFnsL
           <button
             onClick={() => onCancel(booking.id)}
             disabled={cancelling === booking.id}
-            className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
+            className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             {cancelling === booking.id
-              ? <SpinnerGap weight="bold" className="w-3.5 h-3.5 animate-spin" />
-              : <><X weight="bold" className="w-3.5 h-3.5" /> {t('bookings.cancelBtn')}</>
+              ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
+              : <><X weight="bold" className="w-4 h-4" /> {t('bookings.cancelBtn')}</>
             }
           </button>
         )}

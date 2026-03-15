@@ -51,7 +51,7 @@ export const api = {
       method: 'POST', body: JSON.stringify({ username, password }),
     }),
 
-  register: (data: { username: string; email: string; password: string; password_confirmation: string; name: string }) =>
+  register: (data: { username: string; email: string; password: string; name: string }) =>
     request('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
   me: () => request<User>('/api/v1/me'),
@@ -110,6 +110,9 @@ export const api = {
   adminStats: () => request<AdminStats>('/api/v1/admin/stats'),
   adminUsers: () => request<User[]>('/api/v1/admin/users'),
   adminUpdateUser: (id: string, data: any) => request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteUser: (id: string) => request<void>(`/api/v1/admin/users/${id}`, { method: 'DELETE' }),
+  adminUpdateUserRole: (id: string, role: string) =>
+    request<User>(`/api/v1/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   adminGrantCredits: (userId: string, amount: number, description?: string) =>
     request('/api/v1/admin/users/' + userId + '/credits', { method: 'POST', body: JSON.stringify({ amount, description }) }),
   adminRefillAll: (amount?: number) =>
@@ -118,17 +121,28 @@ export const api = {
   adminUpdateSettings: (data: Record<string, string>) =>
     request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
-  // ── Features ──
-  getFeatures: () => request<{ enabled: string[] }>('/api/v1/features'),
-  updateFeatures: (enabled: string[]) =>
-    request('/api/v1/admin/features', { method: 'PUT', body: JSON.stringify({ enabled }) }),
-  adminGetFeatures: () => request<{ enabled: string[]; available: FeatureInfo[] }>('/api/v1/admin/features'),
+  // ── Admin Announcements ──
+  adminListAnnouncements: () => request<Announcement[]>('/api/v1/admin/announcements'),
+  adminCreateAnnouncement: (data: { title: string; message: string; severity: string; active: boolean; expires_at?: string }) =>
+    request<Announcement>('/api/v1/admin/announcements', { method: 'POST', body: JSON.stringify(data) }),
+  adminUpdateAnnouncement: (id: string, data: { title: string; message: string; severity: string; active: boolean; expires_at?: string }) =>
+    request<Announcement>(`/api/v1/admin/announcements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminDeleteAnnouncement: (id: string) =>
+    request<void>(`/api/v1/admin/announcements/${id}`, { method: 'DELETE' }),
+
+  // ── Notifications ──
+  getNotifications: () => request<Notification[]>('/api/v1/notifications'),
+  markNotificationRead: (id: string) => request<void>(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: () => request<void>('/api/v1/notifications/read-all', { method: 'POST' }),
+
+  // ── Calendar ──
+  calendarEvents: (start: string, end: string) =>
+    request<CalendarEvent[]>(`/api/v1/calendar/events?start=${start}&end=${end}`),
 
   // ── Demo ──
   getDemoConfig: () => request<{ demo_mode: boolean }>('/api/v1/demo/config'),
   getDemoStatus: () => request<DemoStatus>('/api/v1/demo/status'),
   voteDemoReset: () => request('/api/v1/demo/vote', { method: 'POST' }),
-  resetDemo: () => request<{ reset: boolean }>('/api/v1/demo/reset', { method: 'POST' }),
 };
 
 // ── Types ──
@@ -139,7 +153,7 @@ export interface User {
   name: string;
   picture?: string;
   phone?: string;
-  role: 'user' | 'admin' | 'superadmin';
+  role: 'user' | 'premium' | 'admin' | 'superadmin';
   preferences: Record<string, any>;
   is_active: boolean;
   department?: string;
@@ -162,13 +176,22 @@ export interface ParkingLot {
   total_slots: number;
   available_slots: number;
   status: string;
+  hourly_rate?: number;
+  daily_max?: number;
+  monthly_pass?: number;
+  currency?: string;
 }
+
+export type SlotType = 'standard' | 'compact' | 'large' | 'handicap' | 'electric' | 'motorcycle' | 'reserved' | 'vip';
+export type SlotFeature = 'near_exit' | 'near_elevator' | 'near_stairs' | 'covered' | 'security_camera' | 'well_lit' | 'wide_lane' | 'charging_station';
 
 export interface ParkingSlot {
   id: string;
   lot_id: string;
   slot_number: string;
   status: string;
+  slot_type?: SlotType;
+  features?: SlotFeature[];
   zone_id?: string;
 }
 
@@ -186,6 +209,10 @@ export interface Booking {
   booking_type?: string;
   dauer_interval?: string;
   notes?: string;
+  base_price?: number;
+  tax_amount?: number;
+  total_price?: number;
+  currency?: string;
 }
 
 export interface Vehicle {
@@ -253,24 +280,40 @@ export interface AdminStats {
   active_bookings: number;
 }
 
-export interface FeatureInfo {
-  id: string;
-  category: string;
-  default_enabled: boolean;
+export interface DemoStatus {
+  timer_seconds: number;
+  votes: number;
+  vote_threshold: number;
+  viewers: number;
+  has_voted: boolean;
+  reset?: boolean;
 }
 
-export interface DemoStatus {
-  enabled: boolean;
-  timer: {
-    remaining: number;
-    duration: number;
-    started_at: number;
-  };
-  votes: {
-    current: number;
-    threshold: number;
-    has_voted: boolean;
-  };
-  viewers: number;
-  reset?: boolean;
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end: string;
+  type: 'booking' | 'absence';
+  status: string;
+  lot_name?: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  severity: string;
+  active: boolean;
+  expires_at?: string;
+  created_at: string;
 }

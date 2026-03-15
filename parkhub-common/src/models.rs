@@ -490,6 +490,131 @@ pub enum LayoutElementType {
     ChargingStation,
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ABSENCE & HOMEOFFICE MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Absence type classification
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum AbsenceType {
+    Homeoffice,
+    Vacation,
+    Sick,
+    Training,
+    Other,
+}
+
+/// Absence record (homeoffice, vacation, sick, etc.)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Absence {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub absence_type: AbsenceType,
+    pub start_date: String,
+    pub end_date: String,
+    pub note: Option<String>,
+    pub source: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Recurring absence pattern (e.g. homeoffice every Monday)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AbsencePattern {
+    pub absence_type: AbsenceType,
+    pub weekdays: Vec<u8>,
+}
+
+/// Waitlist entry for a parking lot
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WaitlistEntry {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub lot_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub notified_at: Option<DateTime<Utc>>,
+}
+
+/// Guest booking (visitor parking)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GuestBooking {
+    pub id: Uuid,
+    pub created_by: Uuid,
+    pub lot_id: Uuid,
+    pub slot_id: Uuid,
+    pub guest_name: String,
+    pub guest_email: Option<String>,
+    pub guest_code: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub vehicle_plate: Option<String>,
+    pub status: BookingStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Swap request between two bookings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SwapRequest {
+    pub id: Uuid,
+    pub requester_booking_id: Uuid,
+    pub target_booking_id: Uuid,
+    pub requester_id: Uuid,
+    pub target_id: Uuid,
+    pub status: SwapRequestStatus,
+    pub message: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Swap request status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SwapRequestStatus {
+    Pending,
+    Accepted,
+    Declined,
+    Cancelled,
+}
+
+/// Recurring booking pattern
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecurringBooking {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub lot_id: Uuid,
+    pub slot_id: Option<Uuid>,
+    pub days_of_week: Vec<u8>,
+    pub start_date: String,
+    pub end_date: Option<String>,
+    pub start_time: String,
+    pub end_time: String,
+    pub vehicle_plate: Option<String>,
+    pub active: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// System announcement
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Announcement {
+    pub id: Uuid,
+    pub title: String,
+    pub message: String,
+    pub severity: AnnouncementSeverity,
+    pub active: bool,
+    pub created_by: Option<Uuid>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Announcement severity level
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum AnnouncementSeverity {
+    Info,
+    Warning,
+    Error,
+    Success,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

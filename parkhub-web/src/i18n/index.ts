@@ -13,16 +13,16 @@ import ja from './locales/ja';
 import zh from './locales/zh';
 
 export const languages = [
-  { code: 'en', name: 'English', native: 'English' },
-  { code: 'de', name: 'German', native: 'Deutsch' },
-  { code: 'fr', name: 'French', native: 'Fran\u00e7ais' },
-  { code: 'es', name: 'Spanish', native: 'Espa\u00f1ol' },
-  { code: 'it', name: 'Italian', native: 'Italiano' },
-  { code: 'pt', name: 'Portuguese', native: 'Portugu\u00eas' },
-  { code: 'tr', name: 'Turkish', native: 'T\u00fcrk\u00e7e' },
-  { code: 'pl', name: 'Polish', native: 'Polski' },
-  { code: 'ja', name: 'Japanese', native: '\u65e5\u672c\u8a9e' },
-  { code: 'zh', name: 'Chinese', native: '\u4e2d\u6587' },
+  { code: 'en', name: 'English', flag: '🇬🇧', native: 'English' },
+  { code: 'de', name: 'German', flag: '🇩🇪', native: 'Deutsch' },
+  { code: 'fr', name: 'French', flag: '🇫🇷', native: 'Francais' },
+  { code: 'es', name: 'Spanish', flag: '🇪🇸', native: 'Espanol' },
+  { code: 'it', name: 'Italian', flag: '🇮🇹', native: 'Italiano' },
+  { code: 'pt', name: 'Portuguese', flag: '🇵🇹', native: 'Portugues' },
+  { code: 'tr', name: 'Turkish', flag: '🇹🇷', native: 'Turkce' },
+  { code: 'pl', name: 'Polish', flag: '🇵🇱', native: 'Polski' },
+  { code: 'ja', name: 'Japanese', flag: '🇯🇵', native: '日本語' },
+  { code: 'zh', name: 'Chinese', flag: '🇨🇳', native: '中文' },
 ] as const;
 
 i18n
