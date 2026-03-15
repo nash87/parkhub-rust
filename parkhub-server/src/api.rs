@@ -39,18 +39,22 @@ const VAT_RATE: f64 = 0.19;
 use parkhub_common::{
     ApiResponse, AuthTokens, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
     CreditTransaction, CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginRequest,
-    LoginResponse, ParkingLot, ParkingSlot, PaymentStatus, RefreshTokenRequest, RegisterRequest,
-    ServerStatus, SlotStatus, User, UserPreferences, UserRole, Vehicle, VehicleType,
-    PROTOCOL_VERSION,
+    LoginResponse, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PaymentStatus,
+    PricingInfo, PricingRate, RefreshTokenRequest, RegisterRequest, ServerStatus, SlotStatus, User,
+    UserPreferences, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
 };
 use parkhub_common::models::{
     Absence, AbsencePattern, AbsenceType, Announcement, AnnouncementSeverity, GuestBooking,
-    Notification, RecurringBooking, SwapRequest, SwapRequestStatus, WaitlistEntry,
+    Notification, RecurringBooking, SlotPosition, SlotType, SwapRequest, SwapRequestStatus,
+    WaitlistEntry,
 };
 use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::db::Session;
-use crate::requests::VehicleRequest;
+use crate::requests::{
+    parse_lot_status, CreateParkingLotRequest, UpdateParkingLotRequest, VehicleRequest,
+};
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -123,7 +127,10 @@ pub fn create_router(state: SharedState) -> Router {
         // Admin-only: retrieve any user by ID
         .route("/api/v1/users/{id}", get(get_user))
         .route("/api/v1/lots", get(list_lots).post(create_lot))
-        .route("/api/v1/lots/{id}", get(get_lot))
+        .route(
+            "/api/v1/lots/{id}",
+            get(get_lot).put(update_lot).delete(delete_lot),
+        )
         .route("/api/v1/lots/{id}/slots", get(get_lot_slots))
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
@@ -159,6 +166,10 @@ pub fn create_router(state: SharedState) -> Router {
         .route(
             "/api/v1/admin/credits/refill-all",
             post(admin_refill_all_credits),
+        )
+        .route(
+            "/api/v1/admin/users/{id}/quota",
+            put(admin_update_user_quota),
         )
         // Admin-only: feature flags management
         .route(
@@ -680,8 +691,8 @@ async fn register(
         last_login: Some(now),
         preferences: UserPreferences::default(),
         is_active: true,
-        credits_balance: 10,
-        credits_monthly_quota: 10,
+        credits_balance: 40,
+        credits_monthly_quota: 40,
         credits_last_refilled: Some(now),
     };
 
@@ -1243,9 +1254,26 @@ async fn list_lots(State(state): State<SharedState>) -> Json<ApiResponse<Vec<Par
 async fn create_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
-    Json(lot): Json<ParkingLot>,
+    Json(req): Json<CreateParkingLotRequest>,
 ) -> (StatusCode, Json<ApiResponse<ParkingLot>>) {
-    let state_guard = state.read().await;
+    // Validate the request DTO
+    if let Err(errors) = req.validate() {
+        let msg = errors
+            .field_errors()
+            .values()
+            .flat_map(|errs| errs.iter().filter_map(|e| e.message.as_deref()))
+            .collect::<Vec<_>>()
+            .join("; ");
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                if msg.is_empty() { "Invalid request" } else { &msg },
+            )),
+        );
+    }
+
+    let state_guard = state.write().await;
 
     // Check if user is admin
     let user = match state_guard
@@ -1269,6 +1297,74 @@ async fn create_lot(
         );
     }
 
+    let now = Utc::now();
+    let lot_id = Uuid::new_v4();
+
+    // Build pricing from request fields
+    let mut rates = Vec::new();
+    if let Some(hourly) = req.hourly_rate {
+        rates.push(PricingRate {
+            duration_minutes: 60,
+            price: hourly,
+            label: "1 hour".to_string(),
+        });
+    }
+
+    let pricing = PricingInfo {
+        currency: req.currency.clone(),
+        rates,
+        daily_max: req.daily_max,
+        monthly_pass: req.monthly_pass,
+    };
+
+    // Default to 24h operation
+    let operating_hours = OperatingHours {
+        is_24h: true,
+        monday: None,
+        tuesday: None,
+        wednesday: None,
+        thursday: None,
+        friday: None,
+        saturday: None,
+        sunday: None,
+    };
+
+    // Create a default floor for the auto-generated slots
+    let floor_id = Uuid::new_v4();
+    let default_floor = ParkingFloor {
+        id: floor_id,
+        lot_id,
+        name: "Ground Floor".to_string(),
+        floor_number: 1,
+        total_slots: req.total_slots,
+        available_slots: req.total_slots,
+        slots: Vec::new(),
+    };
+
+    // Build the ParkingLot
+    let lot = ParkingLot {
+        id: lot_id,
+        name: req.name,
+        address: req.address.unwrap_or_default(),
+        latitude: req.latitude.unwrap_or(0.0),
+        longitude: req.longitude.unwrap_or(0.0),
+        total_slots: req.total_slots,
+        available_slots: req.total_slots,
+        floors: vec![default_floor],
+        amenities: Vec::new(),
+        pricing,
+        operating_hours,
+        images: Vec::new(),
+        status: req
+            .status
+            .as_deref()
+            .and_then(parse_lot_status)
+            .unwrap_or(LotStatus::Open),
+        created_at: now,
+        updated_at: now,
+    };
+
+    // Persist the lot
     if let Err(e) = state_guard.db.save_parking_lot(&lot).await {
         tracing::error!("Failed to save parking lot: {}", e);
         return (
@@ -1280,7 +1376,232 @@ async fn create_lot(
         );
     }
 
+    // Auto-generate parking slots in a single batch transaction
+    let slots: Vec<ParkingSlot> = (1..=req.total_slots)
+        .map(|i| ParkingSlot {
+            id: Uuid::new_v4(),
+            lot_id,
+            floor_id,
+            slot_number: i,
+            row: ((i - 1) / 10) + 1,
+            column: ((i - 1) % 10) + 1,
+            slot_type: SlotType::Standard,
+            status: SlotStatus::Available,
+            current_booking: None,
+            features: Vec::new(),
+            position: SlotPosition {
+                x: (((i - 1) % 10) as f32) * 3.0,
+                y: (((i - 1) / 10) as f32) * 5.0,
+                width: 2.5,
+                height: 5.0,
+                rotation: 0.0,
+            },
+        })
+        .collect();
+
+    if let Err(e) = state_guard.db.save_parking_slots_batch(&slots).await {
+        tracing::error!("Failed to batch-save parking slots: {}", e);
+    }
+
+    tracing::info!(
+        "Created parking lot '{}' ({}) with {} slots",
+        lot.name,
+        lot.id,
+        req.total_slots,
+    );
+
     (StatusCode::CREATED, Json(ApiResponse::success(lot)))
+}
+
+async fn update_lot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateParkingLotRequest>,
+) -> (StatusCode, Json<ApiResponse<ParkingLot>>) {
+    // Validate the request DTO
+    if let Err(errors) = req.validate() {
+        let msg = errors
+            .field_errors()
+            .values()
+            .flat_map(|errs| errs.iter().filter_map(|e| e.message.as_deref()))
+            .collect::<Vec<_>>()
+            .join("; ");
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                if msg.is_empty() { "Invalid request" } else { &msg },
+            )),
+        );
+    }
+
+    let state_guard = state.write().await;
+
+    // Check if user is admin
+    let user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+
+    if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+        );
+    }
+
+    // Fetch existing lot
+    let mut lot = match state_guard.db.get_parking_lot(&id).await {
+        Ok(Some(l)) => l,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Parking lot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Apply partial updates
+    if let Some(name) = req.name {
+        lot.name = name;
+    }
+    if let Some(address) = req.address {
+        lot.address = address;
+    }
+    if let Some(lat) = req.latitude {
+        lot.latitude = lat;
+    }
+    if let Some(lng) = req.longitude {
+        lot.longitude = lng;
+    }
+    if let Some(total_slots) = req.total_slots {
+        lot.total_slots = total_slots;
+    }
+    if let Some(ref status_str) = req.status {
+        if let Some(parsed) = parse_lot_status(status_str) {
+            lot.status = parsed;
+        } else {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "VALIDATION_ERROR",
+                    "Invalid status. Valid: open, closed, full, maintenance",
+                )),
+            );
+        }
+    }
+
+    // Update pricing fields
+    if let Some(hourly_rate) = req.hourly_rate {
+        if let Some(rate) = lot.pricing.rates.iter_mut().find(|r| r.duration_minutes == 60) {
+            rate.price = hourly_rate;
+        } else {
+            lot.pricing.rates.push(PricingRate {
+                duration_minutes: 60,
+                price: hourly_rate,
+                label: "1 hour".to_string(),
+            });
+        }
+    }
+    if let Some(daily_max) = req.daily_max {
+        lot.pricing.daily_max = Some(daily_max);
+    }
+    if let Some(monthly_pass) = req.monthly_pass {
+        lot.pricing.monthly_pass = Some(monthly_pass);
+    }
+    if let Some(currency) = req.currency {
+        lot.pricing.currency = currency;
+    }
+
+    lot.updated_at = Utc::now();
+
+    // Persist
+    if let Err(e) = state_guard.db.save_parking_lot(&lot).await {
+        tracing::error!("Failed to update parking lot: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update parking lot",
+            )),
+        );
+    }
+
+    tracing::info!("Updated parking lot '{}' ({})", lot.name, lot.id);
+
+    (StatusCode::OK, Json(ApiResponse::success(lot)))
+}
+
+async fn delete_lot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.write().await;
+
+    // Check if user is admin
+    let user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+
+    if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+        );
+    }
+
+    match state_guard.db.delete_parking_lot(&id).await {
+        Ok(true) => {
+            // Cascade-delete orphaned slots belonging to this lot
+            if let Err(e) = state_guard.db.delete_slots_by_lot(&id).await {
+                tracing::error!("Failed to cascade-delete slots for lot {}: {}", id, e);
+            }
+            tracing::info!("Deleted parking lot: {}", id);
+            (StatusCode::OK, Json(ApiResponse::success(())))
+        }
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Parking lot not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete parking lot: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete parking lot",
+                )),
+            )
+        }
+    }
 }
 
 async fn get_lot(
@@ -2705,6 +3026,9 @@ struct AdminUserResponse {
     name: String,
     role: String,
     status: String,
+    credits_balance: i32,
+    credits_monthly_quota: i32,
+    is_active: bool,
     created_at: chrono::DateTime<Utc>,
 }
 
@@ -2721,6 +3045,9 @@ impl From<&User> for AdminUserResponse {
             } else {
                 "disabled".to_string()
             },
+            credits_balance: u.credits_balance,
+            credits_monthly_quota: u.credits_monthly_quota,
+            is_active: u.is_active,
             created_at: u.created_at,
         }
     }
@@ -3247,6 +3574,93 @@ async fn admin_refill_all_credits(
         Json(ApiResponse::success(
             serde_json::json!({ "users_refilled": refilled }),
         )),
+    )
+}
+
+/// `PUT /api/v1/admin/users/{id}/quota` — update a user's monthly credit quota (admin only)
+async fn admin_update_user_quota(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(user_id): Path<String>,
+    Json(req): Json<crate::requests::UpdateQuotaRequest>,
+) -> (StatusCode, Json<ApiResponse<AdminUserResponse>>) {
+    use validator::Validate;
+
+    if let Err(e) = req.validate() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                &format!("Invalid quota: {e}"),
+            )),
+        );
+    }
+
+    let state_guard = state.write().await;
+
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut target_user = match state_guard.db.get_user(&user_id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let old_quota = target_user.credits_monthly_quota;
+    target_user.credits_monthly_quota = req.monthly_quota;
+    target_user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&target_user).await {
+        tracing::error!("Failed to save user quota: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update quota",
+            )),
+        );
+    }
+
+    // Log quota change as an Adjustment transaction
+    let tx = CreditTransaction {
+        id: Uuid::new_v4(),
+        user_id: target_user.id,
+        booking_id: None,
+        amount: req.monthly_quota - old_quota,
+        transaction_type: CreditTransactionType::Adjustment,
+        description: Some(format!(
+            "Quota changed from {} to {} by admin",
+            old_quota, req.monthly_quota
+        )),
+        granted_by: Some(auth_user.user_id),
+        created_at: Utc::now(),
+    };
+    let _ = state_guard.db.save_credit_transaction(&tx).await;
+
+    tracing::info!(
+        "Admin {} updated quota for user {} from {} to {}",
+        auth_user.user_id,
+        target_user.id,
+        old_quota,
+        req.monthly_quota
+    );
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(AdminUserResponse::from(&target_user))),
     )
 }
 

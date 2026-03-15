@@ -70,7 +70,14 @@ export const api = {
 
   // ── Lots ──
   getLots: () => request<ParkingLot[]>('/api/v1/lots'),
+  getLot: (id: string) => request<ParkingLot>(`/api/v1/lots/${id}`),
   getLotSlots: (lotId: string) => request<ParkingSlot[]>(`/api/v1/lots/${lotId}/slots`),
+  createLot: (data: CreateLotRequest) =>
+    request<ParkingLot>('/api/v1/lots', { method: 'POST', body: JSON.stringify(data) }),
+  updateLot: (id: string, data: UpdateLotRequest) =>
+    request<ParkingLot>(`/api/v1/lots/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteLot: (id: string) =>
+    request<void>(`/api/v1/lots/${id}`, { method: 'DELETE' }),
 
   // ── Bookings ──
   getBookings: () => request<Booking[]>('/api/v1/bookings'),
@@ -117,6 +124,8 @@ export const api = {
     request('/api/v1/admin/users/' + userId + '/credits', { method: 'POST', body: JSON.stringify({ amount, description }) }),
   adminRefillAll: (amount?: number) =>
     request('/api/v1/admin/credits/refill-all', { method: 'POST', body: JSON.stringify(amount ? { amount } : {}) }),
+  adminUpdateUserQuota: (userId: string, monthlyQuota: number) =>
+    request<User>(`/api/v1/admin/users/${userId}/quota`, { method: 'PUT', body: JSON.stringify({ monthly_quota: monthlyQuota }) }),
   adminGetSettings: () => request<Record<string, string>>('/api/v1/admin/settings'),
   adminUpdateSettings: (data: Record<string, string>) =>
     request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
@@ -316,4 +325,32 @@ export interface Announcement {
   active: boolean;
   expires_at?: string;
   created_at: string;
+}
+
+export type LotStatus = 'open' | 'closed' | 'full' | 'maintenance';
+
+export interface CreateLotRequest {
+  name: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  total_slots: number;
+  hourly_rate?: number;
+  daily_max?: number;
+  monthly_pass?: number;
+  currency?: string;
+  status?: LotStatus;
+}
+
+export interface UpdateLotRequest {
+  name?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  total_slots?: number;
+  hourly_rate?: number;
+  daily_max?: number;
+  monthly_pass?: number;
+  currency?: string;
+  status?: LotStatus;
 }

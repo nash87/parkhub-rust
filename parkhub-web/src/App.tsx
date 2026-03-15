@@ -15,6 +15,7 @@ import { AdminPage } from './views/Admin';
 import { AdminSettingsPage } from './views/AdminSettings';
 import { AdminUsersPage } from './views/AdminUsers';
 import { AdminAnnouncementsPage } from './views/AdminAnnouncements';
+import { AdminLotsPage } from './views/AdminLots';
 import { AdminReportsPage } from './views/AdminReports';
 import { VehiclesPage } from './views/Vehicles';
 import { AbsencesPage } from './views/Absences';
@@ -71,6 +72,7 @@ function AppRoutes() {
           <Route index element={<AdminReportsPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
+          <Route path="lots" element={<AdminLotsPage />} />
           <Route path="announcements" element={<AdminAnnouncementsPage />} />
           <Route path="reports" element={<AdminReportsPage />} />
         </Route>

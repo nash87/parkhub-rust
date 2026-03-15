@@ -35,7 +35,7 @@ pub struct User {
 }
 
 fn default_credits_quota() -> i32 {
-    10
+    40
 }
 
 /// User role for access control
@@ -260,6 +260,7 @@ pub enum CreditTransactionType {
     Deduction,
     Refund,
     MonthlyRefill,
+    Adjustment,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
