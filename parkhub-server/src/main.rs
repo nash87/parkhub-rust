@@ -733,7 +733,7 @@ fn get_local_ip() -> Option<String> {
 }
 
 /// Hash a password using Argon2
-fn hash_password(password: &str) -> Result<String> {
+pub(crate) fn hash_password(password: &str) -> Result<String> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
@@ -1568,7 +1568,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
 }
 
 /// Create a sample parking lot for testing
-async fn create_sample_parking_lot(db: &Database) -> Result<()> {
+pub(crate) async fn create_sample_parking_lot(db: &Database) -> Result<()> {
     use chrono::Utc;
     use parkhub_common::models::{
         LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo, PricingRate,

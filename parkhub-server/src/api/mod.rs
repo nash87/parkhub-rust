@@ -61,6 +61,7 @@ mod auth;
 mod bookings;
 mod credits;
 mod lots;
+mod setup;
 mod social;
 mod users;
 
@@ -145,7 +146,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/announcements/active",
             get(get_active_announcements),
-        );
+        )
+        // Setup wizard — only works before initial setup is completed
+        .route("/api/v1/setup/status", get(setup::setup_status))
+        .route("/api/v1/setup", post(setup::setup_init));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
