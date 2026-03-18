@@ -61,12 +61,14 @@ mod auth;
 mod bookings;
 mod credits;
 mod export;
+mod favorites;
 mod lots;
 pub(crate) mod push;
 mod setup;
 mod social;
 mod users;
 pub(crate) mod webhooks;
+mod zones;
 
 // Re-import handler functions so the router can reference them unqualified.
 use auth::{forgot_password, login, refresh_token, register, reset_password};
@@ -81,6 +83,8 @@ use webhooks::{
     create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook,
 };
 use export::{admin_export_bookings_csv, admin_export_users_csv};
+use favorites::{add_favorite, list_favorites, remove_favorite};
+use zones::{create_zone, delete_zone, list_zones};
 
 /// User ID extracted from auth token
 #[derive(Clone)]
@@ -189,6 +193,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/lots/{lot_id}/slots/{slot_id}",
             put(update_slot).delete(delete_slot),
         )
+        // Zones (admin-only CRUD, nested under lots)
+        .route(
+            "/api/v1/lots/{lot_id}/zones",
+            get(list_zones).post(create_zone),
+        )
+        .route(
+            "/api/v1/lots/{lot_id}/zones/{zone_id}",
+            delete(delete_zone),
+        )
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
             "/api/v1/bookings/{id}",
@@ -199,6 +212,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/vehicles/{id}", put(update_vehicle).delete(delete_vehicle))
         // Credits
         .route("/api/v1/user/credits", get(get_user_credits))
+        // Favorites (user-authenticated)
+        .route(
+            "/api/v1/user/favorites",
+            get(list_favorites).post(add_favorite),
+        )
+        .route("/api/v1/user/favorites/{slot_id}", delete(remove_favorite))
         // Admin-only: update Impressum settings
         .route(
             "/api/v1/admin/impressum",
