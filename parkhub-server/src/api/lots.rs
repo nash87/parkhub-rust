@@ -9,11 +9,11 @@ use chrono::Utc;
 use uuid::Uuid;
 use validator::Validate;
 
+use parkhub_common::models::{SlotPosition, SlotType};
 use parkhub_common::{
     ApiResponse, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo,
     PricingRate, SlotStatus,
 };
-use parkhub_common::models::{SlotPosition, SlotType};
 
 use crate::requests::{parse_lot_status, CreateParkingLotRequest, UpdateParkingLotRequest};
 
@@ -24,7 +24,9 @@ use parkhub_common::UserRole;
 // Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub(crate) async fn list_lots(State(state): State<SharedState>) -> Json<ApiResponse<Vec<ParkingLot>>> {
+pub(crate) async fn list_lots(
+    State(state): State<SharedState>,
+) -> Json<ApiResponse<Vec<ParkingLot>>> {
     let state = state.read().await;
 
     match state.db.list_parking_lots().await {

@@ -1,16 +1,12 @@
 //! Authentication handlers: login, register, token refresh, password management.
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, Json};
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
 
 use parkhub_common::{
-    ApiResponse, AuthTokens, LoginRequest, LoginResponse, RegisterRequest, RefreshTokenRequest,
+    ApiResponse, AuthTokens, LoginRequest, LoginResponse, RefreshTokenRequest, RegisterRequest,
     User, UserPreferences, UserRole,
 };
 
@@ -18,7 +14,9 @@ use crate::audit::{AuditEntry, AuditEventType};
 use crate::db::Session;
 use crate::email;
 
-use super::{generate_access_token, hash_password, hash_password_simple, verify_password, SharedState};
+use super::{
+    generate_access_token, hash_password, hash_password_simple, verify_password, SharedState,
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Request types

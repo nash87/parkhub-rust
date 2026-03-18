@@ -74,8 +74,7 @@ impl DemoState {
     pub fn mark_reset_complete(&mut self) {
         let now = Utc::now();
         self.last_reset_at = Some(now);
-        self.next_scheduled_reset =
-            Some(now + chrono::Duration::hours(AUTO_RESET_INTERVAL_HOURS));
+        self.next_scheduled_reset = Some(now + chrono::Duration::hours(AUTO_RESET_INTERVAL_HOURS));
         self.reset_in_progress = false;
     }
 }
