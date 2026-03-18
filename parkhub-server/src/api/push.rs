@@ -164,6 +164,7 @@ pub(crate) async fn unsubscribe(
 ///
 /// This is a placeholder that logs the attempt. Replace with the `web-push`
 /// crate for real Web Push Protocol delivery.
+#[allow(dead_code)]
 pub async fn send_push_notification(
     db: &crate::db::Database,
     user_id: &Uuid,
