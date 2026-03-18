@@ -102,6 +102,9 @@ slint = { version = "1.15", default-features = false, features = [
 # System tray support
 tray-icon = { version = "0.21", optional = true }
 once_cell = "1.21.3"
+reqwest.workspace = true
+hmac = "0.12"
+url = "2"
 regex = "1.12.3"
 rust-embed = "8.11.0"
 mime_guess = "2.0.5"
