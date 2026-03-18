@@ -1961,6 +1961,7 @@ impl Database {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use parkhub_common::models::{SlotFeature, SlotPosition, SlotStatus, SlotType};
     use tempfile::tempdir;
 
     fn test_config(path: PathBuf, encrypted: bool) -> DatabaseConfig {
@@ -2092,5 +2093,436 @@ mod tests {
             db.get_push_subscriptions_by_user(&other_user).await.unwrap().len(),
             1
         );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WEBHOOK CRUD
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_webhook_crud() {
+        let dir = tempdir().unwrap();
+        let config = test_config(dir.path().to_path_buf(), false);
+        let db = Database::open(config).unwrap();
+
+        // Empty initially
+        let all = db.list_webhooks().await.unwrap();
+        assert!(all.is_empty());
+
+        // Create two webhooks
+        let wh1 = Webhook {
+            id: Uuid::new_v4(),
+            url: "https://example.com/hooks/parking".to_string(),
+            secret: "sec_abc123".to_string(),
+            events: vec!["booking.created".into(), "booking.cancelled".into()],
+            active: true,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let wh2 = Webhook {
+            id: Uuid::new_v4(),
+            url: "https://other.io/webhooks".to_string(),
+            secret: "sec_xyz789".to_string(),
+            events: vec!["slot.status_changed".into()],
+            active: false,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        db.save_webhook(&wh1).await.unwrap();
+        db.save_webhook(&wh2).await.unwrap();
+
+        // List returns both
+        let all = db.list_webhooks().await.unwrap();
+        assert_eq!(all.len(), 2);
+
+        // Get by ID
+        let fetched = db.get_webhook(&wh1.id.to_string()).await.unwrap().unwrap();
+        assert_eq!(fetched.url, "https://example.com/hooks/parking");
+        assert_eq!(fetched.events.len(), 2);
+        assert!(fetched.active);
+
+        // Get non-existent returns None
+        let missing = db.get_webhook(&Uuid::new_v4().to_string()).await.unwrap();
+        assert!(missing.is_none());
+
+        // Delete first webhook
+        let deleted = db.delete_webhook(&wh1.id.to_string()).await.unwrap();
+        assert!(deleted);
+
+        // Second delete of same ID returns false
+        let deleted_again = db.delete_webhook(&wh1.id.to_string()).await.unwrap();
+        assert!(!deleted_again);
+
+        // Only wh2 remains
+        let remaining = db.list_webhooks().await.unwrap();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, wh2.id);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ZONE CRUD
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_zone_crud() {
+        let dir = tempdir().unwrap();
+        let config = test_config(dir.path().to_path_buf(), false);
+        let db = Database::open(config).unwrap();
+
+        let lot_a = Uuid::new_v4();
+        let lot_b = Uuid::new_v4();
+
+        // No zones initially
+        let zones = db.list_zones_by_lot(&lot_a.to_string()).await.unwrap();
+        assert!(zones.is_empty());
+
+        // Create zones in lot_a
+        let z1 = Zone {
+            id: Uuid::new_v4(),
+            lot_id: lot_a,
+            name: "Level A".to_string(),
+            description: Some("Ground floor, near entrance".to_string()),
+            color: Some("#4CAF50".to_string()),
+            created_at: Utc::now(),
+        };
+        let z2 = Zone {
+            id: Uuid::new_v4(),
+            lot_id: lot_a,
+            name: "VIP Section".to_string(),
+            description: None,
+            color: Some("#FFD700".to_string()),
+            created_at: Utc::now(),
+        };
+        // Zone in a different lot
+        let z3 = Zone {
+            id: Uuid::new_v4(),
+            lot_id: lot_b,
+            name: "Basement B1".to_string(),
+            description: Some("Underground level".to_string()),
+            color: None,
+            created_at: Utc::now(),
+        };
+
+        db.save_zone(&z1).await.unwrap();
+        db.save_zone(&z2).await.unwrap();
+        db.save_zone(&z3).await.unwrap();
+
+        // List by lot_a -> 2
+        let zones_a = db.list_zones_by_lot(&lot_a.to_string()).await.unwrap();
+        assert_eq!(zones_a.len(), 2);
+        let names: Vec<&str> = zones_a.iter().map(|z| z.name.as_str()).collect();
+        assert!(names.contains(&"Level A"));
+        assert!(names.contains(&"VIP Section"));
+
+        // List by lot_b -> 1
+        let zones_b = db.list_zones_by_lot(&lot_b.to_string()).await.unwrap();
+        assert_eq!(zones_b.len(), 1);
+        assert_eq!(zones_b[0].name, "Basement B1");
+
+        // Delete z1 from lot_a
+        let deleted = db
+            .delete_zone(&lot_a.to_string(), &z1.id.to_string())
+            .await
+            .unwrap();
+        assert!(deleted);
+
+        // Delete non-existent zone returns false
+        let no_delete = db
+            .delete_zone(&lot_a.to_string(), &Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(!no_delete);
+
+        // Only z2 remains in lot_a
+        let zones_a = db.list_zones_by_lot(&lot_a.to_string()).await.unwrap();
+        assert_eq!(zones_a.len(), 1);
+        assert_eq!(zones_a[0].name, "VIP Section");
+
+        // lot_b untouched
+        assert_eq!(
+            db.list_zones_by_lot(&lot_b.to_string()).await.unwrap().len(),
+            1
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUDIT LOG
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_audit_log() {
+        let dir = tempdir().unwrap();
+        let config = test_config(dir.path().to_path_buf(), false);
+        let db = Database::open(config).unwrap();
+
+        // Empty initially
+        let entries = db.list_audit_log(10).await.unwrap();
+        assert!(entries.is_empty());
+
+        let user_id = Uuid::new_v4();
+
+        // Insert entries with staggered timestamps so ordering is deterministic
+        let base = Utc::now();
+        let e1 = AuditLogEntry {
+            id: Uuid::new_v4(),
+            timestamp: base - chrono::Duration::seconds(30),
+            event_type: "user.login".to_string(),
+            user_id: Some(user_id),
+            username: Some("alice".to_string()),
+            details: Some("Login from 192.168.1.10".to_string()),
+        };
+        let e2 = AuditLogEntry {
+            id: Uuid::new_v4(),
+            timestamp: base - chrono::Duration::seconds(20),
+            event_type: "booking.created".to_string(),
+            user_id: Some(user_id),
+            username: Some("alice".to_string()),
+            details: Some("Booked slot A-12 for 2h".to_string()),
+        };
+        let e3 = AuditLogEntry {
+            id: Uuid::new_v4(),
+            timestamp: base - chrono::Duration::seconds(10),
+            event_type: "admin.reset".to_string(),
+            user_id: None,
+            username: None,
+            details: Some("Demo data reset triggered".to_string()),
+        };
+        let e4 = AuditLogEntry {
+            id: Uuid::new_v4(),
+            timestamp: base,
+            event_type: "user.logout".to_string(),
+            user_id: Some(user_id),
+            username: Some("alice".to_string()),
+            details: None,
+        };
+
+        db.save_audit_log(&e1).await.unwrap();
+        db.save_audit_log(&e2).await.unwrap();
+        db.save_audit_log(&e3).await.unwrap();
+        db.save_audit_log(&e4).await.unwrap();
+
+        // List all 4
+        let all = db.list_audit_log(100).await.unwrap();
+        assert_eq!(all.len(), 4);
+
+        // Most recent first
+        assert_eq!(all[0].event_type, "user.logout");
+        assert_eq!(all[1].event_type, "admin.reset");
+        assert_eq!(all[2].event_type, "booking.created");
+        assert_eq!(all[3].event_type, "user.login");
+
+        // Limit truncates
+        let limited = db.list_audit_log(2).await.unwrap();
+        assert_eq!(limited.len(), 2);
+        assert_eq!(limited[0].event_type, "user.logout");
+        assert_eq!(limited[1].event_type, "admin.reset");
+
+        // Verify entry fields
+        let login = &all[3];
+        assert_eq!(login.user_id, Some(user_id));
+        assert_eq!(login.username.as_deref(), Some("alice"));
+        assert_eq!(
+            login.details.as_deref(),
+            Some("Login from 192.168.1.10")
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CLEAR ALL DATA — new tables included
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_clear_all_data_includes_new_tables() {
+        let dir = tempdir().unwrap();
+        let config = test_config(dir.path().to_path_buf(), false);
+        let db = Database::open(config).unwrap();
+
+        // Populate webhooks
+        let wh = Webhook {
+            id: Uuid::new_v4(),
+            url: "https://hooks.test/a".to_string(),
+            secret: "s".to_string(),
+            events: vec!["booking.created".into()],
+            active: true,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        db.save_webhook(&wh).await.unwrap();
+
+        // Populate zones
+        let lot_id = Uuid::new_v4();
+        let zone = Zone {
+            id: Uuid::new_v4(),
+            lot_id,
+            name: "Zone-1".to_string(),
+            description: None,
+            color: None,
+            created_at: Utc::now(),
+        };
+        db.save_zone(&zone).await.unwrap();
+
+        // Populate favorites
+        let fav = Favorite {
+            user_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            lot_id,
+            created_at: Utc::now(),
+        };
+        db.save_favorite(&fav).await.unwrap();
+
+        // Populate audit log
+        let entry = AuditLogEntry {
+            id: Uuid::new_v4(),
+            timestamp: Utc::now(),
+            event_type: "test.event".to_string(),
+            user_id: None,
+            username: None,
+            details: None,
+        };
+        db.save_audit_log(&entry).await.unwrap();
+
+        // Verify data exists
+        assert_eq!(db.list_webhooks().await.unwrap().len(), 1);
+        assert_eq!(
+            db.list_zones_by_lot(&lot_id.to_string()).await.unwrap().len(),
+            1
+        );
+        assert_eq!(
+            db.list_favorites_by_user(&fav.user_id.to_string())
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(db.list_audit_log(10).await.unwrap().len(), 1);
+
+        // Clear everything
+        db.clear_all_data().await.unwrap();
+
+        // All new tables must be empty
+        assert!(db.list_webhooks().await.unwrap().is_empty());
+        assert!(db
+            .list_zones_by_lot(&lot_id.to_string())
+            .await
+            .unwrap()
+            .is_empty());
+        assert!(db
+            .list_favorites_by_user(&fav.user_id.to_string())
+            .await
+            .unwrap()
+            .is_empty());
+        assert!(db.list_audit_log(10).await.unwrap().is_empty());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DELETE PARKING SLOT
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_delete_parking_slot() {
+        let dir = tempdir().unwrap();
+        let config = test_config(dir.path().to_path_buf(), false);
+        let db = Database::open(config).unwrap();
+
+        let lot_id = Uuid::new_v4();
+        let floor_id = Uuid::new_v4();
+
+        let slot1 = ParkingSlot {
+            id: Uuid::new_v4(),
+            lot_id,
+            floor_id,
+            slot_number: 1,
+            row: 0,
+            column: 0,
+            slot_type: SlotType::Standard,
+            status: SlotStatus::Available,
+            current_booking: None,
+            features: vec![SlotFeature::NearExit, SlotFeature::WellLit],
+            position: SlotPosition {
+                x: 10.0,
+                y: 20.0,
+                width: 3.0,
+                height: 5.0,
+                rotation: 0.0,
+            },
+        };
+        let slot2 = ParkingSlot {
+            id: Uuid::new_v4(),
+            lot_id,
+            floor_id,
+            slot_number: 2,
+            row: 0,
+            column: 1,
+            slot_type: SlotType::Electric,
+            status: SlotStatus::Available,
+            current_booking: None,
+            features: vec![SlotFeature::ChargingStation],
+            position: SlotPosition {
+                x: 14.0,
+                y: 20.0,
+                width: 3.0,
+                height: 5.0,
+                rotation: 0.0,
+            },
+        };
+
+        db.save_parking_slot(&slot1).await.unwrap();
+        db.save_parking_slot(&slot2).await.unwrap();
+
+        // Both slots exist
+        assert!(db
+            .get_parking_slot(&slot1.id.to_string())
+            .await
+            .unwrap()
+            .is_some());
+        assert!(db
+            .get_parking_slot(&slot2.id.to_string())
+            .await
+            .unwrap()
+            .is_some());
+        let by_lot = db.list_slots_by_lot(&lot_id.to_string()).await.unwrap();
+        assert_eq!(by_lot.len(), 2);
+
+        // Delete slot1
+        let removed = db
+            .delete_parking_slot(&slot1.id.to_string())
+            .await
+            .unwrap();
+        assert!(removed);
+
+        // slot1 gone from primary table
+        assert!(db
+            .get_parking_slot(&slot1.id.to_string())
+            .await
+            .unwrap()
+            .is_none());
+
+        // slot1 gone from index (lot query returns only slot2)
+        let by_lot = db.list_slots_by_lot(&lot_id.to_string()).await.unwrap();
+        assert_eq!(by_lot.len(), 1);
+        assert_eq!(by_lot[0].id, slot2.id);
+
+        // slot2 unaffected
+        let s2 = db
+            .get_parking_slot(&slot2.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(s2.slot_number, 2);
+
+        // Deleting non-existent slot returns false
+        let no_op = db
+            .delete_parking_slot(&Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(!no_op);
+
+        // Double-delete returns false
+        let again = db
+            .delete_parking_slot(&slot1.id.to_string())
+            .await
+            .unwrap();
+        assert!(!again);
     }
 }
