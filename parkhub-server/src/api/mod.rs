@@ -62,6 +62,7 @@ mod bookings;
 mod credits;
 mod export;
 mod lots;
+pub(crate) mod push;
 mod setup;
 mod social;
 mod users;
@@ -158,7 +159,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/setup", post(setup::setup_init))
         // Public occupancy display (no auth)
         .route("/api/v1/public/occupancy", get(public_occupancy))
-        .route("/api/v1/public/display", get(public_display));
+        .route("/api/v1/public/display", get(public_display))
+        // VAPID public key (no auth — frontend needs it before login)
+        .route("/api/v1/push/vapid-key", get(push::get_vapid_key));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
@@ -322,6 +325,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             put(update_webhook).delete(delete_webhook),
         )
         .route("/api/v1/webhooks/{id}/test", post(test_webhook))
+        // Push notifications
+        .route("/api/v1/push/subscribe", post(push::subscribe))
+        .route("/api/v1/push/unsubscribe", delete(push::unsubscribe))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
