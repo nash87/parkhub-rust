@@ -136,9 +136,10 @@ pub(crate) async fn login(
         );
     }
 
-    AuditEntry::new(AuditEventType::LoginSuccess)
+    let audit = AuditEntry::new(AuditEventType::LoginSuccess)
         .user(user.id, &user.username)
         .log();
+    audit.persist(&state_guard.db).await;
 
     // Create response — never send password_hash to clients
     let mut response_user = user;
@@ -251,9 +252,23 @@ pub(crate) async fn register(
         );
     }
 
-    AuditEntry::new(AuditEventType::UserCreated)
+    let audit = AuditEntry::new(AuditEventType::UserCreated)
         .user(user.id, &user.username)
         .log();
+    audit.persist(&state_guard.db).await;
+
+    // Dispatch webhook for user creation
+    {
+        let state_clone = state.clone();
+        let payload = serde_json::json!({
+            "user_id": user.id,
+            "username": user.username,
+        });
+        tokio::spawn(async move {
+            crate::api::webhooks::dispatch_webhook_event(&state_clone, "user.created", payload)
+                .await;
+        });
+    }
 
     // Create session using configured timeout (converted from minutes to hours, minimum 1h)
     let session_hours = (state_guard.config.session_timeout_minutes as i64).max(60) / 60;

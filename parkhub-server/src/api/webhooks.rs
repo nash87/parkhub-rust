@@ -550,7 +550,6 @@ fn compute_signature(secret: &str, body: &str) -> String {
 /// Delivery failures are logged but not retried.
 ///
 /// Call from any async handler that has access to `SharedState`.
-#[allow(dead_code)]
 pub async fn dispatch_webhook_event(
     state: &SharedState,
     event_type: &str,
