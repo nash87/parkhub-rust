@@ -1082,7 +1082,9 @@ async fn create_booking(
     // Deduct credits if enabled and user is not admin
     if credits_enabled && !is_admin_user {
         booking_user.credits_balance -= credits_per_booking;
-        let _ = state_guard.db.save_user(&booking_user).await;
+        if let Err(e) = state_guard.db.save_user(&booking_user).await {
+            tracing::warn!("Failed to save user credit deduction: {e}");
+        }
         let tx = CreditTransaction {
             id: Uuid::new_v4(),
             user_id: auth_user.user_id,
@@ -1093,7 +1095,9 @@ async fn create_booking(
             granted_by: None,
             created_at: Utc::now(),
         };
-        let _ = state_guard.db.save_credit_transaction(&tx).await;
+        if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+            tracing::warn!("Failed to save credit transaction: {e}");
+        }
     }
 
     // Fetch user details for audit log and confirmation email
@@ -1271,7 +1275,9 @@ async fn cancel_booking(
         {
             if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
                 user.credits_balance += credits_per_booking;
-                let _ = state_guard.db.save_user(&user).await;
+                if let Err(e) = state_guard.db.save_user(&user).await {
+                    tracing::warn!("Failed to save user credit refund: {e}");
+                }
                 let tx = CreditTransaction {
                     id: Uuid::new_v4(),
                     user_id: auth_user.user_id,
@@ -1282,7 +1288,9 @@ async fn cancel_booking(
                     granted_by: None,
                     created_at: Utc::now(),
                 };
-                let _ = state_guard.db.save_credit_transaction(&tx).await;
+                if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+                    tracing::warn!("Failed to save credit transaction: {e}");
+                }
             }
         }
     }
@@ -1978,7 +1986,9 @@ async fn update_impressum(
     for field in IMPRESSUM_FIELDS {
         if let Some(serde_json::Value::String(value)) = payload.get(*field) {
             let key = format!("impressum_{}", field);
-            let _ = state_guard.db.set_setting(&key, value).await;
+            if let Err(e) = state_guard.db.set_setting(&key, value).await {
+                tracing::warn!("Failed to save impressum setting {key}: {e}");
+            }
         }
     }
 
@@ -4421,13 +4431,15 @@ async fn calendar_events(
     {
         for a in absences {
             let start = chrono::NaiveDate::parse_from_str(&a.start_date, "%Y-%m-%d")
-                .map(|d| d.and_hms_opt(0, 0, 0).unwrap())
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
                 .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
             let end = chrono::NaiveDate::parse_from_str(&a.end_date, "%Y-%m-%d")
-                .map(|d| d.and_hms_opt(23, 59, 59).unwrap())
+                .ok()
+                .and_then(|d| d.and_hms_opt(23, 59, 59))
                 .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
 
-            if let (Ok(start_dt), Ok(end_dt)) = (start, end) {
+            if let (Some(start_dt), Some(end_dt)) = (start, end) {
                 // Filter by date range
                 if let Some(from) = from_date {
                     if end_dt.date_naive() < from {

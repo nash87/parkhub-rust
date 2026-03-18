@@ -486,7 +486,9 @@ pub(crate) async fn reset_password(
     // Check token expiry
     if token_data.expires_at < Utc::now() {
         // Clean up expired token
-        let _ = state_guard.db.set_setting(&settings_key, "").await;
+        if let Err(e) = state_guard.db.set_setting(&settings_key, "").await {
+            tracing::warn!("Failed to clean up expired reset token: {e}");
+        }
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
@@ -557,7 +559,9 @@ pub(crate) async fn reset_password(
     }
 
     // Invalidate the token by deleting it (write empty string as tombstone)
-    let _ = state_guard.db.set_setting(&settings_key, "").await;
+    if let Err(e) = state_guard.db.set_setting(&settings_key, "").await {
+        tracing::warn!("Failed to invalidate reset token: {e}");
+    }
 
     // Invalidate all existing sessions for this user — a password change must
     // force re-authentication on every device.
