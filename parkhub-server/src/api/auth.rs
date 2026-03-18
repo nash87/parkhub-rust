@@ -143,7 +143,7 @@ pub(crate) async fn login(
         .log();
 
     // Create response — never send password_hash to clients
-    let mut response_user = user.clone();
+    let mut response_user = user;
     response_user.password_hash = String::new();
 
     (
@@ -275,7 +275,7 @@ pub(crate) async fn register(
     }
 
     // Create response — never send password_hash to clients
-    let mut response_user = user.clone();
+    let mut response_user = user;
     response_user.password_hash = String::new();
 
     (
