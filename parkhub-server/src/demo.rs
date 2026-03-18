@@ -2,8 +2,10 @@
 //!
 //! Activated by the `DEMO_MODE=true` environment variable (read once at startup).
 //! State is kept in-memory — ephemeral by design for free-tier hosting.
+//! Supports actual database reset and scheduled auto-reset every 6 hours.
 
 use axum::{extract::ConnectInfo, http::StatusCode, response::IntoResponse, Json};
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -13,6 +15,7 @@ use std::time::{Duration, Instant};
 const TIMER_DURATION_SECS: u64 = 1800; // 30 minutes
 const VOTE_THRESHOLD: usize = 3;
 const VIEWER_TIMEOUT_SECS: u64 = 300; // 5 minutes
+pub const AUTO_RESET_INTERVAL_HOURS: i64 = 6;
 
 /// In-memory demo state (cheap, ephemeral — resets on restart).
 #[derive(Debug)]
@@ -21,6 +24,12 @@ pub struct DemoState {
     started_at: Instant,
     votes: HashMap<String, Instant>,
     viewers: HashMap<String, Instant>,
+    /// When the last full data reset occurred (None = never / fresh start)
+    pub last_reset_at: Option<DateTime<Utc>>,
+    /// When the next scheduled auto-reset will fire
+    pub next_scheduled_reset: Option<DateTime<Utc>>,
+    /// True while a reset is in progress (prevents concurrent resets)
+    pub reset_in_progress: bool,
 }
 
 impl DemoState {
@@ -28,11 +37,19 @@ impl DemoState {
         let enabled = std::env::var("DEMO_MODE")
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
+        let now = Utc::now();
         Self {
             enabled,
             started_at: Instant::now(),
             votes: HashMap::new(),
             viewers: HashMap::new(),
+            last_reset_at: if enabled { Some(now) } else { None },
+            next_scheduled_reset: if enabled {
+                Some(now + chrono::Duration::hours(AUTO_RESET_INTERVAL_HOURS))
+            } else {
+                None
+            },
+            reset_in_progress: false,
         }
     }
 
@@ -46,9 +63,20 @@ impl DemoState {
         self.viewers.retain(|_, ts| *ts > cutoff);
     }
 
-    fn reset(&mut self) {
+    /// Reset the in-memory timer and vote state.
+    /// Call `mark_reset_complete()` after the full DB reset finishes.
+    pub fn reset(&mut self) {
         self.started_at = Instant::now();
         self.votes.clear();
+    }
+
+    /// Mark a full data reset as complete — updates timestamps.
+    pub fn mark_reset_complete(&mut self) {
+        let now = Utc::now();
+        self.last_reset_at = Some(now);
+        self.next_scheduled_reset =
+            Some(now + chrono::Duration::hours(AUTO_RESET_INTERVAL_HOURS));
+        self.reset_in_progress = false;
     }
 }
 
@@ -64,6 +92,12 @@ struct DemoStatusResponse {
     timer: TimerInfo,
     votes: VoteInfo,
     viewers: usize,
+    /// ISO 8601 timestamp of last reset (null if never)
+    last_reset_at: Option<String>,
+    /// ISO 8601 timestamp of next scheduled auto-reset
+    next_scheduled_reset: Option<String>,
+    /// True while a reset is running
+    reset_in_progress: bool,
 }
 
 #[derive(Serialize)]
@@ -128,6 +162,9 @@ pub async fn demo_status(
             has_voted,
         },
         viewers: s.viewers.len(),
+        last_reset_at: s.last_reset_at.map(|t| t.to_rfc3339()),
+        next_scheduled_reset: s.next_scheduled_reset.map(|t| t.to_rfc3339()),
+        reset_in_progress: s.reset_in_progress,
     };
 
     Json(resp).into_response()

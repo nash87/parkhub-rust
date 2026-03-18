@@ -90,8 +90,9 @@ pub(crate) async fn check_admin(
     }
 }
 
-/// Create the API router with OpenAPI docs and metrics
-pub fn create_router(state: SharedState) -> Router {
+/// Create the API router with OpenAPI docs and metrics.
+/// Returns (router, demo_state) so the demo state can be used for scheduled resets.
+pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Initialize Prometheus metrics
     let metrics_handle = metrics::init_metrics();
 
@@ -284,6 +285,7 @@ pub fn create_router(state: SharedState) -> Router {
 
     // Demo mode routes (no auth, in-memory state)
     let demo_state = demo::new_demo_state();
+    let demo_state_ret = demo_state.clone();
     let demo_routes = Router::new()
         .route("/api/v1/demo/status", get(demo::demo_status))
         .route("/api/v1/demo/vote", post(demo::demo_vote))
@@ -294,7 +296,7 @@ pub fn create_router(state: SharedState) -> Router {
     // Clone handle for the closure
     let metrics_handle_clone = metrics_handle.clone();
 
-    Router::new()
+    let router = Router::new()
         .merge(public_routes)
         .merge(login_route)
         .merge(register_route)
@@ -365,7 +367,9 @@ pub fn create_router(state: SharedState) -> Router {
                 ])
                 .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
                 .allow_credentials(false),
-        )
+        );
+
+    (router, demo_state_ret)
 }
 
 /// Middleware that adds security-related response headers to every request.

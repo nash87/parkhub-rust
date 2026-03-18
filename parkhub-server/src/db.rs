@@ -301,6 +301,54 @@ impl Database {
         self.encryption_enabled
     }
 
+    /// Clear all data tables for demo reset. Preserves DB structure and settings.
+    /// Admin user must be re-created after calling this.
+    pub async fn clear_all_data(&self) -> Result<()> {
+        // Helper: drain a table by collecting keys first, then removing them.
+        // redb's borrow rules prevent removing while iterating.
+        macro_rules! drain_table {
+            ($txn:expr, $table:expr) => {{
+                let mut t = $txn.open_table($table)?;
+                let keys: Vec<String> = {
+                    let mut keys = Vec::new();
+                    let mut iter = t.iter()?;
+                    while let Some(entry) = iter.next() {
+                        let entry = entry?;
+                        keys.push(entry.0.value().to_string());
+                    }
+                    keys
+                };
+                for key in &keys {
+                    t.remove(key.as_str())?;
+                }
+            }};
+        }
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        drain_table!(write_txn, USERS);
+        drain_table!(write_txn, USERS_BY_USERNAME);
+        drain_table!(write_txn, USERS_BY_EMAIL);
+        drain_table!(write_txn, SESSIONS);
+        drain_table!(write_txn, BOOKINGS);
+        drain_table!(write_txn, PARKING_LOTS);
+        drain_table!(write_txn, PARKING_SLOTS);
+        drain_table!(write_txn, SLOTS_BY_LOT);
+        drain_table!(write_txn, VEHICLES);
+        drain_table!(write_txn, CREDIT_TRANSACTIONS);
+        drain_table!(write_txn, ABSENCES);
+        drain_table!(write_txn, WAITLIST);
+        drain_table!(write_txn, GUEST_BOOKINGS);
+        drain_table!(write_txn, SWAP_REQUESTS);
+        drain_table!(write_txn, RECURRING_BOOKINGS);
+        drain_table!(write_txn, ANNOUNCEMENTS);
+        drain_table!(write_txn, NOTIFICATIONS);
+        // Preserve SETTINGS table (encryption salt, setup status, etc.)
+        write_txn.commit()?;
+        info!("All data tables cleared for demo reset");
+        Ok(())
+    }
+
     /// Check if the database is fresh (no setup completed)
     pub async fn is_fresh(&self) -> Result<bool> {
         let db = self.inner.read().await;
