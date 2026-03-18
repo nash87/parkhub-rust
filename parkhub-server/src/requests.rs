@@ -249,7 +249,8 @@ pub struct CreateParkingLotRequest {
     #[validate(range(min = -180.0, max = 180.0, message = "Invalid longitude"))]
     pub longitude: Option<f64>,
 
-    /// Total number of parking slots to auto-generate
+    /// Total number of parking slots to auto-generate (defaults to 10)
+    #[serde(default = "default_total_slots")]
     #[validate(range(min = 1, max = 500, message = "Slots must be 1-500"))]
     pub total_slots: i32,
 
@@ -323,6 +324,10 @@ pub struct UpdateParkingLotRequest {
 
 fn default_currency() -> String {
     "EUR".to_string()
+}
+
+fn default_total_slots() -> i32 {
+    10
 }
 
 /// Parse a status string into a LotStatus enum.
