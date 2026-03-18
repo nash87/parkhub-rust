@@ -79,15 +79,13 @@ use auth::{forgot_password, login, refresh_token, register, reset_password};
 use credits::{
     admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits,
 };
+use export::{admin_export_bookings_csv, admin_export_users_csv};
+use favorites::{add_favorite, list_favorites, remove_favorite};
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
     update_lot, update_slot,
 };
-use webhooks::{
-    create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook,
-};
-use export::{admin_export_bookings_csv, admin_export_users_csv};
-use favorites::{add_favorite, list_favorites, remove_favorite};
+use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 use zones::{create_zone, delete_zone, list_zones};
 
 /// User ID extracted from auth token
@@ -192,7 +190,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/lots/{id}",
             get(get_lot).put(update_lot).delete(delete_lot),
         )
-        .route("/api/v1/lots/{id}/slots", get(get_lot_slots).post(create_slot))
+        .route(
+            "/api/v1/lots/{id}/slots",
+            get(get_lot_slots).post(create_slot),
+        )
         .route(
             "/api/v1/lots/{lot_id}/slots/{slot_id}",
             put(update_slot).delete(delete_slot),
@@ -204,10 +205,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/lots/{lot_id}/zones",
             get(list_zones).post(create_zone),
         )
-        .route(
-            "/api/v1/lots/{lot_id}/zones/{zone_id}",
-            delete(delete_zone),
-        )
+        .route("/api/v1/lots/{lot_id}/zones/{zone_id}", delete(delete_zone))
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
             "/api/v1/bookings/{id}",
@@ -217,9 +215,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
         // City codes must come before {id} to avoid parameter capture
         .route("/api/v1/vehicles/city-codes", get(vehicle_city_codes))
-        .route("/api/v1/vehicles/{id}", put(update_vehicle).delete(delete_vehicle))
+        .route(
+            "/api/v1/vehicles/{id}",
+            put(update_vehicle).delete(delete_vehicle),
+        )
         // Vehicle photos
-        .route("/api/v1/vehicles/{id}/photo", post(upload_vehicle_photo).get(get_vehicle_photo))
+        .route(
+            "/api/v1/vehicles/{id}/photo",
+            post(upload_vehicle_photo).get(get_vehicle_photo),
+        )
         // Credits
         .route("/api/v1/user/credits", get(get_user_credits))
         // Favorites (user-authenticated)
@@ -344,15 +348,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/admin/stats", get(admin_stats))
         .route("/api/v1/admin/reports", get(admin_reports))
         .route("/api/v1/admin/heatmap", get(admin_heatmap))
-        .route("/api/v1/admin/dashboard/charts", get(admin_dashboard_charts))
+        .route(
+            "/api/v1/admin/dashboard/charts",
+            get(admin_dashboard_charts),
+        )
         .route("/api/v1/admin/audit-log", get(admin_audit_log))
         // Team
         .route("/api/v1/team", get(team_list))
         // Admin-only: webhooks
-        .route(
-            "/api/v1/webhooks",
-            get(list_webhooks).post(create_webhook),
-        )
+        .route("/api/v1/webhooks", get(list_webhooks).post(create_webhook))
         .route(
             "/api/v1/webhooks/{id}",
             put(update_webhook).delete(delete_webhook),
@@ -1915,7 +1919,10 @@ async fn update_vehicle(
         tracing::error!("Failed to update vehicle: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update vehicle")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update vehicle",
+            )),
         );
     }
 
@@ -1939,7 +1946,12 @@ struct VehiclePhotoUpload {
 fn detect_image_mime(bytes: &[u8]) -> Option<&'static str> {
     if bytes.len() >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF {
         Some("image/jpeg")
-    } else if bytes.len() >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47 {
+    } else if bytes.len() >= 4
+        && bytes[0] == 0x89
+        && bytes[1] == 0x50
+        && bytes[2] == 0x4E
+        && bytes[3] == 0x47
+    {
         Some("image/png")
     } else {
         None
@@ -2096,7 +2108,10 @@ async fn get_vehicle_photo(
         Err(_) => {
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "Corrupt photo data")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "Corrupt photo data",
+                )),
             )
                 .into_response();
         }
@@ -2118,42 +2133,92 @@ async fn get_vehicle_photo(
 
 /// `GET /api/v1/vehicles/city-codes` — return a JSON map of the most common
 /// German licence-plate area codes to their city/district names.
-async fn vehicle_city_codes() -> Json<ApiResponse<std::collections::HashMap<&'static str, &'static str>>> {
+async fn vehicle_city_codes(
+) -> Json<ApiResponse<std::collections::HashMap<&'static str, &'static str>>> {
     // Top ~75 German Kfz-Kennzeichen area codes → city/district names.
     // Built once per call (tiny cost) to avoid the serde_json::json! recursion limit.
     let codes: std::collections::HashMap<&str, &str> = [
-        ("A", "Augsburg"), ("AA", "Aalen"), ("AB", "Aschaffenburg"),
-        ("AC", "Aachen"), ("AK", "Altenkirchen"),
-        ("B", "Berlin"), ("BA", "Bamberg"), ("BB", "Böblingen"),
-        ("BC", "Biberach"), ("BN", "Bonn"),
-        ("C", "Chemnitz"), ("CB", "Cottbus"), ("CE", "Celle"),
-        ("CO", "Coburg"), ("CW", "Calw"),
-        ("D", "Düsseldorf"), ("DA", "Darmstadt"), ("DD", "Dresden"),
-        ("DE", "Dessau"), ("DO", "Dortmund"), ("DU", "Duisburg"),
-        ("E", "Essen"), ("EM", "Emmendingen"), ("ER", "Erlangen"),
+        ("A", "Augsburg"),
+        ("AA", "Aalen"),
+        ("AB", "Aschaffenburg"),
+        ("AC", "Aachen"),
+        ("AK", "Altenkirchen"),
+        ("B", "Berlin"),
+        ("BA", "Bamberg"),
+        ("BB", "Böblingen"),
+        ("BC", "Biberach"),
+        ("BN", "Bonn"),
+        ("C", "Chemnitz"),
+        ("CB", "Cottbus"),
+        ("CE", "Celle"),
+        ("CO", "Coburg"),
+        ("CW", "Calw"),
+        ("D", "Düsseldorf"),
+        ("DA", "Darmstadt"),
+        ("DD", "Dresden"),
+        ("DE", "Dessau"),
+        ("DO", "Dortmund"),
+        ("DU", "Duisburg"),
+        ("E", "Essen"),
+        ("EM", "Emmendingen"),
+        ("ER", "Erlangen"),
         ("ES", "Esslingen"),
-        ("F", "Frankfurt"), ("FB", "Friedberg"), ("FN", "Friedrichshafen"),
-        ("FR", "Freiburg"), ("FT", "Frankenthal"),
-        ("G", "Gera"), ("GI", "Gießen"), ("GP", "Göppingen"),
+        ("F", "Frankfurt"),
+        ("FB", "Friedberg"),
+        ("FN", "Friedrichshafen"),
+        ("FR", "Freiburg"),
+        ("FT", "Frankenthal"),
+        ("G", "Gera"),
+        ("GI", "Gießen"),
+        ("GP", "Göppingen"),
         ("GÖ", "Göttingen"),
-        ("H", "Hannover"), ("HA", "Hagen"), ("HB", "Bremen"),
-        ("HD", "Heidelberg"), ("HH", "Hamburg"), ("HN", "Heilbronn"),
-        ("K", "Köln"), ("KA", "Karlsruhe"), ("KI", "Kiel"),
-        ("KN", "Konstanz"), ("KS", "Kassel"),
-        ("L", "Leipzig"), ("LB", "Ludwigsburg"), ("LU", "Ludwigshafen"),
-        ("M", "München"), ("MA", "Mannheim"), ("MD", "Magdeburg"),
-        ("MH", "Mülheim"), ("MK", "Märkischer Kreis"), ("MS", "Münster"),
-        ("N", "Nürnberg"), ("NE", "Neuss"),
-        ("OB", "Oberhausen"), ("OF", "Offenbach"), ("OL", "Oldenburg"),
+        ("H", "Hannover"),
+        ("HA", "Hagen"),
+        ("HB", "Bremen"),
+        ("HD", "Heidelberg"),
+        ("HH", "Hamburg"),
+        ("HN", "Heilbronn"),
+        ("K", "Köln"),
+        ("KA", "Karlsruhe"),
+        ("KI", "Kiel"),
+        ("KN", "Konstanz"),
+        ("KS", "Kassel"),
+        ("L", "Leipzig"),
+        ("LB", "Ludwigsburg"),
+        ("LU", "Ludwigshafen"),
+        ("M", "München"),
+        ("MA", "Mannheim"),
+        ("MD", "Magdeburg"),
+        ("MH", "Mülheim"),
+        ("MK", "Märkischer Kreis"),
+        ("MS", "Münster"),
+        ("N", "Nürnberg"),
+        ("NE", "Neuss"),
+        ("OB", "Oberhausen"),
+        ("OF", "Offenbach"),
+        ("OL", "Oldenburg"),
         ("OS", "Osnabrück"),
-        ("P", "Potsdam"), ("PB", "Paderborn"), ("PF", "Pforzheim"),
-        ("R", "Regensburg"), ("RE", "Recklinghausen"), ("RO", "Rosenheim"),
-        ("RS", "Remscheid"), ("RT", "Reutlingen"),
-        ("S", "Stuttgart"), ("SG", "Solingen"), ("SN", "Schwerin"),
-        ("SO", "Soest"), ("ST", "Steinfurt"),
-        ("UL", "Ulm"), ("UN", "Unna"),
-        ("W", "Wuppertal"), ("WI", "Wiesbaden"), ("WÜ", "Würzburg"),
-    ].into_iter().collect();
+        ("P", "Potsdam"),
+        ("PB", "Paderborn"),
+        ("PF", "Pforzheim"),
+        ("R", "Regensburg"),
+        ("RE", "Recklinghausen"),
+        ("RO", "Rosenheim"),
+        ("RS", "Remscheid"),
+        ("RT", "Reutlingen"),
+        ("S", "Stuttgart"),
+        ("SG", "Solingen"),
+        ("SN", "Schwerin"),
+        ("SO", "Soest"),
+        ("ST", "Steinfurt"),
+        ("UL", "Ulm"),
+        ("UN", "Unna"),
+        ("W", "Wuppertal"),
+        ("WI", "Wiesbaden"),
+        ("WÜ", "Würzburg"),
+    ]
+    .into_iter()
+    .collect();
     Json(ApiResponse::success(codes))
 }
 
@@ -2277,8 +2342,7 @@ async fn admin_dashboard_charts(
     let cutoff = now - Duration::days(30);
 
     // ── bookings_by_day (last 30 days) ──────────────────────────────────────
-    let mut by_day: std::collections::BTreeMap<String, usize> =
-        std::collections::BTreeMap::new();
+    let mut by_day: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
     // Pre-fill all 30 days so the chart has continuous x-axis
     for d in 0..30 {
         let date = (now - Duration::days(d)).format("%Y-%m-%d").to_string();
@@ -2298,8 +2362,7 @@ async fn admin_dashboard_charts(
     // ── bookings_by_lot ─────────────────────────────────────────────────────
     let lot_name_map: std::collections::HashMap<Uuid, String> =
         lots.iter().map(|l| (l.id, l.name.clone())).collect();
-    let mut by_lot: std::collections::HashMap<String, usize> =
-        std::collections::HashMap::new();
+    let mut by_lot: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for b in &bookings {
         let name = lot_name_map
             .get(&b.lot_id)
@@ -2361,8 +2424,7 @@ async fn admin_dashboard_charts(
     // ── top_users (top 10 by booking count) ─────────────────────────────────
     let user_name_map: std::collections::HashMap<Uuid, String> =
         users.iter().map(|u| (u.id, u.username.clone())).collect();
-    let mut by_user: std::collections::HashMap<String, usize> =
-        std::collections::HashMap::new();
+    let mut by_user: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for b in &bookings {
         let name = user_name_map
             .get(&b.user_id)
@@ -5284,7 +5346,10 @@ async fn admin_audit_log(
             tracing::error!("Failed to list audit log: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list audit log")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list audit log",
+                )),
             )
         }
     }
@@ -5408,14 +5473,14 @@ async fn change_password(
         tracing::error!("Failed to save user: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update password")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update password",
+            )),
         );
     }
 
-    (
-        StatusCode::OK,
-        Json(ApiResponse::success(())),
-    )
+    (StatusCode::OK, Json(ApiResponse::success(())))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -5449,11 +5514,7 @@ async fn user_calendar_ics(
 
     for b in &bookings {
         // Resolve lot name (best-effort)
-        let lot_name = match state_guard
-            .db
-            .get_parking_lot(&b.lot_id.to_string())
-            .await
-        {
+        let lot_name = match state_guard.db.get_parking_lot(&b.lot_id.to_string()).await {
             Ok(Some(l)) => l.name,
             _ => "Unknown Lot".to_string(),
         };
@@ -5507,7 +5568,10 @@ async fn public_occupancy(
             tracing::error!("Failed to list lots for occupancy: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to get occupancy")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to get occupancy",
+                )),
             );
         }
     };
@@ -5547,9 +5611,7 @@ async fn public_occupancy(
 }
 
 /// `GET /api/v1/public/display` — simplified HTML for parking displays
-async fn public_display(
-    State(state): State<SharedState>,
-) -> impl axum::response::IntoResponse {
+async fn public_display(State(state): State<SharedState>) -> impl axum::response::IntoResponse {
     let state_guard = state.read().await;
 
     let lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
