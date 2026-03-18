@@ -90,6 +90,11 @@ body {
   color: var(--color-surface-100);
 }
 
+p { line-height: 1.6; }
+
+/* ── Utilities ── */
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
 /* ── Glass card — signature component ── */
 .glass-card {
   background: rgba(255, 255, 255, 0.7);
@@ -165,6 +170,21 @@ body {
 
 .btn:focus-visible {
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.4);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-primary {
