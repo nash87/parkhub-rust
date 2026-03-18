@@ -49,8 +49,7 @@ const RECURRING_BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("r
 const ANNOUNCEMENTS: TableDefinition<&str, &[u8]> = TableDefinition::new("announcements");
 const NOTIFICATIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("notifications");
 const WEBHOOKS: TableDefinition<&str, &[u8]> = TableDefinition::new("webhooks");
-const PUSH_SUBSCRIPTIONS: TableDefinition<&str, &[u8]> =
-    TableDefinition::new("push_subscriptions");
+const PUSH_SUBSCRIPTIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("push_subscriptions");
 const ZONES: TableDefinition<&str, &[u8]> = TableDefinition::new("zones");
 const FAVORITES: TableDefinition<&str, &[u8]> = TableDefinition::new("favorites");
 const AUDIT_LOG: TableDefinition<&str, &[u8]> = TableDefinition::new("audit_log");
@@ -1739,7 +1738,10 @@ impl Database {
             table.insert(id.as_str(), data.as_slice())?;
         }
         write_txn.commit()?;
-        debug!("Saved push subscription {} for user {}", sub.id, sub.user_id);
+        debug!(
+            "Saved push subscription {} for user {}",
+            sub.id, sub.user_id
+        );
         Ok(())
     }
 
@@ -2084,13 +2086,23 @@ mod tests {
         assert_eq!(all.len(), 3);
 
         // Delete user_id subscriptions
-        let deleted = db.delete_push_subscriptions_by_user(&user_id).await.unwrap();
+        let deleted = db
+            .delete_push_subscriptions_by_user(&user_id)
+            .await
+            .unwrap();
         assert_eq!(deleted, 2);
 
         // user_id has none, other_user still has 1
-        assert!(db.get_push_subscriptions_by_user(&user_id).await.unwrap().is_empty());
+        assert!(db
+            .get_push_subscriptions_by_user(&user_id)
+            .await
+            .unwrap()
+            .is_empty());
         assert_eq!(
-            db.get_push_subscriptions_by_user(&other_user).await.unwrap().len(),
+            db.get_push_subscriptions_by_user(&other_user)
+                .await
+                .unwrap()
+                .len(),
             1
         );
     }
@@ -2241,7 +2253,10 @@ mod tests {
 
         // lot_b untouched
         assert_eq!(
-            db.list_zones_by_lot(&lot_b.to_string()).await.unwrap().len(),
+            db.list_zones_by_lot(&lot_b.to_string())
+                .await
+                .unwrap()
+                .len(),
             1
         );
     }
@@ -2322,10 +2337,7 @@ mod tests {
         let login = &all[3];
         assert_eq!(login.user_id, Some(user_id));
         assert_eq!(login.username.as_deref(), Some("alice"));
-        assert_eq!(
-            login.details.as_deref(),
-            Some("Login from 192.168.1.10")
-        );
+        assert_eq!(login.details.as_deref(), Some("Login from 192.168.1.10"));
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -2385,7 +2397,10 @@ mod tests {
         // Verify data exists
         assert_eq!(db.list_webhooks().await.unwrap().len(), 1);
         assert_eq!(
-            db.list_zones_by_lot(&lot_id.to_string()).await.unwrap().len(),
+            db.list_zones_by_lot(&lot_id.to_string())
+                .await
+                .unwrap()
+                .len(),
             1
         );
         assert_eq!(
@@ -2485,10 +2500,7 @@ mod tests {
         assert_eq!(by_lot.len(), 2);
 
         // Delete slot1
-        let removed = db
-            .delete_parking_slot(&slot1.id.to_string())
-            .await
-            .unwrap();
+        let removed = db.delete_parking_slot(&slot1.id.to_string()).await.unwrap();
         assert!(removed);
 
         // slot1 gone from primary table
@@ -2519,10 +2531,7 @@ mod tests {
         assert!(!no_op);
 
         // Double-delete returns false
-        let again = db
-            .delete_parking_slot(&slot1.id.to_string())
-            .await
-            .unwrap();
+        let again = db.delete_parking_slot(&slot1.id.to_string()).await.unwrap();
         assert!(!again);
     }
 }

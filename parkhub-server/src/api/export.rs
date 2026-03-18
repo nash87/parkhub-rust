@@ -50,7 +50,11 @@ pub(super) async fn admin_export_users_csv(
 ) -> impl IntoResponse {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-        return (status, [(header::CONTENT_TYPE, "text/plain")], msg.to_string());
+        return (
+            status,
+            [(header::CONTENT_TYPE, "text/plain")],
+            msg.to_string(),
+        );
     }
 
     let users = match state_guard.db.list_users().await {
@@ -101,7 +105,11 @@ pub(super) async fn admin_export_bookings_csv(
 ) -> impl IntoResponse {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-        return (status, [(header::CONTENT_TYPE, "text/plain")], msg.to_string());
+        return (
+            status,
+            [(header::CONTENT_TYPE, "text/plain")],
+            msg.to_string(),
+        );
     }
 
     let bookings = match state_guard.db.list_bookings().await {
@@ -121,11 +129,7 @@ pub(super) async fn admin_export_bookings_csv(
 
     for b in &bookings {
         // Resolve lot name (best-effort)
-        let lot_name = match state_guard
-            .db
-            .get_parking_lot(&b.lot_id.to_string())
-            .await
-        {
+        let lot_name = match state_guard.db.get_parking_lot(&b.lot_id.to_string()).await {
             Ok(Some(l)) => l.name,
             _ => b.lot_id.to_string(),
         };

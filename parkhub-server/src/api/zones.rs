@@ -116,7 +116,12 @@ pub(crate) async fn create_zone(
         );
     }
 
-    tracing::info!("Created zone '{}' ({}) in lot {}", zone.name, zone.id, lot_id);
+    tracing::info!(
+        "Created zone '{}' ({}) in lot {}",
+        zone.name,
+        zone.id,
+        lot_id
+    );
 
     (StatusCode::CREATED, Json(ApiResponse::success(zone)))
 }

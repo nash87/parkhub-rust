@@ -93,10 +93,7 @@ pub(crate) async fn add_favorite(
         tracing::error!("Failed to save favorite: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to add favorite",
-            )),
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to add favorite")),
         );
     }
 

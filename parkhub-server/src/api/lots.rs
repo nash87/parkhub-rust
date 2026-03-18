@@ -458,7 +458,11 @@ pub(crate) async fn create_slot(
     let state_guard = state.write().await;
 
     // Admin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -486,11 +490,27 @@ pub(crate) async fn create_slot(
         }
     };
 
-    let floor_id = lot.floors.first().map(|f| f.id).unwrap_or_else(Uuid::new_v4);
-    let existing_slots = state_guard.db.list_slots_by_lot(&lot_id).await.unwrap_or_default();
-    let next_number = existing_slots.iter().map(|s| s.slot_number).max().unwrap_or(0) + 1;
+    let floor_id = lot
+        .floors
+        .first()
+        .map(|f| f.id)
+        .unwrap_or_else(Uuid::new_v4);
+    let existing_slots = state_guard
+        .db
+        .list_slots_by_lot(&lot_id)
+        .await
+        .unwrap_or_default();
+    let next_number = existing_slots
+        .iter()
+        .map(|s| s.slot_number)
+        .max()
+        .unwrap_or(0)
+        + 1;
 
-    let slot_type_str = req.get("slot_type").and_then(|v| v.as_str()).unwrap_or("standard");
+    let slot_type_str = req
+        .get("slot_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("standard");
     let slot_type = match slot_type_str {
         "compact" => SlotType::Compact,
         "large" => SlotType::Large,
@@ -505,7 +525,10 @@ pub(crate) async fn create_slot(
         id: Uuid::new_v4(),
         lot_id: lot.id,
         floor_id,
-        slot_number: req.get("slot_number").and_then(|v| v.as_i64()).unwrap_or(next_number as i64) as i32,
+        slot_number: req
+            .get("slot_number")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(next_number as i64) as i32,
         row: ((next_number - 1) / 10) + 1,
         column: ((next_number - 1) % 10) + 1,
         slot_type,
@@ -542,7 +565,11 @@ pub(crate) async fn update_slot(
     let state_guard = state.write().await;
 
     // Admin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -557,7 +584,10 @@ pub(crate) async fn update_slot(
         Ok(Some(_)) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "Slot not found in this lot")),
+                Json(ApiResponse::error(
+                    "NOT_FOUND",
+                    "Slot not found in this lot",
+                )),
             );
         }
         Ok(None) => {
@@ -623,7 +653,11 @@ pub(crate) async fn delete_slot(
     let state_guard = state.write().await;
 
     // Admin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -639,7 +673,10 @@ pub(crate) async fn delete_slot(
         Ok(Some(_)) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "Slot not found in this lot")),
+                Json(ApiResponse::error(
+                    "NOT_FOUND",
+                    "Slot not found in this lot",
+                )),
             );
         }
         Ok(None) => {

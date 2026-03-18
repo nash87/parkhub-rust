@@ -38,9 +38,7 @@ pub struct SetupRequest {
 }
 
 /// `GET /api/v1/setup/status` — check if initial setup is completed
-pub async fn setup_status(
-    State(state): State<SharedState>,
-) -> Json<ApiResponse<SetupStatus>> {
+pub async fn setup_status(State(state): State<SharedState>) -> Json<ApiResponse<SetupStatus>> {
     let state = state.read().await;
     let is_fresh = state.db.is_fresh().await.unwrap_or(true);
     let stats = state.db.stats().await.unwrap_or_default();
@@ -64,7 +62,10 @@ pub async fn setup_init(
     if !state_guard.db.is_fresh().await.unwrap_or(false) {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("SETUP_COMPLETED", "Setup already completed")),
+            Json(ApiResponse::error(
+                "SETUP_COMPLETED",
+                "Setup already completed",
+            )),
         );
     }
 
@@ -72,13 +73,19 @@ pub async fn setup_init(
     if req.admin_username.len() < 3 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("VALIDATION_ERROR", "Username must be at least 3 characters")),
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                "Username must be at least 3 characters",
+            )),
         );
     }
     if req.admin_password.len() < 8 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("VALIDATION_ERROR", "Password must be at least 8 characters")),
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                "Password must be at least 8 characters",
+            )),
         );
     }
 
@@ -89,7 +96,10 @@ pub async fn setup_init(
             tracing::error!("Failed to hash password: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to hash password")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to hash password",
+                )),
             );
         }
     };
@@ -125,13 +135,22 @@ pub async fn setup_init(
         tracing::error!("Failed to create admin user: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create admin user")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create admin user",
+            )),
         );
     }
 
     // Save settings
-    let _ = state_guard.db.set_setting("company_name", &req.company_name).await;
-    let _ = state_guard.db.set_setting("use_case", req.use_case.as_deref().unwrap_or("corporate")).await;
+    let _ = state_guard
+        .db
+        .set_setting("company_name", &req.company_name)
+        .await;
+    let _ = state_guard
+        .db
+        .set_setting("use_case", req.use_case.as_deref().unwrap_or("corporate"))
+        .await;
     let _ = state_guard.db.set_setting("credits_enabled", "true").await;
     let _ = state_guard.db.set_setting("credits_per_booking", "1").await;
 
@@ -159,7 +178,10 @@ pub async fn setup_init(
         tracing::error!("Failed to create admin session: {}", e);
     }
 
-    tracing::info!("Setup completed: admin user '{}' created", req.admin_username);
+    tracing::info!(
+        "Setup completed: admin user '{}' created",
+        req.admin_username
+    );
 
     (
         StatusCode::OK,

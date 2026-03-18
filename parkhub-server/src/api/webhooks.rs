@@ -153,9 +153,7 @@ fn is_private_ip(ip: &IpAddr) -> bool {
             // 0.0.0.0
             || v4.is_unspecified()
         }
-        IpAddr::V6(v6) => {
-            v6.is_loopback() || v6.is_unspecified()
-        }
+        IpAddr::V6(v6) => v6.is_loopback() || v6.is_unspecified(),
     }
 }
 
@@ -194,14 +192,18 @@ pub(crate) async fn list_webhooks(
 
     match state_guard.db.list_webhooks().await {
         Ok(webhooks) => {
-            let responses: Vec<WebhookResponse> = webhooks.iter().map(WebhookResponse::from).collect();
+            let responses: Vec<WebhookResponse> =
+                webhooks.iter().map(WebhookResponse::from).collect();
             (StatusCode::OK, Json(ApiResponse::success(responses)))
         }
         Err(e) => {
             tracing::error!("Failed to list webhooks: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list webhooks")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list webhooks",
+                )),
             )
         }
     }
@@ -276,7 +278,10 @@ pub(crate) async fn create_webhook(
         tracing::error!("Failed to save webhook: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create webhook")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create webhook",
+            )),
         );
     }
 
@@ -346,10 +351,7 @@ pub(crate) async fn update_webhook(
             if !VALID_EVENTS.contains(&event.as_str()) {
                 return (
                     StatusCode::BAD_REQUEST,
-                    Json(ApiResponse::error(
-                        "VALIDATION_ERROR",
-                        "Invalid event type",
-                    )),
+                    Json(ApiResponse::error("VALIDATION_ERROR", "Invalid event type")),
                 );
             }
         }
@@ -535,8 +537,8 @@ pub(crate) async fn test_webhook(
 /// Compute HMAC-SHA256 signature of the body using the webhook secret.
 fn compute_signature(secret: &str, body: &str) -> String {
     type HmacSha256 = Hmac<Sha256>;
-    let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-        .expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC can take key of any size");
     mac.update(body.as_bytes());
     let result = mac.finalize();
     format!("sha256={}", hex::encode(result.into_bytes()))
