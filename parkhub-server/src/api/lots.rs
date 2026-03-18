@@ -443,3 +443,227 @@ pub(crate) async fn get_lot_slots(
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slot CRUD (admin only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// `POST /api/v1/lots/{lot_id}/slots` — create a new slot in a lot
+pub(crate) async fn create_slot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(lot_id): Path<String>,
+    Json(req): Json<serde_json::Value>,
+) -> (StatusCode, Json<ApiResponse<ParkingSlot>>) {
+    let state_guard = state.write().await;
+
+    // Admin check
+    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+            );
+        }
+    }
+
+    // Verify lot exists
+    let lot = match state_guard.db.get_parking_lot(&lot_id).await {
+        Ok(Some(l)) => l,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Parking lot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let floor_id = lot.floors.first().map(|f| f.id).unwrap_or_else(Uuid::new_v4);
+    let existing_slots = state_guard.db.list_slots_by_lot(&lot_id).await.unwrap_or_default();
+    let next_number = existing_slots.iter().map(|s| s.slot_number).max().unwrap_or(0) + 1;
+
+    let slot_type_str = req.get("slot_type").and_then(|v| v.as_str()).unwrap_or("standard");
+    let slot_type = match slot_type_str {
+        "compact" => SlotType::Compact,
+        "large" => SlotType::Large,
+        "handicap" => SlotType::Handicap,
+        "electric" => SlotType::Electric,
+        "motorcycle" => SlotType::Motorcycle,
+        "vip" => SlotType::Vip,
+        _ => SlotType::Standard,
+    };
+
+    let slot = ParkingSlot {
+        id: Uuid::new_v4(),
+        lot_id: lot.id,
+        floor_id,
+        slot_number: req.get("slot_number").and_then(|v| v.as_i64()).unwrap_or(next_number as i64) as i32,
+        row: ((next_number - 1) / 10) + 1,
+        column: ((next_number - 1) % 10) + 1,
+        slot_type,
+        status: SlotStatus::Available,
+        current_booking: None,
+        features: Vec::new(),
+        position: SlotPosition {
+            x: (((next_number - 1) % 10) as f32) * 3.0,
+            y: (((next_number - 1) / 10) as f32) * 5.0,
+            width: 2.5,
+            height: 5.0,
+            rotation: 0.0,
+        },
+    };
+
+    if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+        tracing::error!("Failed to save slot: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to create slot")),
+        );
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(slot)))
+}
+
+/// `PUT /api/v1/lots/{lot_id}/slots/{slot_id}` — update a slot
+pub(crate) async fn update_slot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path((lot_id, slot_id)): Path<(String, String)>,
+    Json(req): Json<serde_json::Value>,
+) -> (StatusCode, Json<ApiResponse<ParkingSlot>>) {
+    let state_guard = state.write().await;
+
+    // Admin check
+    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+            );
+        }
+    }
+
+    let mut slot = match state_guard.db.get_parking_slot(&slot_id).await {
+        Ok(Some(s)) if s.lot_id.to_string() == lot_id => s,
+        Ok(Some(_)) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found in this lot")),
+            );
+        }
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Update fields if provided
+    if let Some(status) = req.get("status").and_then(|v| v.as_str()) {
+        slot.status = match status {
+            "available" => SlotStatus::Available,
+            "occupied" => SlotStatus::Occupied,
+            "reserved" => SlotStatus::Reserved,
+            "maintenance" => SlotStatus::Maintenance,
+            "disabled" => SlotStatus::Disabled,
+            _ => slot.status,
+        };
+    }
+
+    if let Some(slot_type) = req.get("slot_type").and_then(|v| v.as_str()) {
+        slot.slot_type = match slot_type {
+            "compact" => SlotType::Compact,
+            "large" => SlotType::Large,
+            "handicap" => SlotType::Handicap,
+            "electric" => SlotType::Electric,
+            "motorcycle" => SlotType::Motorcycle,
+            "vip" => SlotType::Vip,
+            _ => SlotType::Standard,
+        };
+    }
+
+    if let Some(number) = req.get("slot_number").and_then(|v| v.as_i64()) {
+        slot.slot_number = number as i32;
+    }
+
+    if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+        tracing::error!("Failed to update slot: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update slot")),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(slot)))
+}
+
+/// `DELETE /api/v1/lots/{lot_id}/slots/{slot_id}` — delete a slot
+pub(crate) async fn delete_slot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path((lot_id, slot_id)): Path<(String, String)>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.write().await;
+
+    // Admin check
+    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+            );
+        }
+    }
+
+    // Verify slot belongs to lot
+    match state_guard.db.get_parking_slot(&slot_id).await {
+        Ok(Some(s)) if s.lot_id.to_string() == lot_id => {}
+        Ok(Some(_)) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found in this lot")),
+            );
+        }
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    }
+
+    if let Err(e) = state_guard.db.delete_parking_slot(&slot_id).await {
+        tracing::error!("Failed to delete slot: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to delete slot")),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}

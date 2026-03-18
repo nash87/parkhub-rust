@@ -809,6 +809,42 @@ impl Database {
         Ok(())
     }
 
+    /// Delete a single parking slot by ID.
+    pub async fn delete_parking_slot(&self, id: &str) -> Result<bool> {
+        let id_suffix = format!(":{}", id);
+        let db = self.inner.write().await;
+
+        // First collect index keys to remove (read pass)
+        let keys_to_remove: Vec<String> = {
+            let read_txn = db.begin_read()?;
+            let idx_table = read_txn.open_table(SLOTS_BY_LOT)?;
+            let mut keys = Vec::new();
+            for entry in idx_table.iter()? {
+                let (key, _) = entry?;
+                if key.value().ends_with(&id_suffix) {
+                    keys.push(key.value().to_string());
+                }
+            }
+            keys
+        };
+
+        // Write pass: remove slot + index entries
+        let write_txn = db.begin_write()?;
+        let removed = {
+            let mut table = write_txn.open_table(PARKING_SLOTS)?;
+            let r = table.remove(id)?.is_some();
+            r
+        };
+        if removed && !keys_to_remove.is_empty() {
+            let mut idx_table = write_txn.open_table(SLOTS_BY_LOT)?;
+            for key in &keys_to_remove {
+                idx_table.remove(key.as_str())?;
+            }
+        }
+        write_txn.commit()?;
+        Ok(removed)
+    }
+
     /// Save multiple parking slots in a single write transaction (batch insert).
     pub async fn save_parking_slots_batch(&self, slots: &[ParkingSlot]) -> Result<()> {
         if slots.is_empty() {
