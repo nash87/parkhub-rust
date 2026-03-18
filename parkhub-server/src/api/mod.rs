@@ -539,7 +539,7 @@ async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse<Ser
         .db
         .stats()
         .await
-        .unwrap_or_else(|_| crate::db::DatabaseStats {
+        .unwrap_or(crate::db::DatabaseStats {
             users: 0,
             bookings: 0,
             parking_lots: 0,
@@ -892,7 +892,7 @@ async fn create_booking(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "DURATION_TOO_SHORT",
-                &format!("Minimum booking duration is {} hour(s)", min_hours),
+                format!("Minimum booking duration is {} hour(s)", min_hours),
             )),
         );
     }
@@ -905,7 +905,7 @@ async fn create_booking(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "DURATION_TOO_LONG",
-                &format!("Maximum booking duration is {} hour(s)", max_hours),
+                format!("Maximum booking duration is {} hour(s)", max_hours),
             )),
         );
     }
@@ -933,7 +933,7 @@ async fn create_booking(
                 StatusCode::UNPROCESSABLE_ENTITY,
                 Json(ApiResponse::error(
                     "MAX_BOOKINGS_REACHED",
-                    &format!("Maximum of {} booking(s) per day reached", max_per_day),
+                    format!("Maximum of {} booking(s) per day reached", max_per_day),
                 )),
             );
         }
@@ -976,16 +976,14 @@ async fn create_booking(
     let is_admin_user =
         booking_user.role == UserRole::Admin || booking_user.role == UserRole::SuperAdmin;
 
-    if credits_enabled && !is_admin_user {
-        if booking_user.credits_balance < credits_per_booking {
-            return (
-                StatusCode::UNPROCESSABLE_ENTITY,
-                Json(ApiResponse::error(
-                    "INSUFFICIENT_CREDITS",
-                    "Not enough credits for this booking",
-                )),
-            );
-        }
+    if credits_enabled && !is_admin_user && booking_user.credits_balance < credits_per_booking {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(
+                "INSUFFICIENT_CREDITS",
+                "Not enough credits for this booking",
+            )),
+        );
     }
 
     // Calculate end time and pricing
@@ -1339,6 +1337,7 @@ async fn cancel_booking(
 /// - Parking lot name and slot number
 /// - Start / end time and duration
 /// - Itemised pricing: base price, VAT at 19% (German standard), total
+#[allow(clippy::format_in_format_args)]
 async fn get_booking_invoice(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1804,6 +1803,7 @@ pub(super) fn generate_access_token() -> String {
 ///
 /// Returns `Err` on the (extremely unlikely) event that hashing fails so the
 /// caller can propagate a proper HTTP 500 instead of panicking.
+#[allow(clippy::result_large_err)]
 pub(super) fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
@@ -2591,7 +2591,7 @@ async fn admin_update_settings(
                 StatusCode::BAD_REQUEST,
                 Json(ApiResponse::error(
                     "INVALID_KEY",
-                    &format!("Unknown setting: {}", key),
+                    format!("Unknown setting: {}", key),
                 )),
             );
         }
@@ -4508,7 +4508,7 @@ async fn admin_stats(
         .db
         .stats()
         .await
-        .unwrap_or_else(|_| crate::db::DatabaseStats {
+        .unwrap_or(crate::db::DatabaseStats {
             users: 0,
             bookings: 0,
             parking_lots: 0,

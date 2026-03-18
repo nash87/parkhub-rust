@@ -265,7 +265,7 @@ impl Database {
                         let write_txn = db.begin_write()?;
                         {
                             let mut table = write_txn.open_table(SETTINGS)?;
-                            table.insert(SETTING_ENCRYPTION_SALT, hex::encode(&salt).as_str())?;
+                            table.insert(SETTING_ENCRYPTION_SALT, hex::encode(salt).as_str())?;
                         }
                         write_txn.commit()?;
 
