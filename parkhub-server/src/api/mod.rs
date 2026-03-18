@@ -60,6 +60,7 @@ pub(crate) mod admin;
 mod auth;
 mod bookings;
 mod credits;
+mod export;
 mod lots;
 mod setup;
 mod social;
@@ -78,6 +79,7 @@ use lots::{
 use webhooks::{
     create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook,
 };
+use export::{admin_export_bookings_csv, admin_export_users_csv};
 
 /// User ID extracted from auth token
 #[derive(Clone)]
@@ -153,7 +155,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Setup wizard — only works before initial setup is completed
         .route("/api/v1/setup/status", get(setup::setup_status))
-        .route("/api/v1/setup", post(setup::setup_init));
+        .route("/api/v1/setup", post(setup::setup_init))
+        // Public occupancy display (no auth)
+        .route("/api/v1/public/occupancy", get(public_occupancy))
+        .route("/api/v1/public/display", get(public_display));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
@@ -163,6 +168,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
+        .route(
+            "/api/v1/users/me/password",
+            axum::routing::patch(change_password),
+        )
+        // iCal export for user's bookings
+        .route("/api/v1/user/calendar.ics", get(user_calendar_ics))
         // Admin-only: retrieve any user by ID
         .route("/api/v1/users/{id}", get(get_user))
         .route("/api/v1/lots", get(list_lots).post(create_lot))
@@ -226,6 +237,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
+        // Admin-only: CSV exports
+        .route(
+            "/api/v1/admin/users/export-csv",
+            get(admin_export_users_csv),
+        )
+        .route(
+            "/api/v1/admin/bookings/export-csv",
+            get(admin_export_bookings_csv),
+        )
         // Absences (user-scoped)
         .route("/api/v1/absences", get(list_absences).post(create_absence))
         .route("/api/v1/absences/team", get(list_team_absences))
@@ -4727,4 +4747,310 @@ async fn admin_heatmap(
         .collect();
 
     (StatusCode::OK, Json(ApiResponse::success(cells)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHANGE PASSWORD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for password change
+#[derive(Debug, Deserialize)]
+struct ChangePasswordRequest {
+    current_password: String,
+    new_password: String,
+}
+
+/// `PATCH /api/v1/users/me/password` — authenticated user changes their own password
+async fn change_password(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<ChangePasswordRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    // Validate new password length
+    if req.new_password.len() < 8 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                "New password must be at least 8 characters",
+            )),
+        );
+    }
+
+    let state_guard = state.read().await;
+    let user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Verify current password
+    if !verify_password(&req.current_password, &user.password_hash) {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "INVALID_PASSWORD",
+                "Current password is incorrect",
+            )),
+        );
+    }
+
+    // Hash new password
+    let new_hash = match hash_password_simple(&req.new_password) {
+        Ok(h) => h,
+        Err(e) => {
+            tracing::error!("Password hashing failed: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Update user
+    let mut updated_user = user;
+    updated_user.password_hash = new_hash;
+    updated_user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&updated_user).await {
+        tracing::error!("Failed to save user: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update password")),
+        );
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(())),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// iCAL EXPORT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/user/calendar.ics` — export user's bookings as iCal
+async fn user_calendar_ics(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> impl axum::response::IntoResponse {
+    let state_guard = state.read().await;
+
+    let bookings = match state_guard
+        .db
+        .list_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(b) => b,
+        Err(e) => {
+            tracing::error!("Failed to list bookings for iCal: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Failed to generate calendar".to_string(),
+            );
+        }
+    };
+
+    let mut ical = String::from("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ParkHub//EN\r\n");
+
+    for b in &bookings {
+        // Resolve lot name (best-effort)
+        let lot_name = match state_guard
+            .db
+            .get_parking_lot(&b.lot_id.to_string())
+            .await
+        {
+            Ok(Some(l)) => l.name,
+            _ => "Unknown Lot".to_string(),
+        };
+
+        let dtstart = b.start_time.format("%Y%m%dT%H%M%SZ");
+        let dtend = b.end_time.format("%Y%m%dT%H%M%SZ");
+
+        ical.push_str("BEGIN:VEVENT\r\n");
+        ical.push_str(&format!("UID:{}@parkhub\r\n", b.id));
+        ical.push_str(&format!("DTSTART:{}\r\n", dtstart));
+        ical.push_str(&format!("DTEND:{}\r\n", dtend));
+        ical.push_str(&format!(
+            "SUMMARY:Parking - {} - Slot {}\r\n",
+            lot_name, b.slot_number
+        ));
+        ical.push_str("END:VEVENT\r\n");
+    }
+
+    ical.push_str("END:VCALENDAR\r\n");
+
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/calendar; charset=utf-8")],
+        ical,
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUBLIC OCCUPANCY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Occupancy info for a single lot
+#[derive(Debug, Serialize)]
+struct LotOccupancy {
+    lot_id: String,
+    lot_name: String,
+    total_slots: i32,
+    occupied_slots: i32,
+    available_slots: i32,
+}
+
+/// `GET /api/v1/public/occupancy` — public JSON occupancy data
+async fn public_occupancy(
+    State(state): State<SharedState>,
+) -> (StatusCode, Json<ApiResponse<Vec<LotOccupancy>>>) {
+    let state_guard = state.read().await;
+
+    let lots = match state_guard.db.list_parking_lots().await {
+        Ok(l) => l,
+        Err(e) => {
+            tracing::error!("Failed to list lots for occupancy: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to get occupancy")),
+            );
+        }
+    };
+
+    // Count active bookings per lot
+    let now = Utc::now();
+    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
+
+    let mut occupancy = Vec::with_capacity(lots.len());
+    for lot in &lots {
+        let occupied = bookings
+            .iter()
+            .filter(|b| {
+                b.lot_id == lot.id
+                    && b.start_time <= now
+                    && b.end_time >= now
+                    && matches!(
+                        b.status,
+                        parkhub_common::BookingStatus::Confirmed
+                            | parkhub_common::BookingStatus::Active
+                    )
+            })
+            .count() as i32;
+
+        let available = (lot.total_slots - occupied).max(0);
+
+        occupancy.push(LotOccupancy {
+            lot_id: lot.id.to_string(),
+            lot_name: lot.name.clone(),
+            total_slots: lot.total_slots,
+            occupied_slots: occupied,
+            available_slots: available,
+        });
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(occupancy)))
+}
+
+/// `GET /api/v1/public/display` — simplified HTML for parking displays
+async fn public_display(
+    State(state): State<SharedState>,
+) -> impl axum::response::IntoResponse {
+    let state_guard = state.read().await;
+
+    let lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
+    let now = Utc::now();
+    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
+
+    let mut html = String::from(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="30">
+<title>ParkHub — Parking Availability</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem; background: #1a1a2e; color: #eee; }
+  h1 { text-align: center; margin-bottom: 2rem; }
+  .lots { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
+  .lot { background: #16213e; border-radius: 12px; padding: 1.5rem 2rem; min-width: 220px; text-align: center; }
+  .lot-name { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem; }
+  .available { font-size: 3rem; font-weight: 700; }
+  .available.green { color: #4ade80; }
+  .available.yellow { color: #facc15; }
+  .available.red { color: #f87171; }
+  .label { font-size: 0.9rem; color: #94a3b8; }
+</style>
+</head>
+<body>
+<h1>Parking Availability</h1>
+<div class="lots">
+"#,
+    );
+
+    for lot in &lots {
+        let occupied = bookings
+            .iter()
+            .filter(|b| {
+                b.lot_id == lot.id
+                    && b.start_time <= now
+                    && b.end_time >= now
+                    && matches!(
+                        b.status,
+                        parkhub_common::BookingStatus::Confirmed
+                            | parkhub_common::BookingStatus::Active
+                    )
+            })
+            .count() as i32;
+
+        let available = (lot.total_slots - occupied).max(0);
+        let pct = if lot.total_slots > 0 {
+            (available as f64 / lot.total_slots as f64) * 100.0
+        } else {
+            0.0
+        };
+        let color_class = if pct > 30.0 {
+            "green"
+        } else if pct > 10.0 {
+            "yellow"
+        } else {
+            "red"
+        };
+
+        html.push_str(&format!(
+            r#"<div class="lot">
+  <div class="lot-name">{}</div>
+  <div class="available {}">{}</div>
+  <div class="label">of {} available</div>
+</div>
+"#,
+            lot.name, color_class, available, lot.total_slots
+        ));
+    }
+
+    html.push_str("</div>\n</body>\n</html>\n");
+
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        html,
+    )
 }
