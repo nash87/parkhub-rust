@@ -209,6 +209,9 @@ export default {
       viewers: 'viewers',
       voteReset: 'Vote to Reset',
       votesNeeded: '{{current}}/{{needed}} votes',
+      resetting: 'Resetting demo data...',
+      lastReset: 'Last reset',
+      nextReset: 'Next reset',
     },
     common: {
       refresh: 'Refresh',

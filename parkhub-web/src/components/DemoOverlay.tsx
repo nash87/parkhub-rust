@@ -1,8 +1,25 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Sparkle, Eye, Timer, ArrowsClockwise, CaretDown, CaretUp } from '@phosphor-icons/react';
 import { api, type DemoStatus } from '../api/client';
+
+function formatRelativeTime(isoString: string): string {
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
+}
+
+function formatCountdown(isoString: string): string {
+  const diff = Math.max(0, Math.floor((new Date(isoString).getTime() - Date.now()) / 1000));
+  if (diff === 0) return 'now';
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
 
 export function DemoOverlay() {
   const { t } = useTranslation();
@@ -10,6 +27,7 @@ export function DemoOverlay() {
   const [enabled, setEnabled] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [localTimer, setLocalTimer] = useState(0);
+  const [, setTick] = useState(0); // force re-render for relative times
 
   // Check if demo mode is enabled
   useEffect(() => {
@@ -41,14 +59,15 @@ export function DemoOverlay() {
     return () => clearInterval(interval);
   }, [enabled]);
 
-  // Local countdown
+  // Local countdown + relative time refresh
   useEffect(() => {
-    if (!enabled || localTimer <= 0) return;
+    if (!enabled) return;
     const interval = setInterval(() => {
       setLocalTimer(t => Math.max(0, t - 1));
+      setTick(t => t + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [enabled, localTimer > 0]);
+  }, [enabled]);
 
   const handleVote = useCallback(() => {
     api.voteDemoReset().then(res => {
@@ -57,6 +76,18 @@ export function DemoOverlay() {
       }
     });
   }, []);
+
+  const lastReset = useMemo(
+    () => demo?.last_reset_at ? formatRelativeTime(demo.last_reset_at) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [demo?.last_reset_at, localTimer]
+  );
+
+  const nextReset = useMemo(
+    () => demo?.next_scheduled_reset ? formatCountdown(demo.next_scheduled_reset) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [demo?.next_scheduled_reset, localTimer]
+  );
 
   if (!enabled || !demo) return null;
 
@@ -122,12 +153,34 @@ export function DemoOverlay() {
 
                 <button
                   onClick={handleVote}
-                  disabled={demo.has_voted}
+                  disabled={demo.has_voted || demo.reset_in_progress}
                   className="btn btn-sm btn-primary w-full disabled:opacity-50"
                 >
-                  <ArrowsClockwise weight="bold" className="w-3.5 h-3.5" />
-                  {demo.has_voted ? t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold }) : t('demo.voteReset')}
+                  <ArrowsClockwise weight="bold" className={`w-3.5 h-3.5 ${demo.reset_in_progress ? 'animate-spin' : ''}`} />
+                  {demo.reset_in_progress
+                    ? t('demo.resetting', 'Resetting...')
+                    : demo.has_voted
+                      ? t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold })
+                      : t('demo.voteReset')}
                 </button>
+
+                {/* Auto-reset info */}
+                {(lastReset || nextReset) && (
+                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-[11px] text-surface-400 space-y-0.5">
+                    {lastReset && (
+                      <div className="flex justify-between">
+                        <span>{t('demo.lastReset', 'Last reset')}</span>
+                        <span className="font-mono">{lastReset}</span>
+                      </div>
+                    )}
+                    {nextReset && (
+                      <div className="flex justify-between">
+                        <span>{t('demo.nextReset', 'Next reset')}</span>
+                        <span className="font-mono">{nextReset}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
