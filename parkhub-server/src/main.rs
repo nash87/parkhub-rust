@@ -14,22 +14,33 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 mod api;
+#[allow(dead_code)]
 mod audit;
 mod config;
 mod db;
 mod demo;
 mod discovery;
 mod email;
+#[allow(dead_code)]
 mod error;
+#[allow(dead_code)]
 mod health;
+#[allow(dead_code)]
 mod jwt;
+#[allow(dead_code)]
 mod metrics;
+#[allow(dead_code)]
 mod openapi;
+#[allow(dead_code)]
 mod rate_limit;
+#[allow(dead_code)]
 mod requests;
+#[allow(dead_code)]
 mod static_files;
+#[allow(dead_code)]
 mod tls;
 pub mod utils;
+#[allow(dead_code)]
 mod validation;
 
 use config::ServerConfig;

@@ -1858,6 +1858,7 @@ pub(super) fn verify_password(password: &str, hash: &str) -> bool {
 
 /// DDG § 5 Impressum fields stored as settings keys with "impressum_" prefix
 #[derive(Debug, Serialize, Deserialize, Default)]
+#[allow(dead_code)]
 pub struct ImpressumData {
     pub provider_name: String,
     pub provider_legal_form: String,
@@ -4171,6 +4172,7 @@ async fn admin_cancel_guest_booking(
 
 /// Request body for quick booking
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct QuickBookRequest {
     lot_id: Uuid,
     date: Option<String>,
