@@ -142,7 +142,9 @@ pub(crate) async fn admin_grant_credits(
         granted_by: Some(auth_user.user_id),
         created_at: Utc::now(),
     };
-    let _ = state_guard.db.save_credit_transaction(&tx).await;
+    if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+        tracing::warn!("Failed to save credit grant transaction: {e}");
+    }
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
@@ -192,7 +194,9 @@ pub(crate) async fn admin_refill_all_credits(
                 granted_by: Some(auth_user.user_id),
                 created_at: now,
             };
-            let _ = state_guard.db.save_credit_transaction(&tx).await;
+            if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+                tracing::warn!("Failed to save refill transaction for user {}: {e}", user.id);
+            }
             refilled += 1;
         }
     }
@@ -273,7 +277,9 @@ pub(crate) async fn admin_update_user_quota(
         granted_by: Some(auth_user.user_id),
         created_at: Utc::now(),
     };
-    let _ = state_guard.db.save_credit_transaction(&tx).await;
+    if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+        tracing::warn!("Failed to save quota adjustment transaction: {e}");
+    }
 
     tracing::info!(
         "Admin {} updated quota for user {} from {} to {}",

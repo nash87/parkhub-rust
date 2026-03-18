@@ -68,7 +68,7 @@ jobs:
           key: cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings || true
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
   test:
     name: Cargo Test
@@ -90,7 +90,7 @@ jobs:
           key: cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test --workspace || true
+        run: cargo test --workspace
 
   build-linux:
     name: Build Linux

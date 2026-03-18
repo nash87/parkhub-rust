@@ -518,7 +518,9 @@ async fn main() -> Result<()> {
                                     granted_by: None,
                                     created_at: now,
                                 };
-                                let _ = state_guard.db.save_credit_transaction(&tx).await;
+                                if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+                                    tracing::warn!("Failed to save monthly refill transaction: {e}");
+                                }
                                 refilled += 1;
                             }
                         }

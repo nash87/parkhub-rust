@@ -957,7 +957,7 @@ impl Database {
 
         let old_username = user.username.clone();
         let old_email = user.email.clone();
-        let anon_id = format!("deleted-{}", &user_id.chars().take(8).collect::<String>());
+        let anon_id = format!("deleted-{}", Uuid::new_v4());
         let anon_email = format!("{}@deleted.invalid", anon_id);
         let anon_password = format!("DELETED_{}", Uuid::new_v4());
 
@@ -994,7 +994,9 @@ impl Database {
             .await
             .unwrap_or_default();
         for vehicle in vehicles {
-            let _ = self.delete_vehicle(&vehicle.id.to_string()).await;
+            if let Err(e) = self.delete_vehicle(&vehicle.id.to_string()).await {
+                tracing::warn!("GDPR: failed to delete vehicle {}: {e}", vehicle.id);
+            }
         }
 
         // Scrub license plate from bookings (keep records for accounting, strip PII)
@@ -1004,7 +1006,9 @@ impl Database {
             .unwrap_or_default();
         for mut booking in bookings {
             booking.vehicle.license_plate = "[DELETED]".to_string();
-            let _ = self.save_booking(&booking).await;
+            if let Err(e) = self.save_booking(&booking).await {
+                tracing::warn!("GDPR: failed to scrub booking {}: {e}", booking.id);
+            }
         }
 
         info!(
