@@ -239,6 +239,8 @@ body {
 .input:focus {
   border-color: var(--color-primary-500);
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: -1px;
 }
 
 .dark .input {
@@ -318,6 +320,18 @@ body {
 *:focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
+}
+
+/* ── Reduced motion — WCAG 2.1 Level A ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Smooth page transitions ── */
