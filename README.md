@@ -182,6 +182,19 @@ cargo build --release --package parkhub-server --no-default-features --features 
 ./target/release/parkhub-server --headless --unattended --port 8080
 ```
 
+### Live Demo
+
+Try ParkHub without installing anything:
+
+| | |
+|---|---|
+| **URL** | [parkhub-rust-demo.onrender.com](https://parkhub-rust-demo.onrender.com) |
+| **Login** | `admin@parkhub-demo.de` / `ParkHub2026!` |
+| **Auto-reset** | Every 6 hours (all data reset to demo state) |
+| **Manual reset** | Vote with other viewers, or reset solo when alone |
+
+> The demo runs on Render free tier and may take ~30 seconds to wake from sleep.
+
 The binary serves the full React frontend — no web server or reverse proxy needed.
 
 ---

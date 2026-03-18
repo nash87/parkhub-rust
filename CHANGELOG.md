@@ -7,7 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [1.3.0] - 2026-03-18
+
+### Added
+- **Demo auto-reset**: Scheduled auto-reset every 6 hours when `DEMO_MODE=true` — clears all data and re-seeds
+- **Demo reset button**: Manual reset via `POST /api/v1/demo/reset` with actual database wipe + re-seed
+- **Demo status tracking**: `GET /api/v1/demo/status` now returns `last_reset_at`, `next_scheduled_reset`, `reset_in_progress`
+- **DemoOverlay countdown**: Frontend shows time since last reset, countdown to next auto-reset, and reset-in-progress indicator
+- **Database clear method**: `Database::clear_all_data()` for full table drain while preserving settings
+
+### Fixed
+- **Silent error ignores**: Replaced all `let _ =` patterns with `tracing::warn` logging for credit transactions, GDPR operations, and settings saves
+- **Absence date parsing**: Replaced `unwrap()` with safe `Option` chaining in absence date filtering (prevented potential panics)
+- **CI pipeline**: Removed `|| true` from clippy and test steps in Gitea CI (errors were silently ignored)
+- **Duplicate scheduling**: Removed duplicate auto-release job in PHP scheduler (ran twice every 5 min)
+- **GDPR export route**: Fixed broken `/users/me/export` route pointing to wrong method name (PHP)
+- **Swap race condition**: Wrapped slot swap in `DB::transaction` with `lockForUpdate` (PHP)
+- **Admin pagination**: Added pagination to admin bookings endpoint to prevent memory exhaustion (PHP)
+
+### Improved
+- **Dead code warnings**: Reduced from 46 to 0 by adding `#[allow(dead_code)]` on scaffolding modules
+- **Auth response**: Removed unnecessary `User::clone()` in login/register responses
+- **iCal import**: Added date validation and title truncation to prevent crashes on malformed input (PHP)
+- **Demo reset error handling**: Returns HTTP 500 on failure instead of silently swallowing exceptions (PHP)
 
 ---
 
