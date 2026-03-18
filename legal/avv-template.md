@@ -108,6 +108,17 @@ Dieser AVV unterliegt dem Recht der Bundesrepublik Deutschland.
 
 ---
 
+### Prüfrechte (Art. 28 Abs. 3 lit. h DSGVO)
+
+Der Verantwortliche hat das Recht, die Einhaltung der in diesem Vertrag genannten
+Pflichten durch den Auftragsverarbeiter zu überprüfen — auch durch Vor-Ort-Inspektionen
+oder durch einen beauftragten unabhängigen Prüfer. Der Auftragsverarbeiter unterstützt
+den Verantwortlichen bei der Durchführung von Prüfungen und stellt die erforderlichen
+Informationen zum Nachweis der Einhaltung der in Art. 28 DSGVO niedergelegten Pflichten
+zur Verfügung.
+
+---
+
 **Ort, Datum, Unterschrift Verantwortlicher:**
 _____________________________________________
 
