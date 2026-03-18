@@ -2534,4 +2534,798 @@ mod tests {
         let again = db.delete_parking_slot(&slot1.id.to_string()).await.unwrap();
         assert!(!again);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // USER CRUD
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    fn make_user(username: &str, email: &str) -> User {
+        let now = Utc::now();
+        User {
+            id: Uuid::new_v4(),
+            username: username.to_string(),
+            email: email.to_string(),
+            password_hash: "$argon2id$v=19$m=65536,t=3,p=4$fake".to_string(),
+            name: format!("{} User", username),
+            picture: None,
+            phone: None,
+            role: parkhub_common::models::UserRole::User,
+            created_at: now,
+            updated_at: now,
+            last_login: None,
+            preferences: parkhub_common::models::UserPreferences::default(),
+            is_active: true,
+            credits_balance: 0,
+            credits_monthly_quota: 40,
+            credits_last_refilled: None,
+        }
+    }
+
+    fn make_vehicle(user_id: Uuid, plate: &str) -> Vehicle {
+        Vehicle {
+            id: Uuid::new_v4(),
+            user_id,
+            license_plate: plate.to_string(),
+            make: Some("Tesla".to_string()),
+            model: Some("Model 3".to_string()),
+            color: Some("White".to_string()),
+            vehicle_type: parkhub_common::models::VehicleType::Electric,
+            is_default: true,
+            created_at: Utc::now(),
+        }
+    }
+
+    fn make_booking(user_id: Uuid, lot_id: Uuid, vehicle: &Vehicle) -> Booking {
+        let now = Utc::now();
+        Booking {
+            id: Uuid::new_v4(),
+            user_id,
+            lot_id,
+            slot_id: Uuid::new_v4(),
+            slot_number: 1,
+            floor_name: "Ground".to_string(),
+            vehicle: vehicle.clone(),
+            start_time: now,
+            end_time: now + chrono::Duration::hours(2),
+            status: parkhub_common::models::BookingStatus::Confirmed,
+            pricing: parkhub_common::models::BookingPricing {
+                base_price: 5.0,
+                discount: 0.0,
+                tax: 0.95,
+                total: 5.95,
+                currency: "EUR".to_string(),
+                payment_status: parkhub_common::models::PaymentStatus::Paid,
+                payment_method: Some("card".to_string()),
+            },
+            created_at: now,
+            updated_at: now,
+            check_in_time: None,
+            check_out_time: None,
+            qr_code: None,
+            notes: None,
+        }
+    }
+
+    fn make_slot(lot_id: Uuid, floor_id: Uuid, number: i32) -> ParkingSlot {
+        ParkingSlot {
+            id: Uuid::new_v4(),
+            lot_id,
+            floor_id,
+            slot_number: number,
+            row: 0,
+            column: number,
+            slot_type: SlotType::Standard,
+            status: SlotStatus::Available,
+            current_booking: None,
+            features: vec![],
+            position: SlotPosition {
+                x: number as f32 * 4.0,
+                y: 0.0,
+                width: 3.0,
+                height: 5.0,
+                rotation: 0.0,
+            },
+        }
+    }
+
+    fn make_parking_lot() -> ParkingLot {
+        let now = Utc::now();
+        ParkingLot {
+            id: Uuid::new_v4(),
+            name: "Test Lot".to_string(),
+            address: "123 Test St".to_string(),
+            latitude: 48.1351,
+            longitude: 11.582,
+            total_slots: 50,
+            available_slots: 50,
+            floors: vec![],
+            amenities: vec!["EV Charging".to_string()],
+            pricing: parkhub_common::models::PricingInfo {
+                currency: "EUR".to_string(),
+                rates: vec![],
+                daily_max: Some(20.0),
+                monthly_pass: Some(150.0),
+            },
+            operating_hours: parkhub_common::models::OperatingHours {
+                is_24h: true,
+                monday: None,
+                tuesday: None,
+                wednesday: None,
+                thursday: None,
+                friday: None,
+                saturday: None,
+                sunday: None,
+            },
+            images: vec![],
+            status: parkhub_common::models::LotStatus::Open,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_user_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let mut user = make_user("alice", "alice@example.com");
+
+        // Create
+        db.save_user(&user).await.unwrap();
+
+        // Get by ID
+        let fetched = db.get_user(&user.id.to_string()).await.unwrap().unwrap();
+        assert_eq!(fetched.username, "alice");
+        assert_eq!(fetched.email, "alice@example.com");
+
+        // Get by username
+        let by_name = db.get_user_by_username("alice").await.unwrap().unwrap();
+        assert_eq!(by_name.id, user.id);
+
+        // Get by email
+        let by_email = db
+            .get_user_by_email("alice@example.com")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(by_email.id, user.id);
+
+        // Update
+        user.name = "Alice Updated".to_string();
+        user.updated_at = Utc::now();
+        db.save_user(&user).await.unwrap();
+        let updated = db.get_user(&user.id.to_string()).await.unwrap().unwrap();
+        assert_eq!(updated.name, "Alice Updated");
+
+        // Delete
+        let deleted = db.delete_user(&user.id.to_string()).await.unwrap();
+        assert!(deleted);
+        assert!(db.get_user(&user.id.to_string()).await.unwrap().is_none());
+        assert!(db.get_user_by_username("alice").await.unwrap().is_none());
+        assert!(db
+            .get_user_by_email("alice@example.com")
+            .await
+            .unwrap()
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn test_user_list() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let u1 = make_user("alice", "alice@test.com");
+        let u2 = make_user("bob", "bob@test.com");
+        let u3 = make_user("charlie", "charlie@test.com");
+
+        db.save_user(&u1).await.unwrap();
+        db.save_user(&u2).await.unwrap();
+        db.save_user(&u3).await.unwrap();
+
+        let all = db.list_users().await.unwrap();
+        assert_eq!(all.len(), 3);
+        let names: Vec<&str> = all.iter().map(|u| u.username.as_str()).collect();
+        assert!(names.contains(&"alice"));
+        assert!(names.contains(&"bob"));
+        assert!(names.contains(&"charlie"));
+    }
+
+    #[tokio::test]
+    async fn test_user_not_found() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let fake_id = Uuid::new_v4().to_string();
+        assert!(db.get_user(&fake_id).await.unwrap().is_none());
+        assert!(db
+            .get_user_by_username("nonexistent")
+            .await
+            .unwrap()
+            .is_none());
+        assert!(db
+            .get_user_by_email("nobody@nowhere.com")
+            .await
+            .unwrap()
+            .is_none());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BOOKING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_booking_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user = make_user("parker", "parker@test.com");
+        let vehicle = make_vehicle(user.id, "M-PH 1234");
+        let lot_id = Uuid::new_v4();
+        let booking = make_booking(user.id, lot_id, &vehicle);
+
+        // Create
+        db.save_booking(&booking).await.unwrap();
+
+        // Get
+        let fetched = db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(fetched.user_id, user.id);
+        assert_eq!(fetched.lot_id, lot_id);
+        assert_eq!(fetched.vehicle.license_plate, "M-PH 1234");
+
+        // List by user
+        let by_user = db
+            .list_bookings_by_user(&user.id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(by_user.len(), 1);
+        assert_eq!(by_user[0].id, booking.id);
+
+        // List all
+        let all = db.list_bookings().await.unwrap();
+        assert_eq!(all.len(), 1);
+
+        // Delete
+        let deleted = db.delete_booking(&booking.id.to_string()).await.unwrap();
+        assert!(deleted);
+        assert!(db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn test_booking_by_lot() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user = make_user("parker", "parker@test.com");
+        let vehicle = make_vehicle(user.id, "M-PH 5678");
+        let lot_a = Uuid::new_v4();
+        let lot_b = Uuid::new_v4();
+
+        let b1 = make_booking(user.id, lot_a, &vehicle);
+        let b2 = make_booking(user.id, lot_a, &vehicle);
+        let b3 = make_booking(user.id, lot_b, &vehicle);
+
+        db.save_booking(&b1).await.unwrap();
+        db.save_booking(&b2).await.unwrap();
+        db.save_booking(&b3).await.unwrap();
+
+        let all = db.list_bookings().await.unwrap();
+        assert_eq!(all.len(), 3);
+
+        let lot_a_bookings: Vec<_> = all.iter().filter(|b| b.lot_id == lot_a).collect();
+        let lot_b_bookings: Vec<_> = all.iter().filter(|b| b.lot_id == lot_b).collect();
+        assert_eq!(lot_a_bookings.len(), 2);
+        assert_eq!(lot_b_bookings.len(), 1);
+        assert_eq!(lot_b_bookings[0].id, b3.id);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VEHICLE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_vehicle_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let vehicle = make_vehicle(user_id, "B-AB 9876");
+
+        // Create
+        db.save_vehicle(&vehicle).await.unwrap();
+
+        // Get
+        let fetched = db
+            .get_vehicle(&vehicle.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(fetched.license_plate, "B-AB 9876");
+        assert_eq!(fetched.user_id, user_id);
+
+        // List by user
+        let by_user = db
+            .list_vehicles_by_user(&user_id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(by_user.len(), 1);
+
+        // Delete
+        let deleted = db.delete_vehicle(&vehicle.id.to_string()).await.unwrap();
+        assert!(deleted);
+        assert!(db
+            .get_vehicle(&vehicle.id.to_string())
+            .await
+            .unwrap()
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn test_vehicle_delete_nonexistent() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let result = db
+            .delete_vehicle(&Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(!result);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SESSION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_session_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let session = Session::new(user_id, 24, "testuser", "user");
+        let token = "access_tok_abc123";
+
+        // Save
+        db.save_session(token, &session).await.unwrap();
+
+        // Get
+        let fetched = db.get_session(token).await.unwrap().unwrap();
+        assert_eq!(fetched.user_id, user_id);
+        assert_eq!(fetched.username, "testuser");
+        assert_eq!(fetched.role, "user");
+        assert!(!fetched.is_expired());
+
+        // Delete
+        let deleted = db.delete_session(token).await.unwrap();
+        assert!(deleted);
+        assert!(db.get_session(token).await.unwrap().is_none());
+
+        // Delete again returns false
+        let again = db.delete_session(token).await.unwrap();
+        assert!(!again);
+    }
+
+    #[tokio::test]
+    async fn test_session_expiry() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        // Create a session that expired 1 hour ago
+        let mut session = Session::new(user_id, 1, "expired_user", "user");
+        session.expires_at = Utc::now() - chrono::Duration::hours(1);
+        let token = "expired_token_xyz";
+
+        db.save_session(token, &session).await.unwrap();
+
+        // is_expired should be true on the raw struct
+        assert!(session.is_expired());
+
+        // get_session filters out expired sessions -> returns None
+        assert!(db.get_session(token).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_delete_sessions_by_user() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+
+        let s1 = Session::new(user_a, 24, "alice", "user");
+        let s2 = Session::new(user_a, 24, "alice", "user");
+        let s3 = Session::new(user_a, 24, "alice", "user");
+        let s4 = Session::new(user_b, 24, "bob", "admin");
+
+        db.save_session("tok_a1", &s1).await.unwrap();
+        db.save_session("tok_a2", &s2).await.unwrap();
+        db.save_session("tok_a3", &s3).await.unwrap();
+        db.save_session("tok_b1", &s4).await.unwrap();
+
+        // Delete all sessions for user_a
+        let deleted = db.delete_sessions_by_user(user_a).await.unwrap();
+        assert_eq!(deleted, 3);
+
+        // user_a sessions gone
+        assert!(db.get_session("tok_a1").await.unwrap().is_none());
+        assert!(db.get_session("tok_a2").await.unwrap().is_none());
+        assert!(db.get_session("tok_a3").await.unwrap().is_none());
+
+        // user_b session untouched
+        let bob = db.get_session("tok_b1").await.unwrap().unwrap();
+        assert_eq!(bob.user_id, user_b);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SETTINGS OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_settings_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        // Non-existent key returns None
+        assert!(db.get_setting("theme").await.unwrap().is_none());
+
+        // Set
+        db.set_setting("theme", "dark").await.unwrap();
+        assert_eq!(
+            db.get_setting("theme").await.unwrap(),
+            Some("dark".to_string())
+        );
+
+        // Overwrite
+        db.set_setting("theme", "light").await.unwrap();
+        assert_eq!(
+            db.get_setting("theme").await.unwrap(),
+            Some("light".to_string())
+        );
+
+        // Another key is independent
+        assert!(db.get_setting("locale").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_setup_workflow() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        // Fresh DB
+        assert!(db.is_fresh().await.unwrap());
+
+        // Mark setup completed
+        db.mark_setup_completed().await.unwrap();
+        assert!(!db.is_fresh().await.unwrap());
+
+        // Idempotent — marking again doesn't fail
+        db.mark_setup_completed().await.unwrap();
+        assert!(!db.is_fresh().await.unwrap());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NOTIFICATION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_notification_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let notif = Notification {
+            id: Uuid::new_v4(),
+            user_id,
+            notification_type: parkhub_common::models::NotificationType::BookingConfirmed,
+            title: "Booking Confirmed".to_string(),
+            message: "Your slot A-12 is booked for 14:00-16:00".to_string(),
+            data: None,
+            read: false,
+            created_at: Utc::now(),
+        };
+
+        // Save
+        db.save_notification(&notif).await.unwrap();
+
+        // List by user
+        let list = db
+            .list_notifications_by_user(&user_id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].title, "Booking Confirmed");
+        assert!(!list[0].read);
+
+        // Mark read
+        let marked = db
+            .mark_notification_read(&notif.id.to_string())
+            .await
+            .unwrap();
+        assert!(marked);
+
+        // Verify read=true
+        let list = db
+            .list_notifications_by_user(&user_id.to_string())
+            .await
+            .unwrap();
+        assert!(list[0].read);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ANNOUNCEMENT OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_announcement_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let ann = Announcement {
+            id: Uuid::new_v4(),
+            title: "Maintenance Notice".to_string(),
+            message: "Level B2 closed for repairs on Saturday".to_string(),
+            severity: parkhub_common::models::AnnouncementSeverity::Warning,
+            active: true,
+            created_by: Some(Uuid::new_v4()),
+            expires_at: Some(Utc::now() + chrono::Duration::days(7)),
+            created_at: Utc::now(),
+        };
+
+        // Save
+        db.save_announcement(&ann).await.unwrap();
+
+        // List
+        let all = db.list_announcements().await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].title, "Maintenance Notice");
+        assert_eq!(
+            all[0].severity,
+            parkhub_common::models::AnnouncementSeverity::Warning
+        );
+
+        // Delete
+        let deleted = db
+            .delete_announcement(&ann.id.to_string())
+            .await
+            .unwrap();
+        assert!(deleted);
+        assert!(db.list_announcements().await.unwrap().is_empty());
+
+        // Delete non-existent
+        let nope = db
+            .delete_announcement(&Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(!nope);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ABSENCE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_absence_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let absence = Absence {
+            id: Uuid::new_v4(),
+            user_id,
+            absence_type: parkhub_common::models::AbsenceType::Homeoffice,
+            start_date: "2026-03-20".to_string(),
+            end_date: "2026-03-20".to_string(),
+            note: Some("Working from home".to_string()),
+            source: "manual".to_string(),
+            created_at: Utc::now(),
+        };
+
+        // Create
+        db.save_absence(&absence).await.unwrap();
+
+        // List by user
+        let list = db
+            .list_absences_by_user(&user_id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].start_date, "2026-03-20");
+
+        // Delete
+        let deleted = db.delete_absence(&absence.id.to_string()).await.unwrap();
+        assert!(deleted);
+        assert!(db
+            .list_absences_by_user(&user_id.to_string())
+            .await
+            .unwrap()
+            .is_empty());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CREDIT TRANSACTION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_credit_transaction_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let tx1 = parkhub_common::models::CreditTransaction {
+            id: Uuid::new_v4(),
+            user_id,
+            booking_id: Some(Uuid::new_v4()),
+            amount: -2,
+            transaction_type: parkhub_common::models::CreditTransactionType::Deduction,
+            description: Some("Booking slot A-5".to_string()),
+            granted_by: None,
+            created_at: Utc::now() - chrono::Duration::minutes(10),
+        };
+        let tx2 = parkhub_common::models::CreditTransaction {
+            id: Uuid::new_v4(),
+            user_id,
+            booking_id: None,
+            amount: 40,
+            transaction_type: parkhub_common::models::CreditTransactionType::MonthlyRefill,
+            description: Some("Monthly refill".to_string()),
+            granted_by: None,
+            created_at: Utc::now(),
+        };
+
+        db.save_credit_transaction(&tx1).await.unwrap();
+        db.save_credit_transaction(&tx2).await.unwrap();
+
+        let list = db
+            .list_credit_transactions_for_user(user_id)
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 2);
+        // Sorted newest first
+        assert_eq!(
+            list[0].transaction_type,
+            parkhub_common::models::CreditTransactionType::MonthlyRefill
+        );
+        assert_eq!(
+            list[1].transaction_type,
+            parkhub_common::models::CreditTransactionType::Deduction
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SLOT OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_slot_batch_save() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let lot_id = Uuid::new_v4();
+        let floor_id = Uuid::new_v4();
+
+        let slots: Vec<ParkingSlot> = (1..=5).map(|n| make_slot(lot_id, floor_id, n)).collect();
+
+        db.save_parking_slots_batch(&slots).await.unwrap();
+
+        let by_lot = db.list_slots_by_lot(&lot_id.to_string()).await.unwrap();
+        assert_eq!(by_lot.len(), 5);
+
+        // Each slot accessible by ID
+        for slot in &slots {
+            let fetched = db
+                .get_parking_slot(&slot.id.to_string())
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(fetched.lot_id, lot_id);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_slot_status_update() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let lot_id = Uuid::new_v4();
+        let floor_id = Uuid::new_v4();
+        let slot = make_slot(lot_id, floor_id, 1);
+
+        db.save_parking_slot(&slot).await.unwrap();
+        let fetched = db
+            .get_parking_slot(&slot.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(fetched.status, SlotStatus::Available);
+
+        // Update status
+        let updated = db
+            .update_slot_status(&slot.id.to_string(), SlotStatus::Occupied)
+            .await
+            .unwrap();
+        assert!(updated);
+
+        let after = db
+            .get_parking_slot(&slot.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(after.status, SlotStatus::Occupied);
+
+        // Update non-existent slot returns false
+        let nope = db
+            .update_slot_status(&Uuid::new_v4().to_string(), SlotStatus::Maintenance)
+            .await
+            .unwrap();
+        assert!(!nope);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // STATS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_stats_after_data() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        // Users
+        let u1 = make_user("alice", "alice@stats.com");
+        let u2 = make_user("bob", "bob@stats.com");
+        db.save_user(&u1).await.unwrap();
+        db.save_user(&u2).await.unwrap();
+
+        // Parking lot
+        let lot = make_parking_lot();
+        db.save_parking_lot(&lot).await.unwrap();
+
+        // Slots
+        let floor_id = Uuid::new_v4();
+        let s1 = make_slot(lot.id, floor_id, 1);
+        let s2 = make_slot(lot.id, floor_id, 2);
+        let s3 = make_slot(lot.id, floor_id, 3);
+        db.save_parking_slots_batch(&[s1, s2, s3]).await.unwrap();
+
+        // Vehicle + Bookings
+        let v = make_vehicle(u1.id, "M-ST 1111");
+        db.save_vehicle(&v).await.unwrap();
+        let b1 = make_booking(u1.id, lot.id, &v);
+        let b2 = make_booking(u1.id, lot.id, &v);
+        db.save_booking(&b1).await.unwrap();
+        db.save_booking(&b2).await.unwrap();
+
+        // Session
+        let session = Session::new(u1.id, 24, "alice", "user");
+        db.save_session("stats_tok", &session).await.unwrap();
+
+        let stats = db.stats().await.unwrap();
+        assert_eq!(stats.users, 2);
+        assert_eq!(stats.parking_lots, 1);
+        assert_eq!(stats.slots, 3);
+        assert_eq!(stats.bookings, 2);
+        assert_eq!(stats.vehicles, 1);
+        assert_eq!(stats.sessions, 1);
+    }
+
+    #[tokio::test]
+    async fn test_database_stats_empty() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let stats = db.stats().await.unwrap();
+        assert_eq!(stats.users, 0);
+        assert_eq!(stats.bookings, 0);
+        assert_eq!(stats.parking_lots, 0);
+        assert_eq!(stats.slots, 0);
+        assert_eq!(stats.sessions, 0);
+        assert_eq!(stats.vehicles, 0);
+    }
 }
