@@ -49,6 +49,8 @@ const RECURRING_BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("r
 const ANNOUNCEMENTS: TableDefinition<&str, &[u8]> = TableDefinition::new("announcements");
 const NOTIFICATIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("notifications");
 const WEBHOOKS: TableDefinition<&str, &[u8]> = TableDefinition::new("webhooks");
+const PUSH_SUBSCRIPTIONS: TableDefinition<&str, &[u8]> =
+    TableDefinition::new("push_subscriptions");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -130,6 +132,21 @@ pub struct Webhook {
     pub active: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PUSH SUBSCRIPTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Web Push subscription stored per user
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PushSubscription {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub endpoint: String,
+    pub p256dh: String,
+    pub auth: String,
+    pub created_at: DateTime<Utc>,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -256,6 +273,7 @@ impl Database {
             let _ = write_txn.open_table(ANNOUNCEMENTS)?;
             let _ = write_txn.open_table(NOTIFICATIONS)?;
             let _ = write_txn.open_table(WEBHOOKS)?;
+            let _ = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
         }
         write_txn.commit()?;
 
@@ -1652,6 +1670,91 @@ impl Database {
         }
         Ok(existed)
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PUSH SUBSCRIPTION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a push subscription (upsert by id)
+    pub async fn save_push_subscription(&self, sub: &PushSubscription) -> Result<()> {
+        let id = sub.id.to_string();
+        let data = self.serialize(sub)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved push subscription {} for user {}", sub.id, sub.user_id);
+        Ok(())
+    }
+
+    /// Get all push subscriptions for a given user
+    pub async fn get_push_subscriptions_by_user(
+        &self,
+        user_id: &Uuid,
+    ) -> Result<Vec<PushSubscription>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(PUSH_SUBSCRIPTIONS)?;
+
+        let mut subs = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let sub: PushSubscription = self.deserialize(value.value())?;
+            if sub.user_id == *user_id {
+                subs.push(sub);
+            }
+        }
+        Ok(subs)
+    }
+
+    /// Delete all push subscriptions for a given user
+    pub async fn delete_push_subscriptions_by_user(&self, user_id: &Uuid) -> Result<u64> {
+        // First, collect IDs to delete
+        let ids: Vec<String> = self
+            .get_push_subscriptions_by_user(user_id)
+            .await?
+            .iter()
+            .map(|s| s.id.to_string())
+            .collect();
+
+        let count = ids.len() as u64;
+        if count == 0 {
+            return Ok(0);
+        }
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
+            for id in &ids {
+                table.remove(id.as_str())?;
+            }
+        }
+        write_txn.commit()?;
+        debug!(
+            "Deleted {} push subscription(s) for user {}",
+            count, user_id
+        );
+        Ok(count)
+    }
+
+    /// List all push subscriptions (admin use / delivery fan-out)
+    pub async fn list_all_push_subscriptions(&self) -> Result<Vec<PushSubscription>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(PUSH_SUBSCRIPTIONS)?;
+
+        let mut subs = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            subs.push(self.deserialize(value.value())?);
+        }
+        Ok(subs)
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1728,5 +1831,69 @@ mod tests {
         assert_eq!(stats.users, 0);
         assert_eq!(stats.bookings, 0);
         assert_eq!(stats.parking_lots, 0);
+    }
+
+    #[tokio::test]
+    async fn test_push_subscriptions_crud() {
+        let dir = tempdir().unwrap();
+        let config = test_config(dir.path().to_path_buf(), false);
+        let db = Database::open(config).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let other_user = Uuid::new_v4();
+
+        // No subscriptions initially
+        let subs = db.get_push_subscriptions_by_user(&user_id).await.unwrap();
+        assert!(subs.is_empty());
+
+        // Save two subscriptions for user_id
+        let sub1 = PushSubscription {
+            id: Uuid::new_v4(),
+            user_id,
+            endpoint: "https://push.example.com/sub1".into(),
+            p256dh: "key1".into(),
+            auth: "auth1".into(),
+            created_at: Utc::now(),
+        };
+        let sub2 = PushSubscription {
+            id: Uuid::new_v4(),
+            user_id,
+            endpoint: "https://push.example.com/sub2".into(),
+            p256dh: "key2".into(),
+            auth: "auth2".into(),
+            created_at: Utc::now(),
+        };
+        // Save one subscription for other_user
+        let sub3 = PushSubscription {
+            id: Uuid::new_v4(),
+            user_id: other_user,
+            endpoint: "https://push.example.com/sub3".into(),
+            p256dh: "key3".into(),
+            auth: "auth3".into(),
+            created_at: Utc::now(),
+        };
+
+        db.save_push_subscription(&sub1).await.unwrap();
+        db.save_push_subscription(&sub2).await.unwrap();
+        db.save_push_subscription(&sub3).await.unwrap();
+
+        // List for user_id -> 2
+        let subs = db.get_push_subscriptions_by_user(&user_id).await.unwrap();
+        assert_eq!(subs.len(), 2);
+
+        // List all -> 3
+        let all = db.list_all_push_subscriptions().await.unwrap();
+        assert_eq!(all.len(), 3);
+
+        // Delete user_id subscriptions
+        let deleted = db.delete_push_subscriptions_by_user(&user_id).await.unwrap();
+        assert_eq!(deleted, 2);
+
+        // user_id has none, other_user still has 1
+        assert!(db.get_push_subscriptions_by_user(&user_id).await.unwrap().is_empty());
+        assert_eq!(
+            db.get_push_subscriptions_by_user(&other_user).await.unwrap().len(),
+            1
+        );
     }
 }
