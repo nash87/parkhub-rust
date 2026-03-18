@@ -69,7 +69,10 @@ use auth::{forgot_password, login, refresh_token, register, reset_password};
 use credits::{
     admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits,
 };
-use lots::{create_lot, delete_lot, get_lot, get_lot_slots, list_lots, update_lot};
+use lots::{
+    create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
+    update_lot, update_slot,
+};
 
 /// User ID extracted from auth token
 #[derive(Clone)]
@@ -159,7 +162,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/lots/{id}",
             get(get_lot).put(update_lot).delete(delete_lot),
         )
-        .route("/api/v1/lots/{id}/slots", get(get_lot_slots))
+        .route("/api/v1/lots/{id}/slots", get(get_lot_slots).post(create_slot))
+        .route(
+            "/api/v1/lots/{lot_id}/slots/{slot_id}",
+            put(update_slot).delete(delete_slot),
+        )
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
             "/api/v1/bookings/{id}",
@@ -167,7 +174,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
-        .route("/api/v1/vehicles/{id}", delete(delete_vehicle))
+        .route("/api/v1/vehicles/{id}", put(update_vehicle).delete(delete_vehicle))
         // Credits
         .route("/api/v1/user/credits", get(get_user_credits))
         // Admin-only: update Impressum settings
@@ -1774,6 +1781,68 @@ async fn delete_vehicle(
             )
         }
     }
+}
+
+/// `PUT /api/v1/vehicles/{id}` — update vehicle details
+async fn update_vehicle(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<serde_json::Value>,
+) -> (StatusCode, Json<ApiResponse<Vehicle>>) {
+    let state_guard = state.write().await;
+
+    let mut vehicle = match state_guard.db.get_vehicle(&id).await {
+        Ok(Some(v)) => v,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Vehicle not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Ownership check
+    if vehicle.user_id != auth_user.user_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    // Update fields if provided
+    if let Some(plate) = req.get("license_plate").and_then(|v| v.as_str()) {
+        vehicle.license_plate = plate.to_string();
+    }
+    if let Some(make) = req.get("make").and_then(|v| v.as_str()) {
+        vehicle.make = Some(make.to_string());
+    }
+    if let Some(model) = req.get("model").and_then(|v| v.as_str()) {
+        vehicle.model = Some(model.to_string());
+    }
+    if let Some(color) = req.get("color").and_then(|v| v.as_str()) {
+        vehicle.color = Some(color.to_string());
+    }
+    if let Some(is_default) = req.get("is_default").and_then(|v| v.as_bool()) {
+        vehicle.is_default = is_default;
+    }
+
+    if let Err(e) = state_guard.db.save_vehicle(&vehicle).await {
+        tracing::error!("Failed to update vehicle: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update vehicle")),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(vehicle)))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
