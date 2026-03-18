@@ -19,8 +19,10 @@ interface Props extends Omit<HTMLMotionProps<'div'>, 'whileHover' | 'whileTap'> 
 
 export function MicroAnimated({ children, noHover, noPress, ...rest }: Props) {
   const { isEnabled } = useFeatures();
+  const prefersReducedMotion = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (!isEnabled('micro_animations')) {
+  if (!isEnabled('micro_animations') || prefersReducedMotion) {
     return <div {...(rest as any)}>{children}</div>;
   }
 
