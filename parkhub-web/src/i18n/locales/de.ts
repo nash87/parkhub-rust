@@ -209,6 +209,9 @@ export default {
       viewers: 'Besucher',
       voteReset: 'Fur Reset stimmen',
       votesNeeded: '{{current}}/{{needed}} Stimmen',
+      resetting: 'Demo wird zuruckgesetzt...',
+      lastReset: 'Letzter Reset',
+      nextReset: 'Nachster Reset',
     },
     common: {
       refresh: 'Aktualisieren',

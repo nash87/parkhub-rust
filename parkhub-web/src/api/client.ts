@@ -296,6 +296,9 @@ export interface DemoStatus {
   viewers: number;
   has_voted: boolean;
   reset?: boolean;
+  last_reset_at?: string;
+  next_scheduled_reset?: string;
+  reset_in_progress?: boolean;
 }
 
 export interface Notification {
