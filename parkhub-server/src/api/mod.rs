@@ -334,6 +334,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/admin/stats", get(admin_stats))
         .route("/api/v1/admin/reports", get(admin_reports))
         .route("/api/v1/admin/heatmap", get(admin_heatmap))
+        .route("/api/v1/admin/audit-log", get(admin_audit_log))
+        // Team
+        .route("/api/v1/team", get(team_list))
         // Admin-only: webhooks
         .route(
             "/api/v1/webhooks",
@@ -4772,6 +4775,75 @@ async fn admin_heatmap(
         .collect();
 
     (StatusCode::OK, Json(ApiResponse::success(cells)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/admin/audit-log` — list recent audit entries
+async fn admin_audit_log(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> (StatusCode, Json<ApiResponse<Vec<crate::db::AuditLogEntry>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let limit = params
+        .get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(100usize)
+        .min(500);
+
+    match state_guard.db.list_audit_log(limit).await {
+        Ok(entries) => (StatusCode::OK, Json(ApiResponse::success(entries))),
+        Err(e) => {
+            tracing::error!("Failed to list audit log: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list audit log")),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEAM LIST
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[derive(Serialize)]
+struct TeamMember {
+    id: Uuid,
+    name: String,
+    username: String,
+    role: String,
+    is_active: bool,
+}
+
+/// `GET /api/v1/team` — list all team members (simplified view)
+async fn team_list(
+    State(state): State<SharedState>,
+    Extension(_auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<Vec<TeamMember>>> {
+    let state_guard = state.read().await;
+
+    let users = state_guard.db.list_users().await.unwrap_or_default();
+    let members: Vec<TeamMember> = users
+        .into_iter()
+        .filter(|u| u.is_active)
+        .map(|u| TeamMember {
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            role: format!("{:?}", u.role).to_lowercase(),
+            is_active: u.is_active,
+        })
+        .collect();
+
+    Json(ApiResponse::success(members))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

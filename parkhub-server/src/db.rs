@@ -53,6 +53,7 @@ const PUSH_SUBSCRIPTIONS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("push_subscriptions");
 const ZONES: TableDefinition<&str, &[u8]> = TableDefinition::new("zones");
 const FAVORITES: TableDefinition<&str, &[u8]> = TableDefinition::new("favorites");
+const AUDIT_LOG: TableDefinition<&str, &[u8]> = TableDefinition::new("audit_log");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -177,6 +178,21 @@ pub struct Favorite {
     pub slot_id: Uuid,
     pub lot_id: Uuid,
     pub created_at: DateTime<Utc>,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Persistent audit log entry (stored in DB, exposed via API)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditLogEntry {
+    pub id: Uuid,
+    pub timestamp: DateTime<Utc>,
+    pub event_type: String,
+    pub user_id: Option<Uuid>,
+    pub username: Option<String>,
+    pub details: Option<String>,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -306,6 +322,7 @@ impl Database {
             let _ = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
             let _ = write_txn.open_table(ZONES)?;
             let _ = write_txn.open_table(FAVORITES)?;
+            let _ = write_txn.open_table(AUDIT_LOG)?;
         }
         write_txn.commit()?;
 
@@ -414,6 +431,7 @@ impl Database {
         drain_table!(write_txn, WEBHOOKS);
         drain_table!(write_txn, ZONES);
         drain_table!(write_txn, FAVORITES);
+        drain_table!(write_txn, AUDIT_LOG);
         // Preserve SETTINGS table (encryption salt, setup status, etc.)
         write_txn.commit()?;
         info!("All data tables cleared for demo reset");
@@ -1898,6 +1916,41 @@ impl Database {
             debug!("Deleted favorite: user={}, slot={}", user_id, slot_id);
         }
         Ok(existed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUDIT LOG OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save an audit log entry
+    pub async fn save_audit_log(&self, entry: &AuditLogEntry) -> Result<()> {
+        let id = entry.id.to_string();
+        let data = self.serialize(entry)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(AUDIT_LOG)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// List recent audit log entries (most recent first, limited)
+    pub async fn list_audit_log(&self, limit: usize) -> Result<Vec<AuditLogEntry>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(AUDIT_LOG)?;
+
+        let mut entries: Vec<AuditLogEntry> = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            entries.push(self.deserialize(value.value())?);
+        }
+        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        entries.truncate(limit);
+        Ok(entries)
     }
 }
 
