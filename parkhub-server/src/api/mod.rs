@@ -365,6 +365,33 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Push notifications
         .route("/api/v1/push/subscribe", post(push::subscribe))
         .route("/api/v1/push/unsubscribe", delete(push::unsubscribe))
+        // User stats & preferences
+        .route("/api/v1/user/stats", get(user_stats))
+        .route(
+            "/api/v1/user/preferences",
+            get(get_user_preferences).put(update_user_preferences),
+        )
+        // Booking checkin
+        .route("/api/v1/bookings/{id}/checkin", post(booking_checkin))
+        // Admin: database reset
+        .route("/api/v1/admin/reset", post(admin_reset))
+        // Admin: auto-release settings
+        .route(
+            "/api/v1/admin/settings/auto-release",
+            get(admin_get_auto_release).put(admin_update_auto_release),
+        )
+        // Admin: email settings
+        .route(
+            "/api/v1/admin/settings/email",
+            get(admin_get_email_settings).put(admin_update_email_settings),
+        )
+        // Admin: privacy settings
+        .route(
+            "/api/v1/admin/privacy",
+            get(admin_get_privacy).put(admin_update_privacy),
+        )
+        // Admin: update user
+        .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
@@ -3140,6 +3167,7 @@ const ADMIN_SETTINGS: &[(&str, &str)] = &[
     ("display_name_format", "first_name"),
     ("max_bookings_per_day", "0"),
     ("allow_guest_bookings", "false"),
+    ("auto_release_enabled", "false"),
     ("auto_release_minutes", "30"),
     ("require_vehicle", "false"),
     ("waitlist_enabled", "true"),
@@ -3201,7 +3229,8 @@ fn validate_setting_value(key: &str, value: &str) -> Result<(), &'static str> {
         | "allow_guest_bookings"
         | "require_vehicle"
         | "waitlist_enabled"
-        | "credits_enabled" => {
+        | "credits_enabled"
+        | "auto_release_enabled" => {
             if value != "true" && value != "false" {
                 return Err("Value must be \"true\" or \"false\"");
             }
@@ -5691,5 +5720,863 @@ async fn public_display(State(state): State<SharedState>) -> impl axum::response
         StatusCode::OK,
         [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
         html,
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER STATS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/user/stats` — authenticated user's personal statistics
+async fn user_stats(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    let uid = auth_user.user_id.to_string();
+
+    let user = match state_guard.db.get_user(&uid).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+    };
+
+    let bookings = state_guard
+        .db
+        .list_bookings_by_user(&uid)
+        .await
+        .unwrap_or_default();
+
+    let total_bookings = bookings.len() as i64;
+    let active_bookings = bookings
+        .iter()
+        .filter(|b| {
+            matches!(
+                b.status,
+                BookingStatus::Confirmed | BookingStatus::Active | BookingStatus::Pending
+            )
+        })
+        .count() as i64;
+    let cancelled_bookings = bookings
+        .iter()
+        .filter(|b| b.status == BookingStatus::Cancelled)
+        .count() as i64;
+
+    // Sum credits spent from deduction transactions
+    let total_credits_spent = state_guard
+        .db
+        .list_credit_transactions_for_user(auth_user.user_id)
+        .await
+        .unwrap_or_default()
+        .iter()
+        .filter(|tx| tx.transaction_type == CreditTransactionType::Deduction)
+        .map(|tx| tx.amount.abs() as i64)
+        .sum::<i64>();
+
+    // Find favorite lot by most bookings
+    let favorite_lot = {
+        let mut lot_counts: std::collections::HashMap<Uuid, usize> =
+            std::collections::HashMap::new();
+        for b in &bookings {
+            *lot_counts.entry(b.lot_id).or_insert(0) += 1;
+        }
+        if let Some((&lot_id, _)) = lot_counts.iter().max_by_key(|(_, &c)| c) {
+            state_guard
+                .db
+                .get_parking_lot(&lot_id.to_string())
+                .await
+                .ok()
+                .flatten()
+                .map(|l| l.name)
+                .unwrap_or_else(|| "Unknown".to_string())
+        } else {
+            "None".to_string()
+        }
+    };
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "total_bookings": total_bookings,
+            "active_bookings": active_bookings,
+            "cancelled_bookings": cancelled_bookings,
+            "total_credits_spent": total_credits_spent,
+            "favorite_lot": favorite_lot,
+            "member_since": user.created_at,
+        }))),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// USER PREFERENCES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/user/preferences` — return current user's preferences
+async fn get_user_preferences(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(user)) => (
+            StatusCode::OK,
+            Json(ApiResponse::success(serde_json::json!({
+                "language": user.preferences.language,
+                "theme": user.preferences.theme,
+                "notifications_enabled": user.preferences.notifications_enabled,
+                "email_reminders": user.preferences.email_reminders,
+                "default_duration_minutes": user.preferences.default_duration_minutes,
+            }))),
+        ),
+        _ => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        ),
+    }
+}
+
+/// Request body for updating user preferences
+#[derive(Debug, Deserialize)]
+struct UpdatePreferencesRequest {
+    language: Option<String>,
+    theme: Option<String>,
+    notifications_enabled: Option<bool>,
+    email_reminders: Option<bool>,
+    default_duration_minutes: Option<i32>,
+}
+
+/// `PUT /api/v1/user/preferences` — update preferences
+async fn update_user_preferences(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<UpdatePreferencesRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+
+    let mut user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+    };
+
+    if let Some(lang) = req.language {
+        user.preferences.language = lang;
+    }
+    if let Some(theme) = req.theme {
+        user.preferences.theme = theme;
+    }
+    if let Some(notif) = req.notifications_enabled {
+        user.preferences.notifications_enabled = notif;
+    }
+    if let Some(email) = req.email_reminders {
+        user.preferences.email_reminders = email;
+    }
+    if let Some(dur) = req.default_duration_minutes {
+        user.preferences.default_duration_minutes = Some(dur);
+    }
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!("Failed to save preferences: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save preferences",
+            )),
+        );
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "language": user.preferences.language,
+            "theme": user.preferences.theme,
+            "notifications_enabled": user.preferences.notifications_enabled,
+            "email_reminders": user.preferences.email_reminders,
+            "default_duration_minutes": user.preferences.default_duration_minutes,
+        }))),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOKING CHECKIN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `POST /api/v1/bookings/{id}/checkin` — mark booking as checked in
+async fn booking_checkin(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    let state_guard = state.write().await;
+
+    let mut booking = match state_guard.db.get_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Only booking owner or admin can check in
+    if booking.user_id != auth_user.user_id {
+        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+        }
+    }
+
+    // Only Confirmed or Pending bookings can be checked in
+    if booking.status != BookingStatus::Confirmed && booking.status != BookingStatus::Pending {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "INVALID_STATUS",
+                "Only confirmed or pending bookings can be checked in",
+            )),
+        );
+    }
+
+    booking.status = BookingStatus::Active;
+    booking.check_in_time = Some(Utc::now());
+    booking.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_booking(&booking).await {
+        tracing::error!("Failed to save booking checkin: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to check in booking",
+            )),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::BookingUpdated)
+        .user(auth_user.user_id, "")
+        .resource("booking", &id)
+        .details(serde_json::json!({"action": "checkin"}))
+        .log();
+
+    (StatusCode::OK, Json(ApiResponse::success(booking)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: DATABASE RESET
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for database reset confirmation
+#[derive(Debug, Deserialize)]
+struct AdminResetRequest {
+    confirm: String,
+}
+
+/// `POST /api/v1/admin/reset` — wipe all data (admin only)
+async fn admin_reset(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<AdminResetRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.write().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    if req.confirm != "RESET" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "CONFIRMATION_REQUIRED",
+                "Body must contain {\"confirm\": \"RESET\"}",
+            )),
+        );
+    }
+
+    // Capture admin info before wipe
+    let admin = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to read admin user before reset",
+                )),
+            );
+        }
+    };
+
+    if let Err(e) = state_guard.db.clear_all_data().await {
+        tracing::error!("Database reset failed: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to reset database",
+            )),
+        );
+    }
+
+    // Re-create the admin user who triggered the reset
+    let admin_user = User {
+        id: admin.id,
+        username: admin.username.clone(),
+        email: admin.email.clone(),
+        name: admin.name.clone(),
+        password_hash: admin.password_hash,
+        role: admin.role,
+        is_active: true,
+        phone: admin.phone,
+        picture: admin.picture,
+        preferences: admin.preferences,
+        credits_balance: 0,
+        credits_monthly_quota: 0,
+        credits_last_refilled: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+        last_login: None,
+    };
+
+    if let Err(e) = state_guard.db.save_user(&admin_user).await {
+        tracing::error!("Failed to re-create admin after reset: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Database reset succeeded but admin re-creation failed",
+            )),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::ConfigChanged)
+        .user(auth_user.user_id, &admin_user.username)
+        .details(serde_json::json!({"action": "database_reset"}))
+        .log();
+
+    tracing::warn!(
+        admin = %admin_user.username,
+        "Database reset completed"
+    );
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: AUTO-RELEASE SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/admin/settings/auto-release` — return auto-release config
+async fn admin_get_auto_release(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let enabled = read_admin_setting(&state_guard.db, "auto_release_enabled").await;
+    let minutes = read_admin_setting(&state_guard.db, "auto_release_minutes").await;
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "auto_release_enabled": enabled.parse::<bool>().unwrap_or(false),
+            "auto_release_minutes": minutes.parse::<i32>().unwrap_or(30),
+        }))),
+    )
+}
+
+/// Request body for auto-release settings update
+#[derive(Debug, Deserialize)]
+struct AutoReleaseSettingsRequest {
+    auto_release_enabled: Option<bool>,
+    auto_release_minutes: Option<i32>,
+}
+
+/// `PUT /api/v1/admin/settings/auto-release` — update auto-release timing
+async fn admin_update_auto_release(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<AutoReleaseSettingsRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    if let Some(enabled) = req.auto_release_enabled {
+        if let Err(e) = state_guard
+            .db
+            .set_setting("auto_release_enabled", &enabled.to_string())
+            .await
+        {
+            tracing::error!("Failed to save auto_release_enabled: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to save setting")),
+            );
+        }
+    }
+
+    if let Some(minutes) = req.auto_release_minutes {
+        if minutes < 1 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "auto_release_minutes must be >= 1",
+                )),
+            );
+        }
+        if let Err(e) = state_guard
+            .db
+            .set_setting("auto_release_minutes", &minutes.to_string())
+            .await
+        {
+            tracing::error!("Failed to save auto_release_minutes: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to save setting")),
+            );
+        }
+    }
+
+    // Return updated values
+    let enabled = read_admin_setting(&state_guard.db, "auto_release_enabled").await;
+    let minutes = read_admin_setting(&state_guard.db, "auto_release_minutes").await;
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "auto_release_enabled": enabled.parse::<bool>().unwrap_or(false),
+            "auto_release_minutes": minutes.parse::<i32>().unwrap_or(30),
+        }))),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: EMAIL SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/admin/settings/email` — return SMTP config (password masked)
+async fn admin_get_email_settings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let host = state_guard
+        .db
+        .get_setting("smtp_host")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let port = state_guard
+        .db
+        .get_setting("smtp_port")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "587".to_string());
+    let username = state_guard
+        .db
+        .get_setting("smtp_username")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let has_password = state_guard
+        .db
+        .get_setting("smtp_password")
+        .await
+        .ok()
+        .flatten()
+        .map(|p| !p.is_empty())
+        .unwrap_or(false);
+    let from = state_guard
+        .db
+        .get_setting("smtp_from")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let enabled = state_guard
+        .db
+        .get_setting("smtp_enabled")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "false".to_string());
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "smtp_host": host,
+            "smtp_port": port.parse::<i32>().unwrap_or(587),
+            "smtp_username": username,
+            "smtp_password": if has_password { "********" } else { "" },
+            "smtp_from": from,
+            "smtp_enabled": enabled.parse::<bool>().unwrap_or(false),
+        }))),
+    )
+}
+
+/// Request body for email settings update
+#[derive(Debug, Deserialize)]
+struct EmailSettingsRequest {
+    smtp_host: Option<String>,
+    smtp_port: Option<i32>,
+    smtp_username: Option<String>,
+    smtp_password: Option<String>,
+    smtp_from: Option<String>,
+    smtp_enabled: Option<bool>,
+}
+
+/// `PUT /api/v1/admin/settings/email` — update SMTP settings
+async fn admin_update_email_settings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<EmailSettingsRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let db = &state_guard.db;
+
+    if let Some(host) = &req.smtp_host {
+        let _ = db.set_setting("smtp_host", host).await;
+    }
+    if let Some(port) = req.smtp_port {
+        let _ = db.set_setting("smtp_port", &port.to_string()).await;
+    }
+    if let Some(username) = &req.smtp_username {
+        let _ = db.set_setting("smtp_username", username).await;
+    }
+    if let Some(password) = &req.smtp_password {
+        // Don't overwrite with the masked placeholder
+        if password != "********" {
+            let _ = db.set_setting("smtp_password", password).await;
+        }
+    }
+    if let Some(from) = &req.smtp_from {
+        let _ = db.set_setting("smtp_from", from).await;
+    }
+    if let Some(enabled) = req.smtp_enabled {
+        let _ = db.set_setting("smtp_enabled", &enabled.to_string()).await;
+    }
+
+    AuditEntry::new(AuditEventType::ConfigChanged)
+        .user(auth_user.user_id, "admin")
+        .resource("settings", "email")
+        .log();
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            serde_json::json!({"message": "Email settings updated"}),
+        )),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: PRIVACY SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/admin/privacy` — return privacy/GDPR settings
+async fn admin_get_privacy(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let db = &state_guard.db;
+
+    let privacy_policy_url = db
+        .get_setting("privacy_policy_url")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let data_retention_days = db
+        .get_setting("data_retention_days")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "365".to_string());
+    let require_consent = db
+        .get_setting("require_consent")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "true".to_string());
+    let anonymize_on_delete = db
+        .get_setting("anonymize_on_delete")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "true".to_string());
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "privacy_policy_url": privacy_policy_url,
+            "data_retention_days": data_retention_days.parse::<i32>().unwrap_or(365),
+            "require_consent": require_consent.parse::<bool>().unwrap_or(true),
+            "anonymize_on_delete": anonymize_on_delete.parse::<bool>().unwrap_or(true),
+        }))),
+    )
+}
+
+/// Request body for privacy settings update
+#[derive(Debug, Deserialize)]
+struct PrivacySettingsRequest {
+    privacy_policy_url: Option<String>,
+    data_retention_days: Option<i32>,
+    require_consent: Option<bool>,
+    anonymize_on_delete: Option<bool>,
+}
+
+/// `PUT /api/v1/admin/privacy` — update privacy settings
+async fn admin_update_privacy(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<PrivacySettingsRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let db = &state_guard.db;
+
+    if let Some(url) = &req.privacy_policy_url {
+        let _ = db.set_setting("privacy_policy_url", url).await;
+    }
+    if let Some(days) = req.data_retention_days {
+        if days < 1 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "data_retention_days must be >= 1",
+                )),
+            );
+        }
+        let _ = db
+            .set_setting("data_retention_days", &days.to_string())
+            .await;
+    }
+    if let Some(consent) = req.require_consent {
+        let _ = db
+            .set_setting("require_consent", &consent.to_string())
+            .await;
+    }
+    if let Some(anonymize) = req.anonymize_on_delete {
+        let _ = db
+            .set_setting("anonymize_on_delete", &anonymize.to_string())
+            .await;
+    }
+
+    AuditEntry::new(AuditEventType::ConfigChanged)
+        .user(auth_user.user_id, "admin")
+        .resource("settings", "privacy")
+        .log();
+
+    // Return current state
+    let privacy_policy_url = db
+        .get_setting("privacy_policy_url")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let data_retention_days = db
+        .get_setting("data_retention_days")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "365".to_string());
+    let require_consent = db
+        .get_setting("require_consent")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "true".to_string());
+    let anonymize_on_delete = db
+        .get_setting("anonymize_on_delete")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "true".to_string());
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "privacy_policy_url": privacy_policy_url,
+            "data_retention_days": data_retention_days.parse::<i32>().unwrap_or(365),
+            "require_consent": require_consent.parse::<bool>().unwrap_or(true),
+            "anonymize_on_delete": anonymize_on_delete.parse::<bool>().unwrap_or(true),
+        }))),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: UPDATE USER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for admin user update
+#[derive(Debug, Deserialize)]
+struct AdminUpdateUserRequest {
+    name: Option<String>,
+    email: Option<String>,
+    role: Option<String>,
+    is_active: Option<bool>,
+}
+
+/// `PUT /api/v1/admin/users/{id}/update` — admin can update user details
+async fn admin_update_user(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<AdminUpdateUserRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut user = match state_guard.db.get_user(&id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    if let Some(name) = req.name {
+        user.name = name;
+    }
+    if let Some(email) = req.email {
+        // Basic email validation
+        if !email.contains('@') || email.len() < 5 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("INVALID_INPUT", "Invalid email address")),
+            );
+        }
+        user.email = email;
+    }
+    if let Some(role_str) = req.role {
+        let new_role = match role_str.to_lowercase().as_str() {
+            "user" => UserRole::User,
+            "premium" => UserRole::Premium,
+            "admin" => UserRole::Admin,
+            "superadmin" => {
+                // Only SuperAdmin can assign SuperAdmin
+                let caller = state_guard
+                    .db
+                    .get_user(&auth_user.user_id.to_string())
+                    .await
+                    .ok()
+                    .flatten();
+                if caller.map(|c| c.role) != Some(UserRole::SuperAdmin) {
+                    return (
+                        StatusCode::FORBIDDEN,
+                        Json(ApiResponse::error(
+                            "FORBIDDEN",
+                            "Only SuperAdmin can assign SuperAdmin role",
+                        )),
+                    );
+                }
+                UserRole::SuperAdmin
+            }
+            _ => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "INVALID_INPUT",
+                        "Role must be user, premium, admin, or superadmin",
+                    )),
+                );
+            }
+        };
+        user.role = new_role;
+    }
+    if let Some(active) = req.is_active {
+        user.is_active = active;
+    }
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!("Failed to update user: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update user")),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::UserUpdated)
+        .user(auth_user.user_id, "admin")
+        .resource("user", &id)
+        .log();
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "id": user.id.to_string(),
+            "username": user.username,
+            "email": user.email,
+            "name": user.name,
+            "role": format!("{:?}", user.role).to_lowercase(),
+            "is_active": user.is_active,
+        }))),
     )
 }
