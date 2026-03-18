@@ -13,6 +13,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 mod discovery;
+#[allow(dead_code)]
 mod server_connection;
 
 slint::include_modules!();
