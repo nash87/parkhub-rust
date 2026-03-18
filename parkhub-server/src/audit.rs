@@ -200,6 +200,24 @@ impl AuditEntryBuilder {
     }
 }
 
+impl AuditEntry {
+    /// Persist this audit entry to the database (non-blocking best-effort).
+    /// Call after `.log()` when you have DB access.
+    pub async fn persist(&self, db: &crate::db::Database) {
+        let log_entry = crate::db::AuditLogEntry {
+            id: self.id,
+            timestamp: self.timestamp,
+            event_type: format!("{:?}", self.event_type),
+            user_id: self.user_id,
+            username: self.username.clone(),
+            details: self.details.as_ref().map(|v| v.to_string()),
+        };
+        if let Err(e) = db.save_audit_log(&log_entry).await {
+            tracing::warn!("Failed to persist audit entry: {e}");
+        }
+    }
+}
+
 /// Convenience functions for common audit events
 pub mod events {
     use super::*;

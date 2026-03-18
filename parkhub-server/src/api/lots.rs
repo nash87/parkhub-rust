@@ -204,6 +204,19 @@ pub(crate) async fn create_lot(
         req.total_slots,
     );
 
+    // Dispatch webhook
+    {
+        let state_clone = state.clone();
+        let lot_json = serde_json::json!({
+            "lot_id": lot.id,
+            "name": lot.name,
+            "total_slots": lot.total_slots,
+        });
+        tokio::spawn(async move {
+            super::webhooks::dispatch_webhook_event(&state_clone, "lot.created", lot_json).await;
+        });
+    }
+
     (StatusCode::CREATED, Json(ApiResponse::success(lot)))
 }
 

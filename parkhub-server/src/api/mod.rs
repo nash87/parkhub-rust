@@ -1220,10 +1220,31 @@ async fn create_booking(
         .ok()
         .flatten();
 
-    if let Some(ref u) = user_info_opt {
-        crate::audit::events::booking_created(auth_user.user_id, &u.username, booking.id);
+    let audit_entry = if let Some(ref u) = user_info_opt {
+        crate::audit::events::booking_created(auth_user.user_id, &u.username, booking.id)
     } else {
-        crate::audit::events::booking_created(auth_user.user_id, "", booking.id);
+        crate::audit::events::booking_created(auth_user.user_id, "", booking.id)
+    };
+    // Persist audit entry to DB (non-blocking)
+    {
+        let state_r = state.read().await;
+        audit_entry.persist(&state_r.db).await;
+    }
+
+    // Dispatch webhook event (non-blocking)
+    {
+        let state_clone = state.clone();
+        let booking_json = serde_json::json!({
+            "booking_id": booking.id,
+            "user_id": auth_user.user_id,
+            "lot_id": booking.lot_id,
+            "slot_number": booking.slot_number,
+            "start_time": booking.start_time,
+            "end_time": booking.end_time,
+        });
+        tokio::spawn(async move {
+            webhooks::dispatch_webhook_event(&state_clone, "booking.created", booking_json).await;
+        });
     }
 
     // Send booking confirmation email (non-blocking, fire-and-forget).
@@ -1427,6 +1448,19 @@ async fn cancel_booking(
         booking_id = %id,
         "Booking cancelled"
     );
+
+    // Dispatch webhook event
+    {
+        let state_clone = state.clone();
+        let payload = serde_json::json!({
+            "booking_id": id,
+            "user_id": auth_user.user_id,
+            "action": "cancelled",
+        });
+        tokio::spawn(async move {
+            webhooks::dispatch_webhook_event(&state_clone, "booking.cancelled", payload).await;
+        });
+    }
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }

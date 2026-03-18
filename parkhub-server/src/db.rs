@@ -3092,10 +3092,7 @@ mod tests {
         );
 
         // Delete
-        let deleted = db
-            .delete_announcement(&ann.id.to_string())
-            .await
-            .unwrap();
+        let deleted = db.delete_announcement(&ann.id.to_string()).await.unwrap();
         assert!(deleted);
         assert!(db.list_announcements().await.unwrap().is_empty());
 
@@ -3183,10 +3180,7 @@ mod tests {
         db.save_credit_transaction(&tx1).await.unwrap();
         db.save_credit_transaction(&tx2).await.unwrap();
 
-        let list = db
-            .list_credit_transactions_for_user(user_id)
-            .await
-            .unwrap();
+        let list = db.list_credit_transactions_for_user(user_id).await.unwrap();
         assert_eq!(list.len(), 2);
         // Sorted newest first
         assert_eq!(
