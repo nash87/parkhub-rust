@@ -85,6 +85,7 @@ pub struct AuditEntry {
 
 impl AuditEntry {
     /// Create a new audit entry builder
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(event_type: AuditEventType) -> AuditEntryBuilder {
         AuditEntryBuilder {
             event_type,

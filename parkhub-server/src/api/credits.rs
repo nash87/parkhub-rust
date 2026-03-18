@@ -223,7 +223,7 @@ pub(crate) async fn admin_update_user_quota(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "VALIDATION_ERROR",
-                &format!("Invalid quota: {e}"),
+                format!("Invalid quota: {e}"),
             )),
         );
     }

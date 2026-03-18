@@ -166,6 +166,7 @@ impl CliArgs {
 }
 
 #[tokio::main]
+#[allow(clippy::field_reassign_with_default)]
 async fn main() -> Result<()> {
     // Parse CLI arguments first
     let cli = CliArgs::parse();
@@ -553,10 +554,10 @@ async fn main() -> Result<()> {
 
     // Demo auto-reset scheduler (every 6 hours when DEMO_MODE=true)
     {
-        let ds = demo_state.lock().unwrap_or_else(|e| e.into_inner());
-        let demo_enabled = ds.enabled;
-        drop(ds);
-
+        let demo_enabled = {
+            let ds = demo_state.lock().unwrap_or_else(|e| e.into_inner());
+            ds.enabled
+        };
         if demo_enabled {
             use tokio_cron_scheduler::{Job, JobScheduler};
 
