@@ -51,6 +51,8 @@ const NOTIFICATIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("notifi
 const WEBHOOKS: TableDefinition<&str, &[u8]> = TableDefinition::new("webhooks");
 const PUSH_SUBSCRIPTIONS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("push_subscriptions");
+const ZONES: TableDefinition<&str, &[u8]> = TableDefinition::new("zones");
+const FAVORITES: TableDefinition<&str, &[u8]> = TableDefinition::new("favorites");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -146,6 +148,34 @@ pub struct PushSubscription {
     pub endpoint: String,
     pub p256dh: String,
     pub auth: String,
+    pub created_at: DateTime<Utc>,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ZONE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A zone within a parking lot (e.g., "Level A", "VIP Section")
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Zone {
+    pub id: Uuid,
+    pub lot_id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub color: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FAVORITE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A user's favorite parking slot
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Favorite {
+    pub user_id: Uuid,
+    pub slot_id: Uuid,
+    pub lot_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
 
@@ -274,6 +304,8 @@ impl Database {
             let _ = write_txn.open_table(NOTIFICATIONS)?;
             let _ = write_txn.open_table(WEBHOOKS)?;
             let _ = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
+            let _ = write_txn.open_table(ZONES)?;
+            let _ = write_txn.open_table(FAVORITES)?;
         }
         write_txn.commit()?;
 
@@ -380,6 +412,8 @@ impl Database {
         drain_table!(write_txn, ANNOUNCEMENTS);
         drain_table!(write_txn, NOTIFICATIONS);
         drain_table!(write_txn, WEBHOOKS);
+        drain_table!(write_txn, ZONES);
+        drain_table!(write_txn, FAVORITES);
         // Preserve SETTINGS table (encryption salt, setup status, etc.)
         write_txn.commit()?;
         info!("All data tables cleared for demo reset");
@@ -1754,6 +1788,116 @@ impl Database {
             subs.push(self.deserialize(value.value())?);
         }
         Ok(subs)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ZONE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a zone
+    pub async fn save_zone(&self, zone: &Zone) -> Result<()> {
+        let key = format!("{}:{}", zone.lot_id, zone.id);
+        let data = self.serialize(zone)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(ZONES)?;
+            table.insert(key.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved zone: {} (lot: {})", zone.id, zone.lot_id);
+        Ok(())
+    }
+
+    /// List all zones for a parking lot
+    pub async fn list_zones_by_lot(&self, lot_id: &str) -> Result<Vec<Zone>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(ZONES)?;
+
+        let prefix = format!("{}:", lot_id);
+        let mut zones = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            if key.value().starts_with(&prefix) {
+                zones.push(self.deserialize(value.value())?);
+            }
+        }
+        Ok(zones)
+    }
+
+    /// Delete a zone by lot_id and zone_id
+    pub async fn delete_zone(&self, lot_id: &str, zone_id: &str) -> Result<bool> {
+        let key = format!("{}:{}", lot_id, zone_id);
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(ZONES)?;
+            let result = table.remove(key.as_str())?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted zone {} from lot {}", zone_id, lot_id);
+        }
+        Ok(existed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FAVORITE OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a favorite (user pins a parking slot)
+    pub async fn save_favorite(&self, fav: &Favorite) -> Result<()> {
+        let key = format!("{}:{}", fav.user_id, fav.slot_id);
+        let data = self.serialize(fav)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(FAVORITES)?;
+            table.insert(key.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved favorite: user={}, slot={}", fav.user_id, fav.slot_id);
+        Ok(())
+    }
+
+    /// List all favorites for a user
+    pub async fn list_favorites_by_user(&self, user_id: &str) -> Result<Vec<Favorite>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(FAVORITES)?;
+
+        let prefix = format!("{}:", user_id);
+        let mut favs = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            if key.value().starts_with(&prefix) {
+                favs.push(self.deserialize(value.value())?);
+            }
+        }
+        Ok(favs)
+    }
+
+    /// Delete a favorite by user_id and slot_id
+    pub async fn delete_favorite(&self, user_id: &str, slot_id: &str) -> Result<bool> {
+        let key = format!("{}:{}", user_id, slot_id);
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(FAVORITES)?;
+            let result = table.remove(key.as_str())?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted favorite: user={}, slot={}", user_id, slot_id);
+        }
+        Ok(existed)
     }
 }
 
