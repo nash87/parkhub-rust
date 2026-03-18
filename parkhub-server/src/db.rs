@@ -48,6 +48,7 @@ const SWAP_REQUESTS: TableDefinition<&str, &[u8]> = TableDefinition::new("swap_r
 const RECURRING_BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("recurring_bookings");
 const ANNOUNCEMENTS: TableDefinition<&str, &[u8]> = TableDefinition::new("announcements");
 const NOTIFICATIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("notifications");
+const WEBHOOKS: TableDefinition<&str, &[u8]> = TableDefinition::new("webhooks");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -113,6 +114,22 @@ impl Session {
     pub fn is_expired(&self) -> bool {
         self.expires_at < Utc::now()
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEBHOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Webhook configuration for event delivery
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Webhook {
+    pub id: Uuid,
+    pub url: String,
+    pub secret: String,
+    pub events: Vec<String>,
+    pub active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -238,6 +255,7 @@ impl Database {
             let _ = write_txn.open_table(RECURRING_BOOKINGS)?;
             let _ = write_txn.open_table(ANNOUNCEMENTS)?;
             let _ = write_txn.open_table(NOTIFICATIONS)?;
+            let _ = write_txn.open_table(WEBHOOKS)?;
         }
         write_txn.commit()?;
 
@@ -343,6 +361,7 @@ impl Database {
         drain_table!(write_txn, RECURRING_BOOKINGS);
         drain_table!(write_txn, ANNOUNCEMENTS);
         drain_table!(write_txn, NOTIFICATIONS);
+        drain_table!(write_txn, WEBHOOKS);
         // Preserve SETTINGS table (encryption salt, setup status, etc.)
         write_txn.commit()?;
         info!("All data tables cleared for demo reset");
@@ -1570,6 +1589,68 @@ impl Database {
         }
         transactions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
         Ok(transactions)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WEBHOOK OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a webhook (insert or update)
+    pub async fn save_webhook(&self, webhook: &Webhook) -> Result<()> {
+        let id = webhook.id.to_string();
+        let data = self.serialize(webhook)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(WEBHOOKS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved webhook: {}", webhook.id);
+        Ok(())
+    }
+
+    /// Get a webhook by ID
+    pub async fn get_webhook(&self, id: &str) -> Result<Option<Webhook>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(WEBHOOKS)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List all webhooks
+    pub async fn list_webhooks(&self) -> Result<Vec<Webhook>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        let table = read_txn.open_table(WEBHOOKS)?;
+
+        let mut webhooks = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            webhooks.push(self.deserialize(value.value())?);
+        }
+        Ok(webhooks)
+    }
+
+    /// Delete a webhook by ID
+    pub async fn delete_webhook(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        let existed = {
+            let mut table = write_txn.open_table(WEBHOOKS)?;
+            let result = table.remove(id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        if existed {
+            debug!("Deleted webhook: {}", id);
+        }
+        Ok(existed)
     }
 }
 

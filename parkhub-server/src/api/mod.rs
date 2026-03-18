@@ -64,6 +64,7 @@ mod lots;
 mod setup;
 mod social;
 mod users;
+pub(crate) mod webhooks;
 
 // Re-import handler functions so the router can reference them unqualified.
 use auth::{forgot_password, login, refresh_token, register, reset_password};
@@ -73,6 +74,9 @@ use credits::{
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
     update_lot, update_slot,
+};
+use webhooks::{
+    create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook,
 };
 
 /// User ID extracted from auth token
@@ -288,6 +292,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/admin/stats", get(admin_stats))
         .route("/api/v1/admin/reports", get(admin_reports))
         .route("/api/v1/admin/heatmap", get(admin_heatmap))
+        // Admin-only: webhooks
+        .route(
+            "/api/v1/webhooks",
+            get(list_webhooks).post(create_webhook),
+        )
+        .route(
+            "/api/v1/webhooks/{id}",
+            put(update_webhook).delete(delete_webhook),
+        )
+        .route("/api/v1/webhooks/{id}/test", post(test_webhook))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
