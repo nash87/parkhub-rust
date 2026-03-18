@@ -38,15 +38,12 @@ const VAT_RATE: f64 = 0.19;
 
 use parkhub_common::models::{
     Absence, AbsencePattern, AbsenceType, Announcement, AnnouncementSeverity, GuestBooking,
-    Notification, RecurringBooking, SwapRequest, SwapRequestStatus,
-    WaitlistEntry,
+    Notification, RecurringBooking, SwapRequest, SwapRequestStatus, WaitlistEntry,
 };
 use parkhub_common::{
-    ApiResponse, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
-    CreditTransaction, CreditTransactionType, HandshakeRequest, HandshakeResponse,
-    LoginResponse, PaymentStatus,
-    ServerStatus, SlotStatus, User,
-    UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
+    ApiResponse, Booking, BookingPricing, BookingStatus, CreateBookingRequest, CreditTransaction,
+    CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginResponse, PaymentStatus,
+    ServerStatus, SlotStatus, User, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
 };
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +66,9 @@ mod users;
 
 // Re-import handler functions so the router can reference them unqualified.
 use auth::{forgot_password, login, refresh_token, register, reset_password};
-use credits::{admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits};
+use credits::{
+    admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits,
+};
 use lots::{create_lot, delete_lot, get_lot, get_lot_slots, list_lots, update_lot};
 
 /// User ID extracted from auth token
@@ -535,18 +534,14 @@ async fn handshake(
 
 async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse<ServerStatus>> {
     let state = state.read().await;
-    let db_stats = state
-        .db
-        .stats()
-        .await
-        .unwrap_or(crate::db::DatabaseStats {
-            users: 0,
-            bookings: 0,
-            parking_lots: 0,
-            slots: 0,
-            sessions: 0,
-            vehicles: 0,
-        });
+    let db_stats = state.db.stats().await.unwrap_or(crate::db::DatabaseStats {
+        users: 0,
+        bookings: 0,
+        parking_lots: 0,
+        slots: 0,
+        sessions: 0,
+        vehicles: 0,
+    });
 
     Json(ApiResponse::success(ServerStatus {
         uptime_seconds: 0,
@@ -1804,7 +1799,9 @@ pub(super) fn generate_access_token() -> String {
 /// Returns `Err` on the (extremely unlikely) event that hashing fails so the
 /// caller can propagate a proper HTTP 500 instead of panicking.
 #[allow(clippy::result_large_err)]
-pub(super) fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
+pub(super) fn hash_password(
+    password: &str,
+) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,

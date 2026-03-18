@@ -531,7 +531,9 @@ async fn main() -> Result<()> {
                                     created_at: now,
                                 };
                                 if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
-                                    tracing::warn!("Failed to save monthly refill transaction: {e}");
+                                    tracing::warn!(
+                                        "Failed to save monthly refill transaction: {e}"
+                                    );
                                 }
                                 refilled += 1;
                             }
@@ -588,7 +590,8 @@ async fn main() -> Result<()> {
                         }
 
                         // Re-create admin user and sample lot
-                        if let Err(e) = create_admin_user(&state_guard.db, &state_guard.config).await
+                        if let Err(e) =
+                            create_admin_user(&state_guard.db, &state_guard.config).await
                         {
                             tracing::error!("Demo auto-reset: failed to create admin: {e}");
                         }

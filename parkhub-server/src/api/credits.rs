@@ -9,9 +9,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use parkhub_common::{
-    ApiResponse, CreditTransaction, CreditTransactionType, UserRole,
-};
+use parkhub_common::{ApiResponse, CreditTransaction, CreditTransactionType, UserRole};
 
 use super::{admin::AdminUserResponse, check_admin, AuthUser, SharedState};
 
@@ -195,7 +193,10 @@ pub(crate) async fn admin_refill_all_credits(
                 created_at: now,
             };
             if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
-                tracing::warn!("Failed to save refill transaction for user {}: {e}", user.id);
+                tracing::warn!(
+                    "Failed to save refill transaction for user {}: {e}",
+                    user.id
+                );
             }
             refilled += 1;
         }
