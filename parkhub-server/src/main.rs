@@ -403,7 +403,7 @@ async fn main() -> Result<()> {
     }));
 
     // Build the API router
-    let app = api::create_router(state.clone());
+    let (app, demo_state) = api::create_router(state.clone());
 
     // Determine bind address
     let addr: SocketAddr = format!("0.0.0.0:{}", config.port).parse()?;
@@ -549,6 +549,103 @@ async fn main() -> Result<()> {
         // Store scheduler in AppState so it is properly dropped on shutdown
         // instead of leaked via mem::forget.
         state.write().await.scheduler = Some(sched);
+    }
+
+    // Demo auto-reset scheduler (every 6 hours when DEMO_MODE=true)
+    {
+        let ds = demo_state.lock().unwrap_or_else(|e| e.into_inner());
+        let demo_enabled = ds.enabled;
+        drop(ds);
+
+        if demo_enabled {
+            use tokio_cron_scheduler::{Job, JobScheduler};
+
+            let sched = JobScheduler::new().await?;
+            let state_for_demo = state.clone();
+            let demo_for_cron = demo_state.clone();
+
+            sched
+                .add(Job::new_async("0 0 */6 * * *", move |_uuid, _lock| {
+                    let state = state_for_demo.clone();
+                    let demo = demo_for_cron.clone();
+                    Box::pin(async move {
+                        info!("Running scheduled demo data reset...");
+
+                        // Mark reset in progress
+                        if let Ok(mut ds) = demo.lock() {
+                            ds.reset_in_progress = true;
+                        }
+
+                        // Clear all data
+                        let state_guard = state.write().await;
+                        if let Err(e) = state_guard.db.clear_all_data().await {
+                            tracing::error!("Demo auto-reset: failed to clear data: {e}");
+                            if let Ok(mut ds) = demo.lock() {
+                                ds.reset_in_progress = false;
+                            }
+                            return;
+                        }
+
+                        // Re-create admin user and sample lot
+                        if let Err(e) = create_admin_user(&state_guard.db, &state_guard.config).await
+                        {
+                            tracing::error!("Demo auto-reset: failed to create admin: {e}");
+                        }
+                        if let Err(e) = create_sample_parking_lot(&state_guard.db).await {
+                            tracing::error!("Demo auto-reset: failed to create sample lot: {e}");
+                        }
+                        // Re-enable credits
+                        let _ = state_guard.db.set_setting("credits_enabled", "true").await;
+                        let _ = state_guard.db.set_setting("credits_per_booking", "1").await;
+                        drop(state_guard);
+
+                        // Spawn seed script in background (best-effort)
+                        let port = std::env::var("PORT").unwrap_or_else(|_| "10000".to_string());
+                        let admin_pw = std::env::var("PARKHUB_ADMIN_PASSWORD")
+                            .unwrap_or_else(|_| "ParkHub2026!".to_string());
+                        let seed_script = std::path::Path::new("/app/seed_demo.py");
+                        if seed_script.exists() {
+                            match tokio::process::Command::new("python3")
+                                .arg(seed_script)
+                                .arg("--base-url")
+                                .arg(format!("http://127.0.0.1:{}", port))
+                                .arg("--admin-password")
+                                .arg(&admin_pw)
+                                .output()
+                                .await
+                            {
+                                Ok(output) if output.status.success() => {
+                                    info!("Demo seed script completed successfully");
+                                }
+                                Ok(output) => {
+                                    tracing::warn!(
+                                        "Demo seed script exited with {}: {}",
+                                        output.status,
+                                        String::from_utf8_lossy(&output.stderr)
+                                    );
+                                }
+                                Err(e) => {
+                                    tracing::warn!("Failed to run demo seed script: {e}");
+                                }
+                            }
+                        }
+
+                        // Mark reset complete and update timestamps
+                        if let Ok(mut ds) = demo.lock() {
+                            ds.reset();
+                            ds.mark_reset_complete();
+                        }
+
+                        info!("Demo auto-reset complete");
+                    })
+                })?)
+                .await?;
+            sched.start().await?;
+            info!(
+                "Demo auto-reset scheduler started (runs every {}h)",
+                demo::AUTO_RESET_INTERVAL_HOURS
+            );
+        }
     }
 
     // Show status GUI or wait for shutdown signal
