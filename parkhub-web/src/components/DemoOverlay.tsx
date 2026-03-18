@@ -105,7 +105,9 @@ export function DemoOverlay() {
       <div className="glass-card shadow-xl">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center gap-3 px-4 py-2.5 min-w-[200px]"
+          aria-expanded={!collapsed}
+          aria-label={t('demo.badge', 'Demo mode overlay')}
+          className="flex items-center gap-3 px-4 py-3 min-w-[200px]"
         >
           {/* Demo badge */}
           <span className="flex items-center gap-1 badge badge-primary">
@@ -114,7 +116,7 @@ export function DemoOverlay() {
           </span>
 
           {/* Timer */}
-          <span className={`font-mono text-sm font-bold ${isLow ? 'text-red-500 animate-pulse' : 'text-surface-700 dark:text-surface-300'}`}>
+          <span className={`font-mono text-sm font-bold transition-colors duration-300 ${isLow ? 'text-red-500' : 'text-surface-700 dark:text-surface-300'}`}>
             <Timer weight="bold" className="w-3.5 h-3.5 inline mr-1" />
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </span>
@@ -139,7 +141,14 @@ export function DemoOverlay() {
               <div className="px-4 pb-3 pt-1 border-t border-surface-200/50 dark:border-surface-700/50">
                 {/* Vote progress */}
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="flex-1 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+                  <div
+                    className="flex-1 h-2 bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden"
+                    role="progressbar"
+                    aria-valuenow={demo.votes}
+                    aria-valuemin={0}
+                    aria-valuemax={demo.vote_threshold}
+                    aria-label={t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold })}
+                  >
                     <motion.div
                       className="h-full bg-primary-500 rounded-full"
                       animate={{ width: `${voteProgress}%` }}
@@ -166,7 +175,7 @@ export function DemoOverlay() {
 
                 {/* Auto-reset info */}
                 {(lastReset || nextReset) && (
-                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-[11px] text-surface-400 space-y-0.5">
+                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-400 space-y-0.5">
                     {lastReset && (
                       <div className="flex justify-between">
                         <span>{t('demo.lastReset', 'Last reset')}</span>
