@@ -136,4 +136,75 @@ mod tests {
         timer.finish(true);
         // Timer should complete without panic
     }
+
+    #[test]
+    fn test_metrics_timer_failure() {
+        let timer = MetricsTimer::new("write", "bookings");
+        timer.finish(false);
+    }
+
+    #[test]
+    fn test_metrics_timer_stores_fields() {
+        let timer = MetricsTimer::new("delete", "sessions");
+        assert_eq!(timer.operation, "delete");
+        assert_eq!(timer.table, "sessions");
+    }
+
+    #[test]
+    fn test_record_http_request_no_panic() {
+        record_http_request("GET", "/api/lots", 200, std::time::Duration::from_millis(50));
+        record_http_request("POST", "/api/bookings", 201, std::time::Duration::from_millis(120));
+        record_http_request("GET", "/api/missing", 404, std::time::Duration::from_millis(5));
+        record_http_request("POST", "/api/login", 500, std::time::Duration::from_secs(2));
+    }
+
+    #[test]
+    fn test_record_auth_event_no_panic() {
+        record_auth_event("login", true);
+        record_auth_event("login", false);
+        record_auth_event("token_refresh", true);
+        record_auth_event("logout", true);
+    }
+
+    #[test]
+    fn test_record_booking_event_no_panic() {
+        record_booking_event("created");
+        record_booking_event("cancelled");
+        record_booking_event("extended");
+        record_booking_event("checked_in");
+        record_booking_event("checked_out");
+    }
+
+    #[test]
+    fn test_record_lot_occupancy_no_panic() {
+        record_lot_occupancy("lot-1", "Main Lot", 100, 75);
+        record_lot_occupancy("lot-2", "Overflow", 50, 0);
+        record_lot_occupancy("lot-3", "VIP", 10, 10);
+    }
+
+    #[test]
+    fn test_record_lot_occupancy_zero_total() {
+        // Should not divide by zero
+        record_lot_occupancy("empty-lot", "Empty", 0, 0);
+    }
+
+    #[test]
+    fn test_record_db_operation_no_panic() {
+        record_db_operation("insert", "users", std::time::Duration::from_millis(5), true);
+        record_db_operation("select", "bookings", std::time::Duration::from_millis(15), true);
+        record_db_operation("update", "slots", std::time::Duration::from_millis(8), false);
+    }
+
+    #[test]
+    fn test_record_active_sessions_no_panic() {
+        record_active_sessions(0);
+        record_active_sessions(42);
+        record_active_sessions(1000);
+    }
+
+    #[test]
+    fn test_record_active_bookings_no_panic() {
+        record_active_bookings(0);
+        record_active_bookings(100);
+    }
 }

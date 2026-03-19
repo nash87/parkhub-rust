@@ -287,4 +287,222 @@ mod tests {
         assert!(!entry.success);
         assert!(entry.error.is_some());
     }
+
+    #[test]
+    fn test_audit_entry_has_unique_id() {
+        let e1 = AuditEntry::new(AuditEventType::LoginSuccess).log();
+        let e2 = AuditEntry::new(AuditEventType::LoginSuccess).log();
+        assert_ne!(e1.id, e2.id);
+    }
+
+    #[test]
+    fn test_audit_entry_timestamp_set() {
+        let before = Utc::now();
+        let entry = AuditEntry::new(AuditEventType::UserCreated).log();
+        let after = Utc::now();
+        assert!(entry.timestamp >= before);
+        assert!(entry.timestamp <= after);
+    }
+
+    #[test]
+    fn test_audit_entry_with_resource() {
+        let booking_id = Uuid::new_v4();
+        let entry = AuditEntry::new(AuditEventType::BookingCreated)
+            .resource("booking", &booking_id.to_string())
+            .log();
+
+        assert_eq!(entry.resource_type.as_deref(), Some("booking"));
+        assert_eq!(entry.resource_id.as_deref(), Some(booking_id.to_string().as_str()));
+    }
+
+    #[test]
+    fn test_audit_entry_with_details() {
+        let details = serde_json::json!({"key": "value", "count": 42});
+        let entry = AuditEntry::new(AuditEventType::ConfigChanged)
+            .details(details.clone())
+            .log();
+
+        assert_eq!(entry.details, Some(details));
+    }
+
+    #[test]
+    fn test_audit_entry_with_user_agent() {
+        let entry = AuditEntry::new(AuditEventType::LoginSuccess)
+            .user_agent("Mozilla/5.0")
+            .log();
+
+        assert_eq!(entry.user_agent.as_deref(), Some("Mozilla/5.0"));
+    }
+
+    #[test]
+    fn test_audit_entry_default_success_true() {
+        let entry = AuditEntry::new(AuditEventType::UserCreated).log();
+        assert!(entry.success);
+        assert!(entry.error.is_none());
+    }
+
+    #[test]
+    fn test_audit_entry_explicit_success_false() {
+        let entry = AuditEntry::new(AuditEventType::BookingCancelled)
+            .success(false)
+            .log();
+        assert!(!entry.success);
+    }
+
+    #[test]
+    fn test_audit_entry_error_sets_success_false() {
+        let entry = AuditEntry::new(AuditEventType::LoginFailed)
+            .error("bad credentials")
+            .log();
+        assert!(!entry.success);
+        assert_eq!(entry.error.as_deref(), Some("bad credentials"));
+    }
+
+    #[test]
+    fn test_audit_entry_without_user() {
+        let entry = AuditEntry::new(AuditEventType::RateLimitExceeded)
+            .ip(IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4)))
+            .log();
+
+        assert!(entry.user_id.is_none());
+        assert!(entry.username.is_none());
+        assert!(entry.ip_address.is_some());
+    }
+
+    #[test]
+    fn test_audit_entry_all_event_types() {
+        // Verify all event types can be used without panic
+        let event_types = vec![
+            AuditEventType::LoginSuccess,
+            AuditEventType::LoginFailed,
+            AuditEventType::Logout,
+            AuditEventType::TokenRefresh,
+            AuditEventType::PasswordChanged,
+            AuditEventType::PasswordResetRequested,
+            AuditEventType::UserCreated,
+            AuditEventType::UserUpdated,
+            AuditEventType::UserDeleted,
+            AuditEventType::UserDeactivated,
+            AuditEventType::UserActivated,
+            AuditEventType::RoleChanged,
+            AuditEventType::BookingCreated,
+            AuditEventType::BookingUpdated,
+            AuditEventType::BookingCancelled,
+            AuditEventType::BookingExtended,
+            AuditEventType::CheckIn,
+            AuditEventType::CheckOut,
+            AuditEventType::VehicleAdded,
+            AuditEventType::VehicleRemoved,
+            AuditEventType::LotCreated,
+            AuditEventType::LotUpdated,
+            AuditEventType::LotDeleted,
+            AuditEventType::SlotStatusChanged,
+            AuditEventType::ConfigChanged,
+            AuditEventType::RateLimitExceeded,
+            AuditEventType::InvalidTokenUsed,
+            AuditEventType::UnauthorizedAccess,
+            AuditEventType::SuspiciousActivity,
+        ];
+
+        for event_type in event_types {
+            let entry = AuditEntry::new(event_type).log();
+            assert!(entry.success);
+        }
+    }
+
+    #[test]
+    fn test_audit_event_type_serialization() {
+        let serialized = serde_json::to_string(&AuditEventType::LoginSuccess).unwrap();
+        assert_eq!(serialized, "\"login_success\"");
+
+        let serialized = serde_json::to_string(&AuditEventType::BookingCreated).unwrap();
+        assert_eq!(serialized, "\"booking_created\"");
+
+        let serialized = serde_json::to_string(&AuditEventType::RateLimitExceeded).unwrap();
+        assert_eq!(serialized, "\"rate_limit_exceeded\"");
+    }
+
+    #[test]
+    fn test_audit_event_type_deserialization() {
+        let event: AuditEventType = serde_json::from_str("\"login_failed\"").unwrap();
+        assert!(matches!(event, AuditEventType::LoginFailed));
+
+        let event: AuditEventType = serde_json::from_str("\"user_created\"").unwrap();
+        assert!(matches!(event, AuditEventType::UserCreated));
+    }
+
+    #[test]
+    fn test_audit_entry_serialization_roundtrip() {
+        let user_id = Uuid::new_v4();
+        let entry = AuditEntry::new(AuditEventType::BookingCreated)
+            .user(user_id, "florian")
+            .ip(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100)))
+            .resource("booking", "abc-123")
+            .details(serde_json::json!({"slot": 5}))
+            .log();
+
+        let json = serde_json::to_string(&entry).unwrap();
+        let deserialized: AuditEntry = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.id, entry.id);
+        assert_eq!(deserialized.user_id, Some(user_id));
+        assert_eq!(deserialized.username.as_deref(), Some("florian"));
+        assert_eq!(deserialized.resource_type.as_deref(), Some("booking"));
+        assert!(deserialized.success);
+    }
+
+    #[test]
+    fn test_convenience_login_success() {
+        let user_id = Uuid::new_v4();
+        let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1));
+        let entry = events::login_success(user_id, "admin", ip);
+
+        assert!(entry.success);
+        assert_eq!(entry.user_id, Some(user_id));
+        assert_eq!(entry.username.as_deref(), Some("admin"));
+        assert_eq!(entry.ip_address, Some(ip));
+    }
+
+    #[test]
+    fn test_convenience_login_failed() {
+        let ip = IpAddr::V4(Ipv4Addr::new(10, 0, 0, 2));
+        let entry = events::login_failed("hacker", ip, "wrong password");
+
+        assert!(!entry.success);
+        assert_eq!(entry.error.as_deref(), Some("wrong password"));
+        assert_eq!(entry.ip_address, Some(ip));
+    }
+
+    #[test]
+    fn test_convenience_booking_created() {
+        let user_id = Uuid::new_v4();
+        let booking_id = Uuid::new_v4();
+        let entry = events::booking_created(user_id, "user1", booking_id);
+
+        assert!(entry.success);
+        assert_eq!(entry.resource_type.as_deref(), Some("booking"));
+        assert_eq!(entry.resource_id.as_deref(), Some(booking_id.to_string().as_str()));
+    }
+
+    #[test]
+    fn test_convenience_unauthorized_access() {
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let entry = events::unauthorized_access(ip, "/admin/secret");
+
+        assert!(!entry.success);
+        assert!(entry.details.is_some());
+        let details = entry.details.unwrap();
+        assert_eq!(details["path"], "/admin/secret");
+    }
+
+    #[test]
+    fn test_convenience_rate_limit_exceeded() {
+        let ip = IpAddr::V4(Ipv4Addr::new(10, 10, 10, 10));
+        let entry = events::rate_limit_exceeded(ip, "/api/login");
+
+        assert!(!entry.success);
+        assert!(entry.details.is_some());
+        let details = entry.details.unwrap();
+        assert_eq!(details["endpoint"], "/api/login");
+    }
 }
