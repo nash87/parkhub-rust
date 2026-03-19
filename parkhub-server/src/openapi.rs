@@ -129,4 +129,40 @@ mod tests {
         assert!(json.contains("ParkHub API"));
         assert!(json.contains("1.0.0"));
     }
+
+    #[test]
+    fn test_openapi_has_all_tags() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for tag in ["Authentication", "Lots", "Credits", "Health", "Monitoring"] {
+            assert!(json.contains(tag), "Missing tag: {tag}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_auth_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in ["/auth/login", "/auth/register", "/auth/refresh"] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_lot_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in ["/lots", "/lots/{id}", "/lots/{lot_id}/slots"] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_schemas() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for schema in ["LoginRequest", "RegisterRequest", "CreateParkingLotRequest"] {
+            assert!(json.contains(schema), "Missing schema: {schema}");
+        }
+    }
 }

@@ -6804,3 +6804,38 @@ async fn admin_update_user(
         }))),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normalize_metric_path_uuid() {
+        let path = "/api/v1/lots/550e8400-e29b-41d4-a716-446655440000/slots";
+        assert_eq!(normalize_metric_path(path), "/api/v1/lots/:id/slots");
+    }
+
+    #[test]
+    fn test_normalize_metric_path_numeric() {
+        let path = "/api/v1/bookings/12345";
+        assert_eq!(normalize_metric_path(path), "/api/v1/bookings/:id");
+    }
+
+    #[test]
+    fn test_normalize_metric_path_no_ids() {
+        let path = "/api/v1/lots";
+        assert_eq!(normalize_metric_path(path), "/api/v1/lots");
+    }
+
+    #[test]
+    fn test_normalize_metric_path_multiple_ids() {
+        let path = "/api/v1/lots/550e8400-e29b-41d4-a716-446655440000/slots/42";
+        assert_eq!(normalize_metric_path(path), "/api/v1/lots/:id/slots/:id");
+    }
+
+    #[test]
+    fn test_normalize_metric_path_root() {
+        assert_eq!(normalize_metric_path("/health"), "/health");
+        assert_eq!(normalize_metric_path("/metrics"), "/metrics");
+    }
+}
