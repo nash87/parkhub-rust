@@ -8,6 +8,7 @@ import {
   CalendarCheck, MagnifyingGlass, Funnel,
 } from '@phosphor-icons/react';
 import { api, type Booking, type Vehicle } from '../api/client';
+import { BookingsSkeleton } from '../components/Skeleton';
 import toast from 'react-hot-toast';
 import { format, formatDistanceToNow, isFuture } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
@@ -60,15 +61,11 @@ export function BookingsPage() {
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
-  if (loading) return (
-    <div className="space-y-6">
-      <div className="h-8 w-64 skeleton rounded-xl" />
-      {[1,2,3].map(i => <div key={i} className="h-40 skeleton rounded-2xl" />)}
-    </div>
-  );
+  if (loading) return <BookingsSkeleton />;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+    <AnimatePresence mode="wait">
+    <motion.div key="bookings-loaded" variants={container} initial="hidden" animate="show" className="space-y-8">
       <motion.div variants={item} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('bookings.title')}</h1>
@@ -147,6 +144,7 @@ export function BookingsPage() {
         )}
       </Section>
     </motion.div>
+    </AnimatePresence>
   );
 }
 

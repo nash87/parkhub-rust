@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   CalendarCheck, Car, Coins, Clock, CalendarPlus, ArrowRight,
@@ -8,6 +8,7 @@ import {
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type Booking, type UserStats } from '../api/client';
+import { DashboardSkeleton } from '../components/Skeleton';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -31,18 +32,11 @@ export function DashboardPage() {
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
-  if (loading) return (
-    <div className="space-y-6">
-      <div className="h-10 w-72 skeleton rounded-xl" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1,2,3,4].map(i => <div key={i} className="h-28 skeleton rounded-2xl" />)}
-      </div>
-      <div className="h-64 skeleton rounded-2xl" />
-    </div>
-  );
+  if (loading) return <DashboardSkeleton />;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+    <AnimatePresence mode="wait">
+    <motion.div key="dashboard-loaded" variants={container} initial="hidden" animate="show" className="space-y-8">
       {/* Greeting */}
       <motion.div variants={item}>
         <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white">
@@ -163,6 +157,7 @@ export function DashboardPage() {
         </motion.div>
       </div>
     </motion.div>
+    </AnimatePresence>
   );
 }
 

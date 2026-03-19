@@ -82,7 +82,15 @@ export function CalendarPage() {
   const selectedEvents = selectedDate ? eventsForDay(selectedDate) : [];
 
   const monthLabel = currentMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  // Use i18n-aware weekday abbreviations (Monday-start)
+  const WEEKDAYS = useMemo(() => {
+    const base = new Date(2026, 0, 5); // Monday
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      return d.toLocaleDateString(undefined, { weekday: 'short' });
+    });
+  }, []);
 
   function prevMonth() {
     setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
