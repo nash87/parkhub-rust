@@ -59,19 +59,14 @@ jobs:
         run: |
           SVC="https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}"
           AUTH="Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
-          CURRENT=$(curl -sf "$SVC/env-vars" -H "$AUTH" 2>/dev/null || echo "[]")
-          MERGED=$(echo "$CURRENT" | python3 -c "
-          import sys, json
-          current = json.load(sys.stdin)
-          env = {e['key']: e['value'] for e in current} if isinstance(current, list) else {}
-          env['DEMO_MODE'] = 'true'
-          env['PARKHUB_ADMIN_PASSWORD'] = 'demo'
-          env['RUST_LOG'] = 'info'
-          print(json.dumps([{'key': k, 'value': v} for k, v in env.items()]))
-          ")
-          curl -sf -X PUT "$SVC/env-vars" \
-            -H "$AUTH" -H "Content-Type: application/json" \
-            -d "$MERGED" || echo "WARNING: Failed to set env vars"
+          # Per-key PUT: /env-vars/{key} with {"value": "..."}
+          for KV in "DEMO_MODE=true" "PARKHUB_ADMIN_PASSWORD=demo" "RUST_LOG=info"; do
+            KEY="${KV%%=*}"; VALUE="${KV#*=}"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$SVC/env-vars/$KEY" \
+              -H "$AUTH" -H "Content-Type: application/json" \
+              -d "{\"value\":\"$VALUE\"}")
+            echo "  $KEY → HTTP $HTTP_CODE"
+          done
 
       - name: Deploy to Render
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
