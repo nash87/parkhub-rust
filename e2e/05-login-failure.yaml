@@ -1,0 +1,35 @@
+url: ${BASE_URL}
+---
+# Login failure
+- launchApp
+
+- extendedWaitUntil:
+    visible: "Get Started|Sign In"
+    timeout: 30000
+
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 10000
+
+# Wrong password
+- tapOn:
+    id: "username"
+- inputText: "admin@parkhub.test"
+- tapOn:
+    id: "password"
+- inputText: "wrongpassword"
+- tapOn: "Sign In"
+
+# Should show error
+- extendedWaitUntil:
+    visible: "Invalid"
+    timeout: 10000
+
+# Still on login page
+- assertVisible: "Sign In"
