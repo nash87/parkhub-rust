@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { CarSimple, Eye, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
+// @ts-ignore — Vite resolves JSON imports at build time
+import { version as APP_VERSION } from '../../package.json';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -178,7 +180,7 @@ export function LoginPage() {
           </p>
 
           <p className="text-center text-xs text-surface-400 mt-8">
-            ParkHub v1.4.0
+            ParkHub v{APP_VERSION}
           </p>
         </motion.div>
       </div>
