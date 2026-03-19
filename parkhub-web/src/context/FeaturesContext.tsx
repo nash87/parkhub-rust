@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
-import { api } from '../api/client';
 import { useUseCase, type UseCase } from './UseCaseContext';
 
 // ── Feature Module Definitions ──
@@ -91,28 +90,13 @@ export function FeaturesProvider({ children }: { children: ReactNode }) {
   const [configured, setConfigured] = useState(() => localStorage.getItem(STORAGE_KEY) !== null);
   const [loading, setLoading] = useState(true);
 
-  // Try to load from server on mount (if logged in)
+  // Load from localStorage on mount (features are client-side only for now)
   useEffect(() => {
-    const token = localStorage.getItem('parkhub_token');
-    if (token) {
-      api.getFeatures().then(res => {
-        if (res.success && res.data && Array.isArray(res.data.enabled)) {
-          setFeaturesState(res.data.enabled as FeatureModule[]);
-          setConfigured(true);
-        }
-      }).catch(() => {}).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    setLoading(false);
   }, []);
 
   const persist = useCallback((f: FeatureModule[]) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(f));
-    // Fire-and-forget server sync
-    const token = localStorage.getItem('parkhub_token');
-    if (token) {
-      api.updateFeatures(f).catch(() => {});
-    }
   }, []);
 
   const isEnabled = useCallback((feature: FeatureModule) => features.includes(feature), [features]);
