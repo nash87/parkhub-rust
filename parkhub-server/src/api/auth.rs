@@ -13,6 +13,7 @@ use parkhub_common::{
 use crate::audit::{AuditEntry, AuditEventType};
 use crate::db::Session;
 use crate::email;
+use crate::metrics;
 
 use super::{
     generate_access_token, hash_password, hash_password_simple, verify_password, SharedState,
@@ -23,13 +24,13 @@ use super::{
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Request body for the forgot-password endpoint
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub(crate) struct ForgotPasswordRequest {
     email: String,
 }
 
 /// Request body for the reset-password endpoint
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub(crate) struct ResetPasswordRequest {
     token: String,
     password: String,
@@ -46,6 +47,16 @@ struct PasswordResetToken {
 // Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login",
+    tag = "Authentication",
+    responses(
+        (status = 200, description = "Login successful"),
+        (status = 401, description = "Invalid credentials"),
+        (status = 403, description = "Account disabled"),
+    )
+)]
 pub(crate) async fn login(
     State(state): State<SharedState>,
     Json(request): Json<LoginRequest>,
@@ -63,6 +74,7 @@ pub(crate) async fn login(
                     AuditEntry::new(AuditEventType::LoginFailed)
                         .error("User not found")
                         .log();
+                    metrics::record_auth_event("login", false);
                     return (
                         StatusCode::UNAUTHORIZED,
                         Json(ApiResponse::error(
@@ -99,6 +111,7 @@ pub(crate) async fn login(
             .user(user.id, &user.username)
             .error("Invalid password")
             .log();
+        metrics::record_auth_event("login", false);
         return (
             StatusCode::UNAUTHORIZED,
             Json(ApiResponse::error(
@@ -140,6 +153,7 @@ pub(crate) async fn login(
         .user(user.id, &user.username)
         .log();
     audit.persist(&state_guard.db).await;
+    metrics::record_auth_event("login", true);
 
     // Create response — never send password_hash to clients
     let mut response_user = user;
@@ -159,6 +173,17 @@ pub(crate) async fn login(
     )
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/register",
+    tag = "Authentication",
+    responses(
+        (status = 201, description = "Registration successful"),
+        (status = 400, description = "Invalid input"),
+        (status = 403, description = "Registration disabled"),
+        (status = 409, description = "Email already exists"),
+    )
+)]
 pub(crate) async fn register(
     State(state): State<SharedState>,
     Json(request): Json<RegisterRequest>,
@@ -256,6 +281,7 @@ pub(crate) async fn register(
         .user(user.id, &user.username)
         .log();
     audit.persist(&state_guard.db).await;
+    metrics::record_auth_event("register", true);
 
     // Dispatch webhook for user creation
     {
@@ -305,6 +331,15 @@ pub(crate) async fn register(
     )
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/refresh",
+    tag = "Authentication",
+    responses(
+        (status = 200, description = "Token refreshed successfully"),
+        (status = 401, description = "Invalid or expired refresh token"),
+    )
+)]
 pub(crate) async fn refresh_token(
     State(state): State<SharedState>,
     Json(request): Json<RefreshTokenRequest>,
@@ -386,6 +421,14 @@ pub(crate) async fn refresh_token(
 /// stores it in the database with a 1-hour expiry, and sends a reset link
 /// to the user's email address.  Always returns 200 to prevent user
 /// enumeration attacks.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/forgot-password",
+    tag = "Authentication",
+    responses(
+        (status = 200, description = "Reset email sent (always succeeds to prevent enumeration)"),
+    )
+)]
 pub(crate) async fn forgot_password(
     State(state): State<SharedState>,
     Json(request): Json<ForgotPasswordRequest>,
@@ -464,6 +507,15 @@ pub(crate) async fn forgot_password(
 ///
 /// Accepts `{"token": "...", "password": "..."}`, validates the token,
 /// updates the user's password, and invalidates the token.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/reset-password",
+    tag = "Authentication",
+    responses(
+        (status = 200, description = "Password reset successful"),
+        (status = 400, description = "Invalid or expired token"),
+    )
+)]
 pub(crate) async fn reset_password(
     State(state): State<SharedState>,
     Json(request): Json<ResetPasswordRequest>,

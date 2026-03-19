@@ -652,6 +652,51 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Periodic metrics gauge update (every 5 minutes) — lot occupancy, active bookings
+    {
+        use tokio_cron_scheduler::{Job, JobScheduler};
+
+        let sched = JobScheduler::new().await?;
+        let state_for_metrics = state.clone();
+        sched
+            .add(Job::new_async("0 */5 * * * *", move |_uuid, _lock| {
+                let state = state_for_metrics.clone();
+                Box::pin(async move {
+                    let state_guard = state.read().await;
+                    // Active bookings count
+                    let now = chrono::Utc::now();
+                    if let Ok(bookings) = state_guard.db.list_bookings().await {
+                        let active = bookings
+                            .iter()
+                            .filter(|b| {
+                                b.status == parkhub_common::BookingStatus::Confirmed
+                                    && b.start_time <= now
+                                    && b.end_time >= now
+                            })
+                            .count();
+                        metrics::record_active_bookings(active as u64);
+                    }
+                    // Lot occupancy
+                    if let Ok(lots) = state_guard.db.list_parking_lots().await {
+                        for lot in &lots {
+                            let total = lot.total_slots as u64;
+                            let occupied =
+                                (lot.total_slots - lot.available_slots).max(0) as u64;
+                            metrics::record_lot_occupancy(
+                                &lot.id.to_string(),
+                                &lot.name,
+                                total,
+                                occupied,
+                            );
+                        }
+                    }
+                })
+            })?)
+            .await?;
+        sched.start().await?;
+        info!("Metrics gauge updater started (runs every 5 minutes)");
+    }
+
     // Show status GUI or wait for shutdown signal
     #[cfg(feature = "gui")]
     if !cli.headless {

@@ -37,7 +37,8 @@ use crate::{
         (name = "Vehicles", description = "User vehicles"),
         (name = "Health", description = "Health check endpoints"),
         (name = "Monitoring", description = "Metrics and monitoring"),
-        (name = "Admin", description = "Administrative endpoints")
+        (name = "Admin", description = "Administrative endpoints"),
+        (name = "Credits", description = "Credit balance and management")
     ),
     components(
         schemas(
@@ -80,7 +81,29 @@ use crate::{
         )
     ),
     paths(
-        // Health endpoints will be added via #[utoipa::path] macros
+        // Authentication
+        crate::api::auth::login,
+        crate::api::auth::register,
+        crate::api::auth::refresh_token,
+        crate::api::auth::forgot_password,
+        crate::api::auth::reset_password,
+
+        // Lots & Slots
+        crate::api::lots::list_lots,
+        crate::api::lots::create_lot,
+        crate::api::lots::get_lot,
+        crate::api::lots::update_lot,
+        crate::api::lots::delete_lot,
+        crate::api::lots::get_lot_slots,
+        crate::api::lots::create_slot,
+        crate::api::lots::update_slot,
+        crate::api::lots::delete_slot,
+
+        // Credits
+        crate::api::credits::get_user_credits,
+        crate::api::credits::admin_grant_credits,
+        crate::api::credits::admin_refill_all_credits,
+        crate::api::credits::admin_update_user_quota,
     )
 )]
 pub struct ApiDoc;

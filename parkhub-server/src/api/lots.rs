@@ -24,6 +24,14 @@ use parkhub_common::UserRole;
 // Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/lots",
+    tag = "Lots",
+    responses(
+        (status = 200, description = "List of all parking lots"),
+    )
+)]
 pub(crate) async fn list_lots(
     State(state): State<SharedState>,
 ) -> Json<ApiResponse<Vec<ParkingLot>>> {
@@ -41,6 +49,17 @@ pub(crate) async fn list_lots(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/lots",
+    tag = "Lots",
+    request_body = CreateParkingLotRequest,
+    responses(
+        (status = 201, description = "Parking lot created"),
+        (status = 400, description = "Validation error"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
 pub(crate) async fn create_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -220,6 +239,19 @@ pub(crate) async fn create_lot(
     (StatusCode::CREATED, Json(ApiResponse::success(lot)))
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/lots/{id}",
+    tag = "Lots",
+    params(("id" = String, Path, description = "Parking lot ID")),
+    request_body = UpdateParkingLotRequest,
+    responses(
+        (status = 200, description = "Parking lot updated"),
+        (status = 400, description = "Validation error"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
 pub(crate) async fn update_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -365,6 +397,17 @@ pub(crate) async fn update_lot(
     (StatusCode::OK, Json(ApiResponse::success(lot)))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/lots/{id}",
+    tag = "Lots",
+    params(("id" = String, Path, description = "Parking lot ID")),
+    responses(
+        (status = 200, description = "Parking lot deleted"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
 pub(crate) async fn delete_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -420,6 +463,16 @@ pub(crate) async fn delete_lot(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/lots/{id}",
+    tag = "Lots",
+    params(("id" = String, Path, description = "Parking lot ID")),
+    responses(
+        (status = 200, description = "Parking lot details"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
 pub(crate) async fn get_lot(
     State(state): State<SharedState>,
     Path(id): Path<String>,
@@ -442,6 +495,15 @@ pub(crate) async fn get_lot(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/lots/{id}/slots",
+    tag = "Lots",
+    params(("id" = String, Path, description = "Parking lot ID")),
+    responses(
+        (status = 200, description = "List of slots in the parking lot"),
+    )
+)]
 pub(crate) async fn get_lot_slots(
     State(state): State<SharedState>,
     Path(id): Path<String>,
@@ -462,6 +524,17 @@ pub(crate) async fn get_lot_slots(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `POST /api/v1/lots/{lot_id}/slots` — create a new slot in a lot
+#[utoipa::path(
+    post,
+    path = "/api/v1/lots/{lot_id}/slots",
+    tag = "Lots",
+    params(("lot_id" = String, Path, description = "Parking lot ID")),
+    responses(
+        (status = 201, description = "Slot created"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
 pub(crate) async fn create_slot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -569,6 +642,20 @@ pub(crate) async fn create_slot(
 }
 
 /// `PUT /api/v1/lots/{lot_id}/slots/{slot_id}` — update a slot
+#[utoipa::path(
+    put,
+    path = "/api/v1/lots/{lot_id}/slots/{slot_id}",
+    tag = "Lots",
+    params(
+        ("lot_id" = String, Path, description = "Parking lot ID"),
+        ("slot_id" = String, Path, description = "Slot ID"),
+    ),
+    responses(
+        (status = 200, description = "Slot updated"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Slot not found"),
+    )
+)]
 pub(crate) async fn update_slot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -658,6 +745,20 @@ pub(crate) async fn update_slot(
 }
 
 /// `DELETE /api/v1/lots/{lot_id}/slots/{slot_id}` — delete a slot
+#[utoipa::path(
+    delete,
+    path = "/api/v1/lots/{lot_id}/slots/{slot_id}",
+    tag = "Lots",
+    params(
+        ("lot_id" = String, Path, description = "Parking lot ID"),
+        ("slot_id" = String, Path, description = "Slot ID"),
+    ),
+    responses(
+        (status = 200, description = "Slot deleted"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Slot not found"),
+    )
+)]
 pub(crate) async fn delete_slot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

@@ -7,6 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.3.7] - 2026-03-19
+
+### Added
+- **Prometheus metrics middleware**: HTTP request duration/count, auth events (login success/fail), booking events (created/cancelled) recorded for every request
+- **Global rate limiting**: 100 req/s with burst 200 on all routes (in addition to per-IP auth rate limits)
+- **Periodic gauge updates**: Lot occupancy and active booking counts updated every 5 minutes via cron
+- **OpenAPI annotations**: 18 handler endpoints annotated with `#[utoipa::path]` — Swagger UI now fully populated for auth, lots, and credits APIs
+- **Frontend Vitest tests**: 33 tests across 3 files (API client, DemoOverlay, Login) — vitest + @testing-library/react
+- **Use-case context providers**: `UseCaseProvider` and `FeaturesProvider` wired into App.tsx provider tree
+- **i18n keys**: Added `useCase.*` and `features.*` translation keys in English and German for UseCaseSelector page
+- **PWA support**: manifest.json, service worker registration, apple-mobile-web-app meta tags
+
+### Fixed
+- **AdminSettings use-case dropdown**: Options now match backend presets (company, residential, shared, rental, personal) instead of stale corporate/university/other
+- **Metric path normalization**: UUIDs and numeric IDs collapsed to `:id` to prevent Prometheus label cardinality explosion
+- **Clippy clean**: Resolved `if_same_then_else` in metric path normalization
+
+### Improved
+- **Test coverage**: 77 Rust tests (60 server + 17 common), 33 frontend vitest tests, all passing
+- **OpenAPI schemas**: Request/response types registered in ApiDoc for complete Swagger documentation
+
+---
+
 ## [1.3.0] - 2026-03-18
 
 ### Added

@@ -24,7 +24,7 @@ interface AppSettings {
 
 const defaultSettings: AppSettings = {
   company_name: 'ParkHub',
-  use_case: 'corporate',
+  use_case: 'company',
   self_registration: 'true',
   license_plate_mode: 'optional',
   max_bookings_per_day: '3',
@@ -149,10 +149,11 @@ export function AdminSettingsPage() {
                 Use Case
               </label>
               <select value={settings.use_case} onChange={e => update('use_case', e.target.value)} className="input">
-                <option value="corporate">Corporate</option>
-                <option value="university">University</option>
+                <option value="company">Company</option>
                 <option value="residential">Residential</option>
-                <option value="other">Other</option>
+                <option value="shared">Shared Parking</option>
+                <option value="rental">Rental</option>
+                <option value="personal">Personal</option>
               </select>
             </div>
 
