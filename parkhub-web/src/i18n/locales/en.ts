@@ -31,7 +31,7 @@ export default {
       signIn: 'Sign In',
       loggingIn: 'Signing in...',
       loginError: 'Invalid credentials',
-      demoHint: 'Demo: admin@parkhub.demo / demo',
+      demoHint: 'Demo: admin@parkhub.test / demo',
     },
     nav: {
       dashboard: 'Dashboard',

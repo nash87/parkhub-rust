@@ -189,7 +189,7 @@ Try ParkHub without installing anything:
 | | |
 |---|---|
 | **URL** | [parkhub-rust-demo.onrender.com](https://parkhub-rust-demo.onrender.com) |
-| **Login** | `admin@parkhub.demo` / `demo` |
+| **Login** | `admin@parkhub.test` / `demo` |
 | **Auto-reset** | Every 6 hours (all data reset to demo state) |
 | **Manual reset** | Vote with other viewers, or reset solo when alone |
 
