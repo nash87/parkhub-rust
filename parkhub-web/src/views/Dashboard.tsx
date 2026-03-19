@@ -96,7 +96,7 @@ export function DashboardPage() {
           ) : (
             <div className="space-y-3">
               {activeBookings.slice(0, 5).map(b => (
-                <div key={b.id} className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700/50 transition-colors">
+                <div key={b.id} className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700/50 hover:-translate-y-0.5 hover:shadow-md transition-all">
                   <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                     <span className="text-lg font-bold text-primary-600 dark:text-primary-400">{b.slot_number}</span>
                   </div>
@@ -129,29 +129,30 @@ export function DashboardPage() {
               { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), color: 'info' },
               { to: '/credits', icon: Coins, label: t('nav.credits'), color: 'success' },
             ].map((action, i) => (
-              <Link
-                key={i}
-                to={action.to}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group"
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  action.color === 'primary' ? 'bg-primary-100 dark:bg-primary-900/30' :
-                  action.color === 'accent' ? 'bg-accent-100 dark:bg-accent-900/30' :
-                  action.color === 'info' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                  'bg-emerald-100 dark:bg-emerald-900/30'
-                }`}>
-                  <action.icon weight="fill" className={`w-5 h-5 ${
-                    action.color === 'primary' ? 'text-primary-600 dark:text-primary-400' :
-                    action.color === 'accent' ? 'text-accent-600 dark:text-accent-400' :
-                    action.color === 'info' ? 'text-blue-600 dark:text-blue-400' :
-                    'text-emerald-600 dark:text-emerald-400'
-                  }`} />
-                </div>
-                <span className="font-medium text-surface-700 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white transition-colors">
-                  {action.label}
-                </span>
-                <ArrowRight weight="bold" className="w-4 h-4 text-surface-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Link>
+              <motion.div key={i} whileHover={{ scale: 1.02, x: 2 }} whileTap={{ scale: 0.98 }}>
+                <Link
+                  to={action.to}
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group"
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    action.color === 'primary' ? 'bg-primary-100 dark:bg-primary-900/30' :
+                    action.color === 'accent' ? 'bg-accent-100 dark:bg-accent-900/30' :
+                    action.color === 'info' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                    'bg-emerald-100 dark:bg-emerald-900/30'
+                  }`}>
+                    <action.icon weight="fill" className={`w-5 h-5 ${
+                      action.color === 'primary' ? 'text-primary-600 dark:text-primary-400' :
+                      action.color === 'accent' ? 'text-accent-600 dark:text-accent-400' :
+                      action.color === 'info' ? 'text-blue-600 dark:text-blue-400' :
+                      'text-emerald-600 dark:text-emerald-400'
+                    }`} />
+                  </div>
+                  <span className="font-medium text-surface-700 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white transition-colors">
+                    {action.label}
+                  </span>
+                  <ArrowRight weight="bold" className="w-4 h-4 text-surface-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </motion.div>
             ))}
           </div>
         </motion.div>

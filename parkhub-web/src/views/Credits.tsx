@@ -134,8 +134,10 @@ export function CreditsPage() {
 
         {!credits?.transactions?.length ? (
           <div className="text-center py-8">
-            <Coins weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
-            <p className="text-surface-500 dark:text-surface-400">{t('credits.noTransactions')}</p>
+            <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
+              <Coins weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
+            </motion.div>
+            <p className="text-surface-500 dark:text-surface-400 mt-3">{t('credits.noTransactions')}</p>
           </div>
         ) : (
           <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   UserCircle, Envelope, Shield, PencilSimple, FloppyDisk, SpinnerGap, Lock,
@@ -91,6 +91,26 @@ export function ProfilePage() {
     } catch { toast.error('L\u00f6schen fehlgeschlagen'); }
   }
 
+  function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
+    const [display, setDisplay] = useState(0);
+    const rafRef = useRef<number>(0);
+    useEffect(() => {
+      if (value === 0) { setDisplay(0); return; }
+      const duration = 600;
+      const start = performance.now();
+      function tick(now: number) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setDisplay(Math.round(eased * value));
+        if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+      }
+      rafRef.current = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(rafRef.current);
+    }, [value]);
+    return <>{display}{suffix}</>;
+  }
+
   const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
   const roleLabels: Record<string, string> = { user: 'Benutzer', admin: 'Admin', superadmin: 'Super-Admin' };
 
@@ -151,12 +171,12 @@ export function ProfilePage() {
       </motion.div>
 
       {/* Stats */}
-      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-live="polite">
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('profile.bookingsThisMonth', 'Buchungen (Monat)')}</p>
-              <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-1">{stats?.bookings_this_month ?? '-'}</p>
+              <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-1">{stats ? <AnimatedNumber value={stats.bookings_this_month} /> : '-'}</p>
             </div>
             <CalendarCheck weight="fill" className="w-8 h-8 text-primary-200 dark:text-primary-800" />
           </div>
@@ -165,7 +185,7 @@ export function ProfilePage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('profile.homeOfficeDays', 'Homeoffice-Tage')}</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats?.homeoffice_days_this_month ?? '-'}</p>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats ? <AnimatedNumber value={stats.homeoffice_days_this_month} /> : '-'}</p>
             </div>
             <House weight="fill" className="w-8 h-8 text-blue-200 dark:text-blue-800" />
           </div>
@@ -174,7 +194,7 @@ export function ProfilePage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('profile.avgDuration', 'Durchschn. Dauer')}</p>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats ? `${stats.avg_duration_minutes} min` : '-'}</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats ? <AnimatedNumber value={stats.avg_duration_minutes} suffix=" min" /> : '-'}</p>
             </div>
             <ChartBar weight="fill" className="w-8 h-8 text-amber-200 dark:text-amber-800" />
           </div>

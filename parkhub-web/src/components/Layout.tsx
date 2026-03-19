@@ -51,37 +51,49 @@ export function Layout() {
         {/* Nav */}
         <nav className="flex-1 space-y-1">
           {NAV_ITEMS.map(item => (
-            <NavLink
+            <motion.div
               key={item.key}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800'
-                }`
-              }
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 400 }}
             >
-              <item.icon weight="fill" className="w-5 h-5" />
-              {t(`nav.${item.key}`)}
-            </NavLink>
+              <NavLink
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                      : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800'
+                  }`
+                }
+              >
+                <item.icon weight="fill" className="w-5 h-5" />
+                {t(`nav.${item.key}`)}
+              </NavLink>
+            </motion.div>
           ))}
 
           {user?.role && ['admin', 'superadmin'].includes(user.role) && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                    : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800'
-                }`
-              }
+            <motion.div
+              whileHover={{ x: 4 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 400 }}
             >
-              <GearSix weight="fill" className="w-5 h-5" />
-              {t('nav.admin')}
-            </NavLink>
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                      : 'text-surface-600 dark:text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800'
+                  }`
+                }
+              >
+                <GearSix weight="fill" className="w-5 h-5" />
+                {t('nav.admin')}
+              </NavLink>
+            </motion.div>
           )}
         </nav>
 
@@ -175,39 +187,51 @@ export function Layout() {
                 </div>
                 <nav className="space-y-1">
                   {NAV_ITEMS.map(item => (
-                    <NavLink
+                    <motion.div
                       key={item.key}
-                      to={item.to}
-                      end={item.end}
-                      onClick={() => setSidebarOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                          isActive
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                            : 'text-surface-600 dark:text-surface-400'
-                        }`
-                      }
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ type: 'spring', damping: 20, stiffness: 400 }}
                     >
-                      <item.icon weight="fill" className="w-5 h-5" />
-                      {t(`nav.${item.key}`)}
-                    </NavLink>
+                      <NavLink
+                        to={item.to}
+                        end={item.end}
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                            isActive
+                              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                              : 'text-surface-600 dark:text-surface-400'
+                          }`
+                        }
+                      >
+                        <item.icon weight="fill" className="w-5 h-5" />
+                        {t(`nav.${item.key}`)}
+                      </NavLink>
+                    </motion.div>
                   ))}
 
                   {user?.role && ['admin', 'superadmin'].includes(user.role) && (
-                    <NavLink
-                      to="/admin"
-                      onClick={() => setSidebarOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
-                          isActive
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                            : 'text-surface-600 dark:text-surface-400'
-                        }`
-                      }
+                    <motion.div
+                      whileHover={{ x: 4 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ type: 'spring', damping: 20, stiffness: 400 }}
                     >
-                      <GearSix weight="fill" className="w-5 h-5" />
-                      {t('nav.admin')}
-                    </NavLink>
+                      <NavLink
+                        to="/admin"
+                        onClick={() => setSidebarOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                            isActive
+                              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                              : 'text-surface-600 dark:text-surface-400'
+                          }`
+                        }
+                      >
+                        <GearSix weight="fill" className="w-5 h-5" />
+                        {t('nav.admin')}
+                      </NavLink>
+                    </motion.div>
                   )}
                 </nav>
                 <div className="absolute bottom-4 left-4 right-4">
