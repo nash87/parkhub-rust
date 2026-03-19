@@ -312,7 +312,10 @@ mod tests {
             .log();
 
         assert_eq!(entry.resource_type.as_deref(), Some("booking"));
-        assert_eq!(entry.resource_id.as_deref(), Some(booking_id.to_string().as_str()));
+        assert_eq!(
+            entry.resource_id.as_deref(),
+            Some(booking_id.to_string().as_str())
+        );
     }
 
     #[test]
@@ -481,7 +484,10 @@ mod tests {
 
         assert!(entry.success);
         assert_eq!(entry.resource_type.as_deref(), Some("booking"));
-        assert_eq!(entry.resource_id.as_deref(), Some(booking_id.to_string().as_str()));
+        assert_eq!(
+            entry.resource_id.as_deref(),
+            Some(booking_id.to_string().as_str())
+        );
     }
 
     #[test]

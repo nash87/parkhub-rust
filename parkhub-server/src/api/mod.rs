@@ -179,10 +179,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(get_current_user).put(update_current_user),
         )
         // Alias: frontend may call /api/v1/me — keep both paths working
-        .route(
-            "/api/v1/me",
-            get(get_current_user).put(update_current_user),
-        )
+        .route("/api/v1/me", get(get_current_user).put(update_current_user))
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
         .route(

@@ -152,9 +152,24 @@ mod tests {
 
     #[test]
     fn test_record_http_request_no_panic() {
-        record_http_request("GET", "/api/lots", 200, std::time::Duration::from_millis(50));
-        record_http_request("POST", "/api/bookings", 201, std::time::Duration::from_millis(120));
-        record_http_request("GET", "/api/missing", 404, std::time::Duration::from_millis(5));
+        record_http_request(
+            "GET",
+            "/api/lots",
+            200,
+            std::time::Duration::from_millis(50),
+        );
+        record_http_request(
+            "POST",
+            "/api/bookings",
+            201,
+            std::time::Duration::from_millis(120),
+        );
+        record_http_request(
+            "GET",
+            "/api/missing",
+            404,
+            std::time::Duration::from_millis(5),
+        );
         record_http_request("POST", "/api/login", 500, std::time::Duration::from_secs(2));
     }
 
@@ -191,8 +206,18 @@ mod tests {
     #[test]
     fn test_record_db_operation_no_panic() {
         record_db_operation("insert", "users", std::time::Duration::from_millis(5), true);
-        record_db_operation("select", "bookings", std::time::Duration::from_millis(15), true);
-        record_db_operation("update", "slots", std::time::Duration::from_millis(8), false);
+        record_db_operation(
+            "select",
+            "bookings",
+            std::time::Duration::from_millis(15),
+            true,
+        );
+        record_db_operation(
+            "update",
+            "slots",
+            std::time::Duration::from_millis(8),
+            false,
+        );
     }
 
     #[test]

@@ -3,25 +3,31 @@ url: ${BASE_URL}
 # Dashboard + Navigation
 - launchApp
 
-# Login flow
+# Wait for any page to load (may already be logged in from previous flow)
 - extendedWaitUntil:
-    visible: "Get Started|Sign In"
+    visible: "Get Started|Sign In|Dashboard|Active Bookings"
     timeout: 30000
 
+# If on welcome page, navigate to login
 - runFlow:
     when:
       visible: "Get Started"
     commands:
       - tapOn: "Get Started"
 
-- extendedWaitUntil:
-    visible: "Sign In"
-    timeout: 10000
-
-- tapOn:
-    id: "demo-autofill"
-- tapOn:
-    id: "login-submit"
+# If on login page, log in
+- runFlow:
+    when:
+      visible: "Sign In"
+    commands:
+      - tapOn:
+          id: "username"
+      - inputText: "admin@parkhub.test"
+      - tapOn:
+          id: "password"
+      - inputText: "demo"
+      - tapOn:
+          id: "login-submit"
 
 # Dashboard loaded
 - extendedWaitUntil:
