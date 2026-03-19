@@ -2770,6 +2770,22 @@ async fn gdpr_export_data(
         .await
         .unwrap_or_default();
 
+    let absences = state
+        .db
+        .list_absences_by_user(&user_id)
+        .await
+        .unwrap_or_default();
+    let credit_transactions = state
+        .db
+        .list_credit_transactions_for_user(auth_user.user_id)
+        .await
+        .unwrap_or_default();
+    let notifications = state
+        .db
+        .list_notifications_by_user(&user_id)
+        .await
+        .unwrap_or_default();
+
     // Note: password_hash is intentionally excluded from GDPR exports.
     // Exporting a password hash would allow offline brute-force attacks
     // against the user's own credential — contrary to the spirit of Art. 15.
@@ -2789,6 +2805,9 @@ async fn gdpr_export_data(
         },
         "bookings": bookings,
         "vehicles": vehicles,
+        "absences": absences,
+        "credit_transactions": credit_transactions,
+        "notifications": notifications,
     });
 
     let json_str = serde_json::to_string_pretty(&export).unwrap_or_default();
