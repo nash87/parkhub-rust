@@ -122,8 +122,7 @@ export function AdminUsersPage() {
       user: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
     };
     return (
-      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${colors[role] || colors.user}`}>
-        <ShieldCheck weight="fill" className="w-3.5 h-3.5" />
+      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[role] || colors.user}`}>
         {role}
       </span>
     );
@@ -142,7 +141,6 @@ export function AdminUsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Users weight="fill" className="w-6 h-6 text-primary-600" />
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Users</h2>
           <span className="text-sm text-surface-400">({users.length})</span>
         </div>
@@ -171,10 +169,7 @@ export function AdminUsersPage() {
           >
             <div className="card p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-                  <Coins weight="fill" className="w-5 h-5 text-primary-600" />
-                  Grant Credits
-                </h3>
+                <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Grant Credits</h3>
                 <button onClick={() => setCreditUserId(null)} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
                   <X weight="bold" className="w-5 h-5 text-surface-400" />
                 </button>
@@ -228,14 +223,9 @@ export function AdminUsersPage() {
                   className="hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors"
                 >
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                        <UserCircle weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{user.name}</p>
-                        <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{user.email}</p>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{user.name}</p>
+                      <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{user.email}</p>
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -337,9 +327,8 @@ export function AdminUsersPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="p-12 text-center">
-            <Users weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
-            <p className="text-surface-500 dark:text-surface-400">
+          <div className="p-8 text-center">
+            <p className="text-sm text-surface-500 dark:text-surface-400">
               {search ? 'No users match your search.' : 'No users found.'}
             </p>
           </div>

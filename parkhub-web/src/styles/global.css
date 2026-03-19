@@ -105,8 +105,6 @@
   --color-primary-950: #4c0519;
 }
 
-/* "company" is the default — uses the @theme primary palette (teal) */
-
 /* Base styles */
 html {
   scroll-behavior: smooth;
