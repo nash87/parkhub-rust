@@ -7,6 +7,50 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.8] - 2026-03-19
+
+### Design
+- **Full UI overhaul**: Eliminated AI slop patterns across all 12+ views
+- Welcome: left-aligned layout, inline features, no floating shapes or 3-column grid
+- Login: dark panel with specific copy, clean form, no decorative elements
+- Dashboard: clean stat cards, tabular-nums, real action buttons
+- Bookings: 2px left-border status accents, text badges
+- Profile: neutral avatar, clean stats, GDPR section
+- Layout: flat sidebar, left-border active indicator, no glass/blur
+- Admin: plain text headers, clean data tables
+- CSS: 12px card radius, 8px button radius, solid backgrounds, system font
+- Specific copy replacing generic AI marketing language
+
+### Added
+- **434 tests**: 147 Rust + 150 PHP (376 assertions) + 137 frontend vitest
+- **Maestro E2E**: 5 browser flows (welcome, login, dashboard, admin, login failure)
+- **1-month simulation**: 294 bookings, EUR 5,007 revenue simulated successfully
+- **Prometheus metrics middleware**: HTTP request duration/count, auth/booking events
+- **Global rate limiting**: 100 req/s burst 200 on all routes
+- **OpenAPI annotations**: 18 handler endpoints in Swagger UI
+- **Skeleton loading**: contextual skeleton screens for Dashboard, Bookings, Vehicles
+- **i18n**: 50+ translation keys for notifications, calendar, team, profile (EN + DE)
+- **Dynamic version**: reads from package.json at build time
+- **Render env var automation**: deploy workflow sets env vars via API
+
+### Fixed
+- Demo login credentials (admin@parkhub.test / demo) — seeder, entrypoint, env vars
+- DemoOverlay [object Object] / NaN — normalize nested API response
+- FeaturesContext crash (api.getFeatures not a function)
+- Welcome screen not showing for first-time visitors
+- PHP DemoController wrong config key (test_mode → demo_mode)
+- PHP User $fillable missing 'role' — setup wizard admin got role=user
+- PHP audit_log table name typo in GDPR anonymize
+- Rate limiter panic on zero config values
+- Admin password exposed via CLI arg (now env var)
+
+### Security
+- Rate limiter: clamp config values to >=1 (prevents panic)
+- Admin password: passed via env var, not CLI arg
+- cargo audit: 1 known advisory (RSA timing in jsonwebtoken, no fix available)
+
+---
+
 ## [1.3.7] - 2026-03-19
 
 ### Added
