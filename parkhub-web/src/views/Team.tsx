@@ -79,7 +79,7 @@ export function TeamPage() {
             <p className="text-surface-500 dark:text-surface-400">{t('team.noAbsencesToday', 'Heute keine Abwesenheiten')}</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div>
             {Object.entries(todayByUser).map(([name, items]) => (
               <TeamMemberCard key={name} name={name} entries={items} t={t} />
             ))}
@@ -97,7 +97,7 @@ export function TeamPage() {
             <p className="text-surface-500 dark:text-surface-400">{t('team.noUpcoming', 'Keine anstehenden Abwesenheiten')}</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div>
             {Object.entries(upcomingByUser).map(([name, items]) => (
               <TeamMemberCard key={name} name={name} entries={items} t={t} />
             ))}
@@ -110,21 +110,21 @@ export function TeamPage() {
 
 function TeamMemberCard({ name, entries, t }: { name: string; entries: TeamAbsenceEntry[]; t: (k: string, f?: string) => string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-4">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center text-sm font-bold text-primary-700 dark:text-primary-300">
+    <div className="py-3 border-b border-surface-100 dark:border-surface-800 last:border-b-0">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-8 h-8 bg-surface-200 dark:bg-surface-700 rounded-full flex items-center justify-center text-sm font-semibold text-surface-700 dark:text-surface-300">
           {name.charAt(0).toUpperCase()}
         </div>
-        <span className="font-medium text-surface-900 dark:text-white">{name}</span>
+        <span className="text-sm font-medium text-surface-900 dark:text-white">{name}</span>
       </div>
-      <div className="space-y-2">
+      <div className="ml-11 space-y-1">
         {entries.map((entry, i) => {
           const cfg = ABSENCE_CONFIG[entry.absence_type as AbsenceType] || ABSENCE_CONFIG.other;
           return (
-            <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${cfg.bg}`}>
-              <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
-              <span className={`text-sm font-medium ${cfg.color}`}>{t(`absences.types.${entry.absence_type}`, entry.absence_type)}</span>
-              <span className="text-sm text-surface-600 dark:text-surface-400 ml-auto">
+            <div key={i} className="flex items-center gap-2">
+              <div className={`w-1 h-1 rounded-full ${cfg.dot}`} />
+              <span className={`text-sm ${cfg.color}`}>{t(`absences.types.${entry.absence_type}`, entry.absence_type)}</span>
+              <span className="text-sm text-surface-400 ml-auto">
                 {new Date(entry.start_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                 {entry.start_date !== entry.end_date && <> &ndash; {new Date(entry.end_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</>}
               </span>
@@ -132,6 +132,6 @@ function TeamMemberCard({ name, entries, t }: { name: string; entries: TeamAbsen
           );
         })}
       </div>
-    </motion.div>
+    </div>
   );
 }

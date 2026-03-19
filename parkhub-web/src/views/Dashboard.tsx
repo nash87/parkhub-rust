@@ -47,58 +47,60 @@ export function DashboardPage() {
       {/* Stats grid */}
       <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={CalendarCheck}
           label={t('dashboard.activeBookings')}
           value={activeBookings.length}
-          color="primary"
         />
         <StatCard
-          icon={Coins}
           label={t('dashboard.creditsLeft')}
           value={user?.credits_balance ?? 0}
-          color="accent"
         />
         <StatCard
-          icon={TrendUp}
           label={t('dashboard.thisMonth')}
           value={stats?.bookings_this_month ?? 0}
-          color="info"
         />
-        <StatCard
-          icon={Clock}
+        <NextBookingCard
           label={t('dashboard.nextBooking')}
           value={activeBookings.length > 0 ? formatTime(activeBookings[0].start_time) : '—'}
-          color="success"
-          isText
         />
       </motion.div>
 
       {/* Active bookings + Quick actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Active bookings */}
-        <motion.div variants={item} className="lg:col-span-2 card p-6">
+        <motion.div
+          variants={item}
+          className="lg:col-span-2 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-6"
+          style={{ borderRadius: 12 }}
+        >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <CalendarCheck weight="fill" className="w-5 h-5 text-primary-500" />
+            <h2 className="text-lg font-semibold text-surface-900 dark:text-white">
               {t('dashboard.activeBookings')}
             </h2>
-            <Link to="/bookings" className="text-sm text-primary-600 hover:text-primary-500 font-medium flex items-center gap-1">
+            <Link to="/bookings" className="text-sm text-teal-600 hover:text-teal-500 dark:text-teal-400 font-medium flex items-center gap-1">
               {t('nav.bookings')} <ArrowRight weight="bold" className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {activeBookings.length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarPlus weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
+            <div className="py-12">
               <p className="text-surface-500 dark:text-surface-400 mb-4">{t('dashboard.noActiveBookings')}</p>
               <Link to="/book" className="btn btn-primary">{t('dashboard.bookSpot')}</Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {activeBookings.slice(0, 5).map(b => (
-                <div key={b.id} className="flex items-center gap-4 p-4 bg-surface-50 dark:bg-surface-800/50 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-700/50 hover:-translate-y-0.5 hover:shadow-md transition-all">
-                  <div className="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                    <span className="text-lg font-bold text-primary-600 dark:text-primary-400">{b.slot_number}</span>
+                <div
+                  key={b.id}
+                  className="flex items-center gap-4 p-3 bg-surface-50 dark:bg-surface-800/50 border border-surface-100 dark:border-surface-700 transition-colors hover:bg-surface-100 dark:hover:bg-surface-700/50"
+                  style={{ borderRadius: 8 }}
+                >
+                  <div
+                    className="w-10 h-10 flex items-center justify-center bg-surface-100 dark:bg-surface-700 border border-surface-200 dark:border-surface-600"
+                    style={{ borderRadius: 8 }}
+                  >
+                    <span className="text-sm font-bold text-surface-700 dark:text-surface-200" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {b.slot_number}
+                    </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-surface-900 dark:text-white truncate">{b.lot_name}</p>
@@ -118,41 +120,31 @@ export function DashboardPage() {
         </motion.div>
 
         {/* Quick actions */}
-        <motion.div variants={item} className="card p-6">
+        <motion.div
+          variants={item}
+          className="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-6"
+          style={{ borderRadius: 12 }}
+        >
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">
             {t('dashboard.quickActions')}
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[
-              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), color: 'primary' },
-              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles'), color: 'accent' },
-              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings'), color: 'info' },
-              { to: '/credits', icon: Coins, label: t('nav.credits'), color: 'success' },
+              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot') },
+              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles') },
+              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings') },
+              { to: '/credits', icon: Coins, label: t('nav.credits') },
             ].map((action, i) => (
-              <motion.div key={i} whileHover={{ scale: 1.02, x: 2 }} whileTap={{ scale: 0.98 }}>
-                <Link
-                  to={action.to}
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors group"
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    action.color === 'primary' ? 'bg-primary-100 dark:bg-primary-900/30' :
-                    action.color === 'accent' ? 'bg-accent-100 dark:bg-accent-900/30' :
-                    action.color === 'info' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                    'bg-emerald-100 dark:bg-emerald-900/30'
-                  }`}>
-                    <action.icon weight="fill" className={`w-5 h-5 ${
-                      action.color === 'primary' ? 'text-primary-600 dark:text-primary-400' :
-                      action.color === 'accent' ? 'text-accent-600 dark:text-accent-400' :
-                      action.color === 'info' ? 'text-blue-600 dark:text-blue-400' :
-                      'text-emerald-600 dark:text-emerald-400'
-                    }`} />
-                  </div>
-                  <span className="font-medium text-surface-700 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white transition-colors">
-                    {action.label}
-                  </span>
-                  <ArrowRight weight="bold" className="w-4 h-4 text-surface-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              </motion.div>
+              <Link
+                key={i}
+                to={action.to}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-surface-700 dark:text-surface-300 border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-800 hover:bg-surface-50 dark:hover:bg-surface-700/50 hover:border-surface-300 dark:hover:border-surface-500 transition-colors"
+                style={{ borderRadius: 8 }}
+              >
+                <action.icon weight="regular" className="w-4 h-4 text-surface-500 dark:text-surface-400" />
+                <span className="flex-1">{action.label}</span>
+                <ArrowRight weight="bold" className="w-3.5 h-3.5 text-surface-400" />
+              </Link>
             ))}
           </div>
         </motion.div>
@@ -162,33 +154,40 @@ export function DashboardPage() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, isText }: {
-  icon: any; label: string; value: number | string; color: string; isText?: boolean;
+function StatCard({ label, value }: {
+  label: string; value: number | string;
 }) {
-  const colors: Record<string, string> = {
-    primary: 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400',
-    accent: 'bg-accent-100 dark:bg-accent-900/30 text-accent-600 dark:text-accent-400',
-    info: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-    success: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
-  };
-
   return (
-    <div className="stat-card">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-surface-500 dark:text-surface-400">{label}</p>
-          {isText ? (
-            <p className="mt-2 text-lg font-bold text-surface-900 dark:text-white">{value}</p>
-          ) : (
-            <p className={`mt-2 stat-value ${color === 'primary' ? 'text-primary-600 dark:text-primary-400' : color === 'accent' ? 'text-accent-600 dark:text-accent-400' : color === 'info' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-              {value}
-            </p>
-          )}
-        </div>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}`}>
-          <Icon weight="fill" className="w-5 h-5" />
-        </div>
-      </div>
+    <div
+      className="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-4"
+      style={{ borderRadius: 12 }}
+    >
+      <p className="text-sm font-medium text-surface-500 dark:text-surface-400">{label}</p>
+      <p
+        className="mt-2 text-2xl font-bold text-surface-900 dark:text-white"
+        style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1 }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function NextBookingCard({ label, value }: {
+  label: string; value: string;
+}) {
+  return (
+    <div
+      className="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-4"
+      style={{ borderRadius: 12, borderLeft: '3px solid #0d9488' }}
+    >
+      <p className="text-sm font-medium text-surface-500 dark:text-surface-400">{label}</p>
+      <p
+        className="mt-2 text-2xl font-bold text-surface-900 dark:text-white"
+        style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em', lineHeight: 1 }}
+      >
+        {value}
+      </p>
     </div>
   );
 }

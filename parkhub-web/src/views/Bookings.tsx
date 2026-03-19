@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarBlank, Clock, Car, X, SpinnerGap, CheckCircle, XCircle,
-  ArrowClockwise, Warning, MapPin, CalendarPlus, Repeat, Timer,
-  CalendarCheck, MagnifyingGlass, Funnel,
+  CalendarBlank, Clock, Car, X, SpinnerGap,
+  ArrowClockwise, Warning, MapPin, CalendarPlus, Timer,
+  MagnifyingGlass, Funnel,
 } from '@phosphor-icons/react';
 import { api, type Booking, type Vehicle } from '../api/client';
 import { BookingsSkeleton } from '../components/Skeleton';
@@ -65,11 +65,11 @@ export function BookingsPage() {
 
   return (
     <AnimatePresence mode="wait">
-    <motion.div key="bookings-loaded" variants={container} initial="hidden" animate="show" className="space-y-8">
+    <motion.div key="bookings-loaded" variants={container} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={item} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('bookings.title')}</h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('bookings.subtitle')}</p>
+          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">{t('bookings.subtitle')}</p>
         </div>
         <button onClick={loadData} className="btn btn-secondary">
           <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
@@ -77,9 +77,9 @@ export function BookingsPage() {
       </motion.div>
 
       {/* Filters */}
-      <motion.div variants={item} className="card p-4">
+      <motion.div variants={item} className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3" aria-live="polite">
-          <Funnel weight="bold" className="w-4 h-4 text-surface-500" />
+          <Funnel weight="bold" className="w-4 h-4 text-surface-400" />
           <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t('common.filter')}</span>
           <span className="ml-auto text-xs text-surface-400">{t('bookingFilters.totalCount', { count: filtered.length })}</span>
         </div>
@@ -99,9 +99,9 @@ export function BookingsPage() {
       </motion.div>
 
       {/* Active */}
-      <Section icon={Clock} title={t('bookings.active')} count={active.length} color="text-emerald-600">
+      <Section title={t('bookings.active')} count={active.length}>
         {active.length === 0 ? (
-          <Empty icon={CalendarBlank} text={t('bookings.noActive')} showAction t={t} />
+          <Empty text={t('bookings.noActive')} showAction t={t} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence>
@@ -115,9 +115,9 @@ export function BookingsPage() {
       </Section>
 
       {/* Upcoming */}
-      <Section icon={CalendarPlus} title={t('bookings.upcoming')} count={upcoming.length} color="text-primary-600">
+      <Section title={t('bookings.upcoming')} count={upcoming.length}>
         {upcoming.length === 0 ? (
-          <Empty icon={CalendarCheck} text={t('bookings.noUpcoming')} t={t} />
+          <Empty text={t('bookings.noUpcoming')} t={t} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence>
@@ -131,9 +131,9 @@ export function BookingsPage() {
       </Section>
 
       {/* Past */}
-      <Section icon={CalendarBlank} title={t('bookings.past')} count={past.length} color="text-surface-400">
+      <Section title={t('bookings.past')} count={past.length}>
         {past.length === 0 ? (
-          <Empty icon={CheckCircle} text={t('bookings.noPast')} t={t} />
+          <Empty text={t('bookings.noPast')} t={t} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {past.map(b => (
@@ -148,30 +148,24 @@ export function BookingsPage() {
   );
 }
 
-function Section({ icon: Icon, title, count, color, children }: any) {
+function Section({ title, count, children }: any) {
   return (
     <section>
-      <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
-        <Icon weight="fill" className={`w-5 h-5 ${color}`} />
+      <h2 className="text-base font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2">
         {title}
-        <span className="badge badge-gray text-xs">{count}</span>
+        <span className="text-xs font-normal text-surface-400">{count}</span>
       </h2>
       {children}
     </section>
   );
 }
 
-function Empty({ icon: Icon, text, showAction, t }: any) {
+function Empty({ text, showAction, t }: any) {
   return (
-    <div className="card p-12 text-center">
-      <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-        <Icon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
-      </motion.div>
-      <p className="text-surface-500 dark:text-surface-400 mb-4 mt-4">{text}</p>
+    <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-8 text-left">
+      <p className="text-sm text-surface-500 dark:text-surface-400 mb-3">{text}</p>
       {showAction && (
-        <motion.div className="inline-block" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Link to="/book" className="btn btn-primary"><CalendarPlus weight="bold" className="w-4 h-4" />{t('bookings.bookNow')}</Link>
-        </motion.div>
+        <Link to="/book" className="btn btn-primary btn-sm">{t('bookings.bookNow')}</Link>
       )}
     </div>
   );
@@ -184,48 +178,42 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, t, dateFnsL
   const isUpcoming = isActiveOrConfirmed && isFuture(new Date(booking.start_time));
 
   const statusCfg: Record<string, { label: string; cls: string }> = {
-    active: { label: t('bookings.statusActive'), cls: 'badge-success' },
-    confirmed: { label: t('bookings.statusActive'), cls: 'badge-success' },
-    completed: { label: t('bookings.statusCompleted'), cls: 'badge-gray' },
-    cancelled: { label: t('bookings.statusCancelled'), cls: 'badge-error' },
+    active: { label: t('bookings.statusActive'), cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
+    confirmed: { label: t('bookings.statusActive'), cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
+    completed: { label: t('bookings.statusCompleted'), cls: 'bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-400' },
+    cancelled: { label: t('bookings.statusCancelled'), cls: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
   };
   const cfg = statusCfg[booking.status] || statusCfg.active;
 
+  const borderColor = isPast
+    ? 'border-l-surface-300 dark:border-l-surface-600'
+    : isExpiring
+    ? 'border-l-accent-500'
+    : 'border-l-primary-500';
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      className={`card p-5 border-l-4 transition-all hover:shadow-md ${
-        isPast ? 'border-l-surface-300 dark:border-l-surface-600 opacity-80' :
-        isExpiring ? 'border-l-accent-500' : 'border-l-primary-500'
-      }`}
+      exit={{ opacity: 0, x: -60 }}
+      className={`bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-4 border-l-2 ${borderColor} ${isPast ? 'opacity-75' : ''}`}
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            isPast ? 'bg-surface-100 dark:bg-surface-800' : isExpiring ? 'bg-accent-100 dark:bg-accent-900/30' : 'bg-primary-100 dark:bg-primary-900/30'
-          }`}>
-            <span className={`text-lg font-bold ${
-              isPast ? 'text-surface-500' : isExpiring ? 'text-accent-600 dark:text-accent-400' : 'text-primary-600 dark:text-primary-400'
-            }`}>{booking.slot_number}</span>
-          </div>
-          <div>
-            <p className="font-semibold text-surface-900 dark:text-white">{booking.lot_name}</p>
-            <div className="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400">
-              <MapPin weight="regular" className="w-3.5 h-3.5" /> {t('dashboard.slot')} {booking.slot_number}
-            </div>
-          </div>
+        <div>
+          <p className="font-semibold text-surface-900 dark:text-white">{booking.lot_name}</p>
+          <p className="text-sm text-surface-500 dark:text-surface-400 mt-0.5">
+            {t('dashboard.slot')} {booking.slot_number}
+          </p>
         </div>
-        <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${cfg.cls}`}>{cfg.label}</span>
       </div>
 
       <div className="flex items-center gap-4 text-sm text-surface-600 dark:text-surface-400 mb-3">
         {booking.vehicle_plate && (
-          <span className="flex items-center gap-1"><Car weight="regular" className="w-4 h-4" /> {booking.vehicle_plate}</span>
+          <span className="flex items-center gap-1"><Car weight="regular" className="w-3.5 h-3.5" /> {booking.vehicle_plate}</span>
         )}
         <span className="flex items-center gap-1">
-          <Timer weight="regular" className="w-4 h-4" />
+          <Clock weight="regular" className="w-3.5 h-3.5" />
           {format(new Date(booking.start_time), 'HH:mm')} — {format(new Date(booking.end_time), 'HH:mm')}
         </span>
       </div>

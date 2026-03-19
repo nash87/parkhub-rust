@@ -151,21 +151,14 @@ export function VehiclesPage() {
           {vehicles.map((v, i) => {
             const colorClass = v.color ? (colorMap[v.color] || 'bg-surface-400') : 'bg-surface-400';
             return (
-              <motion.div key={v.id} variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6 hover:shadow-md transition-all">
+              <motion.div key={v.id} variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${colorClass}`}>
-                      <Car weight="fill" className="w-7 h-7 text-white/60" />
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${colorClass}`} />
                     <div>
-                      <p className="text-xl font-bold text-surface-900 dark:text-white font-mono tracking-wider">{v.plate}</p>
-                      {(v.make || v.model) && <p className="text-sm text-surface-600 dark:text-surface-400">{v.make} {v.model}</p>}
-                      {v.color && (
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <div className={`w-2.5 h-2.5 rounded-full ${colorClass}`} />
-                          <span className="text-xs text-surface-500">{v.color}</span>
-                        </div>
-                      )}
+                      <p className="text-lg font-semibold text-surface-900 dark:text-white font-mono tracking-wider">{v.plate}</p>
+                      {(v.make || v.model) && <p className="text-sm text-surface-500 dark:text-surface-400">{[v.make, v.model].filter(Boolean).join(' ')}</p>}
+                      {v.color && <p className="text-xs text-surface-400 mt-0.5">{v.color}</p>}
                     </div>
                   </div>
                   <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
@@ -173,9 +166,9 @@ export function VehiclesPage() {
                   </button>
                 </div>
                 {v.is_default && (
-                  <div className="mt-4 pt-3 border-t border-surface-100 dark:border-surface-800">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2.5 py-1 rounded-full">
-                      <Star weight="fill" className="w-3 h-3" /> {t('vehicles.isDefault', 'Standardfahrzeug')}
+                  <div className="mt-3 pt-3 border-t border-surface-100 dark:border-surface-800">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-500 dark:text-surface-400">
+                      <Star weight="fill" className="w-3 h-3 text-primary-500" /> {t('vehicles.isDefault', 'Standardfahrzeug')}
                     </span>
                   </div>
                 )}
