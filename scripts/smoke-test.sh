@@ -6,7 +6,7 @@
 #
 # Env vars:
 #   PARKHUB_ADMIN_EMAIL     (default: admin@parkhub.test)
-#   PARKHUB_ADMIN_PASSWORD  (default: ParkHub2026!)
+#   PARKHUB_ADMIN_PASSWORD  (default: demo)
 #
 # Requires: curl, jq
 # Exits 0 if all tests pass, 1 if any fail.
@@ -15,7 +15,7 @@ set -o pipefail
 
 BASE_URL="${1:-https://parkhub-rust-demo.onrender.com}"
 ADMIN_EMAIL="${PARKHUB_ADMIN_EMAIL:-admin@parkhub.test}"
-ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-ParkHub2026!}"
+ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-demo}"
 TOKEN=""
 BOOKING_ID=""
 
