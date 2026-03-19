@@ -2,8 +2,8 @@
 FROM node:22-alpine AS web-builder
 WORKDIR /app/web
 COPY parkhub-web/package*.json ./
-# Install all deps (tsc, vite are devDependencies needed for build)
-RUN npm ci
+# Install only production deps — test deps (vitest, testing-library) not needed for build
+RUN npm ci --omit=dev
 COPY parkhub-web/ ./
 RUN npm run build
 

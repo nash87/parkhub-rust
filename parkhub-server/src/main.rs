@@ -680,8 +680,7 @@ async fn main() -> Result<()> {
                     if let Ok(lots) = state_guard.db.list_parking_lots().await {
                         for lot in &lots {
                             let total = lot.total_slots as u64;
-                            let occupied =
-                                (lot.total_slots - lot.available_slots).max(0) as u64;
+                            let occupied = (lot.total_slots - lot.available_slots).max(0) as u64;
                             metrics::record_lot_occupancy(
                                 &lot.id.to_string(),
                                 &lot.name,
