@@ -165,7 +165,7 @@ export function LoginPage() {
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   className="input"
-                  placeholder="admin@parkhub.demo"
+                  placeholder="admin@parkhub.test"
                   autoComplete="username"
                   required
                   autoFocus

@@ -5,7 +5,7 @@
 #   ./scripts/smoke-test.sh [BASE_URL]
 #
 # Env vars:
-#   PARKHUB_ADMIN_EMAIL     (default: admin@parkhub.demo)
+#   PARKHUB_ADMIN_EMAIL     (default: admin@parkhub.test)
 #   PARKHUB_ADMIN_PASSWORD  (default: ParkHub2026!)
 #
 # Requires: curl, jq
@@ -14,7 +14,7 @@
 set -o pipefail
 
 BASE_URL="${1:-https://parkhub-rust-demo.onrender.com}"
-ADMIN_EMAIL="${PARKHUB_ADMIN_EMAIL:-admin@parkhub.demo}"
+ADMIN_EMAIL="${PARKHUB_ADMIN_EMAIL:-admin@parkhub.test}"
 ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-ParkHub2026!}"
 TOKEN=""
 BOOKING_ID=""
