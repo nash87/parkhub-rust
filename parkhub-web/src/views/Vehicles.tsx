@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Car, Plus, Trash, Star, X, SpinnerGap } from '@phosphor-icons/react';
 import { api, type Vehicle } from '../api/client';
+import { VehiclesSkeleton } from '../components/Skeleton';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -67,17 +68,11 @@ export function VehiclesPage() {
   const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
-  if (loading) return (
-    <div className="space-y-6">
-      <div className="h-8 w-64 skeleton rounded-xl" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[1, 2].map(i => <div key={i} className="h-32 skeleton rounded-2xl" />)}
-      </div>
-    </div>
-  );
+  if (loading) return <VehiclesSkeleton />;
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+    <AnimatePresence mode="wait">
+    <motion.div key="vehicles-loaded" variants={container} initial="hidden" animate="show" className="space-y-8">
       <motion.div variants={item} className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('vehicles.title', 'Meine Fahrzeuge')}</h1>
@@ -188,5 +183,6 @@ export function VehiclesPage() {
         </div>
       )}
     </motion.div>
+    </AnimatePresence>
   );
 }
