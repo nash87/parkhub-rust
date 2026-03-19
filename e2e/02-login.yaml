@@ -20,9 +20,13 @@ url: ${BASE_URL}
     visible: "Sign In"
     timeout: 10000
 
-# Auto-fill demo credentials via the demo hint button
+# Enter credentials
 - tapOn:
-    id: "demo-autofill"
+    id: "username"
+- inputText: "admin@parkhub.test"
+- tapOn:
+    id: "password"
+- inputText: "demo"
 
 # Submit login
 - tapOn:

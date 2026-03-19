@@ -46,8 +46,7 @@ impl Default for RateLimitConfig {
 pub fn create_rate_limiter(config: &RateLimitConfig) -> Arc<GlobalRateLimiter> {
     let rps = NonZeroU32::new(config.requests_per_second.max(1))
         .expect("requests_per_second clamped to >= 1");
-    let burst = NonZeroU32::new(config.burst_size.max(1))
-        .expect("burst_size clamped to >= 1");
+    let burst = NonZeroU32::new(config.burst_size.max(1)).expect("burst_size clamped to >= 1");
     let quota = Quota::per_second(rps).allow_burst(burst);
 
     Arc::new(RateLimiter::direct(quota))
@@ -92,8 +91,7 @@ pub mod per_ip {
         requests: u32,
         period: Duration,
     ) -> Arc<IpRateLimiter> {
-        let burst = NonZeroU32::new(requests.max(1))
-            .expect("requests clamped to >= 1");
+        let burst = NonZeroU32::new(requests.max(1)).expect("requests clamped to >= 1");
         let quota = Quota::with_period(period)
             .expect("period must be non-zero")
             .allow_burst(burst);
@@ -269,9 +267,18 @@ mod tests {
     fn test_endpoint_rate_limiters_creation() {
         let limiters = EndpointRateLimiters::new();
         // All limiters should be created
-        assert!(limiters.login.check_key(&"10.0.0.1".parse().unwrap()).is_ok());
-        assert!(limiters.register.check_key(&"10.0.0.1".parse().unwrap()).is_ok());
-        assert!(limiters.forgot_password.check_key(&"10.0.0.1".parse().unwrap()).is_ok());
+        assert!(limiters
+            .login
+            .check_key(&"10.0.0.1".parse().unwrap())
+            .is_ok());
+        assert!(limiters
+            .register
+            .check_key(&"10.0.0.1".parse().unwrap())
+            .is_ok());
+        assert!(limiters
+            .forgot_password
+            .check_key(&"10.0.0.1".parse().unwrap())
+            .is_ok());
         assert!(limiters.general.check().is_ok());
     }
 }

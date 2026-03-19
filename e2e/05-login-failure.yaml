@@ -3,10 +3,22 @@ url: ${BASE_URL}
 # Login failure
 - launchApp
 
+# Wait for any page
 - extendedWaitUntil:
-    visible: "Get Started|Sign In"
+    visible: "Get Started|Sign In|Dashboard|Active Bookings"
     timeout: 30000
 
+# If already logged in, sign out first
+- runFlow:
+    when:
+      visible: "Sign Out"
+    commands:
+      - tapOn: "Sign Out"
+      - extendedWaitUntil:
+          visible: "Get Started|Sign In"
+          timeout: 10000
+
+# If on welcome page, navigate to login
 - runFlow:
     when:
       visible: "Get Started"
