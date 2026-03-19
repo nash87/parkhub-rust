@@ -165,7 +165,7 @@ export function LoginPage() {
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   className="input"
-                  placeholder="admin@parkhub-demo.de"
+                  placeholder="admin@parkhub.demo"
                   autoComplete="username"
                   required
                   autoFocus
@@ -188,7 +188,7 @@ export function LoginPage() {
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     className="input pr-11"
-                    placeholder="ParkHub2026!"
+                    placeholder="demo"
                     autoComplete="current-password"
                     required
                   />

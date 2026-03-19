@@ -166,9 +166,10 @@ class Client:
 class MonthSimulation:
     """Orchestrates a 30-day realistic booking simulation."""
 
-    def __init__(self, client: Client, dry_run: bool = False):
+    def __init__(self, client: Client, dry_run: bool = False, days: int = SIMULATION_DAYS):
         self.client = client
         self.dry_run = dry_run
+        self.days = days
 
         # Fetched from API
         self.admin_token: str = ""
@@ -614,11 +615,11 @@ class MonthSimulation:
         self.create_recurring_bookings(sim_start)
 
         # Simulate each day
-        print(f"\n[6/6] Simulating {SIMULATION_DAYS} days starting {sim_start.strftime('%Y-%m-%d')}...")
+        print(f"\n[6/6] Simulating {self.days} days starting {sim_start.strftime('%Y-%m-%d')}...")
         print(f"{'Day':>4}  {'Date':>12}  {'Type':>9}  {'Bookings':>8}  {'Cancelled':>9}  {'Running Total':>13}")
         print("-" * 72)
 
-        for day_offset in range(SIMULATION_DAYS):
+        for day_offset in range(self.days):
             sim_date = sim_start + timedelta(days=day_offset)
             weekday = sim_date.weekday()
 
@@ -684,7 +685,7 @@ class MonthSimulation:
         print()
         print("  ── Occupancy ─────────────────────────────────────")
         print(f"  Peak Day:              {s['peak_occupancy_day']}  ({s['peak_occupancy_count']} bookings)")
-        avg = total / SIMULATION_DAYS if SIMULATION_DAYS > 0 else 0
+        avg = total / self.days if self.days > 0 else 0
         print(f"  Avg Bookings/Day:      {avg:.1f}")
         print()
         print("  Top 5 Busiest Days:")
@@ -709,15 +710,16 @@ class MonthSimulation:
 
 # ─── Dry-Run Estimator ───────────────────────────────────────────────────────
 
-def estimate_dry_run(users_count: int, lots_count: int, total_slots: int):
+def estimate_dry_run(users_count: int, lots_count: int, total_slots: int, days: int = 30):
     """When --dry-run, estimate what would happen without API calls."""
     print("\n" + "=" * 72)
     print("  PARKHUB SIMULATION ESTIMATE (DRY RUN)")
     print("=" * 72)
 
-    workdays = 22  # approximate workdays in 30 days
-    fridays = 4
-    weekends = 8  # 4 Sat + 4 Sun
+    # Scale workdays/fridays/weekends proportionally
+    workdays = int(days * 22 / 30)
+    fridays = int(days * 4 / 30)
+    weekends = int(days * 8 / 30)
 
     # Bookings estimate
     wd_avg = users_count * 0.70  # 60-80% midpoint
@@ -791,13 +793,12 @@ def main():
     )
     args = parser.parse_args()
 
-    global SIMULATION_DAYS
-    SIMULATION_DAYS = args.days
+    sim_days = args.days
 
     print("=" * 72)
     print("  ParkHub 1-Month Booking Simulation")
     print(f"  Target: {args.base_url}")
-    print(f"  Days:   {SIMULATION_DAYS}")
+    print(f"  Days:   {sim_days}")
     print(f"  Mode:   {'DRY RUN' if args.dry_run else 'LIVE'}")
     print("=" * 72)
     print()
@@ -830,15 +831,15 @@ def main():
             if total_slots == 0:
                 total_slots = 600  # estimate
 
-            estimate_dry_run(users_count, lots_count, total_slots)
+            estimate_dry_run(users_count, lots_count, total_slots, sim_days)
         else:
             # Can't connect — use defaults from seed_demo
             print("  Could not connect to API, using seed_demo defaults")
-            estimate_dry_run(200, 10, 600)
+            estimate_dry_run(200, 10, 600, sim_days)
 
         return 0
 
-    sim = MonthSimulation(client, dry_run=False)
+    sim = MonthSimulation(client, dry_run=False, days=sim_days)
     success = sim.run()
     return 0 if success else 1
 
