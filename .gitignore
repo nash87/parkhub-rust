@@ -64,3 +64,4 @@ parkhub-web/dist/
 *.zip
 *.tar.gz
 parkhub-web-old/
+.gstack/
