@@ -22,8 +22,10 @@ for i in $(seq 1 60); do
     sleep 1
 done
 
-# Seed demo data if DEMO_MODE is enabled and database is fresh
-if [ "${DEMO_MODE}" = "true" ]; then
+# Seed demo data if DEMO_MODE or SEED_DEMO_DATA is enabled and database is fresh.
+# DEMO_MODE=true: enables demo UI (overlay, voting, auto-reset) + seeds data
+# SEED_DEMO_DATA=true: seeds data only (production mode, no demo UI)
+if [ "${DEMO_MODE}" = "true" ] || [ "${SEED_DEMO_DATA}" = "true" ]; then
     echo "DEMO_MODE=true — checking if seeding is needed..."
     LOT_COUNT=$(wget -qO- http://127.0.0.1:${PORT:-10000}/api/v1/lots 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('total',len(d.get('data',d if isinstance(d,list) else []))))" 2>/dev/null || echo "0")
     if [ "$LOT_COUNT" -le 1 ]; then
@@ -49,7 +51,7 @@ if [ "${DEMO_MODE}" = "true" ]; then
         done
 
         # Run the seed script
-        python3 /app/seed_demo.py --base-url http://127.0.0.1:${PORT:-10000} --admin-password "${PARKHUB_ADMIN_PASSWORD:-ParkHub2026!}" 2>&1 || echo "WARNING: Demo seeding failed"
+        python3 /app/seed_demo.py --base-url http://127.0.0.1:${PORT:-10000} --admin-password "${PARKHUB_ADMIN_PASSWORD:-demo}" 2>&1 || echo "WARNING: Demo seeding failed"
         echo "Demo seeding complete."
 
         # Disable self-registration again

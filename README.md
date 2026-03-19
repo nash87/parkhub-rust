@@ -195,6 +195,25 @@ Try ParkHub without installing anything:
 
 > The demo runs on Render free tier and may take ~30 seconds to wake from sleep.
 
+### Deployment Modes
+
+| Mode | Env Vars | Behavior |
+|---|---|---|
+| **Production** | *(none)* | Clean install, setup wizard on first run |
+| **Production + seed data** | `SEED_DEMO_DATA=true` | Seeds 10 lots, 200 users, ~3,500 bookings — no demo UI |
+| **Demo** | `DEMO_MODE=true` | Seeds data + enables demo overlay, voting, 6h auto-reset |
+
+```bash
+# Production (fresh install with setup wizard)
+docker compose up -d
+
+# Production with sample data (great for evaluation)
+SEED_DEMO_DATA=true docker compose up -d
+
+# Full demo mode (auto-resets every 6 hours)
+DEMO_MODE=true docker compose up -d
+```
+
 The binary serves the full React frontend — no web server or reverse proxy needed.
 
 ---
