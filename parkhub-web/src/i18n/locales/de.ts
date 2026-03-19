@@ -31,7 +31,7 @@ export default {
       signIn: 'Anmelden',
       loggingIn: 'Anmeldung...',
       loginError: 'Ungultige Anmeldedaten',
-      demoHint: 'Demo: admin@parkhub-demo.de / ParkHub2026!',
+      demoHint: 'Demo: admin@parkhub.demo / demo',
     },
     nav: {
       dashboard: 'Dashboard',

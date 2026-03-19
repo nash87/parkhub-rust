@@ -15,6 +15,6 @@ services:
       - key: DEMO_MODE
         value: "true"
       - key: PARKHUB_ADMIN_PASSWORD
-        value: "ParkHub2026!"
+        value: "demo"
     # /data is ephemeral on Render free tier — redb resets on each restart
     # This is intentional: demo data always starts fresh

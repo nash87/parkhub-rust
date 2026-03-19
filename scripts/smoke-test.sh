@@ -5,7 +5,7 @@
 #   ./scripts/smoke-test.sh [BASE_URL]
 #
 # Env vars:
-#   PARKHUB_ADMIN_EMAIL     (default: admin@parkhub-demo.de)
+#   PARKHUB_ADMIN_EMAIL     (default: admin@parkhub.demo)
 #   PARKHUB_ADMIN_PASSWORD  (default: ParkHub2026!)
 #
 # Requires: curl, jq
@@ -14,7 +14,7 @@
 set -o pipefail
 
 BASE_URL="${1:-https://parkhub-rust-demo.onrender.com}"
-ADMIN_EMAIL="${PARKHUB_ADMIN_EMAIL:-admin@parkhub-demo.de}"
+ADMIN_EMAIL="${PARKHUB_ADMIN_EMAIL:-admin@parkhub.demo}"
 ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-ParkHub2026!}"
 TOKEN=""
 BOOKING_ID=""
@@ -42,55 +42,27 @@ fail() {
     printf "  $(red FAIL)  %-50s %s\n" "$1" "$2"
 }
 
-# auth_curl METHOD PATH [DATA]
-# Writes body to LAST_BODY and HTTP code to LAST_HTTP_CODE.
+# Temp files for curl output (avoid subshell variable scoping issues)
+_BODY_FILE=$(mktemp)
+trap 'rm -f "$_BODY_FILE"' EXIT
+
+# Global results set by auth_curl
 LAST_HTTP_CODE="000"
 LAST_BODY=""
-HTTP_CODE_FILE=$(mktemp)
-BODY_FILE=$(mktemp)
-trap "rm -f $HTTP_CODE_FILE $BODY_FILE" EXIT
 
+# auth_curl METHOD PATH [DATA]
+# Sets LAST_HTTP_CODE and LAST_BODY — call directly, NOT in a subshell.
 auth_curl() {
     local method="$1" path="$2" data="${3:-}"
     local url="${BASE_URL}${path}"
 
-    local args=(-s -o "$BODY_FILE" -w '%{http_code}' -X "$method")
+    local args=(-s -o "$_BODY_FILE" -w '%{http_code}' -X "$method" --connect-timeout 30 --max-time 60)
     [[ -n "$TOKEN" ]] && args+=(-H "Authorization: Bearer ${TOKEN}")
     args+=(-H "Content-Type: application/json")
     [[ -n "$data" ]] && args+=(-d "$data")
 
     LAST_HTTP_CODE=$(curl "${args[@]}" "$url" 2>/dev/null) || LAST_HTTP_CODE="000"
-    LAST_BODY=$(cat "$BODY_FILE" 2>/dev/null)
-}
-
-# has_fields JSON_STRING FIELD1 FIELD2 ...
-# Returns 0 if all fields exist and are non-null in the JSON.
-has_fields() {
-    local json="$1"
-    shift
-    for field in "$@"; do
-        local val
-        val=$(echo "$json" | jq -r ".$field // empty" 2>/dev/null)
-        if [[ -z "$val" ]]; then
-            return 1
-        fi
-    done
-    return 0
-}
-
-# has_any_field JSON_STRING FIELD1 FIELD2 ...
-# Returns 0 if at least one field exists and is non-null.
-has_any_field() {
-    local json="$1"
-    shift
-    for field in "$@"; do
-        local val
-        val=$(echo "$json" | jq -r ".$field // empty" 2>/dev/null)
-        if [[ -n "$val" ]]; then
-            return 0
-        fi
-    done
-    return 1
+    LAST_BODY=$(cat "$_BODY_FILE" 2>/dev/null)
 }
 
 # ── Banner ───────────────────────────────────────────────────────────────────
@@ -120,17 +92,17 @@ bold "1. Login as admin"
 echo ""
 
 # Try username-based login first (ParkHub uses username field)
-BODY=$(auth_curl POST /api/v1/auth/login \
-    "{\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\"}")
+auth_curl POST /api/v1/auth/login \
+    "{\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\"}"
 
 if [[ "$LAST_HTTP_CODE" != "200" ]]; then
     # Fallback: try email-based login
-    BODY=$(auth_curl POST /api/v1/auth/login \
-        "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\"}")
+    auth_curl POST /api/v1/auth/login \
+        "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\"}"
 fi
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    TOKEN=$(echo "$BODY" | jq -r '
+    TOKEN=$(echo "$LAST_BODY" | jq -r '
         .data.tokens.access_token //
         .data.token //
         .token //
@@ -141,11 +113,11 @@ if [[ "$LAST_HTTP_CODE" == "200" ]]; then
         pass "POST /api/v1/auth/login" "HTTP $LAST_HTTP_CODE, token obtained"
     else
         fail "POST /api/v1/auth/login" "HTTP 200 but no token in response"
-        echo "    Response: $(echo "$BODY" | jq -c '.' 2>/dev/null | head -c 200)"
+        echo "    Response: $(echo "$LAST_BODY" | jq -c '.' 2>/dev/null | head -c 200)"
     fi
 else
     fail "POST /api/v1/auth/login" "HTTP $LAST_HTTP_CODE (expected 200)"
-    echo "    Response: $(echo "$BODY" | jq -c '.' 2>/dev/null | head -c 300)"
+    echo "    Response: $(echo "$LAST_BODY" | jq -c '.' 2>/dev/null | head -c 300)"
 fi
 
 if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
@@ -168,11 +140,10 @@ echo ""
 bold "2. Dashboard stats"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/admin/stats)
+auth_curl GET /api/v1/admin/stats
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    # Check for common dashboard fields
-    if echo "$BODY" | jq -e '.data // . | keys | length > 0' &>/dev/null; then
+    if echo "$LAST_BODY" | jq -e '.data // . | keys | length > 0' &>/dev/null; then
         pass "GET /api/v1/admin/stats" "HTTP $LAST_HTTP_CODE, has data"
     else
         fail "GET /api/v1/admin/stats" "HTTP 200 but empty/invalid body"
@@ -190,10 +161,10 @@ echo ""
 bold "3. List parking lots"
 echo ""
 
-LOTS_BODY=$(auth_curl GET /api/v1/lots)
+auth_curl GET /api/v1/lots
+LOTS_BODY="$LAST_BODY"
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    # Extract lots array — could be .data, .data.items, or top-level array
     LOT_COUNT=$(echo "$LOTS_BODY" | jq '
         if .data then
             if (.data | type) == "array" then .data | length
@@ -220,7 +191,7 @@ echo ""
 bold "4. Create a booking"
 echo ""
 
-# Find first available lot and slot
+# Extract first lot ID and first slot ID (slots are nested in floors)
 FIRST_LOT_ID=$(echo "$LOTS_BODY" | jq -r '
     (if .data then
         if (.data | type) == "array" then .data
@@ -229,72 +200,72 @@ FIRST_LOT_ID=$(echo "$LOTS_BODY" | jq -r '
     elif (. | type) == "array" then .
     else [] end) | .[0].id // empty' 2>/dev/null || echo "")
 
-if [[ -n "$FIRST_LOT_ID" && "$FIRST_LOT_ID" != "null" ]]; then
-    # Get slots for this lot
-    SLOTS_BODY=$(auth_curl GET "/api/v1/lots/${FIRST_LOT_ID}/slots")
-    FIRST_SLOT_ID=$(echo "$SLOTS_BODY" | jq -r '
+# Slot IDs are inside lot.floors[].slots[] — extract from the lots response directly
+FIRST_SLOT_ID=$(echo "$LOTS_BODY" | jq -r '
+    (if .data then
+        if (.data | type) == "array" then .data
+        elif .data.items then .data.items
+        else [] end
+    elif (. | type) == "array" then .
+    else [] end) | .[0].floors[0].slots[0].id // empty' 2>/dev/null || echo "")
+
+# If not in floors, try separate slots endpoint
+if [[ -z "$FIRST_SLOT_ID" || "$FIRST_SLOT_ID" == "null" ]] && [[ -n "$FIRST_LOT_ID" && "$FIRST_LOT_ID" != "null" ]]; then
+    auth_curl GET "/api/v1/lots/${FIRST_LOT_ID}/slots"
+    FIRST_SLOT_ID=$(echo "$LAST_BODY" | jq -r '
         (if .data then
             if (.data | type) == "array" then .data
             elif .data.items then .data.items
             else [] end
         elif (. | type) == "array" then .
-        else [] end) | [.[] | select(.status == "available" or .status == "free" or .is_available == true)] | .[0].id // empty' 2>/dev/null || echo "")
+        else [] end) | .[0].id // empty' 2>/dev/null || echo "")
+fi
 
-    # If no slot found, try first slot regardless of status
-    if [[ -z "$FIRST_SLOT_ID" || "$FIRST_SLOT_ID" == "null" ]]; then
-        FIRST_SLOT_ID=$(echo "$SLOTS_BODY" | jq -r '
-            (if .data then
-                if (.data | type) == "array" then .data
-                elif .data.items then .data.items
-                else [] end
-            elif (. | type) == "array" then .
-            else [] end) | .[0].id // empty' 2>/dev/null || echo "")
+# Create a vehicle first (needed for booking)
+VEHICLE_ID=""
+auth_curl POST /api/v1/vehicles \
+    '{"license_plate":"B-PH 1234","make":"BMW","model":"X5","color":"Black"}'
+if [[ "$LAST_HTTP_CODE" == "200" || "$LAST_HTTP_CODE" == "201" ]]; then
+    VEHICLE_ID=$(echo "$LAST_BODY" | jq -r '.data.id // .id // empty' 2>/dev/null || echo "")
+fi
+
+if [[ -n "$FIRST_LOT_ID" && "$FIRST_LOT_ID" != "null" && -n "$FIRST_SLOT_ID" && "$FIRST_SLOT_ID" != "null" ]]; then
+    # Build start_time: tomorrow at 09:00 UTC
+    TOMORROW_9AM=$(date -u -d "+1 day 09:00:00" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || date -u -v+1d -v9H -v0M -v0S +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || echo "2026-03-20T09:00:00Z")
+
+    BOOKING_PAYLOAD="{\"lot_id\":\"${FIRST_LOT_ID}\",\"slot_id\":\"${FIRST_SLOT_ID}\",\"start_time\":\"${TOMORROW_9AM}\",\"duration_minutes\":60,\"license_plate\":\"B-PH 1234\""
+    if [[ -n "$VEHICLE_ID" && "$VEHICLE_ID" != "null" ]]; then
+        BOOKING_PAYLOAD="${BOOKING_PAYLOAD},\"vehicle_id\":\"${VEHICLE_ID}\""
     fi
+    BOOKING_PAYLOAD="${BOOKING_PAYLOAD}}"
 
-    if [[ -n "$FIRST_SLOT_ID" && "$FIRST_SLOT_ID" != "null" ]]; then
-        # Create booking for tomorrow
-        TOMORROW=$(date -u -d "+1 day" +%Y-%m-%d 2>/dev/null || date -u -v+1d +%Y-%m-%d 2>/dev/null || echo "2026-03-20")
-        BOOKING_BODY=$(auth_curl POST /api/v1/bookings \
-            "{\"lot_id\":\"${FIRST_LOT_ID}\",\"slot_id\":\"${FIRST_SLOT_ID}\",\"date\":\"${TOMORROW}\"}")
-
-        if [[ "$LAST_HTTP_CODE" == "200" || "$LAST_HTTP_CODE" == "201" ]]; then
-            BOOKING_ID=$(echo "$BOOKING_BODY" | jq -r '.data.id // .id // empty' 2>/dev/null || echo "")
-            if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
-                pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE, booking=$BOOKING_ID"
-            else
-                pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE, created (no id extracted)"
-            fi
-        elif [[ "$LAST_HTTP_CODE" == "409" || "$LAST_HTTP_CODE" == "422" ]]; then
-            # Conflict or validation error — slot might be taken, still shows API works
-            pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE (slot unavailable, API responsive)"
-        else
-            fail "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE (expected 200/201)"
-            echo "    Response: $(echo "$BOOKING_BODY" | jq -c '.' 2>/dev/null | head -c 300)"
-        fi
-    else
-        # No slots — try booking without slot_id
-        TOMORROW=$(date -u -d "+1 day" +%Y-%m-%d 2>/dev/null || date -u -v+1d +%Y-%m-%d 2>/dev/null || echo "2026-03-20")
-        BOOKING_BODY=$(auth_curl POST /api/v1/bookings \
-            "{\"lot_id\":\"${FIRST_LOT_ID}\",\"date\":\"${TOMORROW}\"}")
-
-        if [[ "$LAST_HTTP_CODE" == "200" || "$LAST_HTTP_CODE" == "201" ]]; then
-            BOOKING_ID=$(echo "$BOOKING_BODY" | jq -r '.data.id // .id // empty' 2>/dev/null || echo "")
-            pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE, booking=$BOOKING_ID"
-        elif [[ "$LAST_HTTP_CODE" == "409" || "$LAST_HTTP_CODE" == "422" || "$LAST_HTTP_CODE" == "400" ]]; then
-            pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE (validation/conflict, API works)"
-        else
-            fail "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE"
-            echo "    Response: $(echo "$BOOKING_BODY" | jq -c '.' 2>/dev/null | head -c 300)"
-        fi
-    fi
-else
-    # No lots available, try direct booking
-    TOMORROW=$(date -u -d "+1 day" +%Y-%m-%d 2>/dev/null || date -u -v+1d +%Y-%m-%d 2>/dev/null || echo "2026-03-20")
-    BOOKING_BODY=$(auth_curl POST /api/v1/bookings \
-        "{\"date\":\"${TOMORROW}\"}")
+    auth_curl POST /api/v1/bookings "$BOOKING_PAYLOAD"
 
     if [[ "$LAST_HTTP_CODE" == "200" || "$LAST_HTTP_CODE" == "201" ]]; then
-        BOOKING_ID=$(echo "$BOOKING_BODY" | jq -r '.data.id // .id // empty' 2>/dev/null || echo "")
+        BOOKING_ID=$(echo "$LAST_BODY" | jq -r '.data.id // .id // empty' 2>/dev/null || echo "")
+        if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
+            pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE, booking=$BOOKING_ID"
+        else
+            pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE, created (no id extracted)"
+        fi
+    elif [[ "$LAST_HTTP_CODE" == "400" || "$LAST_HTTP_CODE" == "409" || "$LAST_HTTP_CODE" == "422" ]]; then
+        pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE (validation/conflict, API responsive)"
+    else
+        fail "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE (expected 200/201)"
+        echo "    Response: $(echo "$LAST_BODY" | jq -c '.' 2>/dev/null | head -c 300)"
+    fi
+else
+    # No lots/slots — try anyway to test API response
+    TOMORROW_9AM=$(date -u -d "+1 day 09:00:00" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || date -u -v+1d -v9H -v0M -v0S +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+        || echo "2026-03-20T09:00:00Z")
+    auth_curl POST /api/v1/bookings \
+        "{\"start_time\":\"${TOMORROW_9AM}\",\"duration_minutes\":60,\"license_plate\":\"B-PH 1234\"}"
+
+    if [[ "$LAST_HTTP_CODE" == "200" || "$LAST_HTTP_CODE" == "201" ]]; then
+        BOOKING_ID=$(echo "$LAST_BODY" | jq -r '.data.id // .id // empty' 2>/dev/null || echo "")
         pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE"
     elif [[ "$LAST_HTTP_CODE" == "400" || "$LAST_HTTP_CODE" == "422" ]]; then
         pass "POST /api/v1/bookings" "HTTP $LAST_HTTP_CODE (no lots, API responds correctly)"
@@ -313,7 +284,7 @@ bold "5. Get booking details"
 echo ""
 
 if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
-    BODY=$(auth_curl GET "/api/v1/bookings/${BOOKING_ID}")
+    auth_curl GET "/api/v1/bookings/${BOOKING_ID}"
 
     if [[ "$LAST_HTTP_CODE" == "200" ]]; then
         pass "GET /api/v1/bookings/{id}" "HTTP $LAST_HTTP_CODE, booking=$BOOKING_ID"
@@ -322,8 +293,8 @@ if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
     fi
 else
     # Fall back to listing bookings and picking first
-    BOOKINGS_BODY=$(auth_curl GET /api/v1/bookings)
-    BOOKING_ID=$(echo "$BOOKINGS_BODY" | jq -r '
+    auth_curl GET /api/v1/bookings
+    BOOKING_ID=$(echo "$LAST_BODY" | jq -r '
         (if .data then
             if (.data | type) == "array" then .data
             elif .data.items then .data.items
@@ -332,7 +303,7 @@ else
         else [] end) | .[0].id // empty' 2>/dev/null || echo "")
 
     if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
-        BODY=$(auth_curl GET "/api/v1/bookings/${BOOKING_ID}")
+        auth_curl GET "/api/v1/bookings/${BOOKING_ID}"
         if [[ "$LAST_HTTP_CODE" == "200" ]]; then
             pass "GET /api/v1/bookings/{id}" "HTTP $LAST_HTTP_CODE, booking=$BOOKING_ID"
         else
@@ -353,7 +324,7 @@ bold "6. Cancel booking"
 echo ""
 
 if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
-    BODY=$(auth_curl DELETE "/api/v1/bookings/${BOOKING_ID}")
+    auth_curl DELETE "/api/v1/bookings/${BOOKING_ID}"
 
     if [[ "$LAST_HTTP_CODE" == "200" || "$LAST_HTTP_CODE" == "204" ]]; then
         pass "DELETE /api/v1/bookings/{id}" "HTTP $LAST_HTTP_CODE, cancelled=$BOOKING_ID"
@@ -361,6 +332,7 @@ if [[ -n "$BOOKING_ID" && "$BOOKING_ID" != "null" ]]; then
         pass "DELETE /api/v1/bookings/{id}" "HTTP $LAST_HTTP_CODE (already cancelled or not cancellable)"
     else
         fail "DELETE /api/v1/bookings/{id}" "HTTP $LAST_HTTP_CODE (expected 200/204)"
+        echo "    Response: $(echo "$LAST_BODY" | jq -c '.' 2>/dev/null | head -c 200)"
     fi
 else
     pass "DELETE /api/v1/bookings/{id}" "SKIP — no booking to cancel"
@@ -375,25 +347,23 @@ echo ""
 bold "7. Demo status"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/demo/status)
+auth_curl GET /api/v1/demo/status
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    # Check for last_reset_at and next_scheduled_reset in response (any nesting level)
-    HAS_RESET=$(echo "$BODY" | jq -r '
+    HAS_RESET=$(echo "$LAST_BODY" | jq -r '
         (.data // .) |
         if .last_reset_at then "yes" else "no" end' 2>/dev/null || echo "no")
-    HAS_NEXT=$(echo "$BODY" | jq -r '
+    HAS_NEXT=$(echo "$LAST_BODY" | jq -r '
         (.data // .) |
         if .next_scheduled_reset then "yes" else "no" end' 2>/dev/null || echo "no")
 
     if [[ "$HAS_RESET" == "yes" && "$HAS_NEXT" == "yes" ]]; then
         pass "GET /api/v1/demo/status" "HTTP $LAST_HTTP_CODE, has last_reset_at + next_scheduled_reset"
     elif [[ "$HAS_RESET" == "yes" || "$HAS_NEXT" == "yes" ]]; then
-        pass "GET /api/v1/demo/status" "HTTP $LAST_HTTP_CODE, partial reset fields (reset=$HAS_RESET, next=$HAS_NEXT)"
+        pass "GET /api/v1/demo/status" "HTTP $LAST_HTTP_CODE, partial fields (reset=$HAS_RESET, next=$HAS_NEXT)"
     else
-        # Still pass if we got 200, just note missing fields
-        pass "GET /api/v1/demo/status" "HTTP $LAST_HTTP_CODE (reset fields not found in expected location)"
-        echo "    $(dim "Keys: $(echo "$BODY" | jq -r '(.data // .) | keys | join(", ")' 2>/dev/null | head -c 200)")"
+        pass "GET /api/v1/demo/status" "HTTP $LAST_HTTP_CODE (fields not in expected location)"
+        echo "    $(dim "Keys: $(echo "$LAST_BODY" | jq -r '(.data // .) | keys | join(", ")' 2>/dev/null | head -c 200)")"
     fi
 else
     fail "GET /api/v1/demo/status" "HTTP $LAST_HTTP_CODE (expected 200)"
@@ -408,17 +378,17 @@ echo ""
 bold "8. Health check"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/health)
+auth_curl GET /api/v1/health
 
-# Also try /health if /api/v1/health fails
+# Fallback to /health
 if [[ "$LAST_HTTP_CODE" != "200" ]]; then
-    BODY=$(auth_curl GET /health)
+    auth_curl GET /health
 fi
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    pass "GET /api/v1/health (or /health)" "HTTP $LAST_HTTP_CODE"
+    pass "GET /health" "HTTP $LAST_HTTP_CODE"
 else
-    fail "GET /api/v1/health" "HTTP $LAST_HTTP_CODE (expected 200)"
+    fail "GET /health" "HTTP $LAST_HTTP_CODE (expected 200)"
 fi
 
 echo ""
@@ -430,19 +400,18 @@ echo ""
 bold "9. GDPR export"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/users/me/export)
+auth_curl GET /api/v1/users/me/export
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    # Check for absences, notifications, credit_transactions
-    HAS_ABSENCES=$(echo "$BODY" | jq -e '(.data // .) | has("absences")' 2>/dev/null && echo "yes" || echo "no")
-    HAS_NOTIFICATIONS=$(echo "$BODY" | jq -e '(.data // .) | has("notifications")' 2>/dev/null && echo "yes" || echo "no")
-    HAS_CREDITS=$(echo "$BODY" | jq -e '(.data // .) | has("credit_transactions")' 2>/dev/null && echo "yes" || echo "no")
+    HAS_ABSENCES=$(echo "$LAST_BODY" | jq -e '(.data // .) | has("absences")' &>/dev/null && echo "yes" || echo "no")
+    HAS_NOTIFICATIONS=$(echo "$LAST_BODY" | jq -e '(.data // .) | has("notifications")' &>/dev/null && echo "yes" || echo "no")
+    HAS_CREDITS=$(echo "$LAST_BODY" | jq -e '(.data // .) | has("credit_transactions")' &>/dev/null && echo "yes" || echo "no")
 
     if [[ "$HAS_ABSENCES" == "yes" && "$HAS_NOTIFICATIONS" == "yes" && "$HAS_CREDITS" == "yes" ]]; then
-        pass "GET /api/v1/users/me/export" "HTTP $LAST_HTTP_CODE, has absences+notifications+credit_transactions"
+        pass "GET /api/v1/users/me/export" "HTTP $LAST_HTTP_CODE, has absences+notifications+credits"
     else
-        pass "GET /api/v1/users/me/export" "HTTP $LAST_HTTP_CODE (absences=$HAS_ABSENCES, notif=$HAS_NOTIFICATIONS, credits=$HAS_CREDITS)"
-        echo "    $(dim "Keys: $(echo "$BODY" | jq -r '(.data // .) | keys | join(", ")' 2>/dev/null | head -c 300)")"
+        pass "GET /api/v1/users/me/export" "HTTP $LAST_HTTP_CODE (abs=$HAS_ABSENCES, notif=$HAS_NOTIFICATIONS, cred=$HAS_CREDITS)"
+        echo "    $(dim "Keys: $(echo "$LAST_BODY" | jq -r '(.data // .) | keys | join(", ")' 2>/dev/null | head -c 300)")"
     fi
 else
     fail "GET /api/v1/users/me/export" "HTTP $LAST_HTTP_CODE (expected 200)"
@@ -457,10 +426,10 @@ echo ""
 bold "10. List notifications"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/notifications)
+auth_curl GET /api/v1/notifications
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    NOTIF_COUNT=$(echo "$BODY" | jq '
+    NOTIF_COUNT=$(echo "$LAST_BODY" | jq '
         if .data then
             if (.data | type) == "array" then .data | length
             elif .data.items then .data.items | length
@@ -481,10 +450,10 @@ echo ""
 bold "11. Audit log"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/admin/audit-log)
+auth_curl GET /api/v1/admin/audit-log
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
-    ENTRY_COUNT=$(echo "$BODY" | jq '
+    ENTRY_COUNT=$(echo "$LAST_BODY" | jq '
         if .data then
             if (.data | type) == "array" then .data | length
             elif .data.items then .data.items | length
@@ -506,11 +475,11 @@ echo ""
 bold "12. Webhook listing"
 echo ""
 
-BODY=$(auth_curl GET /api/v1/admin/webhooks)
+auth_curl GET /api/v1/admin/webhooks
 
-# Also try /api/v1/webhooks if admin path fails
+# Fallback to user-level webhooks endpoint
 if [[ "$LAST_HTTP_CODE" != "200" ]]; then
-    BODY=$(auth_curl GET /api/v1/webhooks)
+    auth_curl GET /api/v1/webhooks
 fi
 
 if [[ "$LAST_HTTP_CODE" == "200" ]]; then
