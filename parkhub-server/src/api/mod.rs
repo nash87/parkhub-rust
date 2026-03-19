@@ -155,6 +155,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/legal/impressum", get(get_impressum))
         // Feature flags — public (frontend needs to know which features are enabled)
         .route("/api/v1/features", get(get_features))
+        // Theme — public (frontend needs theme before auth for login page styling)
+        .route("/api/v1/theme", get(get_public_theme))
         // Announcements — public (active announcements visible without auth)
         .route(
             "/api/v1/announcements/active",
@@ -271,6 +273,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/settings",
             get(admin_get_settings).put(admin_update_settings),
         )
+        .route("/api/v1/admin/settings/use-case", get(admin_get_use_case))
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
         // Admin-only: CSV exports
@@ -3214,7 +3217,7 @@ async fn admin_list_bookings(
 /// All admin settings with their default values.
 const ADMIN_SETTINGS: &[(&str, &str)] = &[
     ("company_name", "ParkHub"),
-    ("use_case", "corporate"),
+    ("use_case", "company"),
     ("self_registration", "true"),
     ("license_plate_mode", "optional"),
     ("display_name_format", "first_name"),
@@ -3240,6 +3243,108 @@ async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
         .find(|(k, _)| *k == key)
         .map(|(_, v)| v.to_string())
         .unwrap_or_default()
+}
+
+/// Use-case theme definitions — maps use_case key to display config
+fn use_case_theme(key: &str) -> serde_json::Value {
+    match key {
+        "company" => serde_json::json!({
+            "key": "company",
+            "name": "Company Parking",
+            "description": "Employee parking for offices and campuses",
+            "icon": "buildings",
+            "primary_color": "#0d9488",
+            "accent_color": "#0ea5e9",
+            "terminology": {
+                "user": "Employee", "users": "Employees",
+                "lot": "Parking Area", "slot": "Spot",
+                "booking": "Reservation", "department": "Department"
+            },
+            "features_emphasis": ["team_calendar", "absence_tracking", "departments", "credits"]
+        }),
+        "residential" => serde_json::json!({
+            "key": "residential",
+            "name": "Residential Parking",
+            "description": "Parking for apartment buildings and housing complexes",
+            "icon": "house-line",
+            "primary_color": "#059669",
+            "accent_color": "#84cc16",
+            "terminology": {
+                "user": "Resident", "users": "Residents",
+                "lot": "Parking Area", "slot": "Space",
+                "booking": "Reservation", "department": "Unit"
+            },
+            "features_emphasis": ["guest_parking", "long_term_bookings", "public_display"]
+        }),
+        "shared" => serde_json::json!({
+            "key": "shared",
+            "name": "Shared Parking",
+            "description": "Community or co-working parking spaces",
+            "icon": "users-three",
+            "primary_color": "#7c3aed",
+            "accent_color": "#06b6d4",
+            "terminology": {
+                "user": "Member", "users": "Members",
+                "lot": "Parking Zone", "slot": "Spot",
+                "booking": "Booking", "department": "Group"
+            },
+            "features_emphasis": ["quick_book", "waitlist", "public_display", "qr_codes"]
+        }),
+        "rental" => serde_json::json!({
+            "key": "rental",
+            "name": "Rental / Commercial",
+            "description": "Paid parking for customers and tenants",
+            "icon": "currency-circle-dollar",
+            "primary_color": "#2563eb",
+            "accent_color": "#f59e0b",
+            "terminology": {
+                "user": "Customer", "users": "Customers",
+                "lot": "Parking Facility", "slot": "Bay",
+                "booking": "Rental", "department": "Account"
+            },
+            "features_emphasis": ["invoicing", "pricing", "revenue_reports", "guest_bookings"]
+        }),
+        _ => serde_json::json!({
+            "key": "personal",
+            "name": "Personal / Private",
+            "description": "Private parking for family and friends",
+            "icon": "car-simple",
+            "primary_color": "#e11d48",
+            "accent_color": "#f97316",
+            "terminology": {
+                "user": "Person", "users": "People",
+                "lot": "Driveway", "slot": "Spot",
+                "booking": "Booking", "department": "Group"
+            },
+            "features_emphasis": ["simple_booking", "guest_parking"]
+        }),
+    }
+}
+
+/// `GET /api/v1/admin/settings/use-case` — return current use-case with theme config
+async fn admin_get_use_case(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+    let current = read_admin_setting(&state_guard.db, "use_case").await;
+    let theme = use_case_theme(&current);
+    let all_options: Vec<serde_json::Value> =
+        ["company", "residential", "shared", "rental", "personal"]
+            .iter()
+            .map(|k| use_case_theme(k))
+            .collect();
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "current": theme,
+            "available": all_options,
+        }))),
+    )
 }
 
 /// `GET /api/v1/admin/settings` — return all settings (merged defaults + stored values)
@@ -3274,8 +3379,8 @@ async fn admin_get_settings(
 fn validate_setting_value(key: &str, value: &str) -> Result<(), &'static str> {
     match key {
         "use_case" => {
-            if !["corporate", "university", "residential", "other"].contains(&value) {
-                return Err("use_case must be corporate, university, residential, or other");
+            if !["company", "residential", "shared", "rental", "personal"].contains(&value) {
+                return Err("use_case must be company, residential, shared, rental, or personal");
             }
         }
         "self_registration"
@@ -3450,6 +3555,24 @@ async fn get_features(
         Json(ApiResponse::success(serde_json::json!({
             "enabled": enabled,
             "available": FEATURE_MODULES,
+        }))),
+    )
+}
+
+/// `GET /api/v1/theme` — public: return current use-case theme (no auth required)
+async fn get_public_theme(
+    State(state): State<SharedState>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    let use_case = read_admin_setting(&state_guard.db, "use_case").await;
+    let company = read_admin_setting(&state_guard.db, "company_name").await;
+    let theme = use_case_theme(&use_case);
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "use_case": theme,
+            "company_name": company,
         }))),
     )
 }
