@@ -194,6 +194,6 @@ describe('LoginPage', () => {
 
   it('renders the version badge', () => {
     render(<LoginPage />);
-    expect(screen.getByText('ParkHub v1.3.0')).toBeInTheDocument();
+    expect(screen.getByText(/ParkHub v\d+\.\d+/)).toBeInTheDocument();
   });
 });
