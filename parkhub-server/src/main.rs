@@ -610,12 +610,12 @@ async fn main() -> Result<()> {
                             .unwrap_or_else(|_| "demo".to_string());
                         let seed_script = std::path::Path::new("/app/seed_demo.py");
                         if seed_script.exists() {
+                            // Pass password via env var, not CLI arg (avoids /proc exposure)
                             match tokio::process::Command::new("python3")
                                 .arg(seed_script)
                                 .arg("--base-url")
                                 .arg(format!("http://127.0.0.1:{}", port))
-                                .arg("--admin-password")
-                                .arg(&admin_pw)
+                                .env("PARKHUB_ADMIN_PASSWORD", &admin_pw)
                                 .output()
                                 .await
                             {
