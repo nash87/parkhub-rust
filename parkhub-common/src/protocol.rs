@@ -77,7 +77,7 @@ pub struct PaginatedResponse<T> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Login request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -91,13 +91,13 @@ pub struct LoginResponse {
 }
 
 /// Token refresh request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 
 /// Register new user request
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,

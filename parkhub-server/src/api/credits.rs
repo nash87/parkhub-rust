@@ -27,7 +27,7 @@ pub(crate) struct UserCreditsResponse {
 }
 
 /// Request body for admin credit grant
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub(crate) struct AdminGrantCreditsRequest {
     amount: i32,
     description: Option<String>,
@@ -38,6 +38,15 @@ pub(crate) struct AdminGrantCreditsRequest {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `GET /api/v1/user/credits` — get current user's credit balance and history
+#[utoipa::path(
+    get,
+    path = "/api/v1/user/credits",
+    tag = "Credits",
+    responses(
+        (status = 200, description = "User credit balance and recent transactions"),
+        (status = 404, description = "User not found"),
+    )
+)]
 pub(crate) async fn get_user_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -79,6 +88,18 @@ pub(crate) async fn get_user_credits(
 }
 
 /// `POST /api/v1/admin/users/{id}/credits` — grant credits to a user (admin only)
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/users/{id}/credits",
+    tag = "Credits",
+    params(("id" = String, Path, description = "Target user ID")),
+    responses(
+        (status = 200, description = "Credits granted successfully"),
+        (status = 400, description = "Invalid amount"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "User not found"),
+    )
+)]
 pub(crate) async fn admin_grant_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -148,6 +169,15 @@ pub(crate) async fn admin_grant_credits(
 }
 
 /// `POST /api/v1/admin/credits/refill-all` — refill all active users' credits (admin only)
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/credits/refill-all",
+    tag = "Credits",
+    responses(
+        (status = 200, description = "All active users refilled"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
 pub(crate) async fn admin_refill_all_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -211,6 +241,18 @@ pub(crate) async fn admin_refill_all_credits(
 }
 
 /// `PUT /api/v1/admin/users/{id}/quota` — update a user's monthly credit quota (admin only)
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/users/{id}/quota",
+    tag = "Credits",
+    params(("id" = String, Path, description = "Target user ID")),
+    responses(
+        (status = 200, description = "Quota updated successfully"),
+        (status = 400, description = "Invalid quota value"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "User not found"),
+    )
+)]
 pub(crate) async fn admin_update_user_quota(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

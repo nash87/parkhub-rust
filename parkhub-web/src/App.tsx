@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { UseCaseProvider } from './context/UseCaseContext';
+import { FeaturesProvider } from './context/FeaturesContext';
 import './i18n';
 
 // Pages
@@ -110,6 +112,8 @@ export function App() {
     <BrowserRouter>
       <ThemeProvider>
         <ThemeLoader>
+        <UseCaseProvider>
+        <FeaturesProvider>
         <AuthProvider>
           <AppRoutes />
           <DemoOverlay />
@@ -122,6 +126,8 @@ export function App() {
             }}
           />
         </AuthProvider>
+        </FeaturesProvider>
+        </UseCaseProvider>
         </ThemeLoader>
       </ThemeProvider>
     </BrowserRouter>

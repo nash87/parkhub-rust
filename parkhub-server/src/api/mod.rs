@@ -61,12 +61,12 @@ type SharedState = Arc<RwLock<AppState>>;
 // ─────────────────────────────────────────────────────────────────────────────
 
 pub(crate) mod admin;
-mod auth;
+pub(crate) mod auth;
 mod bookings;
-mod credits;
+pub(crate) mod credits;
 mod export;
 mod favorites;
-mod lots;
+pub(crate) mod lots;
 pub(crate) mod push;
 mod setup;
 mod social;
@@ -114,6 +114,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
 
     // Instantiate per-endpoint rate limiters
     let rate_limiters = EndpointRateLimiters::new();
+    let global_limiter = rate_limiters.general.clone();
 
     // Rate-limited auth routes — each sub-router gets its own per-IP limiter applied
     // via route_layer so only that specific route is affected.
@@ -454,7 +455,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Static files (web frontend) - fallback for all other routes
         .fallback(static_files::static_handler)
         .with_state(state)
+        // HTTP request metrics — captures method, path, status, duration for Prometheus
+        .layer(axum::middleware::from_fn(http_metrics_middleware))
         .layer(TraceLayer::new_for_http())
+        // Global rate limit — 100 req/s with burst 200
+        .layer(axum::middleware::from_fn(move |req, next| {
+            crate::rate_limit::rate_limit_middleware(global_limiter.clone(), req, next)
+        }))
         // Security headers applied to every response
         .layer(axum::middleware::from_fn(security_headers_middleware))
         // Restrict request body size to prevent DoS via large payloads
@@ -539,6 +546,41 @@ async fn security_headers_middleware(request: Request<Body>, next: Next) -> Resp
     );
 
     response
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HTTP METRICS MIDDLEWARE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Records HTTP request metrics (method, path, status, duration) for Prometheus.
+async fn http_metrics_middleware(request: Request<Body>, next: Next) -> Response {
+    let method = request.method().to_string();
+    let path = request.uri().path().to_string();
+    let start = std::time::Instant::now();
+
+    let response = next.run(request).await;
+
+    let status = response.status().as_u16();
+    let duration = start.elapsed();
+
+    // Normalize path to avoid high-cardinality labels (strip UUIDs/IDs)
+    let normalized = normalize_metric_path(&path);
+    metrics::record_http_request(&method, &normalized, status, duration);
+
+    response
+}
+
+/// Collapse dynamic path segments (UUIDs, numeric IDs) into placeholders
+/// to keep Prometheus label cardinality bounded.
+fn normalize_metric_path(path: &str) -> String {
+    path.split('/')
+        .map(|s| {
+            let is_uuid = s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4;
+            let is_numeric = !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
+            if is_uuid || is_numeric { ":id" } else { s }
+        })
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1249,6 +1291,7 @@ async fn create_booking(
             webhooks::dispatch_webhook_event(&state_clone, "booking.created", booking_json).await;
         });
     }
+    metrics::record_booking_event("created");
 
     // Send booking confirmation email (non-blocking, fire-and-forget).
     if let Some(u) = user_info_opt {
@@ -1464,6 +1507,7 @@ async fn cancel_booking(
             webhooks::dispatch_webhook_event(&state_clone, "booking.cancelled", payload).await;
         });
     }
+    metrics::record_booking_event("cancelled");
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }

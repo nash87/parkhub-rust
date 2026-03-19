@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.2.5-brightgreen.svg?style=for-the-badge" alt="v1.2.5"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.3.7-brightgreen.svg?style=for-the-badge" alt="v1.3.7"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
@@ -115,9 +115,9 @@
 | Argon2id password hashing (OsRng salts) | Done |
 | AES-256-GCM database encryption at rest (optional) | Done |
 | TLS 1.3 (auto-generated cert or bring-your-own) | Done |
-| Rate limiting: 5 login attempts/min per IP, 100 req/s global | Done |
+| Rate limiting: 5 login/min, 3 register/min per IP; 100 req/s global | Done |
 | Security headers: CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy | Done |
-| Request body size limit (1 MiB) | Done |
+| Request body size limit (4 MiB) | Done |
 | CORS: same-origin (localhost allowed in dev) | Done |
 | Audit logging | Done |
 
@@ -134,8 +134,9 @@
 | Admin settings (company, booking rules, credits, waitlist) | Done |
 | Guest booking management | Done |
 | Impressum editor in admin panel | Done |
-| Prometheus metrics endpoint (`/metrics`) | Done |
-| Swagger UI at `/swagger-ui` | Done |
+| Prometheus metrics endpoint (`/metrics`) with HTTP + business metrics | Done |
+| Swagger UI at `/swagger-ui` with 18+ annotated endpoints | Done |
+| Use-case theming (company, residential, shared, rental, personal) | Done |
 | Automatic daily backups with configurable retention | Done |
 
 ### Deployment
@@ -151,6 +152,8 @@
 | Dark mode and light mode | Done |
 | Mobile-responsive UI | Done |
 | Accessibility (ARIA labels, keyboard navigation, screen reader) | Done |
+| PWA (installable, offline-capable, service worker) | Done |
+| i18n — English + German (8 locale stubs) | Done |
 
 ---
 
@@ -335,7 +338,7 @@ See [docs/GDPR.md](docs/GDPR.md) for the full operator compliance guide and [COM
 - **Transport**: TLS 1.3 — auto-generated self-signed cert or custom certificate
 - **Rate limiting**: 5 login/register attempts per minute per IP; 100 req/s global (burst 200)
 - **Security headers**: Content-Security-Policy, X-Frame-Options: DENY, Referrer-Policy, Permissions-Policy
-- **Request size**: 1 MiB limit on all request bodies (prevents DoS via large payloads)
+- **Request size**: 4 MiB limit on all request bodies (accommodates vehicle photo uploads)
 - **CORS**: same-origin only (localhost allowed in development)
 - **RBAC**: user / admin / superadmin roles enforced independently on every endpoint
 - **Audit log**: every write operation recorded with timestamp and user ID
