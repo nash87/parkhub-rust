@@ -1,9 +1,9 @@
 export default {
   translation: {
-    app: { name: 'ParkHub', tagline: 'Smart Parking Management' },
+    app: { name: 'ParkHub', tagline: 'Self-hosted parking management' },
     welcome: {
       greeting: 'Welcome to ParkHub',
-      subtitle: 'The intelligent parking management solution for your organization',
+      subtitle: 'Book parking spots, manage lots, track credits. Self-hosted, open source, GDPR compliant.',
       selectLanguage: 'Select your language',
       getStarted: 'Get Started',
       features: {
