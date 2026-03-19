@@ -577,7 +577,11 @@ fn normalize_metric_path(path: &str) -> String {
         .map(|s| {
             let is_uuid = s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4;
             let is_numeric = !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
-            if is_uuid || is_numeric { ":id" } else { s }
+            if is_uuid || is_numeric {
+                ":id"
+            } else {
+                s
+            }
         })
         .collect::<Vec<_>>()
         .join("/")

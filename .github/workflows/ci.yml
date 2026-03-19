@@ -2,15 +2,11 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [main, develop]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
-# Minimal permissions — CI only reads code, no write access needed
 permissions:
   contents: read
 
@@ -22,8 +18,7 @@ jobs:
     name: Cargo Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -31,14 +26,9 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      # rust-embed needs the dist folder at compile time; create a placeholder
-      # so cargo check works without a full frontend build.
       - name: Create placeholder web dist
         run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
-      # Check only the server-side packages — parkhub-client has Slint/GTK deps
-      # that require a full desktop environment and cannot be checked on plain Ubuntu.
-      # The client is covered by the Windows build job in release.yml.
       - name: Run cargo check (server + common)
         run: |
           cargo check --package parkhub-common --all-targets
@@ -48,8 +38,7 @@ jobs:
     name: Cargo Format
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -63,8 +52,7 @@ jobs:
     name: Cargo Clippy
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -77,20 +65,17 @@ jobs:
       - name: Create placeholder web dist
         run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
-      # Clippy only for server-side packages (same reason as cargo check above)
-      # Allow dead_code — project is in active development with modules wired up incrementally
       - name: Run clippy (server + common)
         run: |
-          cargo clippy --package parkhub-common --all-targets -- -D warnings -A dead_code -A unused -A clippy::field_reassign_with_default -A clippy::format_in_format_args -A clippy::collapsible_if -A clippy::unnecessary_lazy_evaluations -A clippy::needless_borrows_for_generic_args -A clippy::result_large_err -A clippy::new_ret_no_self
-          cargo clippy --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A dead_code -A unused -A clippy::field_reassign_with_default -A clippy::format_in_format_args -A clippy::collapsible_if -A clippy::unnecessary_lazy_evaluations -A clippy::needless_borrows_for_generic_args -A clippy::result_large_err -A clippy::new_ret_no_self
+          cargo clippy --package parkhub-common --all-targets -- -D warnings
+          cargo clippy --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings
 
   test:
     name: Cargo Test
     runs-on: ubuntu-latest
     needs: [check]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -106,13 +91,38 @@ jobs:
           cargo test --package parkhub-common
           cargo test --package parkhub-server --no-default-features --features headless
 
+  frontend:
+    name: Frontend Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: parkhub-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest
+        run: npx vitest run
+
+      - name: Build frontend
+        run: npm run build
+
   build:
     name: Cargo Build Release
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, clippy, frontend]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -123,7 +133,6 @@ jobs:
       - name: Create placeholder web dist
         run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
-      # Build the headless server binary — this is what Docker ships
       - name: Build release (headless server)
         run: cargo build --release --package parkhub-server --no-default-features --features headless
 
@@ -133,14 +142,13 @@ jobs:
     needs: [build]
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: false
