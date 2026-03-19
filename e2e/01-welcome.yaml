@@ -1,0 +1,17 @@
+url: ${BASE_URL}
+---
+# Welcome / Language Selection Screen
+- launchApp
+
+# Wait for SPA to hydrate
+- extendedWaitUntil:
+    visible: "Get Started"
+    timeout: 30000
+
+# Click Get Started → navigate to Login
+- tapOn: "Get Started"
+
+# Should now be on Login page
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 10000

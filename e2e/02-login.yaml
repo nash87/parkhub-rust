@@ -1,0 +1,42 @@
+url: ${BASE_URL}
+---
+# Login Flow
+- launchApp
+
+# Wait for page
+- extendedWaitUntil:
+    visible: "Get Started|Sign In"
+    timeout: 30000
+
+# Skip welcome
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+
+# Wait for login form
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 10000
+
+# Clear fields first, then type credentials
+- tapOn:
+    id: "username"
+- eraseText: 50
+- inputText: "admin@parkhub.test"
+
+- tapOn:
+    id: "password"
+- eraseText: 50
+- inputText: "demo"
+
+# Click the Sign In button (not the heading)
+- tapOn:
+    text: "Sign In"
+    index: 1
+
+# Wait for dashboard — check for nav items that only appear when logged in
+- extendedWaitUntil:
+    visible: "Bookings|Dashboard|Credits"
+    timeout: 20000

@@ -238,7 +238,7 @@ export function LoginPage() {
 
           {/* Version badge */}
           <p className="text-center text-xs text-surface-400 mt-4">
-            ParkHub v1.3.0
+            ParkHub v1.4.0
           </p>
         </motion.div>
       </div>

@@ -1,0 +1,44 @@
+url: ${BASE_URL}
+---
+# Dashboard + Navigation
+- launchApp
+
+# Login flow
+- extendedWaitUntil:
+    visible: "Get Started|Sign In"
+    timeout: 30000
+
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+
+- extendedWaitUntil:
+    visible: "Sign In"
+    timeout: 10000
+
+- tapOn:
+    id: "username"
+- inputText: "admin@parkhub.test"
+- tapOn:
+    id: "password"
+- inputText: "demo"
+- tapOn: "Sign In"
+
+# Dashboard loaded
+- extendedWaitUntil:
+    visible: "Active Bookings|Credits"
+    timeout: 15000
+
+# Navigate to Bookings
+- tapOn: "Bookings"
+- extendedWaitUntil:
+    visible: "My Bookings"
+    timeout: 5000
+
+# Navigate to Vehicles
+- tapOn: "Vehicles"
+- extendedWaitUntil:
+    visible: "My Vehicles"
+    timeout: 5000
