@@ -9,6 +9,7 @@ import './i18n';
 import { WelcomePage } from './views/Welcome';
 import { LoginPage } from './views/Login';
 import { RegisterPage } from './views/Register';
+import { UseCaseSelectorPage } from './views/UseCaseSelector';
 import { DashboardPage } from './views/Dashboard';
 import { BookingsPage } from './views/Bookings';
 import { CreditsPage } from './views/Credits';
@@ -73,6 +74,7 @@ function AppRoutes() {
       <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/choose" element={<UseCaseSelectorPage />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="bookings" element={<BookingsPage />} />
