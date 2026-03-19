@@ -216,13 +216,55 @@ mod tests {
     fn test_ip_extraction() {
         use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-        // From direct connection
+        // From direct connection (private IP)
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)), 8080);
         let ip = per_ip::get_client_ip(Some(&addr), None);
         assert_eq!(ip, IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)));
 
-        // From X-Forwarded-For
+        // From X-Forwarded-For via trusted proxy
         let ip = per_ip::get_client_ip(Some(&addr), Some("10.0.0.1, 192.168.1.1"));
         assert_eq!(ip, IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)));
+    }
+
+    #[test]
+    fn test_ip_extraction_untrusted_proxy() {
+        use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+        // Public IP peer should NOT trust X-Forwarded-For
+        let public_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 1)), 8080);
+        let ip = per_ip::get_client_ip(Some(&public_addr), Some("10.0.0.1"));
+        // Should use peer IP, not forwarded
+        assert_eq!(ip, IpAddr::V4(Ipv4Addr::new(203, 0, 113, 1)));
+    }
+
+    #[test]
+    fn test_ip_extraction_no_peer() {
+        use std::net::IpAddr;
+
+        // No peer address → fallback to 127.0.0.1
+        let ip = per_ip::get_client_ip(None, None);
+        assert_eq!(ip, IpAddr::from([127, 0, 0, 1]));
+    }
+
+    #[test]
+    fn test_ip_rate_limiter_allows_burst() {
+        let limiter = per_ip::create_ip_rate_limiter(5);
+        let ip: std::net::IpAddr = "10.0.0.1".parse().unwrap();
+        // 5 requests should pass
+        for _ in 0..5 {
+            assert!(limiter.check_key(&ip).is_ok());
+        }
+        // 6th should fail
+        assert!(limiter.check_key(&ip).is_err());
+    }
+
+    #[test]
+    fn test_endpoint_rate_limiters_creation() {
+        let limiters = EndpointRateLimiters::new();
+        // All limiters should be created
+        assert!(limiters.login.check_key(&"10.0.0.1".parse().unwrap()).is_ok());
+        assert!(limiters.register.check_key(&"10.0.0.1".parse().unwrap()).is_ok());
+        assert!(limiters.forgot_password.check_key(&"10.0.0.1".parse().unwrap()).is_ok());
+        assert!(limiters.general.check().is_ok());
     }
 }
