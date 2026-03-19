@@ -174,13 +174,13 @@ export function AdminLotsPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Parking Lots</h2>
           <span className="text-sm text-surface-400">({lots.length})</span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative">
             <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
             <input
@@ -188,11 +188,11 @@ export function AdminLotsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search lots..."
-              className="input pl-9 w-56"
+              className="input pl-9 w-full sm:w-56"
               aria-label="Search parking lots"
             />
           </div>
-          <button onClick={openCreate} className="btn btn-primary">
+          <button onClick={openCreate} className="btn btn-primary self-start sm:self-auto">
             <Plus weight="bold" className="w-4 h-4" />
             New Lot
           </button>

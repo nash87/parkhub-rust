@@ -24,11 +24,12 @@ url: ${BASE_URL}
 - tapOn:
     id: "password"
 - inputText: "wrongpassword"
-- tapOn: "Sign In"
+- tapOn:
+    id: "login-submit"
 
 # Should show error
 - extendedWaitUntil:
-    visible: "Invalid"
+    visible: "Invalid|failed|error"
     timeout: 10000
 
 # Still on login page

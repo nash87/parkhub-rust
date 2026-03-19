@@ -122,7 +122,7 @@ export function Layout() {
         <header className="lg:hidden sticky top-0 z-30 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon" aria-label="Open navigation menu">
+              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon min-w-[44px] min-h-[44px]" aria-label="Open navigation menu">
                 <List weight="bold" className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">

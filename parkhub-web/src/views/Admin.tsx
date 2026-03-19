@@ -22,7 +22,7 @@ function AdminNav() {
   }
 
   return (
-    <nav className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+    <nav className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide -webkit-overflow-scrolling-touch">
       {tabs.map(tab => {
         const active = isActive(tab.path);
         return (
@@ -61,7 +61,10 @@ export function AdminPage() {
       </div>
 
       {/* Tab navigation */}
-      <AdminNav />
+      <div className="relative">
+        <AdminNav />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-surface-950 to-transparent pointer-events-none sm:hidden" />
+      </div>
 
       {/* Divider */}
       <div className="border-t border-surface-200 dark:border-surface-700" />

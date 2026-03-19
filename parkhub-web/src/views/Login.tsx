@@ -93,11 +93,16 @@ export function LoginPage() {
             {t('auth.loginSubtitle')}
           </p>
 
-          {/* Demo hint */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 text-sm text-primary-700 dark:text-primary-300 mb-6">
+          {/* Demo hint — click to auto-fill credentials */}
+          <button
+            type="button"
+            id="demo-autofill"
+            onClick={() => { setUsername('admin@parkhub.test'); setPassword('demo'); }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 text-sm text-primary-700 dark:text-primary-300 mb-6 w-full text-left cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-950/50 transition-colors"
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
             {t('auth.demoHint')}
-          </div>
+          </button>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

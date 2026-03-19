@@ -66,12 +66,12 @@ export function BookingsPage() {
   return (
     <AnimatePresence mode="wait">
     <motion.div key="bookings-loaded" variants={container} initial="hidden" animate="show" className="space-y-6">
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('bookings.title')}</h1>
           <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">{t('bookings.subtitle')}</p>
         </div>
-        <button onClick={loadData} className="btn btn-secondary">
+        <button onClick={loadData} className="btn btn-secondary self-start sm:self-auto">
           <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
         </button>
       </motion.div>

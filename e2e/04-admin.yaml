@@ -19,12 +19,9 @@ url: ${BASE_URL}
     timeout: 10000
 
 - tapOn:
-    id: "username"
-- inputText: "admin@parkhub.test"
+    id: "demo-autofill"
 - tapOn:
-    id: "password"
-- inputText: "demo"
-- tapOn: "Sign In"
+    id: "login-submit"
 
 - extendedWaitUntil:
     visible: "Active Bookings|Credits"

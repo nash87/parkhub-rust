@@ -147,9 +147,9 @@ export function AbsencesPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{calMonthLabel}</h2>
             <div className="flex items-center gap-1">
-              <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"><CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" /></button>
-              <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} className="px-2 py-1 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300">Heute</button>
-              <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"><CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" /></button>
+              <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" /></button>
+              <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} className="px-3 py-2 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 min-h-[44px] flex items-center">Heute</button>
+              <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" /></button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1">
