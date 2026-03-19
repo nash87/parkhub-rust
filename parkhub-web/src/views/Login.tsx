@@ -215,6 +215,7 @@ export function LoginPage() {
               )}
 
               <button
+                id="login-submit"
                 type="submit"
                 disabled={loading || !username || !password}
                 className="btn btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"

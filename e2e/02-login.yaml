@@ -20,7 +20,7 @@ url: ${BASE_URL}
     visible: "Sign In"
     timeout: 10000
 
-# Clear fields first, then type credentials
+# Enter credentials
 - tapOn:
     id: "username"
 - eraseText: 50
@@ -31,12 +31,11 @@ url: ${BASE_URL}
 - eraseText: 50
 - inputText: "demo"
 
-# Click the Sign In button (not the heading)
+# Click submit button by ID
 - tapOn:
-    text: "Sign In"
-    index: 1
+    id: "login-submit"
 
-# Wait for dashboard — check for nav items that only appear when logged in
+# Wait for dashboard nav to appear
 - extendedWaitUntil:
-    visible: "Bookings|Dashboard|Credits"
+    visible: "Bookings"
     timeout: 20000
