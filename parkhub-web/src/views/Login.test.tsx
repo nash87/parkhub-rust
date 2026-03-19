@@ -54,6 +54,12 @@ vi.mock('framer-motion', () => ({
     div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
     )),
+    p: React.forwardRef(({ children, initial, animate, exit, transition, ...props }: any, ref: any) => (
+      <p ref={ref} {...props}>{children}</p>
+    )),
+    button: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, ...props }: any, ref: any) => (
+      <button ref={ref} {...props}>{children}</button>
+    )),
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
