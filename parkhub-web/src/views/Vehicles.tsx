@@ -73,12 +73,12 @@ export function VehiclesPage() {
   return (
     <AnimatePresence mode="wait">
     <motion.div key="vehicles-loaded" variants={container} initial="hidden" animate="show" className="space-y-8">
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('vehicles.title', 'Meine Fahrzeuge')}</h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">{t('vehicles.subtitle', 'Fahrzeuge verwalten')}</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn btn-primary">
+        <button onClick={() => setShowForm(true)} className="btn btn-primary self-start sm:self-auto">
           <Plus weight="bold" className="w-4 h-4" /> {t('vehicles.add', 'Hinzuf\u00fcgen')}
         </button>
       </motion.div>

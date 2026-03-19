@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Enable class-based dark mode (Tailwind CSS 4 defaults to media query) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ParkHub Design System — Tailwind CSS 4 custom theme */
 
 @theme {
@@ -299,6 +302,12 @@ p { line-height: 1.6; }
   color: var(--color-surface-100);
 }
 
+/* Select option colors for dark mode */
+.dark select.input option {
+  background: var(--color-surface-800);
+  color: var(--color-surface-100);
+}
+
 /* Badges */
 .badge {
   display: inline-flex;
@@ -362,6 +371,14 @@ p { line-height: 1.6; }
 *:focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
+}
+
+/* Mobile touch target minimum */
+@media (max-width: 640px) {
+  .btn-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 /* Reduced motion */

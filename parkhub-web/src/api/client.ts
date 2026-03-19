@@ -54,10 +54,10 @@ export const api = {
   register: (data: { username: string; email: string; password: string; name: string }) =>
     request('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
-  me: () => request<User>('/api/v1/me'),
+  me: () => request<User>('/api/v1/users/me'),
 
   updateMe: (data: Partial<User>) =>
-    request<User>('/api/v1/me', { method: 'PUT', body: JSON.stringify(data) }),
+    request<User>('/api/v1/users/me', { method: 'PUT', body: JSON.stringify(data) }),
 
   changePassword: (current_password: string, password: string, password_confirmation: string) =>
     request('/api/v1/users/me/password', {

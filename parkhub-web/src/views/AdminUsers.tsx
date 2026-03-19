@@ -139,7 +139,7 @@ export function AdminUsersPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Users</h2>
           <span className="text-sm text-surface-400">({users.length})</span>
@@ -152,7 +152,7 @@ export function AdminUsersPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search users..."
-            className="input pl-9 w-64"
+            className="input pl-9 w-full sm:w-64"
             aria-label="Search users"
           />
         </div>

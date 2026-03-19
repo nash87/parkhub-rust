@@ -100,7 +100,7 @@ export function DemoOverlay() {
     <motion.div
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-3 left-1/2 -translate-x-1/2 z-50"
+      className="fixed top-3 left-1/2 -translate-x-1/2 z-50 max-sm:scale-90 max-sm:origin-top"
     >
       <div className="glass-card shadow-xl">
         <button

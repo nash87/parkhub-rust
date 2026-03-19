@@ -162,12 +162,12 @@ export function AdminAnnouncementsPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Megaphone weight="fill" className="w-6 h-6 text-primary-600" />
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Announcements</h2>
         </div>
-        <button onClick={openCreate} className="btn btn-primary">
+        <button onClick={openCreate} className="btn btn-primary self-start sm:self-auto">
           <Plus weight="bold" className="w-4 h-4" />
           New Announcement
         </button>

@@ -110,12 +110,12 @@ export function CalendarPage() {
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('calendar.title', 'Kalender')}</h1>
-        <div className="flex items-center gap-2">
-          <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" />
           </button>
           <span className="text-sm font-medium text-surface-700 dark:text-surface-300 min-w-[140px] text-center">{monthLabel}</span>
-          <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
+          <button onClick={nextMonth} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" />
           </button>
         </div>
@@ -136,7 +136,7 @@ export function CalendarPage() {
             const selected = selectedDate && isSameDay(day, selectedDate);
             return (
               <button key={idx} onClick={() => setSelectedDate(day)}
-                className={`min-h-[60px] sm:min-h-[80px] p-1 border-b border-r border-surface-100 dark:border-surface-800 text-left transition-colors ${
+                className={`min-h-[44px] sm:min-h-[80px] p-1 border-b border-r border-surface-100 dark:border-surface-800 text-left transition-colors ${
                   !inMonth ? 'opacity-30' : ''
                 } ${selected ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-surface-50 dark:hover:bg-surface-800/50'}`}
               >
