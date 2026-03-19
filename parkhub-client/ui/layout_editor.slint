@@ -91,36 +91,6 @@ component ToolbarElement inherits Rectangle {
     }
 }
 
-// Grid cell for the canvas
-component GridCell inherits Rectangle {
-    in property <int> grid-x;
-    in property <int> grid-y;
-    in property <bool> has-element: false;
-    in property <bool> is-hovered: false;
-    in property <bool> can-place: true;
-
-    callback clicked();
-    callback hover-changed(bool);
-
-    width: 40px;
-    height: 40px;
-    background: root.has-element ? transparent :
-                root.is-hovered && root.can-place ? Theme.primary.transparentize(0.9) :
-                root.is-hovered && !root.can-place ? Theme.error.transparentize(0.9) :
-                transparent;
-    border-width: 1px;
-    border-color: Theme.border.transparentize(0.8);
-
-    touch := TouchArea {
-        clicked => { root.clicked(); }
-        mouse-cursor: pointer;
-
-        moved => {
-            root.hover-changed(true);
-        }
-    }
-}
-
 // Draggable element on canvas
 component CanvasElement inherits Rectangle {
     in property <LayoutElement> element;

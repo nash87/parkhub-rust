@@ -70,68 +70,6 @@ component ToggleSwitch inherits Rectangle {
     }
 }
 
-// Dropdown selector component
-component Dropdown inherits Rectangle {
-    in property <string> current-value: "";
-    in property <[string]> options: [];
-    in property <bool> expanded: false;
-
-    callback value-changed(string);
-    callback toggle-expanded();
-
-    height: 40px;
-    border-radius: 8px;
-    background: Theme.surface;
-    border-width: 1px;
-    border-color: Theme.border;
-
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 8px;
-
-        Text {
-            horizontal-stretch: 1;
-            text: root.current-value;
-            font-size: 14px;
-            color: Theme.text-primary;
-            vertical-alignment: center;
-        }
-
-        // Arrow indicator
-        Rectangle {
-            width: 16px;
-            height: 16px;
-            y: (parent.height - self.height) / 2;
-
-            // Simple arrow using rectangles
-            Rectangle {
-                width: 8px;
-                height: 2px;
-                x: 2px;
-                y: 6px;
-                background: Theme.text-secondary;
-                border-radius: 1px;
-            }
-            Rectangle {
-                width: 8px;
-                height: 2px;
-                x: 6px;
-                y: 6px;
-                background: Theme.text-secondary;
-                border-radius: 1px;
-            }
-        }
-    }
-
-    TouchArea {
-        clicked => {
-            root.toggle-expanded();
-        }
-        mouse-cursor: pointer;
-    }
-}
-
 // Settings section header
 component SectionHeader inherits Rectangle {
     in property <string> title;
