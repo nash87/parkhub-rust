@@ -138,11 +138,13 @@ export function VehiclesPage() {
       {/* Vehicle list */}
       {vehicles.length === 0 ? (
         <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-16 text-center">
-          <Car weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
-          <p className="text-surface-500 dark:text-surface-400 mb-4">{t('vehicles.noVehicles', 'Noch keine Fahrzeuge angelegt')}</p>
-          <button onClick={() => setShowForm(true)} className="btn btn-primary">
+          <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
+            <Car weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
+          </motion.div>
+          <p className="text-surface-500 dark:text-surface-400 mb-4 mt-4">{t('vehicles.noVehicles', 'Noch keine Fahrzeuge angelegt')}</p>
+          <motion.button onClick={() => setShowForm(true)} className="btn btn-primary" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Plus weight="bold" className="w-4 h-4" /> {t('vehicles.add', 'Hinzuf\u00fcgen')}
-          </button>
+          </motion.button>
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

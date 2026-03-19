@@ -78,7 +78,7 @@ export function BookingsPage() {
 
       {/* Filters */}
       <motion.div variants={item} className="card p-4">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-3" aria-live="polite">
           <Funnel weight="bold" className="w-4 h-4 text-surface-500" />
           <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t('common.filter')}</span>
           <span className="ml-auto text-xs text-surface-400">{t('bookingFilters.totalCount', { count: filtered.length })}</span>
@@ -164,9 +164,15 @@ function Section({ icon: Icon, title, count, color, children }: any) {
 function Empty({ icon: Icon, text, showAction, t }: any) {
   return (
     <div className="card p-12 text-center">
-      <Icon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
-      <p className="text-surface-500 dark:text-surface-400 mb-4">{text}</p>
-      {showAction && <Link to="/book" className="btn btn-primary"><CalendarPlus weight="bold" className="w-4 h-4" />{t('bookings.bookNow')}</Link>}
+      <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
+        <Icon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
+      </motion.div>
+      <p className="text-surface-500 dark:text-surface-400 mb-4 mt-4">{text}</p>
+      {showAction && (
+        <motion.div className="inline-block" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Link to="/book" className="btn btn-primary"><CalendarPlus weight="bold" className="w-4 h-4" />{t('bookings.bookNow')}</Link>
+        </motion.div>
+      )}
     </div>
   );
 }

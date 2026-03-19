@@ -253,7 +253,12 @@ export function AbsencesPage() {
                 );
               })}
               {entries.filter(e => e.end_date >= todayStr).length === 0 && (
-                <p className="text-sm text-surface-400 text-center py-6">{t('absences.noEntries', 'Keine Eintr\u00e4ge')}</p>
+                <div className="text-center py-6">
+                  <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
+                    <CalendarCheck weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
+                  </motion.div>
+                  <p className="text-sm text-surface-400 mt-3">{t('absences.noEntries', 'Keine Eintr\u00e4ge')}</p>
+                </div>
               )}
             </div>
           </div>
