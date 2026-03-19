@@ -150,7 +150,13 @@ export const api = {
 
   // ── Demo ──
   getDemoConfig: () => request<{ demo_mode: boolean }>('/api/v1/demo/config'),
-  getDemoStatus: () => request<DemoStatus>('/api/v1/demo/status'),
+  getDemoStatus: async (): Promise<ApiResponse<DemoStatus>> => {
+    const res = await request<DemoStatusRaw>('/api/v1/demo/status');
+    if (res.success && res.data) {
+      return { ...res, data: normalizeDemoStatus(res.data) };
+    }
+    return res as ApiResponse<DemoStatus>;
+  },
   voteDemoReset: () => request('/api/v1/demo/vote', { method: 'POST' }),
 };
 
@@ -289,6 +295,22 @@ export interface AdminStats {
   active_bookings: number;
 }
 
+/** Raw shape from the Rust API (nested objects) */
+interface DemoStatusRaw {
+  enabled?: boolean;
+  timer?: { remaining: number; duration: number };
+  timer_seconds?: number;
+  votes?: { current: number; threshold: number; has_voted: boolean } | number;
+  vote_threshold?: number;
+  viewers: number;
+  has_voted?: boolean;
+  reset?: boolean;
+  last_reset_at?: string;
+  next_scheduled_reset?: string;
+  reset_in_progress?: boolean;
+}
+
+/** Normalized shape used by components */
 export interface DemoStatus {
   timer_seconds: number;
   votes: number;
@@ -299,6 +321,21 @@ export interface DemoStatus {
   last_reset_at?: string;
   next_scheduled_reset?: string;
   reset_in_progress?: boolean;
+}
+
+/** Normalize Rust (nested) or PHP (flat) demo status into a consistent shape */
+function normalizeDemoStatus(raw: DemoStatusRaw): DemoStatus {
+  return {
+    timer_seconds: raw.timer?.remaining ?? raw.timer_seconds ?? 0,
+    votes: typeof raw.votes === 'object' ? raw.votes.current : (raw.votes ?? 0),
+    vote_threshold: typeof raw.votes === 'object' ? raw.votes.threshold : (raw.vote_threshold ?? 3),
+    has_voted: typeof raw.votes === 'object' ? raw.votes.has_voted : (raw.has_voted ?? false),
+    viewers: raw.viewers ?? 0,
+    reset: raw.reset,
+    last_reset_at: raw.last_reset_at,
+    next_scheduled_reset: raw.next_scheduled_reset,
+    reset_in_progress: raw.reset_in_progress ?? false,
+  };
 }
 
 export interface Notification {
