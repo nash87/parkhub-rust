@@ -222,6 +222,7 @@ async fn main() -> Result<()> {
     }
 
     // Determine initial data directory (may change if setup wizard runs)
+    #[allow(unused_mut)] // mut needed when gui feature is enabled
     let mut data_dir = if let Some(ref dir) = cli.data_dir {
         std::fs::create_dir_all(dir)?;
         dir.clone()
