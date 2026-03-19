@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  UserCircle, Envelope, Shield, PencilSimple, FloppyDisk, SpinnerGap, Lock,
+  UserCircle, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
   CalendarCheck, House, ChartBar, DownloadSimple, Trash, CaretDown, CaretUp,
+  Shield,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type UserStats } from '../api/client';
@@ -118,19 +119,19 @@ export function ProfilePage() {
   const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="max-w-3xl mx-auto space-y-8">
+    <motion.div variants={container} initial="hidden" animate="show" className="max-w-3xl mx-auto space-y-6">
       <motion.div variants={item}>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('profile.title', 'Profil')}</h1>
-        <p className="text-surface-500 dark:text-surface-400 mt-1">{t('profile.subtitle', 'Pers\u00f6nliche Daten verwalten')}</p>
+        <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">{t('profile.subtitle', 'Pers\u00f6nliche Daten verwalten')}</p>
       </motion.div>
 
       {/* Profile card */}
-      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-8">
-        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-          <div className="w-24 h-24 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-            <span className="text-3xl font-bold text-primary-600 dark:text-primary-400">{initials}</span>
+      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-6">
+        <div className="flex items-start gap-5">
+          <div className="w-14 h-14 rounded-lg bg-surface-100 dark:bg-surface-800 flex items-center justify-center flex-shrink-0">
+            <span className="text-xl font-bold text-surface-600 dark:text-surface-300">{initials}</span>
           </div>
-          <div className="flex-1 text-center sm:text-left">
+          <div className="flex-1">
             {editing ? (
               <div className="space-y-3">
                 <div>
@@ -151,15 +152,17 @@ export function ProfilePage() {
               </div>
             ) : (
               <>
-                <h2 className="text-xl font-bold text-surface-900 dark:text-white">{user?.name}</h2>
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-2">
-                  <span className="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400"><UserCircle weight="regular" className="w-4 h-4" />@{user?.username}</span>
-                  <span className="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400"><Envelope weight="regular" className="w-4 h-4" />{user?.email}</span>
-                </div>
-                <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-medium bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 px-2.5 py-1 rounded-full">
-                    <Shield weight="fill" className="w-3 h-3" /> {roleLabels[user?.role || 'user']}
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-surface-900 dark:text-white">{user?.name}</h2>
+                  <span className="text-xs font-medium text-surface-500 dark:text-surface-400 bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded-md">
+                    {roleLabels[user?.role || 'user']}
                   </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-surface-500 dark:text-surface-400">
+                  <span className="flex items-center gap-1.5"><UserCircle weight="regular" className="w-4 h-4" />@{user?.username}</span>
+                  <span className="flex items-center gap-1.5"><Envelope weight="regular" className="w-4 h-4" />{user?.email}</span>
+                </div>
+                <div className="mt-3">
                   <button onClick={() => setEditing(true)} className="btn btn-secondary btn-sm">
                     <PencilSimple weight="bold" className="w-3.5 h-3.5" /> {t('common.edit', 'Bearbeiten')}
                   </button>
@@ -172,43 +175,30 @@ export function ProfilePage() {
 
       {/* Stats */}
       <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-live="polite">
-        <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-surface-500 dark:text-surface-400">{t('profile.bookingsThisMonth', 'Buchungen (Monat)')}</p>
-              <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-1">{stats ? <AnimatedNumber value={stats.bookings_this_month} /> : '-'}</p>
-            </div>
-            <CalendarCheck weight="fill" className="w-8 h-8 text-primary-200 dark:text-primary-800" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-surface-500 dark:text-surface-400">{t('profile.homeOfficeDays', 'Homeoffice-Tage')}</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats ? <AnimatedNumber value={stats.homeoffice_days_this_month} /> : '-'}</p>
-            </div>
-            <House weight="fill" className="w-8 h-8 text-blue-200 dark:text-blue-800" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-surface-500 dark:text-surface-400">{t('profile.avgDuration', 'Durchschn. Dauer')}</p>
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats ? <AnimatedNumber value={stats.avg_duration_minutes} suffix=" min" /> : '-'}</p>
-            </div>
-            <ChartBar weight="fill" className="w-8 h-8 text-amber-200 dark:text-amber-800" />
-          </div>
-        </div>
+        <StatCard
+          label={t('profile.bookingsThisMonth', 'Buchungen (Monat)')}
+          value={stats ? <AnimatedNumber value={stats.bookings_this_month} /> : '-'}
+          color="text-primary-600 dark:text-primary-400"
+        />
+        <StatCard
+          label={t('profile.homeOfficeDays', 'Homeoffice-Tage')}
+          value={stats ? <AnimatedNumber value={stats.homeoffice_days_this_month} /> : '-'}
+          color="text-surface-900 dark:text-white"
+        />
+        <StatCard
+          label={t('profile.avgDuration', 'Durchschn. Dauer')}
+          value={stats ? <AnimatedNumber value={stats.avg_duration_minutes} suffix=" min" /> : '-'}
+          color="text-surface-900 dark:text-white"
+        />
       </motion.div>
 
       {/* Password change */}
-      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
+      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
         <button onClick={() => setPwOpen(!pwOpen)} className="w-full flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-            <Lock weight="fill" className="w-5 h-5 text-primary-600" />
+          <h3 className="text-base font-semibold text-surface-900 dark:text-white">
             {t('profile.changePassword', 'Passwort \u00e4ndern')}
           </h3>
-          {pwOpen ? <CaretUp weight="bold" className="w-5 h-5 text-surface-400" /> : <CaretDown weight="bold" className="w-5 h-5 text-surface-400" />}
+          {pwOpen ? <CaretUp weight="bold" className="w-4 h-4 text-surface-400" /> : <CaretDown weight="bold" className="w-4 h-4 text-surface-400" />}
         </button>
         {pwOpen && (
           <div className="mt-4 space-y-3">
@@ -235,11 +225,11 @@ export function ProfilePage() {
       </motion.div>
 
       {/* GDPR */}
-      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-          <Shield weight="fill" className="w-5 h-5 text-primary-600" /> DSGVO / GDPR
-        </h3>
-        <p className="text-xs text-surface-500 dark:text-surface-400">{t('gdpr.rights', 'Ihre Rechte gem\u00e4\u00df DSGVO Art. 15, 17 und 20.')}</p>
+      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5 space-y-4">
+        <div>
+          <h3 className="text-base font-semibold text-surface-900 dark:text-white">DSGVO / GDPR</h3>
+          <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">{t('gdpr.rights', 'Ihre Rechte gem\u00e4\u00df DSGVO Art. 15, 17 und 20.')}</p>
+        </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <button onClick={handleExportData} disabled={exporting} className="btn btn-secondary flex-1">
             <DownloadSimple weight="bold" className="w-4 h-4" />
@@ -258,5 +248,14 @@ export function ProfilePage() {
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function StatCard({ label, value, color }: { label: string; value: React.ReactNode; color: string }) {
+  return (
+    <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
+      <p className="text-xs font-medium text-surface-500 dark:text-surface-400 mb-2">{label}</p>
+      <p className={`text-2xl font-bold tabular-nums ${color}`}>{value}</p>
+    </div>
   );
 }

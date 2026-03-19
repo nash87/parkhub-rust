@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Users, SpinnerGap, MagnifyingGlass, ShieldCheck, Coins,
-  PencilSimple, X, Check, UserCircle, Gauge, UserMinus, UserPlus,
+  Users, SpinnerGap, MagnifyingGlass, Coins,
+  PencilSimple, X, Check, Gauge, UserMinus, UserPlus,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
 import toast from 'react-hot-toast';

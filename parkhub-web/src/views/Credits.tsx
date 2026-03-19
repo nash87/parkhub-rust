@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Coins, ArrowDown, ArrowUp, ArrowClockwise, CalendarCheck,
+  Coins, ArrowDown, ArrowUp, ArrowClockwise,
   TrendUp, Sparkle,
 } from '@phosphor-icons/react';
 import { api, type UserCredits } from '../api/client';
@@ -49,39 +49,21 @@ export function CreditsPage() {
         <p className="text-surface-500 dark:text-surface-400 mt-1">{t('credits.subtitle')}</p>
       </motion.div>
 
-      {/* Balance display — hero card */}
-      <motion.div variants={item} className="glass-card p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-accent-400/10 to-transparent rounded-bl-full" />
-        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">{t('credits.balance')}</p>
-            <div className="flex items-baseline gap-3">
-              <span className="text-5xl sm:text-6xl font-black tracking-tight text-accent-600 dark:text-accent-400">
-                {balance}
-              </span>
-              <span className="text-lg text-surface-400">/ {quota}</span>
-            </div>
-            <p className="text-sm text-surface-500 dark:text-surface-400 mt-2">
-              {t('credits.creditsPerBooking', { count: 1 })}
-            </p>
-          </div>
-
-          {/* Circular progress */}
-          <div className="relative w-28 h-28 flex-shrink-0">
-            <svg className="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="52" stroke="currentColor" strokeWidth="8" fill="none"
-                className="text-surface-200 dark:text-surface-700" />
-              <circle cx="60" cy="60" r="52" stroke="currentColor" strokeWidth="8" fill="none"
-                strokeDasharray={`${2 * Math.PI * 52}`}
-                strokeDashoffset={`${2 * Math.PI * 52 * (1 - percentage / 100)}`}
-                strokeLinecap="round"
-                className="text-accent-500 transition-all duration-1000 ease-out" />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-bold text-surface-900 dark:text-white">{percentage}%</span>
-            </div>
-          </div>
+      {/* Balance display */}
+      <motion.div variants={item}>
+        <p className="text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">{t('credits.balance')}</p>
+        <div className="flex items-baseline gap-2">
+          <span className="text-5xl font-bold tracking-tight text-surface-900 dark:text-white">
+            {balance}
+          </span>
+          <span className="text-lg text-surface-400">/ {quota}</span>
         </div>
+        <div className="mt-3 h-2 w-full max-w-xs bg-surface-200 dark:bg-surface-700 rounded-full overflow-hidden">
+          <div className="h-full bg-primary-600 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
+        </div>
+        <p className="text-sm text-surface-500 dark:text-surface-400 mt-2">
+          {t('credits.creditsPerBooking', { count: 1 })}
+        </p>
       </motion.div>
 
       {/* Stat cards */}
@@ -126,33 +108,24 @@ export function CreditsPage() {
       </motion.div>
 
       {/* Transaction history */}
-      <motion.div variants={item} className="card p-6">
-        <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4 flex items-center gap-2">
-          <CalendarCheck weight="fill" className="w-5 h-5 text-primary-500" />
+      <motion.div variants={item}>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-3">
           {t('credits.history')}
         </h2>
 
         {!credits?.transactions?.length ? (
           <div className="text-center py-8">
-            <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-              <Coins weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
-            </motion.div>
+            <Coins weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
             <p className="text-surface-500 dark:text-surface-400 mt-3">{t('credits.noTransactions')}</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-surface-100 dark:divide-surface-800">
             {credits.transactions.map(tx => (
-              <div key={tx.id} className="flex items-center gap-4 p-3 bg-surface-50 dark:bg-surface-800/50 rounded-xl">
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                  tx.amount > 0
-                    ? 'bg-emerald-100 dark:bg-emerald-900/30'
-                    : 'bg-red-100 dark:bg-red-900/30'
-                }`}>
-                  {tx.amount > 0
-                    ? <ArrowDown weight="bold" className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    : <ArrowUp weight="bold" className="w-4 h-4 text-red-600 dark:text-red-400" />
-                  }
-                </div>
+              <div key={tx.id} className="flex items-center gap-3 py-3">
+                {tx.amount > 0
+                  ? <ArrowDown weight="bold" className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  : <ArrowUp weight="bold" className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                }
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-surface-900 dark:text-white">
                     {t(`credits.${tx.type}`)}
@@ -162,7 +135,7 @@ export function CreditsPage() {
                   )}
                 </div>
                 <div className="text-right">
-                  <span className={`text-sm font-bold ${tx.amount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <span className={`text-sm font-semibold ${tx.amount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                     {tx.amount > 0 ? '+' : ''}{tx.amount}
                   </span>
                   <p className="text-xs text-surface-400">

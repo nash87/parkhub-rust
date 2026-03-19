@@ -52,7 +52,7 @@ function LoadingSplash() {
   return (
     <div className="min-h-dvh flex items-center justify-center mesh-gradient">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-glow">
+        <div className="w-16 h-16 rounded-xl bg-primary-600 flex items-center justify-center">
           <span className="text-2xl font-black text-white tracking-tight">P</span>
         </div>
         <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />

@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-  SlidersHorizontal, SpinnerGap, Check, Buildings, CalendarCheck,
-  Timer, CurrencyCircleDollar, Car, Queue,
-} from '@phosphor-icons/react';
+import { SpinnerGap, Check } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import toast from 'react-hot-toast';
 
@@ -116,20 +113,14 @@ export function AdminSettingsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      <div className="flex items-center gap-3">
-        <SlidersHorizontal weight="fill" className="w-6 h-6 text-primary-600" />
-        <h2 className="text-xl font-semibold text-surface-900 dark:text-white">System Settings</h2>
-      </div>
+      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">System Settings</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column */}
         <div className="space-y-6">
           {/* General */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <Buildings weight="fill" className="w-5 h-5 text-primary-600" />
-              General
-            </h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">General</h3>
 
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -167,10 +158,7 @@ export function AdminSettingsPage() {
 
           {/* Booking Rules */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <CalendarCheck weight="fill" className="w-5 h-5 text-primary-600" />
-              Booking Rules
-            </h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Booking Rules</h3>
 
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -213,10 +201,7 @@ export function AdminSettingsPage() {
         <div className="space-y-6">
           {/* Auto-Release */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <Timer weight="fill" className="w-5 h-5 text-primary-600" />
-              Auto-Release
-            </h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Auto-Release</h3>
 
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -238,10 +223,7 @@ export function AdminSettingsPage() {
 
           {/* Waitlist */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <Queue weight="fill" className="w-5 h-5 text-primary-600" />
-              Waitlist
-            </h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Waitlist</h3>
 
             <ToggleRow
               label="Enable Waitlist"
@@ -253,10 +235,7 @@ export function AdminSettingsPage() {
 
           {/* Credits System */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <CurrencyCircleDollar weight="fill" className="w-5 h-5 text-primary-600" />
-              Credits System
-            </h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Credits System</h3>
 
             <ToggleRow
               label="Enable Credits"
@@ -284,10 +263,7 @@ export function AdminSettingsPage() {
 
           {/* License Plate Mode */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-              <Car weight="fill" className="w-5 h-5 text-primary-600" />
-              License Plate
-            </h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">License Plate</h3>
 
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">

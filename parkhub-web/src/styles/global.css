@@ -1,12 +1,9 @@
 @import "tailwindcss";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ParkHub Design System — Tailwind CSS 4 custom theme
-   State-of-the-art, accessible, glassmorphic parking management UI
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ParkHub Design System — Tailwind CSS 4 custom theme */
 
 @theme {
-  /* Brand palette — deep teal to cyan gradient system */
+  /* Brand palette — teal */
   --color-primary-50: #f0fdfa;
   --color-primary-100: #ccfbf1;
   --color-primary-200: #99f6e4;
@@ -19,7 +16,7 @@
   --color-primary-900: #134e4a;
   --color-primary-950: #042f2e;
 
-  /* Accent — warm amber for CTAs and highlights */
+  /* Accent — amber */
   --color-accent-50: #fffbeb;
   --color-accent-100: #fef3c7;
   --color-accent-200: #fde68a;
@@ -29,7 +26,7 @@
   --color-accent-600: #d97706;
   --color-accent-700: #b45309;
 
-  /* Surface — slate-based neutral system */
+  /* Surface — slate */
   --color-surface-50: #f8fafc;
   --color-surface-100: #f1f5f9;
   --color-surface-200: #e2e8f0;
@@ -57,13 +54,12 @@
   --radius-3xl: 1.5rem;
   --radius-full: 9999px;
 
-  /* Shadows — soft elevation system */
+  /* Shadows */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --shadow-glow: 0 0 20px rgba(20, 184, 166, 0.15);
 
   /* Animation durations */
   --animate-fast: 150ms;
@@ -71,9 +67,7 @@
   --animate-slow: 400ms;
 }
 
-/* ── Use-case theme overrides ──
-   Applied via data-usecase attribute on <html>.
-   Each use case overrides the primary color ramp. */
+/* Use-case theme overrides */
 
 [data-usecase="residential"] {
   --color-primary-50: #ecfdf5; --color-primary-100: #d1fae5;
@@ -113,7 +107,7 @@
 
 /* "company" is the default — uses the @theme primary palette (teal) */
 
-/* ── Base styles ── */
+/* Base styles */
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
@@ -134,30 +128,29 @@ body {
 
 p { line-height: 1.6; }
 
-/* ── Utilities ── */
+/* Utilities */
 .tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* ── Glass card — signature component ── */
+/* Glass card — simple translucent surface */
 .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-lg);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--color-surface-200);
+  border-radius: var(--radius-lg);
 }
 
 .dark .glass-card {
-  background: rgba(15, 23, 42, 0.7);
-  border-color: rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.9);
+  border-color: var(--color-surface-700);
 }
 
-/* ── Solid card ── */
+/* Solid card */
 .card {
   background: white;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-surface-200);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--animate-normal) ease, transform var(--animate-normal) ease;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--animate-normal) ease;
 }
 
 .dark .card {
@@ -166,17 +159,15 @@ p { line-height: 1.6; }
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
 }
 
-/* ── Stat card ── */
+/* Stat card */
 .stat-card {
   background: white;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   border: 1px solid var(--color-surface-200);
-  box-shadow: var(--shadow-sm);
   padding: 1.25rem;
-  transition: box-shadow var(--animate-normal) ease, transform var(--animate-normal) ease;
 }
 
 .dark .stat-card {
@@ -191,7 +182,7 @@ p { line-height: 1.6; }
   letter-spacing: -0.02em;
 }
 
-/* ── Buttons ── */
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -201,7 +192,7 @@ p { line-height: 1.6; }
   font-size: 0.875rem;
   font-weight: 600;
   line-height: 1;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   transition: all var(--animate-fast) ease;
   cursor: pointer;
   border: none;
@@ -230,15 +221,13 @@ p { line-height: 1.6; }
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  background: var(--color-primary-600);
   color: white;
-  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.25);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
-  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.35);
-  transform: translateY(-1px);
+  background: var(--color-primary-700);
 }
 
 .btn-secondary {
@@ -283,7 +272,7 @@ p { line-height: 1.6; }
   padding: 0.5rem;
 }
 
-/* ── Form inputs ── */
+/* Form inputs */
 .input {
   display: block;
   width: 100%;
@@ -292,8 +281,8 @@ p { line-height: 1.6; }
   line-height: 1.5;
   color: var(--color-surface-900);
   background: white;
-  border: 1.5px solid var(--color-surface-300);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-surface-300);
+  border-radius: var(--radius-md);
   transition: border-color var(--animate-fast) ease, box-shadow var(--animate-fast) ease;
   outline: none;
 }
@@ -311,7 +300,7 @@ p { line-height: 1.6; }
   color: var(--color-surface-100);
 }
 
-/* ── Badges ── */
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -319,7 +308,7 @@ p { line-height: 1.6; }
   padding: 0.25rem 0.625rem;
   font-size: 0.75rem;
   font-weight: 600;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   line-height: 1.2;
 }
 
@@ -337,7 +326,7 @@ p { line-height: 1.6; }
 .dark .badge-info { background: rgba(59, 130, 246, 0.15); color: #93c5fd; }
 .dark .badge-primary { background: rgba(20, 184, 166, 0.15); color: #5eead4; }
 
-/* ── Skeleton loading ── */
+/* Skeleton loading */
 .skeleton {
   background: linear-gradient(90deg, var(--color-surface-200) 25%, var(--color-surface-100) 50%, var(--color-surface-200) 75%);
   background-size: 200% 100%;
@@ -355,36 +344,28 @@ p { line-height: 1.6; }
   100% { background-position: -200% 0; }
 }
 
-/* ── Gradient mesh background for welcome/auth pages ── */
+/* Background for welcome/auth pages */
 .mesh-gradient {
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(20, 184, 166, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at 40% 80%, rgba(245, 158, 11, 0.08) 0%, transparent 50%),
-    var(--color-surface-50);
+  background: var(--color-surface-50);
 }
 
 .dark .mesh-gradient {
-  background:
-    radial-gradient(ellipse at 20% 50%, rgba(20, 184, 166, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 40% 80%, rgba(245, 158, 11, 0.04) 0%, transparent 50%),
-    var(--color-surface-950);
+  background: var(--color-surface-950);
 }
 
-/* ── Scrollbar ── */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-surface-300); border-radius: var(--radius-full); }
 .dark ::-webkit-scrollbar-thumb { background: var(--color-surface-600); }
 
-/* ── Focus ring ── */
+/* Focus ring */
 *:focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
 }
 
-/* ── Reduced motion — WCAG 2.1 Level A ── */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -396,7 +377,7 @@ p { line-height: 1.6; }
   }
 }
 
-/* ── Smooth page transitions ── */
+/* Page transitions */
 @view-transition {
   navigation: auto;
 }
