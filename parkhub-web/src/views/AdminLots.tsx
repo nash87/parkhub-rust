@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, Plus, PencilSimple, Trash, SpinnerGap, Check, X,
-  MagnifyingGlass, CheckCircle, Prohibit, CurrencyEur,
+  Plus, PencilSimple, Trash, SpinnerGap, Check, X,
+  MagnifyingGlass, CurrencyEur,
 } from '@phosphor-icons/react';
 import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus } from '../api/client';
 import toast from 'react-hot-toast';
@@ -39,11 +39,7 @@ const statusConfig: Record<LotStatus, { label: string; color: string; bg: string
 function StatusBadge({ status }: { status: string }) {
   const cfg = statusConfig[status as LotStatus] || statusConfig.open;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.bg} ${cfg.color}`}>
-      {status === 'open' && <CheckCircle weight="fill" className="w-3.5 h-3.5" />}
-      {status === 'closed' && <Prohibit weight="fill" className="w-3.5 h-3.5" />}
-      {status === 'full' && <Prohibit weight="fill" className="w-3.5 h-3.5" />}
-      {status === 'maintenance' && <SpinnerGap weight="fill" className="w-3.5 h-3.5" />}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.color}`}>
       {cfg.label}
     </span>
   );
@@ -180,7 +176,6 @@ export function AdminLotsPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <MapPin weight="fill" className="w-6 h-6 text-primary-600" />
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Parking Lots</h2>
           <span className="text-sm text-surface-400">({lots.length})</span>
         </div>
@@ -392,16 +387,11 @@ export function AdminLotsPage() {
                   className="hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors"
                 >
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                        <MapPin weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{lot.name}</p>
-                        {lot.address && (
-                          <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{lot.address}</p>
-                        )}
-                      </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{lot.name}</p>
+                      {lot.address && (
+                        <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{lot.address}</p>
+                      )}
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -454,9 +444,8 @@ export function AdminLotsPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="p-12 text-center">
-            <MapPin weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
-            <p className="text-surface-500 dark:text-surface-400">
+          <div className="p-8 text-center">
+            <p className="text-sm text-surface-500 dark:text-surface-400">
               {search ? 'No lots match your search.' : 'No parking lots yet. Create one to get started.'}
             </p>
           </div>
