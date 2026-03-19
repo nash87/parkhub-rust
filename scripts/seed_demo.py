@@ -19,6 +19,7 @@ Prerequisites:
 import argparse
 import json
 import math
+import os
 import random
 import sys
 import uuid
@@ -396,7 +397,8 @@ def main():
     args = parser.parse_args()
 
     BASE_URL       = args.base_url
-    ADMIN_PASSWORD = args.admin_password
+    # Prefer env var for password (avoids /proc exposure), fall back to CLI arg
+    ADMIN_PASSWORD = os.environ.get("PARKHUB_ADMIN_PASSWORD", args.admin_password)
 
     if args.dry_run:
         print("DRY RUN — building one lot payload and printing:")

@@ -51,7 +51,8 @@ if [ "${DEMO_MODE}" = "true" ] || [ "${SEED_DEMO_DATA}" = "true" ]; then
         done
 
         # Run the seed script
-        python3 /app/seed_demo.py --base-url http://127.0.0.1:${PORT:-10000} --admin-password "${PARKHUB_ADMIN_PASSWORD:-demo}" 2>&1 || echo "WARNING: Demo seeding failed"
+        # Password passed via env var PARKHUB_ADMIN_PASSWORD (not CLI arg — avoids /proc exposure)
+        PARKHUB_ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-demo}" python3 /app/seed_demo.py --base-url http://127.0.0.1:${PORT:-10000} 2>&1 || echo "WARNING: Demo seeding failed"
         echo "Demo seeding complete."
 
         # Disable self-registration again

@@ -44,8 +44,11 @@ impl Default for RateLimitConfig {
 
 /// Create a new rate limiter
 pub fn create_rate_limiter(config: &RateLimitConfig) -> Arc<GlobalRateLimiter> {
-    let quota = Quota::per_second(NonZeroU32::new(config.requests_per_second).unwrap())
-        .allow_burst(NonZeroU32::new(config.burst_size).unwrap());
+    let rps = NonZeroU32::new(config.requests_per_second.max(1))
+        .expect("requests_per_second clamped to >= 1");
+    let burst = NonZeroU32::new(config.burst_size.max(1))
+        .expect("burst_size clamped to >= 1");
+    let quota = Quota::per_second(rps).allow_burst(burst);
 
     Arc::new(RateLimiter::direct(quota))
 }
@@ -77,7 +80,9 @@ pub mod per_ip {
 
     /// Create a per-IP rate limiter with a per-minute quota
     pub fn create_ip_rate_limiter(requests_per_minute: u32) -> Arc<IpRateLimiter> {
-        let quota = Quota::per_minute(NonZeroU32::new(requests_per_minute).unwrap());
+        let rpm = NonZeroU32::new(requests_per_minute.max(1))
+            .expect("requests_per_minute clamped to >= 1");
+        let quota = Quota::per_minute(rpm);
         Arc::new(RateLimiter::dashmap(quota))
     }
 
@@ -87,9 +92,11 @@ pub mod per_ip {
         requests: u32,
         period: Duration,
     ) -> Arc<IpRateLimiter> {
+        let burst = NonZeroU32::new(requests.max(1))
+            .expect("requests clamped to >= 1");
         let quota = Quota::with_period(period)
-            .unwrap()
-            .allow_burst(NonZeroU32::new(requests).unwrap());
+            .expect("period must be non-zero")
+            .allow_burst(burst);
         Arc::new(RateLimiter::dashmap(quota))
     }
 
