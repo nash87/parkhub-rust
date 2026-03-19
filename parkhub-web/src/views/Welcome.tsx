@@ -43,6 +43,7 @@ export function WelcomePage() {
   }
 
   function handleGetStarted() {
+    localStorage.setItem('parkhub_welcome_seen', '1');
     navigate('/login');
   }
 

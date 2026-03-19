@@ -34,7 +34,11 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingSplash />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    // First-time visitors see the welcome/language screen
+    const seen = localStorage.getItem('parkhub_welcome_seen');
+    return <Navigate to={seen ? '/login' : '/welcome'} replace />;
+  }
   return <>{children}</>;
 }
 
