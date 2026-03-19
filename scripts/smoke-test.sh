@@ -71,6 +71,37 @@ auth_curl() {
         LAST_HTTP_CODE=$(curl "${args[@]}" "$url" 2>/dev/null) || LAST_HTTP_CODE="000"
         LAST_BODY=$(cat "$_BODY_FILE" 2>/dev/null)
     fi
+
+    # Re-authenticate on 401 (token may have expired after demo reset)
+    if [[ "$LAST_HTTP_CODE" == "401" && -n "$TOKEN" && "$path" != "/api/v1/auth/login" ]]; then
+        relogin
+        if [[ -n "$TOKEN" ]]; then
+            # Rebuild args with new token
+            args=(-s -o "$_BODY_FILE" -w '%{http_code}' -X "$method" --connect-timeout 30 --max-time 90)
+            args+=(-H "Authorization: Bearer ${TOKEN}")
+            args+=(-H "Content-Type: application/json")
+            [[ -n "$data" ]] && args+=(-d "$data")
+            : > "$_BODY_FILE"
+            LAST_HTTP_CODE=$(curl "${args[@]}" "$url" 2>/dev/null) || LAST_HTTP_CODE="000"
+            LAST_BODY=$(cat "$_BODY_FILE" 2>/dev/null)
+        fi
+    fi
+}
+
+# Re-login to get a fresh token
+relogin() {
+    local _tmp_body
+    _tmp_body=$(mktemp)
+    local code
+    code=$(curl -s -o "$_tmp_body" -w '%{http_code}' -X POST --connect-timeout 30 --max-time 90 \
+        -H 'Content-Type: application/json' \
+        -d "{\"username\":\"admin\",\"password\":\"${ADMIN_PASSWORD}\"}" \
+        "${BASE_URL}/api/v1/auth/login" 2>/dev/null) || code="000"
+    if [[ "$code" == "200" ]]; then
+        TOKEN=$(jq -r '.data.tokens.access_token // empty' "$_tmp_body" 2>/dev/null || echo "")
+        echo "    $(dim "[re-authenticated after 401]")"
+    fi
+    rm -f "$_tmp_body"
 }
 
 # ── Banner ───────────────────────────────────────────────────────────────────
