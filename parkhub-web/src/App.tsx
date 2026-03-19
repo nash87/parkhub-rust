@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -53,6 +54,19 @@ function LoadingSplash() {
   );
 }
 
+/** Fetch /api/v1/theme on mount and apply use-case CSS theme */
+function useThemeLoader() {
+  useEffect(() => {
+    fetch('/api/v1/theme')
+      .then(r => r.json())
+      .then(res => {
+        const key = res?.data?.use_case?.key;
+        if (key) document.documentElement.dataset.usecase = key;
+      })
+      .catch(() => {});
+  }, []);
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -83,11 +97,17 @@ function AppRoutes() {
   );
 }
 
+function ThemeLoader({ children }: { children: React.ReactNode }) {
+  useThemeLoader();
+  return <>{children}</>;
+}
+
 export function App() {
   return (
     <ErrorBoundary>
     <BrowserRouter>
       <ThemeProvider>
+        <ThemeLoader>
         <AuthProvider>
           <AppRoutes />
           <DemoOverlay />
@@ -100,6 +120,7 @@ export function App() {
             }}
           />
         </AuthProvider>
+        </ThemeLoader>
       </ThemeProvider>
     </BrowserRouter>
     </ErrorBoundary>
