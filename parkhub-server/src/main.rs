@@ -607,7 +607,7 @@ async fn main() -> Result<()> {
                         // Spawn seed script in background (best-effort)
                         let port = std::env::var("PORT").unwrap_or_else(|_| "10000".to_string());
                         let admin_pw = std::env::var("PARKHUB_ADMIN_PASSWORD")
-                            .unwrap_or_else(|_| "ParkHub2026!".to_string());
+                            .unwrap_or_else(|_| "demo".to_string());
                         let seed_script = std::path::Path::new("/app/seed_demo.py");
                         if seed_script.exists() {
                             match tokio::process::Command::new("python3")

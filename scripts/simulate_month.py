@@ -41,7 +41,7 @@ from urllib import error, request
 # ─── Defaults ────────────────────────────────────────────────────────────────
 BASE_URL = "http://localhost:7878"
 ADMIN_USER = "admin"
-ADMIN_PASSWORD = "ParkHub2026!"
+ADMIN_PASSWORD = "demo"
 SIMULATION_DAYS = 30
 RATE_LIMIT_DELAY = 0.05  # 50ms between API calls
 

@@ -30,7 +30,7 @@ from urllib.parse import urlencode
 # ─── Configuration ────────────────────────────────────────────────────────────
 BASE_URL       = "http://localhost:7878"
 ADMIN_USER     = "admin"
-ADMIN_PASSWORD = "ParkHub2026!"
+ADMIN_PASSWORD = "demo"
 ADMIN_EMAIL    = "admin@parkhub.test"
 ADMIN_NAME     = "Administrator"
 
