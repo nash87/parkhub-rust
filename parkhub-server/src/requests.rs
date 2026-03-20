@@ -909,4 +909,382 @@ mod tests {
         };
         assert!(empty.validate().is_err());
     }
+
+    // ── LoginRequest serde round-trip ────────────────────────────────────────
+
+    #[test]
+    fn test_login_request_serde_from_json_value() {
+        let json = serde_json::json!({"username": "admin", "password": "secret"});
+        let req: LoginRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(req.username, "admin");
+        assert_eq!(req.password, "secret");
+    }
+
+    #[test]
+    fn test_login_request_missing_password_fails() {
+        let json = serde_json::json!({"username": "admin"});
+        let result: Result<LoginRequest, _> = serde_json::from_value(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_login_request_missing_username_fails() {
+        let json = serde_json::json!({"password": "secret"});
+        let result: Result<LoginRequest, _> = serde_json::from_value(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_login_request_exactly_min_username_length() {
+        // 3 chars = valid
+        let req = LoginRequest {
+            username: "abc".to_string(),
+            password: "pass".to_string(),
+        };
+        assert!(req.validate().is_ok());
+
+        // 2 chars = invalid
+        let req_short = LoginRequest {
+            username: "ab".to_string(),
+            password: "pass".to_string(),
+        };
+        assert!(req_short.validate().is_err());
+    }
+
+    #[test]
+    fn test_login_request_max_username_length() {
+        let req_ok = LoginRequest {
+            username: "a".repeat(100),
+            password: "pass".to_string(),
+        };
+        assert!(req_ok.validate().is_ok());
+
+        let req_over = LoginRequest {
+            username: "a".repeat(101),
+            password: "pass".to_string(),
+        };
+        assert!(req_over.validate().is_err());
+    }
+
+    // ── RegisterRequest serde / validation edge cases ────────────────────────
+
+    #[test]
+    fn test_register_request_serde_from_json() {
+        let json = serde_json::json!({
+            "username": "john_doe",
+            "email": "john@example.com",
+            "password": "Secure1Pass",
+            "name": "John Doe",
+            "phone": "+49123456789"
+        });
+        let req: RegisterRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(req.username, "john_doe");
+        assert_eq!(req.phone.as_deref(), Some("+49123456789"));
+    }
+
+    #[test]
+    fn test_register_request_no_phone_is_ok() {
+        let json = serde_json::json!({
+            "username": "newuser",
+            "email": "new@example.com",
+            "password": "StrongPass1",
+            "name": "New User"
+        });
+        let req: RegisterRequest = serde_json::from_value(json).unwrap();
+        assert!(req.phone.is_none());
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_register_request_phone_too_long_fails() {
+        let req = RegisterRequest {
+            username: "userxyz".to_string(),
+            email: "u@example.com".to_string(),
+            password: "StrongPass1".to_string(),
+            name: "User".to_string(),
+            phone: Some("0".repeat(21)),
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_register_request_username_must_start_with_letter() {
+        let req = RegisterRequest {
+            username: "1invalid".to_string(),
+            email: "a@example.com".to_string(),
+            password: "StrongPass1".to_string(),
+            name: "A".to_string(),
+            phone: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    // ── CreateBookingRequest serde ───────────────────────────────────────────
+
+    #[test]
+    fn test_create_booking_request_serde_from_json() {
+        let lot_id = Uuid::new_v4();
+        let slot_id = Uuid::new_v4();
+        let start = chrono::Utc::now() + chrono::Duration::hours(2);
+        let json = serde_json::json!({
+            "lot_id": lot_id,
+            "slot_id": slot_id,
+            "start_time": start,
+            "duration_minutes": 90,
+            "license_plate": "M-XY-1234"
+        });
+        let req: CreateBookingRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(req.lot_id, lot_id);
+        assert_eq!(req.duration_minutes, 90);
+        assert!(req.vehicle_id.is_none());
+        assert!(req.notes.is_none());
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_create_booking_request_duration_14_minutes_fails() {
+        let req = CreateBookingRequest {
+            lot_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            start_time: chrono::Utc::now() + chrono::Duration::hours(1),
+            duration_minutes: 14,
+            vehicle_id: None,
+            license_plate: Some("AB-CD-123".to_string()),
+            notes: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_booking_request_duration_1441_minutes_fails() {
+        let req = CreateBookingRequest {
+            lot_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            start_time: chrono::Utc::now() + chrono::Duration::hours(1),
+            duration_minutes: 1441,
+            vehicle_id: None,
+            license_plate: Some("AB-CD-123".to_string()),
+            notes: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_booking_request_with_vehicle_id_no_plate() {
+        let req = CreateBookingRequest {
+            lot_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            start_time: chrono::Utc::now() + chrono::Duration::hours(1),
+            duration_minutes: 60,
+            vehicle_id: Some(Uuid::new_v4()),
+            license_plate: None,
+            notes: Some("covered spot please".to_string()),
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    // ── VehicleRequest serde ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_vehicle_request_serde_from_json() {
+        let json = serde_json::json!({
+            "license_plate": "MUC-AB-123",
+            "make": "Audi",
+            "model": "A4",
+            "color": "Silver"
+        });
+        let req: VehicleRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(req.license_plate, "MUC-AB-123");
+        assert_eq!(req.make.as_deref(), Some("Audi"));
+        // is_default should default to false
+        assert!(!req.is_default);
+    }
+
+    #[test]
+    fn test_vehicle_request_make_too_long_fails() {
+        let req = VehicleRequest {
+            license_plate: "AB-12".to_string(),
+            make: Some("A".repeat(51)),
+            model: None,
+            color: None,
+            vehicle_type: None,
+            is_default: false,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_vehicle_request_color_too_long_fails() {
+        let req = VehicleRequest {
+            license_plate: "AB-12".to_string(),
+            make: None,
+            model: None,
+            color: Some("x".repeat(31)),
+            vehicle_type: None,
+            is_default: false,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    // ── UpdateProfileRequest serde ───────────────────────────────────────────
+
+    #[test]
+    fn test_update_profile_request_all_none_is_ok() {
+        let req = UpdateProfileRequest {
+            name: None,
+            email: None,
+            phone: None,
+            picture: None,
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_profile_request_valid_url() {
+        let req = UpdateProfileRequest {
+            name: None,
+            email: None,
+            phone: None,
+            picture: Some("https://example.com/avatar.jpg".to_string()),
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_profile_request_name_too_long_fails() {
+        let req = UpdateProfileRequest {
+            name: Some("x".repeat(101)),
+            email: None,
+            phone: None,
+            picture: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    // ── ExtendBookingRequest boundary ────────────────────────────────────────
+
+    #[test]
+    fn test_extend_booking_request_min_boundary() {
+        let at_min = ExtendBookingRequest {
+            additional_minutes: 15,
+        };
+        assert!(at_min.validate().is_ok());
+
+        let below_min = ExtendBookingRequest {
+            additional_minutes: 14,
+        };
+        assert!(below_min.validate().is_err());
+    }
+
+    #[test]
+    fn test_extend_booking_request_max_boundary() {
+        let at_max = ExtendBookingRequest {
+            additional_minutes: 480,
+        };
+        assert!(at_max.validate().is_ok());
+
+        let above_max = ExtendBookingRequest {
+            additional_minutes: 481,
+        };
+        assert!(above_max.validate().is_err());
+    }
+
+    // ── UpdateBookingRequest serde ───────────────────────────────────────────
+
+    #[test]
+    fn test_update_booking_request_all_none_from_empty_json() {
+        let json = serde_json::json!({});
+        let req: UpdateBookingRequest = serde_json::from_value(json).unwrap();
+        assert!(req.start_time.is_none());
+        assert!(req.duration_minutes.is_none());
+        assert!(req.notes.is_none());
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_booking_request_notes_exactly_500_chars() {
+        let req = UpdateBookingRequest {
+            start_time: None,
+            duration_minutes: None,
+            notes: Some("x".repeat(500)),
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_booking_request_notes_501_chars_fails() {
+        let req = UpdateBookingRequest {
+            start_time: None,
+            duration_minutes: None,
+            notes: Some("x".repeat(501)),
+        };
+        assert!(req.validate().is_err());
+    }
+
+    // ── UpdatePreferencesRequest serde ───────────────────────────────────────
+
+    #[test]
+    fn test_update_preferences_language_too_short_fails() {
+        let req = UpdatePreferencesRequest {
+            default_duration_minutes: None,
+            notifications_enabled: None,
+            email_reminders: None,
+            language: Some("x".to_string()), // 1 char, min is 2
+            theme: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_preferences_theme_too_long_fails() {
+        let req = UpdatePreferencesRequest {
+            default_duration_minutes: None,
+            notifications_enabled: None,
+            email_reminders: None,
+            language: None,
+            theme: Some("x".repeat(11)), // max is 10
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_preferences_all_none_is_valid() {
+        let req = UpdatePreferencesRequest {
+            default_duration_minutes: None,
+            notifications_enabled: None,
+            email_reminders: None,
+            language: None,
+            theme: None,
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    // ── PaginationParams serde defaults ─────────────────────────────────────
+
+    #[test]
+    fn test_pagination_params_serde_defaults() {
+        let json = serde_json::json!({});
+        let params: PaginationParams = serde_json::from_value(json).unwrap();
+        assert_eq!(params.page, 1);
+        assert_eq!(params.per_page, 20);
+        assert!(params.validate().is_ok());
+    }
+
+    #[test]
+    fn test_pagination_params_per_page_over_100_fails() {
+        let req = PaginationParams {
+            page: 1,
+            per_page: 101,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_pagination_params_page_zero_fails() {
+        let req = PaginationParams {
+            page: 0,
+            per_page: 20,
+        };
+        assert!(req.validate().is_err());
+    }
 }
