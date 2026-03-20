@@ -6811,6 +6811,8 @@ async fn admin_update_user(
 mod tests {
     use super::*;
 
+    // ─── normalize_metric_path ─────────────────────────────────────────
+
     #[test]
     fn test_normalize_metric_path_uuid() {
         let path = "/api/v1/lots/550e8400-e29b-41d4-a716-446655440000/slots";
@@ -6839,5 +6841,533 @@ mod tests {
     fn test_normalize_metric_path_root() {
         assert_eq!(normalize_metric_path("/health"), "/health");
         assert_eq!(normalize_metric_path("/metrics"), "/metrics");
+    }
+
+    // ─── is_valid_date ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_is_valid_date_correct() {
+        assert!(is_valid_date("2026-03-20"));
+        assert!(is_valid_date("2000-01-01"));
+        assert!(is_valid_date("2026-12-31"));
+    }
+
+    #[test]
+    fn test_is_valid_date_invalid() {
+        assert!(!is_valid_date("2026-13-01")); // month 13
+        assert!(!is_valid_date("2026-02-30")); // Feb 30
+        assert!(!is_valid_date("not-a-date"));
+        assert!(!is_valid_date(""));
+        assert!(!is_valid_date("20260320"));
+        assert!(!is_valid_date("2026/03/20"));
+    }
+
+    #[test]
+    fn test_is_valid_date_leap_year() {
+        assert!(is_valid_date("2024-02-29")); // 2024 is leap
+        assert!(!is_valid_date("2025-02-29")); // 2025 is not
+    }
+
+    // ─── generate_guest_code ───────────────────────────────────────────
+
+    #[test]
+    fn test_generate_guest_code_length() {
+        let code = generate_guest_code();
+        assert_eq!(code.len(), 8);
+    }
+
+    #[test]
+    fn test_generate_guest_code_charset() {
+        let valid_chars: &str = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        for _ in 0..20 {
+            let code = generate_guest_code();
+            for c in code.chars() {
+                assert!(
+                    valid_chars.contains(c),
+                    "Invalid char '{}' in guest code",
+                    c
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_generate_guest_code_uniqueness() {
+        let codes: Vec<String> = (0..50).map(|_| generate_guest_code()).collect();
+        let unique: std::collections::HashSet<&String> = codes.iter().collect();
+        // With 8 chars from 31-char set, collisions in 50 codes are astronomically unlikely
+        assert!(unique.len() > 45);
+    }
+
+    // ─── detect_image_mime ─────────────────────────────────────────────
+
+    #[test]
+    fn test_detect_image_mime_jpeg() {
+        let jpeg_header = [0xFF, 0xD8, 0xFF, 0xE0, 0x00];
+        assert_eq!(detect_image_mime(&jpeg_header), Some("image/jpeg"));
+    }
+
+    #[test]
+    fn test_detect_image_mime_png() {
+        let png_header = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A];
+        assert_eq!(detect_image_mime(&png_header), Some("image/png"));
+    }
+
+    #[test]
+    fn test_detect_image_mime_unknown() {
+        let unknown = [0x00, 0x01, 0x02, 0x03];
+        assert_eq!(detect_image_mime(&unknown), None);
+    }
+
+    #[test]
+    fn test_detect_image_mime_empty() {
+        assert_eq!(detect_image_mime(&[]), None);
+    }
+
+    #[test]
+    fn test_detect_image_mime_too_short() {
+        assert_eq!(detect_image_mime(&[0xFF, 0xD8]), None);
+        assert_eq!(detect_image_mime(&[0x89, 0x50, 0x4E]), None);
+    }
+
+    // ─── strip_data_uri_prefix ─────────────────────────────────────────
+
+    #[test]
+    fn test_strip_data_uri_prefix_with_prefix() {
+        let input = "data:image/jpeg;base64,/9j/4AAQ";
+        assert_eq!(strip_data_uri_prefix(input), "/9j/4AAQ");
+    }
+
+    #[test]
+    fn test_strip_data_uri_prefix_no_prefix() {
+        let input = "/9j/4AAQSkZJRgABAQ";
+        assert_eq!(strip_data_uri_prefix(input), "/9j/4AAQSkZJRgABAQ");
+    }
+
+    #[test]
+    fn test_strip_data_uri_prefix_png() {
+        let input = "data:image/png;base64,iVBORw0KGgo";
+        assert_eq!(strip_data_uri_prefix(input), "iVBORw0KGgo");
+    }
+
+    // ─── ImpressumData serde ───────────────────────────────────────────
+
+    #[test]
+    fn test_impressum_data_default() {
+        let data = ImpressumData::default();
+        assert_eq!(data.provider_name, "");
+        assert_eq!(data.country, "");
+    }
+
+    #[test]
+    fn test_impressum_data_roundtrip() {
+        let data = ImpressumData {
+            provider_name: "ParkCorp GmbH".to_string(),
+            provider_legal_form: "GmbH".to_string(),
+            street: "Musterstr. 1".to_string(),
+            zip_city: "12345 Berlin".to_string(),
+            country: "DE".to_string(),
+            email: "info@parkcorp.de".to_string(),
+            phone: "+49 30 123456".to_string(),
+            register_court: "Amtsgericht Berlin".to_string(),
+            register_number: "HRB 12345".to_string(),
+            vat_id: "DE123456789".to_string(),
+            responsible_person: "Max Mustermann".to_string(),
+            custom_text: "".to_string(),
+        };
+        let json = serde_json::to_string(&data).unwrap();
+        let back: ImpressumData = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.provider_name, "ParkCorp GmbH");
+        assert_eq!(back.vat_id, "DE123456789");
+    }
+
+    // ─── UpdateCurrentUserRequest serde ────────────────────────────────
+
+    #[test]
+    fn test_update_current_user_request_full() {
+        let json =
+            r#"{"name":"New Name","phone":"+49123","picture":"https://img.example/pic.jpg"}"#;
+        let req: UpdateCurrentUserRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name.as_deref(), Some("New Name"));
+        assert_eq!(req.phone.as_deref(), Some("+49123"));
+        assert_eq!(req.picture.as_deref(), Some("https://img.example/pic.jpg"));
+    }
+
+    #[test]
+    fn test_update_current_user_request_empty() {
+        let json = r#"{}"#;
+        let req: UpdateCurrentUserRequest = serde_json::from_str(json).unwrap();
+        assert!(req.name.is_none());
+        assert!(req.phone.is_none());
+        assert!(req.picture.is_none());
+    }
+
+    // ─── UpdateUserRoleRequest / UpdateUserStatusRequest ───────────────
+
+    #[test]
+    fn test_update_user_role_request() {
+        let json = r#"{"role":"admin"}"#;
+        let req: UpdateUserRoleRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.role, "admin");
+    }
+
+    #[test]
+    fn test_update_user_status_request() {
+        let json = r#"{"status":"active"}"#;
+        let req: UpdateUserStatusRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.status, "active");
+    }
+
+    // ─── ChangePasswordRequest ─────────────────────────────────────────
+
+    #[test]
+    fn test_change_password_request() {
+        let json = r#"{"current_password":"old","new_password":"NewSecure123!"}"#;
+        let req: ChangePasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.current_password, "old");
+        assert_eq!(req.new_password, "NewSecure123!");
+    }
+
+    // ─── JoinWaitlistRequest ───────────────────────────────────────────
+
+    #[test]
+    fn test_join_waitlist_request() {
+        let json = r#"{"lot_id":"550e8400-e29b-41d4-a716-446655440000"}"#;
+        let req: JoinWaitlistRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            req.lot_id.to_string(),
+            "550e8400-e29b-41d4-a716-446655440000"
+        );
+    }
+
+    // ─── CreateSwapRequestBody ─────────────────────────────────────────
+
+    #[test]
+    fn test_create_swap_request_body() {
+        let json = r#"{"target_booking_id":"550e8400-e29b-41d4-a716-446655440000","message":"Please swap?"}"#;
+        let req: CreateSwapRequestBody = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            req.target_booking_id.to_string(),
+            "550e8400-e29b-41d4-a716-446655440000"
+        );
+        assert_eq!(req.message.as_deref(), Some("Please swap?"));
+    }
+
+    #[test]
+    fn test_create_swap_request_body_no_message() {
+        let json = r#"{"target_booking_id":"550e8400-e29b-41d4-a716-446655440000"}"#;
+        let req: CreateSwapRequestBody = serde_json::from_str(json).unwrap();
+        assert!(req.message.is_none());
+    }
+
+    // ─── UpdateSwapRequestBody ─────────────────────────────────────────
+
+    #[test]
+    fn test_update_swap_request_body_accept() {
+        let json = r#"{"action":"accept"}"#;
+        let req: UpdateSwapRequestBody = serde_json::from_str(json).unwrap();
+        assert_eq!(req.action, "accept");
+    }
+
+    #[test]
+    fn test_update_swap_request_body_decline() {
+        let json = r#"{"action":"decline"}"#;
+        let req: UpdateSwapRequestBody = serde_json::from_str(json).unwrap();
+        assert_eq!(req.action, "decline");
+    }
+
+    // ─── CreateRecurringBookingRequest ─────────────────────────────────
+
+    #[test]
+    fn test_create_recurring_booking_request_full() {
+        let json = r#"{
+            "lot_id":"550e8400-e29b-41d4-a716-446655440000",
+            "slot_id":"660e8400-e29b-41d4-a716-446655440001",
+            "days_of_week":[1,3,5],
+            "start_date":"2026-04-01",
+            "end_date":"2026-06-30",
+            "start_time":"08:00",
+            "end_time":"17:00",
+            "vehicle_plate":"B-AB 1234"
+        }"#;
+        let req: CreateRecurringBookingRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.days_of_week, vec![1, 3, 5]);
+        assert_eq!(req.start_date, "2026-04-01");
+        assert_eq!(req.end_date.as_deref(), Some("2026-06-30"));
+        assert_eq!(req.vehicle_plate.as_deref(), Some("B-AB 1234"));
+    }
+
+    #[test]
+    fn test_create_recurring_booking_request_minimal() {
+        let json = r#"{
+            "lot_id":"550e8400-e29b-41d4-a716-446655440000",
+            "days_of_week":[1],
+            "start_date":"2026-04-01",
+            "start_time":"09:00",
+            "end_time":"18:00"
+        }"#;
+        let req: CreateRecurringBookingRequest = serde_json::from_str(json).unwrap();
+        assert!(req.slot_id.is_none());
+        assert!(req.end_date.is_none());
+        assert!(req.vehicle_plate.is_none());
+    }
+
+    // ─── CreateGuestBookingRequest ─────────────────────────────────────
+
+    #[test]
+    fn test_create_guest_booking_request() {
+        let json = r#"{
+            "lot_id":"550e8400-e29b-41d4-a716-446655440000",
+            "slot_id":"660e8400-e29b-41d4-a716-446655440001",
+            "start_time":"2026-04-01T08:00:00Z",
+            "end_time":"2026-04-01T17:00:00Z",
+            "guest_name":"Visitor One",
+            "guest_email":"visitor@example.com"
+        }"#;
+        let req: CreateGuestBookingRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.guest_name, "Visitor One");
+        assert_eq!(req.guest_email.as_deref(), Some("visitor@example.com"));
+    }
+
+    #[test]
+    fn test_create_guest_booking_request_no_email() {
+        let json = r#"{
+            "lot_id":"550e8400-e29b-41d4-a716-446655440000",
+            "slot_id":"660e8400-e29b-41d4-a716-446655440001",
+            "start_time":"2026-04-01T08:00:00Z",
+            "end_time":"2026-04-01T17:00:00Z",
+            "guest_name":"Walk-in"
+        }"#;
+        let req: CreateGuestBookingRequest = serde_json::from_str(json).unwrap();
+        assert!(req.guest_email.is_none());
+    }
+
+    // ─── AdminResetRequest ─────────────────────────────────────────────
+
+    #[test]
+    fn test_admin_reset_request() {
+        let json = r#"{"confirm":"RESET"}"#;
+        let req: AdminResetRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.confirm, "RESET");
+    }
+
+    // ─── AutoReleaseSettingsRequest ────────────────────────────────────
+
+    #[test]
+    fn test_auto_release_settings_request() {
+        let json = r#"{"auto_release_enabled":true,"auto_release_minutes":15}"#;
+        let req: AutoReleaseSettingsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.auto_release_enabled, Some(true));
+        assert_eq!(req.auto_release_minutes, Some(15));
+    }
+
+    #[test]
+    fn test_auto_release_settings_request_partial() {
+        let json = r#"{"auto_release_minutes":45}"#;
+        let req: AutoReleaseSettingsRequest = serde_json::from_str(json).unwrap();
+        assert!(req.auto_release_enabled.is_none());
+        assert_eq!(req.auto_release_minutes, Some(45));
+    }
+
+    // ─── EmailSettingsRequest ──────────────────────────────────────────
+
+    #[test]
+    fn test_email_settings_request_full() {
+        let json = r#"{
+            "smtp_host":"smtp.example.com",
+            "smtp_port":587,
+            "smtp_username":"user@example.com",
+            "smtp_password":"secret",
+            "smtp_from":"noreply@example.com",
+            "smtp_enabled":true
+        }"#;
+        let req: EmailSettingsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.smtp_host.as_deref(), Some("smtp.example.com"));
+        assert_eq!(req.smtp_port, Some(587));
+        assert_eq!(req.smtp_enabled, Some(true));
+    }
+
+    #[test]
+    fn test_email_settings_request_empty() {
+        let json = r#"{}"#;
+        let req: EmailSettingsRequest = serde_json::from_str(json).unwrap();
+        assert!(req.smtp_host.is_none());
+        assert!(req.smtp_port.is_none());
+        assert!(req.smtp_enabled.is_none());
+    }
+
+    // ─── PrivacySettingsRequest ────────────────────────────────────────
+
+    #[test]
+    fn test_privacy_settings_request() {
+        let json = r#"{
+            "privacy_policy_url":"https://example.com/privacy",
+            "data_retention_days":365,
+            "require_consent":true,
+            "anonymize_on_delete":true
+        }"#;
+        let req: PrivacySettingsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            req.privacy_policy_url.as_deref(),
+            Some("https://example.com/privacy")
+        );
+        assert_eq!(req.data_retention_days, Some(365));
+        assert_eq!(req.require_consent, Some(true));
+        assert_eq!(req.anonymize_on_delete, Some(true));
+    }
+
+    // ─── AdminUpdateUserRequest ────────────────────────────────────────
+
+    #[test]
+    fn test_admin_update_user_request_full() {
+        let json =
+            r#"{"name":"Updated","email":"new@example.com","role":"admin","is_active":false}"#;
+        let req: AdminUpdateUserRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name.as_deref(), Some("Updated"));
+        assert_eq!(req.email.as_deref(), Some("new@example.com"));
+        assert_eq!(req.role.as_deref(), Some("admin"));
+        assert_eq!(req.is_active, Some(false));
+    }
+
+    #[test]
+    fn test_admin_update_user_request_partial() {
+        let json = r#"{"is_active":true}"#;
+        let req: AdminUpdateUserRequest = serde_json::from_str(json).unwrap();
+        assert!(req.name.is_none());
+        assert!(req.email.is_none());
+        assert!(req.role.is_none());
+        assert_eq!(req.is_active, Some(true));
+    }
+
+    // ─── UpdateFeaturesRequest ─────────────────────────────────────────
+
+    #[test]
+    fn test_update_features_request() {
+        let json = r#"{"enabled":["credits","absences","vehicles"]}"#;
+        let req: UpdateFeaturesRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.enabled.len(), 3);
+        assert!(req.enabled.contains(&"credits".to_string()));
+    }
+
+    #[test]
+    fn test_update_features_request_empty() {
+        let json = r#"{"enabled":[]}"#;
+        let req: UpdateFeaturesRequest = serde_json::from_str(json).unwrap();
+        assert!(req.enabled.is_empty());
+    }
+
+    // ─── CreateAbsenceRequest ──────────────────────────────────────────
+
+    #[test]
+    fn test_create_absence_request() {
+        let json = r#"{"absence_type":"homeoffice","start_date":"2026-04-01","end_date":"2026-04-01","note":"WFH"}"#;
+        let req: CreateAbsenceRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.start_date, "2026-04-01");
+        assert_eq!(req.end_date, "2026-04-01");
+        assert_eq!(req.note.as_deref(), Some("WFH"));
+    }
+
+    #[test]
+    fn test_create_absence_request_no_note() {
+        let json =
+            r#"{"absence_type":"vacation","start_date":"2026-04-01","end_date":"2026-04-05"}"#;
+        let req: CreateAbsenceRequest = serde_json::from_str(json).unwrap();
+        assert!(req.note.is_none());
+    }
+
+    // ─── CreateAnnouncementRequest ─────────────────────────────────────
+
+    #[test]
+    fn test_create_announcement_request_full() {
+        let json = r#"{
+            "title":"Maintenance",
+            "message":"Lot A closed on Monday",
+            "severity":"warning",
+            "active":true,
+            "expires_at":"2026-04-01T00:00:00Z"
+        }"#;
+        let req: CreateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.title, "Maintenance");
+        assert_eq!(req.message, "Lot A closed on Monday");
+        assert_eq!(req.active, Some(true));
+        assert!(req.expires_at.is_some());
+    }
+
+    #[test]
+    fn test_create_announcement_request_minimal() {
+        let json = r#"{"title":"Info","message":"Welcome!","severity":"info"}"#;
+        let req: CreateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert!(req.active.is_none());
+        assert!(req.expires_at.is_none());
+    }
+
+    // ─── UpdatePreferencesRequest ──────────────────────────────────────
+
+    #[test]
+    fn test_update_preferences_request() {
+        let json = r#"{"language":"de","theme":"dark","notifications_enabled":false}"#;
+        let req: UpdatePreferencesRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.language.as_deref(), Some("de"));
+        assert_eq!(req.theme.as_deref(), Some("dark"));
+        assert_eq!(req.notifications_enabled, Some(false));
+        assert!(req.email_reminders.is_none());
+        assert!(req.default_duration_minutes.is_none());
+    }
+
+    // ─── CalendarQuery / CalendarEvent ─────────────────────────────────
+
+    #[test]
+    fn test_calendar_query_deserialize() {
+        let json = r#"{"from":"2026-03-01","to":"2026-03-31"}"#;
+        let q: CalendarQuery = serde_json::from_str(json).unwrap();
+        assert_eq!(q.from.as_deref(), Some("2026-03-01"));
+        assert_eq!(q.to.as_deref(), Some("2026-03-31"));
+    }
+
+    #[test]
+    fn test_calendar_event_serialize_skip_none() {
+        let event = CalendarEvent {
+            id: "evt-1".to_string(),
+            event_type: "booking".to_string(),
+            title: "Slot A3".to_string(),
+            start: Utc::now(),
+            end: Utc::now() + Duration::hours(2),
+            lot_name: None,
+            slot_number: None,
+            status: None,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(!json.contains("lot_name"));
+        assert!(!json.contains("slot_number"));
+        assert!(!json.contains("status"));
+    }
+
+    #[test]
+    fn test_calendar_event_serialize_with_optionals() {
+        let event = CalendarEvent {
+            id: "evt-2".to_string(),
+            event_type: "booking".to_string(),
+            title: "Slot B1".to_string(),
+            start: Utc::now(),
+            end: Utc::now() + Duration::hours(1),
+            lot_name: Some("Lot Alpha".to_string()),
+            slot_number: Some(42),
+            status: Some("confirmed".to_string()),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("Lot Alpha"));
+        assert!(json.contains("42"));
+        assert!(json.contains("confirmed"));
+        // Check rename
+        assert!(json.contains(r#""type":"booking"#));
+    }
+
+    // ─── VehiclePhotoUpload ────────────────────────────────────────────
+
+    #[test]
+    fn test_vehicle_photo_upload_deserialize() {
+        let json = r#"{"photo":"data:image/jpeg;base64,/9j/4AAQ"}"#;
+        let req: VehiclePhotoUpload = serde_json::from_str(json).unwrap();
+        assert!(req.photo.starts_with("data:image"));
     }
 }

@@ -167,3 +167,67 @@ pub(crate) async fn delete_zone(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_zone_request_full() {
+        let json = r##"{"name":"VIP Section","description":"Premium spots","color":"#FFD700"}"##;
+        let req: CreateZoneRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "VIP Section");
+        assert_eq!(req.description.as_deref(), Some("Premium spots"));
+        assert_eq!(req.color.as_deref(), Some("#FFD700"));
+    }
+
+    #[test]
+    fn test_create_zone_request_minimal() {
+        let json = r#"{"name":"Level A"}"#;
+        let req: CreateZoneRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "Level A");
+        assert!(req.description.is_none());
+        assert!(req.color.is_none());
+    }
+
+    #[test]
+    fn test_create_zone_request_missing_name() {
+        let json = r#"{"description":"No name"}"#;
+        let result: Result<CreateZoneRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zone_serde_roundtrip() {
+        let zone = Zone {
+            id: Uuid::new_v4(),
+            lot_id: Uuid::new_v4(),
+            name: "Floor B".to_string(),
+            description: Some("Second floor".to_string()),
+            color: Some("green".to_string()),
+            created_at: Utc::now(),
+        };
+        let json = serde_json::to_string(&zone).unwrap();
+        let deserialized: Zone = serde_json::from_str(&json).unwrap();
+        assert_eq!(zone.id, deserialized.id);
+        assert_eq!(zone.name, deserialized.name);
+        assert_eq!(zone.description, deserialized.description);
+        assert_eq!(zone.color, deserialized.color);
+    }
+
+    #[test]
+    fn test_zone_no_optional_fields() {
+        let zone = Zone {
+            id: Uuid::new_v4(),
+            lot_id: Uuid::new_v4(),
+            name: "Basic".to_string(),
+            description: None,
+            color: None,
+            created_at: Utc::now(),
+        };
+        let json = serde_json::to_string(&zone).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["description"], serde_json::Value::Null);
+        assert_eq!(value["color"], serde_json::Value::Null);
+    }
+}

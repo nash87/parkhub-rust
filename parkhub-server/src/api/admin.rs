@@ -61,3 +61,90 @@ impl From<&User> for AdminUserResponse {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parkhub_common::models::UserPreferences;
+    use parkhub_common::UserRole;
+    use uuid::Uuid;
+
+    fn make_test_user(role: UserRole, is_active: bool) -> User {
+        User {
+            id: Uuid::new_v4(),
+            username: "testuser".to_string(),
+            email: "test@example.com".to_string(),
+            name: "Test User".to_string(),
+            password_hash: "hash".to_string(),
+            role,
+            is_active,
+            phone: None,
+            picture: None,
+            preferences: UserPreferences {
+                language: "en".to_string(),
+                theme: "system".to_string(),
+                notifications_enabled: true,
+                email_reminders: false,
+                default_duration_minutes: None,
+                favorite_slots: Vec::new(),
+            },
+            credits_balance: 5,
+            credits_monthly_quota: 10,
+            credits_last_refilled: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_login: None,
+        }
+    }
+
+    #[test]
+    fn test_admin_user_response_from_active_admin() {
+        let user = make_test_user(UserRole::Admin, true);
+        let resp = AdminUserResponse::from(&user);
+        assert_eq!(resp.username, "testuser");
+        assert_eq!(resp.email, "test@example.com");
+        assert_eq!(resp.role, "admin");
+        assert_eq!(resp.status, "active");
+        assert!(resp.is_active);
+        assert_eq!(resp.credits_balance, 5);
+        assert_eq!(resp.credits_monthly_quota, 10);
+    }
+
+    #[test]
+    fn test_admin_user_response_from_disabled_user() {
+        let user = make_test_user(UserRole::User, false);
+        let resp = AdminUserResponse::from(&user);
+        assert_eq!(resp.role, "user");
+        assert_eq!(resp.status, "disabled");
+        assert!(!resp.is_active);
+    }
+
+    #[test]
+    fn test_admin_user_response_from_superadmin() {
+        let user = make_test_user(UserRole::SuperAdmin, true);
+        let resp = AdminUserResponse::from(&user);
+        assert_eq!(resp.role, "superadmin");
+        assert_eq!(resp.status, "active");
+    }
+
+    #[test]
+    fn test_admin_user_response_serialize() {
+        let user = make_test_user(UserRole::Admin, true);
+        let resp = AdminUserResponse::from(&user);
+        let json = serde_json::to_string(&resp).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["username"], "testuser");
+        assert_eq!(value["role"], "admin");
+        assert_eq!(value["status"], "active");
+        assert_eq!(value["credits_balance"], 5);
+        assert_eq!(value["is_active"], true);
+    }
+
+    #[test]
+    fn test_admin_user_response_id_is_uuid_string() {
+        let user = make_test_user(UserRole::User, true);
+        let resp = AdminUserResponse::from(&user);
+        // ID should be parseable back to UUID
+        assert!(Uuid::parse_str(&resp.id).is_ok());
+    }
+}

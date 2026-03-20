@@ -144,3 +144,51 @@ pub(crate) async fn remove_favorite(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_favorite_request_deserialize() {
+        let json = r#"{"slot_id":"550e8400-e29b-41d4-a716-446655440000","lot_id":"660e8400-e29b-41d4-a716-446655440001"}"#;
+        let req: AddFavoriteRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            req.slot_id.to_string(),
+            "550e8400-e29b-41d4-a716-446655440000"
+        );
+        assert_eq!(
+            req.lot_id.to_string(),
+            "660e8400-e29b-41d4-a716-446655440001"
+        );
+    }
+
+    #[test]
+    fn test_add_favorite_request_missing_field() {
+        let json = r#"{"slot_id":"550e8400-e29b-41d4-a716-446655440000"}"#;
+        let result: Result<AddFavoriteRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_add_favorite_request_invalid_uuid() {
+        let json = r#"{"slot_id":"not-a-uuid","lot_id":"also-bad"}"#;
+        let result: Result<AddFavoriteRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_favorite_serialize_roundtrip() {
+        let fav = Favorite {
+            user_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            lot_id: Uuid::new_v4(),
+            created_at: Utc::now(),
+        };
+        let json = serde_json::to_string(&fav).unwrap();
+        let deserialized: Favorite = serde_json::from_str(&json).unwrap();
+        assert_eq!(fav.user_id, deserialized.user_id);
+        assert_eq!(fav.slot_id, deserialized.slot_id);
+        assert_eq!(fav.lot_id, deserialized.lot_id);
+    }
+}

@@ -93,6 +93,7 @@ vi.mock('@phosphor-icons/react', () => ({
   CarSimple: (props: any) => <span data-testid="icon-car-simple" {...props} />,
   SunDim: (props: any) => <span data-testid="icon-sun" {...props} />,
   Moon: (props: any) => <span data-testid="icon-moon" {...props} />,
+  CalendarPlus: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
 }));
 
 import { Layout } from './Layout';

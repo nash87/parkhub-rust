@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,8 @@ import {
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { CommandPalette } from './CommandPalette';
 
 const NAV_ITEMS = [
   { to: '/', icon: House, key: 'dashboard', end: true },
@@ -27,6 +29,14 @@ export function Layout() {
   const navigate = useNavigate();
   const { resolved, setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  const toggleCommandPalette = useCallback(
+    () => setCommandPaletteOpen(prev => !prev),
+    [],
+  );
+
+  useKeyboardShortcuts({ onToggleCommandPalette: toggleCommandPalette });
 
   function handleLogout() {
     logout();
@@ -225,6 +235,9 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Command palette */}
+      <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
     </div>
   );
 }
