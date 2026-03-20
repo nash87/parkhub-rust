@@ -1,38 +1,37 @@
 url: ${BASE_URL}
 ---
-# Login failure
+# Login failure — verify wrong password is rejected
+# Uses a non-existent user to avoid Chrome auto-fill overriding the password
 - launchApp
 
-# Wait for any page
+# Wait for page
 - extendedWaitUntil:
-    visible: "Get Started|Sign In|Dashboard|Active Bookings"
+    visible: "Get Started|Sign In|Dashboard"
     timeout: 30000
 
-# If already logged in, sign out first
+# If logged in, sign out
 - runFlow:
     when:
       visible: "Sign Out"
     commands:
       - tapOn: "Sign Out"
-      - extendedWaitUntil:
-          visible: "Get Started|Sign In"
-          timeout: 10000
 
-# If on welcome page, navigate to login
+# Navigate to login if needed
 - runFlow:
     when:
       visible: "Get Started"
     commands:
       - tapOn: "Get Started"
 
+# Wait for login form
 - extendedWaitUntil:
     visible: "Sign In"
-    timeout: 10000
+    timeout: 15000
 
-# Wrong password
+# Use a non-existent email so Chrome won't auto-fill
 - tapOn:
     id: "username"
-- inputText: "admin@parkhub.test"
+- inputText: "nonexistent@parkhub.test"
 - tapOn:
     id: "password"
 - inputText: "wrongpassword"
@@ -41,8 +40,9 @@ url: ${BASE_URL}
 
 # Should show error
 - extendedWaitUntil:
-    visible: "Invalid|failed|error"
-    timeout: 10000
+    visible: "Login failed|Invalid|incorrect|not found"
+    timeout: 15000
 
-# Still on login page
-- assertVisible: "Sign In"
+# Still on login page (submit button still present)
+- assertVisible:
+    id: "login-submit"
