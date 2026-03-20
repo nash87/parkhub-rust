@@ -5,10 +5,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 // ── Mocks ──
 
 const mockAdminStats = vi.fn();
+const mockGetBookings = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
     adminStats: (...args: any[]) => mockAdminStats(...args),
+    getBookings: (...args: any[]) => mockGetBookings(...args),
   },
 }));
 
@@ -33,11 +35,19 @@ vi.mock('../components/SimpleChart', () => ({
   DonutChart: ({ slices }: any) => <div data-testid="donut-chart">{slices?.length} slices</div>,
 }));
 
+vi.mock('../components/OccupancyHeatmap', () => ({
+  OccupancyHeatmap: ({ bookings, totalSlots }: any) => (
+    <div data-testid="occupancy-heatmap">heatmap: {bookings?.length ?? 0} bookings, {totalSlots} slots</div>
+  ),
+}));
+
 import { AdminReportsPage } from './AdminReports';
 
 describe('AdminReportsPage', () => {
   beforeEach(() => {
     mockAdminStats.mockClear();
+    mockGetBookings.mockClear();
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
   });
 
   afterEach(() => {
@@ -46,6 +56,7 @@ describe('AdminReportsPage', () => {
 
   it('shows loading spinner initially', () => {
     mockAdminStats.mockReturnValue(new Promise(() => {}));
+    mockGetBookings.mockReturnValue(new Promise(() => {}));
     render(<AdminReportsPage />);
     expect(screen.getByTestId('icon-spinner')).toBeInTheDocument();
   });
@@ -123,6 +134,20 @@ describe('AdminReportsPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('donut-chart')).toBeInTheDocument();
     });
+  });
+
+  it('renders occupancy heatmap section', async () => {
+    mockAdminStats.mockResolvedValue({
+      success: true,
+      data: { total_users: 10, total_lots: 2, total_bookings: 50, active_bookings: 5 },
+    });
+
+    render(<AdminReportsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('occupancy-heatmap')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Occupancy Heatmap')).toBeInTheDocument();
   });
 
   it('calculates correct utilization rate', async () => {
