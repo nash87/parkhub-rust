@@ -44,7 +44,18 @@ fn csv_escape(value: &str) -> String {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `GET /api/v1/admin/users/export-csv` — export all users as CSV (admin only)
-pub(super) async fn admin_export_users_csv(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/users/export-csv",
+    tag = "Admin",
+    summary = "Export users as CSV",
+    description = "Download all users as a CSV file. Admin only.",
+    responses(
+        (status = 200, description = "CSV file", content_type = "text/csv"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
+pub(crate) async fn admin_export_users_csv(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
@@ -99,7 +110,18 @@ pub(super) async fn admin_export_users_csv(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `GET /api/v1/admin/bookings/export-csv` — export all bookings as CSV (admin only)
-pub(super) async fn admin_export_bookings_csv(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/bookings/export-csv",
+    tag = "Admin",
+    summary = "Export bookings as CSV",
+    description = "Download all bookings as a CSV file. Admin only.",
+    responses(
+        (status = 200, description = "CSV file", content_type = "text/csv"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
+pub(crate) async fn admin_export_bookings_csv(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {

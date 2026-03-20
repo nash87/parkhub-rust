@@ -51,6 +51,9 @@ struct PasswordResetToken {
     post,
     path = "/api/v1/auth/login",
     tag = "Authentication",
+    summary = "Log in",
+    description = "Authenticate with username/email and password. Returns access and refresh tokens.",
+    request_body = LoginRequest,
     responses(
         (status = 200, description = "Login successful"),
         (status = 401, description = "Invalid credentials"),
@@ -177,6 +180,9 @@ pub(crate) async fn login(
     post,
     path = "/api/v1/auth/register",
     tag = "Authentication",
+    summary = "Register a new account",
+    description = "Create a new user account. May be disabled via admin settings.",
+    request_body = RegisterRequest,
     responses(
         (status = 201, description = "Registration successful"),
         (status = 400, description = "Invalid input"),
@@ -335,6 +341,9 @@ pub(crate) async fn register(
     post,
     path = "/api/v1/auth/refresh",
     tag = "Authentication",
+    summary = "Refresh access token",
+    description = "Exchange a valid refresh token for a new access/refresh token pair.",
+    request_body = RefreshTokenRequest,
     responses(
         (status = 200, description = "Token refreshed successfully"),
         (status = 401, description = "Invalid or expired refresh token"),
@@ -425,6 +434,9 @@ pub(crate) async fn refresh_token(
     post,
     path = "/api/v1/auth/forgot-password",
     tag = "Authentication",
+    summary = "Request password reset",
+    description = "Send a password reset email. Always returns 200 to prevent user enumeration.",
+    request_body = ForgotPasswordRequest,
     responses(
         (status = 200, description = "Reset email sent (always succeeds to prevent enumeration)"),
     )
@@ -511,6 +523,9 @@ pub(crate) async fn forgot_password(
     post,
     path = "/api/v1/auth/reset-password",
     tag = "Authentication",
+    summary = "Reset password with token",
+    description = "Set a new password using a one-time reset token from the forgot-password email.",
+    request_body = ResetPasswordRequest,
     responses(
         (status = 200, description = "Password reset successful"),
         (status = 400, description = "Invalid or expired token"),

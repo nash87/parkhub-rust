@@ -28,6 +28,8 @@ use parkhub_common::UserRole;
     get,
     path = "/api/v1/lots",
     tag = "Lots",
+    summary = "List all parking lots",
+    description = "Returns all parking lots with their configuration and status.",
     responses(
         (status = 200, description = "List of all parking lots"),
     )
@@ -53,6 +55,8 @@ pub(crate) async fn list_lots(
     post,
     path = "/api/v1/lots",
     tag = "Lots",
+    summary = "Create a parking lot",
+    description = "Create a new parking lot with auto-generated slots. Admin only.",
     request_body = CreateParkingLotRequest,
     responses(
         (status = 201, description = "Parking lot created"),
@@ -243,6 +247,8 @@ pub(crate) async fn create_lot(
     put,
     path = "/api/v1/lots/{id}",
     tag = "Lots",
+    summary = "Update a parking lot",
+    description = "Update parking lot properties. Admin only.",
     params(("id" = String, Path, description = "Parking lot ID")),
     request_body = UpdateParkingLotRequest,
     responses(
@@ -401,6 +407,8 @@ pub(crate) async fn update_lot(
     delete,
     path = "/api/v1/lots/{id}",
     tag = "Lots",
+    summary = "Delete a parking lot",
+    description = "Permanently remove a parking lot and all its slots. Admin only.",
     params(("id" = String, Path, description = "Parking lot ID")),
     responses(
         (status = 200, description = "Parking lot deleted"),
@@ -467,6 +475,8 @@ pub(crate) async fn delete_lot(
     get,
     path = "/api/v1/lots/{id}",
     tag = "Lots",
+    summary = "Get parking lot details",
+    description = "Returns full details of a single parking lot.",
     params(("id" = String, Path, description = "Parking lot ID")),
     responses(
         (status = 200, description = "Parking lot details"),
@@ -499,6 +509,8 @@ pub(crate) async fn get_lot(
     get,
     path = "/api/v1/lots/{id}/slots",
     tag = "Lots",
+    summary = "List slots in a parking lot",
+    description = "Returns all parking slots in the specified lot with their current status.",
     params(("id" = String, Path, description = "Parking lot ID")),
     responses(
         (status = 200, description = "List of slots in the parking lot"),
@@ -528,6 +540,8 @@ pub(crate) async fn get_lot_slots(
     post,
     path = "/api/v1/lots/{lot_id}/slots",
     tag = "Lots",
+    summary = "Create a parking slot",
+    description = "Add a new slot to a parking lot. Admin only.",
     params(("lot_id" = String, Path, description = "Parking lot ID")),
     responses(
         (status = 201, description = "Slot created"),
@@ -646,6 +660,8 @@ pub(crate) async fn create_slot(
     put,
     path = "/api/v1/lots/{lot_id}/slots/{slot_id}",
     tag = "Lots",
+    summary = "Update a parking slot",
+    description = "Update slot properties (status, type, label, etc.). Admin only.",
     params(
         ("lot_id" = String, Path, description = "Parking lot ID"),
         ("slot_id" = String, Path, description = "Slot ID"),
@@ -749,6 +765,8 @@ pub(crate) async fn update_slot(
     delete,
     path = "/api/v1/lots/{lot_id}/slots/{slot_id}",
     tag = "Lots",
+    summary = "Delete a parking slot",
+    description = "Remove a slot from a parking lot. Admin only.",
     params(
         ("lot_id" = String, Path, description = "Parking lot ID"),
         ("slot_id" = String, Path, description = "Slot ID"),
