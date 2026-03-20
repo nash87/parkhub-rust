@@ -3322,4 +3322,429 @@ mod tests {
         assert_eq!(stats.sessions, 0);
         assert_eq!(stats.vehicles, 0);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FAVORITES CRUD
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_favorites_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let slot_a = Uuid::new_v4();
+        let slot_b = Uuid::new_v4();
+        let lot_id = Uuid::new_v4();
+
+        // No favorites initially
+        let favs = db.list_favorites_by_user(&user_id.to_string()).await.unwrap();
+        assert!(favs.is_empty());
+
+        // Add two favorites
+        let fav1 = Favorite {
+            user_id,
+            slot_id: slot_a,
+            lot_id,
+            created_at: Utc::now(),
+        };
+        let fav2 = Favorite {
+            user_id,
+            slot_id: slot_b,
+            lot_id,
+            created_at: Utc::now(),
+        };
+
+        db.save_favorite(&fav1).await.unwrap();
+        db.save_favorite(&fav2).await.unwrap();
+
+        // List returns both
+        let favs = db.list_favorites_by_user(&user_id.to_string()).await.unwrap();
+        assert_eq!(favs.len(), 2);
+
+        // Delete one
+        let deleted = db
+            .delete_favorite(&user_id.to_string(), &slot_a.to_string())
+            .await
+            .unwrap();
+        assert!(deleted);
+
+        // Only one remains
+        let favs = db.list_favorites_by_user(&user_id.to_string()).await.unwrap();
+        assert_eq!(favs.len(), 1);
+        assert_eq!(favs[0].slot_id, slot_b);
+
+        // Delete non-existent returns false
+        let nope = db
+            .delete_favorite(&user_id.to_string(), &Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(!nope);
+    }
+
+    #[tokio::test]
+    async fn test_favorites_isolation_between_users() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+        let slot_id = Uuid::new_v4();
+        let lot_id = Uuid::new_v4();
+
+        // Both users favorite the same slot
+        let fav_a = Favorite {
+            user_id: user_a,
+            slot_id,
+            lot_id,
+            created_at: Utc::now(),
+        };
+        let fav_b = Favorite {
+            user_id: user_b,
+            slot_id,
+            lot_id,
+            created_at: Utc::now(),
+        };
+
+        db.save_favorite(&fav_a).await.unwrap();
+        db.save_favorite(&fav_b).await.unwrap();
+
+        // Each user sees only their own
+        let a_favs = db.list_favorites_by_user(&user_a.to_string()).await.unwrap();
+        assert_eq!(a_favs.len(), 1);
+        assert_eq!(a_favs[0].user_id, user_a);
+
+        let b_favs = db.list_favorites_by_user(&user_b.to_string()).await.unwrap();
+        assert_eq!(b_favs.len(), 1);
+        assert_eq!(b_favs[0].user_id, user_b);
+
+        // Delete user_a's favorite doesn't affect user_b
+        db.delete_favorite(&user_a.to_string(), &slot_id.to_string())
+            .await
+            .unwrap();
+        assert!(db
+            .list_favorites_by_user(&user_a.to_string())
+            .await
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            db.list_favorites_by_user(&user_b.to_string())
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GDPR ANONYMIZATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_gdpr_anonymize_user() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user = make_user("alice", "alice@example.com");
+        db.save_user(&user).await.unwrap();
+
+        // Add a vehicle
+        let vehicle = make_vehicle(user.id, "M-AB 1234");
+        db.save_vehicle(&vehicle).await.unwrap();
+
+        // Add a booking
+        let lot_id = Uuid::new_v4();
+        let booking = make_booking(user.id, lot_id, &vehicle);
+        db.save_booking(&booking).await.unwrap();
+
+        // Anonymize
+        let result = db.anonymize_user(&user.id.to_string()).await.unwrap();
+        assert!(result);
+
+        // User still exists but is anonymized
+        let anon = db.get_user(&user.id.to_string()).await.unwrap().unwrap();
+        assert_eq!(anon.name, "[Deleted User]");
+        assert!(anon.username.starts_with("deleted-"));
+        assert!(anon.email.ends_with("@deleted.invalid"));
+
+        // Old username/email lookups return None
+        assert!(db.get_user_by_username("alice").await.unwrap().is_none());
+        assert!(db
+            .get_user_by_email("alice@example.com")
+            .await
+            .unwrap()
+            .is_none());
+
+        // New anonymized username lookup works
+        let by_name = db.get_user_by_username(&anon.username).await.unwrap();
+        assert!(by_name.is_some());
+
+        // Vehicle is deleted
+        assert!(db
+            .get_vehicle(&vehicle.id.to_string())
+            .await
+            .unwrap()
+            .is_none());
+
+        // Booking still exists but license plate is scrubbed
+        let scrubbed = db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(scrubbed.vehicle.license_plate, "[DELETED]");
+    }
+
+    #[tokio::test]
+    async fn test_gdpr_anonymize_nonexistent_user() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let result = db
+            .anonymize_user(&Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(!result);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SESSION REFRESH TOKEN LOOKUP
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_get_session_by_refresh_token() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let session = Session::new(user_id, 24, "alice", "user");
+        let refresh_token = session.refresh_token.clone();
+        let access_token = "access_abc";
+
+        db.save_session(access_token, &session).await.unwrap();
+
+        // Lookup by refresh token
+        let (found_access, found_session) = db
+            .get_session_by_refresh_token(&refresh_token)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(found_access, access_token);
+        assert_eq!(found_session.user_id, user_id);
+        assert_eq!(found_session.username, "alice");
+
+        // Non-existent refresh token
+        let missing = db
+            .get_session_by_refresh_token("nonexistent")
+            .await
+            .unwrap();
+        assert!(missing.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_session_by_refresh_token_expired() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let user_id = Uuid::new_v4();
+        let mut session = Session::new(user_id, 1, "expired", "user");
+        let refresh_token = session.refresh_token.clone();
+        session.expires_at = Utc::now() - chrono::Duration::hours(1);
+
+        db.save_session("expired_tok", &session).await.unwrap();
+
+        // Expired session should return None
+        let result = db
+            .get_session_by_refresh_token(&refresh_token)
+            .await
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CLEAR ALL DATA — verifies settings preserved
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_clear_all_data_preserves_settings() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        // Add some data
+        let user = make_user("alice", "alice@test.com");
+        db.save_user(&user).await.unwrap();
+
+        // Set a custom setting
+        db.set_setting("custom_key", "custom_value").await.unwrap();
+        db.mark_setup_completed().await.unwrap();
+
+        // Clear
+        db.clear_all_data().await.unwrap();
+
+        // Users gone
+        assert!(db.list_users().await.unwrap().is_empty());
+
+        // Settings preserved
+        assert_eq!(
+            db.get_setting("custom_key").await.unwrap(),
+            Some("custom_value".to_string())
+        );
+        assert!(!db.is_fresh().await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_clear_all_data_sessions_and_bookings() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        // Sessions
+        let session = Session::new(Uuid::new_v4(), 24, "test", "user");
+        db.save_session("tok1", &session).await.unwrap();
+
+        // Bookings
+        let user = make_user("alice", "alice@test.com");
+        let vehicle = make_vehicle(user.id, "X-1");
+        let booking = make_booking(user.id, Uuid::new_v4(), &vehicle);
+        db.save_user(&user).await.unwrap();
+        db.save_booking(&booking).await.unwrap();
+
+        db.clear_all_data().await.unwrap();
+
+        assert!(db.get_session("tok1").await.unwrap().is_none());
+        assert!(db.list_bookings().await.unwrap().is_empty());
+        assert!(db.list_users().await.unwrap().is_empty());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ANNOUNCEMENT — additional coverage
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_announcement_multiple_and_order() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let a1 = Announcement {
+            id: Uuid::new_v4(),
+            title: "First".to_string(),
+            message: "First announcement".to_string(),
+            severity: parkhub_common::models::AnnouncementSeverity::Info,
+            active: true,
+            created_by: None,
+            expires_at: None,
+            created_at: Utc::now(),
+        };
+        let a2 = Announcement {
+            id: Uuid::new_v4(),
+            title: "Second".to_string(),
+            message: "Second announcement".to_string(),
+            severity: parkhub_common::models::AnnouncementSeverity::Error,
+            active: false,
+            created_by: Some(Uuid::new_v4()),
+            expires_at: Some(Utc::now() + chrono::Duration::days(30)),
+            created_at: Utc::now(),
+        };
+
+        db.save_announcement(&a1).await.unwrap();
+        db.save_announcement(&a2).await.unwrap();
+
+        let all = db.list_announcements().await.unwrap();
+        assert_eq!(all.len(), 2);
+
+        let titles: Vec<&str> = all.iter().map(|a| a.title.as_str()).collect();
+        assert!(titles.contains(&"First"));
+        assert!(titles.contains(&"Second"));
+
+        // Verify severity is preserved
+        let critical = all.iter().find(|a| a.title == "Second").unwrap();
+        assert_eq!(
+            critical.severity,
+            parkhub_common::models::AnnouncementSeverity::Error
+        );
+        assert!(!critical.active);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PARKING LOT CRUD
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_parking_lot_crud() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+
+        let lot = make_parking_lot();
+
+        // Save
+        db.save_parking_lot(&lot).await.unwrap();
+
+        // Get
+        let fetched = db
+            .get_parking_lot(&lot.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(fetched.name, "Test Lot");
+        assert_eq!(fetched.address, "123 Test St");
+
+        // List
+        let all = db.list_parking_lots().await.unwrap();
+        assert_eq!(all.len(), 1);
+
+        // Non-existent
+        let missing = db
+            .get_parking_lot(&Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        assert!(missing.is_none());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SESSION — constructor invariants
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_session_new_fields() {
+        let user_id = Uuid::new_v4();
+        let session = Session::new(user_id, 48, "testuser", "admin");
+
+        assert_eq!(session.user_id, user_id);
+        assert_eq!(session.username, "testuser");
+        assert_eq!(session.role, "admin");
+        assert!(session.refresh_token.starts_with("rt_"));
+        // Refresh token has 64 hex chars after prefix
+        assert_eq!(session.refresh_token.len(), 3 + 64);
+        assert!(!session.is_expired());
+        assert!(session.expires_at > session.created_at);
+    }
+
+    #[test]
+    fn test_session_unique_refresh_tokens() {
+        let uid = Uuid::new_v4();
+        let s1 = Session::new(uid, 1, "u", "r");
+        let s2 = Session::new(uid, 1, "u", "r");
+        assert_ne!(
+            s1.refresh_token, s2.refresh_token,
+            "Each session must have a unique refresh token"
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ENCRYPTED DATABASE — data roundtrip
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_encrypted_data_roundtrip() {
+        let dir = tempdir().unwrap();
+        let db = Database::open(test_config(dir.path().to_path_buf(), true)).unwrap();
+        assert!(db.is_encrypted());
+
+        // Save and retrieve a user through encryption
+        let user = make_user("encrypted_alice", "encrypted@test.com");
+        db.save_user(&user).await.unwrap();
+
+        let fetched = db.get_user(&user.id.to_string()).await.unwrap().unwrap();
+        assert_eq!(fetched.username, "encrypted_alice");
+        assert_eq!(fetched.email, "encrypted@test.com");
+    }
 }
