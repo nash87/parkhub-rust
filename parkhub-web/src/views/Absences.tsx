@@ -292,7 +292,7 @@ function AddAbsenceModal({ onClose, onAdd, t }: {
         role="dialog"
         aria-modal="true"
         aria-label={t('absences.addAbsence', 'Abwesenheit eintragen')}
-        className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-2xl p-6"
+        className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md glass-modal shadow-2xl p-6"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{t('absences.addAbsence', 'Abwesenheit eintragen')}</h2>
