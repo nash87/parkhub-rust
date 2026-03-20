@@ -3338,7 +3338,10 @@ mod tests {
         let lot_id = Uuid::new_v4();
 
         // No favorites initially
-        let favs = db.list_favorites_by_user(&user_id.to_string()).await.unwrap();
+        let favs = db
+            .list_favorites_by_user(&user_id.to_string())
+            .await
+            .unwrap();
         assert!(favs.is_empty());
 
         // Add two favorites
@@ -3359,7 +3362,10 @@ mod tests {
         db.save_favorite(&fav2).await.unwrap();
 
         // List returns both
-        let favs = db.list_favorites_by_user(&user_id.to_string()).await.unwrap();
+        let favs = db
+            .list_favorites_by_user(&user_id.to_string())
+            .await
+            .unwrap();
         assert_eq!(favs.len(), 2);
 
         // Delete one
@@ -3370,7 +3376,10 @@ mod tests {
         assert!(deleted);
 
         // Only one remains
-        let favs = db.list_favorites_by_user(&user_id.to_string()).await.unwrap();
+        let favs = db
+            .list_favorites_by_user(&user_id.to_string())
+            .await
+            .unwrap();
         assert_eq!(favs.len(), 1);
         assert_eq!(favs[0].slot_id, slot_b);
 
@@ -3410,11 +3419,17 @@ mod tests {
         db.save_favorite(&fav_b).await.unwrap();
 
         // Each user sees only their own
-        let a_favs = db.list_favorites_by_user(&user_a.to_string()).await.unwrap();
+        let a_favs = db
+            .list_favorites_by_user(&user_a.to_string())
+            .await
+            .unwrap();
         assert_eq!(a_favs.len(), 1);
         assert_eq!(a_favs[0].user_id, user_a);
 
-        let b_favs = db.list_favorites_by_user(&user_b.to_string()).await.unwrap();
+        let b_favs = db
+            .list_favorites_by_user(&user_b.to_string())
+            .await
+            .unwrap();
         assert_eq!(b_favs.len(), 1);
         assert_eq!(b_favs[0].user_id, user_b);
 
