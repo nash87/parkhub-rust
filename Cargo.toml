@@ -54,7 +54,8 @@ mdns-sd = "0.18"  # updated from 0.11
 parkhub-common = { path = "parkhub-common" }
 
 [profile.release]
-lto = "thin"
-codegen-units = 4
+lto = "fat"
+codegen-units = 1
 strip = true
-opt-level = 3
+opt-level = "z"
+panic = "abort"
