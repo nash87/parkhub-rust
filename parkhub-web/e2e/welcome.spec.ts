@@ -24,4 +24,13 @@ test.describe('Welcome Page', () => {
     await expect(page).toHaveURL(/\/login/);
     await expect(page.getByText('Sign In')).toBeVisible();
   });
+
+  test('welcome page has correct ARIA structure', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Get Started' }).waitFor({ timeout: 30_000 });
+    await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+      - heading /ParkHub/
+      - button "Get Started"
+    `);
+  });
 });

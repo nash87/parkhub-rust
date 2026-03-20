@@ -12,6 +12,15 @@ test.describe('Login Page', () => {
     await expect(page.getByText('admin@parkhub.test')).toBeVisible();
   });
 
+  test('login form has correct ARIA structure', async ({ page }) => {
+    await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+      - heading /ParkHub/ [level=1]
+      - textbox "Username"
+      - textbox "Password"
+      - button /Sign [Ii]n/
+    `);
+  });
+
   test('login with demo autofill', async ({ page }) => {
     // Click the demo autofill button to fill credentials
     const autofill = page.locator('#demo-autofill');

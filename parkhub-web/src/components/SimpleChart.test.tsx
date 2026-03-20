@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render } from '@testing-library/react';
-import { BarChart } from './SimpleChart';
+import { BarChart, DonutChart, type DonutSlice } from './SimpleChart';
 
 describe('BarChart', () => {
   const sampleData = [
@@ -54,5 +54,59 @@ describe('BarChart', () => {
     const { container } = render(<BarChart data={zeros} />);
     const svg = container.querySelector('svg');
     expect(svg).toBeTruthy();
+  });
+});
+
+describe('DonutChart', () => {
+  const sampleSlices: DonutSlice[] = [
+    { label: 'Lot A', occupancy: 45, capacity: 100 },
+    { label: 'Lot B', occupancy: 70, capacity: 80 },
+    { label: 'Lot C', occupancy: 90, capacity: 50 },
+  ];
+
+  it('renders nothing when slices are empty', () => {
+    const { container } = render(<DonutChart slices={[]} />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('renders an SVG with aria-label', () => {
+    const { container } = render(<DonutChart slices={sampleSlices} />);
+    const svg = container.querySelector('svg');
+    expect(svg).toBeTruthy();
+    expect(svg!.getAttribute('aria-label')).toMatch(/occupancy/i);
+  });
+
+  it('renders one arc circle per slice plus the background track', () => {
+    const { container } = render(<DonutChart slices={sampleSlices} />);
+    // background circle + one per slice
+    const circles = container.querySelectorAll('circle');
+    expect(circles.length).toBe(sampleSlices.length + 1);
+  });
+
+  it('shows overall occupancy percentage in center text', () => {
+    // All capacity 100, all at 50% -> overall 50%
+    const uniform: DonutSlice[] = [
+      { label: 'A', occupancy: 50, capacity: 100 },
+      { label: 'B', occupancy: 50, capacity: 100 },
+    ];
+    const { container } = render(<DonutChart slices={uniform} />);
+    const texts = container.querySelectorAll('text');
+    const centerText = Array.from(texts).find(t => t.textContent?.includes('%'));
+    expect(centerText).toBeTruthy();
+    expect(centerText!.textContent).toBe('50%');
+  });
+
+  it('respects custom size prop', () => {
+    const { container } = render(<DonutChart slices={sampleSlices} size={240} />);
+    const svg = container.querySelector('svg');
+    expect(svg!.getAttribute('width')).toBe('240');
+    expect(svg!.getAttribute('height')).toBe('240');
+  });
+
+  it('renders title tooltip for each slice', () => {
+    const { container } = render(<DonutChart slices={sampleSlices} />);
+    const titles = container.querySelectorAll('title');
+    expect(titles.length).toBe(sampleSlices.length);
+    expect(titles[0].textContent).toContain('Lot A');
   });
 });

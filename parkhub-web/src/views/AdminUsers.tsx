@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, SpinnerGap, MagnifyingGlass, Coins,
@@ -11,6 +11,8 @@ export function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState('');
   const [creditUserId, setCreditUserId] = useState<string | null>(null);
@@ -24,6 +26,12 @@ export function AdminUsersPage() {
 
   useEffect(() => { loadUsers(); }, []);
 
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(search), 200);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [search]);
+
   async function loadUsers() {
     try {
       const res = await api.adminUsers();
@@ -33,11 +41,15 @@ export function AdminUsersPage() {
     }
   }
 
-  const filtered = users.filter(u =>
-    u.name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    u.username.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = users.filter(u => {
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
+    return (
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      u.username.toLowerCase().includes(q)
+    );
+  });
 
   function startEditRole(user: User) {
     setEditingId(user.id);
@@ -152,9 +164,19 @@ export function AdminUsersPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search users..."
-            className="input pl-9 w-full sm:w-64"
+            className="input pl-9 pr-8 w-full sm:w-64"
             aria-label="Search users"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 transition-colors"
+            >
+              <X weight="bold" className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
