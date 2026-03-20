@@ -60,6 +60,11 @@ vi.mock('react-i18next', () => ({
         'nav.lightMode': 'Light Mode',
         'nav.darkMode': 'Dark Mode',
         'nav.logout': 'Log Out',
+        'nav.openMenu': 'Open navigation menu',
+        'nav.closeMenu': 'Close navigation menu',
+        'nav.skipToContent': 'Skip to content',
+        'nav.switchToLight': 'Switch to light mode',
+        'nav.switchToDark': 'Switch to dark mode',
       };
       return map[key] || key;
     },

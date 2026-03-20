@@ -64,7 +64,7 @@ export function WelcomePage() {
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
           className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
-          aria-label="Toggle theme"
+          aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
         >
           {resolved === 'dark' ? <SunDim weight="bold" className="w-5 h-5 text-surface-400" /> : <Moon weight="bold" className="w-5 h-5 text-surface-500" />}
         </button>
@@ -121,7 +121,7 @@ export function WelcomePage() {
           </span>
           <span className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Self-hosted
+            {t('welcome.selfHosted')}
           </span>
         </motion.div>
 

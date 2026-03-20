@@ -37,7 +37,7 @@ export function ProfilePage() {
         setEditing(false);
         toast.success(t('profile.updated', 'Profil aktualisiert'));
       } else {
-        toast.error(res.error?.message || 'Fehler');
+        toast.error(res.error?.message || t('common.error'));
       }
     } finally { setSaving(false); }
   }
@@ -54,7 +54,7 @@ export function ProfilePage() {
         setPwForm({ current: '', newPw: '', confirm: '' });
         setPwOpen(false);
       } else {
-        toast.error(res.error?.message || 'Fehler');
+        toast.error(res.error?.message || t('common.error'));
       }
     } finally { setPwSaving(false); }
   }
@@ -74,7 +74,7 @@ export function ProfilePage() {
       a.href = url; a.download = 'my-parkhub-data.json'; a.click();
       URL.revokeObjectURL(url);
       toast.success(t('gdpr.exported', 'Daten exportiert'));
-    } catch { toast.error('Export fehlgeschlagen'); }
+    } catch { toast.error(t('gdpr.exportFailed')); }
     finally { setExporting(false); }
   }
 
@@ -90,7 +90,7 @@ export function ProfilePage() {
       if (!res.ok) throw new Error('Delete failed');
       toast.success(t('gdpr.deleted', 'Konto gel\u00f6scht'));
       logout();
-    } catch { toast.error('L\u00f6schen fehlgeschlagen'); }
+    } catch { toast.error(t('gdpr.deleteFailed')); }
   }
 
   function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
@@ -114,7 +114,7 @@ export function ProfilePage() {
   }
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
-  const roleLabels: Record<string, string> = { user: 'Benutzer', admin: 'Admin', superadmin: 'Super-Admin' };
+  const roleLabels: Record<string, string> = { user: t('profile.roles.user'), admin: t('profile.roles.admin'), superadmin: t('profile.roles.superadmin') };
 
   const container = staggerSlow;
   const item = fadeUp;
@@ -210,12 +210,12 @@ export function ProfilePage() {
             <div>
               <label htmlFor="pw-new" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.newPassword', 'Neues Passwort')}</label>
               <input id="pw-new" type="password" value={pwForm.newPw} onChange={e => setPwForm({ ...pwForm, newPw: e.target.value })} className="input" autoComplete="new-password" />
-              {pwForm.newPw.length > 0 && pwForm.newPw.length < 8 && <p className="text-xs text-amber-600 mt-1">Mind. 8 Zeichen</p>}
+              {pwForm.newPw.length > 0 && pwForm.newPw.length < 8 && <p className="text-xs text-amber-600 mt-1">{t('profile.minChars')}</p>}
             </div>
             <div>
               <label htmlFor="pw-confirm" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.confirmPassword', 'Passwort best\u00e4tigen')}</label>
               <input id="pw-confirm" type="password" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} className="input" autoComplete="new-password" />
-              {pwForm.confirm.length > 0 && pwForm.newPw !== pwForm.confirm && <p className="text-xs text-red-600 mt-1">Passw\u00f6rter stimmen nicht \u00fcberein</p>}
+              {pwForm.confirm.length > 0 && pwForm.newPw !== pwForm.confirm && <p className="text-xs text-red-600 mt-1">{t('profile.passwordsNoMatch')}</p>}
             </div>
             <button onClick={handleChangePassword} disabled={pwSaving || pwForm.newPw.length < 8 || pwForm.newPw !== pwForm.confirm || !pwForm.current} className="btn btn-primary btn-sm disabled:opacity-60">
               {pwSaving ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Lock weight="bold" className="w-4 h-4" />}
