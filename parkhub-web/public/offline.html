@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d9488" />
+  <title>ParkHub — Offline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --teal-600: #0d9488; --teal-700: #0f766e; --surface-50: #fafafa; --surface-600: #525252; --surface-900: #171717; --surface-950: #0a0a0a; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: var(--surface-950); --text: #f5f5f5; --muted: #a3a3a3; }
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: var(--surface-50); --text: var(--surface-900); --muted: var(--surface-600); }
+    }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    .container { text-align: center; max-width: 28rem; }
+    .icon-wrapper {
+      width: 5rem; height: 5rem; border-radius: 1rem;
+      background: var(--teal-600); display: inline-flex;
+      align-items: center; justify-content: center; margin-bottom: 1.5rem;
+    }
+    .icon-wrapper svg { width: 2.5rem; height: 2.5rem; fill: white; }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.025em; }
+    p { color: var(--muted); font-size: 0.9375rem; line-height: 1.6; margin-bottom: 1.5rem; }
+    .retry-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.5rem; border-radius: 0.75rem; border: none;
+      background: var(--teal-600); color: white; font-size: 0.9375rem;
+      font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .retry-btn:hover { background: var(--teal-700); }
+    .retry-btn:active { transform: scale(0.97); }
+    .queued-info {
+      margin-top: 1.5rem; padding: 1rem; border-radius: 0.75rem;
+      background: rgba(13, 148, 136, 0.1); font-size: 0.8125rem;
+      color: var(--muted); line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon-wrapper">
+      <!-- Wi-Fi slash icon -->
+      <svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+        <path d="M128,196a20,20,0,1,0,20,20A20,20,0,0,0,128,196Zm0,28a8,8,0,1,1,8-8A8,8,0,0,1,128,224ZM213.66,42.34a8,8,0,0,0-11.32,0L42.34,202.34a8,8,0,0,0,11.32,11.32l40-40a63.39,63.39,0,0,1,68.68,0,8,8,0,0,0,10.64-12A79.19,79.19,0,0,0,128,144a79.85,79.85,0,0,0-22.83,3.31l23.49-23.49a111.59,111.59,0,0,1,64.1,27,8,8,0,1,0,10.48-12.08,127.36,127.36,0,0,0-46.89-26.53l27.21-27.21a159.55,159.55,0,0,1,36.68,24.08,8,8,0,1,0,10.52-12.08A175.28,175.28,0,0,0,192.4,73.6l21.26-21.26A8,8,0,0,0,213.66,42.34ZM83.82,119.82a128.35,128.35,0,0,0-28.06,19,8,8,0,0,0,10.48,12.08,112.22,112.22,0,0,1,32.56-18.1ZM25.24,97A175.79,175.79,0,0,1,63.6,73.6a8,8,0,0,0-10.52-12.08A192.1,192.1,0,0,0,14.72,97a8,8,0,1,0,10.52,12.08Z"/>
+      </svg>
+    </div>
+    <h1>You're Offline</h1>
+    <p>ParkHub can't reach the server right now. Your recent data may still be available — check back when you're connected.</p>
+    <button class="retry-btn" onclick="location.reload()">
+      <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1,0-16h28.69l-14.83-14.83A95.4,95.4,0,0,0,130.1,48.09,96,96,0,0,0,32.39,143.61a8,8,0,0,1-15.88-2.22A112,112,0,0,1,128,32a111.47,111.47,0,0,1,77.26,31.06L220,77.75V56a8,8,0,0,1,16,0Zm-32.47,96.61a8,8,0,0,0-9.83,5.61A96,96,0,0,1,100.18,223.3a95.42,95.42,0,0,1-27.72-34.39L57.63,174.08H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0v-21.75l15.32,15.32A112,112,0,0,0,213.14,162.44,8,8,0,0,0,207.53,152.61Z"/></svg>
+      Try Again
+    </button>
+    <div class="queued-info">
+      Any actions you performed while offline have been saved and will sync automatically when your connection is restored.
+    </div>
+  </div>
+</body>
+</html>
