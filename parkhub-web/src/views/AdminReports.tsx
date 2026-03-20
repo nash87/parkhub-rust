@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning } from '@phosphor-icons/react';
 import { api, type AdminStats } from '../api/client';
-import { BarChart } from '../components/SimpleChart';
+import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
 
 function StatCard({ icon: Icon, label, value }: {
   icon: any;
@@ -19,6 +19,30 @@ function StatCard({ icon: Icon, label, value }: {
       <p className="stat-value text-surface-900 dark:text-white">{value}</p>
     </div>
   );
+}
+
+/**
+ * Mock per-lot occupancy derived from aggregate stats.
+ * When a real /api/v1/admin/reports endpoint is available, replace this.
+ */
+function mockLotOccupancy(totalLots: number, activeBookings: number): DonutSlice[] {
+  if (totalLots <= 0) return [];
+  const lotNames = ['Lot A', 'Lot B', 'Lot C', 'Lot D', 'Lot E', 'Lot F'];
+  // Distribute capacity unevenly to make the chart interesting
+  const capacityWeights = [0.30, 0.25, 0.20, 0.12, 0.08, 0.05];
+  // Distribute active bookings with a skew toward first lots
+  const occupancyWeights = [0.40, 0.30, 0.18, 0.07, 0.03, 0.02];
+  const baseCapacity = Math.max(Math.round(activeBookings * 1.4), totalLots * 5, 20);
+
+  return Array.from({ length: Math.min(totalLots, lotNames.length) }, (_, i) => {
+    const capacity = Math.round(baseCapacity * capacityWeights[i]);
+    const occupied = Math.round(activeBookings * occupancyWeights[i]);
+    return {
+      label: lotNames[i],
+      capacity: Math.max(capacity, 1),
+      occupancy: Math.min(Math.round((occupied / Math.max(capacity, 1)) * 100), 100),
+    };
+  });
 }
 
 /** Build mock "bookings this week" from total bookings to show a plausible distribution. */
@@ -45,6 +69,11 @@ export function AdminReportsPage() {
   const weeklyData = useMemo(
     () => weeklyBookingData(stats?.total_bookings ?? 0),
     [stats?.total_bookings],
+  );
+
+  const lotOccupancy = useMemo(
+    () => mockLotOccupancy(stats?.total_lots ?? 0, stats?.active_bookings ?? 0),
+    [stats?.total_lots, stats?.active_bookings],
   );
 
   if (loading) {

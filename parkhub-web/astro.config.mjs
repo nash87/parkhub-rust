@@ -2,10 +2,36 @@
 import { defineConfig, fontProviders } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
+import { execSync } from 'node:child_process';
+
+const buildHash = (() => {
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    return Date.now().toString(36);
+  }
+})();
+
+/** @type {import('astro').AstroIntegration} */
+const swBuildHashIntegration = {
+  name: 'sw-build-hash',
+  hooks: {
+    'astro:build:done': async ({ dir }) => {
+      const { readFileSync, writeFileSync } = await import('node:fs');
+      const swPath = new URL('sw.js', dir);
+      try {
+        const content = readFileSync(swPath, 'utf8');
+        writeFileSync(swPath, content.replace('__BUILD_HASH__', buildHash));
+      } catch {
+        // sw.js not present — skip
+      }
+    },
+  },
+};
 
 export default defineConfig({
   output: 'static',
-  integrations: [react()],
+  integrations: [react(), swBuildHashIntegration],
   vite: {
     plugins: [tailwindcss()],
     define: {
