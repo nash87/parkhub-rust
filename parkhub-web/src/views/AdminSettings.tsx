@@ -123,10 +123,11 @@ export function AdminSettingsPage() {
             <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">General</h3>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              <label htmlFor="setting-company-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Company Name
               </label>
               <input
+                id="setting-company-name"
                 type="text"
                 value={settings.company_name}
                 onChange={e => update('company_name', e.target.value)}
@@ -136,10 +137,10 @@ export function AdminSettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              <label htmlFor="setting-use-case" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Use Case
               </label>
-              <select value={settings.use_case} onChange={e => update('use_case', e.target.value)} className="input">
+              <select id="setting-use-case" value={settings.use_case} onChange={e => update('use_case', e.target.value)} className="input">
                 <option value="company">Company</option>
                 <option value="residential">Residential</option>
                 <option value="shared">Shared Parking</option>
@@ -161,10 +162,11 @@ export function AdminSettingsPage() {
             <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Booking Rules</h3>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              <label htmlFor="setting-max-bookings" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Max Bookings per Day
               </label>
               <input
+                id="setting-max-bookings"
                 type="number"
                 min={0}
                 max={50}
@@ -204,10 +206,11 @@ export function AdminSettingsPage() {
             <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Auto-Release</h3>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              <label htmlFor="setting-auto-release" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 Auto-release after (minutes)
               </label>
               <input
+                id="setting-auto-release"
                 type="number"
                 min={0}
                 max={480}
@@ -246,10 +249,11 @@ export function AdminSettingsPage() {
 
             {toBool(settings.credits_enabled) && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+                <label htmlFor="setting-credits-per-booking" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                   Credits per Booking
                 </label>
                 <input
+                  id="setting-credits-per-booking"
                   type="number"
                   min={1}
                   max={100}
@@ -266,10 +270,10 @@ export function AdminSettingsPage() {
             <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">License Plate</h3>
 
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
+              <label htmlFor="setting-license-plate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
                 License Plate Mode
               </label>
-              <select value={settings.license_plate_mode} onChange={e => update('license_plate_mode', e.target.value)} className="input">
+              <select id="setting-license-plate" value={settings.license_plate_mode} onChange={e => update('license_plate_mode', e.target.value)} className="input">
                 <option value="required">Required</option>
                 <option value="optional">Optional</option>
                 <option value="disabled">Disabled</option>

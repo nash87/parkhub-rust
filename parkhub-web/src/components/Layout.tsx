@@ -49,7 +49,7 @@ export function Layout() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">Skip to content</a>
 
       {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 p-4 sticky top-0 h-dvh">
+      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
         {/* Logo */}
         <div className="flex items-center gap-3 px-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
@@ -162,6 +162,7 @@ export function Layout() {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/40 z-40 lg:hidden"
                 onClick={() => setSidebarOpen(false)}
+                aria-hidden="true"
               />
               <motion.aside
                 initial={{ x: '-100%' }}

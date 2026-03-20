@@ -87,9 +87,9 @@ export function BookingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="relative">
             <MagnifyingGlass weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-            <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} className="input pl-9 text-sm" />
+            <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} className="input pl-9 text-sm" aria-label={t('bookingFilters.searchLot')} />
           </div>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input">
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input" aria-label={t('common.filter')}>
             <option value="all">{t('bookingFilters.statusAll')}</option>
             <option value="active">{t('bookingFilters.statusActive')}</option>
             <option value="confirmed">{t('bookingFilters.statusConfirmed')}</option>
@@ -233,6 +233,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, t, dateFnsL
           <button
             onClick={() => onCancel(booking.id)}
             disabled={cancelling === booking.id}
+            aria-label={`${t('bookings.cancelBtn')} ${booking.lot_name}`}
             className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             {cancelling === booking.id

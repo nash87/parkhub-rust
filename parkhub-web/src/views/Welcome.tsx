@@ -54,7 +54,7 @@ export function WelcomePage() {
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-primary-50 via-transparent to-transparent dark:from-primary-950/30 dark:via-transparent pointer-events-none" />
 
       {/* Top bar */}
-      <div className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
+      <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
             <CarSimple weight="fill" className="w-5 h-5 text-white" />
@@ -68,12 +68,12 @@ export function WelcomePage() {
         >
           {resolved === 'dark' ? <SunDim weight="bold" className="w-5 h-5 text-surface-400" /> : <Moon weight="bold" className="w-5 h-5 text-surface-500" />}
         </button>
-      </div>
+      </header>
 
       {/* Main content — left-aligned, not centered */}
-      <div className="relative z-10 flex flex-col justify-center min-h-[calc(100dvh-80px)] px-6 sm:px-10 lg:px-20 max-w-3xl">
+      <main className="relative z-10 flex flex-col justify-center min-h-[calc(100dvh-80px)] px-6 sm:px-10 lg:px-20 max-w-3xl">
         {/* Cycling greeting — large, left-aligned */}
-        <div className="h-20 sm:h-24 mb-4 flex items-center">
+        <div className="h-20 sm:h-24 mb-4 flex items-center" aria-live="polite" aria-atomic="true">
           <AnimatePresence mode="wait">
             <motion.div
               key={greeting.lang}
@@ -177,7 +177,7 @@ export function WelcomePage() {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </main>
     </div>
   );
 }
