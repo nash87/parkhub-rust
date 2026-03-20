@@ -764,7 +764,10 @@ mod tests {
     #[test]
     fn test_compute_signature_format() {
         let sig = compute_signature("secret", "body");
-        assert!(sig.starts_with("sha256="), "Signature must start with sha256=");
+        assert!(
+            sig.starts_with("sha256="),
+            "Signature must start with sha256="
+        );
         // sha256= prefix + 64 hex chars
         assert_eq!(sig.len(), 7 + 64);
     }
@@ -780,7 +783,10 @@ mod tests {
     fn test_compute_signature_different_keys() {
         let sig1 = compute_signature("key1", "data");
         let sig2 = compute_signature("key2", "data");
-        assert_ne!(sig1, sig2, "Different keys must produce different signatures");
+        assert_ne!(
+            sig1, sig2,
+            "Different keys must produce different signatures"
+        );
     }
 
     #[test]
@@ -809,7 +815,10 @@ mod tests {
     #[test]
     fn test_generate_secret_format() {
         let secret = generate_secret();
-        assert!(secret.starts_with("whsec_"), "Secret must start with whsec_");
+        assert!(
+            secret.starts_with("whsec_"),
+            "Secret must start with whsec_"
+        );
         // whsec_ prefix + 64 hex chars
         assert_eq!(secret.len(), 6 + 64);
     }
@@ -834,8 +843,7 @@ mod tests {
 
     #[test]
     fn test_create_webhook_request_active_false() {
-        let json =
-            r#"{"url": "https://example.com/hook", "events": ["test"], "active": false}"#;
+        let json = r#"{"url": "https://example.com/hook", "events": ["test"], "active": false}"#;
         let req: CreateWebhookRequest = serde_json::from_str(json).unwrap();
         assert!(!req.active);
     }
