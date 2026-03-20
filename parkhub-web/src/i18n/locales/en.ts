@@ -41,6 +41,12 @@ export default {
       registrationFailed: 'Registration failed',
       creatingAccount: 'Creating account...',
       minChars: 'Min. 8 characters',
+      confirmPassword: 'Confirm Password',
+      passwordMismatch: 'Passwords do not match',
+      rule8Chars: '8+ characters',
+      ruleLower: 'Lowercase',
+      ruleUpper: 'Uppercase',
+      ruleDigit: 'Number',
     },
     nav: {
       dashboard: 'Dashboard',
