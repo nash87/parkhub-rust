@@ -27,7 +27,7 @@ use parkhub_common::User;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Response type for admin user listing (includes status field)
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub(crate) struct AdminUserResponse {
     pub id: String,
     pub username: String,

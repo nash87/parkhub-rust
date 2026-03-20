@@ -16,28 +16,49 @@ use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct SetupStatus {
+    /// Whether initial setup has been completed
     setup_completed: bool,
+    /// Whether at least one admin user exists
     has_admin: bool,
+    /// Whether at least one parking lot exists
     has_parking_lots: bool,
+    /// Whether any users exist
     has_users: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct SetupRequest {
+    /// Organization / company name
     pub company_name: String,
+    /// Admin username (min 3 characters)
     pub admin_username: String,
+    /// Admin password (min 8 characters)
     pub admin_password: String,
+    /// Admin email address
     pub admin_email: String,
+    /// Admin full name
     pub admin_name: String,
+    /// Use case (e.g. "corporate", "residential")
     #[serde(default)]
     pub use_case: Option<String>,
+    /// Whether to create sample parking lot data
     #[serde(default)]
     pub create_sample_data: bool,
 }
 
 /// `GET /api/v1/setup/status` — check if initial setup is completed
+#[utoipa::path(
+    get,
+    path = "/api/v1/setup/status",
+    tag = "Setup",
+    summary = "Get setup status",
+    description = "Check whether initial setup has been completed. Public endpoint.",
+    responses(
+        (status = 200, description = "Setup status"),
+    )
+)]
 pub async fn setup_status(State(state): State<SharedState>) -> Json<ApiResponse<SetupStatus>> {
     let state = state.read().await;
     let is_fresh = state.db.is_fresh().await.unwrap_or(true);
@@ -52,6 +73,18 @@ pub async fn setup_status(State(state): State<SharedState>) -> Json<ApiResponse<
 }
 
 /// `POST /api/v1/setup` — initial setup: create admin user and configure system
+#[utoipa::path(
+    post,
+    path = "/api/v1/setup",
+    tag = "Setup",
+    summary = "Run initial setup",
+    description = "Create the first admin user and configure the system. Only works before setup is completed.",
+    request_body = SetupRequest,
+    responses(
+        (status = 200, description = "Setup completed successfully"),
+        (status = 400, description = "Setup already completed or validation error"),
+    )
+)]
 pub async fn setup_init(
     State(state): State<SharedState>,
     Json(req): Json<SetupRequest>,

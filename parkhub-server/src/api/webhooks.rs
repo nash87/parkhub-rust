@@ -25,32 +25,45 @@ use super::{AuthUser, SharedState};
 // Request / Response types
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateWebhookRequest {
+    /// Target URL for webhook delivery (must be HTTPS)
     pub url: String,
+    /// Event types to subscribe to (e.g. "booking.created", "user.deleted")
     pub events: Vec<String>,
+    /// Whether the webhook is active (defaults to true)
     #[serde(default = "default_true")]
     pub active: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct UpdateWebhookRequest {
+    /// New target URL (optional)
     pub url: Option<String>,
+    /// New event types (optional)
     pub events: Option<Vec<String>>,
+    /// Enable/disable (optional)
     pub active: Option<bool>,
-    /// If true, regenerate the secret
+    /// If true, regenerate the HMAC signing secret
     #[serde(default)]
     pub regenerate_secret: bool,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct WebhookResponse {
+    /// Webhook ID
     pub id: String,
+    /// Target URL
     pub url: String,
+    /// HMAC signing secret
     pub secret: String,
+    /// Subscribed event types
     pub events: Vec<String>,
+    /// Whether the webhook is active
     pub active: bool,
+    /// Creation timestamp (RFC 3339)
     pub created_at: String,
+    /// Last update timestamp (RFC 3339)
     pub updated_at: String,
 }
 
@@ -169,6 +182,17 @@ fn generate_secret() -> String {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `GET /api/v1/webhooks` — list all webhooks (admin only)
+#[utoipa::path(
+    get,
+    path = "/api/v1/webhooks",
+    tag = "Webhooks",
+    summary = "List all webhooks",
+    description = "Returns all configured webhooks. Admin only.",
+    responses(
+        (status = 200, description = "List of webhooks"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
 pub(crate) async fn list_webhooks(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -210,6 +234,19 @@ pub(crate) async fn list_webhooks(
 }
 
 /// `POST /api/v1/webhooks` — create a new webhook (admin only)
+#[utoipa::path(
+    post,
+    path = "/api/v1/webhooks",
+    tag = "Webhooks",
+    summary = "Create a webhook",
+    description = "Register a new webhook endpoint. URL must be HTTPS and pass SSRF validation. Admin only.",
+    request_body = CreateWebhookRequest,
+    responses(
+        (status = 201, description = "Webhook created"),
+        (status = 400, description = "Validation error"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
 pub(crate) async fn create_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -294,6 +331,21 @@ pub(crate) async fn create_webhook(
 }
 
 /// `PUT /api/v1/webhooks/{id}` — update a webhook (admin only)
+#[utoipa::path(
+    put,
+    path = "/api/v1/webhooks/{id}",
+    tag = "Webhooks",
+    summary = "Update a webhook",
+    description = "Update an existing webhook's URL, events, or active status. Admin only.",
+    params(("id" = String, Path, description = "Webhook ID")),
+    request_body = UpdateWebhookRequest,
+    responses(
+        (status = 200, description = "Webhook updated"),
+        (status = 400, description = "Validation error"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Webhook not found"),
+    )
+)]
 pub(crate) async fn update_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -397,6 +449,19 @@ pub(crate) async fn update_webhook(
 }
 
 /// `DELETE /api/v1/webhooks/{id}` — delete a webhook (admin only)
+#[utoipa::path(
+    delete,
+    path = "/api/v1/webhooks/{id}",
+    tag = "Webhooks",
+    summary = "Delete a webhook",
+    description = "Permanently remove a webhook. Admin only.",
+    params(("id" = String, Path, description = "Webhook ID")),
+    responses(
+        (status = 200, description = "Webhook deleted"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Webhook not found"),
+    )
+)]
 pub(crate) async fn delete_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -442,6 +507,19 @@ pub(crate) async fn delete_webhook(
 }
 
 /// `POST /api/v1/webhooks/{id}/test` — send a test event (admin only)
+#[utoipa::path(
+    post,
+    path = "/api/v1/webhooks/{id}/test",
+    tag = "Webhooks",
+    summary = "Send test event",
+    description = "Deliver a test payload to verify webhook connectivity. Admin only.",
+    params(("id" = String, Path, description = "Webhook ID")),
+    responses(
+        (status = 200, description = "Test result (delivered or error details)"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Webhook not found"),
+    )
+)]
 pub(crate) async fn test_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
