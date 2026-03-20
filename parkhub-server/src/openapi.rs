@@ -54,7 +54,12 @@ use crate::{
         (name = "Demo", description = "Public demo mode endpoints"),
         (name = "Health", description = "Health check and readiness probes"),
         (name = "Monitoring", description = "Prometheus metrics"),
-        (name = "Public", description = "Unauthenticated public endpoints")
+        (name = "Public", description = "Unauthenticated public endpoints"),
+        (name = "Absences", description = "User absence management (vacation, sick, home office)"),
+        (name = "Notifications", description = "In-app notification management"),
+        (name = "Waitlist", description = "Parking lot waitlist"),
+        (name = "Calendar", description = "Calendar events and iCal export"),
+        (name = "Team", description = "Team overview and member status")
     ),
     components(
         schemas(
@@ -180,6 +185,94 @@ use crate::{
         // Exports
         crate::api::export::admin_export_users_csv,
         crate::api::export::admin_export_bookings_csv,
+
+        // Health & Discovery (mod.rs)
+        crate::api::health_check,
+        crate::api::liveness_check,
+        crate::api::readiness_check,
+        crate::api::handshake,
+        crate::api::server_status,
+
+        // Users (mod.rs)
+        crate::api::get_current_user,
+        crate::api::update_current_user,
+        crate::api::get_user,
+        crate::api::change_password,
+        crate::api::user_stats,
+        crate::api::get_user_preferences,
+        crate::api::update_user_preferences,
+        crate::api::gdpr_export_data,
+        crate::api::gdpr_delete_account,
+
+        // Bookings (mod.rs)
+        crate::api::list_bookings,
+        crate::api::create_booking,
+        crate::api::get_booking,
+        crate::api::cancel_booking,
+        crate::api::get_booking_invoice,
+        crate::api::quick_book,
+        crate::api::booking_checkin,
+
+        // Vehicles (mod.rs)
+        crate::api::list_vehicles,
+        crate::api::create_vehicle,
+        crate::api::update_vehicle,
+        crate::api::delete_vehicle,
+        crate::api::upload_vehicle_photo,
+        crate::api::get_vehicle_photo,
+        crate::api::vehicle_city_codes,
+        crate::api::lot_qr_code,
+
+        // Admin (mod.rs)
+        crate::api::admin_list_users,
+        crate::api::admin_update_user_role,
+        crate::api::admin_update_user_status,
+        crate::api::admin_delete_user,
+        crate::api::admin_list_bookings,
+        crate::api::admin_get_settings,
+        crate::api::admin_update_settings,
+        crate::api::admin_get_features,
+        crate::api::admin_update_features,
+        crate::api::admin_stats,
+        crate::api::admin_reports,
+        crate::api::admin_heatmap,
+        crate::api::admin_dashboard_charts,
+        crate::api::admin_audit_log,
+        crate::api::admin_reset,
+        crate::api::get_impressum_admin,
+        crate::api::update_impressum,
+        crate::api::admin_list_announcements,
+
+        // Public (mod.rs)
+        crate::api::get_impressum,
+        crate::api::get_features,
+        crate::api::get_public_theme,
+        crate::api::get_active_announcements,
+        crate::api::public_occupancy,
+        crate::api::public_display,
+
+        // Absences (mod.rs)
+        crate::api::list_absences,
+        crate::api::create_absence,
+        crate::api::delete_absence,
+
+        // Notifications (mod.rs)
+        crate::api::list_notifications,
+        crate::api::mark_notification_read,
+        crate::api::mark_all_notifications_read,
+
+        // Waitlist (mod.rs)
+        crate::api::list_waitlist,
+        crate::api::join_waitlist,
+        crate::api::leave_waitlist,
+
+        // Calendar (mod.rs)
+        crate::api::calendar_events,
+        crate::api::user_calendar_ics,
+
+        // Team (mod.rs)
+        crate::api::team_today,
+        crate::api::team_list,
     )
 )]
 pub struct ApiDoc;
@@ -212,8 +305,11 @@ mod tests {
         let json = doc.to_json().unwrap();
         for tag in [
             "Authentication",
+            "Users",
+            "Bookings",
             "Lots",
             "Zones",
+            "Vehicles",
             "Credits",
             "Webhooks",
             "Favorites",
@@ -221,8 +317,12 @@ mod tests {
             "Setup",
             "Admin",
             "Health",
-            "Monitoring",
             "Public",
+            "Absences",
+            "Notifications",
+            "Waitlist",
+            "Calendar",
+            "Team",
         ] {
             assert!(json.contains(tag), "Missing tag: {tag}");
         }
@@ -291,6 +391,74 @@ mod tests {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
         for path in ["/admin/users/export-csv", "/admin/bookings/export-csv"] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_user_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/users/me",
+            "/api/v1/users/me/password",
+            "/api/v1/users/me/export",
+            "/api/v1/users/me/delete",
+            "/api/v1/user/stats",
+            "/api/v1/user/preferences",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_booking_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/bookings",
+            "/api/v1/bookings/{id}",
+            "/api/v1/bookings/{id}/checkin",
+            "/api/v1/bookings/quick",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_vehicle_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/vehicles",
+            "/api/v1/vehicles/{id}",
+            "/api/v1/vehicles/{id}/photo",
+            "/api/v1/vehicles/city-codes",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_admin_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/admin/users",
+            "/api/v1/admin/bookings",
+            "/api/v1/admin/stats",
+            "/api/v1/admin/settings",
+            "/api/v1/admin/audit-log",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_health_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in ["/health", "/health/live", "/health/ready", "/status"] {
             assert!(json.contains(path), "Missing path: {path}");
         }
     }
