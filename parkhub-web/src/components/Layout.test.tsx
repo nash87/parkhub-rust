@@ -57,6 +57,8 @@ vi.mock('react-i18next', () => ({
         'nav.notifications': 'Notifications',
         'nav.profile': 'Profile',
         'nav.admin': 'Admin',
+        'nav.lightMode': 'Light Mode',
+        'nav.darkMode': 'Dark Mode',
         'nav.logout': 'Log Out',
       };
       return map[key] || key;

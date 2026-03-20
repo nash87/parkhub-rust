@@ -3222,22 +3222,29 @@ async fn admin_list_bookings(
         }
     };
 
-    // Build a response enriched with user info (best-effort: fall back to IDs if user not found)
+    // Batch-load all users and lots upfront to avoid N+1 queries
+    let all_users = state_guard.db.list_users().await.unwrap_or_default();
+    let user_map: std::collections::HashMap<String, _> = all_users
+        .into_iter()
+        .map(|u| (u.id.to_string(), u))
+        .collect();
+
+    let all_lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
+    let lot_map: std::collections::HashMap<String, _> = all_lots
+        .into_iter()
+        .map(|l| (l.id.to_string(), l))
+        .collect();
+
     let mut response = Vec::with_capacity(bookings.len());
     for booking in bookings {
-        let (user_name, user_email) =
-            match state_guard.db.get_user(&booking.user_id.to_string()).await {
-                Ok(Some(u)) => (u.name, u.email),
-                _ => (booking.user_id.to_string(), String::new()),
-            };
+        let (user_name, user_email) = match user_map.get(&booking.user_id.to_string()) {
+            Some(u) => (u.name.clone(), u.email.clone()),
+            None => (booking.user_id.to_string(), String::new()),
+        };
 
-        let lot_name = match state_guard
-            .db
-            .get_parking_lot(&booking.lot_id.to_string())
-            .await
-        {
-            Ok(Some(l)) => l.name,
-            _ => booking.lot_id.to_string(),
+        let lot_name = match lot_map.get(&booking.lot_id.to_string()) {
+            Some(l) => l.name.clone(),
+            None => booking.lot_id.to_string(),
         };
 
         response.push(AdminBookingResponse {

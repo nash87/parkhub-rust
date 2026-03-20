@@ -101,7 +101,7 @@ export function Layout() {
           className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white transition-colors mb-2"
         >
           {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
-          {resolved === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          {resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
         </button>
 
         {/* User + logout */}

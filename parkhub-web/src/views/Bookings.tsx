@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { api, type Booking, type Vehicle } from '../api/client';
 import { BookingsSkeleton } from '../components/Skeleton';
+import { stagger, fadeUp } from '../constants/animations';
 import toast from 'react-hot-toast';
 import { format, formatDistanceToNow, isFuture } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
@@ -58,8 +59,8 @@ export function BookingsPage() {
   const upcoming = filtered.filter(b => isActiveOrConfirmed(b.status) && isFuture(new Date(b.start_time)));
   const past = filtered.filter(b => b.status === 'completed' || b.status === 'cancelled');
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
-  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+  const container = stagger;
+  const item = fadeUp;
 
   if (loading) return <BookingsSkeleton />;
 
