@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.5.4-brightgreen.svg?style=for-the-badge" alt="v1.5.4"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.6.0-brightgreen.svg?style=for-the-badge" alt="v1.6.0"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
@@ -94,6 +94,7 @@
 | Forgot Password page (self-service reset flow) | Done |
 | Vehicle registry (plate, make, model, color, default flag) | Done |
 | Full admin user management (list, role change, status, delete) | Done |
+| Admin user search | Done |
 | Absence tracking (homeoffice, vacation, sick, training) | Done |
 | Absence patterns (recurring weekly homeoffice) | Done |
 | Team overview — who is in office / on vacation today | Done |
@@ -117,7 +118,9 @@
 | Argon2id password hashing (OsRng salts) | Done |
 | AES-256-GCM database encryption at rest (optional) | Done |
 | TLS 1.3 (auto-generated cert or bring-your-own) | Done |
+| Typed AppError handling (structured error responses) | Done |
 | Rate limiting: 5 login/min, 3 register/min per IP; 100 req/s global | Done |
+| Rate-limited demo endpoints | Done |
 | Security headers: CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy | Done |
 | Request body size limit (4 MiB) | Done |
 | CORS: same-origin (localhost allowed in dev) | Done |
@@ -139,6 +142,8 @@
 | Prometheus metrics endpoint (`/metrics`) with HTTP + business metrics | Done |
 | Swagger UI at `/swagger-ui` with 18+ annotated endpoints | Done |
 | Use-case theming (company, residential, shared, rental, personal) | Done |
+| Demo reset with full DB wipe and re-seed | Done |
+| Auto-reset scheduler (every 6h in demo mode) | Done |
 | Automatic daily backups with configurable retention | Done |
 
 ### Deployment
@@ -155,6 +160,8 @@
 | Mobile-responsive UI | Done |
 | Command Palette (Ctrl+K) — quick navigation and actions | Done |
 | Accessibility (ARIA labels, keyboard navigation, screen reader) | Done |
+| React 19 useActionState for form handling | Done |
+| Tailwind CSS 4 with @utility directives | Done |
 | PWA (installable, offline-capable, service worker) | Done |
 | i18n — English + German (8 locale stubs) | Done |
 
@@ -242,13 +249,13 @@ The binary serves the full React frontend — no web server or reverse proxy nee
 
 ## Testing
 
-**727 tests total** across three layers:
+**965 tests total** across three layers:
 
 | Layer | Framework | Tests |
 |---|---|---|
-| Backend (Rust) | `cargo test` | 327 |
-| Frontend (React) | Vitest + Testing Library | 197 |
-| Backend (PHP) | PHPUnit | 203 |
+| Backend (Rust) | `cargo test` | 426 |
+| Frontend (React) | Vitest + Testing Library | 213 |
+| Backend (PHP) | PHPUnit | 326 |
 | E2E (browser) | Playwright | Included |
 | E2E (mobile) | Maestro | 5 flows |
 | Performance | Lighthouse CI | Included |

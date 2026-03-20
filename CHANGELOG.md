@@ -7,6 +7,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.0] - 2026-03-20
+
+### Added
+- **Typed AppError handling**: Structured error responses with consistent error codes across all endpoints
+- **Demo reset with DB wipe**: Full database clear and re-seed on demo reset (not just soft reset)
+- **Auto-reset scheduler**: Demo mode auto-resets every 6 hours with countdown in DemoOverlay
+- **React 19 useActionState**: Form handling migrated to React 19 `useActionState` pattern
+- **Tailwind CSS 4 @utility**: Custom utilities via Tailwind CSS 4 `@utility` directives
+- **Admin user search**: Search/filter users by name, email, or role in admin panel
+- **Rate-limited demo endpoints**: Demo reset and status endpoints are rate-limited to prevent abuse
+
+### Tests
+- **965 tests total**: 426 Rust + 213 Vitest + 326 PHP (up from 727 in v1.5.4)
+
+---
+
 ## [1.5.4] - 2026-03-20
 
 ### Added
