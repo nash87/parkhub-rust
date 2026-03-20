@@ -16,8 +16,10 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tower::ServiceBuilder;
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::trace::TraceLayer;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -431,6 +433,19 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Clone handle for the closure
     let metrics_handle_clone = metrics_handle.clone();
 
+    // Build CORS allowed-origins list.
+    // `PARKHUB_CORS_ORIGINS` can be set to a comma-separated list of allowed origins
+    // (e.g. "https://parkhub.example.com,https://admin.example.com").
+    // When unset or empty, only localhost/127.0.0.1 origins are permitted (dev default).
+    let extra_origins: Vec<String> = std::env::var("PARKHUB_CORS_ORIGINS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let x_request_id = HeaderName::from_static("x-request-id");
+
     let router = Router::new()
         .merge(public_routes)
         .merge(login_route)
@@ -472,9 +487,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Static files (web frontend) - fallback for all other routes
         .fallback(static_files::static_handler)
         .with_state(state)
+        // ── Outermost layers (applied last-in-first-out) ──────────────
+        // Propagate x-request-id from response back to the client
+        .layer(PropagateRequestIdLayer::new(x_request_id.clone()))
         // HTTP request metrics — captures method, path, status, duration for Prometheus
         .layer(axum::middleware::from_fn(http_metrics_middleware))
+        // Request-ID tracing middleware — logs request_id in every span
+        .layer(axum::middleware::from_fn(request_id_tracing_middleware))
         .layer(TraceLayer::new_for_http())
+        // Response compression (gzip + brotli) — negotiated via Accept-Encoding
+        .layer(CompressionLayer::new().gzip(true).br(true))
         // Global rate limit — 100 req/s with burst 200
         .layer(axum::middleware::from_fn(move |req, next| {
             crate::rate_limit::rate_limit_middleware(global_limiter.clone(), req, next)
@@ -483,19 +505,22 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .layer(axum::middleware::from_fn(security_headers_middleware))
         // Restrict request body size to prevent DoS via large payloads
         .layer(RequestBodyLimitLayer::new(MAX_REQUEST_BODY_BYTES))
-        // CORS: same-origin by default; no wildcard
+        // CORS: same-origin by default; no wildcard.
+        // Set PARKHUB_CORS_ORIGINS for production deployments.
         .layer(
             CorsLayer::new()
                 .allow_origin(tower_http::cors::AllowOrigin::predicate(
-                    |origin: &HeaderValue, _req_parts: &axum::http::request::Parts| {
-                        // Allow requests with no Origin header (same-origin, curl, mobile)
-                        // and explicitly allow localhost origins during development.
-                        // In production, the SPA is served from the same origin, so
-                        // cross-origin requests are not expected.
+                    move |origin: &HeaderValue, _req_parts: &axum::http::request::Parts| {
                         let s = origin.to_str().unwrap_or("");
-                        s.starts_with("http://localhost:")
+                        // Always allow localhost / 127.0.0.1 for development
+                        if s.starts_with("http://localhost:")
                             || s.starts_with("https://localhost:")
                             || s.starts_with("http://127.0.0.1:")
+                        {
+                            return true;
+                        }
+                        // Allow origins from PARKHUB_CORS_ORIGINS env var
+                        extra_origins.iter().any(|allowed| s == allowed)
                     },
                 ))
                 .allow_methods([
@@ -506,9 +531,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                     axum::http::Method::DELETE,
                     axum::http::Method::OPTIONS,
                 ])
-                .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
+                .allow_headers([
+                    header::AUTHORIZATION,
+                    header::CONTENT_TYPE,
+                    header::ACCEPT,
+                    HeaderName::from_static("x-request-id"),
+                ])
+                .expose_headers([HeaderName::from_static("x-request-id")])
                 .allow_credentials(false),
         )
+        // Assign a unique x-request-id to every inbound request (UUID v4)
+        .layer(SetRequestIdLayer::new(x_request_id, MakeRequestUuid))
         // 30-second request timeout — returns 408 on breach
         .layer(
             ServiceBuilder::new()
@@ -577,6 +610,43 @@ async fn security_headers_middleware(request: Request<Body>, next: Next) -> Resp
         HeaderName::from_static("strict-transport-security"),
         HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
     );
+
+    response
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REQUEST ID TRACING MIDDLEWARE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Attaches the `x-request-id` header value (set by `SetRequestIdLayer`) to the
+/// current tracing span so that every log line within this request includes the
+/// request ID.  Also ensures the header is copied to the response.
+async fn request_id_tracing_middleware(request: Request<Body>, next: Next) -> Response {
+    let request_id = request
+        .headers()
+        .get("x-request-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("-")
+        .to_owned();
+
+    let span = tracing::info_span!("request", request_id = %request_id);
+    let _guard = span.enter();
+
+    let mut response = {
+        // Drop the span guard before awaiting so the span covers the full
+        // request lifecycle via the instrument approach.
+        drop(_guard);
+        use tracing::Instrument;
+        next.run(request).instrument(span).await
+    };
+
+    // Ensure x-request-id is on the response (belt-and-suspenders with PropagateRequestIdLayer)
+    if let Ok(val) = HeaderValue::from_str(&request_id) {
+        response
+            .headers_mut()
+            .entry(HeaderName::from_static("x-request-id"))
+            .or_insert(val);
+    }
 
     response
 }
