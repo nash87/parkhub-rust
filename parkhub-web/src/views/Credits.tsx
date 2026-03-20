@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import { api, type UserCredits } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { staggerSlow, fadeUp } from '../constants/animations';
 
 export function CreditsPage() {
   const { t } = useTranslation();
@@ -20,8 +21,8 @@ export function CreditsPage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+  const container = staggerSlow;
+  const item = fadeUp;
 
   if (loading) return (
     <div className="space-y-6">

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Car, Plus, Trash, Star, X, SpinnerGap } from '@phosphor-icons/react';
 import { api, type Vehicle } from '../api/client';
 import { VehiclesSkeleton } from '../components/Skeleton';
+import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -65,8 +66,8 @@ export function VehiclesPage() {
     }
   }
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
-  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+  const container = stagger;
+  const item = fadeUp;
 
   if (loading) return <VehiclesSkeleton />;
 

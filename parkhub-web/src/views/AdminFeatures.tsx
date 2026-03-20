@@ -14,6 +14,7 @@ import {
 } from '../context/FeaturesContext';
 import { useUseCase } from '../context/UseCaseContext';
 import { AnimatePresence } from 'framer-motion';
+import { stagger } from '../constants/animations';
 import toast from 'react-hot-toast';
 
 const CATEGORY_ORDER = ['core', 'collaboration', 'billing', 'admin', 'experience'] as const;
@@ -63,7 +64,7 @@ export function AdminFeaturesPage() {
     modules: FEATURE_REGISTRY.filter(f => f.category === cat),
   })).filter(g => g.modules.length > 0);
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.06 } } };
+  const container = stagger;
   const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { ease: [0.22, 1, 0.36, 1] as const } } };
 
   return (

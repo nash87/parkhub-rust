@@ -45,6 +45,8 @@ export default {
       notifications: 'Notifications',
       profile: 'Profile',
       admin: 'Admin',
+      lightMode: 'Light Mode',
+      darkMode: 'Dark Mode',
       logout: 'Sign Out',
     },
     dashboard: {

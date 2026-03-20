@@ -45,6 +45,8 @@ export default {
       notifications: 'Mitteilungen',
       profile: 'Profil',
       admin: 'Admin',
+      lightMode: 'Heller Modus',
+      darkMode: 'Dunkler Modus',
       logout: 'Abmelden',
     },
     dashboard: {

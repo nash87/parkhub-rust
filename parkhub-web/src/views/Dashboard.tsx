@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api, type Booking, type UserStats } from '../api/client';
 import { DashboardSkeleton } from '../components/Skeleton';
+import { staggerSlow, fadeUp } from '../constants/animations';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -29,8 +30,8 @@ export function DashboardPage() {
   const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'confirmed');
   const name = user?.name?.split(' ')[0] || user?.username || '';
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+  const container = staggerSlow;
+  const item = fadeUp;
 
   if (loading) return <DashboardSkeleton />;
 
@@ -134,9 +135,9 @@ export function DashboardPage() {
               { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles') },
               { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings') },
               { to: '/credits', icon: Coins, label: t('nav.credits') },
-            ].map((action, i) => (
+            ].map((action) => (
               <Link
-                key={i}
+                key={action.to}
                 to={action.to}
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-surface-700 dark:text-surface-300 border border-surface-200 dark:border-surface-600 bg-white dark:bg-surface-800 hover:bg-surface-50 dark:hover:bg-surface-700/50 hover:border-surface-300 dark:hover:border-surface-500 transition-colors"
                 style={{ borderRadius: 8 }}

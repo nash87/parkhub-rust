@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api, type UserStats } from '../api/client';
 import { useTranslation } from 'react-i18next';
+import { staggerSlow, fadeUp } from '../constants/animations';
 import toast from 'react-hot-toast';
 
 export function ProfilePage() {
@@ -115,8 +116,8 @@ export function ProfilePage() {
   const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
   const roleLabels: Record<string, string> = { user: 'Benutzer', admin: 'Admin', superadmin: 'Super-Admin' };
 
-  const container = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.08 } } };
-  const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+  const container = staggerSlow;
+  const item = fadeUp;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="max-w-3xl mx-auto space-y-6">
