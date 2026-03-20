@@ -420,9 +420,17 @@ async fn main() -> Result<()> {
         config.port
     );
 
+    // Shared shutdown signal — when triggered, the HTTP server will drain
+    // in-flight connections gracefully before exiting.
+    let shutdown_tx = {
+        let (tx, _) = tokio::sync::broadcast::channel::<()>(1);
+        Arc::new(tx)
+    };
+
     // Start server in background task
     let server_config = config.clone();
     let data_dir_for_server = data_dir.clone();
+    let shutdown_rx = shutdown_tx.subscribe();
     tokio::spawn(async move {
         if server_config.enable_tls {
             match tls::load_or_create_tls_config(&data_dir_for_server).await {
@@ -443,10 +451,16 @@ async fn main() -> Result<()> {
             warn!("TLS disabled - connections are not encrypted!");
             match tokio::net::TcpListener::bind(addr).await {
                 Ok(listener) => {
+                    let mut shutdown_rx = shutdown_rx;
+                    let shutdown_signal = async move {
+                        let _ = shutdown_rx.recv().await;
+                        info!("Graceful shutdown signal received — draining connections");
+                    };
                     if let Err(e) = axum::serve(
                         listener,
                         app.into_make_service_with_connect_info::<SocketAddr>(),
                     )
+                    .with_graceful_shutdown(shutdown_signal)
                     .await
                     {
                         tracing::error!("Server error: {}", e);
@@ -728,6 +742,12 @@ async fn main() -> Result<()> {
         tokio::signal::ctrl_c().await?;
         info!("Shutting down...");
     }
+
+    // Trigger graceful shutdown — HTTP server will drain in-flight connections
+    let _ = shutdown_tx.send(());
+    info!("Graceful shutdown initiated, waiting for connections to drain...");
+    // Give the server a moment to finish draining
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     Ok(())
 }
