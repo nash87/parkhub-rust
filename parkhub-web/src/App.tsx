@@ -37,6 +37,7 @@ const TeamPage = lazy(() => import('./views/Team'), 'TeamPage');
 const NotificationsPage = lazy(() => import('./views/Notifications'), 'NotificationsPage');
 const CalendarPage = lazy(() => import('./views/Calendar'), 'CalendarPage');
 const DemoOverlay = lazy(() => import('./components/DemoOverlay'), 'DemoOverlay');
+const InstallPrompt = lazy(() => import('./components/InstallPrompt'), 'InstallPrompt');
 
 // Admin pages
 const AdminPage = lazy(() => import('./views/Admin'), 'AdminPage');
@@ -142,6 +143,7 @@ export function App() {
         <AuthProvider>
           <AppRoutes />
           <Suspense fallback={null}><DemoOverlay /></Suspense>
+          <Suspense fallback={null}><InstallPrompt /></Suspense>
           <Toaster
             position="bottom-center"
             toastOptions={{
