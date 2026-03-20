@@ -158,3 +158,70 @@ pub(super) async fn admin_export_bookings_csv(
         csv,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_csv_escape_plain_text() {
+        assert_eq!(csv_escape("hello"), "hello");
+        assert_eq!(csv_escape("John Doe"), "John Doe");
+    }
+
+    #[test]
+    fn test_csv_escape_formula_injection_equals() {
+        assert_eq!(csv_escape("=SUM(A1)"), "'=SUM(A1)");
+    }
+
+    #[test]
+    fn test_csv_escape_formula_injection_plus() {
+        assert_eq!(csv_escape("+cmd"), "'+cmd");
+    }
+
+    #[test]
+    fn test_csv_escape_formula_injection_minus() {
+        assert_eq!(csv_escape("-cmd"), "'-cmd");
+    }
+
+    #[test]
+    fn test_csv_escape_formula_injection_at() {
+        assert_eq!(csv_escape("@SUM"), "'@SUM");
+    }
+
+    #[test]
+    fn test_csv_escape_commas() {
+        assert_eq!(csv_escape("hello,world"), "\"hello,world\"");
+    }
+
+    #[test]
+    fn test_csv_escape_double_quotes() {
+        assert_eq!(csv_escape(r#"say "hi""#), r#""say ""hi""""#);
+    }
+
+    #[test]
+    fn test_csv_escape_newlines() {
+        assert_eq!(csv_escape("line1\nline2"), "\"line1\nline2\"");
+    }
+
+    #[test]
+    fn test_csv_escape_formula_with_comma() {
+        assert_eq!(csv_escape("=1,2"), "\"'=1,2\"");
+    }
+
+    #[test]
+    fn test_csv_escape_empty_string() {
+        assert_eq!(csv_escape(""), "");
+    }
+
+    #[test]
+    fn test_csv_escape_uuid_not_prefixed() {
+        let uuid_str = "550e8400-e29b-41d4-a716-446655440000";
+        assert_eq!(csv_escape(uuid_str), uuid_str);
+    }
+
+    #[test]
+    fn test_csv_escape_minus_number() {
+        assert_eq!(csv_escape("-10"), "'-10");
+    }
+}

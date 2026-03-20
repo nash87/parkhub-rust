@@ -191,3 +191,98 @@ pub async fn send_push_notification(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_subscribe_request_deserialize() {
+        let json = r#"{"endpoint":"https://push.example.com/send/abc","keys":{"p256dh":"BNcR...","auth":"tBH..."}}"#;
+        let req: SubscribeRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.endpoint, "https://push.example.com/send/abc");
+        assert_eq!(req.keys.p256dh, "BNcR...");
+        assert_eq!(req.keys.auth, "tBH...");
+    }
+
+    #[test]
+    fn test_subscribe_request_missing_keys() {
+        let json = r#"{"endpoint":"https://push.example.com/send/abc"}"#;
+        let result: Result<SubscribeRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_subscribe_request_missing_endpoint() {
+        let json = r#"{"keys":{"p256dh":"BNcR...","auth":"tBH..."}}"#;
+        let result: Result<SubscribeRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_push_keys_missing_auth() {
+        let json = r#"{"endpoint":"https://example.com","keys":{"p256dh":"BNcR..."}}"#;
+        let result: Result<SubscribeRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_vapid_key_response_serialize() {
+        let resp = VapidKeyResponse {
+            public_key: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8p8ljwlQA".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("public_key"));
+        assert!(json.contains("BNcR"));
+    }
+
+    #[test]
+    fn test_subscription_response_serialize() {
+        let resp = SubscriptionResponse {
+            id: "test-id".to_string(),
+            endpoint: "https://push.example.com".to_string(),
+            created_at: "2026-03-20T10:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["id"], "test-id");
+        assert_eq!(value["endpoint"], "https://push.example.com");
+        assert_eq!(value["created_at"], "2026-03-20T10:00:00Z");
+    }
+
+    #[test]
+    fn test_subscription_response_from_push_subscription() {
+        let sub = PushSubscription {
+            id: Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap(),
+            user_id: Uuid::new_v4(),
+            endpoint: "https://push.example.com/sub/123".to_string(),
+            p256dh: "key1".to_string(),
+            auth: "auth1".to_string(),
+            created_at: chrono::DateTime::parse_from_rfc3339("2026-03-20T10:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        };
+        let resp = SubscriptionResponse::from(&sub);
+        assert_eq!(resp.id, "550e8400-e29b-41d4-a716-446655440000");
+        assert_eq!(resp.endpoint, "https://push.example.com/sub/123");
+        assert!(resp.created_at.contains("2026-03-20"));
+    }
+
+    #[test]
+    fn test_push_subscription_serde_roundtrip() {
+        let sub = PushSubscription {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            endpoint: "https://fcm.googleapis.com/fcm/send/abc".to_string(),
+            p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA".to_string(),
+            auth: "tBHItJI5svbpC7Aq".to_string(),
+            created_at: Utc::now(),
+        };
+        let json = serde_json::to_string(&sub).unwrap();
+        let deserialized: PushSubscription = serde_json::from_str(&json).unwrap();
+        assert_eq!(sub.id, deserialized.id);
+        assert_eq!(sub.endpoint, deserialized.endpoint);
+        assert_eq!(sub.p256dh, deserialized.p256dh);
+        assert_eq!(sub.auth, deserialized.auth);
+    }
+}

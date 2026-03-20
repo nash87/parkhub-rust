@@ -194,3 +194,98 @@ pub async fn setup_init(
         }))),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json;
+
+    #[test]
+    fn test_setup_request_deserialize_full() {
+        let json = r#"{
+            "company_name": "ParkCorp",
+            "admin_username": "admin",
+            "admin_password": "Secure123!",
+            "admin_email": "admin@parkcorp.de",
+            "admin_name": "Admin User",
+            "use_case": "corporate",
+            "create_sample_data": true
+        }"#;
+        let req: SetupRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.company_name, "ParkCorp");
+        assert_eq!(req.admin_username, "admin");
+        assert_eq!(req.admin_password, "Secure123!");
+        assert_eq!(req.admin_email, "admin@parkcorp.de");
+        assert_eq!(req.admin_name, "Admin User");
+        assert_eq!(req.use_case.as_deref(), Some("corporate"));
+        assert!(req.create_sample_data);
+    }
+
+    #[test]
+    fn test_setup_request_deserialize_minimal() {
+        let json = r#"{
+            "company_name": "Mini",
+            "admin_username": "root",
+            "admin_password": "P@ssw0rd!",
+            "admin_email": "root@mini.com",
+            "admin_name": "Root"
+        }"#;
+        let req: SetupRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.company_name, "Mini");
+        assert!(req.use_case.is_none());
+        assert!(!req.create_sample_data);
+    }
+
+    #[test]
+    fn test_setup_request_missing_required_field() {
+        let json = r#"{"company_name": "Test"}"#;
+        let result: Result<SetupRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_setup_status_serialize() {
+        let status = SetupStatus {
+            setup_completed: false,
+            has_admin: false,
+            has_parking_lots: false,
+            has_users: false,
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["setup_completed"], false);
+        assert_eq!(value["has_admin"], false);
+        assert_eq!(value["has_parking_lots"], false);
+        assert_eq!(value["has_users"], false);
+    }
+
+    #[test]
+    fn test_setup_status_serialize_completed() {
+        let status = SetupStatus {
+            setup_completed: true,
+            has_admin: true,
+            has_parking_lots: true,
+            has_users: true,
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["setup_completed"], true);
+        assert_eq!(value["has_admin"], true);
+    }
+
+    #[test]
+    fn test_setup_request_create_sample_data_default() {
+        let json = r#"{
+            "company_name": "C",
+            "admin_username": "usr",
+            "admin_password": "pass1234",
+            "admin_email": "a@b.com",
+            "admin_name": "A"
+        }"#;
+        let req: SetupRequest = serde_json::from_str(json).unwrap();
+        assert!(
+            !req.create_sample_data,
+            "create_sample_data should default to false"
+        );
+    }
+}
