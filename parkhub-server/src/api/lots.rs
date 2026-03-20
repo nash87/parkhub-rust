@@ -818,3 +818,298 @@ pub(crate) async fn delete_slot(
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
+
+#[cfg(test)]
+mod tests {
+    use parkhub_common::models::{LotStatus, SlotStatus, SlotType};
+    use parkhub_common::{PricingInfo, PricingRate};
+
+    use crate::requests::{parse_lot_status, CreateParkingLotRequest, UpdateParkingLotRequest};
+    use validator::Validate;
+
+    // ── parse_lot_status ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_lot_status_all_variants() {
+        assert_eq!(parse_lot_status("open"), Some(LotStatus::Open));
+        assert_eq!(parse_lot_status("closed"), Some(LotStatus::Closed));
+        assert_eq!(parse_lot_status("full"), Some(LotStatus::Full));
+        assert_eq!(
+            parse_lot_status("maintenance"),
+            Some(LotStatus::Maintenance)
+        );
+    }
+
+    #[test]
+    fn test_parse_lot_status_case_sensitive() {
+        assert!(parse_lot_status("Open").is_none());
+        assert!(parse_lot_status("OPEN").is_none());
+        assert!(parse_lot_status("Full").is_none());
+        assert!(parse_lot_status("MAINTENANCE").is_none());
+    }
+
+    #[test]
+    fn test_parse_lot_status_empty_and_whitespace() {
+        assert!(parse_lot_status("").is_none());
+        assert!(parse_lot_status(" open").is_none());
+        assert!(parse_lot_status("open ").is_none());
+        assert!(parse_lot_status(" ").is_none());
+    }
+
+    #[test]
+    fn test_parse_lot_status_garbage_values() {
+        assert!(parse_lot_status("unknown").is_none());
+        assert!(parse_lot_status("123").is_none());
+        assert!(parse_lot_status("open;closed").is_none());
+    }
+
+    // ── CreateParkingLotRequest: serde edge cases ───────────────────────────
+
+    #[test]
+    fn test_create_lot_request_missing_name_fails() {
+        let json = r#"{"total_slots": 10}"#;
+        let result: Result<CreateParkingLotRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_zero_hourly_rate() {
+        let json = r#"{"name": "Free Lot", "hourly_rate": 0.0}"#;
+        let req: CreateParkingLotRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.hourly_rate, Some(0.0));
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_create_lot_request_max_hourly_rate() {
+        let json = r#"{"name": "VIP Lot", "hourly_rate": 1000.0}"#;
+        let req: CreateParkingLotRequest = serde_json::from_str(json).unwrap();
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_create_lot_request_hourly_rate_over_max() {
+        let req = CreateParkingLotRequest {
+            name: "X".to_string(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 1,
+            hourly_rate: Some(1001.0),
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_negative_rates_fail_validation() {
+        let req_daily_max = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 5,
+            hourly_rate: None,
+            daily_max: Some(-1.0),
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req_daily_max.validate().is_err());
+
+        let req_monthly = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 5,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: Some(-50.0),
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req_monthly.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_name_exact_min_length() {
+        let req = CreateParkingLotRequest {
+            name: "A".to_string(), // exactly 1 char — min boundary
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 1,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_create_lot_request_name_empty_fails() {
+        let req = CreateParkingLotRequest {
+            name: String::new(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 1,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_extreme_coords() {
+        let south_pole = CreateParkingLotRequest {
+            name: "South Pole".to_string(),
+            address: None,
+            latitude: Some(-90.0),
+            longitude: Some(0.0),
+            total_slots: 1,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(south_pole.validate().is_ok());
+
+        let invalid_lat = CreateParkingLotRequest {
+            name: "Beyond".to_string(),
+            address: None,
+            latitude: Some(-90.1),
+            longitude: None,
+            total_slots: 1,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(invalid_lat.validate().is_err());
+    }
+
+    // ── UpdateParkingLotRequest: serde edge cases ───────────────────────────
+
+    #[test]
+    fn test_update_lot_request_currency_four_chars_fails() {
+        let req = UpdateParkingLotRequest {
+            name: None,
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: None,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: Some("EURO".to_string()),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_lot_request_zero_slots_fails() {
+        let req = UpdateParkingLotRequest {
+            name: None,
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: Some(0),
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: None,
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_lot_request_exactly_max_slots() {
+        let req = UpdateParkingLotRequest {
+            name: None,
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: Some(10000),
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: None,
+            status: None,
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    // ── SlotType / SlotStatus model serde ────────────────────────────────────
+
+    #[test]
+    fn test_slot_type_serde_roundtrip() {
+        let types = [
+            SlotType::Standard,
+            SlotType::Compact,
+            SlotType::Large,
+            SlotType::Handicap,
+            SlotType::Electric,
+            SlotType::Motorcycle,
+            SlotType::Vip,
+        ];
+        for t in &types {
+            let json = serde_json::to_string(t).unwrap();
+            let back: SlotType = serde_json::from_str(&json).unwrap();
+            // Both should serialize to the same JSON string
+            assert_eq!(serde_json::to_string(&back).unwrap(), json);
+        }
+    }
+
+    #[test]
+    fn test_slot_status_serde_roundtrip() {
+        let statuses = [
+            SlotStatus::Available,
+            SlotStatus::Occupied,
+            SlotStatus::Reserved,
+            SlotStatus::Maintenance,
+            SlotStatus::Disabled,
+        ];
+        for s in &statuses {
+            let json = serde_json::to_string(s).unwrap();
+            let back: SlotStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(serde_json::to_string(&back).unwrap(), json);
+        }
+    }
+
+    #[test]
+    fn test_pricing_info_serde() {
+        let pricing = PricingInfo {
+            currency: "EUR".to_string(),
+            rates: vec![PricingRate {
+                duration_minutes: 60,
+                price: 2.50,
+                label: "1 hour".to_string(),
+            }],
+            daily_max: Some(20.0),
+            monthly_pass: None,
+        };
+
+        let json = serde_json::to_string(&pricing).unwrap();
+        let back: PricingInfo = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(back.currency, "EUR");
+        assert_eq!(back.rates.len(), 1);
+        assert!((back.rates[0].price - 2.50).abs() < 1e-9);
+        assert_eq!(back.daily_max, Some(20.0));
+        assert!(back.monthly_pass.is_none());
+    }
+}

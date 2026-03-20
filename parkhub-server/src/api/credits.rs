@@ -222,6 +222,142 @@ mod tests {
         let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
         assert_eq!(req.amount, 10000);
     }
+
+    #[test]
+    fn test_admin_grant_credits_request_max_i32() {
+        let json = r#"{"amount": 2147483647}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, i32::MAX);
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_min_i32() {
+        let json = r#"{"amount": -2147483648}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, i32::MIN);
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_rejects_float() {
+        let json = r#"{"amount": 5.5}"#;
+        let result: Result<AdminGrantCreditsRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_rejects_string_amount() {
+        let json = r#"{"amount": "fifty"}"#;
+        let result: Result<AdminGrantCreditsRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_long_description() {
+        let long_desc = "x".repeat(10000);
+        let json = serde_json::json!({"amount": 100, "description": long_desc});
+        let req: AdminGrantCreditsRequest = serde_json::from_value(json).unwrap();
+        assert_eq!(req.description.unwrap().len(), 10000);
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_null_description() {
+        let json = r#"{"amount": 10, "description": null}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert!(req.description.is_none());
+    }
+
+    #[test]
+    fn test_admin_grant_credits_amount_boundary_validation_logic() {
+        // Boundary: 1 is valid, 0 is not
+        let at_min: AdminGrantCreditsRequest = serde_json::from_str(r#"{"amount": 1}"#).unwrap();
+        assert_eq!(at_min.amount, 1);
+        assert!(at_min.amount >= 1 && at_min.amount <= 10000);
+
+        let below_min: AdminGrantCreditsRequest = serde_json::from_str(r#"{"amount": 0}"#).unwrap();
+        assert!(below_min.amount < 1);
+
+        let at_max: AdminGrantCreditsRequest =
+            serde_json::from_str(r#"{"amount": 10000}"#).unwrap();
+        assert!(at_max.amount >= 1 && at_max.amount <= 10000);
+
+        let above_max: AdminGrantCreditsRequest =
+            serde_json::from_str(r#"{"amount": 10001}"#).unwrap();
+        assert!(above_max.amount > 10000);
+    }
+
+    #[test]
+    fn test_credit_transaction_type_serde() {
+        use parkhub_common::CreditTransactionType;
+
+        let grant: CreditTransactionType = serde_json::from_str(r#""grant""#).unwrap();
+        assert_eq!(grant, CreditTransactionType::Grant);
+
+        let deduction: CreditTransactionType = serde_json::from_str(r#""deduction""#).unwrap();
+        assert_eq!(deduction, CreditTransactionType::Deduction);
+
+        let refund: CreditTransactionType = serde_json::from_str(r#""refund""#).unwrap();
+        assert_eq!(refund, CreditTransactionType::Refund);
+
+        let monthly_refill: CreditTransactionType =
+            serde_json::from_str(r#""monthly_refill""#).unwrap();
+        assert_eq!(monthly_refill, CreditTransactionType::MonthlyRefill);
+
+        let adjustment: CreditTransactionType = serde_json::from_str(r#""adjustment""#).unwrap();
+        assert_eq!(adjustment, CreditTransactionType::Adjustment);
+    }
+
+    #[test]
+    fn test_credit_transaction_type_unknown_variant() {
+        use parkhub_common::CreditTransactionType;
+        let result: Result<CreditTransactionType, _> = serde_json::from_str(r#""unknown""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_credit_transaction_full_serde() {
+        use parkhub_common::{CreditTransaction, CreditTransactionType};
+
+        let tx_json = serde_json::json!({
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "user_id": "550e8400-e29b-41d4-a716-446655440001",
+            "booking_id": null,
+            "amount": 50,
+            "transaction_type": "grant",
+            "description": "Test grant",
+            "granted_by": "550e8400-e29b-41d4-a716-446655440002",
+            "created_at": "2024-01-01T00:00:00Z"
+        });
+
+        let tx: CreditTransaction = serde_json::from_value(tx_json).unwrap();
+        assert_eq!(tx.amount, 50);
+        assert_eq!(tx.transaction_type, CreditTransactionType::Grant);
+        assert_eq!(tx.description.as_deref(), Some("Test grant"));
+        assert!(tx.booking_id.is_none());
+        assert!(tx.granted_by.is_some());
+    }
+
+    #[test]
+    fn test_credit_transaction_with_booking_id() {
+        use parkhub_common::{CreditTransaction, CreditTransactionType};
+
+        let tx_json = serde_json::json!({
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "user_id": "550e8400-e29b-41d4-a716-446655440001",
+            "booking_id": "550e8400-e29b-41d4-a716-446655440010",
+            "amount": -30,
+            "transaction_type": "deduction",
+            "description": null,
+            "granted_by": null,
+            "created_at": "2024-06-15T12:00:00Z"
+        });
+
+        let tx: CreditTransaction = serde_json::from_value(tx_json).unwrap();
+        assert_eq!(tx.amount, -30);
+        assert_eq!(tx.transaction_type, CreditTransactionType::Deduction);
+        assert!(tx.booking_id.is_some());
+        assert!(tx.granted_by.is_none());
+        assert!(tx.description.is_none());
+    }
 }
 
 /// `POST /api/v1/admin/credits/refill-all` — refill all active users' credits (admin only)
