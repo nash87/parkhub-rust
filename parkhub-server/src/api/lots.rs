@@ -34,15 +34,19 @@ use parkhub_common::UserRole;
         (status = 200, description = "List of all parking lots"),
     )
 )]
+#[tracing::instrument(skip(state))]
 pub(crate) async fn list_lots(
     State(state): State<SharedState>,
 ) -> Json<ApiResponse<Vec<ParkingLot>>> {
     let state = state.read().await;
 
     match state.db.list_parking_lots().await {
-        Ok(lots) => Json(ApiResponse::success(lots)),
+        Ok(lots) => {
+            tracing::debug!(count = lots.len(), "Listed parking lots");
+            Json(ApiResponse::success(lots))
+        }
         Err(e) => {
-            tracing::error!("Database error: {}", e);
+            tracing::error!(error = %e, "Failed to list parking lots");
             Json(ApiResponse::error(
                 "SERVER_ERROR",
                 "Failed to list parking lots",
@@ -64,6 +68,7 @@ pub(crate) async fn list_lots(
         (status = 403, description = "Admin access required"),
     )
 )]
+#[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, lot_name = %req.name))]
 pub(crate) async fn create_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

@@ -60,6 +60,7 @@ struct PasswordResetToken {
         (status = 403, description = "Account disabled"),
     )
 )]
+#[tracing::instrument(skip(state, request), fields(username = %request.username))]
 pub(crate) async fn login(
     State(state): State<SharedState>,
     Json(request): Json<LoginRequest>,
@@ -190,6 +191,7 @@ pub(crate) async fn login(
         (status = 409, description = "Email already exists"),
     )
 )]
+#[tracing::instrument(skip(state, request), fields(email = %request.email))]
 pub(crate) async fn register(
     State(state): State<SharedState>,
     Json(request): Json<RegisterRequest>,
@@ -349,6 +351,7 @@ pub(crate) async fn register(
         (status = 401, description = "Invalid or expired refresh token"),
     )
 )]
+#[tracing::instrument(skip(state, request))]
 pub(crate) async fn refresh_token(
     State(state): State<SharedState>,
     Json(request): Json<RefreshTokenRequest>,
@@ -441,6 +444,7 @@ pub(crate) async fn refresh_token(
         (status = 200, description = "Reset email sent (always succeeds to prevent enumeration)"),
     )
 )]
+#[tracing::instrument(skip(state, request), fields(email = %request.email))]
 pub(crate) async fn forgot_password(
     State(state): State<SharedState>,
     Json(request): Json<ForgotPasswordRequest>,
@@ -531,6 +535,7 @@ pub(crate) async fn forgot_password(
         (status = 400, description = "Invalid or expired token"),
     )
 )]
+#[tracing::instrument(skip(state, request))]
 pub(crate) async fn reset_password(
     State(state): State<SharedState>,
     Json(request): Json<ResetPasswordRequest>,
