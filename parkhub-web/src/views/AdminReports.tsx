@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning } from '@phosphor-icons/react';
-import { api, type AdminStats } from '../api/client';
+import { api, type AdminStats, type Booking } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
+import { OccupancyHeatmap } from '../components/OccupancyHeatmap';
 
 function StatCard({ icon: Icon, label, value }: {
   icon: any;
@@ -60,11 +61,16 @@ function weeklyBookingData(totalBookings: number): { label: string; value: numbe
 export function AdminReportsPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.adminStats().then(res => {
-      if (res.success && res.data) setStats(res.data);
+    Promise.all([
+      api.adminStats(),
+      api.getBookings(),
+    ]).then(([statsRes, bookingsRes]) => {
+      if (statsRes.success && statsRes.data) setStats(statsRes.data);
+      if (bookingsRes.success && bookingsRes.data) setBookings(bookingsRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -77,6 +83,11 @@ export function AdminReportsPage() {
     () => mockLotOccupancy(stats?.total_lots ?? 0, stats?.active_bookings ?? 0),
     [stats?.total_lots, stats?.active_bookings],
   );
+
+  const totalSlots = useMemo(() => {
+    const lots = stats?.total_lots ?? 0;
+    return lots > 0 ? Math.max(lots * 10, stats?.active_bookings ?? 1) : 20;
+  }, [stats?.total_lots, stats?.active_bookings]);
 
   if (loading) {
     return (
@@ -188,6 +199,17 @@ export function AdminReportsPage() {
           </p>
         </div>
       )}
+
+      {/* Occupancy Heatmap */}
+      <div className="card p-6">
+        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-1">
+          {t('heatmap.title')}
+        </h3>
+        <p className="text-xs text-surface-500 dark:text-surface-400 mb-4">
+          {t('heatmap.subtitle')}
+        </p>
+        <OccupancyHeatmap bookings={bookings} totalSlots={totalSlots} />
+      </div>
     </motion.div>
   );
 }
