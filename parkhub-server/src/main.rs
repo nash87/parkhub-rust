@@ -1385,7 +1385,7 @@ fn is_letter_p(x: i32, y: i32, size: i32) -> bool {
 }
 
 /// Create the admin user in the database
-async fn create_admin_user(db: &Database, config: &ServerConfig) -> Result<()> {
+pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> Result<()> {
     use chrono::Utc;
     use parkhub_common::models::{User, UserPreferences, UserRole};
     use uuid::Uuid;

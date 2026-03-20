@@ -405,7 +405,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             auth_middleware,
         ));
 
-    // Demo mode routes (no auth, in-memory state)
+    // Demo mode routes (no auth, in-memory state + AppState for DB reset)
     let demo_state = demo::new_demo_state();
     let demo_state_ret = demo_state.clone();
     let demo_routes = Router::new()
@@ -413,7 +413,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/demo/vote", post(demo::demo_vote))
         .route("/api/v1/demo/reset", post(demo::demo_reset))
         .route("/api/v1/demo/config", get(demo::demo_config))
-        .layer(Extension(demo_state));
+        .layer(Extension(demo_state))
+        .layer(Extension(state.clone()));
 
     // Clone handle for the closure
     let metrics_handle_clone = metrics_handle.clone();
