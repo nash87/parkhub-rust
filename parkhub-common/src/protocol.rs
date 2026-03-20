@@ -101,6 +101,7 @@ pub struct RefreshTokenRequest {
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,
+    pub password_confirmation: String,
     pub name: String,
 }
 

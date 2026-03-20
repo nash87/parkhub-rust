@@ -209,6 +209,33 @@ pub(crate) async fn register(
         );
     }
 
+    // Password confirmation must match
+    if request.password != request.password_confirmation {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "PASSWORD_MISMATCH",
+                "Password and confirmation do not match",
+            )),
+        );
+    }
+
+    // Password complexity: min 8 chars, at least one lowercase, uppercase, digit
+    let pw = &request.password;
+    if pw.len() < 8
+        || !pw.chars().any(|c| c.is_ascii_lowercase())
+        || !pw.chars().any(|c| c.is_ascii_uppercase())
+        || !pw.chars().any(|c| c.is_ascii_digit())
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "WEAK_PASSWORD",
+                "Password must be at least 8 characters with uppercase, lowercase, and a digit",
+            )),
+        );
+    }
+
     // Check if email already exists
     if let Ok(Some(_)) = state_guard.db.get_user_by_email(&request.email).await {
         return (
