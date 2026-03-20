@@ -43,6 +43,9 @@ pub mod utils;
 #[allow(dead_code)]
 mod validation;
 
+#[cfg(test)]
+mod integration_tests;
+
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};
 use discovery::MdnsService;
