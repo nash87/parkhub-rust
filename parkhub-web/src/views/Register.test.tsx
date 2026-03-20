@@ -31,6 +31,9 @@ vi.mock('react-i18next', () => ({
         'auth.signUp': 'Sign Up',
         'auth.signIn': 'Sign In',
         'auth.hasAccount': 'Already have an account?',
+        'auth.minChars': 'Min. 8 characters',
+        'auth.registrationFailed': 'Registration failed',
+        'auth.creatingAccount': 'Creating account...',
       };
       return map[key] || key;
     },

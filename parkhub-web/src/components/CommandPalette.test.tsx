@@ -59,7 +59,7 @@ describe('CommandPalette', () => {
   it('renders all action items', () => {
     render(<CommandPalette open={true} onClose={onClose} />);
     expect(screen.getByText('Book a Spot')).toBeInTheDocument();
-    expect(screen.getByText('My Bookings')).toBeInTheDocument();
+    expect(screen.getByText('Bookings')).toBeInTheDocument();
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
     expect(screen.getByText('Profile')).toBeInTheDocument();
     expect(screen.getByText('Admin')).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('CommandPalette', () => {
     await user.type(input, 'book');
 
     expect(screen.getByText('Book a Spot')).toBeInTheDocument();
-    expect(screen.getByText('My Bookings')).toBeInTheDocument();
+    expect(screen.getByText('Bookings')).toBeInTheDocument();
     expect(screen.queryByText('Vehicles')).not.toBeInTheDocument();
     expect(screen.queryByText('Profile')).not.toBeInTheDocument();
   });

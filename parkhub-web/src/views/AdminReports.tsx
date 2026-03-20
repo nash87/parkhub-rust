@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning } from '@phosphor-icons/react';
 import { api, type AdminStats } from '../api/client';
+import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
 
 function StatCard({ icon: Icon, label, value }: {
@@ -57,6 +58,7 @@ function weeklyBookingData(totalBookings: number): { label: string; value: numbe
 }
 
 export function AdminReportsPage() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -87,31 +89,31 @@ export function AdminReportsPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
       {/* Header */}
-      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Reports</h2>
+      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.reports')}</h2>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Users}
-          label="Total Users"
+          label={t('admin.totalUsers')}
           value={stats?.total_users ?? 0}
           color="primary"
         />
         <StatCard
           icon={Buildings}
-          label="Total Lots"
+          label={t('admin.totalLots')}
           value={stats?.total_lots ?? 0}
           color="accent"
         />
         <StatCard
           icon={CalendarCheck}
-          label="Total Bookings"
+          label={t('admin.totalBookings')}
           value={stats?.total_bookings ?? 0}
           color="info"
         />
         <StatCard
           icon={Lightning}
-          label="Active Bookings"
+          label={t('admin.activeBookings')}
           value={stats?.active_bookings ?? 0}
           color="success"
         />
@@ -119,10 +121,10 @@ export function AdminReportsPage() {
 
       {/* Summary Card */}
       <div className="card p-6">
-        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-4">Overview</h3>
+        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-4">{t('admin.overview')}</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
-            <span className="text-sm text-surface-600 dark:text-surface-400">Utilization Rate</span>
+            <span className="text-sm text-surface-600 dark:text-surface-400">{t('admin.utilizationRate')}</span>
             <span className="text-sm font-semibold text-surface-900 dark:text-white">
               {stats && stats.total_lots > 0
                 ? `${Math.round((stats.active_bookings / Math.max(stats.total_lots, 1)) * 100)}%`
@@ -130,7 +132,7 @@ export function AdminReportsPage() {
             </span>
           </div>
           <div className="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
-            <span className="text-sm text-surface-600 dark:text-surface-400">Avg. Bookings per User</span>
+            <span className="text-sm text-surface-600 dark:text-surface-400">{t('admin.avgBookingsPerUser')}</span>
             <span className="text-sm font-semibold text-surface-900 dark:text-white">
               {stats && stats.total_users > 0
                 ? (stats.total_bookings / stats.total_users).toFixed(1)
@@ -138,7 +140,7 @@ export function AdminReportsPage() {
             </span>
           </div>
           <div className="flex items-center justify-between py-3">
-            <span className="text-sm text-surface-600 dark:text-surface-400">Active Booking Rate</span>
+            <span className="text-sm text-surface-600 dark:text-surface-400">{t('admin.activeBookingRate')}</span>
             <span className="text-sm font-semibold text-surface-900 dark:text-white">
               {stats && stats.total_bookings > 0
                 ? `${Math.round((stats.active_bookings / stats.total_bookings) * 100)}%`
@@ -151,7 +153,7 @@ export function AdminReportsPage() {
       {/* Bookings This Week Chart */}
       <div className="card p-6">
         <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-4">
-          Bookings This Week
+          {t('admin.bookingsThisWeek')}
         </h3>
         <BarChart data={weeklyData} />
       </div>
@@ -160,7 +162,7 @@ export function AdminReportsPage() {
       {lotOccupancy.length > 0 && (
         <div className="card p-6">
           <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-6">
-            Lot Occupancy
+            {t('admin.lotOccupancy')}
           </h3>
           <div className="flex flex-col sm:flex-row items-center gap-8">
             <div className="flex-shrink-0">

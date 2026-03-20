@@ -19,9 +19,11 @@ use super::{AuthUser, SharedState};
 // Request DTOs
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct AddFavoriteRequest {
+    /// Parking slot ID to favorite
     pub slot_id: Uuid,
+    /// Parking lot ID the slot belongs to
     pub lot_id: Uuid,
 }
 
@@ -30,6 +32,16 @@ pub struct AddFavoriteRequest {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `GET /api/v1/user/favorites` — list the authenticated user's favorite slots
+#[utoipa::path(
+    get,
+    path = "/api/v1/user/favorites",
+    tag = "Favorites",
+    summary = "List favorite slots",
+    description = "Returns the authenticated user's pinned/favorite parking slots.",
+    responses(
+        (status = 200, description = "List of favorites"),
+    )
+)]
 pub(crate) async fn list_favorites(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -53,6 +65,18 @@ pub(crate) async fn list_favorites(
 }
 
 /// `POST /api/v1/user/favorites` — add a favorite slot
+#[utoipa::path(
+    post,
+    path = "/api/v1/user/favorites",
+    tag = "Favorites",
+    summary = "Add a favorite slot",
+    description = "Pin a parking slot as a favorite for quick access.",
+    request_body = AddFavoriteRequest,
+    responses(
+        (status = 201, description = "Favorite added"),
+        (status = 404, description = "Parking slot not found"),
+    )
+)]
 pub(crate) async fn add_favorite(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -108,6 +132,18 @@ pub(crate) async fn add_favorite(
 }
 
 /// `DELETE /api/v1/user/favorites/{slot_id}` — remove a favorite slot
+#[utoipa::path(
+    delete,
+    path = "/api/v1/user/favorites/{slot_id}",
+    tag = "Favorites",
+    summary = "Remove a favorite slot",
+    description = "Unpin a parking slot from the user's favorites.",
+    params(("slot_id" = String, Path, description = "Parking slot ID")),
+    responses(
+        (status = 200, description = "Favorite removed"),
+        (status = 404, description = "Favorite not found"),
+    )
+)]
 pub(crate) async fn remove_favorite(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

@@ -21,16 +21,29 @@ vi.mock('../api/client', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => {
+    t: (key: string, opts?: any) => {
       const map: Record<string, string> = {
         'notifications.title': 'Notifications',
         'notifications.allRead': 'All read',
         'notifications.empty': 'No notifications',
         'notifications.markAllRead': 'Mark all as read',
         'notifications.allMarkedRead': 'All marked as read',
+        'notifications.unreadCount': '{{count}} unread',
+        'notifications.unread': 'Unread',
         'common.refresh': 'Refresh',
+        'common.error': 'An error occurred',
+        'timeAgo.justNow': 'just now',
+        'timeAgo.minutesAgo': '{{count}}m ago',
+        'timeAgo.hoursAgo': '{{count}}h ago',
+        'timeAgo.daysAgo': '{{count}}d ago',
       };
-      return map[key] || fallback || key;
+      let result = map[key] || key;
+      if (opts && typeof opts === 'object') {
+        Object.entries(opts).forEach(([k, v]) => {
+          result = result.replace(`{{${k}}}`, String(v));
+        });
+      }
+      return result;
     },
   }),
 }));
@@ -141,7 +154,7 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('2 ungelesen')).toBeInTheDocument();
+      expect(screen.getByText('2 unread')).toBeInTheDocument();
     });
   });
 
@@ -170,8 +183,8 @@ describe('NotificationsPage', () => {
       expect(screen.getByText('Unread Item')).toBeInTheDocument();
     });
 
-    // Unread notification shows "1 ungelesen"
-    expect(screen.getByText('1 ungelesen')).toBeInTheDocument();
+    // Unread notification shows "1 unread"
+    expect(screen.getByText('1 unread')).toBeInTheDocument();
 
     // Click the notification button to mark as read
     await user.click(screen.getByText('Unread Item').closest('button')!);
@@ -198,7 +211,7 @@ describe('NotificationsPage', () => {
     render(<NotificationsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('2 ungelesen')).toBeInTheDocument();
+      expect(screen.getByText('2 unread')).toBeInTheDocument();
     });
 
     const markAllBtn = screen.getByRole('button', { name: /Mark all as read/ });

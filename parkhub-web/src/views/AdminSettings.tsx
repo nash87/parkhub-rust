@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { SpinnerGap, Check } from '@phosphor-icons/react';
 import { api } from '../api/client';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 interface AppSettings {
@@ -61,6 +62,7 @@ function ToggleRow({ label, description, checked, onChange }: {
 }
 
 export function AdminSettingsPage() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,7 +76,7 @@ export function AdminSettingsPage() {
         setSettings(prev => ({ ...prev, ...res.data }));
       }
     } catch {
-      toast.error('Failed to load settings');
+      toast.error(t('admin.settingsLoadFailed'));
     } finally {
       setLoading(false);
     }
@@ -85,12 +87,12 @@ export function AdminSettingsPage() {
     try {
       const res = await api.adminUpdateSettings(settings);
       if (res.success) {
-        toast.success('Settings saved');
+        toast.success(t('admin.settingsSaved'));
       } else {
-        toast.error(res.error?.message || 'Failed to save');
+        toast.error(res.error?.message || t('admin.settingsSaveFailed'));
       }
     } catch {
-      toast.error('Failed to save settings');
+      toast.error(t('admin.settingsSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -113,18 +115,18 @@ export function AdminSettingsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">System Settings</h2>
+      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.systemSettings')}</h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column */}
         <div className="space-y-6">
           {/* General */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">General</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.general')}</h3>
 
             <div>
               <label htmlFor="setting-company-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                Company Name
+                {t('admin.companyName')}
               </label>
               <input
                 id="setting-company-name"
@@ -138,20 +140,20 @@ export function AdminSettingsPage() {
 
             <div>
               <label htmlFor="setting-use-case" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                Use Case
+                {t('admin.useCaseLabel')}
               </label>
               <select id="setting-use-case" value={settings.use_case} onChange={e => update('use_case', e.target.value)} className="input">
-                <option value="company">Company</option>
-                <option value="residential">Residential</option>
-                <option value="shared">Shared Parking</option>
-                <option value="rental">Rental</option>
-                <option value="personal">Personal</option>
+                <option value="company">{t('admin.useCaseCompany')}</option>
+                <option value="residential">{t('admin.useCaseResidential')}</option>
+                <option value="shared">{t('admin.useCaseShared')}</option>
+                <option value="rental">{t('admin.useCaseRental')}</option>
+                <option value="personal">{t('admin.useCasePersonal')}</option>
               </select>
             </div>
 
             <ToggleRow
-              label="Self Registration"
-              description="Allow users to register themselves"
+              label={t('admin.selfRegistration')}
+              description={t('admin.selfRegistrationDesc')}
               checked={toBool(settings.self_registration)}
               onChange={v => update('self_registration', fromBool(v))}
             />
@@ -159,11 +161,11 @@ export function AdminSettingsPage() {
 
           {/* Booking Rules */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Booking Rules</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.bookingRules')}</h3>
 
             <div>
               <label htmlFor="setting-max-bookings" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                Max Bookings per Day
+                {t('admin.maxBookingsPerDay')}
               </label>
               <input
                 id="setting-max-bookings"
@@ -174,19 +176,19 @@ export function AdminSettingsPage() {
                 onChange={e => update('max_bookings_per_day', e.target.value)}
                 className="input"
               />
-              <p className="text-xs text-surface-400 mt-1">0 = unlimited</p>
+              <p className="text-xs text-surface-400 mt-1">{t('admin.maxBookingsUnlimited')}</p>
             </div>
 
             <ToggleRow
-              label="Allow Guest Bookings"
-              description="Guests can be booked by admins without an account"
+              label={t('admin.allowGuestBookings')}
+              description={t('admin.allowGuestBookingsDesc')}
               checked={toBool(settings.allow_guest_bookings)}
               onChange={v => update('allow_guest_bookings', fromBool(v))}
             />
 
             <ToggleRow
-              label="Require Vehicle"
-              description="A vehicle / license plate is required for bookings"
+              label={t('admin.requireVehicle')}
+              description={t('admin.requireVehicleDesc')}
               checked={toBool(settings.require_vehicle)}
               onChange={v => update('require_vehicle', fromBool(v))}
             />
@@ -195,7 +197,7 @@ export function AdminSettingsPage() {
           {/* Save Button */}
           <button onClick={handleSave} disabled={saving} className="btn btn-primary w-full">
             {saving ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
-            Save Settings
+            {t('admin.saveSettings')}
           </button>
         </div>
 
@@ -203,11 +205,11 @@ export function AdminSettingsPage() {
         <div className="space-y-6">
           {/* Auto-Release */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Auto-Release</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.autoRelease')}</h3>
 
             <div>
               <label htmlFor="setting-auto-release" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                Auto-release after (minutes)
+                {t('admin.autoReleaseMinutes')}
               </label>
               <input
                 id="setting-auto-release"
@@ -219,18 +221,18 @@ export function AdminSettingsPage() {
                 className="input"
               />
               <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
-                Bookings without check-in are released after this time. 0 = disabled.
+                {t('admin.autoReleaseDesc')}
               </p>
             </div>
           </div>
 
           {/* Waitlist */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Waitlist</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.waitlist')}</h3>
 
             <ToggleRow
-              label="Enable Waitlist"
-              description="Users can join a waitlist when a lot is full"
+              label={t('admin.enableWaitlist')}
+              description={t('admin.enableWaitlistDesc')}
               checked={toBool(settings.waitlist_enabled)}
               onChange={v => update('waitlist_enabled', fromBool(v))}
             />
@@ -238,11 +240,11 @@ export function AdminSettingsPage() {
 
           {/* Credits System */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Credits System</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.creditsSystem')}</h3>
 
             <ToggleRow
-              label="Enable Credits"
-              description="Users need credits to book parking slots"
+              label={t('admin.enableCredits')}
+              description={t('admin.enableCreditsDesc')}
               checked={toBool(settings.credits_enabled)}
               onChange={v => update('credits_enabled', fromBool(v))}
             />
@@ -250,7 +252,7 @@ export function AdminSettingsPage() {
             {toBool(settings.credits_enabled) && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                 <label htmlFor="setting-credits-per-booking" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                  Credits per Booking
+                  {t('admin.creditsPerBooking')}
                 </label>
                 <input
                   id="setting-credits-per-booking"
@@ -267,21 +269,21 @@ export function AdminSettingsPage() {
 
           {/* License Plate Mode */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">License Plate</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.licensePlate')}</h3>
 
             <div>
               <label htmlFor="setting-license-plate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
-                License Plate Mode
+                {t('admin.licensePlateMode')}
               </label>
               <select id="setting-license-plate" value={settings.license_plate_mode} onChange={e => update('license_plate_mode', e.target.value)} className="input">
-                <option value="required">Required</option>
-                <option value="optional">Optional</option>
-                <option value="disabled">Disabled</option>
+                <option value="required">{t('admin.licensePlateLabelRequired')}</option>
+                <option value="optional">{t('admin.licensePlateLabelOptional')}</option>
+                <option value="disabled">{t('admin.licensePlateLabelDisabled')}</option>
               </select>
               <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
-                {settings.license_plate_mode === 'required' && 'A license plate must be provided for every booking'}
-                {settings.license_plate_mode === 'optional' && 'License plate can optionally be provided'}
-                {settings.license_plate_mode === 'disabled' && 'License plate field is hidden'}
+                {settings.license_plate_mode === 'required' && t('admin.licensePlateModeRequired')}
+                {settings.license_plate_mode === 'optional' && t('admin.licensePlateModeOptional')}
+                {settings.license_plate_mode === 'disabled' && t('admin.licensePlateModeDisabled')}
               </p>
             </div>
           </div>

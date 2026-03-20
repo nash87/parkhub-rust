@@ -5,6 +5,7 @@ import {
   MagnifyingGlass, CurrencyEur,
 } from '@phosphor-icons/react';
 import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus } from '../api/client';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 interface LotForm {
@@ -29,28 +30,8 @@ const emptyForm: LotForm = {
   status: 'open',
 };
 
-const statusConfig: Record<LotStatus, { label: string; color: string; bg: string }> = {
-  open:        { label: 'Open',        color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-100 dark:bg-green-900/30' },
-  closed:      { label: 'Closed',      color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-100 dark:bg-red-900/30' },
-  full:        { label: 'Full',        color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
-  maintenance: { label: 'Maintenance', color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-100 dark:bg-amber-900/30' },
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const cfg = statusConfig[status as LotStatus] || statusConfig.open;
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.color}`}>
-      {cfg.label}
-    </span>
-  );
-}
-
-function formatPrice(value?: number, currency?: string) {
-  if (value == null) return '-';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'EUR' }).format(value);
-}
-
 export function AdminLotsPage() {
+  const { t } = useTranslation();
   const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -59,6 +40,13 @@ export function AdminLotsPage() {
   const [form, setForm] = useState<LotForm>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const statusConfig: Record<LotStatus, { label: string; color: string; bg: string }> = {
+    open:        { label: t('admin.statusOpen'),        color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-100 dark:bg-green-900/30' },
+    closed:      { label: t('admin.statusClosed'),      color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-100 dark:bg-red-900/30' },
+    full:        { label: t('admin.statusFull'),        color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
+    maintenance: { label: t('admin.statusMaintenance'), color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-100 dark:bg-amber-900/30' },
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -107,13 +95,18 @@ export function AdminLotsPage() {
     setForm(prev => ({ ...prev, [key]: value }));
   }
 
+  function formatPrice(value?: number, currency?: string) {
+    if (value == null) return '-';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'EUR' }).format(value);
+  }
+
   async function handleSave() {
     if (!form.name.trim()) {
-      toast.error('Name is required.');
+      toast.error(t('admin.lotNameRequired'));
       return;
     }
     if (form.total_slots < 1) {
-      toast.error('Total slots must be at least 1.');
+      toast.error(t('admin.lotSlotsMin'));
       return;
     }
 
@@ -135,11 +128,11 @@ export function AdminLotsPage() {
         : await api.createLot(payload);
 
       if (res.success) {
-        toast.success(editingId ? 'Lot updated.' : 'Lot created.');
+        toast.success(editingId ? t('admin.lotUpdated') : t('admin.lotCreated'));
         closeForm();
         await load();
       } else {
-        toast.error(res.error?.message || 'Failed to save lot.');
+        toast.error(res.error?.message || t('admin.lotSaveFailed'));
       }
     } finally {
       setSaving(false);
@@ -147,16 +140,16 @@ export function AdminLotsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Delete this parking lot? All associated slots and bookings will be removed.')) return;
+    if (!confirm(t('admin.lotDeleteConfirm'))) return;
     setDeletingId(id);
     try {
       const res = await api.deleteLot(id);
       if (res.success) {
         setLots(prev => prev.filter(l => l.id !== id));
-        toast.success('Lot deleted.');
+        toast.success(t('admin.lotDeleted'));
         if (editingId === id) closeForm();
       } else {
-        toast.error(res.error?.message || 'Failed to delete lot.');
+        toast.error(res.error?.message || t('admin.lotDeleteFailed'));
       }
     } finally {
       setDeletingId(null);
@@ -176,7 +169,7 @@ export function AdminLotsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Parking Lots</h2>
+          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.lots')}</h2>
           <span className="text-sm text-surface-400">({lots.length})</span>
         </div>
 
@@ -187,14 +180,14 @@ export function AdminLotsPage() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search lots..."
+              placeholder={t('admin.searchLots')}
               className="input pl-9 w-full sm:w-56"
-              aria-label="Search parking lots"
+              aria-label={t('admin.searchLots')}
             />
           </div>
           <button onClick={openCreate} className="btn btn-primary self-start sm:self-auto">
             <Plus weight="bold" className="w-4 h-4" />
-            New Lot
+            {t('admin.newLot')}
           </button>
         </div>
       </div>
@@ -211,7 +204,7 @@ export function AdminLotsPage() {
             <div className="card p-6 space-y-5">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-surface-900 dark:text-white">
-                  {editingId ? 'Edit Parking Lot' : 'New Parking Lot'}
+                  {editingId ? t('admin.editLot') : t('admin.newLot')}
                 </h3>
                 <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
                   <X weight="bold" className="w-5 h-5 text-surface-400" />
@@ -221,25 +214,23 @@ export function AdminLotsPage() {
               {/* Row 1: Name + Address */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label htmlFor="lot-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Name *</label>
+                  <label htmlFor="lot-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.lotName')} *</label>
                   <input
                     id="lot-name"
                     type="text"
                     value={form.name}
                     onChange={e => updateField('name', e.target.value)}
                     className="input"
-                    placeholder="Main Office Garage"
                   />
                 </div>
                 <div>
-                  <label htmlFor="lot-address" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Address</label>
+                  <label htmlFor="lot-address" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.lotAddress')}</label>
                   <input
                     id="lot-address"
                     type="text"
                     value={form.address}
                     onChange={e => updateField('address', e.target.value)}
                     className="input"
-                    placeholder="123 Main Street"
                   />
                 </div>
               </div>
@@ -247,7 +238,7 @@ export function AdminLotsPage() {
               {/* Row 2: Slots + Status + Currency */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
-                  <label htmlFor="lot-total-slots" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Total Slots *</label>
+                  <label htmlFor="lot-total-slots" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.totalSlots')} *</label>
                   <input
                     id="lot-total-slots"
                     type="number"
@@ -259,7 +250,7 @@ export function AdminLotsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Status</label>
+                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.status')}</label>
                   <div className="flex flex-wrap gap-2">
                     {(Object.keys(statusConfig) as LotStatus[]).map(s => {
                       const cfg = statusConfig[s];
@@ -282,7 +273,7 @@ export function AdminLotsPage() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="lot-currency" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Currency</label>
+                  <label htmlFor="lot-currency" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.currency')}</label>
                   <select
                     id="lot-currency"
                     value={form.currency}
@@ -300,7 +291,7 @@ export function AdminLotsPage() {
               {/* Row 3: Pricing */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
-                  <label htmlFor="lot-hourly-rate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Hourly Rate</label>
+                  <label htmlFor="lot-hourly-rate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.hourlyRate')}</label>
                   <div className="relative">
                     <CurrencyEur weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
@@ -316,7 +307,7 @@ export function AdminLotsPage() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="lot-daily-max" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Daily Max</label>
+                  <label htmlFor="lot-daily-max" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.dailyMax')}</label>
                   <div className="relative">
                     <CurrencyEur weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
@@ -332,7 +323,7 @@ export function AdminLotsPage() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="lot-monthly-pass" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Monthly Pass</label>
+                  <label htmlFor="lot-monthly-pass" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.monthlyPass')}</label>
                   <div className="relative">
                     <CurrencyEur weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
@@ -355,9 +346,9 @@ export function AdminLotsPage() {
                   {saving
                     ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
                     : <Check weight="bold" className="w-4 h-4" />}
-                  {editingId ? 'Save' : 'Create'}
+                  {editingId ? t('common.save') : t('admin.create')}
                 </button>
-                <button onClick={closeForm} className="btn btn-secondary">Cancel</button>
+                <button onClick={closeForm} className="btn btn-secondary">{t('common.cancel')}</button>
               </div>
             </div>
           </motion.div>
@@ -370,11 +361,11 @@ export function AdminLotsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-surface-200 dark:border-surface-700">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Lot</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Slots</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Status</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Pricing</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.lots')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.totalSlots')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.status')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.pricing')}</th>
+                <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -407,13 +398,20 @@ export function AdminLotsPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <StatusBadge status={lot.status} />
+                    {(() => {
+                      const cfg = statusConfig[lot.status as LotStatus] || statusConfig.open;
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.color}`}>
+                          {cfg.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-5 py-4">
                     <div className="space-y-0.5 text-xs text-surface-600 dark:text-surface-400">
-                      <p>Hourly: {formatPrice(lot.hourly_rate, lot.currency)}</p>
-                      <p>Daily max: {formatPrice(lot.daily_max, lot.currency)}</p>
-                      <p>Monthly: {formatPrice(lot.monthly_pass, lot.currency)}</p>
+                      <p>{t('admin.hourlyRate')}: {formatPrice(lot.hourly_rate, lot.currency)}</p>
+                      <p>{t('admin.dailyMax')}: {formatPrice(lot.daily_max, lot.currency)}</p>
+                      <p>{t('admin.monthlyPass')}: {formatPrice(lot.monthly_pass, lot.currency)}</p>
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -421,7 +419,7 @@ export function AdminLotsPage() {
                       <button
                         onClick={() => openEdit(lot)}
                         className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
-                        title="Edit lot"
+                        title={t('admin.editLotBtn')}
                       >
                         <PencilSimple weight="bold" className="w-4 h-4" />
                       </button>
@@ -429,7 +427,7 @@ export function AdminLotsPage() {
                         onClick={() => handleDelete(lot.id)}
                         disabled={deletingId === lot.id}
                         className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-surface-400 hover:text-red-600 disabled:opacity-50"
-                        title="Delete lot"
+                        title={t('admin.deleteLotBtn')}
                       >
                         {deletingId === lot.id
                           ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
@@ -446,7 +444,7 @@ export function AdminLotsPage() {
         {filtered.length === 0 && (
           <div className="p-8 text-center">
             <p className="text-sm text-surface-500 dark:text-surface-400">
-              {search ? 'No lots match your search.' : 'No parking lots yet. Create one to get started.'}
+              {search ? t('admin.noLotsMatch') : t('admin.noLotsYet')}
             </p>
           </div>
         )}

@@ -1,26 +1,27 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   CalendarCheck, Car, UserCircle, Users, GearSix, Coins, Calendar, CalendarPlus,
 } from '@phosphor-icons/react';
 
 interface Action {
-  label: string;
+  labelKey: string;
   path: string;
   icon: React.ComponentType<any>;
   shortcut?: string;
 }
 
 const ACTIONS: Action[] = [
-  { label: 'Book a Spot', path: '/book', icon: CalendarPlus, shortcut: 'Ctrl+B' },
-  { label: 'My Bookings', path: '/bookings', icon: CalendarCheck },
-  { label: 'Vehicles', path: '/vehicles', icon: Car },
-  { label: 'Profile', path: '/profile', icon: UserCircle },
-  { label: 'Admin', path: '/admin', icon: GearSix },
-  { label: 'Credits', path: '/credits', icon: Coins },
-  { label: 'Calendar', path: '/calendar', icon: Calendar },
-  { label: 'Team', path: '/team', icon: Users },
+  { labelKey: 'dashboard.bookSpot', path: '/book', icon: CalendarPlus, shortcut: 'Ctrl+B' },
+  { labelKey: 'nav.bookings', path: '/bookings', icon: CalendarCheck },
+  { labelKey: 'nav.vehicles', path: '/vehicles', icon: Car },
+  { labelKey: 'nav.profile', path: '/profile', icon: UserCircle },
+  { labelKey: 'nav.admin', path: '/admin', icon: GearSix },
+  { labelKey: 'nav.credits', path: '/credits', icon: Coins },
+  { labelKey: 'nav.calendar', path: '/calendar', icon: Calendar },
+  { labelKey: 'nav.team', path: '/team', icon: Users },
 ];
 
 export function CommandPalette({
@@ -30,13 +31,14 @@ export function CommandPalette({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const filtered = ACTIONS.filter(a =>
-    a.label.toLowerCase().includes(query.toLowerCase()),
+    t(a.labelKey).toLowerCase().includes(query.toLowerCase()),
   );
 
   // Reset state when opening
@@ -130,7 +132,7 @@ export function CommandPalette({
                 <input
                   ref={inputRef}
                   type="text"
-                  placeholder="Type a command..."
+                  placeholder={t('commandPalette.placeholder')}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   className="w-full bg-transparent text-sm text-surface-900 dark:text-white placeholder:text-surface-400 outline-none"
@@ -142,7 +144,7 @@ export function CommandPalette({
               <ul className="max-h-64 overflow-y-auto py-1">
                 {filtered.length === 0 && (
                   <li className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">
-                    No results
+                    {t('commandPalette.noResults')}
                   </li>
                 )}
                 {filtered.map((action, i) => (
@@ -154,10 +156,10 @@ export function CommandPalette({
                           ? 'bg-surface-100 dark:bg-surface-800 text-surface-900 dark:text-white'
                           : 'text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800'
                       }`}
-                      data-testid={`command-action-${action.label.toLowerCase().replace(/\s+/g, '-')}`}
+                      data-testid={`command-action-${t(action.labelKey).toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <action.icon weight="fill" className="w-4 h-4 shrink-0" />
-                      <span className="flex-1">{action.label}</span>
+                      <span className="flex-1">{t(action.labelKey)}</span>
                       {action.shortcut && (
                         <kbd className="text-xs font-mono px-1.5 py-0.5 rounded bg-surface-100 dark:bg-surface-700 text-surface-500 dark:text-surface-400 border border-surface-200 dark:border-surface-600">
                           {action.shortcut}
@@ -170,9 +172,9 @@ export function CommandPalette({
 
               {/* Footer hint */}
               <div className="border-t border-surface-200 dark:border-surface-700 px-4 py-2 flex items-center gap-4 text-xs text-surface-400 dark:text-surface-500">
-                <span><kbd className="font-mono">↑↓</kbd> navigate</span>
-                <span><kbd className="font-mono">↵</kbd> select</span>
-                <span><kbd className="font-mono">esc</kbd> close</span>
+                <span><kbd className="font-mono">↑↓</kbd> {t('commandPalette.navigate')}</span>
+                <span><kbd className="font-mono">↵</kbd> {t('commandPalette.select')}</span>
+                <span><kbd className="font-mono">esc</kbd> {t('commandPalette.closeLabel')}</span>
               </div>
             </div>
           </motion.div>

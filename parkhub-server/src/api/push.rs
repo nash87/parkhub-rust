@@ -15,27 +15,35 @@ use super::{AuthUser, SharedState};
 // Request / Response types
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct SubscribeRequest {
+    /// Push service endpoint URL
     pub endpoint: String,
+    /// Browser push encryption keys
     pub keys: PushKeys,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct PushKeys {
+    /// P-256 Diffie-Hellman public key
     pub p256dh: String,
+    /// Authentication secret
     pub auth: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct SubscriptionResponse {
+    /// Subscription ID
     pub id: String,
+    /// Push service endpoint URL
     pub endpoint: String,
+    /// Creation timestamp (RFC 3339)
     pub created_at: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct VapidKeyResponse {
+    /// VAPID public key (base64url-encoded)
     pub public_key: String,
 }
 
@@ -56,6 +64,17 @@ impl From<&PushSubscription> for SubscriptionResponse {
 /// `GET /api/v1/push/vapid-key` — return the public VAPID key (no auth).
 ///
 /// Reads `VAPID_PUBLIC_KEY` from the environment. Returns 404 if not configured.
+#[utoipa::path(
+    get,
+    path = "/api/v1/push/vapid-key",
+    tag = "Push",
+    summary = "Get VAPID public key",
+    description = "Returns the server's VAPID public key for Web Push subscription. No auth required.",
+    responses(
+        (status = 200, description = "VAPID public key"),
+        (status = 404, description = "VAPID keys not configured"),
+    )
+)]
 pub(crate) async fn get_vapid_key() -> (StatusCode, Json<ApiResponse<VapidKeyResponse>>) {
     match std::env::var("VAPID_PUBLIC_KEY") {
         Ok(key) if !key.is_empty() => (
@@ -73,6 +92,18 @@ pub(crate) async fn get_vapid_key() -> (StatusCode, Json<ApiResponse<VapidKeyRes
 }
 
 /// `POST /api/v1/push/subscribe` — register a push subscription for the current user.
+#[utoipa::path(
+    post,
+    path = "/api/v1/push/subscribe",
+    tag = "Push",
+    summary = "Subscribe to push notifications",
+    description = "Register a Web Push subscription endpoint for the authenticated user.",
+    request_body = SubscribeRequest,
+    responses(
+        (status = 201, description = "Subscription created"),
+        (status = 400, description = "Validation error"),
+    )
+)]
 pub(crate) async fn subscribe(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -124,6 +155,16 @@ pub(crate) async fn subscribe(
 }
 
 /// `DELETE /api/v1/push/unsubscribe` — remove all push subscriptions for the current user.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/push/unsubscribe",
+    tag = "Push",
+    summary = "Unsubscribe from push notifications",
+    description = "Remove all push notification subscriptions for the authenticated user.",
+    responses(
+        (status = 200, description = "Subscriptions removed"),
+    )
+)]
 pub(crate) async fn unsubscribe(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

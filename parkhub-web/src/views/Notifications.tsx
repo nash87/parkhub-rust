@@ -17,15 +17,15 @@ function resolveType(raw: string): string {
   return 'info';
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgoFn(dateStr: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('timeAgo.justNow');
+  if (mins < 60) return t('timeAgo.minutesAgo', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t('timeAgo.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t('timeAgo.daysAgo', { count: days });
 }
 
 export function NotificationsPage() {
@@ -58,9 +58,9 @@ export function NotificationsPage() {
       const res = await api.markAllNotificationsRead();
       if (res.success) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        toast.success(t('notifications.allMarkedRead', 'Alle als gelesen markiert'));
+        toast.success(t('notifications.allMarkedRead'));
       }
-    } catch { toast.error('Fehler'); }
+    } catch { toast.error(t('common.error')); }
     finally { setMarkingAll(false); }
   }
 
@@ -78,19 +78,19 @@ export function NotificationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('notifications.title', 'Benachrichtigungen')}</h1>
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('notifications.title')}</h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">
-            {unreadCount > 0 ? `${unreadCount} ungelesen` : t('notifications.allRead', 'Alle gelesen')}
+            {unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : t('notifications.allRead')}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={loadNotifications} className="btn btn-secondary">
-            <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh', 'Aktualisieren')}
+            <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
           </button>
           {unreadCount > 0 && (
             <button onClick={markAllAsRead} disabled={markingAll} className="btn btn-primary">
               {markingAll ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
-              {t('notifications.markAllRead', 'Alle als gelesen')}
+              {t('notifications.markAllRead')}
             </button>
           )}
         </div>
@@ -100,10 +100,10 @@ export function NotificationsPage() {
       {notifications.length === 0 ? (
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-12 text-center">
           <Bell weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
-          <p className="text-surface-500 dark:text-surface-400">{t('notifications.empty', 'Keine Benachrichtigungen')}</p>
+          <p className="text-surface-500 dark:text-surface-400">{t('notifications.empty')}</p>
         </div>
       ) : (
-        <div className="space-y-2" role="list" aria-label={t('notifications.title', 'Notifications')}>
+        <div className="space-y-2" role="list" aria-label={t('notifications.title')}>
           <AnimatePresence>
             {notifications.map(n => {
               const nType = resolveType(n.notification_type);
@@ -116,7 +116,7 @@ export function NotificationsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -50 }}
                   onClick={() => { if (!n.read) markAsRead(n.id); }}
-                  aria-label={`${n.title} — ${n.read ? t('notifications.allRead', 'Read') : t('notifications.unread', 'Unread')}`}
+                  aria-label={`${n.title} — ${n.read ? t('notifications.allRead') : t('notifications.unread')}`}
                   className={`w-full text-left bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-4 flex items-start gap-4 transition-all hover:shadow-md ${
                     n.read ? 'opacity-60' : 'ring-1 ring-primary-200 dark:ring-primary-800'
                   }`}
@@ -130,7 +130,7 @@ export function NotificationsPage() {
                         {n.title}
                       </p>
                       <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs text-surface-400 whitespace-nowrap">{timeAgo(n.created_at)}</span>
+                        <span className="text-xs text-surface-400 whitespace-nowrap">{timeAgoFn(n.created_at, t)}</span>
                         {!n.read && <span className="w-2.5 h-2.5 bg-primary-500 rounded-full flex-shrink-0" />}
                       </div>
                     </div>

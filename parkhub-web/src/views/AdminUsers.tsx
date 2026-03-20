@@ -5,9 +5,11 @@ import {
   PencilSimple, X, Check, Gauge, UserMinus, UserPlus,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 export function AdminUsersPage() {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -62,10 +64,10 @@ export function AdminUsersPage() {
       const res = await api.adminUpdateUserRole(userId, editRole);
       if (res.success) {
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: editRole as User['role'] } : u));
-        toast.success('Role updated');
+        toast.success(t('admin.roleUpdated'));
         setEditingId(null);
       } else {
-        toast.error(res.error?.message || 'Failed to update role');
+        toast.error(res.error?.message || t('admin.roleUpdateFailed'));
       }
     } finally {
       setSavingRole(false);
@@ -76,9 +78,9 @@ export function AdminUsersPage() {
     const res = await api.adminUpdateUser(user.id, { is_active: !user.is_active });
     if (res.success) {
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, is_active: !u.is_active } : u));
-      toast.success(user.is_active ? 'User deactivated' : 'User activated');
+      toast.success(user.is_active ? t('admin.userDeactivated') : t('admin.userActivated'));
     } else {
-      toast.error(res.error?.message || 'Failed to update user');
+      toast.error(res.error?.message || t('admin.userUpdateFailed'));
     }
   }
 
@@ -88,13 +90,13 @@ export function AdminUsersPage() {
     try {
       const res = await api.adminGrantCredits(creditUserId, Number(creditAmount), creditDesc || undefined);
       if (res.success) {
-        toast.success('Credits granted');
+        toast.success(t('admin.creditsGranted'));
         setCreditUserId(null);
         setCreditAmount('');
         setCreditDesc('');
         await loadUsers();
       } else {
-        toast.error(res.error?.message || 'Failed to grant credits');
+        toast.error(res.error?.message || t('admin.creditsGrantFailed'));
       }
     } finally {
       setGrantingCredits(false);
@@ -109,7 +111,7 @@ export function AdminUsersPage() {
   async function saveQuota(userId: string) {
     const quota = Number(editQuota);
     if (isNaN(quota) || quota < 0 || quota > 999) {
-      toast.error('Quota must be 0-999');
+      toast.error(t('admin.quotaRange'));
       return;
     }
     setSavingQuota(true);
@@ -117,10 +119,10 @@ export function AdminUsersPage() {
       const res = await api.adminUpdateUserQuota(userId, quota);
       if (res.success) {
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, credits_monthly_quota: quota } : u));
-        toast.success('Quota updated');
+        toast.success(t('admin.quotaUpdated'));
         setEditingQuotaId(null);
       } else {
-        toast.error(res.error?.message || 'Failed to update quota');
+        toast.error(res.error?.message || t('admin.quotaUpdateFailed'));
       }
     } finally {
       setSavingQuota(false);
@@ -153,7 +155,7 @@ export function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">Users</h2>
+          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.users')}</h2>
           <span className="text-sm text-surface-400">({users.length})</span>
         </div>
 
@@ -163,15 +165,15 @@ export function AdminUsersPage() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search users..."
+            placeholder={t('admin.searchUsers')}
             className="input pl-9 pr-8 w-full sm:w-64"
-            aria-label="Search users"
+            aria-label={t('admin.searchUsers')}
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              aria-label="Clear search"
+              aria-label={t('admin.clearSearch')}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 transition-colors"
             >
               <X weight="bold" className="w-3.5 h-3.5" />
@@ -191,30 +193,30 @@ export function AdminUsersPage() {
           >
             <div className="card p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">Grant Credits</h3>
+                <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.grantCredits')}</h3>
                 <button onClick={() => setCreditUserId(null)} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
                   <X weight="bold" className="w-5 h-5 text-surface-400" />
                 </button>
               </div>
               <p className="text-sm text-surface-500 dark:text-surface-400">
-                Granting to: <strong className="text-surface-900 dark:text-white">{users.find(u => u.id === creditUserId)?.name}</strong>
+                {t('admin.grantingTo')} <strong className="text-surface-900 dark:text-white">{users.find(u => u.id === creditUserId)?.name}</strong>
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="credit-amount" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Amount</label>
+                  <label htmlFor="credit-amount" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.amount')}</label>
                   <input id="credit-amount" type="number" min={1} value={creditAmount} onChange={e => setCreditAmount(e.target.value)} className="input" placeholder="10" />
                 </div>
                 <div>
-                  <label htmlFor="credit-description" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">Description (optional)</label>
-                  <input id="credit-description" type="text" value={creditDesc} onChange={e => setCreditDesc(e.target.value)} className="input" placeholder="Bonus credits" />
+                  <label htmlFor="credit-description" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.description')}</label>
+                  <input id="credit-description" type="text" value={creditDesc} onChange={e => setCreditDesc(e.target.value)} className="input" />
                 </div>
               </div>
               <div className="flex gap-3">
                 <button onClick={handleGrantCredits} disabled={grantingCredits || !creditAmount} className="btn btn-primary">
                   {grantingCredits ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
-                  Grant
+                  {t('admin.grant')}
                 </button>
-                <button onClick={() => setCreditUserId(null)} className="btn btn-secondary">Cancel</button>
+                <button onClick={() => setCreditUserId(null)} className="btn btn-secondary">{t('common.cancel')}</button>
               </div>
             </div>
           </motion.div>
@@ -227,12 +229,12 @@ export function AdminUsersPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-surface-200 dark:border-surface-700">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">User</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Role</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Credits</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Quota/mo</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Status</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">Actions</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.users')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.editRole')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.credits')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.monthlyQuota')}</th>
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.status')}</th>
+                <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -282,12 +284,12 @@ export function AdminUsersPage() {
                           value={editQuota}
                           onChange={e => setEditQuota(e.target.value)}
                           className="input text-xs py-1 px-2 w-20"
-                          aria-label="Monthly quota"
+                          aria-label={t('admin.monthlyQuota')}
                         />
-                        <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label="Save quota">
+                        <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label={t('admin.saveQuota')}>
                           {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label="Cancel editing quota">
+                        <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('admin.cancelEditQuota')}>
                           <X weight="bold" className="w-4 h-4" />
                         </button>
                       </div>
@@ -295,8 +297,8 @@ export function AdminUsersPage() {
                       <button
                         onClick={() => startEditQuota(user)}
                         className="inline-flex items-center gap-1.5 text-sm text-surface-700 dark:text-surface-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                        aria-label={`Edit quota for ${user.name}`}
-                        title="Edit quota"
+                        aria-label={t('admin.editQuota', { name: user.name })}
+                        title={t('admin.editQuota', { name: user.name })}
                       >
                         <span className="font-semibold">{user.credits_monthly_quota}</span>
                         <Gauge weight="bold" className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" />
@@ -309,7 +311,7 @@ export function AdminUsersPage() {
                         ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
                         : 'bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400'
                     }`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                      {user.is_active ? t('admin.active') : t('admin.inactive')}
                     </span>
                   </td>
                   <td className="px-5 py-4">
@@ -317,14 +319,14 @@ export function AdminUsersPage() {
                       <button
                         onClick={() => startEditRole(user)}
                         className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
-                        title="Edit role"
+                        title={t('admin.editRole')}
                       >
                         <PencilSimple weight="bold" className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => { setCreditUserId(user.id); setCreditAmount(''); setCreditDesc(''); }}
                         className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-accent-600"
-                        title="Grant credits"
+                        title={t('admin.grantCreditsFor')}
                       >
                         <Coins weight="bold" className="w-4 h-4" />
                       </button>
@@ -335,7 +337,7 @@ export function AdminUsersPage() {
                             ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-surface-400 hover:text-red-600'
                             : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-surface-400 hover:text-emerald-600'
                         }`}
-                        title={user.is_active ? 'Deactivate' : 'Activate'}
+                        title={user.is_active ? t('admin.deactivate') : t('admin.activate')}
                       >
                         {user.is_active
                           ? <UserMinus weight="bold" className="w-4 h-4" />
@@ -353,7 +355,7 @@ export function AdminUsersPage() {
         {filtered.length === 0 && (
           <div className="p-8 text-center">
             <p className="text-sm text-surface-500 dark:text-surface-400">
-              {search ? 'No users match your search.' : 'No users found.'}
+              {search ? t('admin.noUsersMatch') : t('admin.noUsersFound')}
             </p>
           </div>
         )}

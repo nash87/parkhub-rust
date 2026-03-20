@@ -20,7 +20,7 @@ export function RegisterPage() {
     if (res.success) {
       navigate('/login');
     } else {
-      setError(res.error?.message || 'Registration failed');
+      setError(res.error?.message || t('auth.registrationFailed'));
     }
     setLoading(false);
   }
@@ -58,7 +58,7 @@ export function RegisterPage() {
           <div>
             <label htmlFor="reg-password" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.password')}</label>
             <input id="reg-password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} autoComplete="new-password" />
-            <p className="text-xs text-surface-400 mt-1">Min. 8 characters</p>
+            <p className="text-xs text-surface-400 mt-1">{t('auth.minChars')}</p>
           </div>
 
           {error && (
@@ -68,7 +68,7 @@ export function RegisterPage() {
           )}
 
           <button type="submit" disabled={loading} className="btn btn-primary w-full py-2.5 disabled:opacity-50">
-            {loading ? <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> Creating account...</> : t('auth.signUp')}
+            {loading ? <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.creatingAccount')}</> : t('auth.signUp')}
           </button>
         </form>
 

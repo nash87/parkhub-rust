@@ -68,15 +68,15 @@ pub(crate) mod admin;
 pub(crate) mod auth;
 mod bookings;
 pub(crate) mod credits;
-mod export;
-mod favorites;
+pub(crate) mod export;
+pub(crate) mod favorites;
 pub(crate) mod lots;
 pub(crate) mod push;
-mod setup;
+pub(crate) mod setup;
 mod social;
 mod users;
 pub(crate) mod webhooks;
-mod zones;
+pub(crate) mod zones;
 
 // Re-import handler functions so the router can reference them unqualified.
 use auth::{forgot_password, login, refresh_token, register, reset_password};
