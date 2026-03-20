@@ -4903,6 +4903,7 @@ dependencies = [
  "hex",
  "hmac",
  "hostname",
+ "http-body-util",
  "jsonwebtoken",
  "lettre",
  "mdns-sd",

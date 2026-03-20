@@ -7,11 +7,19 @@ use metrics::{counter, gauge, histogram};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use std::time::Instant;
 
-/// Initialize the Prometheus metrics exporter
+/// Initialize the Prometheus metrics exporter.
+///
+/// Returns a cached handle on subsequent calls — safe to invoke from multiple
+/// test threads without triggering a global-recorder conflict.
 pub fn init_metrics() -> PrometheusHandle {
-    PrometheusBuilder::new()
-        .install_recorder()
-        .expect("Failed to install Prometheus recorder")
+    static HANDLE: std::sync::OnceLock<PrometheusHandle> = std::sync::OnceLock::new();
+    HANDLE
+        .get_or_init(|| {
+            PrometheusBuilder::new()
+                .install_recorder()
+                .expect("Failed to install Prometheus recorder")
+        })
+        .clone()
 }
 
 /// Metrics endpoint handler
