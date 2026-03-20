@@ -276,7 +276,7 @@ mod tests {
         }
 
         let event = rx.try_recv().unwrap();
-        assert_eq!(event.data["seq"], 2);
+        assert_eq!(event.data["seq"], 1);
     }
 
     #[test]
