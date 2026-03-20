@@ -38,6 +38,21 @@ export default defineConfig({
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (/node_modules\/(react|react-dom|react-router|react-router-dom)\//.test(id))
+              return 'vendor-react';
+            if (/node_modules\/framer-motion\//.test(id))
+              return 'vendor-motion';
+            if (/node_modules\/(i18next|react-i18next|i18next-browser-languagedetector)\//.test(id))
+              return 'vendor-i18n';
+          },
+        },
+      },
+    },
   },
   fonts: [
     {
