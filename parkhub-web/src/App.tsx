@@ -65,12 +65,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function LoadingSplash() {
   return (
-    <div className="min-h-dvh flex items-center justify-center mesh-gradient">
+    <div className="min-h-dvh flex items-center justify-center mesh-gradient" role="status" aria-label="Loading ParkHub">
       <div className="flex flex-col items-center gap-4">
         <div className="w-16 h-16 rounded-xl bg-primary-600 flex items-center justify-center">
           <span className="text-2xl font-black text-white tracking-tight">P</span>
         </div>
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
       </div>
     </div>
   );

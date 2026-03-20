@@ -138,9 +138,9 @@ export function AbsencesPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{calMonthLabel}</h2>
             <div className="flex items-center gap-1">
-              <button onClick={prevMonth} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" /></button>
-              <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} className="px-3 py-2 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 min-h-[44px] flex items-center">Heute</button>
-              <button onClick={nextMonth} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" /></button>
+              <button onClick={prevMonth} aria-label={t('absences.previousMonth', 'Previous month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
+              <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} aria-label={t('absences.goToToday', 'Go to today')} className="px-3 py-2 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 min-h-[44px] flex items-center">Heute</button>
+              <button onClick={nextMonth} aria-label={t('absences.nextMonth', 'Next month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -179,7 +179,7 @@ export function AbsencesPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Homeoffice pattern */}
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
-            <button onClick={() => setShowPattern(!showPattern)} className="flex items-center justify-between w-full text-left">
+            <button onClick={() => setShowPattern(!showPattern)} aria-expanded={showPattern} className="flex items-center justify-between w-full text-left">
               <h3 className="text-base font-semibold text-surface-900 dark:text-white flex items-center gap-2">
                 <House weight="fill" className="w-5 h-5 text-primary-600" />
                 {t('absences.weeklyPattern', 'Homeoffice-Muster')}
@@ -199,6 +199,8 @@ export function AbsencesPage() {
                           const next = current.includes(i) ? current.filter(d => d !== i) : [...current, i].sort();
                           handlePatternSave(next);
                         }}
+                          aria-pressed={!!active}
+                          aria-label={`${name} ${active ? t('absences.patternActive', 'active') : t('absences.patternInactive', 'inactive')}`}
                           className={`flex flex-col items-center gap-1 py-3 rounded-xl border-2 transition-all font-medium ${
                             active ? 'bg-primary-100 dark:bg-primary-900/40 border-primary-400 dark:border-primary-600 text-primary-700 dark:text-primary-300' :
                             'bg-surface-50 dark:bg-surface-800 border-surface-200 dark:border-surface-700 text-surface-500'
@@ -237,8 +239,8 @@ export function AbsencesPage() {
                         <span className={`text-xs ${cfg.color}`}>{t(`absences.types.${entry.absence_type}`, entry.absence_type)}</span>
                       </div>
                     </div>
-                    <button onClick={() => deleteEntry(entry.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <Trash weight="bold" className="w-4 h-4" />
+                    <button onClick={() => deleteEntry(entry.id)} aria-label={t('absences.deleteEntry', 'Delete absence entry')} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Trash weight="bold" className="w-4 h-4" aria-hidden="true" />
                     </button>
                   </div>
                 );
@@ -278,16 +280,19 @@ function AddAbsenceModal({ onClose, onAdd, t }: {
 
   return (
     <>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/40 z-50" onClick={onClose} aria-hidden="true" />
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('absences.addAbsence', 'Abwesenheit eintragen')}
         className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-2xl p-6"
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{t('absences.addAbsence', 'Abwesenheit eintragen')}</h2>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"><X weight="bold" className="w-5 h-5 text-surface-500" /></button>
+          <button onClick={onClose} aria-label={t('common.cancel', 'Close')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"><X weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" /></button>
         </div>
 
         {/* Type pills */}
@@ -316,16 +321,17 @@ function AddAbsenceModal({ onClose, onAdd, t }: {
         {/* Date range */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="text-xs text-surface-500 mb-1 block">{t('absences.startDate', 'Von')}</label>
-            <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); if (!endDate || e.target.value > endDate) setEndDate(e.target.value); }} className="input w-full" />
+            <label htmlFor="absence-start" className="text-xs text-surface-500 mb-1 block">{t('absences.startDate', 'Von')}</label>
+            <input id="absence-start" type="date" value={startDate} onChange={e => { setStartDate(e.target.value); if (!endDate || e.target.value > endDate) setEndDate(e.target.value); }} className="input w-full" />
           </div>
           <div>
-            <label className="text-xs text-surface-500 mb-1 block">{t('absences.endDate', 'Bis')}</label>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="input w-full" min={startDate} />
+            <label htmlFor="absence-end" className="text-xs text-surface-500 mb-1 block">{t('absences.endDate', 'Bis')}</label>
+            <input id="absence-end" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="input w-full" min={startDate} />
           </div>
         </div>
 
-        <input type="text" placeholder={t('absences.notePlaceholder', 'Notiz (optional)')} value={note} onChange={e => setNote(e.target.value)} className="input w-full mb-4" />
+        <label htmlFor="absence-note" className="sr-only">{t('absences.notePlaceholder', 'Notiz (optional)')}</label>
+        <input id="absence-note" type="text" placeholder={t('absences.notePlaceholder', 'Notiz (optional)')} value={note} onChange={e => setNote(e.target.value)} className="input w-full mb-4" />
 
         <button onClick={() => onAdd(type, startDate, endDate, note)} disabled={!startDate || !endDate} className="btn btn-primary w-full">
           <Plus weight="bold" className="w-4 h-4" /> {t('absences.addBtn', 'Eintragen')}
