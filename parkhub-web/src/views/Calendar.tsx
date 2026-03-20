@@ -76,8 +76,20 @@ export function CalendarPage() {
     return result;
   }, [currentMonth]);
 
+  // Pre-index events by date string for O(1) lookup per day
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const e of events) {
+      const key = new Date(e.start).toISOString().slice(0, 10);
+      const list = map.get(key);
+      if (list) list.push(e);
+      else map.set(key, [e]);
+    }
+    return map;
+  }, [events]);
+
   const eventsForDay = (day: Date) =>
-    events.filter(e => isSameDay(new Date(e.start), day));
+    eventsByDay.get(formatDate(day)) ?? [];
 
   const selectedEvents = selectedDate ? eventsForDay(selectedDate) : [];
 

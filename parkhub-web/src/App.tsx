@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -18,11 +18,11 @@ import { DashboardPage } from './views/Dashboard';
 import { BookingsPage } from './views/Bookings';
 import { CreditsPage } from './views/Credits';
 import { AdminPage } from './views/Admin';
-import { AdminSettingsPage } from './views/AdminSettings';
-import { AdminUsersPage } from './views/AdminUsers';
-import { AdminAnnouncementsPage } from './views/AdminAnnouncements';
-import { AdminLotsPage } from './views/AdminLots';
-import { AdminReportsPage } from './views/AdminReports';
+const AdminSettingsPage = React.lazy(() => import('./views/AdminSettings').then(m => ({ default: m.AdminSettingsPage })));
+const AdminUsersPage = React.lazy(() => import('./views/AdminUsers').then(m => ({ default: m.AdminUsersPage })));
+const AdminAnnouncementsPage = React.lazy(() => import('./views/AdminAnnouncements').then(m => ({ default: m.AdminAnnouncementsPage })));
+const AdminLotsPage = React.lazy(() => import('./views/AdminLots').then(m => ({ default: m.AdminLotsPage })));
+const AdminReportsPage = React.lazy(() => import('./views/AdminReports').then(m => ({ default: m.AdminReportsPage })));
 import { VehiclesPage } from './views/Vehicles';
 import { AbsencesPage } from './views/Absences';
 import { ProfilePage } from './views/Profile';
@@ -96,13 +96,13 @@ function AppRoutes() {
         <Route path="team" element={<TeamPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
-        <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>}>
-          <Route index element={<AdminReportsPage />} />
-          <Route path="settings" element={<AdminSettingsPage />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="lots" element={<AdminLotsPage />} />
-          <Route path="announcements" element={<AdminAnnouncementsPage />} />
-          <Route path="reports" element={<AdminReportsPage />} />
+        <Route path="admin" element={<AdminRoute><Suspense fallback={<LoadingSplash />}><AdminPage /></Suspense></AdminRoute>}>
+          <Route index element={<Suspense fallback={<LoadingSplash />}><AdminReportsPage /></Suspense>} />
+          <Route path="settings" element={<Suspense fallback={<LoadingSplash />}><AdminSettingsPage /></Suspense>} />
+          <Route path="users" element={<Suspense fallback={<LoadingSplash />}><AdminUsersPage /></Suspense>} />
+          <Route path="lots" element={<Suspense fallback={<LoadingSplash />}><AdminLotsPage /></Suspense>} />
+          <Route path="announcements" element={<Suspense fallback={<LoadingSplash />}><AdminAnnouncementsPage /></Suspense>} />
+          <Route path="reports" element={<Suspense fallback={<LoadingSplash />}><AdminReportsPage /></Suspense>} />
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

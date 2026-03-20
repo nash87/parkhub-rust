@@ -37,8 +37,8 @@ export function TeamPage() {
     return groups;
   }
 
-  const todayByUser = groupByUser(todayEntries);
-  const upcomingByUser = groupByUser(upcomingEntries);
+  const todayByUser = useMemo(() => groupByUser(todayEntries), [todayEntries]);
+  const upcomingByUser = useMemo(() => groupByUser(upcomingEntries), [upcomingEntries]);
 
   if (loading) return (
     <div className="space-y-4">

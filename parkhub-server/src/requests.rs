@@ -450,4 +450,463 @@ mod tests {
         let params = PaginationParams::default();
         assert_eq!(params.page, 0); // Default struct default, not serde default
     }
+
+    // ── CreateParkingLotRequest serde tests ──────────────────────────────────
+
+    #[test]
+    fn test_create_lot_request_minimal_json() {
+        let json = r#"{"name": "Test Lot"}"#;
+        let req: CreateParkingLotRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "Test Lot");
+        assert_eq!(req.total_slots, 10); // default
+        assert_eq!(req.currency, "EUR"); // default
+        assert!(req.address.is_none());
+        assert!(req.latitude.is_none());
+        assert!(req.longitude.is_none());
+        assert!(req.hourly_rate.is_none());
+        assert!(req.status.is_none());
+    }
+
+    #[test]
+    fn test_create_lot_request_full_json() {
+        let json = r#"{
+            "name": "Full Lot",
+            "address": "123 Main St",
+            "latitude": 48.137154,
+            "longitude": 11.576124,
+            "total_slots": 50,
+            "hourly_rate": 2.50,
+            "daily_max": 20.0,
+            "monthly_pass": 150.0,
+            "currency": "USD",
+            "status": "open"
+        }"#;
+        let req: CreateParkingLotRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "Full Lot");
+        assert_eq!(req.address.as_deref(), Some("123 Main St"));
+        assert!((req.latitude.unwrap() - 48.137154).abs() < 1e-6);
+        assert!((req.longitude.unwrap() - 11.576124).abs() < 1e-6);
+        assert_eq!(req.total_slots, 50);
+        assert!((req.hourly_rate.unwrap() - 2.50).abs() < 1e-6);
+        assert!((req.daily_max.unwrap() - 20.0).abs() < 1e-6);
+        assert!((req.monthly_pass.unwrap() - 150.0).abs() < 1e-6);
+        assert_eq!(req.currency, "USD");
+        assert_eq!(req.status.as_deref(), Some("open"));
+    }
+
+    #[test]
+    fn test_create_lot_request_validation_name_too_long() {
+        let req = CreateParkingLotRequest {
+            name: "A".repeat(101),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 10,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_validation_slots_out_of_range() {
+        let too_many = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 501,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(too_many.validate().is_err());
+
+        let zero = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 0,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(zero.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_validation_invalid_latitude() {
+        let req = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: Some(91.0),
+            longitude: None,
+            total_slots: 10,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_validation_invalid_longitude() {
+        let req = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: None,
+            longitude: Some(-181.0),
+            total_slots: 10,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EUR".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_validation_currency_too_short() {
+        let req = CreateParkingLotRequest {
+            name: "Lot".to_string(),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: 10,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: "EU".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_create_lot_request_validation_valid_boundaries() {
+        let req = CreateParkingLotRequest {
+            name: "A".to_string(), // min 1
+            address: None,
+            latitude: Some(-90.0),  // min boundary
+            longitude: Some(180.0), // max boundary
+            total_slots: 1,         // min boundary
+            hourly_rate: Some(0.0), // min boundary
+            daily_max: Some(10000.0),
+            monthly_pass: Some(100000.0),
+            currency: "CHF".to_string(),
+            status: None,
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    // ── UpdateParkingLotRequest serde tests ──────────────────────────────────
+
+    #[test]
+    fn test_update_lot_request_empty_json() {
+        let json = r#"{}"#;
+        let req: UpdateParkingLotRequest = serde_json::from_str(json).unwrap();
+        assert!(req.name.is_none());
+        assert!(req.address.is_none());
+        assert!(req.total_slots.is_none());
+        assert!(req.status.is_none());
+        assert!(req.currency.is_none());
+    }
+
+    #[test]
+    fn test_update_lot_request_partial_json() {
+        let json = r#"{"name": "Updated", "status": "closed"}"#;
+        let req: UpdateParkingLotRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name.as_deref(), Some("Updated"));
+        assert_eq!(req.status.as_deref(), Some("closed"));
+        assert!(req.address.is_none());
+    }
+
+    #[test]
+    fn test_update_lot_request_validation_name_empty() {
+        let req = UpdateParkingLotRequest {
+            name: Some("".to_string()),
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: None,
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: None,
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_lot_request_validation_slots_too_large() {
+        let req = UpdateParkingLotRequest {
+            name: None,
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: Some(10001),
+            hourly_rate: None,
+            daily_max: None,
+            monthly_pass: None,
+            currency: None,
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_lot_request_validation_negative_hourly_rate() {
+        let req = UpdateParkingLotRequest {
+            name: None,
+            address: None,
+            latitude: None,
+            longitude: None,
+            total_slots: None,
+            hourly_rate: Some(-1.0),
+            daily_max: None,
+            monthly_pass: None,
+            currency: None,
+            status: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    // ── UpdateQuotaRequest serde/validation tests ────────────────────────────
+
+    #[test]
+    fn test_update_quota_request_deserialize() {
+        let json = r#"{"monthly_quota": 50}"#;
+        let req: UpdateQuotaRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.monthly_quota, 50);
+    }
+
+    #[test]
+    fn test_update_quota_request_zero_is_valid() {
+        let req = UpdateQuotaRequest { monthly_quota: 0 };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_quota_request_max_boundary() {
+        let req = UpdateQuotaRequest { monthly_quota: 999 };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_quota_request_over_max() {
+        let req = UpdateQuotaRequest {
+            monthly_quota: 1000,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_quota_request_negative() {
+        let req = UpdateQuotaRequest { monthly_quota: -1 };
+        assert!(req.validate().is_err());
+    }
+
+    // ── parse_lot_status tests ───────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_lot_status_valid() {
+        assert!(parse_lot_status("open").is_some());
+        assert!(parse_lot_status("closed").is_some());
+        assert!(parse_lot_status("full").is_some());
+        assert!(parse_lot_status("maintenance").is_some());
+    }
+
+    #[test]
+    fn test_parse_lot_status_invalid() {
+        assert!(parse_lot_status("").is_none());
+        assert!(parse_lot_status("Open").is_none()); // case sensitive
+        assert!(parse_lot_status("unknown").is_none());
+        assert!(parse_lot_status("CLOSED").is_none());
+    }
+
+    // ── Booking request edge cases ───────────────────────────────────────────
+
+    #[test]
+    fn test_create_booking_request_boundary_duration() {
+        // Minimum valid duration: 15 min
+        let min_valid = CreateBookingRequest {
+            lot_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            start_time: Utc::now() + chrono::Duration::hours(1),
+            duration_minutes: 15,
+            vehicle_id: None,
+            license_plate: Some("AB-CD-123".to_string()),
+            notes: None,
+        };
+        assert!(min_valid.validate().is_ok());
+
+        // Max valid duration: 1440 min (24 hours)
+        let max_valid = CreateBookingRequest {
+            lot_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            start_time: Utc::now() + chrono::Duration::hours(1),
+            duration_minutes: 1440,
+            vehicle_id: None,
+            license_plate: Some("AB-CD-123".to_string()),
+            notes: None,
+        };
+        assert!(max_valid.validate().is_ok());
+    }
+
+    #[test]
+    fn test_extend_booking_request_validation() {
+        let valid = ExtendBookingRequest {
+            additional_minutes: 60,
+        };
+        assert!(valid.validate().is_ok());
+
+        let too_short = ExtendBookingRequest {
+            additional_minutes: 10,
+        };
+        assert!(too_short.validate().is_err());
+
+        let too_long = ExtendBookingRequest {
+            additional_minutes: 500,
+        };
+        assert!(too_long.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_profile_request_invalid_email() {
+        let req = UpdateProfileRequest {
+            name: None,
+            email: Some("not-an-email".to_string()),
+            phone: None,
+            picture: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_profile_request_invalid_url() {
+        let req = UpdateProfileRequest {
+            name: None,
+            email: None,
+            phone: None,
+            picture: Some("not-a-url".to_string()),
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_update_preferences_request_valid() {
+        let req = UpdatePreferencesRequest {
+            default_duration_minutes: Some(60),
+            notifications_enabled: Some(true),
+            email_reminders: Some(false),
+            language: Some("de".to_string()),
+            theme: Some("dark".to_string()),
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_update_preferences_request_duration_out_of_range() {
+        let req = UpdatePreferencesRequest {
+            default_duration_minutes: Some(10), // below 15 min
+            notifications_enabled: None,
+            email_reminders: None,
+            language: None,
+            theme: None,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_change_password_request_weak_password() {
+        let req = ChangePasswordRequest {
+            current_password: "old_pass".to_string(),
+            new_password: "weak".to_string(),
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_vehicle_request_valid() {
+        let req = VehicleRequest {
+            license_plate: "M-AB-1234".to_string(),
+            make: Some("BMW".to_string()),
+            model: Some("X5".to_string()),
+            color: Some("Black".to_string()),
+            vehicle_type: Some("suv".to_string()),
+            is_default: true,
+        };
+        assert!(req.validate().is_ok());
+    }
+
+    #[test]
+    fn test_vehicle_request_plate_too_short() {
+        let req = VehicleRequest {
+            license_plate: "A".to_string(),
+            make: None,
+            model: None,
+            color: None,
+            vehicle_type: None,
+            is_default: false,
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_notes_too_long() {
+        let req = CreateBookingRequest {
+            lot_id: Uuid::new_v4(),
+            slot_id: Uuid::new_v4(),
+            start_time: Utc::now() + chrono::Duration::hours(1),
+            duration_minutes: 60,
+            vehicle_id: None,
+            license_plate: Some("AB-CD-123".to_string()),
+            notes: Some("x".repeat(501)),
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn test_booking_filters_deserialize() {
+        let json = r#"{"status": "confirmed", "page": 2, "per_page": 10}"#;
+        let params: BookingFiltersParams = serde_json::from_str(json).unwrap();
+        assert_eq!(params.status.as_deref(), Some("confirmed"));
+        assert_eq!(params.pagination.page, 2);
+        assert_eq!(params.pagination.per_page, 10);
+    }
+
+    #[test]
+    fn test_booking_filters_defaults_from_serde() {
+        let json = r#"{}"#;
+        let params: BookingFiltersParams = serde_json::from_str(json).unwrap();
+        assert!(params.status.is_none());
+        assert!(params.lot_id.is_none());
+        assert_eq!(params.pagination.page, 1);
+        assert_eq!(params.pagination.per_page, 20);
+    }
+
+    #[test]
+    fn test_refresh_token_request_validation() {
+        let valid = RefreshTokenRequest {
+            refresh_token: "some-valid-token".to_string(),
+        };
+        assert!(valid.validate().is_ok());
+
+        let empty = RefreshTokenRequest {
+            refresh_token: "".to_string(),
+        };
+        assert!(empty.validate().is_err());
+    }
 }
