@@ -76,6 +76,7 @@ pub(crate) mod setup;
 mod social;
 mod users;
 pub(crate) mod webhooks;
+pub(crate) mod payments;
 pub mod ws;
 pub(crate) mod zones;
 
@@ -405,6 +406,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Admin: update user
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        // Payments (Stripe stub)
+        .route("/api/v1/payments/create-intent", post(payments::create_payment_intent))
+        .route("/api/v1/payments/confirm", post(payments::confirm_payment))
+        .route("/api/v1/payments/{booking_id}/status", get(payments::payment_status))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
