@@ -205,13 +205,16 @@ async fn perform_db_reset(app_state: &SharedAppState, demo_state: &SharedDemoSta
 
     // Always update demo state and clear reset_in_progress
     if let Ok(mut ds) = demo_state.lock() {
-        if result.is_ok() {
-            ds.reset();
-            ds.mark_reset_complete();
-            info!("Demo data reset complete");
-        } else {
-            ds.reset_in_progress = false;
-            tracing::error!("Demo reset failed: {}", result.unwrap_err());
+        match &result {
+            Ok(()) => {
+                ds.reset();
+                ds.mark_reset_complete();
+                info!("Demo data reset complete");
+            }
+            Err(e) => {
+                ds.reset_in_progress = false;
+                tracing::error!("Demo reset failed: {}", e);
+            }
         }
     }
 }
