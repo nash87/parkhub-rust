@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.4.8-brightgreen.svg?style=for-the-badge" alt="v1.3.7"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.5.4-brightgreen.svg?style=for-the-badge" alt="v1.5.4"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
@@ -58,6 +58,7 @@
 | Feature | Status |
 |---|---|
 | Booking flow: lot → slot → duration → vehicle → confirm | Done |
+| Book a Spot page — 3-step guided flow (lot → slot → confirm) | Done |
 | Quick booking (one tap, system picks best available slot) | Done |
 | Recurring bookings (weekly day-of-week patterns) | Done |
 | Guest bookings (named guest, no account required) | Done |
@@ -90,6 +91,7 @@
 | JWT-style session authentication (24-hour expiry) | Done |
 | Token refresh | Done |
 | Password reset via email | Done |
+| Forgot Password page (self-service reset flow) | Done |
 | Vehicle registry (plate, make, model, color, default flag) | Done |
 | Full admin user management (list, role change, status, delete) | Done |
 | Absence tracking (homeoffice, vacation, sick, training) | Done |
@@ -125,7 +127,7 @@
 
 | Feature | Status |
 |---|---|
-| Admin dashboard with occupancy stats and lot overview | Done |
+| Admin dashboard with occupancy stats, bar chart, and lot overview | Done |
 | Inline slot layout editor | Done |
 | Admin booking overview | Done |
 | Admin reports (bookings by day, status, type) | Done |
@@ -151,6 +153,7 @@
 | React frontend embedded in single Rust binary | Done |
 | Dark mode and light mode | Done |
 | Mobile-responsive UI | Done |
+| Command Palette (Ctrl+K) — quick navigation and actions | Done |
 | Accessibility (ARIA labels, keyboard navigation, screen reader) | Done |
 | PWA (installable, offline-capable, service worker) | Done |
 | i18n — English + German (8 locale stubs) | Done |
@@ -234,6 +237,29 @@ The binary serves the full React frontend — no web server or reverse proxy nee
 | ![Vehicles](screenshots/08-vehicles.png) | Vehicle management |
 | ![Admin Panel](screenshots/09-admin.png) | Admin panel with layout editor |
 | ![Dark Mode](screenshots/10-dark-mode.png) | Dark mode |
+
+---
+
+## Testing
+
+**727 tests total** across three layers:
+
+| Layer | Framework | Tests |
+|---|---|---|
+| Backend (Rust) | `cargo test` | 327 |
+| Frontend (React) | Vitest + Testing Library | 197 |
+| Backend (PHP) | PHPUnit | 203 |
+| E2E (browser) | Playwright | Included |
+| E2E (mobile) | Maestro | 5 flows |
+| Performance | Lighthouse CI | Included |
+
+```bash
+# Run all tests
+cargo test --workspace          # Rust
+cd frontend && npx vitest run   # Frontend
+cd php && vendor/bin/phpunit    # PHP
+cd frontend && npx playwright test  # E2E
+```
 
 ---
 

@@ -59,15 +59,15 @@ export function DemoOverlay() {
     return () => clearInterval(interval);
   }, [enabled]);
 
-  // Local countdown + relative time refresh
+  // Local countdown + relative time refresh (only when expanded)
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || collapsed) return;
     const interval = setInterval(() => {
       setLocalTimer(t => Math.max(0, t - 1));
       setTick(t => t + 1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [enabled]);
+  }, [enabled, collapsed]);
 
   const handleVote = useCallback(() => {
     api.voteDemoReset().then(res => {

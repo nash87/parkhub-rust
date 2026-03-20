@@ -168,6 +168,62 @@ pub(crate) async fn admin_grant_credits(
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_admin_grant_credits_request_deserialize() {
+        let json = r#"{"amount": 50, "description": "Bonus credits"}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, 50);
+        assert_eq!(req.description.as_deref(), Some("Bonus credits"));
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_without_description() {
+        let json = r#"{"amount": 10}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, 10);
+        assert!(req.description.is_none());
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_negative_amount() {
+        let json = r#"{"amount": -5}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, -5); // Deserializes fine, handler validates range
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_zero_amount() {
+        let json = r#"{"amount": 0}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, 0);
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_missing_amount_fails() {
+        let json = r#"{"description": "no amount"}"#;
+        let result: Result<AdminGrantCreditsRequest, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_empty_description() {
+        let json = r#"{"amount": 1, "description": ""}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.description.as_deref(), Some(""));
+    }
+
+    #[test]
+    fn test_admin_grant_credits_request_large_amount() {
+        let json = r#"{"amount": 10000}"#;
+        let req: AdminGrantCreditsRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.amount, 10000);
+    }
+}
+
 /// `POST /api/v1/admin/credits/refill-all` — refill all active users' credits (admin only)
 #[utoipa::path(
     post,

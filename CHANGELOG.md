@@ -7,6 +7,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.4] - 2026-03-20
+
+### Added
+- **Book a Spot page**: 3-step guided booking flow — lot → slot → confirm (fixes #20)
+- **Command Palette** (Ctrl+K): quick navigation and actions from anywhere
+- **Admin bar chart**: visual booking statistics on admin dashboard
+- **Forgot Password page**: self-service password reset flow with email link
+- **404 page**: custom not-found page with navigation back to dashboard
+- **Playwright E2E tests**: browser-based end-to-end test suite
+- **Lighthouse CI**: automated performance, accessibility, and best practices auditing
+
+### Fixed
+- **Dark mode (Tailwind CSS 4)**: resolved compatibility issues with Tailwind CSS v4 dark mode
+- **Shared constants**: extracted magic numbers and strings into shared constants (code review)
+- **N+1 query elimination**: optimized database queries to batch-load related records (code review)
+
+### Tests
+- **727 tests total**: 327 Rust + 197 Vitest + 203 PHP (up from 434 in v1.4.8)
+
+---
+
 ## [1.4.8] - 2026-03-19
 
 ### Design
