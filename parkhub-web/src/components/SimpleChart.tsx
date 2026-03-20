@@ -76,7 +76,7 @@ export function DonutChart({ slices, size = 200, strokeWidth = 28 }: DonutChartP
       <circle
         cx={cx} cy={cy} r={r}
         fill="none"
-        stroke="var(--color-surface-100, #f3f4f6)"
+        stroke="var(--theme-bg-muted)"
         strokeWidth={strokeWidth}
       />
 
@@ -154,7 +154,7 @@ export function BarChart({ data, height, color = 'var(--color-primary-500)' }: B
               y1={y + BAR_HEIGHT / 2}
               x2="100%"
               y2={y + BAR_HEIGHT / 2}
-              stroke="var(--color-surface-200)"
+              stroke="var(--theme-border)"
               strokeWidth={1}
               strokeDasharray="4 4"
             />

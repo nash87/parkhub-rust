@@ -49,7 +49,7 @@ export function Layout() {
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">{t('nav.skipToContent')}</a>
 
       {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
+      <aside className="hidden lg:flex flex-col w-64 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl border-r border-surface-200/60 dark:border-surface-800/60 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
         {/* Logo */}
         <div className="flex items-center gap-3 px-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
@@ -129,7 +129,7 @@ export function Layout() {
 
       {/* Mobile top bar */}
       <div className="flex-1 flex flex-col">
-        <header className="lg:hidden sticky top-0 z-30 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 px-4 py-3">
+        <header className="lg:hidden sticky top-0 z-30 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl border-b border-surface-200/60 dark:border-surface-800/60 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon min-w-[44px] min-h-[44px]" aria-label={t('nav.openMenu')}>
@@ -169,7 +169,7 @@ export function Layout() {
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-surface-900 z-50 p-4 lg:hidden"
+                className="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-surface-900/90 backdrop-blur-2xl z-50 p-4 lg:hidden"
                 role="dialog"
                 aria-label="Navigation menu"
               >

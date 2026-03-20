@@ -3,36 +3,43 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// ── Mock localStorage ──
-const localStorageMock = (() => {
+// ── Hoisted mocks ──
+// vi.hoisted runs BEFORE imports are evaluated, so the module-level
+// `window.matchMedia(...)` in ThemeContext.tsx sees our mock.
+const { localStorageMock, matchMediaState, persistentMql } = vi.hoisted(() => {
   let store: Record<string, string> = {};
-  return {
+  const localStorageMock = {
     getItem: vi.fn((key: string) => store[key] ?? null),
     setItem: vi.fn((key: string, val: string) => { store[key] = val; }),
     removeItem: vi.fn((key: string) => { delete store[key]; }),
     clear: vi.fn(() => { store = {}; }),
   };
-})();
-Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
 
-// ── Mock matchMedia ──
-let matchMediaDark = false;
-const matchMediaListeners: Array<() => void> = [];
+  const matchMediaState = { dark: false, listeners: [] as Array<() => void> };
 
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn((query: string) => ({
-    matches: matchMediaDark,
-    media: query,
+  const persistentMql = {
+    get matches() { return matchMediaState.dark; },
+    media: '(prefers-color-scheme: dark)',
     addEventListener: vi.fn((_event: string, handler: () => void) => {
-      matchMediaListeners.push(handler);
+      matchMediaState.listeners.push(handler);
     }),
     removeEventListener: vi.fn(),
     onchange: null,
     addListener: vi.fn(),
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  })),
+  };
+
+  // Install mocks on globals before any module code runs
+  Object.defineProperty(globalThis.window ?? globalThis, 'localStorage', {
+    value: localStorageMock, writable: true, configurable: true,
+  });
+  Object.defineProperty(globalThis.window ?? globalThis, 'matchMedia', {
+    writable: true, configurable: true,
+    value: vi.fn((_query: string) => persistentMql),
+  });
+
+  return { localStorageMock, matchMediaState, persistentMql };
 });
 
 import { ThemeProvider, useTheme } from './ThemeContext';
@@ -54,8 +61,8 @@ function ThemeConsumer() {
 describe('ThemeContext', () => {
   beforeEach(() => {
     localStorageMock.clear();
-    matchMediaDark = false;
-    matchMediaListeners.length = 0;
+    matchMediaState.dark = false;
+    matchMediaState.listeners.length = 0;
     document.documentElement.classList.remove('dark');
   });
 
@@ -84,7 +91,7 @@ describe('ThemeContext', () => {
   });
 
   it('resolved theme is light when system prefers light', () => {
-    matchMediaDark = false;
+    matchMediaState.dark = false;
 
     render(
       <ThemeProvider>
@@ -96,7 +103,7 @@ describe('ThemeContext', () => {
   });
 
   it('resolved theme is dark when system prefers dark', () => {
-    matchMediaDark = true;
+    matchMediaState.dark = true;
 
     render(
       <ThemeProvider>
@@ -174,7 +181,7 @@ describe('ThemeContext', () => {
 
   it('setTheme to system uses system preference', async () => {
     const user = userEvent.setup();
-    matchMediaDark = true;
+    matchMediaState.dark = true;
 
     render(
       <ThemeProvider>
