@@ -198,7 +198,6 @@ pub async fn setup_init(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json;
 
     #[test]
     fn test_setup_request_deserialize_full() {
