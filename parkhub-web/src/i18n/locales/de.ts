@@ -621,7 +621,6 @@ export default {
       hoursAgo: 'vor {{count}}h',
       daysAgo: 'vor {{count}}d',
     },
-  },
     payment: {
       title: 'Zahlung',
       amount: 'Zu zahlender Betrag',
