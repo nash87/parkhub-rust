@@ -137,6 +137,7 @@ impl ServerConnection {
         let request = RegisterRequest {
             email: email.to_string(),
             password: password.to_string(),
+            password_confirmation: password.to_string(),
             name: name.to_string(),
         };
 
