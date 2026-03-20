@@ -7,32 +7,44 @@ import { UseCaseProvider } from './context/UseCaseContext';
 import { FeaturesProvider } from './context/FeaturesContext';
 import './i18n';
 
-// Pages
-import { WelcomePage } from './views/Welcome';
-import { LoginPage } from './views/Login';
-import { RegisterPage } from './views/Register';
-import { ForgotPasswordPage } from './views/ForgotPassword';
-import { NotFoundPage } from './views/NotFound';
-import { UseCaseSelectorPage } from './views/UseCaseSelector';
-import { DashboardPage } from './views/Dashboard';
-import { BookingsPage } from './views/Bookings';
-import { CreditsPage } from './views/Credits';
-import { AdminPage } from './views/Admin';
-const AdminSettingsPage = React.lazy(() => import('./views/AdminSettings').then(m => ({ default: m.AdminSettingsPage })));
-const AdminUsersPage = React.lazy(() => import('./views/AdminUsers').then(m => ({ default: m.AdminUsersPage })));
-const AdminAnnouncementsPage = React.lazy(() => import('./views/AdminAnnouncements').then(m => ({ default: m.AdminAnnouncementsPage })));
-const AdminLotsPage = React.lazy(() => import('./views/AdminLots').then(m => ({ default: m.AdminLotsPage })));
-const AdminReportsPage = React.lazy(() => import('./views/AdminReports').then(m => ({ default: m.AdminReportsPage })));
-import { VehiclesPage } from './views/Vehicles';
-import { AbsencesPage } from './views/Absences';
-import { ProfilePage } from './views/Profile';
-import { TeamPage } from './views/Team';
-import { NotificationsPage } from './views/Notifications';
-import { CalendarPage } from './views/Calendar';
-import { BookPage } from './views/Book';
+// Eagerly loaded shell
 import { Layout } from './components/Layout';
-import { DemoOverlay } from './components/DemoOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Lazy helper — wraps named exports for React.lazy
+const lazy = <T extends Record<string, React.ComponentType>>(
+  loader: () => Promise<T>,
+  name: keyof T,
+) => React.lazy(() => loader().then(m => ({ default: m[name] as React.ComponentType })));
+
+// Auth pages (small, on critical path for unauthenticated users)
+const WelcomePage = lazy(() => import('./views/Welcome'), 'WelcomePage');
+const LoginPage = lazy(() => import('./views/Login'), 'LoginPage');
+const RegisterPage = lazy(() => import('./views/Register'), 'RegisterPage');
+const ForgotPasswordPage = lazy(() => import('./views/ForgotPassword'), 'ForgotPasswordPage');
+const UseCaseSelectorPage = lazy(() => import('./views/UseCaseSelector'), 'UseCaseSelectorPage');
+const NotFoundPage = lazy(() => import('./views/NotFound'), 'NotFoundPage');
+
+// Main app pages
+const DashboardPage = lazy(() => import('./views/Dashboard'), 'DashboardPage');
+const BookPage = lazy(() => import('./views/Book'), 'BookPage');
+const BookingsPage = lazy(() => import('./views/Bookings'), 'BookingsPage');
+const CreditsPage = lazy(() => import('./views/Credits'), 'CreditsPage');
+const VehiclesPage = lazy(() => import('./views/Vehicles'), 'VehiclesPage');
+const AbsencesPage = lazy(() => import('./views/Absences'), 'AbsencesPage');
+const ProfilePage = lazy(() => import('./views/Profile'), 'ProfilePage');
+const TeamPage = lazy(() => import('./views/Team'), 'TeamPage');
+const NotificationsPage = lazy(() => import('./views/Notifications'), 'NotificationsPage');
+const CalendarPage = lazy(() => import('./views/Calendar'), 'CalendarPage');
+const DemoOverlay = lazy(() => import('./components/DemoOverlay'), 'DemoOverlay');
+
+// Admin pages
+const AdminPage = lazy(() => import('./views/Admin'), 'AdminPage');
+const AdminSettingsPage = lazy(() => import('./views/AdminSettings'), 'AdminSettingsPage');
+const AdminUsersPage = lazy(() => import('./views/AdminUsers'), 'AdminUsersPage');
+const AdminAnnouncementsPage = lazy(() => import('./views/AdminAnnouncements'), 'AdminAnnouncementsPage');
+const AdminLotsPage = lazy(() => import('./views/AdminLots'), 'AdminLotsPage');
+const AdminReportsPage = lazy(() => import('./views/AdminReports'), 'AdminReportsPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -77,35 +89,39 @@ function useThemeLoader() {
   }, []);
 }
 
+function SuspenseRoute({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<LoadingSplash />}>{children}</Suspense>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/welcome" element={<WelcomePage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/choose" element={<UseCaseSelectorPage />} />
+      <Route path="/welcome" element={<SuspenseRoute><WelcomePage /></SuspenseRoute>} />
+      <Route path="/login" element={<SuspenseRoute><LoginPage /></SuspenseRoute>} />
+      <Route path="/register" element={<SuspenseRoute><RegisterPage /></SuspenseRoute>} />
+      <Route path="/forgot-password" element={<SuspenseRoute><ForgotPasswordPage /></SuspenseRoute>} />
+      <Route path="/choose" element={<SuspenseRoute><UseCaseSelectorPage /></SuspenseRoute>} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<DashboardPage />} />
-        <Route path="book" element={<BookPage />} />
-        <Route path="bookings" element={<BookingsPage />} />
-        <Route path="credits" element={<CreditsPage />} />
-        <Route path="vehicles" element={<VehiclesPage />} />
-        <Route path="absences" element={<AbsencesPage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="team" element={<TeamPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="calendar" element={<CalendarPage />} />
-        <Route path="admin" element={<AdminRoute><Suspense fallback={<LoadingSplash />}><AdminPage /></Suspense></AdminRoute>}>
-          <Route index element={<Suspense fallback={<LoadingSplash />}><AdminReportsPage /></Suspense>} />
-          <Route path="settings" element={<Suspense fallback={<LoadingSplash />}><AdminSettingsPage /></Suspense>} />
-          <Route path="users" element={<Suspense fallback={<LoadingSplash />}><AdminUsersPage /></Suspense>} />
-          <Route path="lots" element={<Suspense fallback={<LoadingSplash />}><AdminLotsPage /></Suspense>} />
-          <Route path="announcements" element={<Suspense fallback={<LoadingSplash />}><AdminAnnouncementsPage /></Suspense>} />
-          <Route path="reports" element={<Suspense fallback={<LoadingSplash />}><AdminReportsPage /></Suspense>} />
+        <Route index element={<SuspenseRoute><DashboardPage /></SuspenseRoute>} />
+        <Route path="book" element={<SuspenseRoute><BookPage /></SuspenseRoute>} />
+        <Route path="bookings" element={<SuspenseRoute><BookingsPage /></SuspenseRoute>} />
+        <Route path="credits" element={<SuspenseRoute><CreditsPage /></SuspenseRoute>} />
+        <Route path="vehicles" element={<SuspenseRoute><VehiclesPage /></SuspenseRoute>} />
+        <Route path="absences" element={<SuspenseRoute><AbsencesPage /></SuspenseRoute>} />
+        <Route path="profile" element={<SuspenseRoute><ProfilePage /></SuspenseRoute>} />
+        <Route path="team" element={<SuspenseRoute><TeamPage /></SuspenseRoute>} />
+        <Route path="notifications" element={<SuspenseRoute><NotificationsPage /></SuspenseRoute>} />
+        <Route path="calendar" element={<SuspenseRoute><CalendarPage /></SuspenseRoute>} />
+        <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
+          <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
+          <Route path="settings" element={<SuspenseRoute><AdminSettingsPage /></SuspenseRoute>} />
+          <Route path="users" element={<SuspenseRoute><AdminUsersPage /></SuspenseRoute>} />
+          <Route path="lots" element={<SuspenseRoute><AdminLotsPage /></SuspenseRoute>} />
+          <Route path="announcements" element={<SuspenseRoute><AdminAnnouncementsPage /></SuspenseRoute>} />
+          <Route path="reports" element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
         </Route>
       </Route>
-      <Route path="*" element={<NotFoundPage />} />
+      <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />
     </Routes>
   );
 }
@@ -125,7 +141,7 @@ export function App() {
         <FeaturesProvider>
         <AuthProvider>
           <AppRoutes />
-          <DemoOverlay />
+          <Suspense fallback={null}><DemoOverlay /></Suspense>
           <Toaster
             position="bottom-center"
             toastOptions={{
