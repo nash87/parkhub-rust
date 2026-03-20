@@ -210,3 +210,170 @@ pub fn build_password_reset_email(reset_url: &str, org_name: &str) -> String {
         reset_url = reset_url,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── SmtpConfig::from_env ──
+
+    #[test]
+    fn smtp_config_returns_none_when_host_missing() {
+        // Ensure SMTP_HOST is not set (tests run without it by default)
+        std::env::remove_var("SMTP_HOST");
+        assert!(SmtpConfig::from_env().is_none());
+    }
+
+    #[test]
+    fn smtp_config_parses_env_vars() {
+        // Set up temporary env vars
+        std::env::set_var("SMTP_HOST", "mail.example.com");
+        std::env::set_var("SMTP_PORT", "465");
+        std::env::set_var("SMTP_USER", "user@example.com");
+        std::env::set_var("SMTP_PASS", "secret");
+        std::env::set_var("SMTP_FROM", "Test <test@example.com>");
+
+        let config = SmtpConfig::from_env().expect("should parse SMTP config");
+        assert_eq!(config.host, "mail.example.com");
+        assert_eq!(config.port, 465);
+        assert_eq!(config.username, "user@example.com");
+        assert_eq!(config.password, "secret");
+        assert_eq!(config.from, "Test <test@example.com>");
+
+        // Clean up
+        std::env::remove_var("SMTP_HOST");
+        std::env::remove_var("SMTP_PORT");
+        std::env::remove_var("SMTP_USER");
+        std::env::remove_var("SMTP_PASS");
+        std::env::remove_var("SMTP_FROM");
+    }
+
+    #[test]
+    fn smtp_config_defaults_port_to_587() {
+        std::env::set_var("SMTP_HOST", "mail.test.io");
+        std::env::remove_var("SMTP_PORT");
+        std::env::remove_var("SMTP_USER");
+        std::env::remove_var("SMTP_PASS");
+        std::env::remove_var("SMTP_FROM");
+
+        let config = SmtpConfig::from_env().unwrap();
+        assert_eq!(config.port, 587);
+        assert_eq!(config.from, "ParkHub <noreply@mail.test.io>");
+
+        std::env::remove_var("SMTP_HOST");
+    }
+
+    // ── build_booking_confirmation_email ──
+
+    #[test]
+    fn booking_email_contains_user_name_and_booking_id() {
+        let html = build_booking_confirmation_email(
+            "Alice",
+            "BK-001",
+            "Ground Floor",
+            5,
+            "2026-03-20 09:00",
+            "2026-03-20 17:00",
+            "Acme",
+        );
+        assert!(html.contains("Alice"));
+        assert!(html.contains("BK-001"));
+        assert!(html.contains("Ground Floor"));
+        assert!(html.contains("2026-03-20 09:00"));
+        assert!(html.contains("2026-03-20 17:00"));
+        assert!(html.contains("Acme"));
+    }
+
+    #[test]
+    fn booking_email_defaults_org_to_parkhub() {
+        let html =
+            build_booking_confirmation_email("Bob", "BK-002", "Level 2", 3, "09:00", "12:00", "");
+        assert!(html.contains("ParkHub"));
+        assert!(!html.contains("Acme"));
+    }
+
+    #[test]
+    fn booking_email_escapes_html_in_user_name() {
+        let html = build_booking_confirmation_email(
+            "<script>alert(1)</script>",
+            "BK-XSS",
+            "Floor",
+            1,
+            "09:00",
+            "10:00",
+            "",
+        );
+        assert!(!html.contains("<script>"));
+        assert!(html.contains("&lt;script&gt;"));
+    }
+
+    #[test]
+    fn booking_email_contains_slot_number() {
+        let html = build_booking_confirmation_email(
+            "Carol", "BK-003", "Deck A", 42, "08:00", "18:00", "ParkCo",
+        );
+        assert!(html.contains("42"));
+    }
+
+    #[test]
+    fn booking_email_is_valid_html() {
+        let html = build_booking_confirmation_email(
+            "Dave", "BK-004", "B1", 7, "10:00", "11:00", "TestOrg",
+        );
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("</html>"));
+        assert!(html.contains("<title>Booking Confirmation"));
+    }
+
+    // ── build_password_reset_email ──
+
+    #[test]
+    fn reset_email_contains_url() {
+        let html =
+            build_password_reset_email("https://park.example.com/reset?token=abc123", "MyOrg");
+        assert!(html.contains("https://park.example.com/reset?token=abc123"));
+        assert!(html.contains("MyOrg"));
+    }
+
+    #[test]
+    fn reset_email_defaults_org_to_parkhub() {
+        let html = build_password_reset_email("https://example.com/reset", "");
+        assert!(html.contains("ParkHub"));
+    }
+
+    #[test]
+    fn reset_email_escapes_html_in_url() {
+        let html = build_password_reset_email("https://evil.com?a=1&b=2", "");
+        assert!(html.contains("&amp;b=2"));
+    }
+
+    #[test]
+    fn reset_email_is_valid_html() {
+        let html = build_password_reset_email("https://example.com/reset", "Corp");
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("</html>"));
+        assert!(html.contains("<title>Password Reset"));
+    }
+
+    #[test]
+    fn reset_email_contains_button_with_href() {
+        let html = build_password_reset_email("https://example.com/reset?t=xyz", "");
+        assert!(html.contains(r#"href="https://example.com/reset?t=xyz""#));
+        assert!(html.contains("Reset Password"));
+    }
+
+    #[test]
+    fn reset_email_mentions_one_hour_validity() {
+        let html = build_password_reset_email("https://example.com/r", "");
+        assert!(html.contains("1 hour"));
+    }
+
+    // ── send_email (no SMTP configured) ──
+
+    #[tokio::test]
+    async fn send_email_noop_when_smtp_not_configured() {
+        std::env::remove_var("SMTP_HOST");
+        let result = send_email("user@example.com", "Test", "<p>Hello</p>").await;
+        assert!(result.is_ok());
+    }
+}
