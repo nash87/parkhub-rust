@@ -29,6 +29,7 @@ import { ProfilePage } from './views/Profile';
 import { TeamPage } from './views/Team';
 import { NotificationsPage } from './views/Notifications';
 import { CalendarPage } from './views/Calendar';
+import { BookPage } from './views/Book';
 import { Layout } from './components/Layout';
 import { DemoOverlay } from './components/DemoOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -86,6 +87,7 @@ function AppRoutes() {
       <Route path="/choose" element={<UseCaseSelectorPage />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
+        <Route path="book" element={<BookPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="credits" element={<CreditsPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
