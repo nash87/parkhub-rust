@@ -22,6 +22,14 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         'auth.signIn': 'Sign In',
+        'forgotPassword.title': 'Reset password',
+        'forgotPassword.subtitle': "Enter your email and we'll send you a reset link.",
+        'forgotPassword.emailLabel': 'Email',
+        'forgotPassword.sending': 'Sending...',
+        'forgotPassword.sendResetLink': 'Send reset link',
+        'forgotPassword.successTitle': 'Check your email',
+        'forgotPassword.successMessage': "If an account with that email exists, we've sent a password reset link. Check your inbox and spam folder.",
+        'forgotPassword.backToSignIn': 'Back to Sign In',
       };
       return map[key] || key;
     },

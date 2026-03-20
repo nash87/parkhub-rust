@@ -95,7 +95,7 @@ export function AbsencesPage() {
       toast.success(t('absences.added', 'Abwesenheit eingetragen'));
       setShowAdd(false);
     } else {
-      toast.error(res.error?.message || 'Fehler');
+      toast.error(res.error?.message || t('common.error'));
     }
   }
 
@@ -107,7 +107,11 @@ export function AbsencesPage() {
     }
   }
 
-  const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const WEEKDAYS = [
+    t('homeoffice.weekdaysShort.mon'), t('homeoffice.weekdaysShort.tue'), t('homeoffice.weekdaysShort.wed'),
+    t('homeoffice.weekdaysShort.thu'), t('homeoffice.weekdaysShort.fri'), t('homeoffice.weekdaysShort.sat'),
+    t('homeoffice.weekdaysShort.sun'),
+  ];
 
   if (loading) return (
     <div className="space-y-6">
@@ -139,7 +143,7 @@ export function AbsencesPage() {
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{calMonthLabel}</h2>
             <div className="flex items-center gap-1">
               <button onClick={prevMonth} aria-label={t('absences.previousMonth', 'Previous month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
-              <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} aria-label={t('absences.goToToday', 'Go to today')} className="px-3 py-2 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 min-h-[44px] flex items-center">Heute</button>
+              <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} aria-label={t('absences.goToToday')} className="px-3 py-2 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 min-h-[44px] flex items-center">{t('absences.today')}</button>
               <button onClick={nextMonth} aria-label={t('absences.nextMonth', 'Next month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
             </div>
           </div>
@@ -191,7 +195,7 @@ export function AbsencesPage() {
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   <p className="text-sm text-surface-500 dark:text-surface-400 mt-3 mb-3">{t('absences.patternDesc', 'W\u00e4hle deine festen Homeoffice-Tage')}</p>
                   <div className="grid grid-cols-5 gap-2">
-                    {['Mo', 'Di', 'Mi', 'Do', 'Fr'].map((name, i) => {
+                    {[t('homeoffice.weekdaysShort.mon'), t('homeoffice.weekdaysShort.tue'), t('homeoffice.weekdaysShort.wed'), t('homeoffice.weekdaysShort.thu'), t('homeoffice.weekdaysShort.fri')].map((name, i) => {
                       const active = hoPattern?.weekdays.includes(i);
                       return (
                         <button key={i} onClick={() => {

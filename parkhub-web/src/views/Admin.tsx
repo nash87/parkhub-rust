@@ -1,20 +1,22 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin,
 } from '@phosphor-icons/react';
 
-const tabs = [
-  { name: 'Overview', path: '/admin', icon: ChartBar },
-  { name: 'Settings', path: '/admin/settings', icon: GearSix },
-  { name: 'Users', path: '/admin/users', icon: Users },
-  { name: 'Lots', path: '/admin/lots', icon: MapPin },
-  { name: 'Announcements', path: '/admin/announcements', icon: Megaphone },
-  { name: 'Reports', path: '/admin/reports', icon: ChartLine },
-];
-
 function AdminNav() {
+  const { t } = useTranslation();
   const location = useLocation();
+
+  const tabs = [
+    { name: t('admin.overview'), path: '/admin', icon: ChartBar },
+    { name: t('admin.settings'), path: '/admin/settings', icon: GearSix },
+    { name: t('admin.users'), path: '/admin/users', icon: Users },
+    { name: t('admin.lots'), path: '/admin/lots', icon: MapPin },
+    { name: t('admin.announcements'), path: '/admin/announcements', icon: Megaphone },
+    { name: t('admin.reports'), path: '/admin/reports', icon: ChartLine },
+  ];
 
   function isActive(path: string) {
     if (path === '/admin') return location.pathname === '/admin';
@@ -53,12 +55,14 @@ function AdminNav() {
 }
 
 export function AdminPage() {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white">Admin</h1>
-        <p className="text-surface-500 dark:text-surface-400 mt-1">Manage your ParkHub instance</p>
+        <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('admin.title')}</h1>
+        <p className="text-surface-500 dark:text-surface-400 mt-1">{t('admin.subtitle')}</p>
       </div>
 
       {/* Tab navigation */}

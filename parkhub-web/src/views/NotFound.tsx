@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CarSimple, ArrowLeft } from '@phosphor-icons/react';
 
 export function NotFoundPage() {
+  const { t } = useTranslation();
+
   return (
     <main className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6">
       <div className="text-center max-w-sm" role="alert">
@@ -9,13 +12,13 @@ export function NotFoundPage() {
           <CarSimple weight="fill" className="w-7 h-7 text-white" />
         </div>
         <p className="text-6xl font-extrabold text-surface-200 dark:text-surface-800 mb-2">404</p>
-        <h1 className="text-xl font-bold text-surface-900 dark:text-white mb-2">Page not found</h1>
+        <h1 className="text-xl font-bold text-surface-900 dark:text-white mb-2">{t('notFound.title')}</h1>
         <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">
-          The page you're looking for doesn't exist or has been moved.
+          {t('notFound.description')}
         </p>
         <Link to="/" className="btn btn-primary inline-flex">
           <ArrowLeft weight="bold" className="w-4 h-4" />
-          Back to Dashboard
+          {t('notFound.backToDashboard')}
         </Link>
       </div>
     </main>

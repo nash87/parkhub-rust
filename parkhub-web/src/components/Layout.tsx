@@ -46,7 +46,7 @@ export function Layout() {
   return (
     <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 flex">
       {/* Skip to content */}
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">Skip to content</a>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">{t('nav.skipToContent')}</a>
 
       {/* Sidebar — desktop */}
       <aside className="hidden lg:flex flex-col w-64 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
@@ -132,7 +132,7 @@ export function Layout() {
         <header className="lg:hidden sticky top-0 z-30 bg-white dark:bg-surface-900 border-b border-surface-200 dark:border-surface-800 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon min-w-[44px] min-h-[44px]" aria-label="Open navigation menu">
+              <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon min-w-[44px] min-h-[44px]" aria-label={t('nav.openMenu')}>
                 <List weight="bold" className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export function Layout() {
             <button
               onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
               className="btn btn-ghost btn-icon"
-              aria-label={resolved === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
             >
               {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
             </button>
@@ -180,7 +180,7 @@ export function Layout() {
                     </div>
                     <span className="text-xl font-bold text-surface-900 dark:text-white">ParkHub</span>
                   </div>
-                  <button onClick={() => setSidebarOpen(false)} className="btn btn-ghost btn-icon" aria-label="Close navigation menu">
+                  <button onClick={() => setSidebarOpen(false)} className="btn btn-ghost btn-icon" aria-label={t('nav.closeMenu')}>
                     <X weight="bold" className="w-5 h-5" />
                   </button>
                 </div>

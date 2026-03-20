@@ -46,28 +46,28 @@ export function ForgotPasswordPage() {
           <div className="space-y-4" role="status">
             <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
               <CheckCircle weight="fill" className="w-6 h-6" />
-              <h1 className="text-xl font-bold text-surface-900 dark:text-white">Check your email</h1>
+              <h1 className="text-xl font-bold text-surface-900 dark:text-white">{t('forgotPassword.successTitle')}</h1>
             </div>
             <p className="text-surface-500 dark:text-surface-400 text-sm leading-relaxed">
-              If an account with that email exists, we've sent a password reset link. Check your inbox and spam folder.
+              {t('forgotPassword.successMessage')}
             </p>
             <Link to="/login" className="btn btn-primary w-full mt-6">
-              Back to Sign In
+              {t('forgotPassword.backToSignIn')}
             </Link>
           </div>
         ) : (
           <>
             <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1">
-              Reset password
+              {t('forgotPassword.title')}
             </h1>
             <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">
-              Enter your email and we'll send you a reset link.
+              {t('forgotPassword.subtitle')}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-                  Email
+                  {t('forgotPassword.emailLabel')}
                 </label>
                 <input
                   id="email"
@@ -87,9 +87,9 @@ export function ForgotPasswordPage() {
                 className="btn btn-primary w-full py-2.5 disabled:opacity-50"
               >
                 {loading ? (
-                  <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> Sending...</>
+                  <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('forgotPassword.sending')}</>
                 ) : (
-                  'Send reset link'
+                  t('forgotPassword.sendResetLink')
                 )}
               </button>
             </form>

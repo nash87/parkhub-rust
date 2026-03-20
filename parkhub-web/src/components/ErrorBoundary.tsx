@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from '../i18n';
 import { CarSimple, ArrowClockwise, Warning } from '@phosphor-icons/react';
 
 interface ErrorBoundaryState {
@@ -38,11 +39,11 @@ export class ErrorBoundary extends React.Component<
 
             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <Warning weight="fill" className="w-5 h-5" />
-              <h1 className="text-lg font-semibold">Something went wrong</h1>
+              <h1 className="text-lg font-semibold">{i18n.t('errorBoundary.title')}</h1>
             </div>
 
             <p className="text-sm text-surface-500 dark:text-surface-400">
-              An unexpected error occurred. Please try reloading the page.
+              {i18n.t('errorBoundary.description')}
             </p>
 
             {this.state.error && (
@@ -53,7 +54,7 @@ export class ErrorBoundary extends React.Component<
 
             <button onClick={this.handleReload} className="btn btn-primary">
               <ArrowClockwise weight="bold" className="w-4 h-4" />
-              Reload Page
+              {i18n.t('errorBoundary.reload')}
             </button>
           </div>
         </div>

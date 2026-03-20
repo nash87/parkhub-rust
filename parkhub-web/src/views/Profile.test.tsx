@@ -66,6 +66,14 @@ vi.mock('react-i18next', () => ({
         'gdpr.deleteAccountDesc': 'Alle Daten unwiderruflich löschen',
         'gdpr.exported': 'Daten exportiert',
         'gdpr.deleted': 'Konto gelöscht',
+        'gdpr.exportFailed': 'Export fehlgeschlagen',
+        'gdpr.deleteFailed': 'Löschen fehlgeschlagen',
+        'profile.roles.user': 'Benutzer',
+        'profile.roles.admin': 'Admin',
+        'profile.roles.superadmin': 'Super-Admin',
+        'profile.minChars': 'Mind. 8 Zeichen',
+        'profile.passwordsNoMatch': 'Passwörter stimmen nicht überein',
+        'common.error': 'Fehler',
       };
       return map[key] || fallback || key;
     },

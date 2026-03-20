@@ -53,7 +53,7 @@ export function VehiclesPage() {
       setForm({ plate: '', make: '', model: '', color: '' });
       setShowForm(false);
     } else {
-      toast.error(res.error?.message || 'Fehler');
+      toast.error(res.error?.message || t('common.error'));
     }
     setSaving(false);
   }
@@ -163,7 +163,7 @@ export function VehiclesPage() {
                       {v.color && <p className="text-xs text-surface-400 mt-0.5">{v.color}</p>}
                     </div>
                   </div>
-                  <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label={`${t('vehicles.removed', 'Delete')} ${v.plate}`}>
+                  <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label={t('vehicles.deleteVehicle', { plate: v.plate })}>
                     <Trash weight="regular" className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>

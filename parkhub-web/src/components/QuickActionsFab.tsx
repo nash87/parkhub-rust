@@ -85,7 +85,7 @@ export function QuickActionsFab() {
         animate={{ rotate: open ? 135 : 0 }}
         transition={{ type: 'spring', damping: 15, stiffness: 200 }}
         className="w-14 h-14 rounded-full bg-accent-600 text-white flex items-center justify-center shadow-xl shadow-accent-500/30 active:scale-95 transition-transform cursor-pointer"
-        aria-label={open ? 'Close quick actions' : 'Open quick actions'}
+        aria-label={open ? t('commandPalette.closeQuickActions') : t('commandPalette.openQuickActions')}
       >
         {open ? <X weight="bold" className="w-6 h-6" /> : <Plus weight="bold" className="w-6 h-6" />}
       </motion.button>

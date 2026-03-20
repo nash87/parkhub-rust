@@ -52,13 +52,11 @@ export function LoginPage() {
             <span className="text-xl font-bold text-white tracking-tight">ParkHub</span>
           </div>
 
-          <h2 className="text-3xl font-bold text-white mb-4 leading-tight">
-            Your parking,<br />
-            your server,<br />
-            your rules.
+          <h2 className="text-3xl font-bold text-white mb-4 leading-tight whitespace-pre-line">
+            {t('auth.heroTitle')}
           </h2>
           <p className="text-surface-400 text-sm leading-relaxed max-w-sm">
-            Self-hosted parking management. No cloud, no tracking, no monthly fees. Runs on your infrastructure.
+            {t('auth.heroSubtitle')}
           </p>
         </div>
       </div>
@@ -77,7 +75,7 @@ export function LoginPage() {
             className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors lg:hidden"
           >
             <ArrowLeft weight="bold" className="w-4 h-4" />
-            Back
+            {t('auth.back')}
           </Link>
 
           {/* Mobile logo */}
@@ -147,7 +145,7 @@ export function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showPassword ? <EyeSlash weight="bold" className="w-4 h-4" /> : <Eye weight="bold" className="w-4 h-4" />}
                 </button>
