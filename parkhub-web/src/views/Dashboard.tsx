@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 import {
   CalendarCheck, Car, Coins, Clock, CalendarPlus, ArrowRight,
   TrendUp, MapPin,
@@ -10,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { api, type Booking, type UserStats } from '../api/client';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { staggerSlow, fadeUp } from '../constants/animations';
+import { useWebSocket, type WsEvent } from '../hooks/useWebSocket';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -17,6 +19,22 @@ export function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleWsEvent = useCallback((event: WsEvent) => {
+    switch (event.event) {
+      case 'booking_created':
+        toast.success(t('dashboard.wsBookingCreated', 'New booking created'));
+        break;
+      case 'booking_cancelled':
+        toast(t('dashboard.wsBookingCancelled', 'A booking was cancelled'), { icon: '📋' });
+        break;
+      case 'occupancy_changed':
+        toast(t('dashboard.wsOccupancyChanged', 'Occupancy updated'), { icon: '🅿' });
+        break;
+    }
+  }, [t]);
+
+  useWebSocket({ onEvent: handleWsEvent });
 
   useEffect(() => {
     Promise.all([api.getBookings(), api.getUserStats()]).then(([bRes, sRes]) => {

@@ -69,6 +69,8 @@ pub struct AppState {
     /// The scheduler runs background tasks (e.g. monthly credit refill).
     /// Dropping it will cancel scheduled jobs.
     pub scheduler: Option<tokio_cron_scheduler::JobScheduler>,
+    /// Broadcast channel for WebSocket real-time events.
+    pub ws_events: api::ws::EventBroadcaster,
 }
 
 /// CLI arguments for the server
@@ -407,6 +409,7 @@ async fn main() -> Result<()> {
         db,
         mdns,
         scheduler: None,
+        ws_events: api::ws::EventBroadcaster::new(),
     }));
 
     // Build the API router

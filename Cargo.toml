@@ -36,7 +36,7 @@ rand = "0.9"  # updated from 0.8
 zeroize = { version = "1", features = ["derive"] }
 
 # HTTP/API
-axum = { version = "0.8", features = ["tokio", "json"] }  # updated from 0.7
+axum = { version = "0.8", features = ["tokio", "json", "ws"] }  # updated from 0.7
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "limit", "compression-gzip", "compression-br", "request-id", "propagate-header"] }
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }  # 0.13 exists but may break

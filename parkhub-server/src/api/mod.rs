@@ -76,6 +76,7 @@ pub(crate) mod setup;
 mod social;
 mod users;
 pub(crate) mod webhooks;
+pub mod ws;
 pub(crate) mod zones;
 
 // Re-import handler functions so the router can reference them unqualified.
@@ -174,7 +175,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/public/occupancy", get(public_occupancy))
         .route("/api/v1/public/display", get(public_display))
         // VAPID public key (no auth — frontend needs it before login)
-        .route("/api/v1/push/vapid-key", get(push::get_vapid_key));
+        .route("/api/v1/push/vapid-key", get(push::get_vapid_key))
+        // WebSocket real-time events
+        .route("/api/v1/ws", get(ws::ws_handler));
 
     // Protected routes (auth required)
     let protected_routes = Router::new()
