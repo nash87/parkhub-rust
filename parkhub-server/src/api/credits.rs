@@ -42,6 +42,8 @@ pub(crate) struct AdminGrantCreditsRequest {
     get,
     path = "/api/v1/user/credits",
     tag = "Credits",
+    summary = "Get credit balance",
+    description = "Returns the authenticated user's credit balance, monthly quota, and recent transactions.",
     responses(
         (status = 200, description = "User credit balance and recent transactions"),
         (status = 404, description = "User not found"),
@@ -92,7 +94,10 @@ pub(crate) async fn get_user_credits(
     post,
     path = "/api/v1/admin/users/{id}/credits",
     tag = "Credits",
+    summary = "Grant credits to a user",
+    description = "Add credits to a user's balance. Amount must be 1-10000. Admin only.",
     params(("id" = String, Path, description = "Target user ID")),
+    request_body = AdminGrantCreditsRequest,
     responses(
         (status = 200, description = "Credits granted successfully"),
         (status = 400, description = "Invalid amount"),
@@ -365,6 +370,8 @@ mod tests {
     post,
     path = "/api/v1/admin/credits/refill-all",
     tag = "Credits",
+    summary = "Refill all users' credits",
+    description = "Reset all active non-admin users' credit balances to their monthly quota. Admin only.",
     responses(
         (status = 200, description = "All active users refilled"),
         (status = 403, description = "Admin access required"),
@@ -437,6 +444,8 @@ pub(crate) async fn admin_refill_all_credits(
     put,
     path = "/api/v1/admin/users/{id}/quota",
     tag = "Credits",
+    summary = "Update user's monthly quota",
+    description = "Set a user's monthly credit allowance (0-999). Admin only.",
     params(("id" = String, Path, description = "Target user ID")),
     responses(
         (status = 200, description = "Quota updated successfully"),
