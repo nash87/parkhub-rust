@@ -32,7 +32,7 @@ import { AdminPage } from './Admin';
 describe('AdminPage', () => {
   it('renders Admin heading', () => {
     render(<AdminPage />);
-    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByText('Administration')).toBeInTheDocument();
   });
 
   it('renders the subtitle', () => {
@@ -45,7 +45,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Overview')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
     expect(screen.getByText('Users')).toBeInTheDocument();
-    expect(screen.getByText('Lots')).toBeInTheDocument();
+    expect(screen.getByText('Parking Lots')).toBeInTheDocument();
     expect(screen.getByText('Announcements')).toBeInTheDocument();
     expect(screen.getByText('Reports')).toBeInTheDocument();
   });
@@ -55,7 +55,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Overview').closest('a')).toHaveAttribute('href', '/admin');
     expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/admin/settings');
     expect(screen.getByText('Users').closest('a')).toHaveAttribute('href', '/admin/users');
-    expect(screen.getByText('Lots').closest('a')).toHaveAttribute('href', '/admin/lots');
+    expect(screen.getByText('Parking Lots').closest('a')).toHaveAttribute('href', '/admin/lots');
     expect(screen.getByText('Announcements').closest('a')).toHaveAttribute('href', '/admin/announcements');
     expect(screen.getByText('Reports').closest('a')).toHaveAttribute('href', '/admin/reports');
   });

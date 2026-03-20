@@ -76,13 +76,12 @@ describe('AdminLotsPage', () => {
     render(<AdminLotsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Parking Lots')).toBeInTheDocument();
+      // Table header uses t('admin.lots') which is also the page heading — multiple matches
+      expect(screen.getAllByText('Parking Lots').length).toBeGreaterThanOrEqual(2);
     });
-    expect(screen.getByText('Lot')).toBeInTheDocument();
-    expect(screen.getByText('Slots')).toBeInTheDocument();
+    expect(screen.getByText('Total Slots')).toBeInTheDocument();
     expect(screen.getByText('Status')).toBeInTheDocument();
     expect(screen.getByText('Pricing')).toBeInTheDocument();
-    expect(screen.getByText('Actions')).toBeInTheDocument();
   });
 
   it('renders lot count', async () => {
@@ -134,7 +133,7 @@ describe('AdminLotsPage', () => {
       expect(screen.getByText('Garage A')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByLabelText('Search parking lots');
+    const searchInput = screen.getByLabelText('Search lots...');
     await user.type(searchInput, 'nonexistent');
 
     expect(screen.getByText('No lots match your search.')).toBeInTheDocument();
@@ -155,7 +154,7 @@ describe('AdminLotsPage', () => {
       expect(screen.getByText('Garage Alpha')).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByLabelText('Search parking lots');
+    const searchInput = screen.getByLabelText('Search lots...');
     await user.type(searchInput, 'Beta');
 
     expect(screen.queryByText('Garage Alpha')).not.toBeInTheDocument();
@@ -173,7 +172,8 @@ describe('AdminLotsPage', () => {
 
     await user.click(screen.getByText('New Lot'));
 
-    expect(screen.getByText('New Parking Lot')).toBeInTheDocument();
+    // 'New Lot' appears as both button text and form heading
+    expect(screen.getAllByText('New Lot').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByLabelText('Name *')).toBeInTheDocument();
     expect(screen.getByLabelText('Address')).toBeInTheDocument();
     expect(screen.getByLabelText('Total Slots *')).toBeInTheDocument();

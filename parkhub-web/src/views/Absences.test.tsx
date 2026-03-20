@@ -47,6 +47,15 @@ vi.mock('react-i18next', () => ({
         'absences.endDate': 'Bis',
         'absences.notePlaceholder': 'Notiz (optional)',
         'absences.addBtn': 'Eintragen',
+        'absences.today': 'Heute',
+        'homeoffice.weekdaysShort.mon': 'Mo',
+        'homeoffice.weekdaysShort.tue': 'Di',
+        'homeoffice.weekdaysShort.wed': 'Mi',
+        'homeoffice.weekdaysShort.thu': 'Do',
+        'homeoffice.weekdaysShort.fri': 'Fr',
+        'homeoffice.weekdaysShort.sat': 'Sa',
+        'homeoffice.weekdaysShort.sun': 'So',
+        'common.error': 'Fehler',
       };
       return map[key] || fallback || key;
     },

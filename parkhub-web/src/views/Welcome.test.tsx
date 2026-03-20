@@ -18,6 +18,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         'welcome.subtitle': 'Smart parking management',
+        'welcome.selfHosted': 'Self-hosted',
         'welcome.features.booking': 'Booking',
         'welcome.features.bookingDesc': 'Book your spot',
         'welcome.features.credits': 'Credits',
@@ -25,6 +26,8 @@ vi.mock('react-i18next', () => ({
         'welcome.features.analytics': 'Analytics',
         'welcome.features.analyticsDesc': 'Track usage',
         'welcome.getStarted': 'Get Started',
+        'nav.switchToLight': 'Switch to light mode',
+        'nav.switchToDark': 'Switch to dark mode',
       };
       return map[key] || key;
     },
@@ -187,14 +190,14 @@ describe('WelcomePage', () => {
 
   it('renders the theme toggle button', () => {
     render(<WelcomePage />);
-    expect(screen.getByLabelText('Toggle theme')).toBeInTheDocument();
+    expect(screen.getByLabelText('Switch to dark mode')).toBeInTheDocument();
   });
 
   it('calls setTheme when theme toggle is clicked', async () => {
     const user = userEvent.setup();
     render(<WelcomePage />);
 
-    await user.click(screen.getByLabelText('Toggle theme'));
+    await user.click(screen.getByLabelText('Switch to dark mode'));
 
     // resolved is 'light', so clicking should toggle to 'dark'
     expect(mockSetTheme).toHaveBeenCalledWith('dark');
