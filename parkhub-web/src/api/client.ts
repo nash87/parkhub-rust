@@ -54,6 +54,12 @@ export const api = {
   register: (data: { username: string; email: string; password: string; name: string }) =>
     request('/api/v1/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
+  forgotPassword: (email: string) =>
+    request('/api/v1/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  resetPassword: (token: string, password: string) =>
+    request('/api/v1/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+
   me: () => request<User>('/api/v1/users/me'),
 
   updateMe: (data: Partial<User>) =>
