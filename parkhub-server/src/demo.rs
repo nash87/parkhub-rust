@@ -176,46 +176,44 @@ pub async fn demo_status(
 }
 
 /// Perform a full demo data reset: clear DB, re-seed admin + sample lot + credits.
+/// Always clears `reset_in_progress` on exit, even on partial failure.
 async fn perform_db_reset(app_state: &SharedAppState, demo_state: &SharedDemoState) {
     // Mark reset in progress
     if let Ok(mut ds) = demo_state.lock() {
         ds.reset_in_progress = true;
     }
 
-    let state_guard = app_state.write().await;
+    let result: Result<(), String> = async {
+        let state_guard = app_state.write().await;
 
-    // Clear all data
-    if let Err(e) = state_guard.db.clear_all_data().await {
-        tracing::error!("Demo reset: failed to clear data: {e}");
-        if let Ok(mut ds) = demo_state.lock() {
-            ds.reset_in_progress = false;
-        }
-        return;
-    }
+        // Clear all data
+        state_guard.db.clear_all_data().await
+            .map_err(|e| format!("failed to clear data: {e}"))?;
 
-    // Re-create admin user and sample lot
-    if let Err(e) = crate::create_admin_user(&state_guard.db, &state_guard.config).await {
-        tracing::error!("Demo reset: failed to create admin: {e}");
-    }
-    if let Err(e) = crate::create_sample_parking_lot(&state_guard.db).await {
-        tracing::error!("Demo reset: failed to create sample lot: {e}");
-    }
+        // Re-create admin user and sample lot
+        crate::create_admin_user(&state_guard.db, &state_guard.config).await
+            .map_err(|e| format!("failed to create admin: {e}"))?;
+        crate::create_sample_parking_lot(&state_guard.db).await
+            .map_err(|e| format!("failed to create sample lot: {e}"))?;
 
-    // Re-enable credits
-    let _ = state_guard.db.set_setting("credits_enabled", "true").await;
-    let _ = state_guard
-        .db
-        .set_setting("credits_per_booking", "1")
-        .await;
-    drop(state_guard);
+        // Re-enable credits
+        let _ = state_guard.db.set_setting("credits_enabled", "true").await;
+        let _ = state_guard.db.set_setting("credits_per_booking", "1").await;
 
-    // Update demo state
+        Ok(())
+    }.await;
+
+    // Always update demo state and clear reset_in_progress
     if let Ok(mut ds) = demo_state.lock() {
-        ds.reset();
-        ds.mark_reset_complete();
+        if result.is_ok() {
+            ds.reset();
+            ds.mark_reset_complete();
+            info!("Demo data reset complete");
+        } else {
+            ds.reset_in_progress = false;
+            tracing::error!("Demo reset failed: {}", result.unwrap_err());
+        }
     }
-
-    info!("Demo data reset complete (API-triggered)");
 }
 
 /// POST /api/v1/demo/vote
@@ -224,13 +222,21 @@ pub async fn demo_vote(
     Extension(state): Extension<SharedDemoState>,
     Extension(app_state): Extension<SharedAppState>,
 ) -> impl IntoResponse {
-    // Check enabled + existing vote under short lock
-    let (enabled, already_voted, should_reset) = {
+    // Check enabled + existing vote + reset_in_progress under short lock
+    let should_reset = {
         let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
         if !s.enabled {
             return (
                 StatusCode::FORBIDDEN,
                 Json(serde_json::json!({"error": "Demo mode is not enabled"})),
+            )
+                .into_response();
+        }
+
+        if s.reset_in_progress {
+            return (
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({"error": "A reset is already in progress"})),
             )
                 .into_response();
         }
@@ -247,10 +253,8 @@ pub async fn demo_vote(
         }
 
         s.votes.insert(ip, Instant::now());
-        let should_reset = s.votes.len() >= VOTE_THRESHOLD;
-        (s.enabled, false, should_reset)
+        s.votes.len() >= VOTE_THRESHOLD
     };
-    let _ = (enabled, already_voted); // suppress unused warnings
 
     if should_reset {
         // Full DB reset — runs outside the Mutex lock
