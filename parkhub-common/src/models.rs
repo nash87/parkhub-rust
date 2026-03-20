@@ -355,7 +355,7 @@ pub enum VehicleType {
 }
 
 /// Request to create a booking
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CreateBookingRequest {
     pub lot_id: Uuid,
     pub slot_id: Uuid,
@@ -496,7 +496,7 @@ pub enum LayoutElementType {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Absence type classification
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AbsenceType {
     Homeoffice,
