@@ -78,7 +78,7 @@ export function BookingsPage() {
       </motion.div>
 
       {/* Filters */}
-      <motion.div variants={item} className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-4">
+      <motion.div variants={item} className="bg-white/80 dark:bg-surface-900/80 backdrop-blur-lg border border-surface-200/60 dark:border-surface-800/60 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3" aria-live="polite">
           <Funnel weight="bold" className="w-4 h-4 text-surface-400" />
           <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t('common.filter')}</span>

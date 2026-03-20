@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -10,8 +10,23 @@ interface ThemeState {
 
 const ThemeContext = createContext<ThemeState | null>(null);
 
-function getSystemTheme(): 'light' | 'dark' {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+/* Subscribe to prefers-color-scheme changes via useSyncExternalStore
+   so React re-renders when the OS theme flips while in "system" mode. */
+const mq = typeof window !== 'undefined'
+  ? window.matchMedia('(prefers-color-scheme: dark)')
+  : null;
+
+function subscribeToSystemTheme(callback: () => void) {
+  mq?.addEventListener('change', callback);
+  return () => mq?.removeEventListener('change', callback);
+}
+
+function getSystemSnapshot(): 'light' | 'dark' {
+  return mq?.matches ? 'dark' : 'light';
+}
+
+function getServerSnapshot(): 'light' | 'dark' {
+  return 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -19,22 +34,29 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     (localStorage.getItem('parkhub_theme') as Theme) || 'system'
   );
 
-  const resolved = theme === 'system' ? getSystemTheme() : theme;
+  // Reactively track OS preference so `resolved` updates on system change
+  const systemTheme = useSyncExternalStore(
+    subscribeToSystemTheme,
+    getSystemSnapshot,
+    getServerSnapshot,
+  );
+
+  const resolved = theme === 'system' ? systemTheme : theme;
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', resolved === 'dark');
+    const root = document.documentElement;
+    root.classList.toggle('dark', resolved === 'dark');
+    // Update meta theme-color for mobile browsers
+    const metaLight = document.querySelector('meta[name="theme-color"][media="(prefers-color-scheme: light)"]');
+    const metaDark = document.querySelector('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]');
+    if (resolved === 'dark') {
+      metaLight?.setAttribute('content', '#042f2e');
+      metaDark?.setAttribute('content', '#042f2e');
+    } else {
+      metaLight?.setAttribute('content', '#0d9488');
+      metaDark?.setAttribute('content', '#0d9488');
+    }
   }, [resolved]);
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => {
-      if (theme === 'system') {
-        document.documentElement.classList.toggle('dark', mq.matches);
-      }
-    };
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [theme]);
 
   function setTheme(t: Theme) {
     setThemeState(t);
