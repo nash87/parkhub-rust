@@ -103,7 +103,7 @@ export function NotificationsPage() {
           <p className="text-surface-500 dark:text-surface-400">{t('notifications.empty', 'Keine Benachrichtigungen')}</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2" role="list" aria-label={t('notifications.title', 'Notifications')}>
           <AnimatePresence>
             {notifications.map(n => {
               const nType = resolveType(n.notification_type);
@@ -111,10 +111,12 @@ export function NotificationsPage() {
               return (
                 <motion.button
                   key={n.id}
+                  role="listitem"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -50 }}
                   onClick={() => { if (!n.read) markAsRead(n.id); }}
+                  aria-label={`${n.title} — ${n.read ? t('notifications.allRead', 'Read') : t('notifications.unread', 'Unread')}`}
                   className={`w-full text-left bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-4 flex items-start gap-4 transition-all hover:shadow-md ${
                     n.read ? 'opacity-60' : 'ring-1 ring-primary-200 dark:ring-primary-800'
                   }`}

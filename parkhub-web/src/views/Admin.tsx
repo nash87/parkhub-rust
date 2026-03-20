@@ -22,13 +22,14 @@ function AdminNav() {
   }
 
   return (
-    <nav className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide -webkit-overflow-scrolling-touch">
+    <nav aria-label="Admin navigation" className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide -webkit-overflow-scrolling-touch">
       {tabs.map(tab => {
         const active = isActive(tab.path);
         return (
           <Link
             key={tab.path}
             to={tab.path}
+            aria-current={active ? 'page' : undefined}
             className={`relative flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
               active
                 ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'

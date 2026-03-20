@@ -134,8 +134,8 @@ export function BookPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         {step > 1 && (
-          <button onClick={goBack} className="btn btn-ghost btn-sm p-1.5">
-            <ArrowLeft weight="bold" className="w-5 h-5" />
+          <button onClick={goBack} className="btn btn-ghost btn-sm p-1.5" aria-label={t('common.back', 'Go back')}>
+            <ArrowLeft weight="bold" className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
         <div>
@@ -149,10 +149,11 @@ export function BookPage() {
       </div>
 
       {/* Step indicator */}
-      <div className="flex items-center gap-4 text-sm">
+      <nav aria-label={t('book.progress', 'Booking progress')} className="flex items-center gap-4 text-sm">
         {[1, 2, 3].map(s => (
           <span
             key={s}
+            aria-current={s === step ? 'step' : undefined}
             className={`font-medium ${s === step
               ? 'text-teal-600 dark:text-teal-400'
               : s < step
@@ -161,10 +162,10 @@ export function BookPage() {
             }`}
           >
             {s}. {t(`book.stepName${s}`)}
-            {s < step && <Check weight="bold" className="inline w-3.5 h-3.5 ml-1" />}
+            {s < step && <Check weight="bold" className="inline w-3.5 h-3.5 ml-1" aria-hidden="true" />}
           </span>
         ))}
-      </div>
+      </nav>
 
       {/* Steps */}
       <AnimatePresence mode="wait" custom={direction}>
@@ -366,6 +367,8 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
                   key={slot.id}
                   disabled={!isAvailable}
                   onClick={() => onSelectSlot(slot)}
+                  aria-pressed={isSelected}
+                  aria-label={`${t('book.slot', 'Slot')} ${slot.slot_number}${slot.slot_type ? ` (${slot.slot_type})` : ''} — ${slot.status}`}
                   className={`
                     relative h-12 rounded-lg border text-sm font-medium transition-colors
                     ${isSelected
@@ -394,11 +397,12 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
       {/* Time selection */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-            <Clock weight="regular" className="inline w-4 h-4 mr-1" />
+          <label htmlFor="book-start-time" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+            <Clock weight="regular" className="inline w-4 h-4 mr-1" aria-hidden="true" />
             {t('book.startTime')}
           </label>
           <input
+            id="book-start-time"
             type="datetime-local"
             value={startDate}
             onChange={e => onStartDateChange(e.target.value)}
@@ -406,14 +410,15 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+          <span id="duration-label" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
             {t('book.duration')}
-          </label>
-          <div className="flex gap-2">
+          </span>
+          <div className="flex gap-2" role="group" aria-labelledby="duration-label">
             {DURATIONS.map(d => (
               <button
                 key={d.hours}
                 onClick={() => onDurationChange(d.hours)}
+                aria-pressed={duration === d.hours}
                 className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-colors ${
                   duration === d.hours
                     ? 'bg-teal-600 border-teal-600 text-white'
@@ -430,11 +435,12 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
       {/* Vehicle selection */}
       {vehicles.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-            <Car weight="regular" className="inline w-4 h-4 mr-1" />
+          <label htmlFor="book-vehicle" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
+            <Car weight="regular" className="inline w-4 h-4 mr-1" aria-hidden="true" />
             {t('book.vehicle')}
           </label>
           <select
+            id="book-vehicle"
             value={selectedVehicle}
             onChange={e => onVehicleChange(e.target.value)}
             className="input text-sm"
@@ -482,7 +488,7 @@ function StepConfirm({ lot, slot, start, end, duration, estimatedCost, vehicle, 
 
   return (
     <div className="space-y-6 max-w-lg">
-      <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl divide-y divide-surface-100 dark:divide-surface-800">
+      <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl divide-y divide-surface-100 dark:divide-surface-800" role="region" aria-label={t('book.summary', 'Booking summary')}>
         <SummaryRow label={t('book.lot')} value={lot.name} />
         <SummaryRow label={t('book.slot')} value={slot.slot_number} />
         <SummaryRow label={t('book.from')} value={fmt(start)} />

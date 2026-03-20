@@ -87,31 +87,31 @@ export function VehiclesPage() {
       {/* Add vehicle modal */}
       <AnimatePresence>
         {showForm && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={t('vehicles.newVehicle', 'New vehicle')}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)} aria-hidden="true" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 shadow-2xl">
               <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200 dark:border-surface-800">
                 <h2 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
                   <Car weight="fill" className="w-5 h-5 text-primary-600" />
                   {t('vehicles.newVehicle', 'Neues Fahrzeug')}
                 </h2>
-                <button onClick={() => setShowForm(false)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800">
-                  <X weight="bold" className="w-5 h-5 text-surface-500" />
+                <button onClick={() => setShowForm(false)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800" aria-label={t('common.cancel', 'Close')}>
+                  <X weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" />
                 </button>
               </div>
               <form onSubmit={handleAdd} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.plate', 'Kennzeichen')} *</label>
-                  <input type="text" value={form.plate} onChange={e => setForm({ ...form, plate: e.target.value })} className="input w-full" placeholder="M-AB 1234" required autoFocus />
+                  <label htmlFor="vehicle-plate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.plate', 'Kennzeichen')} *</label>
+                  <input id="vehicle-plate" type="text" value={form.plate} onChange={e => setForm({ ...form, plate: e.target.value })} className="input w-full" placeholder="M-AB 1234" required autoFocus />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.make', 'Marke')}</label>
-                    <input type="text" value={form.make} onChange={e => setForm({ ...form, make: e.target.value })} className="input w-full" placeholder="BMW" />
+                    <label htmlFor="vehicle-make" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.make', 'Marke')}</label>
+                    <input id="vehicle-make" type="text" value={form.make} onChange={e => setForm({ ...form, make: e.target.value })} className="input w-full" placeholder="BMW" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.model', 'Modell')}</label>
-                    <input type="text" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} className="input w-full" placeholder="3er" />
+                    <label htmlFor="vehicle-model" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.model', 'Modell')}</label>
+                    <input id="vehicle-model" type="text" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} className="input w-full" placeholder="3er" />
                   </div>
                 </div>
                 <div>
@@ -119,6 +119,7 @@ export function VehiclesPage() {
                   <div className="flex flex-wrap gap-2 mt-1">
                     {COLOR_OPTIONS.map(c => (
                       <button key={c.value} type="button" onClick={() => setForm({ ...form, color: form.color === c.value ? '' : c.value })}
+                        aria-label={c.value} aria-pressed={form.color === c.value}
                         className={`w-8 h-8 rounded-full ${c.bg} transition-all ${form.color === c.value ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-surface-900 scale-110' : ''}`}
                       />
                     ))}
@@ -162,8 +163,8 @@ export function VehiclesPage() {
                       {v.color && <p className="text-xs text-surface-400 mt-0.5">{v.color}</p>}
                     </div>
                   </div>
-                  <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <Trash weight="regular" className="w-5 h-5" />
+                  <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label={`${t('vehicles.removed', 'Delete')} ${v.plate}`}>
+                    <Trash weight="regular" className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
                 {v.is_default && (

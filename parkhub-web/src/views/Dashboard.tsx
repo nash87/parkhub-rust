@@ -33,7 +33,7 @@ export function DashboardPage() {
   const container = staggerSlow;
   const item = fadeUp;
 
-  if (loading) return <DashboardSkeleton />;
+  if (loading) return <div role="status" aria-label="Loading dashboard"><DashboardSkeleton /></div>;
 
   return (
     <AnimatePresence mode="wait">
@@ -46,7 +46,7 @@ export function DashboardPage() {
       </motion.div>
 
       {/* Stats grid */}
-      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={item} className="grid grid-cols-2 lg:grid-cols-4 gap-4" role="region" aria-label="Statistics">
         <StatCard
           label={t('dashboard.activeBookings')}
           value={activeBookings.length}

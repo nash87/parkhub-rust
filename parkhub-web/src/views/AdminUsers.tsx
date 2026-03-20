@@ -282,11 +282,12 @@ export function AdminUsersPage() {
                           value={editQuota}
                           onChange={e => setEditQuota(e.target.value)}
                           className="input text-xs py-1 px-2 w-20"
+                          aria-label="Monthly quota"
                         />
-                        <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600">
+                        <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label="Save quota">
                           {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
                         </button>
-                        <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400">
+                        <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label="Cancel editing quota">
                           <X weight="bold" className="w-4 h-4" />
                         </button>
                       </div>
@@ -294,6 +295,7 @@ export function AdminUsersPage() {
                       <button
                         onClick={() => startEditQuota(user)}
                         className="inline-flex items-center gap-1.5 text-sm text-surface-700 dark:text-surface-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                        aria-label={`Edit quota for ${user.name}`}
                         title="Edit quota"
                       >
                         <span className="font-semibold">{user.credits_monthly_quota}</span>

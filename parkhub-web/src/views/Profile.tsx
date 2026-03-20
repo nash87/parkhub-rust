@@ -136,12 +136,12 @@ export function ProfilePage() {
             {editing ? (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.name', 'Name')}</label>
-                  <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="input" />
+                  <label htmlFor="profile-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.name', 'Name')}</label>
+                  <input id="profile-name" type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="input" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.email', 'E-Mail')}</label>
-                  <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="input" />
+                  <label htmlFor="profile-email" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.email', 'E-Mail')}</label>
+                  <input id="profile-email" type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="input" />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
@@ -195,7 +195,7 @@ export function ProfilePage() {
 
       {/* Password change */}
       <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
-        <button onClick={() => setPwOpen(!pwOpen)} className="w-full flex items-center justify-between">
+        <button onClick={() => setPwOpen(!pwOpen)} className="w-full flex items-center justify-between" aria-expanded={pwOpen}>
           <h3 className="text-base font-semibold text-surface-900 dark:text-white">
             {t('profile.changePassword', 'Passwort \u00e4ndern')}
           </h3>
@@ -204,17 +204,17 @@ export function ProfilePage() {
         {pwOpen && (
           <div className="mt-4 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.currentPassword', 'Aktuelles Passwort')}</label>
-              <input type="password" value={pwForm.current} onChange={e => setPwForm({ ...pwForm, current: e.target.value })} className="input" autoComplete="current-password" />
+              <label htmlFor="pw-current" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.currentPassword', 'Aktuelles Passwort')}</label>
+              <input id="pw-current" type="password" value={pwForm.current} onChange={e => setPwForm({ ...pwForm, current: e.target.value })} className="input" autoComplete="current-password" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.newPassword', 'Neues Passwort')}</label>
-              <input type="password" value={pwForm.newPw} onChange={e => setPwForm({ ...pwForm, newPw: e.target.value })} className="input" autoComplete="new-password" />
+              <label htmlFor="pw-new" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.newPassword', 'Neues Passwort')}</label>
+              <input id="pw-new" type="password" value={pwForm.newPw} onChange={e => setPwForm({ ...pwForm, newPw: e.target.value })} className="input" autoComplete="new-password" />
               {pwForm.newPw.length > 0 && pwForm.newPw.length < 8 && <p className="text-xs text-amber-600 mt-1">Mind. 8 Zeichen</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.confirmPassword', 'Passwort best\u00e4tigen')}</label>
-              <input type="password" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} className="input" autoComplete="new-password" />
+              <label htmlFor="pw-confirm" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('profile.confirmPassword', 'Passwort best\u00e4tigen')}</label>
+              <input id="pw-confirm" type="password" value={pwForm.confirm} onChange={e => setPwForm({ ...pwForm, confirm: e.target.value })} className="input" autoComplete="new-password" />
               {pwForm.confirm.length > 0 && pwForm.newPw !== pwForm.confirm && <p className="text-xs text-red-600 mt-1">Passw\u00f6rter stimmen nicht \u00fcberein</p>}
             </div>
             <button onClick={handleChangePassword} disabled={pwSaving || pwForm.newPw.length < 8 || pwForm.newPw !== pwForm.confirm || !pwForm.current} className="btn btn-primary btn-sm disabled:opacity-60">
