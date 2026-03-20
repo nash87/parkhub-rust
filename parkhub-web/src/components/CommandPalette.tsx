@@ -123,12 +123,12 @@ export function CommandPalette({
             className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
           >
             <div
-              className="w-full max-w-md bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-700 rounded-lg shadow-lg overflow-hidden"
+              className="w-full max-w-md glass-modal overflow-hidden"
               role="dialog"
               aria-label="Command palette"
             >
               {/* Search input */}
-              <div className="border-b border-surface-200 dark:border-surface-700 px-4 py-3">
+              <div className="border-b border-surface-200/50 dark:border-surface-700/50 px-4 py-3">
                 <input
                   ref={inputRef}
                   type="text"
@@ -171,7 +171,7 @@ export function CommandPalette({
               </ul>
 
               {/* Footer hint */}
-              <div className="border-t border-surface-200 dark:border-surface-700 px-4 py-2 flex items-center gap-4 text-xs text-surface-400 dark:text-surface-500">
+              <div className="border-t border-surface-200/50 dark:border-surface-700/50 px-4 py-2 flex items-center gap-4 text-xs text-surface-400 dark:text-surface-500">
                 <span><kbd className="font-mono">↑↓</kbd> {t('commandPalette.navigate')}</span>
                 <span><kbd className="font-mono">↵</kbd> {t('commandPalette.select')}</span>
                 <span><kbd className="font-mono">esc</kbd> {t('commandPalette.closeLabel')}</span>

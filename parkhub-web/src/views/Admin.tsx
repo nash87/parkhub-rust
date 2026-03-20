@@ -68,7 +68,7 @@ export function AdminPage() {
       {/* Tab navigation */}
       <div className="relative">
         <AdminNav />
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-surface-950 to-transparent pointer-events-none sm:hidden" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-surface-50 dark:from-surface-950 to-transparent pointer-events-none sm:hidden" />
       </div>
 
       {/* Divider */}
