@@ -174,6 +174,8 @@ pub struct EndpointRateLimiters {
     pub register: Arc<per_ip::IpRateLimiter>,
     /// Forgot-password — 3 per 15 minutes per IP
     pub forgot_password: Arc<per_ip::IpRateLimiter>,
+    /// Demo vote/reset — 3 per minute per IP
+    pub demo: Arc<per_ip::IpRateLimiter>,
     /// General API (relaxed global limiter)
     pub general: Arc<GlobalRateLimiter>,
 }
@@ -190,6 +192,8 @@ impl EndpointRateLimiters {
                 3,
                 Duration::from_secs(15 * 60),
             ),
+            // 3 demo vote/reset per minute per IP
+            demo: per_ip::create_ip_rate_limiter(3),
             // 100 requests per second globally
             general: create_rate_limiter(&RateLimitConfig::default()),
         }
