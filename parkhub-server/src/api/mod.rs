@@ -11,9 +11,11 @@ use axum::{
     routing::{delete, get, post, put},
     Extension, Json, Router,
 };
-use chrono::{DateTime, Datelike, Duration, Timelike, Utc};
+use chrono::{DateTime, Datelike, Timelike, TimeDelta, Utc};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::RwLock;
+use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::trace::TraceLayer;
@@ -493,6 +495,22 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 ])
                 .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE, header::ACCEPT])
                 .allow_credentials(false),
+        )
+        // 30-second request timeout — returns 408 on breach
+        .layer(
+            ServiceBuilder::new()
+                .layer(axum::error_handling::HandleErrorLayer::new(
+                    |_: tower::BoxError| async {
+                        (
+                            StatusCode::REQUEST_TIMEOUT,
+                            Json(serde_json::json!({
+                                "error": "REQUEST_TIMEOUT",
+                                "message": "Request timed out"
+                            })),
+                        )
+                    },
+                ))
+                .layer(tower::timeout::TimeoutLayer::new(Duration::from_secs(30))),
         );
 
     (router, demo_state_ret)
@@ -1148,7 +1166,7 @@ async fn create_booking(
     }
 
     // Calculate end time and pricing
-    let end_time = req.start_time + Duration::minutes(req.duration_minutes as i64);
+    let end_time = req.start_time + TimeDelta::minutes(req.duration_minutes as i64);
 
     // Look up the lot for pricing and floor name
     let lot_opt = state_guard
@@ -2453,13 +2471,13 @@ async fn admin_dashboard_charts(
     let lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
     let users = state_guard.db.list_users().await.unwrap_or_default();
     let now = Utc::now();
-    let cutoff = now - Duration::days(30);
+    let cutoff = now - TimeDelta::days(30);
 
     // ── bookings_by_day (last 30 days) ──────────────────────────────────────
     let mut by_day: std::collections::BTreeMap<String, usize> = std::collections::BTreeMap::new();
     // Pre-fill all 30 days so the chart has continuous x-axis
     for d in 0..30 {
-        let date = (now - Duration::days(d)).format("%Y-%m-%d").to_string();
+        let date = (now - TimeDelta::days(d)).format("%Y-%m-%d").to_string();
         by_day.entry(date).or_insert(0);
     }
     for b in &bookings {
@@ -2511,7 +2529,7 @@ async fn admin_dashboard_charts(
                     hour_totals[h] += 1;
                     hour_day_set[h].insert(t.format("%Y-%m-%d").to_string());
                 }
-                t += Duration::hours(1);
+                t += TimeDelta::hours(1);
             }
         }
     }
@@ -5185,19 +5203,19 @@ async fn quick_book(
     let now = Utc::now();
     let (start_time, end_time) = match booking_type {
         "half_day_am" => {
-            let start = now + Duration::minutes(1);
-            let end = start + Duration::hours(4);
+            let start = now + TimeDelta::minutes(1);
+            let end = start + TimeDelta::hours(4);
             (start, end)
         }
         "half_day_pm" => {
-            let start = now + Duration::minutes(1);
-            let end = start + Duration::hours(4);
+            let start = now + TimeDelta::minutes(1);
+            let end = start + TimeDelta::hours(4);
             (start, end)
         }
         _ => {
             // full_day default: 8 hours
-            let start = now + Duration::minutes(1);
-            let end = start + Duration::hours(8);
+            let start = now + TimeDelta::minutes(1);
+            let end = start + TimeDelta::hours(8);
             (start, end)
         }
     };
@@ -5512,7 +5530,7 @@ async fn admin_reports(
     }
 
     let days = query.days.unwrap_or(30);
-    let cutoff = Utc::now() - Duration::days(days);
+    let cutoff = Utc::now() - TimeDelta::days(days);
 
     let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
 
@@ -7338,7 +7356,7 @@ mod tests {
             event_type: "booking".to_string(),
             title: "Slot A3".to_string(),
             start: Utc::now(),
-            end: Utc::now() + Duration::hours(2),
+            end: Utc::now() + TimeDelta::hours(2),
             lot_name: None,
             slot_number: None,
             status: None,
@@ -7356,7 +7374,7 @@ mod tests {
             event_type: "booking".to_string(),
             title: "Slot B1".to_string(),
             start: Utc::now(),
-            end: Utc::now() + Duration::hours(1),
+            end: Utc::now() + TimeDelta::hours(1),
             lot_name: Some("Lot Alpha".to_string()),
             slot_number: Some(42),
             status: Some("confirmed".to_string()),

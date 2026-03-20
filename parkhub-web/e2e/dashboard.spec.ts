@@ -24,6 +24,21 @@ test.describe('Dashboard', () => {
     await expect(page.getByText('Credits Left')).toBeVisible();
   });
 
+  test('dashboard navigation has correct ARIA structure', async ({ page }) => {
+    await expect(page.getByRole('navigation')).toMatchAriaSnapshot(`
+      - link /Bookings/
+      - link /Admin/
+    `);
+  });
+
+  test('dashboard main content has stat sections', async ({ page }) => {
+    await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+      - heading /Good (morning|afternoon|evening)/
+      - text /Active Bookings/
+      - text /Credits Left/
+    `);
+  });
+
   test('quick actions visible', async ({ page }) => {
     await expect(page.getByText('Book a Spot')).toBeVisible();
   });

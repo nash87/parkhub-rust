@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useActionState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -14,25 +14,27 @@ export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+
+  const [error, dispatch, isPending] = useActionState(
+    async (_prev: string | null, _formData: FormData) => {
+      const result = await login(username, password);
+      if (result.success) {
+        navigate('/', { replace: true });
+        return null;
+      }
+      return result.error || t('auth.loginError');
+    },
+    null
+  );
 
   if (user) {
     navigate('/', { replace: true });
     return null;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError('');
-    setLoading(true);
-    const result = await login(username, password);
-    if (result.success) {
-      navigate('/', { replace: true });
-    } else {
-      setError(result.error || t('auth.loginError'));
-    }
-    setLoading(false);
+    dispatch(new FormData(e.currentTarget));
   }
 
   return (
@@ -166,10 +168,10 @@ export function LoginPage() {
             <button
               id="login-submit"
               type="submit"
-              disabled={loading || !username || !password}
+              disabled={isPending || !username || !password}
               className="btn btn-primary w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {isPending ? (
                 <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.loggingIn')}</>
               ) : (
                 t('auth.signIn')

@@ -2,6 +2,7 @@
 import { defineConfig, fontProviders } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
+import reactCompiler from 'babel-plugin-react-compiler';
 import { execSync } from 'node:child_process';
 
 const buildHash = (() => {
@@ -31,7 +32,7 @@ const swBuildHashIntegration = {
 
 export default defineConfig({
   output: 'static',
-  integrations: [react(), swBuildHashIntegration],
+  integrations: [react({ babel: { plugins: [reactCompiler] } }), swBuildHashIntegration],
   vite: {
     plugins: [tailwindcss()],
     define: {

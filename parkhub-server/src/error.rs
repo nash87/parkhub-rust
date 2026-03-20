@@ -151,6 +151,13 @@ impl IntoResponse for AppError {
     }
 }
 
+impl From<redb::Error> for AppError {
+    fn from(e: redb::Error) -> Self {
+        tracing::error!("Database error: {:?}", e);
+        Self::Database(e.to_string())
+    }
+}
+
 // Convert from common error types
 impl From<anyhow::Error> for AppError {
     fn from(err: anyhow::Error) -> Self {
@@ -192,6 +199,7 @@ pub type ApiResult<T> = Result<T, AppError>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::to_bytes;
 
     #[test]
     fn test_error_codes() {
@@ -210,8 +218,86 @@ mod tests {
             StatusCode::NOT_FOUND
         );
         assert_eq!(
+            AppError::Forbidden.status_code(),
+            StatusCode::FORBIDDEN
+        );
+        assert_eq!(
+            AppError::InvalidInput("bad".into()).status_code(),
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            AppError::AlreadyExists("thing".into()).status_code(),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
             AppError::RateLimited.status_code(),
             StatusCode::TOO_MANY_REQUESTS
         );
+        assert_eq!(
+            AppError::Internal.status_code(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            AppError::Database("oops".into()).status_code(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    #[tokio::test]
+    async fn test_into_response_not_found() {
+        let err = AppError::NotFound("parking lot".into());
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "NOT_FOUND");
+        assert!(json["message"].as_str().unwrap().contains("parking lot"));
+    }
+
+    #[tokio::test]
+    async fn test_into_response_unauthorized() {
+        let err = AppError::Unauthorized;
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "UNAUTHORIZED");
+        assert!(json.get("message").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_into_response_bad_request() {
+        let err = AppError::InvalidInput("missing field".into());
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "INVALID_INPUT");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_internal() {
+        let err = AppError::Internal;
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "INTERNAL_ERROR");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_validation_failed() {
+        let errors = vec![FieldError {
+            field: "email".into(),
+            message: "invalid format".into(),
+        }];
+        let err = AppError::ValidationFailed(errors);
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "VALIDATION_FAILED");
+        assert!(json["details"].is_array());
+        assert_eq!(json["details"][0]["field"], "email");
     }
 }

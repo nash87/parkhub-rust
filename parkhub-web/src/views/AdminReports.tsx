@@ -155,6 +155,37 @@ export function AdminReportsPage() {
         </h3>
         <BarChart data={weeklyData} />
       </div>
+
+      {/* Lot Occupancy Donut Chart */}
+      {lotOccupancy.length > 0 && (
+        <div className="card p-6">
+          <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-6">
+            Lot Occupancy
+          </h3>
+          <div className="flex flex-col sm:flex-row items-center gap-8">
+            <div className="flex-shrink-0">
+              <DonutChart slices={lotOccupancy} size={180} strokeWidth={24} />
+            </div>
+            <ul className="flex-1 space-y-2 w-full">
+              {lotOccupancy.map(lot => (
+                <li key={lot.label} className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-full"
+                      style={{ background: lot.occupancy >= 80 ? 'var(--color-red-500,#ef4444)' : lot.occupancy >= 60 ? 'var(--color-amber-400,#fbbf24)' : 'var(--color-emerald-500,#10b981)' }}
+                    />
+                    <span className="text-surface-700 dark:text-surface-300 font-medium">{lot.label}</span>
+                  </span>
+                  <span className="font-semibold text-surface-900 dark:text-white tabular-nums">{lot.occupancy}%</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="mt-4 text-xs text-surface-400">
+            Color: <span className="text-emerald-500 font-medium">green</span> &lt;60% &middot; <span className="text-amber-400 font-medium">yellow</span> 60–80% &middot; <span className="text-red-500 font-medium">red</span> &ge;80%
+          </p>
+        </div>
+      )}
     </motion.div>
   );
 }
