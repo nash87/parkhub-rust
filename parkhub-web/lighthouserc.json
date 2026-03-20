@@ -3,6 +3,7 @@
     "collect": {
       "startServerCommand": "npx astro preview --port 4321",
       "startServerReadyPattern": "localhost:4321",
+      "url": ["http://localhost:4321/"],
       "numberOfRuns": 1
     },
     "assert": {
