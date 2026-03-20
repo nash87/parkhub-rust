@@ -19,10 +19,13 @@ use super::{AuthUser, SharedState};
 // Request DTOs
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct CreateZoneRequest {
+    /// Zone name (e.g. "VIP Section", "Level A")
     pub name: String,
+    /// Optional description
     pub description: Option<String>,
+    /// Display color (hex code, e.g. "#FFD700")
     pub color: Option<String>,
 }
 
@@ -31,6 +34,17 @@ pub struct CreateZoneRequest {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// `GET /api/v1/lots/{lot_id}/zones` — list zones for a lot
+#[utoipa::path(
+    get,
+    path = "/api/v1/lots/{lot_id}/zones",
+    tag = "Zones",
+    summary = "List zones for a lot",
+    description = "Returns all zones defined in the specified parking lot.",
+    params(("lot_id" = String, Path, description = "Parking lot ID")),
+    responses(
+        (status = 200, description = "List of zones"),
+    )
+)]
 pub(crate) async fn list_zones(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
@@ -48,6 +62,21 @@ pub(crate) async fn list_zones(
 }
 
 /// `POST /api/v1/lots/{lot_id}/zones` — create a zone (admin only)
+#[utoipa::path(
+    post,
+    path = "/api/v1/lots/{lot_id}/zones",
+    tag = "Zones",
+    summary = "Create a zone",
+    description = "Create a new zone within a parking lot. Admin only.",
+    params(("lot_id" = String, Path, description = "Parking lot ID")),
+    request_body = CreateZoneRequest,
+    responses(
+        (status = 201, description = "Zone created"),
+        (status = 400, description = "Invalid lot ID"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
 pub(crate) async fn create_zone(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -127,6 +156,22 @@ pub(crate) async fn create_zone(
 }
 
 /// `DELETE /api/v1/lots/{lot_id}/zones/{zone_id}` — delete a zone (admin only)
+#[utoipa::path(
+    delete,
+    path = "/api/v1/lots/{lot_id}/zones/{zone_id}",
+    tag = "Zones",
+    summary = "Delete a zone",
+    description = "Remove a zone from a parking lot. Admin only.",
+    params(
+        ("lot_id" = String, Path, description = "Parking lot ID"),
+        ("zone_id" = String, Path, description = "Zone ID"),
+    ),
+    responses(
+        (status = 200, description = "Zone deleted"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Zone not found"),
+    )
+)]
 pub(crate) async fn delete_zone(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
