@@ -621,7 +621,6 @@ export default {
       hoursAgo: '{{count}}h ago',
       daysAgo: '{{count}}d ago',
     },
-  },
     payment: {
       title: 'Payment',
       amount: 'Amount due',

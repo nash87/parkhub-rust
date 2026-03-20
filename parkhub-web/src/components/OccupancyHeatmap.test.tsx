@@ -45,11 +45,10 @@ describe('computeHeatmapData', () => {
   });
 
   it('counts active bookings in the right day/hour slot', () => {
-    // Create a booking today at 10:00-11:00 to guarantee it falls within the 6-22 range
+    // Use yesterday at 10:00-11:00 to guarantee it's in the past and within 30-day window
     const now = new Date();
-    const start = new Date(now);
+    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     start.setHours(10, 0, 0, 0);
-    // If it's already past 10 today, the booking is in the past (still within 30 days)
     const end = new Date(start);
     end.setHours(11, 0, 0, 0);
 
