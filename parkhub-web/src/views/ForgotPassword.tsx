@@ -43,7 +43,7 @@ export function ForgotPasswordPage() {
         </div>
 
         {sent ? (
-          <div className="space-y-4">
+          <div className="space-y-4" role="status">
             <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
               <CheckCircle weight="fill" className="w-6 h-6" />
               <h1 className="text-xl font-bold text-surface-900 dark:text-white">Check your email</h1>

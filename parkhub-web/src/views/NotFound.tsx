@@ -3,8 +3,8 @@ import { CarSimple, ArrowLeft } from '@phosphor-icons/react';
 
 export function NotFoundPage() {
   return (
-    <div className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6">
-      <div className="text-center max-w-sm">
+    <main className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6">
+      <div className="text-center max-w-sm" role="alert">
         <div className="w-12 h-12 rounded-lg bg-primary-600 flex items-center justify-center mx-auto mb-6">
           <CarSimple weight="fill" className="w-7 h-7 text-white" />
         </div>
@@ -18,6 +18,6 @@ export function NotFoundPage() {
           Back to Dashboard
         </Link>
       </div>
-    </div>
+    </main>
   );
 }
