@@ -212,4 +212,147 @@ mod tests {
             "\"degraded\""
         );
     }
+
+    #[test]
+    fn test_health_status_unhealthy_serialization() {
+        assert_eq!(
+            serde_json::to_string(&HealthStatus::Unhealthy).unwrap(),
+            "\"unhealthy\""
+        );
+    }
+
+    #[test]
+    fn test_health_status_deserialization() {
+        let h: HealthStatus = serde_json::from_str("\"healthy\"").unwrap();
+        assert_eq!(h, HealthStatus::Healthy);
+        let d: HealthStatus = serde_json::from_str("\"degraded\"").unwrap();
+        assert_eq!(d, HealthStatus::Degraded);
+        let u: HealthStatus = serde_json::from_str("\"unhealthy\"").unwrap();
+        assert_eq!(u, HealthStatus::Unhealthy);
+    }
+
+    #[test]
+    fn test_health_status_roundtrip() {
+        for status in [
+            HealthStatus::Healthy,
+            HealthStatus::Degraded,
+            HealthStatus::Unhealthy,
+        ] {
+            let json = serde_json::to_string(&status).unwrap();
+            let back: HealthStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(back, status);
+        }
+    }
+
+    #[test]
+    fn test_health_response_serialization() {
+        let resp = HealthResponse {
+            status: HealthStatus::Healthy,
+            version: "1.0.0".to_string(),
+            uptime_seconds: 3600,
+            checks: vec![ComponentHealth {
+                name: "database".to_string(),
+                status: HealthStatus::Healthy,
+                message: Some("OK".to_string()),
+                response_time_ms: Some(5),
+            }],
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["status"], "healthy");
+        assert_eq!(json["version"], "1.0.0");
+        assert_eq!(json["uptime_seconds"], 3600);
+        assert_eq!(json["checks"][0]["name"], "database");
+        assert_eq!(json["checks"][0]["response_time_ms"], 5);
+    }
+
+    #[test]
+    fn test_health_response_deserialization() {
+        let json = r#"{
+            "status": "degraded",
+            "version": "2.0.0",
+            "uptime_seconds": 120,
+            "checks": []
+        }"#;
+        let resp: HealthResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(resp.status, HealthStatus::Degraded);
+        assert_eq!(resp.version, "2.0.0");
+        assert_eq!(resp.uptime_seconds, 120);
+        assert!(resp.checks.is_empty());
+    }
+
+    #[test]
+    fn test_component_health_skips_none_fields() {
+        let comp = ComponentHealth {
+            name: "memory".to_string(),
+            status: HealthStatus::Healthy,
+            message: None,
+            response_time_ms: None,
+        };
+        let json = serde_json::to_value(&comp).unwrap();
+        assert!(json.get("message").is_none());
+        assert!(json.get("response_time_ms").is_none());
+        assert_eq!(json["name"], "memory");
+    }
+
+    #[test]
+    fn test_component_health_includes_present_fields() {
+        let comp = ComponentHealth {
+            name: "db".to_string(),
+            status: HealthStatus::Unhealthy,
+            message: Some("Connection refused".to_string()),
+            response_time_ms: Some(1000),
+        };
+        let json = serde_json::to_value(&comp).unwrap();
+        assert_eq!(json["message"], "Connection refused");
+        assert_eq!(json["response_time_ms"], 1000);
+        assert_eq!(json["status"], "unhealthy");
+    }
+
+    #[test]
+    fn test_ready_response_ready() {
+        let resp = ReadyResponse {
+            ready: true,
+            reason: None,
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["ready"], true);
+        assert!(json.get("reason").is_none());
+    }
+
+    #[test]
+    fn test_ready_response_not_ready() {
+        let resp = ReadyResponse {
+            ready: false,
+            reason: Some("Database down".to_string()),
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["ready"], false);
+        assert_eq!(json["reason"], "Database down");
+    }
+
+    #[test]
+    fn test_health_response_with_multiple_checks() {
+        let resp = HealthResponse {
+            status: HealthStatus::Degraded,
+            version: "0.5.0".to_string(),
+            uptime_seconds: 60,
+            checks: vec![
+                ComponentHealth {
+                    name: "database".to_string(),
+                    status: HealthStatus::Healthy,
+                    message: Some("OK - 10 users, 5 bookings".to_string()),
+                    response_time_ms: Some(2),
+                },
+                ComponentHealth {
+                    name: "memory".to_string(),
+                    status: HealthStatus::Degraded,
+                    message: Some("600 MB".to_string()),
+                    response_time_ms: None,
+                },
+            ],
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["checks"].as_array().unwrap().len(), 2);
+        assert_eq!(json["checks"][1]["status"], "degraded");
+    }
 }

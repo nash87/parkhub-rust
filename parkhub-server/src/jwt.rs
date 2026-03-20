@@ -315,4 +315,218 @@ mod tests {
         let result = jwt.validate_token("invalid.token.here");
         assert!(result.is_err());
     }
+
+    // ── JwtConfig defaults ──
+
+    #[test]
+    fn test_jwt_config_defaults() {
+        let config = JwtConfig::default();
+        assert_eq!(config.access_token_expiry_hours, 24);
+        assert_eq!(config.refresh_token_expiry_days, 30);
+        assert_eq!(config.issuer, "parkhub");
+        // Secret should be 64 hex chars (32 bytes)
+        assert_eq!(config.secret.len(), 64);
+        assert!(config.secret.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_jwt_config_random_secret_is_unique() {
+        let c1 = JwtConfig::default();
+        let c2 = JwtConfig::default();
+        assert_ne!(c1.secret, c2.secret);
+    }
+
+    // ── Token generation ──
+
+    #[test]
+    fn test_token_expires_in_matches_config() {
+        let config = JwtConfig {
+            secret: "test-secret-key-for-testing-only-1234".to_string(),
+            access_token_expiry_hours: 12,
+            refresh_token_expiry_days: 7,
+            issuer: "test".to_string(),
+        };
+        let jwt = JwtManager::new(config);
+        let tokens = jwt
+            .generate_tokens(&Uuid::new_v4(), "user", "user")
+            .unwrap();
+        assert_eq!(tokens.expires_in, 12 * 3600);
+        assert_eq!(tokens.token_type, "Bearer");
+    }
+
+    #[test]
+    fn test_access_token_has_correct_claims() {
+        let jwt = JwtManager::with_random_secret();
+        let user_id = Uuid::new_v4();
+        let tokens = jwt.generate_tokens(&user_id, "alice", "admin").unwrap();
+        let claims = jwt.validate_token(&tokens.access_token).unwrap();
+        assert_eq!(claims.sub, user_id.to_string());
+        assert_eq!(claims.username, "alice");
+        assert_eq!(claims.role, "admin");
+        assert_eq!(claims.iss, "parkhub");
+        assert_eq!(claims.token_type, TokenType::Access);
+        assert!(claims.exp > claims.iat);
+    }
+
+    #[test]
+    fn test_refresh_token_has_correct_type() {
+        let jwt = JwtManager::with_random_secret();
+        let tokens = jwt.generate_tokens(&Uuid::new_v4(), "bob", "user").unwrap();
+        let claims = jwt.validate_token(&tokens.refresh_token).unwrap();
+        assert_eq!(claims.token_type, TokenType::Refresh);
+    }
+
+    #[test]
+    fn test_refresh_token_lives_longer_than_access() {
+        let jwt = JwtManager::with_random_secret();
+        let tokens = jwt
+            .generate_tokens(&Uuid::new_v4(), "charlie", "user")
+            .unwrap();
+        let access = jwt.validate_token(&tokens.access_token).unwrap();
+        let refresh = jwt.validate_token(&tokens.refresh_token).unwrap();
+        assert!(refresh.exp > access.exp);
+    }
+
+    // ── Validation failures ──
+
+    #[test]
+    fn test_wrong_secret_rejects_token() {
+        let jwt1 = JwtManager::with_random_secret();
+        let jwt2 = JwtManager::with_random_secret();
+        let tokens = jwt1
+            .generate_tokens(&Uuid::new_v4(), "eve", "user")
+            .unwrap();
+        assert!(jwt2.validate_token(&tokens.access_token).is_err());
+    }
+
+    #[test]
+    fn test_empty_string_is_invalid() {
+        let jwt = JwtManager::with_random_secret();
+        assert!(jwt.validate_token("").is_err());
+    }
+
+    #[test]
+    fn test_refresh_with_access_token_fails() {
+        let jwt = JwtManager::with_random_secret();
+        let tokens = jwt
+            .generate_tokens(&Uuid::new_v4(), "frank", "user")
+            .unwrap();
+        // Using access token for refresh should fail (wrong token_type)
+        let result = jwt.refresh_tokens(&tokens.access_token);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_expired_token_rejected() {
+        let config = JwtConfig {
+            secret: "expired-test-secret-key-for-testing".to_string(),
+            access_token_expiry_hours: 0, // 0 hours = expires immediately
+            refresh_token_expiry_days: 0,
+            issuer: "parkhub".to_string(),
+        };
+        let jwt = JwtManager::new(config);
+        let user_id = Uuid::new_v4();
+
+        // Manually build an expired token
+        let exp = Utc::now() - Duration::hours(1);
+        let claims = Claims {
+            sub: user_id.to_string(),
+            username: "expired".to_string(),
+            role: "user".to_string(),
+            iat: (Utc::now() - Duration::hours(2)).timestamp(),
+            exp: exp.timestamp(),
+            iss: "parkhub".to_string(),
+            token_type: TokenType::Access,
+        };
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(b"expired-test-secret-key-for-testing"),
+        )
+        .unwrap();
+
+        let result = jwt.validate_token(&token);
+        assert!(result.is_err());
+    }
+
+    // ── AuthUser ──
+
+    #[test]
+    fn test_auth_user_is_admin() {
+        let user = AuthUser {
+            user_id: Uuid::new_v4(),
+            username: "admin".to_string(),
+            role: "admin".to_string(),
+        };
+        assert!(user.is_admin());
+    }
+
+    #[test]
+    fn test_auth_user_superadmin_is_admin() {
+        let user = AuthUser {
+            user_id: Uuid::new_v4(),
+            username: "superadmin".to_string(),
+            role: "superadmin".to_string(),
+        };
+        assert!(user.is_admin());
+    }
+
+    #[test]
+    fn test_auth_user_regular_is_not_admin() {
+        let user = AuthUser {
+            user_id: Uuid::new_v4(),
+            username: "regular".to_string(),
+            role: "user".to_string(),
+        };
+        assert!(!user.is_admin());
+    }
+
+    #[test]
+    fn test_auth_user_empty_role_is_not_admin() {
+        let user = AuthUser {
+            user_id: Uuid::new_v4(),
+            username: "nobody".to_string(),
+            role: "".to_string(),
+        };
+        assert!(!user.is_admin());
+    }
+
+    // ── TokenType serialization ──
+
+    #[test]
+    fn test_token_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&TokenType::Access).unwrap(),
+            "\"access\""
+        );
+        assert_eq!(
+            serde_json::to_string(&TokenType::Refresh).unwrap(),
+            "\"refresh\""
+        );
+    }
+
+    #[test]
+    fn test_token_type_deserialization() {
+        let a: TokenType = serde_json::from_str("\"access\"").unwrap();
+        assert_eq!(a, TokenType::Access);
+        let r: TokenType = serde_json::from_str("\"refresh\"").unwrap();
+        assert_eq!(r, TokenType::Refresh);
+    }
+
+    // ── TokenPair serialization ──
+
+    #[test]
+    fn test_token_pair_serialization() {
+        let pair = TokenPair {
+            access_token: "abc".to_string(),
+            refresh_token: "def".to_string(),
+            token_type: "Bearer".to_string(),
+            expires_in: 86400,
+        };
+        let json = serde_json::to_value(&pair).unwrap();
+        assert_eq!(json["access_token"], "abc");
+        assert_eq!(json["refresh_token"], "def");
+        assert_eq!(json["token_type"], "Bearer");
+        assert_eq!(json["expires_in"], 86400);
+    }
 }
