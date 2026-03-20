@@ -166,7 +166,8 @@ describe('BookPage', () => {
       expect(screen.getByText('Garage Alpha')).toBeInTheDocument();
     });
     expect(screen.getByText('Garage Beta')).toBeInTheDocument();
-    expect(screen.getByText('123 Main St')).toBeInTheDocument();
+    // Both lots have addresses displayed
+    expect(screen.getAllByText('123 Main St')).toHaveLength(2);
   });
 
   it('shows empty state when no open lots', async () => {

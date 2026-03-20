@@ -645,3 +645,101 @@ pub(crate) async fn reset_password(
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_forgot_password_request_deserialize() {
+        let json = r#"{"email": "alice@example.com"}"#;
+        let req: ForgotPasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.email, "alice@example.com");
+    }
+
+    #[test]
+    fn test_forgot_password_request_missing_email() {
+        let json = r#"{}"#;
+        let result = serde_json::from_str::<ForgotPasswordRequest>(json);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_reset_password_request_deserialize() {
+        let json = r#"{"token": "abc123", "password": "NewP@ss1234"}"#;
+        let req: ResetPasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.token, "abc123");
+        assert_eq!(req.password, "NewP@ss1234");
+    }
+
+    #[test]
+    fn test_reset_password_request_missing_fields() {
+        // Missing password
+        let json = r#"{"token": "abc123"}"#;
+        assert!(serde_json::from_str::<ResetPasswordRequest>(json).is_err());
+
+        // Missing token
+        let json = r#"{"password": "secret"}"#;
+        assert!(serde_json::from_str::<ResetPasswordRequest>(json).is_err());
+
+        // Empty object
+        let json = r#"{}"#;
+        assert!(serde_json::from_str::<ResetPasswordRequest>(json).is_err());
+    }
+
+    #[test]
+    fn test_password_reset_token_roundtrip() {
+        let token = PasswordResetToken {
+            user_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
+            expires_at: Utc::now() + chrono::Duration::hours(1),
+        };
+
+        let json = serde_json::to_string(&token).unwrap();
+        let deserialized: PasswordResetToken = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.user_id, token.user_id);
+        assert_eq!(deserialized.expires_at, token.expires_at);
+    }
+
+    #[test]
+    fn test_password_reset_token_expired_check() {
+        let expired = PasswordResetToken {
+            user_id: "test-user".to_string(),
+            expires_at: Utc::now() - chrono::Duration::hours(1),
+        };
+        assert!(expired.expires_at < Utc::now());
+
+        let valid = PasswordResetToken {
+            user_id: "test-user".to_string(),
+            expires_at: Utc::now() + chrono::Duration::hours(1),
+        };
+        assert!(valid.expires_at > Utc::now());
+    }
+
+    #[test]
+    fn test_password_reset_token_deserialize_from_db_format() {
+        // Simulate what gets stored in the settings table
+        let json = r#"{"user_id":"abc-123","expires_at":"2026-12-31T23:59:59Z"}"#;
+        let token: PasswordResetToken = serde_json::from_str(json).unwrap();
+        assert_eq!(token.user_id, "abc-123");
+    }
+
+    #[test]
+    fn test_forgot_password_request_extra_fields_ignored() {
+        let json = r#"{"email": "test@test.com", "unknown_field": true}"#;
+        let req: ForgotPasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.email, "test@test.com");
+    }
+
+    #[test]
+    fn test_reset_password_request_extra_fields_ignored() {
+        let json = r#"{"token": "t", "password": "p", "extra": 42}"#;
+        let req: ResetPasswordRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.token, "t");
+        assert_eq!(req.password, "p");
+    }
+}

@@ -626,3 +626,258 @@ pub async fn dispatch_webhook_event(
         });
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── SSRF Validation ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_ssrf_rejects_private_10_range() {
+        let err = validate_webhook_url("https://10.0.0.1/hook");
+        assert_eq!(err, Some("URL must not target private/reserved IP ranges"));
+    }
+
+    #[test]
+    fn test_ssrf_rejects_private_172_range() {
+        let err = validate_webhook_url("https://172.16.0.1/hook");
+        assert_eq!(err, Some("URL must not target private/reserved IP ranges"));
+
+        // 172.31.x.x is still in the /12 range
+        let err2 = validate_webhook_url("https://172.31.255.255/hook");
+        assert_eq!(err2, Some("URL must not target private/reserved IP ranges"));
+    }
+
+    #[test]
+    fn test_ssrf_rejects_private_192_168() {
+        let err = validate_webhook_url("https://192.168.1.1/hook");
+        assert_eq!(err, Some("URL must not target private/reserved IP ranges"));
+    }
+
+    #[test]
+    fn test_ssrf_rejects_loopback() {
+        let err = validate_webhook_url("https://127.0.0.1/hook");
+        assert_eq!(err, Some("URL must not target private/reserved IP ranges"));
+
+        let err2 = validate_webhook_url("https://127.0.0.2/hook");
+        assert_eq!(err2, Some("URL must not target private/reserved IP ranges"));
+    }
+
+    #[test]
+    fn test_ssrf_rejects_link_local() {
+        let err = validate_webhook_url("https://169.254.1.1/hook");
+        assert_eq!(err, Some("URL must not target private/reserved IP ranges"));
+    }
+
+    #[test]
+    fn test_ssrf_rejects_unspecified() {
+        let err = validate_webhook_url("https://0.0.0.0/hook");
+        assert_eq!(err, Some("URL must not target private/reserved IP ranges"));
+    }
+
+    #[test]
+    fn test_ssrf_allows_public_ip() {
+        let result = validate_webhook_url("https://93.184.216.34/hook");
+        assert!(result.is_none(), "Public IP should be allowed");
+    }
+
+    #[test]
+    fn test_ssrf_allows_public_domain() {
+        let result = validate_webhook_url("https://hooks.example.com/webhook");
+        assert!(result.is_none(), "Public domain should be allowed");
+    }
+
+    #[test]
+    fn test_ssrf_rejects_invalid_url() {
+        let err = validate_webhook_url("not a url");
+        assert_eq!(err, Some("Invalid URL format"));
+    }
+
+    #[test]
+    fn test_ssrf_rejects_ftp_scheme() {
+        let err = validate_webhook_url("ftp://example.com/hook");
+        assert!(err.is_some(), "Non-HTTPS/HTTP schemes should be rejected");
+    }
+
+    #[test]
+    fn test_ssrf_ipv6_loopback_is_private() {
+        // Verify is_private_ip correctly identifies IPv6 loopback
+        use std::net::Ipv6Addr;
+        assert!(is_private_ip(&IpAddr::V6(Ipv6Addr::LOCALHOST)));
+    }
+
+    #[test]
+    fn test_ssrf_172_15_is_public() {
+        // 172.15.x.x is NOT in the 172.16.0.0/12 range
+        let result = validate_webhook_url("https://172.15.0.1/hook");
+        assert!(result.is_none(), "172.15.x.x is a public range");
+    }
+
+    #[test]
+    fn test_ssrf_172_32_is_public() {
+        // 172.32.x.x is NOT in the 172.16.0.0/12 range
+        let result = validate_webhook_url("https://172.32.0.1/hook");
+        assert!(result.is_none(), "172.32.x.x is a public range");
+    }
+
+    // ── is_private_ip unit tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_is_private_ip_covers_all_ranges() {
+        use std::net::Ipv4Addr;
+
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(10, 255, 255, 255))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(172, 16, 0, 1))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(172, 31, 255, 255))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(169, 254, 0, 1))));
+        assert!(is_private_ip(&IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0))));
+
+        // Public IPs
+        assert!(!is_private_ip(&IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8))));
+        assert!(!is_private_ip(&IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1))));
+        assert!(!is_private_ip(&IpAddr::V4(Ipv4Addr::new(172, 15, 0, 1))));
+        assert!(!is_private_ip(&IpAddr::V4(Ipv4Addr::new(172, 32, 0, 1))));
+    }
+
+    #[test]
+    fn test_is_private_ip_v6() {
+        use std::net::Ipv6Addr;
+
+        assert!(is_private_ip(&IpAddr::V6(Ipv6Addr::LOCALHOST)));
+        assert!(is_private_ip(&IpAddr::V6(Ipv6Addr::UNSPECIFIED)));
+        // A public IPv6 should pass
+        assert!(!is_private_ip(&IpAddr::V6(
+            "2607:f8b0:4004:800::200e".parse().unwrap()
+        )));
+    }
+
+    // ── HMAC Signature ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_compute_signature_format() {
+        let sig = compute_signature("secret", "body");
+        assert!(sig.starts_with("sha256="), "Signature must start with sha256=");
+        // sha256= prefix + 64 hex chars
+        assert_eq!(sig.len(), 7 + 64);
+    }
+
+    #[test]
+    fn test_compute_signature_deterministic() {
+        let sig1 = compute_signature("key", "data");
+        let sig2 = compute_signature("key", "data");
+        assert_eq!(sig1, sig2, "Same key+body must produce same signature");
+    }
+
+    #[test]
+    fn test_compute_signature_different_keys() {
+        let sig1 = compute_signature("key1", "data");
+        let sig2 = compute_signature("key2", "data");
+        assert_ne!(sig1, sig2, "Different keys must produce different signatures");
+    }
+
+    #[test]
+    fn test_compute_signature_different_bodies() {
+        let sig1 = compute_signature("key", "body1");
+        let sig2 = compute_signature("key", "body2");
+        assert_ne!(
+            sig1, sig2,
+            "Different bodies must produce different signatures"
+        );
+    }
+
+    #[test]
+    fn test_compute_signature_known_vector() {
+        // Verify against a known HMAC-SHA256 test vector
+        let sig = compute_signature("secret", "hello");
+        // HMAC-SHA256("secret", "hello") = 88aab3ede8d3adf94d26ab90d3bafd4a2083070c3bcce9c014ee04a443847c0b
+        assert_eq!(
+            sig,
+            "sha256=88aab3ede8d3adf94d26ab90d3bafd4a2083070c3bcce9c014ee04a443847c0b"
+        );
+    }
+
+    // ── Generate Secret ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_generate_secret_format() {
+        let secret = generate_secret();
+        assert!(secret.starts_with("whsec_"), "Secret must start with whsec_");
+        // whsec_ prefix + 64 hex chars
+        assert_eq!(secret.len(), 6 + 64);
+    }
+
+    #[test]
+    fn test_generate_secret_unique() {
+        let s1 = generate_secret();
+        let s2 = generate_secret();
+        assert_ne!(s1, s2, "Two generated secrets must be different");
+    }
+
+    // ── Request Serde ────────────────────────────────────────────────────
+
+    #[test]
+    fn test_create_webhook_request_deserialize() {
+        let json = r#"{"url": "https://example.com/hook", "events": ["booking.created"]}"#;
+        let req: CreateWebhookRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.url, "https://example.com/hook");
+        assert_eq!(req.events, vec!["booking.created"]);
+        assert!(req.active, "active should default to true");
+    }
+
+    #[test]
+    fn test_create_webhook_request_active_false() {
+        let json =
+            r#"{"url": "https://example.com/hook", "events": ["test"], "active": false}"#;
+        let req: CreateWebhookRequest = serde_json::from_str(json).unwrap();
+        assert!(!req.active);
+    }
+
+    #[test]
+    fn test_update_webhook_request_partial() {
+        let json = r#"{"active": false}"#;
+        let req: UpdateWebhookRequest = serde_json::from_str(json).unwrap();
+        assert!(req.url.is_none());
+        assert!(req.events.is_none());
+        assert_eq!(req.active, Some(false));
+        assert!(!req.regenerate_secret);
+    }
+
+    #[test]
+    fn test_webhook_response_from_webhook() {
+        let wh = Webhook {
+            id: Uuid::new_v4(),
+            url: "https://test.io/hook".to_string(),
+            secret: "whsec_abc".to_string(),
+            events: vec!["test".to_string()],
+            active: true,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+        let resp = WebhookResponse::from(&wh);
+        assert_eq!(resp.url, "https://test.io/hook");
+        assert_eq!(resp.secret, "whsec_abc");
+        assert!(resp.active);
+        assert_eq!(resp.events, vec!["test"]);
+    }
+
+    // ── VALID_EVENTS ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_valid_events_contains_expected() {
+        assert!(VALID_EVENTS.contains(&"booking.created"));
+        assert!(VALID_EVENTS.contains(&"booking.cancelled"));
+        assert!(VALID_EVENTS.contains(&"user.created"));
+        assert!(VALID_EVENTS.contains(&"user.deleted"));
+        assert!(VALID_EVENTS.contains(&"lot.created"));
+        assert!(VALID_EVENTS.contains(&"test"));
+        assert!(!VALID_EVENTS.contains(&"nonexistent.event"));
+    }
+}
