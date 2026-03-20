@@ -121,7 +121,7 @@ pub struct ServerInfo {
 }
 
 /// Server handshake request from client
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct HandshakeRequest {
     pub client_version: String,
     pub protocol_version: String,
