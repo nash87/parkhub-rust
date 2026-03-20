@@ -4,13 +4,19 @@
 //! State is kept in-memory — ephemeral by design for free-tier hosting.
 //! Supports actual database reset and scheduled auto-reset every 6 hours.
 
-use axum::{extract::ConnectInfo, http::StatusCode, response::IntoResponse, Json};
+use axum::{extract::ConnectInfo, http::StatusCode, response::IntoResponse, Extension, Json};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
+use tracing::info;
+
+use crate::AppState;
+
+type SharedAppState = Arc<RwLock<AppState>>;
 
 const TIMER_DURATION_SECS: u64 = 1800; // 30 minutes
 const VOTE_THRESHOLD: usize = 3;
@@ -169,36 +175,87 @@ pub async fn demo_status(
     Json(resp).into_response()
 }
 
+/// Perform a full demo data reset: clear DB, re-seed admin + sample lot + credits.
+async fn perform_db_reset(app_state: &SharedAppState, demo_state: &SharedDemoState) {
+    // Mark reset in progress
+    if let Ok(mut ds) = demo_state.lock() {
+        ds.reset_in_progress = true;
+    }
+
+    let state_guard = app_state.write().await;
+
+    // Clear all data
+    if let Err(e) = state_guard.db.clear_all_data().await {
+        tracing::error!("Demo reset: failed to clear data: {e}");
+        if let Ok(mut ds) = demo_state.lock() {
+            ds.reset_in_progress = false;
+        }
+        return;
+    }
+
+    // Re-create admin user and sample lot
+    if let Err(e) = crate::create_admin_user(&state_guard.db, &state_guard.config).await {
+        tracing::error!("Demo reset: failed to create admin: {e}");
+    }
+    if let Err(e) = crate::create_sample_parking_lot(&state_guard.db).await {
+        tracing::error!("Demo reset: failed to create sample lot: {e}");
+    }
+
+    // Re-enable credits
+    let _ = state_guard.db.set_setting("credits_enabled", "true").await;
+    let _ = state_guard
+        .db
+        .set_setting("credits_per_booking", "1")
+        .await;
+    drop(state_guard);
+
+    // Update demo state
+    if let Ok(mut ds) = demo_state.lock() {
+        ds.reset();
+        ds.mark_reset_complete();
+    }
+
+    info!("Demo data reset complete (API-triggered)");
+}
+
 /// POST /api/v1/demo/vote
 pub async fn demo_vote(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
+    Extension(state): Extension<SharedDemoState>,
+    Extension(app_state): Extension<SharedAppState>,
 ) -> impl IntoResponse {
-    let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
-    if !s.enabled {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "Demo mode is not enabled"})),
-        )
+    // Check enabled + existing vote under short lock
+    let (enabled, already_voted, should_reset) = {
+        let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
+        if !s.enabled {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(serde_json::json!({"error": "Demo mode is not enabled"})),
+            )
+                .into_response();
+        }
+
+        let ip = client_ip(&addr);
+        if s.votes.contains_key(&ip) {
+            return Json(VoteResponse {
+                message: "Already voted".into(),
+                votes: s.votes.len(),
+                threshold: VOTE_THRESHOLD,
+                reset: false,
+            })
             .into_response();
-    }
+        }
 
-    let ip = client_ip(&addr);
+        s.votes.insert(ip, Instant::now());
+        let should_reset = s.votes.len() >= VOTE_THRESHOLD;
+        (s.enabled, false, should_reset)
+    };
+    let _ = (enabled, already_voted); // suppress unused warnings
 
-    if s.votes.contains_key(&ip) {
-        return Json(VoteResponse {
-            message: "Already voted".into(),
-            votes: s.votes.len(),
-            threshold: VOTE_THRESHOLD,
-            reset: false,
-        })
-        .into_response();
-    }
+    if should_reset {
+        // Full DB reset — runs outside the Mutex lock
+        perform_db_reset(&app_state, &state).await;
 
-    s.votes.insert(ip, Instant::now());
-
-    if s.votes.len() >= VOTE_THRESHOLD {
-        s.reset();
         return Json(VoteResponse {
             message: "Demo reset! Page will reload.".into(),
             votes: 0,
@@ -208,9 +265,14 @@ pub async fn demo_vote(
         .into_response();
     }
 
+    let votes = state
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .votes
+        .len();
     Json(VoteResponse {
         message: "Vote recorded".into(),
-        votes: s.votes.len(),
+        votes,
         threshold: VOTE_THRESHOLD,
         reset: false,
     })
@@ -220,31 +282,45 @@ pub async fn demo_vote(
 /// POST /api/v1/demo/reset — solo reset (only when viewers <= 1)
 pub async fn demo_reset(
     ConnectInfo(_addr): ConnectInfo<SocketAddr>,
-    axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
+    Extension(state): Extension<SharedDemoState>,
+    Extension(app_state): Extension<SharedAppState>,
 ) -> impl IntoResponse {
-    let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
-    if !s.enabled {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(serde_json::json!({"error": "Demo mode is not enabled"})),
-        )
-            .into_response();
-    }
+    // Pre-checks under short lock
+    {
+        let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
+        if !s.enabled {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(serde_json::json!({"error": "Demo mode is not enabled"})),
+            )
+                .into_response();
+        }
 
-    s.prune_viewers();
+        s.prune_viewers();
 
-    if s.viewers.len() > 1 {
-        return (
-            StatusCode::CONFLICT,
-            Json(serde_json::json!({
-                "error": "Solo reset not available with multiple viewers. Use voting instead.",
-                "viewers": s.viewers.len()
-            })),
-        )
-            .into_response();
-    }
+        if s.viewers.len() > 1 {
+            return (
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({
+                    "error": "Solo reset not available with multiple viewers. Use voting instead.",
+                    "viewers": s.viewers.len()
+                })),
+            )
+                .into_response();
+        }
 
-    s.reset();
+        if s.reset_in_progress {
+            return (
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({"error": "A reset is already in progress"})),
+            )
+                .into_response();
+        }
+    } // lock released
+
+    // Full DB reset
+    perform_db_reset(&app_state, &state).await;
+
     Json(VoteResponse {
         message: "Demo reset! Page will reload.".into(),
         votes: 0,
