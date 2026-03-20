@@ -93,7 +93,7 @@ use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, upda
 use zones::{create_zone, delete_zone, list_zones};
 
 /// User ID extracted from auth token
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AuthUser {
     pub user_id: Uuid,
 }
@@ -754,6 +754,7 @@ async fn auth_middleware(
     description = "Returns 200 OK when the server is running.",
     responses((status = 200, description = "Healthy"))
 )]
+#[tracing::instrument]
 pub(crate) async fn health_check() -> &'static str {
     "OK"
 }
@@ -767,6 +768,7 @@ pub(crate) async fn health_check() -> &'static str {
     description = "Returns 200 if the process is alive.",
     responses((status = 200, description = "Alive"))
 )]
+#[tracing::instrument]
 pub(crate) async fn liveness_check() -> StatusCode {
     StatusCode::OK
 }
@@ -786,12 +788,13 @@ pub(crate) async fn liveness_check() -> StatusCode {
         (status = 503, description = "Not ready")
     )
 )]
+#[tracing::instrument(skip(state))]
 pub(crate) async fn readiness_check(State(state): State<SharedState>) -> impl IntoResponse {
     let state = state.read().await;
     match state.db.stats().await {
         Ok(_) => (StatusCode::OK, Json(serde_json::json!({"ready": true}))),
         Err(e) => {
-            tracing::error!("Readiness check failed: {}", e);
+            tracing::error!(error = %e, "Readiness check failed — database unavailable");
             (
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(serde_json::json!({"ready": false})),
@@ -878,6 +881,7 @@ pub(crate) async fn server_status(State(state): State<SharedState>) -> Json<ApiR
         (status = 404, description = "User not found")
     )
 )]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
 pub(crate) async fn get_current_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -894,7 +898,7 @@ pub(crate) async fn get_current_user(
             Json(ApiResponse::error("NOT_FOUND", "User not found")),
         ),
         Err(e) => {
-            tracing::error!("Database error: {}", e);
+            tracing::error!(error = %e, "Failed to fetch current user");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
@@ -1078,6 +1082,7 @@ pub(crate) async fn get_user(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "List of bookings"))
 )]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
 pub(crate) async fn list_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1089,9 +1094,12 @@ pub(crate) async fn list_bookings(
         .list_bookings_by_user(&auth_user.user_id.to_string())
         .await
     {
-        Ok(bookings) => Json(ApiResponse::success(bookings)),
+        Ok(bookings) => {
+            tracing::debug!(count = bookings.len(), "Listed bookings");
+            Json(ApiResponse::success(bookings))
+        }
         Err(e) => {
-            tracing::error!("Database error: {}", e);
+            tracing::error!(error = %e, "Failed to list bookings");
             Json(ApiResponse::error(
                 "SERVER_ERROR",
                 "Failed to list bookings",
@@ -1107,6 +1115,7 @@ pub(crate) async fn list_bookings(
     request_body = CreateBookingRequest,
     responses((status = 201, description = "Booking created"), (status = 404, description = "Not found"), (status = 409, description = "Slot unavailable"))
 )]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, slot_id = %req.slot_id))]
 pub(crate) async fn create_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1526,6 +1535,7 @@ pub(crate) async fn create_booking(
     params(("id" = String, Path, description = "Booking UUID")),
     responses((status = 200, description = "Booking found"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
 pub(crate) async fn get_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1564,6 +1574,7 @@ pub(crate) async fn get_booking(
     params(("id" = String, Path, description = "Booking UUID")),
     responses((status = 200, description = "Cancelled"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
 pub(crate) async fn cancel_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -3224,6 +3235,7 @@ use admin::AdminUserResponse;
     security(("bearer_auth" = [])),
     responses((status = 200, description = "User list"), (status = 403, description = "Forbidden"))
 )]
+#[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id))]
 pub(crate) async fn admin_list_users(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -3235,6 +3247,7 @@ pub(crate) async fn admin_list_users(
 
     match state_guard.db.list_users().await {
         Ok(users) => {
+            tracing::debug!(count = users.len(), "Admin listed users");
             let response: Vec<AdminUserResponse> =
                 users.iter().map(AdminUserResponse::from).collect();
             (StatusCode::OK, Json(ApiResponse::success(response)))
@@ -3255,6 +3268,7 @@ pub(crate) async fn admin_list_users(
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "User UUID")),
     responses((status = 200, description = "Role updated"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
+#[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, target_user_id = %id, new_role = %req.role))]
 pub(crate) async fn admin_update_user_role(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -3688,7 +3702,15 @@ fn use_case_theme(key: &str) -> serde_json::Value {
 }
 
 /// `GET /api/v1/admin/settings/use-case` — return current use-case with theme config
-async fn admin_get_use_case(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/settings/use-case",
+    tag = "Admin",
+    summary = "Get use-case configuration",
+    description = "Return current use-case with theme config. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_get_use_case(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -4246,7 +4268,15 @@ pub(crate) async fn delete_absence(
 }
 
 /// `GET /api/v1/absences/team` — list all team absences
-async fn list_team_absences(
+#[utoipa::path(
+    get,
+    path = "/api/v1/absences/team",
+    tag = "Absences",
+    summary = "List team absences",
+    description = "List all team member absences visible to the current user.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn list_team_absences(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<Absence>>>) {
@@ -4267,7 +4297,15 @@ async fn list_team_absences(
 }
 
 /// `GET /api/v1/absences/pattern` — get user's absence pattern
-async fn get_absence_pattern(
+#[utoipa::path(
+    get,
+    path = "/api/v1/absences/pattern",
+    tag = "Absences",
+    summary = "Get absence pattern",
+    description = "Get the current user's recurring absence pattern.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn get_absence_pattern(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Option<AbsencePattern>>>) {
@@ -4293,7 +4331,15 @@ async fn get_absence_pattern(
 }
 
 /// `POST /api/v1/absences/pattern` — save user's absence pattern
-async fn save_absence_pattern(
+#[utoipa::path(
+    post,
+    path = "/api/v1/absences/pattern",
+    tag = "Absences",
+    summary = "Save absence pattern",
+    description = "Save or update the current user's recurring absence pattern (e.g. homeoffice every Monday).",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn save_absence_pattern(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(pattern): Json<AbsencePattern>,
@@ -4496,8 +4542,8 @@ pub(crate) async fn admin_list_announcements(
     }
 }
 
-#[derive(Deserialize)]
-struct CreateAnnouncementRequest {
+#[derive(Deserialize, utoipa::ToSchema)]
+pub(crate) struct CreateAnnouncementRequest {
     title: String,
     message: String,
     severity: AnnouncementSeverity,
@@ -4506,7 +4552,15 @@ struct CreateAnnouncementRequest {
 }
 
 /// `POST /api/v1/admin/announcements` — admin: create announcement
-async fn admin_create_announcement(
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/announcements",
+    tag = "Admin",
+    summary = "Create announcement",
+    description = "Create a new system announcement. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_create_announcement(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateAnnouncementRequest>,
@@ -4545,8 +4599,8 @@ async fn admin_create_announcement(
     }
 }
 
-#[derive(Deserialize)]
-struct UpdateAnnouncementRequest {
+#[derive(Deserialize, utoipa::ToSchema)]
+pub(crate) struct UpdateAnnouncementRequest {
     title: Option<String>,
     message: Option<String>,
     severity: Option<AnnouncementSeverity>,
@@ -4555,7 +4609,15 @@ struct UpdateAnnouncementRequest {
 }
 
 /// `PUT /api/v1/admin/announcements/{id}` — admin: update announcement
-async fn admin_update_announcement(
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/announcements/{id}",
+    tag = "Admin",
+    summary = "Update announcement",
+    description = "Update an existing announcement by ID. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_update_announcement(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -4620,7 +4682,15 @@ async fn admin_update_announcement(
 }
 
 /// `DELETE /api/v1/admin/announcements/{id}` — admin: delete announcement
-async fn admin_delete_announcement(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/announcements/{id}",
+    tag = "Admin",
+    summary = "Delete announcement",
+    description = "Delete an announcement by ID. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_delete_announcement(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -4951,7 +5021,15 @@ pub(crate) async fn leave_waitlist(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// `GET /api/v1/swap-requests` — list user's swap requests (as requester or target)
-async fn list_swap_requests(
+#[utoipa::path(
+    get,
+    path = "/api/v1/swap-requests",
+    tag = "Bookings",
+    summary = "List swap requests",
+    description = "List the current user's swap requests (as requester or target).",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn list_swap_requests(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<SwapRequest>>> {
@@ -4973,14 +5051,22 @@ async fn list_swap_requests(
 }
 
 /// Request body for creating a swap request
-#[derive(Debug, Deserialize)]
-struct CreateSwapRequestBody {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct CreateSwapRequestBody {
     target_booking_id: Uuid,
     message: Option<String>,
 }
 
 /// `POST /api/v1/bookings/{id}/swap-request` — create a swap request
-async fn create_swap_request(
+#[utoipa::path(
+    post,
+    path = "/api/v1/bookings/{id}/swap-request",
+    tag = "Bookings",
+    summary = "Create swap request",
+    description = "Create a parking slot swap request for a booking.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn create_swap_request(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(booking_id): Path<String>,
@@ -5090,13 +5176,21 @@ async fn create_swap_request(
 }
 
 /// Request body for accepting/declining a swap request
-#[derive(Debug, Deserialize)]
-struct UpdateSwapRequestBody {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct UpdateSwapRequestBody {
     action: String,
 }
 
 /// `PUT /api/v1/swap-requests/{id}` — accept or decline a swap request
-async fn update_swap_request(
+#[utoipa::path(
+    put,
+    path = "/api/v1/swap-requests/{id}",
+    tag = "Bookings",
+    summary = "Update swap request",
+    description = "Accept or decline a swap request.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn update_swap_request(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5244,7 +5338,15 @@ async fn update_swap_request(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// `GET /api/v1/recurring-bookings` — list user's recurring bookings
-async fn list_recurring_bookings(
+#[utoipa::path(
+    get,
+    path = "/api/v1/recurring-bookings",
+    tag = "Bookings",
+    summary = "List recurring bookings",
+    description = "List the current user's recurring booking patterns.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn list_recurring_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<RecurringBooking>>> {
@@ -5266,8 +5368,8 @@ async fn list_recurring_bookings(
 }
 
 /// Request body for creating a recurring booking
-#[derive(Debug, Deserialize)]
-struct CreateRecurringBookingRequest {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct CreateRecurringBookingRequest {
     lot_id: Uuid,
     slot_id: Option<Uuid>,
     days_of_week: Vec<u8>,
@@ -5279,7 +5381,15 @@ struct CreateRecurringBookingRequest {
 }
 
 /// `POST /api/v1/recurring-bookings` — create a recurring booking
-async fn create_recurring_booking(
+#[utoipa::path(
+    post,
+    path = "/api/v1/recurring-bookings",
+    tag = "Bookings",
+    summary = "Create recurring booking",
+    description = "Create a new recurring booking pattern (e.g. every Tuesday 8-17).",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn create_recurring_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateRecurringBookingRequest>,
@@ -5316,7 +5426,15 @@ async fn create_recurring_booking(
 }
 
 /// `DELETE /api/v1/recurring-bookings/{id}` — delete recurring booking (verify ownership)
-async fn delete_recurring_booking(
+#[utoipa::path(
+    delete,
+    path = "/api/v1/recurring-bookings/{id}",
+    tag = "Bookings",
+    summary = "Delete recurring booking",
+    description = "Delete a recurring booking pattern. Verifies ownership.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn delete_recurring_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5374,8 +5492,8 @@ async fn delete_recurring_booking(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Request body for creating a guest booking
-#[derive(Debug, Deserialize)]
-struct CreateGuestBookingRequest {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct CreateGuestBookingRequest {
     lot_id: Uuid,
     slot_id: Uuid,
     start_time: chrono::DateTime<Utc>,
@@ -5398,7 +5516,15 @@ fn generate_guest_code() -> String {
 }
 
 /// `POST /api/v1/bookings/guest` — create a guest booking
-async fn create_guest_booking(
+#[utoipa::path(
+    post,
+    path = "/api/v1/bookings/guest",
+    tag = "Bookings",
+    summary = "Create guest booking",
+    description = "Create a visitor parking booking with a guest code.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn create_guest_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateGuestBookingRequest>,
@@ -5450,7 +5576,15 @@ async fn create_guest_booking(
 }
 
 /// `GET /api/v1/admin/guest-bookings` — admin: list all guest bookings
-async fn admin_list_guest_bookings(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/guest-bookings",
+    tag = "Admin",
+    summary = "List guest bookings",
+    description = "List all guest bookings. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_list_guest_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<GuestBooking>>>) {
@@ -5475,7 +5609,15 @@ async fn admin_list_guest_bookings(
 }
 
 /// `PATCH /api/v1/admin/guest-bookings/{id}/cancel` — admin: cancel a guest booking
-async fn admin_cancel_guest_booking(
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/guest-bookings/{id}/cancel",
+    tag = "Admin",
+    summary = "Cancel guest booking",
+    description = "Cancel a guest booking by ID. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_cancel_guest_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5538,6 +5680,7 @@ struct QuickBookRequest {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, lot_id = %req.lot_id))]
 pub(crate) async fn quick_book(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -5861,6 +6004,7 @@ struct AdminStatsResponse {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
+#[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id))]
 pub(crate) async fn admin_stats(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -6835,7 +6979,15 @@ pub(crate) async fn admin_reset(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// `GET /api/v1/admin/settings/auto-release` — return auto-release config
-async fn admin_get_auto_release(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/settings/auto-release",
+    tag = "Admin",
+    summary = "Get auto-release settings",
+    description = "Return the auto-release timing configuration. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_get_auto_release(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -6857,14 +7009,22 @@ async fn admin_get_auto_release(
 }
 
 /// Request body for auto-release settings update
-#[derive(Debug, Deserialize)]
-struct AutoReleaseSettingsRequest {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct AutoReleaseSettingsRequest {
     auto_release_enabled: Option<bool>,
     auto_release_minutes: Option<i32>,
 }
 
 /// `PUT /api/v1/admin/settings/auto-release` — update auto-release timing
-async fn admin_update_auto_release(
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/settings/auto-release",
+    tag = "Admin",
+    summary = "Update auto-release settings",
+    description = "Update auto-release timing for unclaimed bookings. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_update_auto_release(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<AutoReleaseSettingsRequest>,
@@ -6929,7 +7089,15 @@ async fn admin_update_auto_release(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// `GET /api/v1/admin/settings/email` — return SMTP config (password masked)
-async fn admin_get_email_settings(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/settings/email",
+    tag = "Admin",
+    summary = "Get email settings",
+    description = "Return SMTP configuration (password masked). Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_get_email_settings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -6996,8 +7164,8 @@ async fn admin_get_email_settings(
 }
 
 /// Request body for email settings update
-#[derive(Debug, Deserialize)]
-struct EmailSettingsRequest {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct EmailSettingsRequest {
     smtp_host: Option<String>,
     smtp_port: Option<i32>,
     smtp_username: Option<String>,
@@ -7007,7 +7175,15 @@ struct EmailSettingsRequest {
 }
 
 /// `PUT /api/v1/admin/settings/email` — update SMTP settings
-async fn admin_update_email_settings(
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/settings/email",
+    tag = "Admin",
+    summary = "Update email settings",
+    description = "Update SMTP settings for outgoing emails. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_update_email_settings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<EmailSettingsRequest>,
@@ -7059,7 +7235,15 @@ async fn admin_update_email_settings(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// `GET /api/v1/admin/privacy` — return privacy/GDPR settings
-async fn admin_get_privacy(
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/privacy",
+    tag = "Admin",
+    summary = "Get privacy settings",
+    description = "Return privacy and GDPR settings. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_get_privacy(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -7107,8 +7291,8 @@ async fn admin_get_privacy(
 }
 
 /// Request body for privacy settings update
-#[derive(Debug, Deserialize)]
-struct PrivacySettingsRequest {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct PrivacySettingsRequest {
     privacy_policy_url: Option<String>,
     data_retention_days: Option<i32>,
     require_consent: Option<bool>,
@@ -7116,7 +7300,15 @@ struct PrivacySettingsRequest {
 }
 
 /// `PUT /api/v1/admin/privacy` — update privacy settings
-async fn admin_update_privacy(
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/privacy",
+    tag = "Admin",
+    summary = "Update privacy settings",
+    description = "Update privacy and GDPR settings. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_update_privacy(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<PrivacySettingsRequest>,
@@ -7203,8 +7395,8 @@ async fn admin_update_privacy(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Request body for admin user update
-#[derive(Debug, Deserialize)]
-struct AdminUpdateUserRequest {
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub(crate) struct AdminUpdateUserRequest {
     name: Option<String>,
     email: Option<String>,
     role: Option<String>,
@@ -7212,7 +7404,15 @@ struct AdminUpdateUserRequest {
 }
 
 /// `PUT /api/v1/admin/users/{id}/update` — admin can update user details
-async fn admin_update_user(
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/users/{id}/update",
+    tag = "Admin",
+    summary = "Update user details",
+    description = "Admin can update any user's details (name, email, department, etc.).",
+    security(("bearer_auth" = []))
+)]
+pub(crate) async fn admin_update_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
