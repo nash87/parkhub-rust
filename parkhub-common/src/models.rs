@@ -290,7 +290,7 @@ pub struct Booking {
 }
 
 /// Booking status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum BookingStatus {
     #[default]
@@ -520,7 +520,7 @@ pub struct Absence {
 }
 
 /// Recurring absence pattern (e.g. homeoffice every Monday)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AbsencePattern {
     pub absence_type: AbsenceType,
     pub weekdays: Vec<u8>,
@@ -537,7 +537,7 @@ pub struct WaitlistEntry {
 }
 
 /// Guest booking (visitor parking)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GuestBooking {
     pub id: Uuid,
     pub created_by: Uuid,
@@ -554,7 +554,7 @@ pub struct GuestBooking {
 }
 
 /// Swap request between two bookings
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SwapRequest {
     pub id: Uuid,
     pub requester_booking_id: Uuid,
@@ -567,7 +567,7 @@ pub struct SwapRequest {
 }
 
 /// Swap request status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SwapRequestStatus {
     Pending,
@@ -577,7 +577,7 @@ pub enum SwapRequestStatus {
 }
 
 /// Recurring booking pattern
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RecurringBooking {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -594,7 +594,7 @@ pub struct RecurringBooking {
 }
 
 /// System announcement
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct Announcement {
     pub id: Uuid,
     pub title: String,
@@ -607,7 +607,7 @@ pub struct Announcement {
 }
 
 /// Announcement severity level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AnnouncementSeverity {
     Info,
