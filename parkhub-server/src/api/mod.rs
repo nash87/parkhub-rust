@@ -655,7 +655,8 @@ async fn request_id_tracing_middleware(request: Request<Body>, next: Next) -> Re
 // HTTP METRICS MIDDLEWARE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Records HTTP request metrics (method, path, status, duration) for Prometheus.
+/// Records HTTP request metrics (method, path, status, duration) for Prometheus
+/// and emits a structured log line for every request.
 async fn http_metrics_middleware(request: Request<Body>, next: Next) -> Response {
     let method = request.method().to_string();
     let path = request.uri().path().to_string();
@@ -669,6 +670,15 @@ async fn http_metrics_middleware(request: Request<Body>, next: Next) -> Response
     // Normalize path to avoid high-cardinality labels (strip UUIDs/IDs)
     let normalized = normalize_metric_path(&path);
     metrics::record_http_request(&method, &normalized, status, duration);
+
+    // Structured request log — every request gets one line with key fields
+    tracing::info!(
+        http.method = %method,
+        http.path = %path,
+        http.status = status,
+        http.latency_ms = duration.as_millis() as u64,
+        "request completed"
+    );
 
     response
 }
@@ -909,7 +919,7 @@ pub(crate) async fn get_current_user(
 
 /// Request body for updating the current user's profile
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct UpdateCurrentUserRequest {
+pub(crate) struct UpdateCurrentUserRequest {
     name: Option<String>,
     phone: Option<String>,
     picture: Option<String>,
@@ -2292,7 +2302,7 @@ pub(crate) async fn update_vehicle(
 
 /// Request body for uploading a vehicle photo as base64-encoded image data.
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct VehiclePhotoUpload {
+pub(crate) struct VehiclePhotoUpload {
     /// Base64-encoded image, optionally prefixed with a data URI scheme
     /// (e.g. `data:image/jpeg;base64,...`).
     photo: String,
@@ -2601,7 +2611,7 @@ pub(crate) async fn vehicle_city_codes(
 
 /// QR code response with URLs for generating a QR code externally.
 #[derive(Debug, Serialize)]
-struct LotQrResponse {
+pub(crate) struct LotQrResponse {
     /// URL to an external QR code image service.
     /// NOTE: Uses api.qrserver.com. For privacy-sensitive deployments,
     /// operators should generate QR codes locally.
@@ -2695,7 +2705,7 @@ struct TopUser {
 }
 
 #[derive(Debug, Serialize)]
-struct DashboardCharts {
+pub(crate) struct DashboardCharts {
     bookings_by_day: Vec<BookingsByDay>,
     bookings_by_lot: Vec<BookingsByLot>,
     occupancy_by_hour: Vec<OccupancyByHour>,
@@ -3217,13 +3227,13 @@ pub(crate) async fn gdpr_delete_account(
 
 /// Request body for updating a user's role
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct UpdateUserRoleRequest {
+pub(crate) struct UpdateUserRoleRequest {
     role: String,
 }
 
 /// Request body for updating a user's status
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct UpdateUserStatusRequest {
+pub(crate) struct UpdateUserStatusRequest {
     status: String,
 }
 
@@ -3372,6 +3382,7 @@ pub(crate) async fn admin_update_user_role(
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "User UUID")),
     responses((status = 200, description = "Updated"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
+#[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, target_user_id = %id))]
 pub(crate) async fn admin_update_user_status(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -3437,6 +3448,7 @@ pub(crate) async fn admin_update_user_status(
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "User UUID")),
     responses((status = 200, description = "Deleted"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
+#[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id, target_user_id = %id))]
 pub(crate) async fn admin_delete_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -3500,7 +3512,7 @@ pub(crate) async fn admin_delete_user(
 
 /// Response type for admin booking listing (includes user details)
 #[derive(Debug, Serialize)]
-struct AdminBookingResponse {
+pub(crate) struct AdminBookingResponse {
     id: String,
     user_id: String,
     user_name: String,
@@ -4024,7 +4036,7 @@ pub(crate) async fn admin_get_features(
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-struct UpdateFeaturesRequest {
+pub(crate) struct UpdateFeaturesRequest {
     enabled: Vec<String>,
 }
 
@@ -4091,7 +4103,7 @@ pub(crate) async fn admin_update_features(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Deserialize)]
-struct AbsenceQuery {
+pub(crate) struct AbsenceQuery {
     #[serde(rename = "type")]
     absence_type: Option<AbsenceType>,
 }
@@ -4138,7 +4150,7 @@ pub(crate) async fn list_absences(
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-struct CreateAbsenceRequest {
+pub(crate) struct CreateAbsenceRequest {
     absence_type: AbsenceType,
     start_date: String,
     end_date: String,
@@ -4377,7 +4389,7 @@ pub(crate) async fn save_absence_pattern(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Serialize)]
-struct TeamMemberStatus {
+pub(crate) struct TeamMemberStatus {
     user_id: Uuid,
     name: String,
     username: String,
@@ -4896,7 +4908,7 @@ pub(crate) async fn list_waitlist(
 
 /// Request body for joining the waitlist
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct JoinWaitlistRequest {
+pub(crate) struct JoinWaitlistRequest {
     lot_id: Uuid,
 }
 
@@ -5524,6 +5536,7 @@ fn generate_guest_code() -> String {
     description = "Create a visitor parking booking with a guest code.",
     security(("bearer_auth" = []))
 )]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, guest_name = %req.guest_name))]
 pub(crate) async fn create_guest_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -5667,7 +5680,7 @@ pub(crate) async fn admin_cancel_guest_booking(
 /// Request body for quick booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 #[allow(dead_code)]
-struct QuickBookRequest {
+pub(crate) struct QuickBookRequest {
     lot_id: Uuid,
     date: Option<String>,
     booking_type: Option<String>,
@@ -5853,14 +5866,14 @@ pub(crate) async fn quick_book(
 
 /// Query params for calendar events
 #[derive(Debug, Deserialize)]
-struct CalendarQuery {
+pub(crate) struct CalendarQuery {
     from: Option<String>,
     to: Option<String>,
 }
 
 /// Calendar event response
 #[derive(Debug, Serialize)]
-struct CalendarEvent {
+pub(crate) struct CalendarEvent {
     id: String,
     #[serde(rename = "type")]
     event_type: String,
@@ -5988,7 +6001,7 @@ pub(crate) async fn calendar_events(
 
 /// Dashboard stats response
 #[derive(Debug, Serialize)]
-struct AdminStatsResponse {
+pub(crate) struct AdminStatsResponse {
     total_users: u64,
     total_lots: u64,
     total_slots: u64,
@@ -6063,13 +6076,13 @@ pub(crate) async fn admin_stats(
 
 /// Query params for reports
 #[derive(Debug, Deserialize)]
-struct ReportsQuery {
+pub(crate) struct ReportsQuery {
     days: Option<i64>,
 }
 
 /// Booking stats by day
 #[derive(Debug, Serialize)]
-struct DailyBookingStat {
+pub(crate) struct DailyBookingStat {
     date: String,
     count: usize,
 }
@@ -6115,7 +6128,7 @@ pub(crate) async fn admin_reports(
 
 /// Heatmap cell: booking count by weekday x hour
 #[derive(Debug, Serialize)]
-struct HeatmapCell {
+pub(crate) struct HeatmapCell {
     weekday: u32,
     hour: u32,
     count: usize,
@@ -6214,7 +6227,7 @@ pub(crate) async fn admin_audit_log(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Serialize)]
-struct TeamMember {
+pub(crate) struct TeamMember {
     id: Uuid,
     name: String,
     username: String,
@@ -6257,7 +6270,7 @@ pub(crate) async fn team_list(
 
 /// Request body for password change
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct ChangePasswordRequest {
+pub(crate) struct ChangePasswordRequest {
     current_password: String,
     new_password: String,
 }
@@ -6269,6 +6282,7 @@ struct ChangePasswordRequest {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id))]
 pub(crate) async fn change_password(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -6420,7 +6434,7 @@ pub(crate) async fn user_calendar_ics(
 
 /// Occupancy info for a single lot
 #[derive(Debug, Serialize)]
-struct LotOccupancy {
+pub(crate) struct LotOccupancy {
     lot_id: String,
     lot_name: String,
     total_slots: i32,
@@ -6711,7 +6725,7 @@ pub(crate) async fn get_user_preferences(
 
 /// Request body for updating user preferences
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct UpdatePreferencesRequest {
+pub(crate) struct UpdatePreferencesRequest {
     language: Option<String>,
     theme: Option<String>,
     notifications_enabled: Option<bool>,
@@ -6870,7 +6884,7 @@ pub(crate) async fn booking_checkin(
 
 /// Request body for database reset confirmation
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-struct AdminResetRequest {
+pub(crate) struct AdminResetRequest {
     confirm: String,
 }
 

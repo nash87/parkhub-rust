@@ -129,6 +129,26 @@ use crate::{
             HealthStatus,
             ComponentHealth,
             ReadyResponse,
+
+            // Swap Requests
+            crate::api::CreateSwapRequestBody,
+            crate::api::UpdateSwapRequestBody,
+
+            // Recurring Bookings
+            crate::api::CreateRecurringBookingRequest,
+
+            // Guest Bookings
+            crate::api::CreateGuestBookingRequest,
+
+            // Announcements
+            crate::api::CreateAnnouncementRequest,
+            crate::api::UpdateAnnouncementRequest,
+
+            // Admin Settings
+            crate::api::AutoReleaseSettingsRequest,
+            crate::api::EmailSettingsRequest,
+            crate::api::PrivacySettingsRequest,
+            crate::api::AdminUpdateUserRequest,
         )
     ),
     paths(
@@ -273,6 +293,41 @@ use crate::{
         // Team (mod.rs)
         crate::api::team_today,
         crate::api::team_list,
+
+        // Swap Requests (mod.rs)
+        crate::api::list_swap_requests,
+        crate::api::create_swap_request,
+        crate::api::update_swap_request,
+
+        // Recurring Bookings (mod.rs)
+        crate::api::list_recurring_bookings,
+        crate::api::create_recurring_booking,
+        crate::api::delete_recurring_booking,
+
+        // Guest Bookings (mod.rs)
+        crate::api::create_guest_booking,
+        crate::api::admin_list_guest_bookings,
+        crate::api::admin_cancel_guest_booking,
+
+        // Absences — additional (mod.rs)
+        crate::api::list_team_absences,
+        crate::api::get_absence_pattern,
+        crate::api::save_absence_pattern,
+
+        // Announcements (mod.rs)
+        crate::api::admin_create_announcement,
+        crate::api::admin_update_announcement,
+        crate::api::admin_delete_announcement,
+
+        // Admin — additional settings (mod.rs)
+        crate::api::admin_get_use_case,
+        crate::api::admin_get_auto_release,
+        crate::api::admin_update_auto_release,
+        crate::api::admin_get_email_settings,
+        crate::api::admin_update_email_settings,
+        crate::api::admin_get_privacy,
+        crate::api::admin_update_privacy,
+        crate::api::admin_update_user,
     )
 )]
 pub struct ApiDoc;
@@ -482,5 +537,104 @@ mod tests {
         ] {
             assert!(json.contains(schema), "Missing schema: {schema}");
         }
+    }
+
+    #[test]
+    fn test_openapi_has_swap_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/swap-requests",
+            "/api/v1/bookings/{id}/swap-request",
+            "/api/v1/swap-requests/{id}",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_recurring_booking_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in ["/api/v1/recurring-bookings"] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_guest_booking_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/bookings/guest",
+            "/api/v1/admin/guest-bookings",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_announcement_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in ["/api/v1/admin/announcements"] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_admin_settings_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/admin/settings/use-case",
+            "/api/v1/admin/settings/auto-release",
+            "/api/v1/admin/settings/email",
+            "/api/v1/admin/privacy",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_absence_pattern_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/absences/team",
+            "/api/v1/absences/pattern",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_has_new_schemas() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for schema in [
+            "CreateSwapRequestBody",
+            "UpdateSwapRequestBody",
+            "CreateRecurringBookingRequest",
+            "CreateGuestBookingRequest",
+            "CreateAnnouncementRequest",
+            "UpdateAnnouncementRequest",
+            "AutoReleaseSettingsRequest",
+            "EmailSettingsRequest",
+            "PrivacySettingsRequest",
+            "AdminUpdateUserRequest",
+        ] {
+            assert!(json.contains(schema), "Missing schema: {schema}");
+        }
+    }
+
+    #[test]
+    fn test_openapi_total_paths_count() {
+        let doc = ApiDoc::openapi();
+        let paths = doc.paths.paths.len();
+        assert!(
+            paths >= 80,
+            "Expected at least 80 documented paths, got {paths}"
+        );
     }
 }
