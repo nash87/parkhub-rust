@@ -30,8 +30,8 @@ export class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-dvh flex items-center justify-center mesh-gradient">
-          <div className="flex flex-col items-center gap-6 max-w-md text-center px-6">
+        <div className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-6 max-w-sm text-center px-6">
             <div className="w-16 h-16 rounded-xl bg-primary-600 flex items-center justify-center">
               <CarSimple weight="fill" className="w-8 h-8 text-white" />
             </div>

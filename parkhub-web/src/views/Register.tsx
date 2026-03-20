@@ -26,44 +26,56 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-dvh mesh-gradient flex items-center justify-center px-4 py-12">
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
+    <div className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-sm"
+      >
         <Link to="/login" className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors">
           <ArrowLeft weight="bold" className="w-4 h-4" /> {t('auth.signIn')}
         </Link>
 
-        <div className="glass-card p-8 sm:p-10">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary-500/20">
-              <CarSimple weight="fill" className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('auth.register')}</h1>
-            <p className="text-surface-500 dark:text-surface-400 mt-1">{t('auth.registerSubtitle')}</p>
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
+            <CarSimple weight="fill" className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
+        </div>
+
+        <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1">{t('auth.register')}</h1>
+        <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">{t('auth.registerSubtitle')}</p>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="reg-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.name')}</label>
+            <input id="reg-name" type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input" required autoComplete="name" />
+          </div>
+          <div>
+            <label htmlFor="reg-email" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.email')}</label>
+            <input id="reg-email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="input" required autoComplete="email" />
+          </div>
+          <div>
+            <label htmlFor="reg-password" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.password')}</label>
+            <input id="reg-password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} autoComplete="new-password" />
+            <p className="text-xs text-surface-400 mt-1">Min. 8 characters</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {(['name', 'username', 'email'] as const).map(field => (
-              <div key={field}>
-                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t(`auth.${field}`)}</label>
-                <input type={field === 'email' ? 'email' : 'text'} value={form[field]} onChange={e => setForm({ ...form, [field]: e.target.value })} className="input" required />
-              </div>
-            ))}
-            <div>
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">{t('auth.password')}</label>
-              <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="input" required minLength={8} />
-            </div>
+          {error && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-sm text-red-600 dark:text-red-400" role="alert">
+              {error}
+            </motion.p>
+          )}
 
-            {error && <div className="bg-danger/10 border border-danger/20 rounded-xl px-4 py-3 text-sm text-danger font-medium">{error}</div>}
+          <button type="submit" disabled={loading} className="btn btn-primary w-full py-2.5 disabled:opacity-50">
+            {loading ? <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> Creating account...</> : t('auth.signUp')}
+          </button>
+        </form>
 
-            <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 text-base">
-              {loading ? <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" /> : t('auth.signUp')}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-surface-500 mt-6">
-            {t('auth.hasAccount')} <Link to="/login" className="text-primary-600 font-semibold">{t('auth.signIn')}</Link>
-          </p>
-        </div>
+        <p className="text-center text-sm text-surface-500 dark:text-surface-400 mt-6">
+          {t('auth.hasAccount')}{' '}
+          <Link to="/login" className="text-primary-600 dark:text-primary-400 font-medium hover:underline">{t('auth.signIn')}</Link>
+        </p>
       </motion.div>
     </div>
   );
