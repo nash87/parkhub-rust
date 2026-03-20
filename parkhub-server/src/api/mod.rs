@@ -405,14 +405,26 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             auth_middleware,
         ));
 
-    // Demo mode routes (no auth, in-memory state + AppState for DB reset)
+    // Demo mode routes (no auth — by design for public demo, rate-limited POST endpoints)
     let demo_state = demo::new_demo_state();
     let demo_state_ret = demo_state.clone();
+    let demo_limiter = rate_limiters.demo.clone();
+    let demo_limiter2 = demo_limiter.clone();
+    let demo_vote_route = Router::new()
+        .route("/api/v1/demo/vote", post(demo::demo_vote))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(demo_limiter.clone(), req, next)
+        }));
+    let demo_reset_route = Router::new()
+        .route("/api/v1/demo/reset", post(demo::demo_reset))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(demo_limiter2.clone(), req, next)
+        }));
     let demo_routes = Router::new()
         .route("/api/v1/demo/status", get(demo::demo_status))
-        .route("/api/v1/demo/vote", post(demo::demo_vote))
-        .route("/api/v1/demo/reset", post(demo::demo_reset))
         .route("/api/v1/demo/config", get(demo::demo_config))
+        .merge(demo_vote_route)
+        .merge(demo_reset_route)
         .layer(Extension(demo_state))
         .layer(Extension(state.clone()));
 
