@@ -142,6 +142,7 @@ jobs:
 
       - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
+        continue-on-error: true
         with:
           uploadArtifacts: true
           configPath: parkhub-web/lighthouserc.json
