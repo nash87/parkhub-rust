@@ -12,6 +12,7 @@ import { WelcomePage } from './views/Welcome';
 import { LoginPage } from './views/Login';
 import { RegisterPage } from './views/Register';
 import { ForgotPasswordPage } from './views/ForgotPassword';
+import { NotFoundPage } from './views/NotFound';
 import { UseCaseSelectorPage } from './views/UseCaseSelector';
 import { DashboardPage } from './views/Dashboard';
 import { BookingsPage } from './views/Bookings';
@@ -102,7 +103,7 @@ function AppRoutes() {
           <Route path="reports" element={<AdminReportsPage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
