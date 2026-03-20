@@ -49,6 +49,7 @@ pub(crate) struct AdminGrantCreditsRequest {
         (status = 404, description = "User not found"),
     )
 )]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
 pub(crate) async fn get_user_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -105,6 +106,7 @@ pub(crate) async fn get_user_credits(
         (status = 404, description = "User not found"),
     )
 )]
+#[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, target_user_id = %user_id, amount = req.amount))]
 pub(crate) async fn admin_grant_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

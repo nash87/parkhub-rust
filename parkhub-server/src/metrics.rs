@@ -112,6 +112,11 @@ pub fn record_booking_event(event_type: &str) {
     counter!("booking_events_total", &labels).increment(1);
 }
 
+/// Record the total number of registered users
+pub fn record_registered_users(count: u64) {
+    gauge!("registered_users_total").set(count as f64);
+}
+
 /// Timer for measuring operation duration
 pub struct MetricsTimer {
     start: Instant,
@@ -239,5 +244,12 @@ mod tests {
     fn test_record_active_bookings_no_panic() {
         record_active_bookings(0);
         record_active_bookings(100);
+    }
+
+    #[test]
+    fn test_record_registered_users_no_panic() {
+        record_registered_users(0);
+        record_registered_users(50);
+        record_registered_users(10_000);
     }
 }

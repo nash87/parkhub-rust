@@ -211,6 +211,8 @@ async fn main() -> Result<()> {
 
     tracing_subscriber::fmt()
         .with_env_filter(std::env::var("RUST_LOG").unwrap_or_else(|_| log_filter.to_string()))
+        .with_target(true)
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
         .init();
 
     info!("Starting ParkHub Server v{}", env!("CARGO_PKG_VERSION"));
@@ -693,6 +695,10 @@ async fn main() -> Result<()> {
                             })
                             .count();
                         metrics::record_active_bookings(active as u64);
+                    }
+                    // Registered users count
+                    if let Ok(users) = state_guard.db.list_users().await {
+                        metrics::record_registered_users(users.len() as u64);
                     }
                     // Lot occupancy
                     if let Ok(lots) = state_guard.db.list_parking_lots().await {
