@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, CreditTransaction, CreditTransactionType, UserRole};
 
+use crate::audit::{AuditEntry, AuditEventType};
 use super::{admin::AdminUserResponse, check_admin, AuthUser, SharedState};
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,6 +157,8 @@ pub async fn admin_grant_credits(
         );
     }
 
+    let grant_amount = req.amount;
+    let grant_description = req.description.clone();
     let tx = CreditTransaction {
         id: Uuid::new_v4(),
         user_id: target_user.id,
@@ -169,6 +172,17 @@ pub async fn admin_grant_credits(
     if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
         tracing::warn!("Failed to save credit grant transaction: {e}");
     }
+
+    let audit = AuditEntry::new(AuditEventType::ConfigChanged)
+        .user(auth_user.user_id, "admin")
+        .resource("user_credits", &user_id)
+        .details(serde_json::json!({
+            "action": "grant_credits",
+            "amount": grant_amount,
+            "description": grant_description,
+        }))
+        .log();
+    audit.persist(&state_guard.db).await;
     drop(state_guard);
 
     (StatusCode::OK, Json(ApiResponse::success(())))

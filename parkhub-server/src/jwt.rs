@@ -10,9 +10,42 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use crate::error::AppError;
+
+/// In-memory token revocation list.
+///
+/// Stores revoked JWT IDs (`jti`) so that even unexpired tokens can be
+/// invalidated (e.g. on logout or password change). Callers share this via
+/// `Arc<TokenRevocationList>`.
+#[derive(Debug, Default)]
+pub struct TokenRevocationList {
+    revoked: Mutex<HashSet<String>>,
+}
+
+impl TokenRevocationList {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    /// Revoke a token by its `jti` claim.
+    pub fn revoke(&self, jti: &str) {
+        if let Ok(mut set) = self.revoked.lock() {
+            set.insert(jti.to_string());
+        }
+    }
+
+    /// Returns `true` if the given `jti` has been revoked.
+    pub fn is_revoked(&self, jti: &str) -> bool {
+        self.revoked
+            .lock()
+            .map(|set| set.contains(jti))
+            .unwrap_or(false)
+    }
+}
 
 /// JWT configuration
 #[derive(Clone)]
@@ -39,8 +72,8 @@ impl Default for JwtConfig {
         };
         Self {
             secret,
-            access_token_expiry_hours: 24,
-            refresh_token_expiry_days: 30,
+            access_token_expiry_hours: 1,
+            refresh_token_expiry_days: 7,
             issuer: "parkhub".to_string(),
         }
     }
@@ -63,6 +96,8 @@ pub struct Claims {
     pub iss: String,
     /// Token type (access/refresh)
     pub token_type: TokenType,
+    /// JWT ID — unique per token, used for revocation
+    pub jti: String,
 }
 
 /// Token type
@@ -127,6 +162,7 @@ impl JwtManager {
             exp: access_exp.timestamp(),
             iss: self.config.issuer.clone(),
             token_type: TokenType::Access,
+            jti: Uuid::new_v4().to_string(),
         };
 
         let access_token = encode(&Header::default(), &access_claims, &self.encoding_key)
@@ -142,6 +178,7 @@ impl JwtManager {
             exp: refresh_exp.timestamp(),
             iss: self.config.issuer.clone(),
             token_type: TokenType::Refresh,
+            jti: Uuid::new_v4().to_string(),
         };
 
         let refresh_token = encode(&Header::default(), &refresh_claims, &self.encoding_key)
@@ -155,8 +192,15 @@ impl JwtManager {
         })
     }
 
-    /// Validate a token and return the claims
-    pub fn validate_token(&self, token: &str) -> Result<Claims, AppError> {
+    /// Validate a token and return the claims.
+    ///
+    /// Pass `Some(revocation_list)` to also check whether the token has been
+    /// explicitly revoked via [`TokenRevocationList::revoke`].
+    pub fn validate_token(
+        &self,
+        token: &str,
+        revocation_list: Option<&TokenRevocationList>,
+    ) -> Result<Claims, AppError> {
         let mut validation = Validation::default();
         validation.set_issuer(&[&self.config.issuer]);
 
@@ -166,12 +210,25 @@ impl JwtManager {
                 _ => AppError::InvalidToken,
             })?;
 
+        // Check revocation list if provided
+        if let Some(rl) = revocation_list {
+            if rl.is_revoked(&token_data.claims.jti) {
+                return Err(AppError::InvalidToken);
+            }
+        }
+
         Ok(token_data.claims)
     }
 
-    /// Refresh tokens using a refresh token
-    pub fn refresh_tokens(&self, refresh_token: &str) -> Result<TokenPair, AppError> {
-        let claims = self.validate_token(refresh_token)?;
+    /// Refresh tokens using a refresh token.
+    ///
+    /// Optionally checks the revocation list before issuing new tokens.
+    pub fn refresh_tokens(
+        &self,
+        refresh_token: &str,
+        revocation_list: Option<&TokenRevocationList>,
+    ) -> Result<TokenPair, AppError> {
+        let claims = self.validate_token(refresh_token, revocation_list)?;
 
         if claims.token_type != TokenType::Refresh {
             return Err(AppError::InvalidToken);
@@ -224,8 +281,10 @@ where
             .get::<JwtManager>()
             .ok_or(AppError::Internal)?;
 
-        // Validate token
-        let claims = jwt_manager.validate_token(token)?;
+        // Validate token (optionally check revocation list if present)
+        let revocation_list = parts.extensions.get::<Arc<TokenRevocationList>>();
+        let claims = jwt_manager
+            .validate_token(token, revocation_list.map(|rl| rl.as_ref()))?;
 
         // Ensure it's an access token
         if claims.token_type != TokenType::Access {
@@ -278,7 +337,7 @@ mod tests {
 
         // Validate access token
         let claims = jwt
-            .validate_token(&tokens.access_token)
+            .validate_token(&tokens.access_token, None)
             .expect("Failed to validate token");
 
         assert_eq!(claims.sub, user_id.to_string());
@@ -300,7 +359,7 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         let new_tokens = jwt
-            .refresh_tokens(&tokens.refresh_token)
+            .refresh_tokens(&tokens.refresh_token, None)
             .expect("Failed to refresh tokens");
 
         assert!(!new_tokens.access_token.is_empty());
@@ -311,7 +370,7 @@ mod tests {
     #[test]
     fn test_invalid_token() {
         let jwt = JwtManager::with_random_secret();
-        let result = jwt.validate_token("invalid.token.here");
+        let result = jwt.validate_token("invalid.token.here", None);
         assert!(result.is_err());
     }
 
@@ -320,8 +379,8 @@ mod tests {
     #[test]
     fn test_jwt_config_defaults() {
         let config = JwtConfig::default();
-        assert_eq!(config.access_token_expiry_hours, 24);
-        assert_eq!(config.refresh_token_expiry_days, 30);
+        assert_eq!(config.access_token_expiry_hours, 1);
+        assert_eq!(config.refresh_token_expiry_days, 7);
         assert_eq!(config.issuer, "parkhub");
         // Secret should be 64 hex chars (32 bytes)
         assert_eq!(config.secret.len(), 64);
@@ -358,20 +417,21 @@ mod tests {
         let jwt = JwtManager::with_random_secret();
         let user_id = Uuid::new_v4();
         let tokens = jwt.generate_tokens(&user_id, "alice", "admin").unwrap();
-        let claims = jwt.validate_token(&tokens.access_token).unwrap();
+        let claims = jwt.validate_token(&tokens.access_token, None).unwrap();
         assert_eq!(claims.sub, user_id.to_string());
         assert_eq!(claims.username, "alice");
         assert_eq!(claims.role, "admin");
         assert_eq!(claims.iss, "parkhub");
         assert_eq!(claims.token_type, TokenType::Access);
         assert!(claims.exp > claims.iat);
+        assert!(!claims.jti.is_empty());
     }
 
     #[test]
     fn test_refresh_token_has_correct_type() {
         let jwt = JwtManager::with_random_secret();
         let tokens = jwt.generate_tokens(&Uuid::new_v4(), "bob", "user").unwrap();
-        let claims = jwt.validate_token(&tokens.refresh_token).unwrap();
+        let claims = jwt.validate_token(&tokens.refresh_token, None).unwrap();
         assert_eq!(claims.token_type, TokenType::Refresh);
     }
 
@@ -381,8 +441,8 @@ mod tests {
         let tokens = jwt
             .generate_tokens(&Uuid::new_v4(), "charlie", "user")
             .unwrap();
-        let access = jwt.validate_token(&tokens.access_token).unwrap();
-        let refresh = jwt.validate_token(&tokens.refresh_token).unwrap();
+        let access = jwt.validate_token(&tokens.access_token, None).unwrap();
+        let refresh = jwt.validate_token(&tokens.refresh_token, None).unwrap();
         assert!(refresh.exp > access.exp);
     }
 
@@ -395,13 +455,13 @@ mod tests {
         let tokens = jwt1
             .generate_tokens(&Uuid::new_v4(), "eve", "user")
             .unwrap();
-        assert!(jwt2.validate_token(&tokens.access_token).is_err());
+        assert!(jwt2.validate_token(&tokens.access_token, None).is_err());
     }
 
     #[test]
     fn test_empty_string_is_invalid() {
         let jwt = JwtManager::with_random_secret();
-        assert!(jwt.validate_token("").is_err());
+        assert!(jwt.validate_token("", None).is_err());
     }
 
     #[test]
@@ -411,7 +471,7 @@ mod tests {
             .generate_tokens(&Uuid::new_v4(), "frank", "user")
             .unwrap();
         // Using access token for refresh should fail (wrong token_type)
-        let result = jwt.refresh_tokens(&tokens.access_token);
+        let result = jwt.refresh_tokens(&tokens.access_token, None);
         assert!(result.is_err());
     }
 
@@ -436,6 +496,7 @@ mod tests {
             exp: exp.timestamp(),
             iss: "parkhub".to_string(),
             token_type: TokenType::Access,
+            jti: Uuid::new_v4().to_string(),
         };
         let token = encode(
             &Header::default(),
@@ -444,7 +505,7 @@ mod tests {
         )
         .unwrap();
 
-        let result = jwt.validate_token(&token);
+        let result = jwt.validate_token(&token, None);
         assert!(result.is_err());
     }
 
@@ -527,5 +588,52 @@ mod tests {
         assert_eq!(json["refresh_token"], "def");
         assert_eq!(json["token_type"], "Bearer");
         assert_eq!(json["expires_in"], 86400);
+    }
+
+    // ── TokenRevocationList ──
+
+    #[test]
+    fn test_revocation_list_rejects_revoked_token() {
+        let jwt = JwtManager::with_random_secret();
+        let user_id = Uuid::new_v4();
+        let tokens = jwt.generate_tokens(&user_id, "alice", "user").unwrap();
+
+        // Token is valid before revocation
+        let rl = TokenRevocationList::new();
+        assert!(jwt.validate_token(&tokens.access_token, Some(&rl)).is_ok());
+
+        // Extract jti and revoke it
+        let claims = jwt.validate_token(&tokens.access_token, None).unwrap();
+        rl.revoke(&claims.jti);
+
+        // Token should now be rejected
+        assert!(jwt.validate_token(&tokens.access_token, Some(&rl)).is_err());
+    }
+
+    #[test]
+    fn test_revocation_list_does_not_affect_other_tokens() {
+        let jwt = JwtManager::with_random_secret();
+        let user_id = Uuid::new_v4();
+        let t1 = jwt.generate_tokens(&user_id, "alice", "user").unwrap();
+        let t2 = jwt.generate_tokens(&user_id, "alice", "user").unwrap();
+
+        let rl = TokenRevocationList::new();
+        let claims1 = jwt.validate_token(&t1.access_token, None).unwrap();
+        rl.revoke(&claims1.jti);
+
+        // t1 revoked, t2 still valid
+        assert!(jwt.validate_token(&t1.access_token, Some(&rl)).is_err());
+        assert!(jwt.validate_token(&t2.access_token, Some(&rl)).is_ok());
+    }
+
+    #[test]
+    fn test_jti_unique_per_token() {
+        let jwt = JwtManager::with_random_secret();
+        let user_id = Uuid::new_v4();
+        let t1 = jwt.generate_tokens(&user_id, "alice", "user").unwrap();
+        let t2 = jwt.generate_tokens(&user_id, "alice", "user").unwrap();
+        let c1 = jwt.validate_token(&t1.access_token, None).unwrap();
+        let c2 = jwt.validate_token(&t2.access_token, None).unwrap();
+        assert_ne!(c1.jti, c2.jti);
     }
 }
