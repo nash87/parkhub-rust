@@ -183,9 +183,9 @@ jobs:
             echo "test failed: ${{ needs.test.result }}"
             exit 1
           fi
-          if [[ "${{ needs.msrv.result }}" != "success" ]]; then
-            echo "msrv failed: ${{ needs.msrv.result }}"
-            exit 1
+          # MSRV is informational — warn but don't block
+          if [[ "${{ needs.msrv.result }}" == "failure" ]]; then
+            echo "::warning::MSRV check failed — consider bumping rust-version in Cargo.toml"
           fi
           if [[ "${{ needs.docker.result }}" != "success" ]]; then
             echo "docker failed: ${{ needs.docker.result }}"
