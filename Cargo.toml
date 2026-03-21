@@ -82,6 +82,20 @@ needless_for_each = "allow"
 uninlined_format_args = "allow"
 # Rust 1.94+ pedantic: "".to_string() vs String::new() is stylistic
 manual_string_new = "allow"
+# Rust 1.94+ pedantic: raw string r#"..."# hashes — used in HTML/email templates
+unnecessary_raw_string_hashes = "allow"
+# Rust 1.94+ pedantic: long numeric literals (DXA units, ports) without separators
+unreadable_literal = "allow"
+# Rust 1.94+ pedantic: f64 assert_eq in tests — acceptable for exact computed values
+float_cmp = "allow"
+# Rust 1.94+ nursery: hardcoded "0.0.0.0" / "127.0.0.1" for server bind addresses
+hardcoded_ip_address = "allow"
+# Rust 1.94+ nursery: .clone() on values moving into closures
+redundant_clone = "allow"
+# Rust 1.94+ pedantic: .iter() in for loops vs direct reference
+explicit_iter_loop = "allow"
+# Rust 1.94+ nursery: collect() into Vec before iteration
+needless_collect = "allow"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
