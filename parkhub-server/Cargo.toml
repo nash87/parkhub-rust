@@ -111,6 +111,10 @@ regex = "1.12.3"
 rust-embed = "8.11.0"
 mime_guess = "2.0.5"
 
+# QR code generation
+qrcode = "0.14"
+image = { version = "0.25", default-features = false, features = ["png"] }
+
 [build-dependencies]
 slint-build = { version = "1.15", optional = true }  # updated from 1.14
 

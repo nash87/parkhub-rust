@@ -176,6 +176,8 @@ pub struct EndpointRateLimiters {
     pub forgot_password: Arc<per_ip::IpRateLimiter>,
     /// Demo vote/reset — 3 per minute per IP
     pub demo: Arc<per_ip::IpRateLimiter>,
+    /// QR pass generation — 10 per minute per IP
+    pub qr_pass: Arc<per_ip::IpRateLimiter>,
     /// General API (relaxed global limiter)
     pub general: Arc<GlobalRateLimiter>,
 }
@@ -194,6 +196,8 @@ impl EndpointRateLimiters {
             ),
             // 3 demo vote/reset per minute per IP
             demo: per_ip::create_ip_rate_limiter(3),
+            // 10 QR pass requests per minute per IP
+            qr_pass: per_ip::create_ip_rate_limiter(10),
             // 100 requests per second globally
             general: create_rate_limiter(&RateLimitConfig::default()),
         }
