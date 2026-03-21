@@ -1,15 +1,16 @@
 //! Parking lot handlers: CRUD operations and slot listing.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Extension, Json,
 };
+use serde::Deserialize;
 use chrono::Utc;
 use uuid::Uuid;
 use validator::Validate;
 
-use parkhub_common::models::{SlotPosition, SlotType};
+use parkhub_common::models::{SlotFeature, SlotPosition, SlotType};
 use parkhub_common::{
     ApiResponse, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo,
     PricingRate, SlotStatus,
@@ -19,6 +20,67 @@ use crate::requests::{parse_lot_status, CreateParkingLotRequest, UpdateParkingLo
 
 use super::{AuthUser, SharedState};
 use parkhub_common::UserRole;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Query params
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Optional filters for `GET /api/v1/lots/{id}/slots`.
+#[derive(Debug, Deserialize, Default, utoipa::IntoParams)]
+pub struct SlotFilterParams {
+    /// Filter by slot type: `standard`, `compact`, `large`, `handicap`,
+    /// `electric`, `motorcycle`, `reserved`, `vip`
+    pub slot_type: Option<String>,
+    /// Filter by slot status: `available`, `occupied`, `reserved`,
+    /// `maintenance`, `disabled`
+    pub status: Option<String>,
+    /// Filter by feature: `near_exit`, `near_elevator`, `near_stairs`,
+    /// `covered`, `security_camera`, `well_lit`, `wide_lane`, `charging_station`
+    pub feature: Option<String>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn parse_slot_type(s: &str) -> Option<SlotType> {
+    match s.to_lowercase().as_str() {
+        "standard" => Some(SlotType::Standard),
+        "compact" => Some(SlotType::Compact),
+        "large" => Some(SlotType::Large),
+        "handicap" => Some(SlotType::Handicap),
+        "electric" => Some(SlotType::Electric),
+        "motorcycle" => Some(SlotType::Motorcycle),
+        "reserved" => Some(SlotType::Reserved),
+        "vip" => Some(SlotType::Vip),
+        _ => None,
+    }
+}
+
+fn parse_slot_status(s: &str) -> Option<SlotStatus> {
+    match s.to_lowercase().as_str() {
+        "available" => Some(SlotStatus::Available),
+        "occupied" => Some(SlotStatus::Occupied),
+        "reserved" => Some(SlotStatus::Reserved),
+        "maintenance" => Some(SlotStatus::Maintenance),
+        "disabled" => Some(SlotStatus::Disabled),
+        _ => None,
+    }
+}
+
+fn parse_slot_feature(s: &str) -> Option<SlotFeature> {
+    match s.to_lowercase().as_str() {
+        "near_exit" => Some(SlotFeature::NearExit),
+        "near_elevator" => Some(SlotFeature::NearElevator),
+        "near_stairs" => Some(SlotFeature::NearStairs),
+        "covered" => Some(SlotFeature::Covered),
+        "security_camera" => Some(SlotFeature::SecurityCamera),
+        "well_lit" => Some(SlotFeature::WellLit),
+        "wide_lane" => Some(SlotFeature::WideLane),
+        "charging_station" => Some(SlotFeature::ChargingStation),
+        _ => None,
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Handlers
@@ -512,25 +574,112 @@ pub async fn get_lot(
     path = "/api/v1/lots/{id}/slots",
     tag = "Lots",
     summary = "List slots in a parking lot",
-    description = "Returns all parking slots in the specified lot with their current status.",
-    params(("id" = String, Path, description = "Parking lot ID")),
+    description = "Returns parking slots in the specified lot. Optionally filter by \
+        `slot_type` (standard, compact, large, handicap, electric, motorcycle, reserved, vip), \
+        `status` (available, occupied, reserved, maintenance, disabled), or \
+        `feature` (near_exit, near_elevator, near_stairs, covered, security_camera, \
+        well_lit, wide_lane, charging_station).",
+    params(
+        ("id" = String, Path, description = "Parking lot ID"),
+        SlotFilterParams,
+    ),
     responses(
         (status = 200, description = "List of slots in the parking lot"),
+        (status = 400, description = "Invalid filter value"),
     )
 )]
 pub async fn get_lot_slots(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Json<ApiResponse<Vec<ParkingSlot>>> {
+    Query(filters): Query<SlotFilterParams>,
+) -> (StatusCode, Json<ApiResponse<Vec<ParkingSlot>>>) {
+    // Validate filter params upfront so we can return 400 on unknown values
+    let type_filter = if let Some(ref t) = filters.slot_type {
+        match parse_slot_type(t) {
+            Some(v) => Some(v),
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "VALIDATION_ERROR",
+                        "Invalid slot_type. Valid: standard, compact, large, handicap, electric, motorcycle, reserved, vip",
+                    )),
+                );
+            }
+        }
+    } else {
+        None
+    };
+
+    let status_filter = if let Some(ref s) = filters.status {
+        match parse_slot_status(s) {
+            Some(v) => Some(v),
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "VALIDATION_ERROR",
+                        "Invalid status. Valid: available, occupied, reserved, maintenance, disabled",
+                    )),
+                );
+            }
+        }
+    } else {
+        None
+    };
+
+    let feature_filter = if let Some(ref f) = filters.feature {
+        match parse_slot_feature(f) {
+            Some(v) => Some(v),
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "VALIDATION_ERROR",
+                        "Invalid feature. Valid: near_exit, near_elevator, near_stairs, covered, security_camera, well_lit, wide_lane, charging_station",
+                    )),
+                );
+            }
+        }
+    } else {
+        None
+    };
+
     let state = state.read().await;
 
-    match state.db.list_slots_by_lot(&id).await {
-        Ok(slots) => Json(ApiResponse::success(slots)),
+    let slots = match state.db.list_slots_by_lot(&id).await {
+        Ok(s) => s,
         Err(e) => {
             tracing::error!("Database error: {}", e);
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to list slots"))
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list slots")),
+            );
         }
-    }
+    };
+
+    // Apply in-memory filters
+    let filtered: Vec<ParkingSlot> = slots
+        .into_iter()
+        .filter(|s| type_filter.as_ref().map_or(true, |t| &s.slot_type == t))
+        .filter(|s| status_filter.as_ref().map_or(true, |st| &s.status == st))
+        .filter(|s| {
+            feature_filter
+                .as_ref()
+                .map_or(true, |f| s.features.contains(f))
+        })
+        .collect();
+
+    tracing::debug!(
+        lot_id = %id,
+        total = filtered.len(),
+        slot_type = ?filters.slot_type,
+        status = ?filters.status,
+        feature = ?filters.feature,
+        "Listed slots with filters"
+    );
+
+    (StatusCode::OK, Json(ApiResponse::success(filtered)))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -848,11 +997,68 @@ pub async fn delete_slot(
 
 #[cfg(test)]
 mod tests {
-    use parkhub_common::models::{LotStatus, SlotStatus, SlotType};
+    use parkhub_common::models::{LotStatus, SlotFeature, SlotStatus, SlotType};
     use parkhub_common::{PricingInfo, PricingRate};
 
     use crate::requests::{parse_lot_status, CreateParkingLotRequest, UpdateParkingLotRequest};
     use validator::Validate;
+
+    use super::{parse_slot_feature, parse_slot_status, parse_slot_type};
+
+    // ── parse_slot_type ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_slot_type_all_variants() {
+        assert_eq!(parse_slot_type("standard"), Some(SlotType::Standard));
+        assert_eq!(parse_slot_type("compact"), Some(SlotType::Compact));
+        assert_eq!(parse_slot_type("large"), Some(SlotType::Large));
+        assert_eq!(parse_slot_type("handicap"), Some(SlotType::Handicap));
+        assert_eq!(parse_slot_type("electric"), Some(SlotType::Electric));
+        assert_eq!(parse_slot_type("motorcycle"), Some(SlotType::Motorcycle));
+        assert_eq!(parse_slot_type("reserved"), Some(SlotType::Reserved));
+        assert_eq!(parse_slot_type("vip"), Some(SlotType::Vip));
+        assert_eq!(parse_slot_type("unknown"), None);
+        assert_eq!(parse_slot_type(""), None);
+    }
+
+    #[test]
+    fn test_parse_slot_type_case_insensitive() {
+        assert_eq!(parse_slot_type("ELECTRIC"), Some(SlotType::Electric));
+        assert_eq!(parse_slot_type("Compact"), Some(SlotType::Compact));
+    }
+
+    // ── parse_slot_status ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_slot_status_all_variants() {
+        assert_eq!(parse_slot_status("available"), Some(SlotStatus::Available));
+        assert_eq!(parse_slot_status("occupied"), Some(SlotStatus::Occupied));
+        assert_eq!(parse_slot_status("reserved"), Some(SlotStatus::Reserved));
+        assert_eq!(parse_slot_status("maintenance"), Some(SlotStatus::Maintenance));
+        assert_eq!(parse_slot_status("disabled"), Some(SlotStatus::Disabled));
+        assert_eq!(parse_slot_status("unknown"), None);
+    }
+
+    #[test]
+    fn test_parse_slot_status_case_insensitive() {
+        assert_eq!(parse_slot_status("AVAILABLE"), Some(SlotStatus::Available));
+        assert_eq!(parse_slot_status("Occupied"), Some(SlotStatus::Occupied));
+    }
+
+    // ── parse_slot_feature ──────────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_slot_feature_all_variants() {
+        assert_eq!(parse_slot_feature("near_exit"), Some(SlotFeature::NearExit));
+        assert_eq!(parse_slot_feature("near_elevator"), Some(SlotFeature::NearElevator));
+        assert_eq!(parse_slot_feature("near_stairs"), Some(SlotFeature::NearStairs));
+        assert_eq!(parse_slot_feature("covered"), Some(SlotFeature::Covered));
+        assert_eq!(parse_slot_feature("security_camera"), Some(SlotFeature::SecurityCamera));
+        assert_eq!(parse_slot_feature("well_lit"), Some(SlotFeature::WellLit));
+        assert_eq!(parse_slot_feature("wide_lane"), Some(SlotFeature::WideLane));
+        assert_eq!(parse_slot_feature("charging_station"), Some(SlotFeature::ChargingStation));
+        assert_eq!(parse_slot_feature("unknown"), None);
+    }
 
     // ── parse_lot_status ────────────────────────────────────────────────────
 
