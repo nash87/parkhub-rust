@@ -826,6 +826,35 @@ async fn auth_middleware(
             ));
         }
     };
+
+    // Re-validate the user against the DB: reject disabled or deleted accounts
+    // even when their session token is still technically valid. This prevents
+    // suspended users from continuing to make requests until their token expires.
+    match state_guard
+        .db
+        .get_user(&session.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) if u.is_active => {}
+        Ok(Some(_)) => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse::error(
+                    "ACCOUNT_DISABLED",
+                    "Account is disabled",
+                )),
+            ));
+        }
+        _ => {
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse::error(
+                    "UNAUTHORIZED",
+                    "User not found",
+                )),
+            ));
+        }
+    }
     drop(state_guard);
 
     // Insert user info into request extensions
@@ -1214,76 +1243,174 @@ pub async fn create_booking(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateBookingRequest>,
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
-    // Use a WRITE lock for the entire booking creation to prevent race
-    // conditions where two concurrent requests book the same slot simultaneously.
-    // Both would read SlotStatus::Available, and both would succeed — leaving the
-    // slot double-booked. Holding the write lock ensures only one request can
-    // complete the check-and-update atomically.
-    let state_guard = state.write().await;
+    // ── Phase 1: reads under a read lock ──────────────────────────────────────
+    // Collect all data needed to validate and price the booking.  A read lock
+    // allows concurrent readers; we release it before any mutation.
+    let (
+        slot,
+        vehicle,
+        require_vehicle,
+        plate_mode,
+        duration_hours,
+        min_hours,
+        max_hours,
+        max_per_day,
+        same_day_count,
+        credits_enabled,
+        credits_per_booking,
+        mut booking_user,
+        lot_opt,
+        org_name,
+    ) = {
+        let rg = state.read().await;
 
-    // Check if slot exists and is available
-    let slot = match state_guard
-        .db
-        .get_parking_slot(&req.slot_id.to_string())
-        .await
-    {
-        Ok(Some(s)) => s,
-        Ok(None) => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
-            );
-        }
-        Err(e) => {
-            tracing::error!("Database error: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
-            );
-        }
-    };
-
-    if slot.status != SlotStatus::Available {
-        return (
-            StatusCode::CONFLICT,
-            Json(ApiResponse::error(
-                "SLOT_UNAVAILABLE",
-                "This slot is not available",
-            )),
-        );
-    }
-
-    // Get or create vehicle info
-    let vehicle = match state_guard
-        .db
-        .get_vehicle(&req.vehicle_id.to_string())
-        .await
-    {
-        Ok(Some(v)) => {
-            // Verify the vehicle belongs to the authenticated user.
-            if v.user_id != auth_user.user_id {
+        // Check if slot exists and is available
+        let slot = match rg.db.get_parking_slot(&req.slot_id.to_string()).await {
+            Ok(Some(s)) => s,
+            Ok(None) => {
                 return (
-                    StatusCode::FORBIDDEN,
-                    Json(ApiResponse::error(
-                        "FORBIDDEN",
-                        "Vehicle does not belong to you",
-                    )),
+                    StatusCode::NOT_FOUND,
+                    Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
                 );
             }
-            v
+            Err(e) => {
+                tracing::error!("Database error: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+                );
+            }
+        };
+
+        if slot.status != SlotStatus::Available {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::error(
+                    "SLOT_UNAVAILABLE",
+                    "This slot is not available",
+                )),
+            );
         }
-        _ => Vehicle {
-            id: req.vehicle_id,
-            user_id: auth_user.user_id,
-            license_plate: req.license_plate.clone(),
-            make: None,
-            model: None,
-            color: None,
-            vehicle_type: VehicleType::Car,
-            is_default: false,
-            created_at: Utc::now(),
-        },
+
+        // Get or create vehicle info
+        let vehicle = match rg.db.get_vehicle(&req.vehicle_id.to_string()).await {
+            Ok(Some(v)) => {
+                if v.user_id != auth_user.user_id {
+                    return (
+                        StatusCode::FORBIDDEN,
+                        Json(ApiResponse::error(
+                            "FORBIDDEN",
+                            "Vehicle does not belong to you",
+                        )),
+                    );
+                }
+                v
+            }
+            _ => Vehicle {
+                id: req.vehicle_id,
+                user_id: auth_user.user_id,
+                license_plate: req.license_plate.clone(),
+                make: None,
+                model: None,
+                color: None,
+                vehicle_type: VehicleType::Car,
+                is_default: false,
+                created_at: Utc::now(),
+            },
+        };
+
+        // Admin settings
+        let require_vehicle = read_admin_setting(&rg.db, "require_vehicle").await;
+        let plate_mode = read_admin_setting(&rg.db, "license_plate_mode").await;
+        let duration_hours = f64::from(req.duration_minutes) / 60.0;
+        let min_hours: f64 = read_admin_setting(&rg.db, "min_booking_duration_hours")
+            .await
+            .parse()
+            .unwrap_or(0.0);
+        let max_hours: f64 = read_admin_setting(&rg.db, "max_booking_duration_hours")
+            .await
+            .parse()
+            .unwrap_or(0.0);
+        let max_per_day: i32 = read_admin_setting(&rg.db, "max_bookings_per_day")
+            .await
+            .parse()
+            .unwrap_or(0);
+
+        let same_day_count = if max_per_day > 0 {
+            let user_bookings = rg
+                .db
+                .list_bookings_by_user(&auth_user.user_id.to_string())
+                .await
+                .unwrap_or_default();
+            let booking_date = req.start_time.date_naive();
+            user_bookings
+                .iter()
+                .filter(|b| {
+                    b.start_time.date_naive() == booking_date
+                        && b.status != BookingStatus::Cancelled
+                })
+                .count()
+        } else {
+            0
+        };
+
+        // Credits settings
+        let credits_enabled = rg
+            .db
+            .get_setting("credits_enabled")
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+            == "true";
+        let credits_per_booking: i32 = rg
+            .db
+            .get_setting("credits_per_booking")
+            .await
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1);
+
+        let booking_user = match rg.db.get_user(&auth_user.user_id.to_string()).await {
+            Ok(Some(u)) => u,
+            _ => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
+                );
+            }
+        };
+
+        let lot_opt = rg
+            .db
+            .get_parking_lot(&req.lot_id.to_string())
+            .await
+            .ok()
+            .flatten();
+
+        let org_name = rg.config.organization_name.clone();
+
+        (
+            slot,
+            vehicle,
+            require_vehicle,
+            plate_mode,
+            duration_hours,
+            min_hours,
+            max_hours,
+            max_per_day,
+            same_day_count,
+            credits_enabled,
+            credits_per_booking,
+            booking_user,
+            lot_opt,
+            org_name,
+        )
     };
+    // Read lock released here.
+
+    // ── Stateless validation (no lock needed) ─────────────────────────────────
 
     // Validate duration is positive before arithmetic
     if req.duration_minutes <= 0 {
@@ -1309,8 +1436,6 @@ pub async fn create_booking(
 
     // ── Admin settings enforcement ─────────────────────────────────────────
 
-    // require_vehicle: reject if no vehicle provided
-    let require_vehicle = read_admin_setting(&state_guard.db, "require_vehicle").await;
     if require_vehicle == "true" && req.vehicle_id == Uuid::nil() {
         return (
             StatusCode::BAD_REQUEST,
@@ -1321,8 +1446,6 @@ pub async fn create_booking(
         );
     }
 
-    // license_plate_mode = "required": reject if plate is empty
-    let plate_mode = read_admin_setting(&state_guard.db, "license_plate_mode").await;
     if plate_mode == "required" && req.license_plate.trim().is_empty() {
         return (
             StatusCode::BAD_REQUEST,
@@ -1333,12 +1456,6 @@ pub async fn create_booking(
         );
     }
 
-    // min_booking_duration_hours / max_booking_duration_hours
-    let duration_hours = f64::from(req.duration_minutes) / 60.0;
-    let min_hours: f64 = read_admin_setting(&state_guard.db, "min_booking_duration_hours")
-        .await
-        .parse()
-        .unwrap_or(0.0);
     if min_hours > 0.0 && duration_hours < min_hours {
         return (
             StatusCode::BAD_REQUEST,
@@ -1348,10 +1465,7 @@ pub async fn create_booking(
             )),
         );
     }
-    let max_hours: f64 = read_admin_setting(&state_guard.db, "max_booking_duration_hours")
-        .await
-        .parse()
-        .unwrap_or(0.0);
+
     if max_hours > 0.0 && duration_hours > max_hours {
         return (
             StatusCode::BAD_REQUEST,
@@ -1362,65 +1476,17 @@ pub async fn create_booking(
         );
     }
 
-    // max_bookings_per_day: count user's bookings for the same day (0 = unlimited)
-    let max_per_day: i32 = read_admin_setting(&state_guard.db, "max_bookings_per_day")
-        .await
-        .parse()
-        .unwrap_or(0);
-    if max_per_day > 0 {
-        let user_bookings = state_guard
-            .db
-            .list_bookings_by_user(&auth_user.user_id.to_string())
-            .await
-            .unwrap_or_default();
-        let booking_date = req.start_time.date_naive();
-        let same_day_count = user_bookings
-            .iter()
-            .filter(|b| {
-                b.start_time.date_naive() == booking_date && b.status != BookingStatus::Cancelled
-            })
-            .count();
-        if same_day_count >= usize::try_from(max_per_day).unwrap_or(0) {
-            return (
-                StatusCode::UNPROCESSABLE_ENTITY,
-                Json(ApiResponse::error(
-                    "MAX_BOOKINGS_REACHED",
-                    format!("Maximum of {max_per_day} booking(s) per day reached"),
-                )),
-            );
-        }
+    if max_per_day > 0 && same_day_count >= usize::try_from(max_per_day).unwrap_or(0) {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(
+                "MAX_BOOKINGS_REACHED",
+                format!("Maximum of {max_per_day} booking(s) per day reached"),
+            )),
+        );
     }
 
     // ── End admin settings enforcement ──────────────────────────────────────
-
-    // Credits check — deduct if credits system is enabled
-    let credits_enabled = state_guard
-        .db
-        .get_setting("credits_enabled")
-        .await
-        .ok()
-        .flatten()
-        .unwrap_or_default()
-        == "true";
-    let credits_per_booking: i32 = state_guard
-        .db
-        .get_setting("credits_per_booking")
-        .await
-        .ok()
-        .flatten()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(1);
-
-    let Ok(Some(mut booking_user)) = state_guard
-        .db
-        .get_user(&auth_user.user_id.to_string())
-        .await
-    else {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
-        );
-    };
 
     let is_admin_user =
         booking_user.role == UserRole::Admin || booking_user.role == UserRole::SuperAdmin;
@@ -1435,16 +1501,8 @@ pub async fn create_booking(
         );
     }
 
-    // Calculate end time and pricing
+    // Calculate pricing (no lock needed)
     let end_time = req.start_time + TimeDelta::minutes(i64::from(req.duration_minutes));
-
-    // Look up the lot for pricing and floor name
-    let lot_opt = state_guard
-        .db
-        .get_parking_lot(&req.lot_id.to_string())
-        .await
-        .ok()
-        .flatten();
 
     let hourly_rate = lot_opt
         .as_ref()
@@ -1455,7 +1513,6 @@ pub async fn create_booking(
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
-    // Look up human-readable floor name from the lot's floors list
     let floor_name = lot_opt.as_ref().map_or_else(
         || "Level 1".to_string(),
         |lot| {
@@ -1495,82 +1552,105 @@ pub async fn create_booking(
         notes: req.notes,
     };
 
-    if let Err(e) = state_guard.db.save_booking(&booking).await {
-        tracing::error!("Failed to save booking: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to create booking",
-            )),
-        );
-    }
+    // ── Phase 2: mutations under a write lock ──────────────────────────────────
+    // Re-check slot availability and commit all mutations atomically.
+    // The write lock serialises concurrent booking attempts for the same slot,
+    // preventing double-booking between the availability check and the insert.
+    let user_info_opt = {
+        let state_guard = state.write().await;
 
-    // Update slot status atomically within the same write-lock scope.
-    // The slot status is a critical cache of availability — if we cannot mark it
-    // Reserved the slot will appear available and can be double-booked.
-    let mut updated_slot = slot;
-    updated_slot.status = SlotStatus::Reserved;
-    if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
-        tracing::error!("Failed to update slot status after booking: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SLOT_UPDATE_FAILED",
-                "Booking created but slot status could not be updated. Please contact support.",
-            )),
-        );
-    }
-
-    tracing::info!(
-        user_id = %auth_user.user_id,
-        booking_id = %booking.id,
-        slot_id = %booking.slot_id,
-        "Booking created"
-    );
-
-    // Deduct credits if enabled and user is not admin
-    if credits_enabled && !is_admin_user {
-        booking_user.credits_balance -= credits_per_booking;
-        if let Err(e) = state_guard.db.save_user(&booking_user).await {
-            tracing::warn!("Failed to save user credit deduction: {e}");
+        // Re-check slot availability now that we hold the write lock.
+        match state_guard.db.get_parking_slot(&req.slot_id.to_string()).await {
+            Ok(Some(s)) if s.status != SlotStatus::Available => {
+                return (
+                    StatusCode::CONFLICT,
+                    Json(ApiResponse::error(
+                        "SLOT_UNAVAILABLE",
+                        "This slot is not available",
+                    )),
+                );
+            }
+            Err(e) => {
+                tracing::error!("Database error on slot re-check: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+                );
+            }
+            _ => {}
         }
-        let tx = CreditTransaction {
-            id: Uuid::new_v4(),
-            user_id: auth_user.user_id,
-            booking_id: Some(booking.id),
-            amount: -credits_per_booking,
-            transaction_type: CreditTransactionType::Deduction,
-            description: Some(format!("Booking {}", booking.id)),
-            granted_by: None,
-            created_at: Utc::now(),
+
+        if let Err(e) = state_guard.db.save_booking(&booking).await {
+            tracing::error!("Failed to save booking: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to create booking",
+                )),
+            );
+        }
+
+        // Update slot status atomically within the write-lock scope.
+        let mut updated_slot = slot;
+        updated_slot.status = SlotStatus::Reserved;
+        if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
+            tracing::error!("Failed to update slot status after booking: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SLOT_UPDATE_FAILED",
+                    "Booking created but slot status could not be updated. Please contact support.",
+                )),
+            );
+        }
+
+        tracing::info!(
+            user_id = %auth_user.user_id,
+            booking_id = %booking.id,
+            slot_id = %booking.slot_id,
+            "Booking created"
+        );
+
+        // Deduct credits if enabled and user is not admin
+        if credits_enabled && !is_admin_user {
+            booking_user.credits_balance -= credits_per_booking;
+            if let Err(e) = state_guard.db.save_user(&booking_user).await {
+                tracing::warn!("Failed to save user credit deduction: {e}");
+            }
+            let tx = CreditTransaction {
+                id: Uuid::new_v4(),
+                user_id: auth_user.user_id,
+                booking_id: Some(booking.id),
+                amount: -credits_per_booking,
+                transaction_type: CreditTransactionType::Deduction,
+                description: Some(format!("Booking {}", booking.id)),
+                granted_by: None,
+                created_at: Utc::now(),
+            };
+            if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+                tracing::warn!("Failed to save credit transaction: {e}");
+            }
+        }
+
+        // Fetch user details for audit log and confirmation email
+        let user_info_opt = state_guard
+            .db
+            .get_user(&auth_user.user_id.to_string())
+            .await
+            .ok()
+            .flatten();
+
+        let audit_entry = if let Some(ref u) = user_info_opt {
+            crate::audit::events::booking_created(auth_user.user_id, &u.username, booking.id)
+        } else {
+            crate::audit::events::booking_created(auth_user.user_id, "", booking.id)
         };
-        if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
-            tracing::warn!("Failed to save credit transaction: {e}");
-        }
-    }
+        audit_entry.persist(&state_guard.db).await;
 
-    // Fetch user details for audit log and confirmation email
-    let user_info_opt = state_guard
-        .db
-        .get_user(&auth_user.user_id.to_string())
-        .await
-        .ok()
-        .flatten();
-
-    let audit_entry = if let Some(ref u) = user_info_opt {
-        crate::audit::events::booking_created(auth_user.user_id, &u.username, booking.id)
-    } else {
-        crate::audit::events::booking_created(auth_user.user_id, "", booking.id)
+        // Write lock released at end of this block.
+        user_info_opt
     };
-    // Persist audit entry to DB — use existing write guard to avoid deadlock
-    audit_entry.persist(&state_guard.db).await;
-
-    // Extract config values before releasing write lock
-    let org_name = state_guard.config.organization_name.clone();
-
-    // Drop write lock before spawning async tasks
-    drop(state_guard);
 
     // Dispatch webhook event (non-blocking)
     {
