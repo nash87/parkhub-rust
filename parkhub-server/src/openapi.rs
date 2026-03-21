@@ -462,7 +462,7 @@ mod tests {
     fn test_openapi_has_export_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in ["/admin/users/export-csv", "/admin/bookings/export-csv"] {
+        for path in ["/api/v1/admin/export/users", "/api/v1/admin/export/bookings"] {
             assert!(json.contains(path), "Missing path: {path}");
         }
     }
