@@ -77,6 +77,7 @@ mod social;
 mod users;
 pub(crate) mod webhooks;
 pub(crate) mod payments;
+pub(crate) mod qr;
 pub mod ws;
 pub(crate) mod zones;
 
@@ -147,6 +148,18 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/auth/forgot-password", post(forgot_password))
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(forgot_limiter.clone(), req, next)
+        }));
+
+    // GET /api/v1/bookings/:id/qr — 10 requests per minute per IP (QR pass generation)
+    let qr_limiter = rate_limiters.qr_pass.clone();
+    let qr_route = Router::new()
+        .route("/api/v1/bookings/{id}/qr", get(qr::booking_qr_code))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        ))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(qr_limiter.clone(), req, next)
         }));
 
     // Remaining public routes (no rate limiting needed)
@@ -459,6 +472,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .merge(login_route)
         .merge(register_route)
         .merge(forgot_route)
+        .merge(qr_route)
         .merge(demo_routes)
         .merge(protected_routes)
         // Prometheus metrics endpoint — protected by METRICS_TOKEN env var when set

@@ -328,6 +328,9 @@ use crate::{
         crate::api::admin_get_privacy,
         crate::api::admin_update_privacy,
         crate::api::admin_update_user,
+
+        // QR Pass
+        crate::api::qr::booking_qr_code,
     )
 )]
 pub struct ApiDoc;
