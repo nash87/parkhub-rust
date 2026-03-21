@@ -332,6 +332,21 @@ pub async fn register(
         });
     }
 
+    // Send welcome email (async, best-effort — failures are logged, not propagated)
+    {
+        let user_email = user.email.clone();
+        let user_name = user.name.clone();
+        let org_name = state_guard.config.organization_name.clone();
+        tokio::spawn(async move {
+            let email_html = crate::email::build_welcome_email(&user_name, &org_name);
+            if let Err(e) =
+                crate::email::send_email(&user_email, &format!("Welcome to {org_name}"), &email_html).await
+            {
+                tracing::warn!("Failed to send welcome email: {}", e);
+            }
+        });
+    }
+
     // Create session using configured timeout (converted from minutes to hours, minimum 1h)
     let session_hours = i64::from(state_guard.config.session_timeout_minutes).max(60) / 60;
     let role_str = format!("{:?}", user.role).to_lowercase();
