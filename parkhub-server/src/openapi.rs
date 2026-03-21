@@ -205,6 +205,7 @@ use crate::{
         // Exports
         crate::api::export::admin_export_users_csv,
         crate::api::export::admin_export_bookings_csv,
+        crate::api::export::admin_export_revenue_csv,
 
         // Health & Discovery (mod.rs)
         crate::api::health_check,
