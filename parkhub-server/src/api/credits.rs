@@ -111,7 +111,7 @@ pub async fn admin_grant_credits(
     Path(user_id): Path<String>,
     Json(req): Json<AdminGrantCreditsRequest>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
@@ -382,7 +382,7 @@ pub async fn admin_refill_all_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
@@ -474,7 +474,7 @@ pub async fn admin_update_user_quota(
         );
     }
 
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));

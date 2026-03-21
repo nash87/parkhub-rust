@@ -250,7 +250,7 @@ pub async fn create_webhook(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateWebhookRequest>,
 ) -> (StatusCode, Json<ApiResponse<WebhookResponse>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
@@ -351,7 +351,7 @@ pub async fn update_webhook(
     Path(id): Path<String>,
     Json(req): Json<UpdateWebhookRequest>,
 ) -> (StatusCode, Json<ApiResponse<WebhookResponse>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
@@ -467,7 +467,7 @@ pub async fn delete_webhook(
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
