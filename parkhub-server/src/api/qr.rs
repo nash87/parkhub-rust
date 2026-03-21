@@ -197,6 +197,145 @@ pub async fn booking_qr_code(
         })
 }
 
+/// JSON payload embedded in the per-slot QR code.
+#[derive(Debug, Serialize)]
+struct SlotQrPayload {
+    lot_id: String,
+    slot_id: String,
+    slot_number: i32,
+    lot_name: String,
+}
+
+/// Generate a QR code PNG image for a parking slot.
+///
+/// The QR content is a JSON object with slot metadata so that
+/// scanners/validators can identify the physical spot offline.
+#[utoipa::path(
+    get,
+    path = "/api/v1/lots/{lot_id}/slots/{slot_id}/qr",
+    tag = "Lots",
+    summary = "Generate QR code for a parking slot",
+    description = "Returns a PNG image containing a QR code that encodes slot details (lot_id, slot_id, slot_number, lot_name). Requires authentication.",
+    params(
+        ("lot_id" = String, Path, description = "Parking lot UUID"),
+        ("slot_id" = String, Path, description = "Parking slot UUID")
+    ),
+    responses(
+        (status = 200, description = "QR code PNG image", content_type = "image/png"),
+        (status = 401, description = "Unauthorized"),
+        (status = 404, description = "Slot or lot not found"),
+        (status = 500, description = "QR generation failed")
+    ),
+    security(("bearer_auth" = []))
+)]
+pub async fn slot_qr_code(
+    State(state): State<SharedState>,
+    Extension(_auth_user): Extension<AuthUser>,
+    Path((lot_id, slot_id)): Path<(String, String)>,
+) -> Response {
+    let state_guard = state.read().await;
+
+    // Fetch slot — verify it belongs to the given lot
+    let slot = match state_guard.db.get_parking_slot(&slot_id).await {
+        Ok(Some(s)) if s.lot_id.to_string() == lot_id => s,
+        Ok(Some(_)) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("NOT_FOUND", "Slot not found in this lot")),
+            )
+                .into_response();
+        }
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::<()>::error("NOT_FOUND", "Slot not found")),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching slot for QR: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error("SERVER_ERROR", "Internal server error")),
+            )
+                .into_response();
+        }
+    };
+
+    // Resolve lot name
+    let lot_name = match state_guard.db.get_parking_lot(&lot_id).await {
+        Ok(Some(lot)) => lot.name,
+        _ => String::from("Unknown Lot"),
+    };
+
+    drop(state_guard);
+
+    // Build QR payload
+    let payload = SlotQrPayload {
+        lot_id,
+        slot_id: slot.id.to_string(),
+        slot_number: slot.slot_number,
+        lot_name,
+    };
+
+    let json = match serde_json::to_string(&payload) {
+        Ok(j) => j,
+        Err(e) => {
+            tracing::error!("Failed to serialize slot QR payload: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+            )
+                .into_response();
+        }
+    };
+
+    // Generate QR code
+    let code = match QrCode::new(json.as_bytes()) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("QR code generation failed: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+            )
+                .into_response();
+        }
+    };
+
+    // Render to PNG bytes in memory
+    let image = code.render::<Luma<u8>>().min_dimensions(300, 300).build();
+
+    let mut png_bytes: Vec<u8> = Vec::new();
+    let mut cursor = Cursor::new(&mut png_bytes);
+    if let Err(e) = image.write_to(&mut cursor, image::ImageFormat::Png) {
+        tracing::error!("PNG encoding failed: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+        )
+            .into_response();
+    }
+
+    // Return PNG with appropriate headers
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "image/png")
+        .header(header::CACHE_CONTROL, "private, max-age=300")
+        .header(
+            header::CONTENT_DISPOSITION,
+            format!("inline; filename=\"slot-{}.png\"", slot.id),
+        )
+        .body(Body::from(png_bytes))
+        .unwrap_or_else(|_| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to build response",
+            )
+                .into_response()
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

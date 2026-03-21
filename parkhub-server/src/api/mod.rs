@@ -166,6 +166,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     let qr_limiter = rate_limiters.qr_pass.clone();
     let qr_route = Router::new()
         .route("/api/v1/bookings/{id}/qr", get(qr::booking_qr_code))
+        .route(
+            "/api/v1/lots/{lot_id}/slots/{slot_id}/qr",
+            get(qr::slot_qr_code),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
