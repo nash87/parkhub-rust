@@ -347,6 +347,7 @@ export function AdminUsersPage() {
         columns={columns}
         searchValue={debouncedSearch}
         emptyMessage={search ? t('admin.noUsersMatch') : t('admin.noUsersFound')}
+        exportFilename="users"
       />
     </motion.div>
   );

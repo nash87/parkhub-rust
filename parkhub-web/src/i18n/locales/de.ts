@@ -212,6 +212,18 @@ export default {
       newVehicle: 'Neues Fahrzeug',
       isDefault: 'Standardfahrzeug',
       deleteVehicle: '{{plate}} loschen',
+      colors: {
+        black: 'Schwarz',
+        white: 'Wei\u00df',
+        silver: 'Silber',
+        gray: 'Grau',
+        blue: 'Blau',
+        red: 'Rot',
+        green: 'Gr\u00fcn',
+        brown: 'Braun',
+        beige: 'Beige',
+        other: 'Sonstige',
+      },
     },
     admin: {
       title: 'Verwaltung',
@@ -685,6 +697,17 @@ export default {
       minutesAgo: 'vor {{count}}m',
       hoursAgo: 'vor {{count}}h',
       daysAgo: 'vor {{count}}d',
+    },
+    reports: {
+      weekdays: {
+        mon: 'Mo',
+        tue: 'Di',
+        wed: 'Mi',
+        thu: 'Do',
+        fri: 'Fr',
+        sat: 'Sa',
+        sun: 'So',
+      },
     },
     payment: {
       title: 'Zahlung',

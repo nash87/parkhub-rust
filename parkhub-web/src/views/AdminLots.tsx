@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, PencilSimple, Trash, SpinnerGap, Check, X,
@@ -7,6 +7,7 @@ import {
 import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 interface LotForm {
   name: string;
@@ -40,13 +41,14 @@ export function AdminLotsPage() {
   const [form, setForm] = useState<LotForm>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void}>({open: false, action: () => {}});
 
-  const statusConfig: Record<LotStatus, { label: string; color: string; bg: string }> = {
+  const statusConfig = useMemo<Record<LotStatus, { label: string; color: string; bg: string }>>(() => ({
     open:        { label: t('admin.statusOpen'),        color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-100 dark:bg-green-900/30' },
     closed:      { label: t('admin.statusClosed'),      color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-100 dark:bg-red-900/30' },
     full:        { label: t('admin.statusFull'),        color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/30' },
     maintenance: { label: t('admin.statusMaintenance'), color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-100 dark:bg-amber-900/30' },
-  };
+  }), [t]);
 
   useEffect(() => { load(); }, []);
 
@@ -59,10 +61,10 @@ export function AdminLotsPage() {
     }
   }
 
-  const filtered = lots.filter(lot =>
+  const filtered = useMemo(() => lots.filter(lot =>
     lot.name.toLowerCase().includes(search.toLowerCase()) ||
     (lot.address || '').toLowerCase().includes(search.toLowerCase())
-  );
+  ), [lots, search]);
 
   function openCreate() {
     setEditingId(null);
@@ -139,21 +141,26 @@ export function AdminLotsPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('admin.lotDeleteConfirm'))) return;
-    setDeletingId(id);
-    try {
-      const res = await api.deleteLot(id);
-      if (res.success) {
-        setLots(prev => prev.filter(l => l.id !== id));
-        toast.success(t('admin.lotDeleted'));
-        if (editingId === id) closeForm();
-      } else {
-        toast.error(res.error?.message || t('admin.lotDeleteFailed'));
-      }
-    } finally {
-      setDeletingId(null);
-    }
+  function handleDelete(id: string) {
+    setConfirmState({
+      open: true,
+      action: async () => {
+        setConfirmState({open: false, action: () => {}});
+        setDeletingId(id);
+        try {
+          const res = await api.deleteLot(id);
+          if (res.success) {
+            setLots(prev => prev.filter(l => l.id !== id));
+            toast.success(t('admin.lotDeleted'));
+            if (editingId === id) closeForm();
+          } else {
+            toast.error(res.error?.message || t('admin.lotDeleteFailed'));
+          }
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   }
 
   if (loading) {
@@ -449,6 +456,14 @@ export function AdminLotsPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={t('common.delete')}
+        message={t('admin.lotDeleteConfirm')}
+        variant="danger"
+        onConfirm={confirmState.action}
+        onCancel={() => setConfirmState({open: false, action: () => {}})}
+      />
     </motion.div>
   );
 }

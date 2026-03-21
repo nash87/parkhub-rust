@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { UseCaseProvider } from './context/UseCaseContext';
 import { FeaturesProvider } from './context/FeaturesContext';
 import './i18n';
+import { loadTranslationOverrides } from './i18n';
 
 // Eagerly loaded shell
 import { Layout } from './components/Layout';
@@ -80,7 +81,7 @@ function LoadingSplash() {
   );
 }
 
-/** Fetch /api/v1/theme on mount and apply use-case CSS theme */
+/** Fetch /api/v1/theme on mount and apply use-case CSS theme + load translation overrides */
 function useThemeLoader() {
   useEffect(() => {
     fetch('/api/v1/theme')
@@ -90,6 +91,7 @@ function useThemeLoader() {
         if (key) document.documentElement.dataset.usecase = key;
       })
       .catch(() => {});
+    loadTranslationOverrides();
   }, []);
 }
 

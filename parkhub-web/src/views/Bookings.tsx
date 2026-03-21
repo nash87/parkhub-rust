@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import {
   ArrowClockwise, Warning, MapPin, CalendarPlus, Timer,
   MagnifyingGlass, Funnel, QrCode,
 } from '@phosphor-icons/react';
+import type { TFunction } from 'react-i18next';
 import { api, type Booking, type Vehicle } from '../api/client';
 import { BookingsSkeleton } from '../components/Skeleton';
 import { ParkingPass } from '../components/ParkingPass';
@@ -14,6 +15,7 @@ import { stagger, fadeUp } from '../constants/animations';
 import toast from 'react-hot-toast';
 import { format, formatDistanceToNow, isFuture } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
 
 export function BookingsPage() {
   const { t, i18n } = useTranslation();
@@ -49,17 +51,19 @@ export function BookingsPage() {
     setCancelling(null);
   }
 
-  const filtered = bookings.filter(b => {
+  const filtered = useMemo(() => bookings.filter(b => {
     if (filterStatus !== 'all' && b.status !== filterStatus) return false;
     if (searchLot && !b.lot_name.toLowerCase().includes(searchLot.toLowerCase())) return false;
     return true;
-  });
+  }), [bookings, filterStatus, searchLot]);
 
   const isActiveOrConfirmed = (s: string) => s === 'active' || s === 'confirmed';
   const now = Date.now();
-  const active = filtered.filter(b => isActiveOrConfirmed(b.status) && !isFuture(new Date(b.start_time)));
-  const upcoming = filtered.filter(b => isActiveOrConfirmed(b.status) && isFuture(new Date(b.start_time)));
-  const past = filtered.filter(b => b.status === 'completed' || b.status === 'cancelled');
+  const { active, upcoming, past } = useMemo(() => ({
+    active: filtered.filter(b => isActiveOrConfirmed(b.status) && !isFuture(new Date(b.start_time))),
+    upcoming: filtered.filter(b => isActiveOrConfirmed(b.status) && isFuture(new Date(b.start_time))),
+    past: filtered.filter(b => b.status === 'completed' || b.status === 'cancelled'),
+  }), [filtered]);
 
   const container = stagger;
   const item = fadeUp;
@@ -152,7 +156,13 @@ export function BookingsPage() {
   );
 }
 
-function Section({ title, count, children }: any) {
+interface SectionProps {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}
+
+function Section({ title, count, children }: SectionProps) {
   return (
     <section>
       <h2 className="text-base font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2">
@@ -164,7 +174,13 @@ function Section({ title, count, children }: any) {
   );
 }
 
-function Empty({ text, showAction, t }: any) {
+interface EmptyProps {
+  text: string;
+  showAction?: boolean;
+  t: TFunction;
+}
+
+function Empty({ text, showAction, t }: EmptyProps) {
   return (
     <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-8 text-left">
       <p className="text-sm text-surface-500 dark:text-surface-400 mb-3">{text}</p>
@@ -175,7 +191,18 @@ function Empty({ text, showAction, t }: any) {
   );
 }
 
-function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass, t, dateFnsLocale }: any) {
+interface BookingCardProps {
+  booking: Booking;
+  now: number;
+  vehicles: Vehicle[];
+  onCancel: (id: string) => void;
+  cancelling: string | null;
+  onShowPass?: (booking: Booking) => void;
+  t: TFunction;
+  dateFnsLocale: Locale;
+}
+
+function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass, t, dateFnsLocale }: BookingCardProps) {
   const isActiveOrConfirmed = booking.status === 'active' || booking.status === 'confirmed';
   const isPast = booking.status === 'completed' || booking.status === 'cancelled';
   const isExpiring = isActiveOrConfirmed && new Date(booking.end_time).getTime() - now < 30 * 60 * 1000;

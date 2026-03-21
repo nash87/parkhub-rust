@@ -10,6 +10,7 @@ import {
 import { api, type TranslationProposal, type ProposalStatus } from '../api/client';
 import toast from 'react-hot-toast';
 import { DataTable } from '../components/ui/DataTable';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 const columnHelper = createColumnHelper<TranslationProposal>();
 
@@ -35,6 +36,7 @@ export function AdminTranslationsPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewAction, setReviewAction] = useState<'approved' | 'rejected' | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void}>({open: false, action: () => {}});
 
   const loadProposals = useCallback(async () => {
     setLoading(true);
@@ -67,24 +69,23 @@ export function AdminTranslationsPage() {
     }
   }
 
-  async function handleBulkAction(action: 'approved' | 'rejected') {
+  function handleBulkAction(action: 'approved' | 'rejected') {
     const pending = proposals.filter(p => p.status === 'pending');
     if (pending.length === 0) return;
 
-    const confirmed = window.confirm(
-      action === 'approved'
-        ? t('translations.admin.confirmBulkApprove', { count: pending.length })
-        : t('translations.admin.confirmBulkReject', { count: pending.length })
-    );
-    if (!confirmed) return;
-
-    let success = 0;
-    for (const p of pending) {
-      const res = await api.reviewProposal(p.id, { status: action });
-      if (res.success) success++;
-    }
-    toast.success(t('translations.admin.bulkComplete', { count: success }));
-    loadProposals();
+    setConfirmState({
+      open: true,
+      action: async () => {
+        setConfirmState({open: false, action: () => {}});
+        let success = 0;
+        for (const p of pending) {
+          const res = await api.reviewProposal(p.id, { status: action });
+          if (res.success) success++;
+        }
+        toast.success(t('translations.admin.bulkComplete', { count: success }));
+        loadProposals();
+      },
+    });
   }
 
   const filteredProposals = useMemo(() => {
@@ -377,6 +378,14 @@ export function AdminTranslationsPage() {
         columns={columns}
         searchValue=""
         emptyMessage={t('translations.noProposals')}
+      />
+      <ConfirmDialog
+        open={confirmState.open}
+        title={t('ui.confirmAction')}
+        message={t('translations.admin.confirmBulkApprove', { count: proposals.filter(p => p.status === 'pending').length })}
+        variant="danger"
+        onConfirm={confirmState.action}
+        onCancel={() => setConfirmState({open: false, action: () => {}})}
       />
     </motion.div>
   );
