@@ -77,6 +77,7 @@ pub mod credits;
 pub mod export;
 pub mod import;
 pub mod favorites;
+pub mod ical_import;
 pub mod import;
 pub mod lots;
 pub mod payments;
@@ -384,6 +385,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Absences (user-scoped)
         .route("/api/v1/absences", get(list_absences).post(create_absence))
+        .route(
+            "/api/v1/absences/import",
+            post(ical_import::import_absences_ical),
+        )
         .route("/api/v1/absences/team", get(list_team_absences))
         .route(
             "/api/v1/absences/pattern",
