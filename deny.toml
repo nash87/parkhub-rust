@@ -11,7 +11,10 @@ ignore = [
 # Allow common permissive licenses
 allow = [
     "MIT",
+    "MIT-0",
     "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-1-Clause",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
@@ -24,10 +27,23 @@ allow = [
     "CC0-1.0",
     "Unlicense",
     "0BSD",
+    "NCSA",
+    "CDLA-Permissive-2.0",
+    "LGPL-2.1-or-later",
 ]
-# ring uses a custom license that is BSD-like
+# Slint uses a custom royalty-free license for open-source use
 exceptions = [
-    { allow = ["ring"], crate = "ring" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "slint" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "slint-build" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "slint-macros" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-core" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-backend-selector" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-backend-winit" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-common" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-compiler" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-core-macros" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-renderer-skia" },
+    { allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"], crate = "i-slint-backend-linuxkms" },
 ]
 # Confidence threshold for detecting a license from file contents
 confidence-threshold = 0.8
