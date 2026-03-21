@@ -86,6 +86,7 @@ pub mod qr;
 pub mod recommendations;
 pub mod setup;
 mod social;
+pub mod system;
 pub mod translations;
 mod users;
 pub mod vehicles;
@@ -222,6 +223,18 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Setup wizard — only works before initial setup is completed
         .route("/api/v1/setup/status", get(setup::setup_status))
         .route("/api/v1/setup", post(setup::setup_init))
+        .route("/api/v1/setup/complete", post(system::setup_complete))
+        .route(
+            "/api/v1/setup/change-password",
+            post(system::setup_change_password),
+        )
+        // System info
+        .route("/api/v1/system/version", get(system::system_version))
+        .route(
+            "/api/v1/system/maintenance",
+            get(system::system_maintenance),
+        )
+        .route("/api/v1/update/check", get(system::update_check))
         // Public occupancy display (no auth)
         .route("/api/v1/public/occupancy", get(public_occupancy))
         .route("/api/v1/public/display", get(public_display))
@@ -504,6 +517,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Admin: update user
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        // Admin: update slot by ID (without specifying lot)
+        .route(
+            "/api/v1/admin/slots/{id}",
+            axum::routing::patch(system::admin_update_slot),
+        )
         // Translation management
         .route("/api/v1/translations/overrides", get(list_overrides))
         .route(
