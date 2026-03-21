@@ -7,6 +7,7 @@ import {
 import { api, type Announcement } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 type Severity = 'info' | 'warning' | 'error' | 'success';
 
@@ -78,6 +79,7 @@ export function AdminAnnouncementsPage() {
   const [form, setForm] = useState<AnnouncementForm>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void}>({open: false, action: () => {}});
 
   useEffect(() => { load(); }, []);
 
@@ -143,27 +145,32 @@ export function AdminAnnouncementsPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('admin.announcementDeleteConfirm'))) return;
-    setDeletingId(id);
-    try {
-      const res = await api.adminDeleteAnnouncement(id);
-      if (res.success) {
-        setAnnouncements(prev => prev.filter(a => a.id !== id));
-        toast.success(t('admin.announcementDeleted'));
-        if (editingId === id) closeForm();
-      } else {
-        toast.error(res.error?.message || t('admin.announcementDeleteFailed'));
-      }
-    } finally {
-      setDeletingId(null);
-    }
+  function handleDelete(id: string) {
+    setConfirmState({
+      open: true,
+      action: async () => {
+        setConfirmState({open: false, action: () => {}});
+        setDeletingId(id);
+        try {
+          const res = await api.adminDeleteAnnouncement(id);
+          if (res.success) {
+            setAnnouncements(prev => prev.filter(a => a.id !== id));
+            toast.success(t('admin.announcementDeleted'));
+            if (editingId === id) closeForm();
+          } else {
+            toast.error(res.error?.message || t('admin.announcementDeleteFailed'));
+          }
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -196,15 +203,16 @@ export function AdminAnnouncementsPage() {
                 <h3 className="text-lg font-semibold text-surface-900 dark:text-white">
                   {editingId ? t('admin.editAnnouncement') : t('admin.newAnnouncement')}
                 </h3>
-                <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
-                  <X weight="bold" className="w-5 h-5 text-surface-400" />
+                <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
+                  <X weight="bold" className="w-5 h-5 text-surface-400" aria-hidden="true" />
                 </button>
               </div>
 
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.announcementTitle')}</label>
+                <label htmlFor="announcement-title" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.announcementTitle')}</label>
                 <input
+                  id="announcement-title"
                   type="text"
                   value={form.title}
                   onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
@@ -215,8 +223,9 @@ export function AdminAnnouncementsPage() {
 
               {/* Message */}
               <div>
-                <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.announcementMessage')}</label>
+                <label htmlFor="announcement-message" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.announcementMessage')}</label>
                 <textarea
+                  id="announcement-message"
                   value={form.message}
                   onChange={e => setForm(prev => ({ ...prev, message: e.target.value }))}
                   className="input h-28 resize-y"
@@ -274,8 +283,9 @@ export function AdminAnnouncementsPage() {
 
                 {/* Expires at */}
                 <div>
-                  <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.expiresAt')}</label>
+                  <label htmlFor="announcement-expires" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.expiresAt')}</label>
                   <input
+                    id="announcement-expires"
                     type="datetime-local"
                     value={form.expires_at}
                     onChange={e => setForm(prev => ({ ...prev, expires_at: e.target.value }))}
@@ -327,7 +337,7 @@ export function AdminAnnouncementsPage() {
                   <p className="text-sm text-surface-600 dark:text-surface-400 line-clamp-2 mb-2">
                     {a.message}
                   </p>
-                  <div className="flex items-center gap-4 text-xs text-surface-400 dark:text-surface-500">
+                  <div className="flex items-center gap-4 text-xs text-surface-500 dark:text-surface-400">
                     <span>{t('admin.announcementCreatedAt')} {new Date(a.created_at).toLocaleDateString()}</span>
                     {a.expires_at && <span>{t('admin.announcementExpiresAt')} {new Date(a.expires_at).toLocaleDateString()}</span>}
                   </div>
@@ -337,19 +347,19 @@ export function AdminAnnouncementsPage() {
                   <button
                     onClick={() => openEdit(a)}
                     className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
-                    title={t('common.edit')}
+                    aria-label={`${t('common.edit')} ${a.title}`}
                   >
-                    <PencilSimple weight="bold" className="w-4.5 h-4.5" />
+                    <PencilSimple weight="bold" className="w-4.5 h-4.5" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => handleDelete(a.id)}
                     disabled={deletingId === a.id}
                     className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-surface-400 hover:text-red-600 disabled:opacity-50"
-                    title={t('common.delete')}
+                    aria-label={`${t('common.delete')} ${a.title}`}
                   >
                     {deletingId === a.id
                       ? <SpinnerGap weight="bold" className="w-4.5 h-4.5 animate-spin" />
-                      : <Trash weight="bold" className="w-4.5 h-4.5" />}
+                      : <Trash weight="bold" className="w-4.5 h-4.5" aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -357,6 +367,14 @@ export function AdminAnnouncementsPage() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={confirmState.open}
+        title={t('common.delete')}
+        message={t('admin.announcementDeleteConfirm')}
+        variant="danger"
+        onConfirm={confirmState.action}
+        onCancel={() => setConfirmState({open: false, action: () => {}})}
+      />
     </motion.div>
   );
 }

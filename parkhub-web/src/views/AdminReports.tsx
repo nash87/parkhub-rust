@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning } from '@phosphor-icons/react';
-import { api, type AdminStats, type Booking } from '../api/client';
+import { api, type AdminStats, type Booking, type ParkingLot } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
 import { OccupancyHeatmap } from '../components/OccupancyHeatmap';
+import { ExportButton } from '../components/ExportButton';
 
 function StatCard({ icon: Icon, label, value }: {
-  icon: any;
+  icon: React.ComponentType<{ weight?: string; className?: string }>;
   label: string;
   value: number;
   color?: string;
@@ -23,37 +24,29 @@ function StatCard({ icon: Icon, label, value }: {
   );
 }
 
-/**
- * Mock per-lot occupancy derived from aggregate stats.
- * When a real /api/v1/admin/reports endpoint is available, replace this.
- */
-function mockLotOccupancy(totalLots: number, activeBookings: number): DonutSlice[] {
-  if (totalLots <= 0) return [];
-  const lotNames = ['Lot A', 'Lot B', 'Lot C', 'Lot D', 'Lot E', 'Lot F'];
-  // Distribute capacity unevenly to make the chart interesting
-  const capacityWeights = [0.30, 0.25, 0.20, 0.12, 0.08, 0.05];
-  // Distribute active bookings with a skew toward first lots
-  const occupancyWeights = [0.40, 0.30, 0.18, 0.07, 0.03, 0.02];
-  const baseCapacity = Math.max(Math.round(activeBookings * 1.4), totalLots * 5, 20);
-
-  return Array.from({ length: Math.min(totalLots, lotNames.length) }, (_, i) => {
-    const capacity = Math.round(baseCapacity * capacityWeights[i]);
-    const occupied = Math.round(activeBookings * occupancyWeights[i]);
+/** Build real per-lot occupancy from ParkingLot data. */
+function lotOccupancyFromData(lots: ParkingLot[]): DonutSlice[] {
+  if (lots.length === 0) return [];
+  return lots.map(lot => {
+    const occupied = lot.total_slots - lot.available_slots;
+    const pct = lot.total_slots > 0
+      ? Math.min(Math.round((occupied / lot.total_slots) * 100), 100)
+      : 0;
     return {
-      label: lotNames[i],
-      capacity: Math.max(capacity, 1),
-      occupancy: Math.min(Math.round((occupied / Math.max(capacity, 1)) * 100), 100),
+      label: lot.name,
+      capacity: Math.max(lot.total_slots, 1),
+      occupancy: pct,
     };
   });
 }
 
 /** Build mock "bookings this week" from total bookings to show a plausible distribution. */
-function weeklyBookingData(totalBookings: number): { label: string; value: number }[] {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function weeklyBookingData(totalBookings: number, t: (key: string) => string): { label: string; value: number }[] {
+  const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   // Weights simulate typical office-parking week pattern
   const weights = [0.18, 0.20, 0.22, 0.19, 0.15, 0.04, 0.02];
-  return days.map((label, i) => ({
-    label,
+  return dayKeys.map((key, i) => ({
+    label: t(`reports.weekdays.${key}`),
     value: Math.round(totalBookings * weights[i]),
   }));
 }
@@ -62,37 +55,40 @@ export function AdminReportsPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.adminStats(),
       api.getBookings(),
-    ]).then(([statsRes, bookingsRes]) => {
+      api.getLots(),
+    ]).then(([statsRes, bookingsRes, lotsRes]) => {
       if (statsRes.success && statsRes.data) setStats(statsRes.data);
       if (bookingsRes.success && bookingsRes.data) setBookings(bookingsRes.data);
+      if (lotsRes.success && lotsRes.data) setLots(lotsRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
   const weeklyData = useMemo(
-    () => weeklyBookingData(stats?.total_bookings ?? 0),
-    [stats?.total_bookings],
+    () => weeklyBookingData(stats?.total_bookings ?? 0, t),
+    [stats?.total_bookings, t],
   );
 
   const lotOccupancy = useMemo(
-    () => mockLotOccupancy(stats?.total_lots ?? 0, stats?.active_bookings ?? 0),
-    [stats?.total_lots, stats?.active_bookings],
+    () => lotOccupancyFromData(lots),
+    [lots],
   );
 
-  const totalSlots = useMemo(() => {
-    const lots = stats?.total_lots ?? 0;
-    return lots > 0 ? Math.max(lots * 10, stats?.active_bookings ?? 1) : 20;
-  }, [stats?.total_lots, stats?.active_bookings]);
+  const totalSlots = useMemo(
+    () => lots.reduce((sum, l) => sum + l.total_slots, 0) || 20,
+    [lots],
+  );
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -100,7 +96,10 @@ export function AdminReportsPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
       {/* Header */}
-      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.reports')}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.reports')}</h2>
+        <ExportButton />
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -194,7 +193,7 @@ export function AdminReportsPage() {
               ))}
             </ul>
           </div>
-          <p className="mt-4 text-xs text-surface-400">
+          <p className="mt-4 text-xs text-surface-500 dark:text-surface-400">
             Color: <span className="text-emerald-500 font-medium">green</span> &lt;60% &middot; <span className="text-amber-400 font-medium">yellow</span> 60–80% &middot; <span className="text-red-500 font-medium">red</span> &ge;80%
           </p>
         </div>

@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin,
+  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate,
 } from '@phosphor-icons/react';
 
 function AdminNav() {
@@ -16,6 +16,7 @@ function AdminNav() {
     { name: t('admin.lots'), path: '/admin/lots', icon: MapPin },
     { name: t('admin.announcements'), path: '/admin/announcements', icon: Megaphone },
     { name: t('admin.reports'), path: '/admin/reports', icon: ChartLine },
+    { name: t('admin.translations'), path: '/admin/translations', icon: Translate },
   ];
 
   function isActive(path: string) {

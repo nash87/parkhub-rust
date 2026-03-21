@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'react-i18next';
 import {
   ArrowLeft, MapPin, Clock, Car, SpinnerGap, Check,
   Lightning, Wheelchair, Motorcycle, Star,
 } from '@phosphor-icons/react';
-import { api, type ParkingLot, type ParkingSlot, type Vehicle } from '../api/client';
+import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload } from '../api/client';
 import { SkeletonCard } from '../components/Skeleton';
 import toast from 'react-hot-toast';
 
@@ -94,13 +95,13 @@ export function BookPage() {
     const start = new Date(startDate);
     const end = new Date(start.getTime() + duration * 60 * 60 * 1000);
 
-    const payload: Record<string, any> = {
+    const payload: CreateBookingPayload = {
       lot_id: selectedLot.id,
       slot_id: selectedSlot.id,
       start_time: start.toISOString(),
       end_time: end.toISOString(),
+      vehicle_id: selectedVehicle || undefined,
     };
-    if (selectedVehicle) payload.vehicle_id = selectedVehicle;
 
     const res = await api.createBooking(payload);
     if (res.success) {
@@ -252,7 +253,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
   lots: ParkingLot[];
   loading: boolean;
   onSelect: (lot: ParkingLot) => void;
-  t: any;
+  t: TFunction;
 }) {
   if (loading) {
     return (
@@ -294,7 +295,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
             )}
           </div>
           {lot.hourly_rate != null && (
-            <p className="text-xs text-surface-400 dark:text-surface-500 mt-1">
+            <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
               {lot.currency || '€'}{lot.hourly_rate.toFixed(2)}/h
             </p>
           )}
@@ -306,7 +307,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
 
 /* ── Step 2: Select Slot + Time ─────────────────────────────────────── */
 
-const SLOT_TYPE_ICON: Record<string, any> = {
+const SLOT_TYPE_ICON: Record<string, React.ComponentType<{ weight?: string; className?: string }>> = {
   electric: Lightning,
   handicap: Wheelchair,
   motorcycle: Motorcycle,
@@ -329,7 +330,7 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
   selectedVehicle: string;
   onVehicleChange: (v: string) => void;
   onContinue: () => void;
-  t: any;
+  t: TFunction;
 }) {
   const available = slots.filter(s => s.status === 'available');
   const occupied = slots.filter(s => s.status !== 'available');
@@ -479,7 +480,7 @@ function StepConfirm({ lot, slot, start, end, duration, estimatedCost, vehicle, 
   vehicle?: Vehicle;
   submitting: boolean;
   onConfirm: () => void;
-  t: any;
+  t: TFunction;
 }) {
   const fmt = (d: Date) => d.toLocaleString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',

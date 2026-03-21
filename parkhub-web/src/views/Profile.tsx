@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   UserCircle, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
@@ -10,6 +10,7 @@ import { api, type UserStats } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { staggerSlow, fadeUp } from '../constants/animations';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 export function ProfilePage() {
   const { t } = useTranslation();
@@ -19,6 +20,7 @@ export function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void}>({open: false, action: () => {}});
 
   // Password change
   const [pwOpen, setPwOpen] = useState(false);
@@ -78,19 +80,24 @@ export function ProfilePage() {
     finally { setExporting(false); }
   }
 
-  async function handleDeleteAccount() {
-    if (!confirm(t('gdpr.deleteConfirmMessage', 'Konto wirklich l\u00f6schen? Das kann nicht r\u00fcckg\u00e4ngig gemacht werden.'))) return;
-    try {
-      const base = (import.meta as any).env?.VITE_API_URL || '';
-      const token = localStorage.getItem('parkhub_token');
-      const res = await fetch(`${base}/api/v1/users/me/delete`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
-      if (!res.ok) throw new Error('Delete failed');
-      toast.success(t('gdpr.deleted', 'Konto gel\u00f6scht'));
-      logout();
-    } catch { toast.error(t('gdpr.deleteFailed')); }
+  function handleDeleteAccount() {
+    setConfirmState({
+      open: true,
+      action: async () => {
+        setConfirmState({open: false, action: () => {}});
+        try {
+          const base = (import.meta as any).env?.VITE_API_URL || '';
+          const token = localStorage.getItem('parkhub_token');
+          const res = await fetch(`${base}/api/v1/users/me/delete`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          });
+          if (!res.ok) throw new Error('Delete failed');
+          toast.success(t('gdpr.deleted', 'Konto gel\u00f6scht'));
+          logout();
+        } catch { toast.error(t('gdpr.deleteFailed')); }
+      },
+    });
   }
 
   function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
@@ -248,6 +255,14 @@ export function ProfilePage() {
           </button>
         </div>
       </motion.div>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={t('gdpr.deleteAccount')}
+        message={t('gdpr.deleteConfirmMessage')}
+        variant="danger"
+        onConfirm={confirmState.action}
+        onCancel={() => setConfirmState({open: false, action: () => {}})}
+      />
     </motion.div>
   );
 }

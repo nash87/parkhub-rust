@@ -616,6 +616,59 @@ pub enum AnnouncementSeverity {
     Success,
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// TRANSLATION MANAGEMENT MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Status of a translation proposal
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ProposalStatus {
+    Pending,
+    Approved,
+    Rejected,
+}
+
+/// A community-submitted translation proposal
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TranslationProposal {
+    pub id: Uuid,
+    pub language: String,
+    pub key: String,
+    pub current_value: String,
+    pub proposed_value: String,
+    pub context: Option<String>,
+    pub proposed_by: Uuid,
+    pub proposed_by_name: String,
+    pub status: ProposalStatus,
+    pub votes_for: i32,
+    pub votes_against: i32,
+    pub reviewer_id: Option<Uuid>,
+    pub reviewer_name: Option<String>,
+    pub review_comment: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// A vote on a translation proposal
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TranslationVote {
+    pub id: Uuid,
+    pub proposal_id: Uuid,
+    pub user_id: Uuid,
+    pub vote: String, // "up" or "down"
+    pub created_at: DateTime<Utc>,
+}
+
+/// An approved translation override (applied at runtime)
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TranslationOverride {
+    pub language: String,
+    pub key: String,
+    pub value: String,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -139,7 +139,7 @@ export function CreditsPage() {
                   <span className={`text-sm font-semibold ${tx.amount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                     {tx.amount > 0 ? '+' : ''}{tx.amount}
                   </span>
-                  <p className="text-xs text-surface-400">
+                  <p className="text-xs text-surface-500 dark:text-surface-400">
                     {new Date(tx.created_at).toLocaleDateString()}
                   </p>
                 </div>
