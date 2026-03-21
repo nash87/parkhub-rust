@@ -137,8 +137,7 @@ pub(crate) async fn list_proposals(
                     obj.insert(
                         "user_vote".into(),
                         user_vote
-                            .map(serde_json::Value::String)
-                            .unwrap_or(serde_json::Value::Null),
+                            .map_or(serde_json::Value::Null, serde_json::Value::String),
                     );
                 }
                 enriched.push(val);
@@ -432,8 +431,7 @@ pub(crate) async fn vote_on_proposal(
         obj.insert(
             "user_vote".into(),
             user_vote
-                .map(serde_json::Value::String)
-                .unwrap_or(serde_json::Value::Null),
+                .map_or(serde_json::Value::Null, serde_json::Value::String),
         );
     }
 

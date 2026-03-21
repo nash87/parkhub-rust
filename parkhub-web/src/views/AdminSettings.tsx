@@ -107,8 +107,8 @@ export function AdminSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -176,7 +176,7 @@ export function AdminSettingsPage() {
                 onChange={e => update('max_bookings_per_day', e.target.value)}
                 className="input"
               />
-              <p className="text-xs text-surface-400 mt-1">{t('admin.maxBookingsUnlimited')}</p>
+              <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">{t('admin.maxBookingsUnlimited')}</p>
             </div>
 
             <ToggleRow

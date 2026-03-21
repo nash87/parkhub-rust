@@ -113,7 +113,7 @@ function TeamMemberCard({ name, entries, t }: { name: string; entries: TeamAbsen
             <div key={i} className="flex items-center gap-2">
               <div className={`w-1 h-1 rounded-full ${cfg.dot}`} />
               <span className={`text-sm ${cfg.color}`}>{t(`absences.types.${entry.absence_type}`, entry.absence_type)}</span>
-              <span className="text-sm text-surface-400 ml-auto">
+              <span className="text-sm text-surface-500 dark:text-surface-400 ml-auto">
                 {new Date(entry.start_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                 {entry.start_date !== entry.end_date && <> &ndash; {new Date(entry.end_date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</>}
               </span>

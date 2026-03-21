@@ -170,7 +170,7 @@ export function AdminTranslationsPage() {
         const p = info.row.original;
         if (p.status !== 'pending') {
           return p.reviewer_name ? (
-            <span className="text-xs text-surface-400">{p.reviewer_name}</span>
+            <span className="text-xs text-surface-500 dark:text-surface-400">{p.reviewer_name}</span>
           ) : null;
         }
         return (

@@ -148,7 +148,7 @@ export function AbsencesPage() {
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1">
-            {WEEKDAYS.map(d => <div key={d} className="text-center text-xs font-semibold text-surface-400 py-2">{d}</div>)}
+            {WEEKDAYS.map(d => <div key={d} className="text-center text-xs font-semibold text-surface-500 dark:text-surface-400 py-2">{d}</div>)}
             {calendarDays.map((day, i) => {
               const mainType = day.types[0];
               const cfg = mainType ? ABSENCE_CONFIG[mainType] : null;
@@ -254,7 +254,7 @@ export function AbsencesPage() {
                   <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
                     <CalendarCheck weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
                   </motion.div>
-                  <p className="text-sm text-surface-400 mt-3">{t('absences.noEntries', 'Keine Eintr\u00e4ge')}</p>
+                  <p className="text-sm text-surface-500 dark:text-surface-400 mt-3">{t('absences.noEntries', 'Keine Eintr\u00e4ge')}</p>
                 </div>
               )}
             </div>

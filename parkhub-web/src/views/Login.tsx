@@ -193,7 +193,7 @@ export function LoginPage() {
             </Link>
           </p>
 
-          <p className="text-center text-xs text-surface-400 mt-8">
+          <p className="text-center text-xs text-surface-500 dark:text-surface-400 mt-8">
             ParkHub v{APP_VERSION}
           </p>
         </motion.div>

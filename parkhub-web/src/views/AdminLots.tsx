@@ -165,8 +165,8 @@ export function AdminLotsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+      <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
+        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -177,7 +177,7 @@ export function AdminLotsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.lots')}</h2>
-          <span className="text-sm text-surface-400">({lots.length})</span>
+          <span className="text-sm text-surface-500 dark:text-surface-400">({lots.length})</span>
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
@@ -213,8 +213,8 @@ export function AdminLotsPage() {
                 <h3 className="text-lg font-semibold text-surface-900 dark:text-white">
                   {editingId ? t('admin.editLot') : t('admin.newLot')}
                 </h3>
-                <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
-                  <X weight="bold" className="w-5 h-5 text-surface-400" />
+                <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
+                  <X weight="bold" className="w-5 h-5 text-surface-400" aria-hidden="true" />
                 </button>
               </div>
 
@@ -395,7 +395,7 @@ export function AdminLotsPage() {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-surface-900 dark:text-white">{lot.available_slots}</span>
-                      <span className="text-xs text-surface-400">/ {lot.total_slots}</span>
+                      <span className="text-xs text-surface-500 dark:text-surface-400">/ {lot.total_slots}</span>
                     </div>
                     <div className="w-20 h-1.5 bg-surface-200 dark:bg-surface-700 rounded-full mt-1.5 overflow-hidden">
                       <div
@@ -426,19 +426,19 @@ export function AdminLotsPage() {
                       <button
                         onClick={() => openEdit(lot)}
                         className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
-                        title={t('admin.editLotBtn')}
+                        aria-label={`${t('admin.editLotBtn')} ${lot.name}`}
                       >
-                        <PencilSimple weight="bold" className="w-4 h-4" />
+                        <PencilSimple weight="bold" className="w-4 h-4" aria-hidden="true" />
                       </button>
                       <button
                         onClick={() => handleDelete(lot.id)}
                         disabled={deletingId === lot.id}
                         className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-surface-400 hover:text-red-600 disabled:opacity-50"
-                        title={t('admin.deleteLotBtn')}
+                        aria-label={`${t('admin.deleteLotBtn')} ${lot.name}`}
                       >
                         {deletingId === lot.id
                           ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                          : <Trash weight="bold" className="w-4 h-4" />}
+                          : <Trash weight="bold" className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                   </td>
