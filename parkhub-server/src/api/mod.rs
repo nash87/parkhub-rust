@@ -85,7 +85,7 @@ use auth::{forgot_password, login, refresh_token, register, reset_password};
 use credits::{
     admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits,
 };
-use export::{admin_export_bookings_csv, admin_export_users_csv};
+use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
@@ -289,12 +289,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
         // Admin-only: CSV exports
         .route(
-            "/api/v1/admin/users/export-csv",
+            "/api/v1/admin/export/users",
             get(admin_export_users_csv),
         )
         .route(
-            "/api/v1/admin/bookings/export-csv",
+            "/api/v1/admin/export/bookings",
             get(admin_export_bookings_csv),
+        )
+        .route(
+            "/api/v1/admin/export/revenue",
+            get(admin_export_revenue_csv),
         )
         // Absences (user-scoped)
         .route("/api/v1/absences", get(list_absences).post(create_absence))
