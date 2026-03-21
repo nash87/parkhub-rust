@@ -1538,11 +1538,14 @@ pub(crate) async fn create_booking(
     } else {
         crate::audit::events::booking_created(auth_user.user_id, "", booking.id)
     };
-    // Persist audit entry to DB (non-blocking)
-    {
-        let state_r = state.read().await;
-        audit_entry.persist(&state_r.db).await;
-    }
+    // Persist audit entry to DB — use existing write guard to avoid deadlock
+    audit_entry.persist(&state_guard.db).await;
+
+    // Extract config values before releasing write lock
+    let org_name = state_guard.config.organization_name.clone();
+
+    // Drop write lock before spawning async tasks
+    drop(state_guard);
 
     // Dispatch webhook event (non-blocking)
     {
@@ -1568,7 +1571,6 @@ pub(crate) async fn create_booking(
         let slot_number = booking.slot_number;
         let start_time_str = booking.start_time.format("%Y-%m-%d %H:%M UTC").to_string();
         let end_time_str = booking.end_time.format("%Y-%m-%d %H:%M UTC").to_string();
-        let org_name = state_guard.config.organization_name.clone();
         let user_email = u.email.clone();
         let user_name = u.name.clone();
         tokio::spawn(async move {
@@ -5897,11 +5899,23 @@ pub(crate) async fn quick_book(
         );
     }
 
-    // Update slot status
+    // Update slot status — fail the booking if slot update fails to prevent double-booking
     let mut updated_slot = available_slot;
     updated_slot.status = SlotStatus::Reserved;
     if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
-        tracing::error!("Failed to update slot status: {}", e);
+        tracing::error!("Failed to update slot status after quick booking: {}", e);
+        // Roll back the booking to avoid inconsistent state
+        let _ = state_guard
+            .db
+            .delete_booking(&booking.id.to_string())
+            .await;
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SLOT_UPDATE_FAILED",
+                "Failed to reserve slot",
+            )),
+        );
     }
 
     tracing::info!(
@@ -6631,7 +6645,7 @@ pub(crate) async fn public_display(State(state): State<SharedState>) -> impl axu
   <div class="label">of {} available</div>
 </div>
 "#,
-            lot.name, color_class, available, lot.total_slots
+            crate::utils::html_escape(&lot.name), color_class, available, lot.total_slots
         ));
     }
 
