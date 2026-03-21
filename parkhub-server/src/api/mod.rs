@@ -334,6 +334,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/absences/pattern",
             get(get_absence_pattern).post(save_absence_pattern),
         )
+        .route(
+            "/api/v1/absences/import",
+            post(import_absences_from_ical),
+        )
         .route("/api/v1/absences/{id}", delete(delete_absence))
         // Team view
         .route("/api/v1/team/today", get(team_today))
@@ -4437,6 +4441,169 @@ pub async fn save_absence_pattern(
             )
         }
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ICAL IMPORT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for the iCal import endpoint.
+///
+/// Clients send the raw `.ics` text in the `ics_data` field.
+#[derive(Deserialize, utoipa::ToSchema)]
+pub struct ICalImportRequest {
+    /// Raw iCalendar text content (RFC 5545).
+    pub ics_data: String,
+}
+
+/// Parse a single VEVENT property value, stripping any parameter portion.
+///
+/// Examples:
+/// * `DTSTART;TZID=Europe/Berlin:20261015T120000` → `"20261015T120000"`
+/// * `DTSTART:20261015`                           → `"20261015"`
+fn ical_property_value(line: &str) -> &str {
+    if let Some(pos) = line.find(':') {
+        line[pos + 1..].trim()
+    } else {
+        line.trim()
+    }
+}
+
+/// Convert an iCal date / datetime string to a `YYYY-MM-DD` string.
+///
+/// Accepted formats:
+/// * `YYYYMMDD`           — date-only
+/// * `YYYYMMDDTHHMMSSZ`  — UTC datetime (timezone discarded, date kept)
+/// * `YYYYMMDDTHHMMSS`   — local datetime (timezone discarded, date kept)
+fn ical_date_to_ymd(raw: &str) -> Option<String> {
+    let date_part = raw.split('T').next().unwrap_or("").trim();
+    if date_part.len() < 8 {
+        return None;
+    }
+    let y = &date_part[0..4];
+    let m = &date_part[4..6];
+    let d = &date_part[6..8];
+    if y.chars().all(|c| c.is_ascii_digit())
+        && m.chars().all(|c| c.is_ascii_digit())
+        && d.chars().all(|c| c.is_ascii_digit())
+    {
+        Some(format!("{y}-{m}-{d}"))
+    } else {
+        None
+    }
+}
+
+/// Map a VEVENT SUMMARY string to an [`AbsenceType`].
+///
+/// * contains `"vacation"` or `"urlaub"` (case-insensitive) → [`AbsenceType::Vacation`]
+/// * otherwise → [`AbsenceType::Other`]
+fn absence_type_from_summary(summary: &str) -> AbsenceType {
+    let lower = summary.to_lowercase();
+    if lower.contains("vacation") || lower.contains("urlaub") {
+        AbsenceType::Vacation
+    } else {
+        AbsenceType::Other
+    }
+}
+
+/// `POST /api/v1/absences/import` — import absences from an iCalendar file
+#[utoipa::path(
+    post,
+    path = "/api/v1/absences/import",
+    tag = "Absences",
+    summary = "Import absences from iCal",
+    description = "Parses a `.ics` file and creates absence records for the authenticated user.",
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 201, description = "Absences created"),
+        (status = 400, description = "Invalid or empty iCal data"),
+    )
+)]
+pub async fn import_absences_from_ical(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<ICalImportRequest>,
+) -> (StatusCode, Json<ApiResponse<Vec<Absence>>>) {
+    let mut parsed: Vec<Absence> = Vec::new();
+
+    // ── Parse VEVENT blocks ──────────────────────────────────────────────────
+    let mut in_vevent = false;
+    let mut dtstart: Option<String> = None;
+    let mut dtend: Option<String> = None;
+    let mut summary: Option<String> = None;
+
+    for raw_line in req.ics_data.lines() {
+        let line = raw_line.trim();
+        match line {
+            "BEGIN:VEVENT" => {
+                in_vevent = true;
+                dtstart = None;
+                dtend = None;
+                summary = None;
+            }
+            "END:VEVENT" if in_vevent => {
+                in_vevent = false;
+                if let (Some(start), Some(end)) = (dtstart.take(), dtend.take()) {
+                    let absence_type =
+                        absence_type_from_summary(summary.as_deref().unwrap_or(""));
+                    let note = summary.take();
+                    parsed.push(Absence {
+                        id: Uuid::new_v4(),
+                        user_id: auth_user.user_id,
+                        absence_type,
+                        start_date: start,
+                        end_date: end,
+                        note,
+                        source: "ical".to_string(),
+                        created_at: Utc::now(),
+                    });
+                } else {
+                    summary = None;
+                }
+            }
+            _ if in_vevent => {
+                // Compare property name case-insensitively; value is kept as-is.
+                let prop_upper = line.to_uppercase();
+                if prop_upper.starts_with("DTSTART") {
+                    if let Some(ymd) = ical_date_to_ymd(ical_property_value(line)) {
+                        dtstart = Some(ymd);
+                    }
+                } else if prop_upper.starts_with("DTEND") {
+                    if let Some(ymd) = ical_date_to_ymd(ical_property_value(line)) {
+                        dtend = Some(ymd);
+                    }
+                } else if prop_upper.starts_with("SUMMARY") {
+                    summary = Some(ical_property_value(line).to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if parsed.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "NO_EVENTS",
+                "No valid VEVENT blocks found in the provided iCal data",
+            )),
+        );
+    }
+
+    // ── Persist absences ─────────────────────────────────────────────────────
+    let state_guard = state.read().await;
+    let mut saved: Vec<Absence> = Vec::with_capacity(parsed.len());
+    for absence in parsed {
+        match state_guard.db.save_absence(&absence).await {
+            Ok(()) => saved.push(absence),
+            Err(e) => {
+                tracing::error!("Failed to save iCal absence: {}", e);
+                // Continue — a partial import is better than total failure.
+            }
+        }
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(saved)))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

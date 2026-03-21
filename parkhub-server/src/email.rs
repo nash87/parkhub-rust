@@ -88,6 +88,41 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
     Ok(())
 }
 
+/// Send an HTML email with exponential-backoff retry.
+///
+/// Attempts up to `max_attempts` times (default 3), sleeping 100 ms, 200 ms,
+/// 400 ms between attempts.  Returns `Ok(())` as soon as one attempt succeeds.
+/// If all attempts fail, the last error is returned.
+pub async fn send_email_with_retry(to: &str, subject: &str, html_body: &str) -> Result<()> {
+    const MAX_ATTEMPTS: u32 = 3;
+    let mut last_err = anyhow::anyhow!("send_email_with_retry: no attempts made");
+    for attempt in 1..=MAX_ATTEMPTS {
+        match send_email(to, subject, html_body).await {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                last_err = e;
+                if attempt < MAX_ATTEMPTS {
+                    let backoff_ms = 100u64 * (1u64 << (attempt - 1)); // 100, 200, 400
+                    warn!(
+                        to = %to,
+                        subject = %subject,
+                        attempt,
+                        backoff_ms,
+                        "Email send failed, retrying after backoff"
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(backoff_ms)).await;
+                }
+            }
+        }
+    }
+    tracing::error!(
+        to = %to,
+        subject = %subject,
+        "Email send failed after {MAX_ATTEMPTS} attempts: {last_err}"
+    );
+    Err(last_err)
+}
+
 /// Build a booking confirmation email body.
 #[allow(clippy::too_many_arguments)]
 pub fn build_booking_confirmation_email(
