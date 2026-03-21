@@ -52,6 +52,7 @@ vi.mock('react-i18next', () => ({
         'bookingFilters.statusConfirmed': 'Confirmed',
         'bookingFilters.statusCancelled': 'Cancelled',
         'bookingFilters.statusCompleted': 'Completed',
+        'pass.showPass': 'Show Pass',
       };
       return map[key] || key;
     },
@@ -87,10 +88,20 @@ vi.mock('@phosphor-icons/react', () => ({
   Timer: (props: any) => <span data-testid="icon-timer" {...props} />,
   MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
   Funnel: (props: any) => <span data-testid="icon-funnel" {...props} />,
+  QrCode: (props: any) => <span data-testid="icon-qrcode" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({
   BookingsSkeleton: () => <div data-testid="bookings-skeleton">Loading...</div>,
+}));
+
+vi.mock('../components/ParkingPass', () => ({
+  ParkingPass: ({ booking, onClose }: any) => (
+    <div data-testid="parking-pass-modal">
+      <span>{booking.lot_name}</span>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
 }));
 
 vi.mock('react-hot-toast', () => ({
