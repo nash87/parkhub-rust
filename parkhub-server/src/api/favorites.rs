@@ -106,6 +106,20 @@ pub(crate) async fn add_favorite(
         }
     }
 
+    // Check for existing favorite to prevent duplicates
+    if let Ok(existing) = state_guard
+        .db
+        .list_favorites_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        if existing.iter().any(|f| f.slot_id == req.slot_id) {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::error("DUPLICATE", "Slot already in favorites")),
+            );
+        }
+    }
+
     let fav = Favorite {
         user_id: auth_user.user_id,
         slot_id: req.slot_id,
