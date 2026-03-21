@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { api, type Booking, type UserStats } from '../api/client';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { staggerSlow, fadeUp } from '../constants/animations';
 import { useWebSocket, type WsEvent } from '../hooks/useWebSocket';
+import { BarChart } from '../components/SimpleChart';
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -47,6 +48,21 @@ export function DashboardPage() {
   const timeOfDay = hour < 12 ? t('dashboard.morning') : hour < 18 ? t('dashboard.afternoon') : t('dashboard.evening');
   const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'confirmed');
   const name = user?.name?.split(' ')[0] || user?.username || '';
+
+  // Build a 7-day booking activity chart from real booking data
+  const weeklyActivity = useMemo(() => {
+    const days: { label: string; value: number }[] = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayStr = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const dateKey = d.toISOString().slice(0, 10);
+      const count = bookings.filter(b => b.start_time.slice(0, 10) === dateKey).length;
+      days.push({ label: dayStr, value: count });
+    }
+    return days;
+  }, [bookings]);
 
   const container = staggerSlow;
   const item = fadeUp;
@@ -168,6 +184,27 @@ export function DashboardPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Booking Activity (last 7 days) */}
+      <motion.div
+        variants={item}
+        className="bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 p-6"
+        style={{ borderRadius: 12 }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <TrendUp weight="bold" className="w-4 h-4 text-surface-400" />
+          <h2 className="text-lg font-semibold text-surface-900 dark:text-white">
+            {t('dashboard.thisMonth')}
+          </h2>
+        </div>
+        {weeklyActivity.some(d => d.value > 0) ? (
+          <BarChart data={weeklyActivity} color="var(--color-teal-500, #14b8a6)" />
+        ) : (
+          <p className="text-sm text-surface-500 dark:text-surface-400 py-6 text-center">
+            {t('dashboard.noActiveBookings')}
+          </p>
+        )}
+      </motion.div>
     </motion.div>
     </AnimatePresence>
   );

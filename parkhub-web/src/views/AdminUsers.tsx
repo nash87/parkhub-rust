@@ -274,7 +274,7 @@ export function AdminUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.users')}</h2>
-          <span className="text-sm text-surface-400 tabular-nums">({users.length})</span>
+          <span className="text-sm text-surface-500 dark:text-surface-400 tabular-nums">({users.length})</span>
         </div>
 
         <div className="relative">

@@ -85,7 +85,7 @@ function ProposalCard({
             <code className="text-xs font-mono bg-surface-100 dark:bg-surface-800 px-2 py-0.5 rounded text-primary-600 dark:text-primary-400">
               {proposal.key}
             </code>
-            <span className="text-xs text-surface-400">
+            <span className="text-xs text-surface-500 dark:text-surface-400">
               {LANGUAGES.find(l => l.code === proposal.language)?.flag} {proposal.language.toUpperCase()}
             </span>
             <StatusBadge status={proposal.status} t={t} />
@@ -419,7 +419,7 @@ export function TranslationsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-surface-400">{filteredProposals.length} {t('translations.proposalsCount')}</p>
+            <p className="text-xs text-surface-500 dark:text-surface-400">{filteredProposals.length} {t('translations.proposalsCount')}</p>
             {filteredProposals.map(p => (
               <ProposalCard key={p.id} proposal={p} onVote={handleVote} currentUserId={user?.id} />
             ))}

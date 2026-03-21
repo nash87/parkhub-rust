@@ -295,7 +295,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
             )}
           </div>
           {lot.hourly_rate != null && (
-            <p className="text-xs text-surface-400 dark:text-surface-500 mt-1">
+            <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
               {lot.currency || '€'}{lot.hourly_rate.toFixed(2)}/h
             </p>
           )}

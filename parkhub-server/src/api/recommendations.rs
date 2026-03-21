@@ -68,9 +68,8 @@ pub(crate) async fn get_recommendations(
     }
 
     // 3. Get all lots and available slots
-    let lots = match state.db.list_parking_lots().await {
-        Ok(l) => l,
-        Err(_) => return Json(ApiResponse::success(vec![])),
+    let Ok(lots) = state.db.list_parking_lots().await else {
+        return Json(ApiResponse::success(vec![]));
     };
 
     let mut candidates: Vec<SlotRecommendation> = Vec::new();
@@ -83,9 +82,8 @@ pub(crate) async fn get_recommendations(
             }
         }
 
-        let slots = match state.db.list_slots_by_lot(&lot.id.to_string()).await {
-            Ok(s) => s,
-            Err(_) => continue,
+        let Ok(slots) = state.db.list_slots_by_lot(&lot.id.to_string()).await else {
+            continue;
         };
 
         for slot in &slots {
@@ -104,7 +102,7 @@ pub(crate) async fn get_recommendations(
             let freq = slot_frequency.get(&slot.id).copied().unwrap_or(0);
             if freq > 0 {
                 score += (freq as f64).min(10.0) * 4.0; // max 40 points
-                reasons.push(format!("Used {} times before", freq));
+                reasons.push(format!("Used {freq} times before"));
             }
 
             // Factor 2: User's preferred lot
@@ -112,7 +110,7 @@ pub(crate) async fn get_recommendations(
             if lot_freq > 0 {
                 score += (lot_freq as f64).min(10.0) * 2.0; // max 20 points
                 if freq == 0 {
-                    reasons.push(format!("In your preferred lot (used {} times)", lot_freq));
+                    reasons.push(format!("In your preferred lot (used {lot_freq} times)"));
                 }
             }
 
@@ -120,7 +118,7 @@ pub(crate) async fn get_recommendations(
             if !slot.features.is_empty() {
                 score += 5.0;
                 let feature_names: Vec<String> = slot.features.iter()
-                    .map(|f| format!("{:?}", f))
+                    .map(|f| format!("{f:?}"))
                     .collect();
                 reasons.push(format!("Features: {}", feature_names.join(", ")));
             }
@@ -136,8 +134,7 @@ pub(crate) async fn get_recommendations(
             }
 
             let floor_name = lot.floors.first()
-                .map(|f| f.name.clone())
-                .unwrap_or_else(|| "Ground".to_string());
+                .map_or_else(|| "Ground".to_string(), |f| f.name.clone());
 
             candidates.push(SlotRecommendation {
                 slot_id: slot.id,
