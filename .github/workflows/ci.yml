@@ -88,8 +88,10 @@ jobs:
 
       - name: Run tests (server + common)
         run: |
-          cargo test --package parkhub-common
-          cargo test --package parkhub-server --no-default-features --features headless
+          cargo test --package parkhub-common --all-targets
+          cargo test --package parkhub-server --no-default-features --features headless --all-targets
+          cargo test --package parkhub-common --doc
+          cargo test --package parkhub-server --no-default-features --features headless --doc
 
   frontend:
     name: Frontend Build & Test
