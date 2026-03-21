@@ -91,7 +91,8 @@ pub mod zones;
 // Re-import handler functions so the router can reference them unqualified.
 use auth::{forgot_password, login, refresh_token, register, reset_password};
 use credits::{
-    admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits,
+    admin_grant_credits, admin_list_credit_transactions, admin_refill_all_credits,
+    admin_update_user_quota, get_user_credits,
 };
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
@@ -296,6 +297,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/credits/refill-all",
             post(admin_refill_all_credits),
+        )
+        .route(
+            "/api/v1/admin/credits/transactions",
+            get(admin_list_credit_transactions),
         )
         .route(
             "/api/v1/admin/users/{id}/quota",
