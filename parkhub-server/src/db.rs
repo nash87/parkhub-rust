@@ -11,7 +11,10 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
-use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
+use redb::{
+    Database as RedbDatabase, MultimapTableDefinition, ReadableMultimapTable, ReadableTable,
+    ReadableTableMetadata, TableDefinition,
+};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::path::PathBuf;
@@ -34,6 +37,15 @@ const USERS: TableDefinition<&str, &[u8]> = TableDefinition::new("users");
 const USERS_BY_USERNAME: TableDefinition<&str, &str> = TableDefinition::new("users_by_username");
 const USERS_BY_EMAIL: TableDefinition<&str, &str> = TableDefinition::new("users_by_email");
 const SESSIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("sessions");
+/// Index: refresh_token -> access_token (for O(1) refresh-token lookup)
+const SESSIONS_BY_REFRESH_TOKEN: TableDefinition<&str, &str> =
+    TableDefinition::new("sessions_by_refresh_token");
+/// Index: user_id -> access_token (for O(1) per-user session invalidation)
+const SESSIONS_BY_USER_ID: MultimapTableDefinition<&str, &str> =
+    MultimapTableDefinition::new("sessions_by_user_id");
+/// Index: (user_id, date) -> booking_id (for O(1) per-user per-day booking count)
+const BOOKINGS_BY_USER_DATE: TableDefinition<(&str, &str), &str> =
+    TableDefinition::new("bookings_by_user_date");
 const BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("bookings");
 const PARKING_LOTS: TableDefinition<&str, &[u8]> = TableDefinition::new("parking_lots");
 const PARKING_SLOTS: TableDefinition<&str, &[u8]> = TableDefinition::new("parking_slots");
@@ -309,7 +321,10 @@ impl Database {
             let _ = write_txn.open_table(USERS_BY_USERNAME)?;
             let _ = write_txn.open_table(USERS_BY_EMAIL)?;
             let _ = write_txn.open_table(SESSIONS)?;
+            let _ = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+            let _ = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
             let _ = write_txn.open_table(BOOKINGS)?;
+            let _ = write_txn.open_table(BOOKINGS_BY_USER_DATE)?;
             let _ = write_txn.open_table(PARKING_LOTS)?;
             let _ = write_txn.open_table(PARKING_SLOTS)?;
             let _ = write_txn.open_table(SLOTS_BY_LOT)?;
@@ -421,7 +436,25 @@ impl Database {
         drain_table!(write_txn, USERS_BY_USERNAME);
         drain_table!(write_txn, USERS_BY_EMAIL);
         drain_table!(write_txn, SESSIONS);
+        drain_table!(write_txn, SESSIONS_BY_REFRESH_TOKEN);
+        // Drain multimap table SESSIONS_BY_USER_ID
+        {
+            let mut mm = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
+            let keys: Vec<String> = {
+                let mut keys = Vec::new();
+                let mut iter = mm.iter()?;
+                while let Some(entry) = iter.next() {
+                    let entry = entry?;
+                    keys.push(entry.0.value().to_string());
+                }
+                keys
+            };
+            for key in &keys {
+                mm.remove_all(key.as_str())?;
+            }
+        }
         drain_table!(write_txn, BOOKINGS);
+        drain_table!(write_txn, BOOKINGS_BY_USER_DATE);
         drain_table!(write_txn, PARKING_LOTS);
         drain_table!(write_txn, PARKING_SLOTS);
         drain_table!(write_txn, SLOTS_BY_LOT);
@@ -519,6 +552,7 @@ impl Database {
     /// Save a session (access token -> session data)
     pub async fn save_session(&self, token: &str, session: &Session) -> Result<()> {
         let data = self.serialize(session)?;
+        let user_id = session.user_id.to_string();
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
@@ -526,6 +560,14 @@ impl Database {
         {
             let mut table = write_txn.open_table(SESSIONS)?;
             table.insert(token, data.as_slice())?;
+
+            // Secondary index: refresh_token -> access_token
+            let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+            rt_idx.insert(session.refresh_token.as_str(), token)?;
+
+            // Secondary index: user_id -> access_token (multimap)
+            let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
+            user_idx.insert(user_id.as_str(), token)?;
         }
         write_txn.commit()?;
         debug!("Saved session for user: {}", session.username);
@@ -553,7 +595,7 @@ impl Database {
         }
     }
 
-    /// Find a session by its refresh token (scans all sessions)
+    /// Find a session by its refresh token using the secondary index (O(1) lookup).
     ///
     /// Returns a tuple of (`access_token`, session) if found and not expired.
     pub async fn get_session_by_refresh_token(
@@ -563,41 +605,51 @@ impl Database {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
         drop(db);
-        let table = read_txn.open_table(SESSIONS)?;
 
-        for entry in table.iter()? {
-            let (key, value) = entry?;
-            let access_token = key.value().to_string();
-            let session: Session = self.deserialize(value.value())?;
-            if session.refresh_token == refresh_token {
+        // Look up the access token via the refresh-token index
+        let rt_idx = read_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+        let access_token = match rt_idx.get(refresh_token)? {
+            Some(v) => v.value().to_string(),
+            None => return Ok(None),
+        };
+
+        let table = read_txn.open_table(SESSIONS)?;
+        match table.get(access_token.as_str())? {
+            Some(value) => {
+                let session: Session = self.deserialize(value.value())?;
                 if session.is_expired() {
-                    return Ok(None);
+                    Ok(None)
+                } else {
+                    Ok(Some((access_token, session)))
                 }
-                return Ok(Some((access_token, session)));
             }
+            None => Ok(None),
         }
-        Ok(None)
     }
 
-    /// Delete all sessions belonging to a specific user.
+    /// Delete all sessions belonging to a specific user using the secondary index.
     ///
-    /// Scans every session, deserializes it, and removes entries whose
-    /// `user_id` matches the given ID. Returns the number of deleted sessions.
+    /// Uses SESSIONS_BY_USER_ID for O(k) lookup (k = sessions per user)
+    /// instead of scanning the entire sessions table. Returns the number of
+    /// deleted sessions.
     pub async fn delete_sessions_by_user(&self, user_id: Uuid) -> Result<u64> {
+        let user_id_str = user_id.to_string();
+
         let db = self.inner.write().await;
         let read_txn = db.begin_read()?;
-        let table = read_txn.open_table(SESSIONS)?;
 
-        // Collect tokens to delete (cannot mutate while iterating)
-        let mut tokens_to_delete = Vec::new();
-        for entry in table.iter()? {
-            let (key, value) = entry?;
-            let session: Session = self.deserialize(value.value())?;
-            if session.user_id == user_id {
-                tokens_to_delete.push(key.value().to_string());
+        // Collect access tokens for this user from the index
+        let tokens_to_delete: Vec<String> = {
+            let user_idx = read_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
+            let mut tokens = Vec::new();
+            if let Ok(mut iter) = user_idx.get(user_id_str.as_str()) {
+                while let Some(entry) = iter.next() {
+                    let entry = entry?;
+                    tokens.push(entry.value().to_string());
+                }
             }
-        }
-        drop(table);
+            tokens
+        };
         drop(read_txn);
 
         let count = tokens_to_delete.len() as u64;
@@ -606,8 +658,15 @@ impl Database {
             drop(db);
             {
                 let mut table = write_txn.open_table(SESSIONS)?;
+                let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+                let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
                 for token in &tokens_to_delete {
-                    table.remove(token.as_str())?;
+                    if let Ok(Some(entry)) = table.remove(token.as_str()) {
+                        if let Ok(session) = self.deserialize::<Session>(entry.value()) {
+                            let _ = rt_idx.remove(session.refresh_token.as_str())?;
+                        }
+                    }
+                    let _ = user_idx.remove(user_id_str.as_str(), token.as_str())?;
                 }
             }
             write_txn.commit()?;
@@ -624,6 +683,17 @@ impl Database {
         let existed = {
             let mut table = write_txn.open_table(SESSIONS)?;
             let result = table.remove(token)?;
+            if let Some(ref entry) = result {
+                // Deserialize to get refresh_token and user_id for index cleanup
+                if let Ok(session) = self.deserialize::<Session>(entry.value()) {
+                    let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+                    let _ = rt_idx.remove(session.refresh_token.as_str())?;
+
+                    let user_id = session.user_id.to_string();
+                    let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
+                    let _ = user_idx.remove(user_id.as_str(), token)?;
+                }
+            }
             result.is_some()
         };
         write_txn.commit()?;
@@ -1021,6 +1091,8 @@ impl Database {
     /// Save a booking
     pub async fn save_booking(&self, booking: &Booking) -> Result<()> {
         let id = booking.id.to_string();
+        let user_id = booking.user_id.to_string();
+        let date_str = booking.start_time.date_naive().to_string();
         let data = self.serialize(booking)?;
 
         let db = self.inner.write().await;
@@ -1029,6 +1101,10 @@ impl Database {
         {
             let mut table = write_txn.open_table(BOOKINGS)?;
             table.insert(id.as_str(), data.as_slice())?;
+
+            // Secondary index: (user_id, date) -> booking_id
+            let mut date_idx = write_txn.open_table(BOOKINGS_BY_USER_DATE)?;
+            date_idx.insert((user_id.as_str(), date_str.as_str()), id.as_str())?;
         }
         write_txn.commit()?;
         debug!("Saved booking: {}", booking.id);
@@ -1072,6 +1148,47 @@ impl Database {
             .collect())
     }
 
+    /// Count non-cancelled bookings for a user on a given date using the secondary index.
+    ///
+    /// `date` must be a `YYYY-MM-DD` string (from `NaiveDate::to_string()`).
+    /// Returns the count of bookings with status != Cancelled for that user/date pair.
+    pub async fn count_bookings_by_user_date(
+        &self,
+        user_id: &str,
+        date: &str,
+    ) -> Result<usize> {
+        use parkhub_common::BookingStatus;
+
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+
+        // The index maps (user_id, date) -> booking_id. We need the actual booking
+        // to check the status field. Iterate all entries for this user/date prefix.
+        // The compound key type means we can only get exact matches — we scan all
+        // index entries and filter by user_id+date prefix.
+        let date_idx = read_txn.open_table(BOOKINGS_BY_USER_DATE)?;
+        let sessions_table = read_txn.open_table(BOOKINGS)?;
+
+        let mut count = 0usize;
+        for entry in date_idx.iter()? {
+            let (key, booking_id_val) = entry?;
+            let (uid, d) = key.value();
+            if uid != user_id || d != date {
+                continue;
+            }
+            let booking_id = booking_id_val.value();
+            if let Some(raw) = sessions_table.get(booking_id)? {
+                if let Ok(booking) = self.deserialize::<Booking>(raw.value()) {
+                    if booking.status != BookingStatus::Cancelled {
+                        count += 1;
+                    }
+                }
+            }
+        }
+        Ok(count)
+    }
+
     /// Delete a booking
     pub async fn delete_booking(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
@@ -1080,6 +1197,15 @@ impl Database {
         let existed = {
             let mut table = write_txn.open_table(BOOKINGS)?;
             let result = table.remove(id)?;
+            if let Some(ref entry) = result {
+                // Remove the BOOKINGS_BY_USER_DATE index entry
+                if let Ok(booking) = self.deserialize::<Booking>(entry.value()) {
+                    let user_id = booking.user_id.to_string();
+                    let date_str = booking.start_time.date_naive().to_string();
+                    let mut date_idx = write_txn.open_table(BOOKINGS_BY_USER_DATE)?;
+                    let _ = date_idx.remove((user_id.as_str(), date_str.as_str()))?;
+                }
+            }
             result.is_some()
         };
         write_txn.commit()?;

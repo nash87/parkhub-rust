@@ -185,6 +185,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/auth/reset-password", post(reset_password))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
+        // System info — public
+        .route("/api/v1/system/version", get(system_version))
+        .route("/api/v1/system/maintenance", get(system_maintenance))
         // Feature flags — public (frontend needs to know which features are enabled)
         .route("/api/v1/features", get(get_features))
         // Theme — public (frontend needs theme before auth for login page styling)
@@ -197,6 +200,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Setup wizard — only works before initial setup is completed
         .route("/api/v1/setup/status", get(setup::setup_status))
         .route("/api/v1/setup", post(setup::setup_init))
+        .route("/api/v1/setup/change-password", post(setup_change_password))
+        .route("/api/v1/setup/complete", post(setup_complete))
+        // System info — public (no auth needed for version/maintenance checks)
+        .route("/api/v1/system/version", get(system_version))
+        .route("/api/v1/system/maintenance", get(system_maintenance))
+        .route("/api/v1/update/check", get(update_check))
         // Public occupancy display (no auth)
         .route("/api/v1/public/occupancy", get(public_occupancy))
         .route("/api/v1/public/display", get(public_display))
@@ -215,6 +224,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/me", get(get_current_user).put(update_current_user))
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
+        .route("/api/v1/users/me/anonymize", post(gdpr_anonymize_account))
         .route(
             "/api/v1/users/me/password",
             axum::routing::patch(change_password),
@@ -418,6 +428,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Booking checkin
         .route("/api/v1/bookings/{id}/checkin", post(booking_checkin))
+        // Admin: slot update (cross-lot)
+        .route(
+            "/api/v1/admin/slots/{slot_id}",
+            axum::routing::patch(admin_update_slot),
+        )
         // Admin: database reset
         .route("/api/v1/admin/reset", post(admin_reset))
         // Admin: auto-release settings
@@ -437,6 +452,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Admin: update user
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        // Admin: patch slot (all fields)
+        .route(
+            "/api/v1/admin/slots/{id}",
+            axum::routing::patch(admin_patch_slot),
+        )
         // Translation management
         .route("/api/v1/translations/overrides", get(list_overrides))
         .route(
@@ -935,6 +955,45 @@ pub async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SYSTEM INFO
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/system/version` — server version info (public)
+#[utoipa::path(get, path = "/api/v1/system/version", tag = "Health",
+    summary = "Server version info",
+    description = "Returns the running server version string.",
+    responses((status = 200, description = "Version info"))
+)]
+pub async fn system_version() -> Json<ApiResponse<serde_json::Value>> {
+    Json(ApiResponse::success(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "name": "parkhub-server",
+    })))
+}
+
+/// `GET /api/v1/system/maintenance` — maintenance mode status (public)
+#[utoipa::path(get, path = "/api/v1/system/maintenance", tag = "Health",
+    summary = "Maintenance mode status",
+    description = "Returns whether the server is in maintenance mode.",
+    responses((status = 200, description = "Maintenance status"))
+)]
+pub async fn system_maintenance(
+    State(state): State<SharedState>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    let state_guard = state.read().await;
+    let enabled = state_guard
+        .db
+        .get_setting("maintenance_mode")
+        .await
+        .ok()
+        .flatten()
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    drop(state_guard);
+    Json(ApiResponse::success(serde_json::json!({ "maintenance": enabled })))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // USERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1341,18 +1400,15 @@ pub async fn create_booking(
         .parse()
         .unwrap_or(0);
     if max_per_day > 0 {
-        let user_bookings = state_guard
+        let booking_date = req.start_time.date_naive().to_string();
+        let same_day_count = state_guard
             .db
-            .list_bookings_by_user(&auth_user.user_id.to_string())
+            .count_bookings_by_user_date(
+                &auth_user.user_id.to_string(),
+                &booking_date,
+            )
             .await
-            .unwrap_or_default();
-        let booking_date = req.start_time.date_naive();
-        let same_day_count = user_bookings
-            .iter()
-            .filter(|b| {
-                b.start_time.date_naive() == booking_date && b.status != BookingStatus::Cancelled
-            })
-            .count();
+            .unwrap_or(0);
         if same_day_count >= usize::try_from(max_per_day).unwrap_or(0) {
             return (
                 StatusCode::UNPROCESSABLE_ENTITY,
@@ -3244,6 +3300,54 @@ pub async fn gdpr_delete_account(
     let state_guard = state.read().await;
 
     // Capture username before anonymization scrubs it
+    let username = state_guard
+        .db
+        .get_user(&user_id)
+        .await
+        .ok()
+        .flatten()
+        .map(|u| u.username)
+        .unwrap_or_default();
+
+    match state_guard.db.anonymize_user(&user_id).await {
+        Ok(true) => {
+            AuditEntry::new(AuditEventType::UserDeleted)
+                .user(auth_user.user_id, &username)
+                .log();
+            (StatusCode::OK, Json(ApiResponse::success(())))
+        }
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        ),
+        Err(e) => {
+            tracing::error!("GDPR anonymization failed for {}: {}", user_id, e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to anonymize account",
+                )),
+            )
+        }
+    }
+}
+
+/// GDPR Art. 17 — Right to Erasure via POST: anonymize user data, keep booking records.
+/// This is an alias for `gdpr_delete_account` but exposed as `POST /api/v1/users/me/anonymize`.
+#[utoipa::path(post, path = "/api/v1/users/me/anonymize", tag = "Users",
+    summary = "GDPR anonymize account (Art. 17)",
+    description = "Anonymizes user PII while preserving booking records for accounting. Soft-delete compliant with GDPR Art. 17.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Account anonymized"), (status = 404, description = "Not found"))
+)]
+pub async fn gdpr_anonymize_account(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let user_id = auth_user.user_id.to_string();
+    let state_guard = state.read().await;
+
     let username = state_guard
         .db
         .get_user(&user_id)
@@ -7066,6 +7170,105 @@ pub async fn admin_reset(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: SLOT UPDATE (cross-lot)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `PATCH /api/v1/admin/slots/{slot_id}` — admin update any slot without lot_id in path
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/slots/{slot_id}",
+    tag = "Admin",
+    summary = "Admin update parking slot",
+    description = "Update a slot's status or properties by slot ID alone (no lot_id required). Admin only.",
+    params(("slot_id" = String, Path, description = "Slot ID")),
+    responses(
+        (status = 200, description = "Slot updated"),
+        (status = 403, description = "Forbidden"),
+        (status = 404, description = "Slot not found"),
+    )
+)]
+pub async fn admin_update_slot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(slot_id): Path<String>,
+    Json(req): Json<serde_json::Value>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.write().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut slot = match state_guard.db.get_parking_slot(&slot_id).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching slot {}: {}", slot_id, e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    use parkhub_common::models::SlotType;
+
+    if let Some(status_str) = req.get("status").and_then(|v| v.as_str()) {
+        slot.status = match status_str {
+            "available" => SlotStatus::Available,
+            "occupied" => SlotStatus::Occupied,
+            "reserved" => SlotStatus::Reserved,
+            "maintenance" => SlotStatus::Maintenance,
+            "disabled" => SlotStatus::Disabled,
+            _ => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(ApiResponse::error(
+                        "INVALID_STATUS",
+                        "Valid statuses: available, occupied, reserved, maintenance, disabled",
+                    )),
+                );
+            }
+        };
+    }
+
+    if let Some(slot_type_str) = req.get("slot_type").and_then(|v| v.as_str()) {
+        slot.slot_type = match slot_type_str {
+            "standard" => SlotType::Standard,
+            "compact" => SlotType::Compact,
+            "large" => SlotType::Large,
+            "handicap" => SlotType::Handicap,
+            "electric" => SlotType::Electric,
+            "motorcycle" => SlotType::Motorcycle,
+            "vip" => SlotType::Vip,
+            _ => slot.slot_type,
+        };
+    }
+
+    if let Some(number) = req.get("slot_number").and_then(serde_json::Value::as_i64) {
+        #[allow(clippy::cast_possible_truncation)]
+        let num = number as i32;
+        slot.slot_number = num;
+    }
+
+    if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+        tracing::error!("Failed to update slot {}: {}", slot_id, e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update slot")),
+        );
+    }
+    drop(state_guard);
+
+    let slot_json = serde_json::to_value(&slot).unwrap_or(serde_json::Value::Null);
+    (StatusCode::OK, Json(ApiResponse::success(slot_json)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN: AUTO-RELEASE SETTINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -7614,6 +7817,392 @@ pub async fn admin_update_user(
             "is_active": user.is_active,
         }))),
     )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SYSTEM / VERSION / MAINTENANCE ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Response for `GET /api/v1/system/version`
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct SystemVersionResponse {
+    /// Current server version from Cargo.toml
+    pub version: String,
+}
+
+/// `GET /api/v1/system/version` — return the running server version.
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/version",
+    tag = "System",
+    summary = "Get server version",
+    description = "Returns the current server version string from Cargo.toml.",
+    responses(
+        (status = 200, description = "Version info"),
+    )
+)]
+pub async fn system_version() -> Json<ApiResponse<SystemVersionResponse>> {
+    Json(ApiResponse::success(SystemVersionResponse {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    }))
+}
+
+/// Response for `GET /api/v1/system/maintenance`
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct MaintenanceModeResponse {
+    /// Whether maintenance mode is currently enabled
+    pub maintenance_mode: bool,
+    /// Optional message to display to users during maintenance
+    pub message: Option<String>,
+}
+
+/// `GET /api/v1/system/maintenance` — return maintenance-mode status from DB.
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/maintenance",
+    tag = "System",
+    summary = "Get maintenance mode status",
+    description = "Returns whether maintenance mode is active (DB setting 'maintenance_mode').",
+    responses(
+        (status = 200, description = "Maintenance mode status"),
+    )
+)]
+pub async fn system_maintenance(
+    State(state): State<SharedState>,
+) -> Json<ApiResponse<MaintenanceModeResponse>> {
+    let state = state.read().await;
+    let enabled = state
+        .db
+        .get_setting("maintenance_mode")
+        .await
+        .ok()
+        .flatten()
+        .as_deref()
+        == Some("true");
+    let message = state
+        .db
+        .get_setting("maintenance_mode_message")
+        .await
+        .ok()
+        .flatten()
+        .filter(|s| !s.is_empty());
+    Json(ApiResponse::success(MaintenanceModeResponse {
+        maintenance_mode: enabled,
+        message,
+    }))
+}
+
+/// Response for `GET /api/v1/update/check`
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct UpdateCheckResponse {
+    /// Current running version
+    pub current_version: String,
+    /// Latest available version (currently always equal to current)
+    pub latest_version: String,
+    /// Whether an update is available
+    pub update_available: bool,
+}
+
+/// `GET /api/v1/update/check` — stub update check endpoint.
+///
+/// For now, `latest_version` always equals `current_version` (no remote check).
+#[utoipa::path(
+    get,
+    path = "/api/v1/update/check",
+    tag = "System",
+    summary = "Check for updates",
+    description = "Returns current and latest version. Currently no remote check is performed.",
+    responses(
+        (status = 200, description = "Update check result"),
+    )
+)]
+pub async fn update_check() -> Json<ApiResponse<UpdateCheckResponse>> {
+    let version = env!("CARGO_PKG_VERSION").to_string();
+    Json(ApiResponse::success(UpdateCheckResponse {
+        current_version: version.clone(),
+        latest_version: version,
+        update_available: false,
+    }))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SETUP UTILITY ENDPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Request body for `POST /api/v1/setup/change-password`
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct SetupChangePasswordRequest {
+    /// Username of the account whose password should be changed
+    pub username: String,
+    /// New password (min 8 characters)
+    pub new_password: String,
+}
+
+/// `POST /api/v1/setup/change-password` — change a user's password during setup.
+///
+/// Only works before setup is completed (mirrors the reset-password flow but
+/// without a token requirement).
+#[utoipa::path(
+    post,
+    path = "/api/v1/setup/change-password",
+    tag = "Setup",
+    summary = "Change password (setup)",
+    description = "Change a user's password. Only works before setup is completed.",
+    request_body = SetupChangePasswordRequest,
+    responses(
+        (status = 200, description = "Password changed"),
+        (status = 400, description = "Setup already completed or validation error"),
+        (status = 404, description = "User not found"),
+    )
+)]
+pub async fn setup_change_password(
+    State(state): State<SharedState>,
+    Json(req): Json<SetupChangePasswordRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Guard: only allow during setup phase
+    if !state_guard.db.is_fresh().await.unwrap_or(false) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "SETUP_COMPLETED",
+                "Setup already completed — use the normal change-password endpoint",
+            )),
+        );
+    }
+
+    if req.new_password.len() < 8 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                "New password must be at least 8 characters",
+            )),
+        );
+    }
+
+    let user = match state_guard
+        .db
+        .get_user_by_username(&req.username)
+        .await
+    {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let new_hash = match hash_password_simple(&req.new_password) {
+        Ok(h) => h,
+        Err(e) => {
+            tracing::error!("Password hashing failed: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let mut updated_user = user;
+    updated_user.password_hash = new_hash;
+    updated_user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&updated_user).await {
+        tracing::error!("Failed to save user: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update password")),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+/// `POST /api/v1/setup/complete` — explicitly mark setup as completed.
+///
+/// Wraps `mark_setup_completed()`. Idempotent if setup is already done.
+#[utoipa::path(
+    post,
+    path = "/api/v1/setup/complete",
+    tag = "Setup",
+    summary = "Mark setup as complete",
+    description = "Marks the initial setup wizard as completed. Idempotent.",
+    responses(
+        (status = 200, description = "Setup marked as completed"),
+    )
+)]
+pub async fn setup_complete(
+    State(state): State<SharedState>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+    if let Err(e) = state_guard.db.mark_setup_completed().await {
+        tracing::error!("Failed to mark setup completed: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to mark setup completed")),
+        );
+    }
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN SLOT UPDATE (PATCH)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Request body for `PATCH /api/v1/admin/slots/{id}`
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct AdminSlotUpdateRequest {
+    /// New slot number
+    pub slot_number: Option<i32>,
+    /// New floor name (stored as a label; floor_id is not changed)
+    pub floor_name: Option<String>,
+    /// New slot type (standard, compact, large, handicap, electric, motorcycle, vip)
+    pub slot_type: Option<String>,
+    /// New slot status (available, occupied, reserved, maintenance, disabled)
+    pub status: Option<String>,
+    /// New feature list (replaces existing)
+    pub features: Option<Vec<String>>,
+}
+
+/// `PATCH /api/v1/admin/slots/{id}` — admin slot update (all fields optional).
+///
+/// Allows changing slot_number, floor_name (label only), slot_type, status,
+/// and the features list. Admin only.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/slots/{id}",
+    tag = "Admin",
+    summary = "Update a parking slot (admin)",
+    description = "Patch any combination of slot fields. Admin only.",
+    params(("id" = String, Path, description = "Slot UUID")),
+    request_body = AdminSlotUpdateRequest,
+    responses(
+        (status = 200, description = "Slot updated"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Slot not found"),
+    )
+)]
+pub async fn admin_patch_slot(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<AdminSlotUpdateRequest>,
+) -> (StatusCode, Json<ApiResponse<parkhub_common::ParkingSlot>>) {
+    use parkhub_common::models::{SlotFeature, SlotType};
+
+    let state_guard = state.write().await;
+
+    // Admin check
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+            );
+        }
+    }
+
+    let mut slot = match state_guard.db.get_parking_slot(&id).await {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    if let Some(n) = req.slot_number {
+        slot.slot_number = n;
+    }
+
+    // floor_name is not a field on ParkingSlot (it lives on ParkingFloor in the lot).
+    // We store the intent here: look up the matching floor and update the name on the lot.
+    if let Some(ref new_floor_name) = req.floor_name {
+        if let Ok(Some(mut lot)) = state_guard
+            .db
+            .get_parking_lot(&slot.lot_id.to_string())
+            .await
+        {
+            if let Some(floor) = lot.floors.iter_mut().find(|f| f.id == slot.floor_id) {
+                floor.name = new_floor_name.clone();
+                let _ = state_guard.db.save_parking_lot(&lot).await;
+            }
+        }
+    }
+
+    if let Some(ref st) = req.slot_type {
+        slot.slot_type = match st.as_str() {
+            "compact" => SlotType::Compact,
+            "large" => SlotType::Large,
+            "handicap" => SlotType::Handicap,
+            "electric" => SlotType::Electric,
+            "motorcycle" => SlotType::Motorcycle,
+            "vip" => SlotType::Vip,
+            _ => SlotType::Standard,
+        };
+    }
+
+    if let Some(ref status) = req.status {
+        slot.status = match status.as_str() {
+            "available" => SlotStatus::Available,
+            "occupied" => SlotStatus::Occupied,
+            "reserved" => SlotStatus::Reserved,
+            "maintenance" => SlotStatus::Maintenance,
+            "disabled" => SlotStatus::Disabled,
+            _ => slot.status,
+        };
+    }
+
+    if let Some(ref feature_strs) = req.features {
+        slot.features = feature_strs
+            .iter()
+            .filter_map(|f| match f.as_str() {
+                "near_exit" => Some(SlotFeature::NearExit),
+                "near_elevator" => Some(SlotFeature::NearElevator),
+                "near_stairs" => Some(SlotFeature::NearStairs),
+                "covered" => Some(SlotFeature::Covered),
+                "security_camera" => Some(SlotFeature::SecurityCamera),
+                "well_lit" => Some(SlotFeature::WellLit),
+                "wide_lane" => Some(SlotFeature::WideLane),
+                "charging_station" => Some(SlotFeature::ChargingStation),
+                _ => None,
+            })
+            .collect();
+    }
+
+    if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+        tracing::error!("Failed to update slot: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update slot")),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(slot)))
 }
 
 #[cfg(test)]

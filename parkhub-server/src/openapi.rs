@@ -240,6 +240,10 @@ use crate::{
         crate::api::handshake,
         crate::api::server_status,
 
+        // System info (mod.rs)
+        crate::api::system_version,
+        crate::api::system_maintenance,
+
         // Users (mod.rs)
         crate::api::get_current_user,
         crate::api::update_current_user,
@@ -250,6 +254,7 @@ use crate::{
         crate::api::update_user_preferences,
         crate::api::gdpr_export_data,
         crate::api::gdpr_delete_account,
+        crate::api::gdpr_anonymize_account,
 
         // Bookings (mod.rs)
         crate::api::list_bookings,
@@ -271,6 +276,7 @@ use crate::{
         crate::api::lot_qr_code,
 
         // Admin (mod.rs)
+        crate::api::admin_update_slot,
         crate::api::admin_list_users,
         crate::api::admin_update_user_role,
         crate::api::admin_update_user_status,
