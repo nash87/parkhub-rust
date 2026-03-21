@@ -30,15 +30,18 @@ async fn test_state() -> Arc<RwLock<AppState>> {
     };
     let db = Database::open(db_config).expect("open test db");
 
-    let mut config = ServerConfig::default();
-    config.admin_password_hash = hash_password_for_test("admin123");
-    config.allow_self_registration = true; // enable for registration tests
+    let config = ServerConfig {
+        admin_password_hash: hash_password_for_test("admin123"),
+        allow_self_registration: true,
+        ..ServerConfig::default()
+    };
 
     let state = Arc::new(RwLock::new(AppState {
         config: config.clone(),
         db,
         mdns: None,
         scheduler: None,
+        ws_events: crate::api::ws::EventBroadcaster::new(),
     }));
 
     // Seed admin user
@@ -351,6 +354,7 @@ async fn register_creates_new_user() {
     let body = serde_json::json!({
         "email": "testuser@example.com",
         "password": "SecurePass1!",
+        "password_confirmation": "SecurePass1!",
         "name": "Test User",
     });
 
@@ -382,6 +386,7 @@ async fn register_duplicate_email_returns_409() {
         let body = serde_json::json!({
             "email": "dup@example.com",
             "password": "SecurePass1!",
+            "password_confirmation": "SecurePass1!",
             "name": "First",
         });
         let resp = app
@@ -402,6 +407,7 @@ async fn register_duplicate_email_returns_409() {
         let body = serde_json::json!({
             "email": "dup@example.com",
             "password": "AnotherPass1!",
+            "password_confirmation": "AnotherPass1!",
             "name": "Second",
         });
         let resp = app
@@ -424,9 +430,11 @@ async fn register_with_overly_long_password_returns_400() {
     let state = test_state().await;
     let app = router(state);
 
+    let long_pw = format!("Aa1{}", "x".repeat(300));
     let body = serde_json::json!({
         "email": "longpw@example.com",
-        "password": "x".repeat(300),
+        "password": long_pw,
+        "password_confirmation": long_pw,
         "name": "Long Pwd",
     });
 
@@ -795,7 +803,7 @@ async fn metrics_endpoint_returns_200_without_token_env() {
     assert_eq!(resp.status(), StatusCode::OK);
     let text = String::from_utf8(body_bytes(resp).await).unwrap();
     // Prometheus format — should contain at least empty output or metric lines
-    assert!(text.is_empty() || text.contains('#') || text.len() > 0);
+    assert!(text.is_empty() || text.contains('#'));
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

@@ -556,7 +556,8 @@ mod tests {
     fn test_openapi_has_recurring_booking_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in ["/api/v1/recurring-bookings"] {
+        {
+            let path = "/api/v1/recurring-bookings";
             assert!(json.contains(path), "Missing path: {path}");
         }
     }
@@ -577,7 +578,8 @@ mod tests {
     fn test_openapi_has_announcement_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in ["/api/v1/admin/announcements"] {
+        {
+            let path = "/api/v1/admin/announcements";
             assert!(json.contains(path), "Missing path: {path}");
         }
     }

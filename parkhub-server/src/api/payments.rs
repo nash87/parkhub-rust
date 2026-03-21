@@ -36,20 +36,16 @@ fn payments_enabled() -> bool {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Payment status for Stripe-style intents.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum StripePaymentStatus {
+    #[default]
     Pending,
     Succeeded,
     Failed,
     Refunded,
 }
 
-impl Default for StripePaymentStatus {
-    fn default() -> Self {
-        Self::Pending
-    }
-}
 
 /// A mock Stripe PaymentIntent (internal model, not yet persisted).
 #[derive(Debug, Clone, Serialize, Deserialize)]
