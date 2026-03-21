@@ -20,7 +20,7 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
 
     for port in ports {
         // Try HTTP first (most common for development)
-        let url = format!("http://localhost:{}/health", port);
+        let url = format!("http://localhost:{port}/health");
         debug!("Probing {}", url);
         match reqwest::Client::new()
             .get(&url)
@@ -32,7 +32,7 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
                 info!("Found local server at localhost:{}", port);
 
                 let server_info = parkhub_common::ServerInfo {
-                    name: format!("Local Server (localhost:{})", port),
+                    name: format!("Local Server (localhost:{port})"),
                     version: env!("CARGO_PKG_VERSION").to_string(),
                     protocol_version: parkhub_common::PROTOCOL_VERSION.to_string(),
                     host: "localhost".to_string(),
@@ -61,7 +61,7 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
         }
 
         // Also try 127.0.0.1
-        let url = format!("http://127.0.0.1:{}/health", port);
+        let url = format!("http://127.0.0.1:{port}/health");
         debug!("Probing {}", url);
         match reqwest::Client::new()
             .get(&url)
@@ -73,7 +73,7 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
                 info!("Found local server at 127.0.0.1:{}", port);
 
                 let server_info = parkhub_common::ServerInfo {
-                    name: format!("Local Server (127.0.0.1:{})", port),
+                    name: format!("Local Server (127.0.0.1:{port})"),
                     version: env!("CARGO_PKG_VERSION").to_string(),
                     protocol_version: parkhub_common::PROTOCOL_VERSION.to_string(),
                     host: "127.0.0.1".to_string(),
@@ -91,7 +91,6 @@ async fn probe_localhost(state: Arc<RwLock<AppState>>) -> bool {
                     state.discovered_servers.push(server_info);
                     found = true;
                 }
-                continue;
             }
             Ok(resp) => {
                 debug!("127.0.0.1:{} returned status {}", port, resp.status());
@@ -157,16 +156,13 @@ pub async fn discover_servers(state: Arc<RwLock<AppState>>) -> Result<()> {
                         .unwrap_or("unknown");
                     let tls = properties
                         .get_property_val_str("tls")
-                        .map(|s| s == "true")
-                        .unwrap_or(false);
+                        .is_some_and(|s| s == "true");
 
                     // Get first address
                     let host = info
                         .get_addresses()
                         .iter()
-                        .next()
-                        .map(|a| a.to_string())
-                        .unwrap_or_else(|| info.get_hostname().trim_end_matches('.').to_string());
+                        .next().map_or_else(|| info.get_hostname().trim_end_matches('.').to_string(), std::string::ToString::to_string);
 
                     let server_info = parkhub_common::ServerInfo {
                         name: info.get_fullname().to_string(),
