@@ -5,10 +5,11 @@ import { useTranslation } from 'react-i18next';
 import {
   CalendarBlank, Clock, Car, X, SpinnerGap,
   ArrowClockwise, Warning, MapPin, CalendarPlus, Timer,
-  MagnifyingGlass, Funnel,
+  MagnifyingGlass, Funnel, QrCode,
 } from '@phosphor-icons/react';
 import { api, type Booking, type Vehicle } from '../api/client';
 import { BookingsSkeleton } from '../components/Skeleton';
+import { ParkingPass } from '../components/ParkingPass';
 import { stagger, fadeUp } from '../constants/animations';
 import toast from 'react-hot-toast';
 import { format, formatDistanceToNow, isFuture } from 'date-fns';
@@ -23,6 +24,7 @@ export function BookingsPage() {
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchLot, setSearchLot] = useState('');
+  const [passBooking, setPassBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     loadData();
@@ -108,7 +110,7 @@ export function BookingsPage() {
             <AnimatePresence>
               {active.map(b => (
                 <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
-                  onCancel={handleCancel} cancelling={cancelling} t={t} dateFnsLocale={dateFnsLocale} />
+                  onCancel={handleCancel} cancelling={cancelling} onShowPass={setPassBooking} t={t} dateFnsLocale={dateFnsLocale} />
               ))}
             </AnimatePresence>
           </div>
@@ -124,7 +126,7 @@ export function BookingsPage() {
             <AnimatePresence>
               {upcoming.map(b => (
                 <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
-                  onCancel={handleCancel} cancelling={cancelling} t={t} dateFnsLocale={dateFnsLocale} />
+                  onCancel={handleCancel} cancelling={cancelling} onShowPass={setPassBooking} t={t} dateFnsLocale={dateFnsLocale} />
               ))}
             </AnimatePresence>
           </div>
@@ -145,6 +147,7 @@ export function BookingsPage() {
         )}
       </Section>
     </motion.div>
+    {passBooking && <ParkingPass booking={passBooking} onClose={() => setPassBooking(null)} />}
     </AnimatePresence>
   );
 }
@@ -172,7 +175,7 @@ function Empty({ text, showAction, t }: any) {
   );
 }
 
-function BookingCard({ booking, now, vehicles, onCancel, cancelling, t, dateFnsLocale }: any) {
+function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass, t, dateFnsLocale }: any) {
   const isActiveOrConfirmed = booking.status === 'active' || booking.status === 'confirmed';
   const isPast = booking.status === 'completed' || booking.status === 'cancelled';
   const isExpiring = isActiveOrConfirmed && new Date(booking.end_time).getTime() - now < 30 * 60 * 1000;
@@ -229,19 +232,30 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, t, dateFnsL
             : t('bookings.endsIn', { time: formatDistanceToNow(new Date(booking.end_time), { addSuffix: true, locale: dateFnsLocale }) })
           }
         </p>
-        {isActiveOrConfirmed && (
-          <button
-            onClick={() => onCancel(booking.id)}
-            disabled={cancelling === booking.id}
-            aria-label={`${t('bookings.cancelBtn')} ${booking.lot_name}`}
-            className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            {cancelling === booking.id
-              ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-              : <><X weight="bold" className="w-4 h-4" /> {t('bookings.cancelBtn')}</>
-            }
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isActiveOrConfirmed && (
+            <button
+              onClick={() => onShowPass(booking)}
+              aria-label={`${t('pass.showPass')} ${booking.lot_name}`}
+              className="btn btn-sm btn-ghost text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+            >
+              <QrCode weight="bold" className="w-4 h-4" /> {t('pass.showPass')}
+            </button>
+          )}
+          {isActiveOrConfirmed && (
+            <button
+              onClick={() => onCancel(booking.id)}
+              disabled={cancelling === booking.id}
+              aria-label={`${t('bookings.cancelBtn')} ${booking.lot_name}`}
+              className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              {cancelling === booking.id
+                ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
+                : <><X weight="bold" className="w-4 h-4" /> {t('bookings.cancelBtn')}</>
+              }
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   );

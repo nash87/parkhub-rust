@@ -104,6 +104,9 @@ use crate::{
         crate::api::credits::admin_grant_credits,
         crate::api::credits::admin_refill_all_credits,
         crate::api::credits::admin_update_user_quota,
+
+        // QR Pass
+        crate::api::qr::booking_qr_code,
     )
 )]
 pub struct ApiDoc;
