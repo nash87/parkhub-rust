@@ -200,6 +200,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Public occupancy display (no auth)
         .route("/api/v1/public/occupancy", get(public_occupancy))
         .route("/api/v1/public/display", get(public_display))
+        // Branding logo (public, no auth — needed before login for custom styling)
+        .route("/api/v1/branding/logo", get(get_public_logo))
         // VAPID public key (no auth — frontend needs it before login)
         .route("/api/v1/push/vapid-key", get(push::get_vapid_key))
         // WebSocket real-time events
@@ -435,6 +437,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/privacy",
             get(admin_get_privacy).put(admin_update_privacy),
         )
+        // Admin: branding settings
+        .route(
+            "/api/v1/admin/branding",
+            get(admin_get_branding).put(admin_update_branding),
+        )
+        .route("/api/v1/admin/branding/logo", post(admin_upload_logo))
         // Admin: update user
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
         // Translation management
@@ -7614,6 +7622,284 @@ pub async fn admin_update_user(
             "is_active": user.is_active,
         }))),
     )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADMIN: BRANDING SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for updating branding settings.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct UpdateBrandingRequest {
+    /// Display name for the application (e.g. "My Parking Hub")
+    name: Option<String>,
+    /// Primary brand colour in hex format, e.g. `#0d9488`
+    primary_color: Option<String>,
+    /// Secondary brand colour in hex format, e.g. `#0f766e`
+    secondary_color: Option<String>,
+}
+
+/// Request body for uploading a logo as base64-encoded image data.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct LogoUploadRequest {
+    /// Base64-encoded image bytes (raw or with `data:<mime>;base64,` prefix).
+    data: String,
+    /// MIME type declared by the client — `image/png` or `image/jpeg`.
+    mime_type: String,
+}
+
+/// `GET /api/v1/admin/branding` — return current branding settings.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/branding",
+    tag = "Admin",
+    summary = "Get branding settings",
+    description = "Return branding configuration (name, colours, logo URL). Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub async fn admin_get_branding(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let db = &state_guard.db;
+
+    let name = db
+        .get_setting("branding_name")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let primary_color = db
+        .get_setting("branding_primary_color")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let secondary_color = db
+        .get_setting("branding_secondary_color")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default();
+    let has_logo = db
+        .get_setting("branding_logo_data")
+        .await
+        .ok()
+        .flatten()
+        .is_some_and(|v| !v.is_empty());
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "name": name,
+            "primary_color": primary_color,
+            "secondary_color": secondary_color,
+            "logo_url": if has_logo { "/api/v1/branding/logo" } else { "" },
+        }))),
+    )
+}
+
+/// `PUT /api/v1/admin/branding` — update branding settings.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/branding",
+    tag = "Admin",
+    summary = "Update branding settings",
+    description = "Update application name and brand colours. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub async fn admin_update_branding(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<UpdateBrandingRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let db = &state_guard.db;
+
+    if let Some(name) = &req.name {
+        let _ = db.set_setting("branding_name", name).await;
+    }
+    if let Some(primary) = &req.primary_color {
+        let _ = db.set_setting("branding_primary_color", primary).await;
+    }
+    if let Some(secondary) = &req.secondary_color {
+        let _ = db.set_setting("branding_secondary_color", secondary).await;
+    }
+
+    AuditEntry::new(AuditEventType::ConfigChanged)
+        .user(auth_user.user_id, "admin")
+        .resource("settings", "branding")
+        .log();
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            serde_json::json!({"message": "Branding settings updated"}),
+        )),
+    )
+}
+
+/// `POST /api/v1/admin/branding/logo` -- upload a branding logo.
+///
+/// Accepts a base64-encoded PNG or JPEG (max 2 MB decoded).
+/// Stores the raw base64 payload in the DB under key `branding_logo_data`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/branding/logo",
+    tag = "Admin",
+    summary = "Upload branding logo",
+    description = "Upload a base64-encoded logo image (PNG or JPEG, max 2 MB). Admin only.",
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "Logo uploaded"),
+        (status = 400, description = "Invalid image or size exceeded"),
+    )
+)]
+pub async fn admin_upload_logo(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<LogoUploadRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    // Validate declared MIME type
+    if req.mime_type != "image/png" && req.mime_type != "image/jpeg" {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Only image/png and image/jpeg are accepted",
+            )),
+        );
+    }
+
+    let b64_payload = strip_data_uri_prefix(&req.data);
+
+    let Ok(raw_bytes) = base64::engine::general_purpose::STANDARD.decode(b64_payload) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_INPUT", "Invalid base64 data")),
+        );
+    };
+
+    // Size check (2 MB max)
+    if raw_bytes.len() > MAX_PHOTO_BYTES {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "PAYLOAD_TOO_LARGE",
+                "Logo exceeds 2 MB limit",
+            )),
+        );
+    }
+
+    // Validate magic bytes to prevent MIME spoofing
+    if detect_image_mime(&raw_bytes).is_none() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Unsupported image format. Only JPEG and PNG are accepted.",
+            )),
+        );
+    }
+
+    if let Err(e) = state_guard
+        .db
+        .set_setting("branding_logo_data", b64_payload)
+        .await
+    {
+        tracing::error!("Failed to save branding logo: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to save logo")),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::ConfigChanged)
+        .user(auth_user.user_id, "admin")
+        .resource("settings", "branding_logo")
+        .log();
+
+    tracing::info!(bytes = raw_bytes.len(), "Branding logo uploaded");
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(
+            serde_json::json!({"message": "Logo uploaded", "logo_url": "/api/v1/branding/logo"}),
+        )),
+    )
+}
+
+/// `GET /api/v1/branding/logo` -- serve the branding logo (public, no auth).
+///
+/// Returns the binary image with `Content-Type` and a one-hour public cache header.
+#[utoipa::path(
+    get,
+    path = "/api/v1/branding/logo",
+    tag = "Branding",
+    summary = "Get branding logo",
+    description = "Returns the stored branding logo as binary image. No authentication required.",
+    responses(
+        (status = 200, description = "Logo image bytes"),
+        (status = 404, description = "No logo configured"),
+    )
+)]
+pub async fn get_public_logo(State(state): State<SharedState>) -> Response {
+    let state_guard = state.read().await;
+
+    let Ok(Some(stored)) = state_guard.db.get_setting("branding_logo_data").await else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("NOT_FOUND", "No logo configured")),
+        )
+            .into_response();
+    };
+
+    if stored.is_empty() {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("NOT_FOUND", "No logo configured")),
+        )
+            .into_response();
+    }
+
+    let b64_payload = strip_data_uri_prefix(&stored);
+
+    let Ok(raw_bytes) = base64::engine::general_purpose::STANDARD.decode(b64_payload) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(
+                "SERVER_ERROR",
+                "Corrupt logo data",
+            )),
+        )
+            .into_response();
+    };
+
+    let content_type = detect_image_mime(&raw_bytes).unwrap_or("application/octet-stream");
+
+    (
+        StatusCode::OK,
+        [
+            (header::CONTENT_TYPE, content_type),
+            (header::CACHE_CONTROL, "public, max-age=3600"),
+        ],
+        raw_bytes,
+    )
+        .into_response()
 }
 
 #[cfg(test)]

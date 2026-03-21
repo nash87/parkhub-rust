@@ -356,6 +356,12 @@ use crate::{
         crate::api::admin_update_privacy,
         crate::api::admin_update_user,
 
+        // Branding
+        crate::api::admin_get_branding,
+        crate::api::admin_update_branding,
+        crate::api::admin_upload_logo,
+        crate::api::get_public_logo,
+
         // QR Pass
         crate::api::qr::booking_qr_code,
 
