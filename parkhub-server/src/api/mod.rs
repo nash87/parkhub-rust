@@ -287,7 +287,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
             "/api/v1/bookings/{id}",
-            get(get_booking).delete(cancel_booking),
+            get(get_booking)
+                .delete(cancel_booking)
+                .patch(update_booking),
         )
         .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
         // Smart parking recommendations
@@ -387,7 +389,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/absences/pattern",
             get(get_absence_pattern).post(save_absence_pattern),
         )
-        .route("/api/v1/absences/{id}", delete(delete_absence))
+        .route(
+            "/api/v1/absences/{id}",
+            delete(delete_absence).put(update_absence),
+        )
         // Team view
         .route("/api/v1/team/today", get(team_today))
         // Admin-only: announcements management
@@ -426,7 +431,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         .route(
             "/api/v1/recurring-bookings/{id}",
-            delete(delete_recurring_booking),
+            delete(delete_recurring_booking).put(update_recurring_booking),
         )
         // Guest bookings
         .route("/api/v1/bookings/guest", post(create_guest_booking))
@@ -7336,6 +7341,323 @@ pub async fn admin_update_user(
             "is_active": user.is_active,
         }))),
     )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOKING UPDATE (PATCH /api/v1/bookings/{id})
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for patching a booking
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct PatchBookingRequest {
+    pub notes: Option<String>,
+    pub start_time: Option<DateTime<Utc>>,
+    pub end_time: Option<DateTime<Utc>>,
+}
+
+/// `PATCH /api/v1/bookings/{id}` — update notes/times on an existing booking
+#[utoipa::path(
+    patch,
+    path = "/api/v1/bookings/{id}",
+    tag = "Bookings",
+    summary = "Update a booking",
+    description = "Update notes and/or times on a booking. Only the booking owner or an admin may update.",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<PatchBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    let state_guard = state.read().await;
+
+    let mut booking = match state_guard.db.get_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching booking: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Check ownership or admin
+    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+    let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
+    if booking.user_id != auth_user.user_id && !is_admin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    if let Some(notes) = req.notes {
+        booking.notes = Some(notes);
+    }
+    if let Some(start_time) = req.start_time {
+        booking.start_time = start_time;
+    }
+    if let Some(end_time) = req.end_time {
+        booking.end_time = end_time;
+    }
+    booking.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_booking(&booking).await {
+        tracing::error!("Failed to update booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update booking")),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::BookingUpdated)
+        .user(auth_user.user_id, &caller.username)
+        .resource("booking", &id)
+        .details(serde_json::json!({"action": "patch"}))
+        .log();
+
+    (StatusCode::OK, Json(ApiResponse::success(booking)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECURRING BOOKING UPDATE (PUT /api/v1/recurring-bookings/{id})
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for updating a recurring booking
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct UpdateRecurringBookingRequest {
+    pub days_of_week: Option<Vec<u8>>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+/// `PUT /api/v1/recurring-bookings/{id}` — update a recurring booking pattern
+#[utoipa::path(
+    put,
+    path = "/api/v1/recurring-bookings/{id}",
+    tag = "Bookings",
+    summary = "Update a recurring booking",
+    description = "Update days_of_week, start_date, or end_date of a recurring booking. Only the owner or an admin may update. Note: re-expansion of future bookings is not performed automatically.",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_recurring_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateRecurringBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let Ok(id_uuid) = Uuid::parse_str(&id) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_ID", "Invalid ID format")),
+        );
+    };
+
+    let state_guard = state.read().await;
+
+    // Fetch caller to check admin status
+    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+    let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
+
+    // Try ownership lookup first
+    let user_bookings = state_guard
+        .db
+        .list_recurring_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+        .unwrap_or_default();
+
+    let mut booking = match user_bookings.into_iter().find(|b| b.id == id_uuid) {
+        Some(b) => b,
+        None => {
+            if !is_admin {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+                );
+            }
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "NOT_FOUND",
+                    "Recurring booking not found",
+                )),
+            );
+        }
+    };
+
+    if let Some(days) = req.days_of_week {
+        booking.days_of_week = days;
+    }
+    if let Some(start_date) = req.start_date {
+        booking.start_date = start_date;
+    }
+    if let Some(end_date) = req.end_date {
+        booking.end_date = Some(end_date);
+    }
+
+    if let Err(e) = state_guard.db.save_recurring_booking(&booking).await {
+        tracing::error!("Failed to update recurring booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update recurring booking",
+            )),
+        );
+    }
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "id": booking.id.to_string(),
+            "days_of_week": booking.days_of_week,
+            "start_date": booking.start_date,
+            "end_date": booking.end_date,
+            "note": "Future expanded bookings are not re-generated automatically. Trigger re-expansion separately if needed."
+        }))),
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ABSENCE UPDATE (PUT /api/v1/absences/{id})
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for updating an absence
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct UpdateAbsenceRequest {
+    pub absence_type: Option<AbsenceType>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub notes: Option<String>,
+}
+
+/// `PUT /api/v1/absences/{id}` — update an existing absence
+#[utoipa::path(
+    put,
+    path = "/api/v1/absences/{id}",
+    tag = "Absences",
+    summary = "Update an absence",
+    description = "Update absence_type, start_date, end_date, or notes. Only the owner or an admin may update.",
+    security(("bearer_auth" = []))
+)]
+pub async fn update_absence(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateAbsenceRequest>,
+) -> (StatusCode, Json<ApiResponse<Absence>>) {
+    let state_guard = state.read().await;
+
+    let mut absence = match state_guard.db.get_absence(&id).await {
+        Ok(Some(a)) => a,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Absence not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching absence: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Check ownership or admin
+    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+            );
+        }
+    };
+    let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
+    if absence.user_id != auth_user.user_id && !is_admin {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    if let Some(absence_type) = req.absence_type {
+        absence.absence_type = absence_type;
+    }
+    if let Some(start_date) = req.start_date {
+        if !is_valid_date(&start_date) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "start_date must be in YYYY-MM-DD format",
+                )),
+            );
+        }
+        absence.start_date = start_date;
+    }
+    if let Some(end_date) = req.end_date {
+        if !is_valid_date(&end_date) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "end_date must be in YYYY-MM-DD format",
+                )),
+            );
+        }
+        absence.end_date = end_date;
+    }
+    if let Some(notes) = req.notes {
+        absence.note = Some(notes);
+    }
+
+    if absence.start_date > absence.end_date {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "start_date must not be after end_date",
+            )),
+        );
+    }
+
+    match state_guard.db.save_absence(&absence).await {
+        Ok(()) => (StatusCode::OK, Json(ApiResponse::success(absence))),
+        Err(e) => {
+            tracing::error!("Failed to update absence: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to update absence")),
+            )
+        }
+    }
 }
 
 #[cfg(test)]
