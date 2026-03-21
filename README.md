@@ -259,13 +259,13 @@ The binary serves the full React frontend — no web server or reverse proxy nee
 
 ## Testing
 
-**965 tests total** across three layers:
+**1,390 tests total** across three layers:
 
 | Layer | Framework | Tests |
 |---|---|---|
-| Backend (Rust) | `cargo test` | 426 |
-| Frontend (React) | Vitest + Testing Library | 213 |
-| Backend (PHP) | PHPUnit | 326 |
+| Backend (Rust) | `cargo test` | 505 |
+| Frontend (React) | Vitest + Testing Library | 401 |
+| Backend (PHP) | PHPUnit | 484 |
 | E2E (browser) | Playwright | Included |
 | E2E (mobile) | Maestro | 5 flows |
 | Performance | Lighthouse CI | Included |
