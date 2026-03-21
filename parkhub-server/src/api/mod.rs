@@ -75,7 +75,6 @@ mod bookings;
 pub mod branding;
 pub mod credits;
 pub mod export;
-pub mod import;
 pub mod favorites;
 pub mod import;
 pub mod lots;
@@ -104,7 +103,7 @@ use vehicles::{
     upload_vehicle_photo, vehicle_city_codes,
 };
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
-use import::import_users_csv;
+use import::{import_absences_ical, import_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_pricing, get_lot_slots,
@@ -232,6 +231,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/sw.js", get(pwa::service_worker))
         // Branding logo (public, cached)
         .route("/api/v1/branding/logo", get(branding::get_branding_logo))
+        // System info (public — no auth needed for version/maintenance checks)
+        .route("/api/v1/system/version", get(system_version))
+        .route("/api/v1/system/maintenance", get(system_maintenance))
         // WebSocket real-time events
         .route("/api/v1/ws", get(ws::ws_handler));
 
@@ -381,6 +383,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/users/import",
             post(import::import_users_csv),
+        )
+        // Absence iCal import (user-scoped)
+        .route(
+            "/api/v1/absences/import/ical",
+            post(import::import_absences_ical),
         )
         // Absences (user-scoped)
         .route("/api/v1/absences", get(list_absences).post(create_absence))
@@ -966,6 +973,28 @@ pub async fn readiness_check(State(state): State<SharedState>) -> impl IntoRespo
             )
         }
     }
+}
+
+
+/// `GET /api/v1/system/version` — server version information
+pub async fn system_version() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "name": env!("CARGO_PKG_NAME"),
+    }))
+}
+
+/// `GET /api/v1/system/maintenance` — maintenance mode status
+pub async fn system_maintenance(State(state): State<SharedState>) -> Json<serde_json::Value> {
+    let state = state.read().await;
+    let maintenance = match state.db.get_setting("maintenance_mode").await {
+        Ok(Some(v)) => v == "true",
+        _ => false,
+    };
+    Json(serde_json::json!({
+        "maintenance_mode": maintenance,
+        "message": if maintenance { "System is under maintenance" } else { "" }
+    }))
 }
 
 #[utoipa::path(
