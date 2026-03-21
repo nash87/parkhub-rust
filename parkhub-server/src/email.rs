@@ -199,6 +199,120 @@ pub fn build_password_reset_email(reset_url: &str, org_name: &str) -> String {
     )
 }
 
+/// Build a welcome email body for new user registrations.
+pub fn build_welcome_email(user_name: &str, org_name: &str) -> String {
+    use crate::utils::html_escape;
+    let org_raw = if org_name.is_empty() {
+        "ParkHub"
+    } else {
+        org_name
+    };
+    let org = html_escape(org_raw);
+    let user_name = html_escape(user_name);
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Welcome to {org}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+    .container {{ max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px;
+                  padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+    h1 {{ color: #1a73e8; margin-top: 0; }}
+    p  {{ color: #333333; line-height: 1.6; }}
+    .highlight {{ background: #e8f0fe; border-left: 4px solid #1a73e8; padding: 16px; border-radius: 4px;
+                  margin: 20px 0; }}
+    .footer {{ margin-top: 40px; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee;
+               padding-top: 16px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to {org}!</h1>
+    <p>Dear <strong>{user_name}</strong>,</p>
+    <p>Your account has been created successfully. You can now log in and start booking parking slots.</p>
+    <div class="highlight">
+      <p><strong>Getting started:</strong></p>
+      <p>Browse available parking lots, book your preferred slot, and manage your bookings from your dashboard.</p>
+    </div>
+    <p>If you have any questions, please contact your administrator.</p>
+    <div class="footer">
+      <p>This email was sent by {org}. You received this because an account was created with your email address.</p>
+    </div>
+  </div>
+</body>
+</html>"#,
+    )
+}
+
+/// Build a booking cancellation confirmation email body.
+#[allow(clippy::too_many_arguments)]
+pub fn build_booking_cancellation_email(
+    user_name: &str,
+    booking_id: &str,
+    floor_name: &str,
+    slot_number: i32,
+    start_time: &str,
+    end_time: &str,
+    org_name: &str,
+) -> String {
+    use crate::utils::html_escape;
+    let org_raw = if org_name.is_empty() {
+        "ParkHub"
+    } else {
+        org_name
+    };
+    let org = html_escape(org_raw);
+    let user_name = html_escape(user_name);
+    let booking_id = html_escape(booking_id);
+    let floor_name = html_escape(floor_name);
+    let start_time = html_escape(start_time);
+    let end_time = html_escape(end_time);
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Booking Cancelled — {org}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+    .container {{ max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px;
+                  padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+    h1 {{ color: #d93025; margin-top: 0; }}
+    p  {{ color: #333333; line-height: 1.6; }}
+    .detail-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+    .detail-table td {{ padding: 10px 12px; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #333333; }}
+    .detail-table td:first-child {{ font-weight: bold; width: 40%; color: #555555; }}
+    .booking-ref {{ display: inline-block; background: #fce8e6; color: #d93025; padding: 8px 16px;
+                    border-radius: 4px; font-family: monospace; font-size: 13px; margin: 8px 0; }}
+    .footer {{ margin-top: 40px; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee;
+               padding-top: 16px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>{org} — Booking Cancelled</h1>
+    <p>Dear <strong>{user_name}</strong>,</p>
+    <p>Your parking booking has been cancelled. The slot has been released and is available for others.</p>
+    <div class="booking-ref">{booking_id}</div>
+    <table class="detail-table">
+      <tr><td>Floor</td><td>{floor_name}</td></tr>
+      <tr><td>Slot Number</td><td>{slot_number}</td></tr>
+      <tr><td>Original Start</td><td>{start_time}</td></tr>
+      <tr><td>Original End</td><td>{end_time}</td></tr>
+      <tr><td>Status</td><td>Cancelled</td></tr>
+    </table>
+    <p>If credits were deducted for this booking, they have been refunded to your account.</p>
+    <div class="footer">
+      <p>This email was sent by {org}. If you have questions, contact your administrator.</p>
+    </div>
+  </div>
+</body>
+</html>"#,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,6 +468,91 @@ mod tests {
     fn reset_email_mentions_one_hour_validity() {
         let html = build_password_reset_email("https://example.com/r", "");
         assert!(html.contains("1 hour"));
+    }
+
+    // ── build_welcome_email ──
+
+    #[test]
+    fn welcome_email_contains_user_name() {
+        let html = build_welcome_email("Alice", "Acme Corp");
+        assert!(html.contains("Alice"));
+        assert!(html.contains("Acme Corp"));
+    }
+
+    #[test]
+    fn welcome_email_defaults_org_to_parkhub() {
+        let html = build_welcome_email("Bob", "");
+        assert!(html.contains("ParkHub"));
+    }
+
+    #[test]
+    fn welcome_email_escapes_html() {
+        let html = build_welcome_email("<script>xss</script>", "");
+        assert!(!html.contains("<script>xss"));
+        assert!(html.contains("&lt;script&gt;"));
+    }
+
+    #[test]
+    fn welcome_email_is_valid_html() {
+        let html = build_welcome_email("Carol", "TestOrg");
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("</html>"));
+        assert!(html.contains("<title>Welcome to TestOrg</title>"));
+    }
+
+    #[test]
+    fn welcome_email_mentions_getting_started() {
+        let html = build_welcome_email("Dave", "");
+        assert!(html.contains("Getting started"));
+    }
+
+    // ── build_booking_cancellation_email ──
+
+    #[test]
+    fn cancellation_email_contains_booking_details() {
+        let html = build_booking_cancellation_email(
+            "Alice", "BK-001", "Ground Floor", 5, "2026-03-20 09:00", "2026-03-20 17:00", "Acme",
+        );
+        assert!(html.contains("Alice"));
+        assert!(html.contains("BK-001"));
+        assert!(html.contains("Ground Floor"));
+        assert!(html.contains("Cancelled"));
+        assert!(html.contains("Acme"));
+    }
+
+    #[test]
+    fn cancellation_email_defaults_org_to_parkhub() {
+        let html = build_booking_cancellation_email(
+            "Bob", "BK-002", "Level 2", 3, "09:00", "12:00", "",
+        );
+        assert!(html.contains("ParkHub"));
+    }
+
+    #[test]
+    fn cancellation_email_escapes_html() {
+        let html = build_booking_cancellation_email(
+            "<img src=x>", "BK-XSS", "F", 1, "09:00", "10:00", "",
+        );
+        assert!(!html.contains("<img src=x>"));
+        assert!(html.contains("&lt;img"));
+    }
+
+    #[test]
+    fn cancellation_email_is_valid_html() {
+        let html = build_booking_cancellation_email(
+            "Carol", "BK-003", "A", 42, "08:00", "18:00", "ParkCo",
+        );
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("</html>"));
+        assert!(html.contains("<title>Booking Cancelled"));
+    }
+
+    #[test]
+    fn cancellation_email_mentions_credit_refund() {
+        let html = build_booking_cancellation_email(
+            "Eve", "BK-004", "B1", 7, "10:00", "11:00", "",
+        );
+        assert!(html.contains("refunded"));
     }
 
     // ── send_email (no SMTP configured) ──
