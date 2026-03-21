@@ -59,7 +59,8 @@ use crate::{
         (name = "Notifications", description = "In-app notification management"),
         (name = "Waitlist", description = "Parking lot waitlist"),
         (name = "Calendar", description = "Calendar events and iCal export"),
-        (name = "Team", description = "Team overview and member status")
+        (name = "Team", description = "Team overview and member status"),
+        (name = "Payments", description = "Stripe payment stub (demo mode)")
     ),
     components(
         schemas(
@@ -149,6 +150,13 @@ use crate::{
             crate::api::EmailSettingsRequest,
             crate::api::PrivacySettingsRequest,
             crate::api::AdminUpdateUserRequest,
+
+            // Payments
+            crate::api::payments::CreatePaymentIntentRequest,
+            crate::api::payments::ConfirmPaymentRequest,
+            crate::api::payments::PaymentIntentResponse,
+            crate::api::payments::PaymentStatusResponse,
+            crate::api::payments::StripePaymentStatus,
         )
     ),
     paths(
@@ -332,6 +340,11 @@ use crate::{
 
         // QR Pass
         crate::api::qr::booking_qr_code,
+
+        // Payments (Stripe stub)
+        crate::api::payments::create_payment_intent,
+        crate::api::payments::confirm_payment,
+        crate::api::payments::payment_status,
     )
 )]
 pub struct ApiDoc;
