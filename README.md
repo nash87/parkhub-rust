@@ -142,8 +142,11 @@
 | Guest booking management | Done |
 | Impressum editor in admin panel | Done |
 | Prometheus metrics endpoint (`/metrics`) with HTTP + business metrics | Done |
-| Swagger UI at `/swagger-ui` with 18+ annotated endpoints | Done |
+| Swagger UI at `/swagger-ui` with 30+ annotated endpoints (OpenAPI 3.0) | Done |
 | Use-case theming (company, residential, shared, rental, personal) | Done |
+| Community translation proposals (submit, vote, admin review/approve) | Done |
+| Runtime translation overrides (approved translations hot-loaded) | Done |
+| Smart slot recommendations (heuristic scoring: frequency, proximity, features) | Done |
 | Demo reset with full DB wipe and re-seed | Done |
 | Auto-reset scheduler (every 6h in demo mode) | Done |
 | Automatic daily backups with configurable retention | Done |
@@ -166,6 +169,9 @@
 | Tailwind CSS 4 with @utility directives | Done |
 | PWA (installable, offline-capable, service worker) | Done |
 | i18n — 10 languages (EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH) | Done |
+| Favorites view — pin & manage preferred parking slots | Done |
+| DataTable CSV export (download any table as spreadsheet) | Done |
+| Dashboard analytics bar chart (7-day booking activity) | Done |
 | WebSocket real-time events (booking/occupancy updates) | Done |
 | Stripe payment stub (demo mode, mock checkout flow) | Done |
 

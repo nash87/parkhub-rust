@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.9.0] - 2026-03-21
+
+### Added
+- **Community translation management**: Proposal submission, up/down voting, admin review (approve/reject with comments)
+- **Runtime translation overrides**: Approved translations hot-loaded into i18n at app startup
+- **Smart slot recommendations**: Heuristic scoring engine (slot frequency, lot frequency, features, proximity, base) — top 5 returned
+- **Favorites UI**: Full view for managing pinned parking slots with live availability status
+- **OpenAPI docs**: 30+ annotated endpoints — translations and recommendations schemas registered
+- **Dashboard analytics**: 7-day booking activity bar chart with real booking data
+- **DataTable CSV export**: Download any data table as CSV with proper cell escaping
+- **A11y audit fixes**: ARIA labels on icon buttons, contrast fixes, confirm dialogs replacing window.confirm
+- **Demo reset tracking**: `last_reset_at`, `next_scheduled_reset`, `reset_in_progress` in status API + overlay
+- **PUSH_SUBSCRIPTIONS drain**: Demo reset now properly clears push subscription table
+
+### Changed
+- Clippy pedantic: `map_or`, `let...else`, format string inlining across translation + recommendation handlers
+- API client: 4 `any` types replaced with proper TypeScript interfaces
+- Version bumped to 1.9.0
+
+### Tests
+- **505 Rust + 484 PHP + 401 Frontend** = 1,390 total tests
+
+---
+
 ## [1.6.0] - 2026-03-20
 
 ### Added
