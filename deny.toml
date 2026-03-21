@@ -19,6 +19,8 @@ ignore = [
 ]
 
 [licenses]
+# Confidence threshold for detecting a license from file contents
+confidence-threshold = 0.8
 # Allow common permissive licenses
 allow = [
     "MIT",
@@ -83,9 +85,6 @@ crate = "i-slint-renderer-femtovg"
 [[licenses.exceptions]]
 allow = ["GPL-3.0-only", "LicenseRef-Slint-Royalty-free-2.0", "LicenseRef-Slint-Software-3.0"]
 crate = "i-slint-renderer-software"
-
-# Confidence threshold for detecting a license from file contents
-confidence-threshold = 0.8
 
 [bans]
 # Warn on multiple versions of the same crate
