@@ -34,6 +34,12 @@ jobs:
           cargo check --package parkhub-common --all-targets
           cargo check --package parkhub-server --no-default-features --features headless --all-targets
 
+      - name: Check minimal build (no modules)
+        run: cargo check --package parkhub-server --no-default-features --features headless
+
+      - name: Check full build (all modules)
+        run: cargo check --package parkhub-server --no-default-features --features "full,headless"
+
   fmt:
     name: Cargo Format Check
     runs-on: ubuntu-latest
@@ -69,6 +75,7 @@ jobs:
         run: |
           cargo clippy --package parkhub-common --all-targets -- -D warnings
           cargo clippy --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings
+          cargo clippy --package parkhub-server --no-default-features --features "full,headless" --all-targets -- -D warnings
 
   test:
     name: Cargo Test
@@ -86,10 +93,13 @@ jobs:
       - name: Create placeholder web dist
         run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
-      - name: Run tests (server + common)
+      - name: Run tests (server + common, minimal features)
         run: |
           cargo test --package parkhub-common --all-targets
           cargo test --package parkhub-server --no-default-features --features headless --all-targets
+
+      - name: Run tests (server, full features)
+        run: cargo test --package parkhub-server --no-default-features --features "full,headless" --all-targets
 
       - name: Run doc tests
         run: |
