@@ -429,7 +429,7 @@ def main():
     print("\n✅ Seed complete!")
     print(f"   Parking lots : {len(lot_data)}")
     print(f"   Users        : {len(users)}")
-    print(f"   Credentials  : admin / {ADMIN_PASSWORD} | any user / Demo2026!X")
+    print(f"   Credentials  : admin / {'*' * len(ADMIN_PASSWORD)} | any user / {'*' * 9}")  # noqa: S106
     print(f"   Dashboard    : {BASE_URL}")
 
 
