@@ -1,0 +1,44 @@
+# cargo-deny configuration
+# https://embarkstudios.github.io/cargo-deny/
+
+[advisories]
+# Allow unmaintained rustls-pemfile — migration to rustls-pki-types PemObject planned
+ignore = [
+    "RUSTSEC-2025-0134", # rustls-pemfile unmaintained
+]
+
+[licenses]
+# Allow common permissive licenses
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "BSL-1.0",
+    "OpenSSL",
+    "MPL-2.0",
+    "CC0-1.0",
+    "Unlicense",
+    "0BSD",
+]
+# ring uses a custom license that is BSD-like
+exceptions = [
+    { allow = ["ring"], crate = "ring" },
+]
+# Confidence threshold for detecting a license from file contents
+confidence-threshold = 0.8
+
+[bans]
+# Warn on multiple versions of the same crate
+multiple-versions = "warn"
+# Allow duplicate versions
+wildcards = "allow"
+
+[sources]
+# Only allow crates from crates.io and git repos
+unknown-registry = "deny"
+unknown-git = "allow"
