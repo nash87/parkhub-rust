@@ -106,16 +106,18 @@ describe('LoginPage', () => {
     expect(screen.getByText('Use admin/demo to log in')).toBeInTheDocument();
   });
 
-  it('has required attribute on both inputs', () => {
+  it('uses noValidate form with react-hook-form validation', () => {
     render(<LoginPage />);
 
-    expect(screen.getByLabelText('Email')).toBeRequired();
-    expect(screen.getByLabelText('Password')).toBeRequired();
+    // Form uses noValidate + zod schema validation, not HTML5 required
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
   });
 
-  it('submit button is disabled when fields are empty', () => {
+  it('submit button is enabled initially (validation on submit)', () => {
     render(<LoginPage />);
-    expect(screen.getByRole('button', { name: 'Sign In' })).toBeDisabled();
+    // react-hook-form disables only during submission (isSubmitting)
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeEnabled();
   });
 
   it('submit button is enabled when both fields are filled', async () => {

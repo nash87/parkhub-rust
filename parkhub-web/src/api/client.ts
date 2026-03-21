@@ -164,6 +164,31 @@ export const api = {
     return res as ApiResponse<DemoStatus>;
   },
   voteDemoReset: () => request('/api/v1/demo/vote', { method: 'POST' }),
+
+  // ── Translations ──
+  getTranslationOverrides: () =>
+    request<TranslationOverride[]>('/api/v1/translations/overrides'),
+
+  getTranslationProposals: (status?: ProposalStatus) =>
+    request<TranslationProposal[]>(`/api/v1/translations/proposals${status ? `?status=${status}` : ''}`),
+
+  getTranslationProposal: (id: string) =>
+    request<TranslationProposal>(`/api/v1/translations/proposals/${id}`),
+
+  createTranslationProposal: (data: CreateProposalRequest) =>
+    request<TranslationProposal>('/api/v1/translations/proposals', {
+      method: 'POST', body: JSON.stringify(data),
+    }),
+
+  voteOnProposal: (id: string, vote: 'up' | 'down') =>
+    request<TranslationProposal>(`/api/v1/translations/proposals/${id}/vote`, {
+      method: 'POST', body: JSON.stringify({ vote }),
+    }),
+
+  reviewProposal: (id: string, data: ReviewProposalRequest) =>
+    request<TranslationProposal>(`/api/v1/translations/proposals/${id}/review`, {
+      method: 'PUT', body: JSON.stringify(data),
+    }),
 };
 
 // ── Types ──
@@ -399,4 +424,47 @@ export interface UpdateLotRequest {
   monthly_pass?: number;
   currency?: string;
   status?: LotStatus;
+}
+
+// ── Translation Management ──
+
+export type ProposalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface TranslationProposal {
+  id: string;
+  language: string;
+  key: string;
+  current_value: string;
+  proposed_value: string;
+  context?: string;
+  proposed_by: string;
+  proposed_by_name: string;
+  status: ProposalStatus;
+  votes_for: number;
+  votes_against: number;
+  user_vote?: 'up' | 'down' | null;
+  reviewer_id?: string;
+  reviewer_name?: string;
+  review_comment?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TranslationOverride {
+  language: string;
+  key: string;
+  value: string;
+  updated_at: string;
+}
+
+export interface CreateProposalRequest {
+  language: string;
+  key: string;
+  proposed_value: string;
+  context?: string;
+}
+
+export interface ReviewProposalRequest {
+  status: 'approved' | 'rejected';
+  comment?: string;
 }

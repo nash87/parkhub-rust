@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createColumnHelper } from '@tanstack/react-table';
 import {
   Users, SpinnerGap, MagnifyingGlass, Coins,
   PencilSimple, X, Check, Gauge, UserMinus, UserPlus,
@@ -7,6 +8,9 @@ import {
 import { api, type User } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { DataTable } from '../components/ui/DataTable';
+
+const columnHelper = createColumnHelper<User>();
 
 export function AdminUsersPage() {
   const { t } = useTranslation();
@@ -42,16 +46,6 @@ export function AdminUsersPage() {
       setLoading(false);
     }
   }
-
-  const filtered = users.filter(u => {
-    if (!debouncedSearch) return true;
-    const q = debouncedSearch.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.username.toLowerCase().includes(q)
-    );
-  });
 
   function startEditRole(user: User) {
     setEditingId(user.id);
@@ -142,9 +136,133 @@ export function AdminUsersPage() {
     );
   }
 
+  const columns = useMemo(() => [
+    columnHelper.accessor('name', {
+      header: () => t('admin.users'),
+      cell: info => (
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{info.getValue()}</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{info.row.original.email}</p>
+        </div>
+      ),
+      enableSorting: true,
+    }),
+    columnHelper.accessor('role', {
+      header: () => t('admin.editRole'),
+      cell: info => {
+        const user = info.row.original;
+        if (editingId === user.id) {
+          return (
+            <div className="flex items-center gap-2">
+              <select value={editRole} onChange={e => setEditRole(e.target.value)} className="input text-xs py-1 px-2 w-28">
+                <option value="user">user</option>
+                <option value="admin">admin</option>
+                <option value="superadmin">superadmin</option>
+              </select>
+              <button onClick={() => saveRole(user.id)} disabled={savingRole} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label={t('common.save')}>
+                {savingRole ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+              </button>
+              <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('common.cancel')}>
+                <X weight="bold" className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        }
+        return roleBadge(user.role);
+      },
+      enableSorting: true,
+    }),
+    columnHelper.accessor('credits_balance', {
+      header: () => t('admin.credits'),
+      cell: info => <span className="text-sm font-semibold text-surface-900 dark:text-white tabular-nums">{info.getValue()}</span>,
+      enableSorting: true,
+    }),
+    columnHelper.accessor('credits_monthly_quota', {
+      header: () => t('admin.monthlyQuota'),
+      cell: info => {
+        const user = info.row.original;
+        if (editingQuotaId === user.id) {
+          return (
+            <div className="flex items-center gap-2">
+              <input type="number" min={0} max={999} value={editQuota} onChange={e => setEditQuota(e.target.value)} className="input text-xs py-1 px-2 w-20" aria-label={t('admin.monthlyQuota')} />
+              <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label={t('admin.saveQuota')}>
+                {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+              </button>
+              <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('admin.cancelEditQuota')}>
+                <X weight="bold" className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        }
+        return (
+          <button
+            onClick={() => startEditQuota(user)}
+            className="inline-flex items-center gap-1.5 text-sm text-surface-700 dark:text-surface-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            aria-label={t('admin.editQuota', { name: user.name })}
+          >
+            <span className="font-semibold tabular-nums">{user.credits_monthly_quota}</span>
+          </button>
+        );
+      },
+      enableSorting: true,
+    }),
+    columnHelper.accessor('is_active', {
+      header: () => t('admin.status'),
+      cell: info => (
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+          info.getValue()
+            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
+            : 'bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400'
+        }`}>
+          {info.getValue() ? t('admin.active') : t('admin.inactive')}
+        </span>
+      ),
+      enableSorting: true,
+    }),
+    columnHelper.display({
+      id: 'actions',
+      header: '',
+      cell: info => {
+        const user = info.row.original;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => startEditRole(user)}
+              className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
+              title={t('admin.editRole')}
+              aria-label={`${t('admin.editRole')} ${user.name}`}
+            >
+              <PencilSimple weight="bold" className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setCreditUserId(user.id); setCreditAmount(''); setCreditDesc(''); }}
+              className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-accent-600"
+              title={t('admin.grantCreditsFor')}
+              aria-label={`${t('admin.grantCredits')} ${user.name}`}
+            >
+              <Coins weight="bold" className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => toggleActive(user)}
+              className={`p-2 rounded-lg transition-colors ${
+                user.is_active
+                  ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-surface-400 hover:text-red-600'
+                  : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-surface-400 hover:text-emerald-600'
+              }`}
+              title={user.is_active ? t('admin.deactivate') : t('admin.activate')}
+              aria-label={`${user.is_active ? t('admin.deactivate') : t('admin.activate')} ${user.name}`}
+            >
+              {user.is_active ? <UserMinus weight="bold" className="w-4 h-4" /> : <UserPlus weight="bold" className="w-4 h-4" />}
+            </button>
+          </div>
+        );
+      },
+    }),
+  ], [editingId, editRole, savingRole, editingQuotaId, editQuota, savingQuota, t]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
         <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     );
@@ -156,7 +274,7 @@ export function AdminUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.users')}</h2>
-          <span className="text-sm text-surface-400">({users.length})</span>
+          <span className="text-sm text-surface-400 tabular-nums">({users.length})</span>
         </div>
 
         <div className="relative">
@@ -194,7 +312,7 @@ export function AdminUsersPage() {
             <div className="card p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.grantCredits')}</h3>
-                <button onClick={() => setCreditUserId(null)} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
+                <button onClick={() => setCreditUserId(null)} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
                   <X weight="bold" className="w-5 h-5 text-surface-400" />
                 </button>
               </div>
@@ -223,143 +341,13 @@ export function AdminUsersPage() {
         )}
       </AnimatePresence>
 
-      {/* Users Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-surface-200 dark:border-surface-700">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.users')}</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.editRole')}</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.credits')}</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.monthlyQuota')}</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('admin.status')}</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
-              {filtered.map((user, i) => (
-                <motion.tr
-                  key={user.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  className="hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors"
-                >
-                  <td className="px-5 py-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{user.name}</p>
-                      <p className="text-xs text-surface-500 dark:text-surface-400 truncate">{user.email}</p>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    {editingId === user.id ? (
-                      <div className="flex items-center gap-2">
-                        <select value={editRole} onChange={e => setEditRole(e.target.value)} className="input text-xs py-1 px-2 w-28">
-                          <option value="user">user</option>
-                          <option value="admin">admin</option>
-                          <option value="superadmin">superadmin</option>
-                        </select>
-                        <button onClick={() => saveRole(user.id)} disabled={savingRole} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600">
-                          {savingRole ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
-                        </button>
-                        <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400">
-                          <X weight="bold" className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      roleBadge(user.role)
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-sm font-semibold text-surface-900 dark:text-white">{user.credits_balance}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    {editingQuotaId === user.id ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={999}
-                          value={editQuota}
-                          onChange={e => setEditQuota(e.target.value)}
-                          className="input text-xs py-1 px-2 w-20"
-                          aria-label={t('admin.monthlyQuota')}
-                        />
-                        <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label={t('admin.saveQuota')}>
-                          {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
-                        </button>
-                        <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('admin.cancelEditQuota')}>
-                          <X weight="bold" className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startEditQuota(user)}
-                        className="inline-flex items-center gap-1.5 text-sm text-surface-700 dark:text-surface-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                        aria-label={t('admin.editQuota', { name: user.name })}
-                        title={t('admin.editQuota', { name: user.name })}
-                      >
-                        <span className="font-semibold">{user.credits_monthly_quota}</span>
-                        <Gauge weight="bold" className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" />
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                      user.is_active
-                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
-                        : 'bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400'
-                    }`}>
-                      {user.is_active ? t('admin.active') : t('admin.inactive')}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => startEditRole(user)}
-                        className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
-                        title={t('admin.editRole')}
-                      >
-                        <PencilSimple weight="bold" className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => { setCreditUserId(user.id); setCreditAmount(''); setCreditDesc(''); }}
-                        className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-accent-600"
-                        title={t('admin.grantCreditsFor')}
-                      >
-                        <Coins weight="bold" className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => toggleActive(user)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          user.is_active
-                            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 text-surface-400 hover:text-red-600'
-                            : 'hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-surface-400 hover:text-emerald-600'
-                        }`}
-                        title={user.is_active ? t('admin.deactivate') : t('admin.activate')}
-                      >
-                        {user.is_active
-                          ? <UserMinus weight="bold" className="w-4 h-4" />
-                          : <UserPlus weight="bold" className="w-4 h-4" />
-                        }
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="text-sm text-surface-500 dark:text-surface-400">
-              {search ? t('admin.noUsersMatch') : t('admin.noUsersFound')}
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Users Table — TanStack Table with sorting */}
+      <DataTable
+        data={users}
+        columns={columns}
+        searchValue={debouncedSearch}
+        emptyMessage={search ? t('admin.noUsersMatch') : t('admin.noUsersFound')}
+      />
     </motion.div>
   );
 }

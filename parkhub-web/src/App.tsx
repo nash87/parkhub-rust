@@ -1,6 +1,7 @@
 import React, { useEffect, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { UseCaseProvider } from './context/UseCaseContext';
@@ -46,6 +47,8 @@ const AdminUsersPage = lazy(() => import('./views/AdminUsers'), 'AdminUsersPage'
 const AdminAnnouncementsPage = lazy(() => import('./views/AdminAnnouncements'), 'AdminAnnouncementsPage');
 const AdminLotsPage = lazy(() => import('./views/AdminLots'), 'AdminLotsPage');
 const AdminReportsPage = lazy(() => import('./views/AdminReports'), 'AdminReportsPage');
+const TranslationsPage = lazy(() => import('./views/Translations'), 'TranslationsPage');
+const AdminTranslationsPage = lazy(() => import('./views/AdminTranslations'), 'AdminTranslationsPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -94,37 +97,47 @@ function SuspenseRoute({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<LoadingSplash />}>{children}</Suspense>;
 }
 
-function AppRoutes() {
+function AnimatedRoutes() {
+  const location = useLocation();
+
   return (
-    <Routes>
-      <Route path="/welcome" element={<SuspenseRoute><WelcomePage /></SuspenseRoute>} />
-      <Route path="/login" element={<SuspenseRoute><LoginPage /></SuspenseRoute>} />
-      <Route path="/register" element={<SuspenseRoute><RegisterPage /></SuspenseRoute>} />
-      <Route path="/forgot-password" element={<SuspenseRoute><ForgotPasswordPage /></SuspenseRoute>} />
-      <Route path="/choose" element={<SuspenseRoute><UseCaseSelectorPage /></SuspenseRoute>} />
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<SuspenseRoute><DashboardPage /></SuspenseRoute>} />
-        <Route path="book" element={<SuspenseRoute><BookPage /></SuspenseRoute>} />
-        <Route path="bookings" element={<SuspenseRoute><BookingsPage /></SuspenseRoute>} />
-        <Route path="credits" element={<SuspenseRoute><CreditsPage /></SuspenseRoute>} />
-        <Route path="vehicles" element={<SuspenseRoute><VehiclesPage /></SuspenseRoute>} />
-        <Route path="absences" element={<SuspenseRoute><AbsencesPage /></SuspenseRoute>} />
-        <Route path="profile" element={<SuspenseRoute><ProfilePage /></SuspenseRoute>} />
-        <Route path="team" element={<SuspenseRoute><TeamPage /></SuspenseRoute>} />
-        <Route path="notifications" element={<SuspenseRoute><NotificationsPage /></SuspenseRoute>} />
-        <Route path="calendar" element={<SuspenseRoute><CalendarPage /></SuspenseRoute>} />
-        <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
-          <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
-          <Route path="settings" element={<SuspenseRoute><AdminSettingsPage /></SuspenseRoute>} />
-          <Route path="users" element={<SuspenseRoute><AdminUsersPage /></SuspenseRoute>} />
-          <Route path="lots" element={<SuspenseRoute><AdminLotsPage /></SuspenseRoute>} />
-          <Route path="announcements" element={<SuspenseRoute><AdminAnnouncementsPage /></SuspenseRoute>} />
-          <Route path="reports" element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/welcome" element={<SuspenseRoute><WelcomePage /></SuspenseRoute>} />
+        <Route path="/login" element={<SuspenseRoute><LoginPage /></SuspenseRoute>} />
+        <Route path="/register" element={<SuspenseRoute><RegisterPage /></SuspenseRoute>} />
+        <Route path="/forgot-password" element={<SuspenseRoute><ForgotPasswordPage /></SuspenseRoute>} />
+        <Route path="/choose" element={<SuspenseRoute><UseCaseSelectorPage /></SuspenseRoute>} />
+        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route index element={<SuspenseRoute><DashboardPage /></SuspenseRoute>} />
+          <Route path="book" element={<SuspenseRoute><BookPage /></SuspenseRoute>} />
+          <Route path="bookings" element={<SuspenseRoute><BookingsPage /></SuspenseRoute>} />
+          <Route path="credits" element={<SuspenseRoute><CreditsPage /></SuspenseRoute>} />
+          <Route path="vehicles" element={<SuspenseRoute><VehiclesPage /></SuspenseRoute>} />
+          <Route path="absences" element={<SuspenseRoute><AbsencesPage /></SuspenseRoute>} />
+          <Route path="profile" element={<SuspenseRoute><ProfilePage /></SuspenseRoute>} />
+          <Route path="team" element={<SuspenseRoute><TeamPage /></SuspenseRoute>} />
+          <Route path="notifications" element={<SuspenseRoute><NotificationsPage /></SuspenseRoute>} />
+          <Route path="calendar" element={<SuspenseRoute><CalendarPage /></SuspenseRoute>} />
+          <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
+          <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
+            <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
+            <Route path="settings" element={<SuspenseRoute><AdminSettingsPage /></SuspenseRoute>} />
+            <Route path="users" element={<SuspenseRoute><AdminUsersPage /></SuspenseRoute>} />
+            <Route path="lots" element={<SuspenseRoute><AdminLotsPage /></SuspenseRoute>} />
+            <Route path="announcements" element={<SuspenseRoute><AdminAnnouncementsPage /></SuspenseRoute>} />
+            <Route path="reports" element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
+            <Route path="translations" element={<SuspenseRoute><AdminTranslationsPage /></SuspenseRoute>} />
+          </Route>
         </Route>
-      </Route>
-      <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />
-    </Routes>
+        <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />
+      </Routes>
+    </AnimatePresence>
   );
+}
+
+function AppRoutes() {
+  return <AnimatedRoutes />;
 }
 
 function ThemeLoader({ children }: { children: React.ReactNode }) {

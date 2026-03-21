@@ -23,6 +23,7 @@ vi.mock('react-router-dom', () => ({
     return <a href={to} onClick={onClick} className={cls} {...props}>{children}</a>;
   },
   useNavigate: () => mockNavigate,
+  useLocation: () => ({ pathname: '/' }),
 }));
 
 vi.mock('../context/AuthContext', () => ({
@@ -57,6 +58,7 @@ vi.mock('react-i18next', () => ({
         'nav.notifications': 'Notifications',
         'nav.profile': 'Profile',
         'nav.admin': 'Admin',
+        'nav.translations': 'Translations',
         'nav.lightMode': 'Light Mode',
         'nav.darkMode': 'Dark Mode',
         'nav.logout': 'Log Out',
@@ -101,6 +103,7 @@ vi.mock('@phosphor-icons/react', () => ({
   SunDim: (props: any) => <span data-testid="icon-sun" {...props} />,
   Moon: (props: any) => <span data-testid="icon-moon" {...props} />,
   CalendarPlus: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
+  Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
 }));
 
 import { Layout } from './Layout';

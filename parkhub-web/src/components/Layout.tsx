@@ -1,15 +1,17 @@
-import { useState, useCallback } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useEffect } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence, useMotionValue, useTransform, useDragControls } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
-  GearSix, SignOut, List, X, CarSimple, SunDim, Moon,
+  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { CommandPalette } from './CommandPalette';
+import { Breadcrumb } from './ui/Breadcrumb';
+import { NotificationBadge } from './ui/NotificationBadge';
 
 const NAV_ITEMS = [
   { to: '/', icon: House, key: 'dashboard', end: true },
@@ -20,6 +22,7 @@ const NAV_ITEMS = [
   { to: '/calendar', icon: Calendar, key: 'calendar' },
   { to: '/credits', icon: Coins, key: 'credits' },
   { to: '/notifications', icon: Bell, key: 'notifications' },
+  { to: '/translations', icon: Translate, key: 'translations' },
   { to: '/profile', icon: UserCircle, key: 'profile' },
 ] as const;
 
@@ -27,9 +30,11 @@ export function Layout() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { resolved, setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const toggleCommandPalette = useCallback(
     () => setCommandPaletteOpen(prev => !prev),
@@ -37,6 +42,14 @@ export function Layout() {
   );
 
   useKeyboardShortcuts({ onToggleCommandPalette: toggleCommandPalette });
+
+  // Fetch unread notification count
+  useEffect(() => {
+    fetch('/api/v1/notifications/unread-count')
+      .then(r => r.json())
+      .then(res => { if (res?.data?.count !== undefined) setUnreadCount(res.data.count); })
+      .catch(() => {});
+  }, [location.pathname]);
 
   function handleLogout() {
     logout();
@@ -65,6 +78,7 @@ export function Layout() {
               key={item.key}
               to={item.to}
               end={item.end}
+              aria-current={location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to)) ? 'page' : undefined}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors border-l-2 ${
                   isActive
@@ -73,7 +87,10 @@ export function Layout() {
                 }`
               }
             >
-              <item.icon weight="fill" className="w-5 h-5" />
+              <span className="relative">
+                <item.icon weight="fill" className="w-5 h-5" />
+                {item.key === 'notifications' && <NotificationBadge count={unreadCount} />}
+              </span>
               {t(`nav.${item.key}`)}
             </NavLink>
           ))}
@@ -169,7 +186,13 @@ export function Layout() {
                 animate={{ x: 0 }}
                 exit={{ x: '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-surface-900/90 backdrop-blur-2xl z-50 p-4 lg:hidden"
+                drag="x"
+                dragConstraints={{ left: -288, right: 0 }}
+                dragElastic={0.1}
+                onDragEnd={(_e, info) => {
+                  if (info.offset.x < -80 || info.velocity.x < -300) setSidebarOpen(false);
+                }}
+                className="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-surface-900/90 backdrop-blur-2xl z-50 p-4 lg:hidden touch-pan-y"
                 role="dialog"
                 aria-label="Navigation menu"
               >
@@ -233,6 +256,7 @@ export function Layout() {
 
         {/* Main content */}
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
+          <Breadcrumb />
           <Outlet />
         </main>
       </div>
