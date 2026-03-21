@@ -32,7 +32,7 @@ struct AccessibilitySettings {
     reduce_motion: bool,
 }
 
-fn default_font_scale() -> f32 {
+const fn default_font_scale() -> f32 {
     1.0
 }
 
@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
                             id: SharedString::from(&s.name),
                             name: SharedString::from(&s.name),
                             host: SharedString::from(&s.host),
-                            port: s.port as i32,
+                            port: i32::from(s.port),
                             tls: s.tls,
                             version: SharedString::from(&s.version),
                         })
@@ -256,7 +256,7 @@ async fn main() -> Result<()> {
                         }
                         Err(e) => {
                             warn!("Connection failed: {}", e);
-                            let error_msg = format!("Connection failed: {}", e);
+                            let error_msg = format!("Connection failed: {e}");
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = ui_weak.upgrade() {
                                     ui.set_is_connecting_to_server(false);
@@ -293,11 +293,11 @@ async fn main() -> Result<()> {
 
             tokio::spawn(async move {
                 let server_info = parkhub_common::ServerInfo {
-                    name: format!("{}:{}", host, port),
+                    name: format!("{host}:{port}"),
                     version: "unknown".to_string(),
                     protocol_version: parkhub_common::PROTOCOL_VERSION.to_string(),
                     host,
-                    port: port as u16,
+                    port: u16::try_from(port).unwrap_or(8443),
                     tls,
                     fingerprint: None,
                 };
@@ -320,7 +320,7 @@ async fn main() -> Result<()> {
                     }
                     Err(e) => {
                         warn!("Connection failed: {}", e);
-                        let error_msg = format!("Connection failed: {}", e);
+                        let error_msg = format!("Connection failed: {e}");
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
                                 ui.set_is_connecting_to_server(false);
@@ -405,7 +405,7 @@ async fn main() -> Result<()> {
                     }
                     Some(Err(e)) => {
                         warn!("Login failed: {}", e);
-                        let error_msg = format!("{}", e);
+                        let error_msg = format!("{e}");
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
                                 ui.set_login_loading(false);
@@ -483,7 +483,7 @@ async fn main() -> Result<()> {
                     }
                     Some(Err(e)) => {
                         warn!("Registration failed: {}", e);
-                        let error_msg = format!("{}", e);
+                        let error_msg = format!("{e}");
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = ui_weak.upgrade() {
                                 ui.set_login_loading(false);
@@ -559,7 +559,7 @@ async fn main() -> Result<()> {
                         // Save to cache for search filtering
                         {
                             let mut state = state.write().await;
-                            state.admin_users_cache = users.clone();
+                            state.admin_users_cache.clone_from(&users);
                         }
 
                         if let Some(ui) = ui_weak.upgrade() {
@@ -574,16 +574,12 @@ async fn main() -> Result<()> {
                                         u.name
                                             .chars()
                                             .next()
-                                            .or_else(|| u.username.chars().next())
-                                            .map(|c| c.to_uppercase().to_string())
-                                            .unwrap_or_else(|| "?".to_string()),
+                                            .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
                                     ),
                                     role: SharedString::from(format!("{:?}", u.role)),
                                     is_active: u.is_active,
                                     last_login: SharedString::from(
-                                        u.last_login
-                                            .map(|dt| dt.format("%d.%m.%Y %H:%M").to_string())
-                                            .unwrap_or_else(|| "-".to_string()),
+                                        u.last_login.map_or_else(|| "-".to_string(), |dt| dt.format("%d.%m.%Y %H:%M").to_string()),
                                     ),
                                     created_at: SharedString::from(
                                         u.created_at.format("%d.%m.%Y").to_string(),
@@ -625,7 +621,7 @@ async fn main() -> Result<()> {
             let state = state.read().await;
             if let Some(ref server) = state.server {
                 match server.delete_user(&user_id).await {
-                    Ok(_) => {
+                    Ok(()) => {
                         info!("User {} deleted successfully", user_id);
                         // Reload users list
                         if let Ok(users) = server.list_users().await {
@@ -641,16 +637,12 @@ async fn main() -> Result<()> {
                                             u.name
                                                 .chars()
                                                 .next()
-                                                .or_else(|| u.username.chars().next())
-                                                .map(|c| c.to_uppercase().to_string())
-                                                .unwrap_or_else(|| "?".to_string()),
+                                                .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
                                         ),
                                         role: SharedString::from(format!("{:?}", u.role)),
                                         is_active: u.is_active,
                                         last_login: SharedString::from(
-                                            u.last_login
-                                                .map(|dt| dt.format("%d.%m.%Y %H:%M").to_string())
-                                                .unwrap_or_else(|| "-".to_string()),
+                                            u.last_login.map_or_else(|| "-".to_string(), |dt| dt.format("%d.%m.%Y %H:%M").to_string()),
                                         ),
                                         created_at: SharedString::from(
                                             u.created_at.format("%d.%m.%Y").to_string(),
@@ -684,7 +676,7 @@ async fn main() -> Result<()> {
             if let Some(ref server) = state.server {
                 // Reset to default password
                 match server.reset_user_password(&user_id, "12351235").await {
-                    Ok(_) => {
+                    Ok(()) => {
                         info!("Password reset for user {} to default", user_id);
                     }
                     Err(e) => {
@@ -730,18 +722,14 @@ async fn main() -> Result<()> {
                                                     u.name
                                                         .chars()
                                                         .next()
-                                                        .or_else(|| u.username.chars().next())
-                                                        .map(|c| c.to_uppercase().to_string())
-                                                        .unwrap_or_else(|| "?".to_string()),
+                                                        .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
                                                 ),
                                                 role: SharedString::from(format!("{:?}", u.role)),
                                                 is_active: u.is_active,
                                                 last_login: SharedString::from(
-                                                    u.last_login
-                                                        .map(|dt| {
+                                                    u.last_login.map_or_else(|| "-".to_string(), |dt| {
                                                             dt.format("%d.%m.%Y %H:%M").to_string()
-                                                        })
-                                                        .unwrap_or_else(|| "-".to_string()),
+                                                        }),
                                                 ),
                                                 created_at: SharedString::from(
                                                     u.created_at.format("%d.%m.%Y").to_string(),
@@ -804,16 +792,12 @@ async fn main() -> Result<()> {
                         u.name
                             .chars()
                             .next()
-                            .or_else(|| u.username.chars().next())
-                            .map(|c| c.to_uppercase().to_string())
-                            .unwrap_or_else(|| "?".to_string()),
+                            .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
                     ),
                     role: SharedString::from(format!("{:?}", u.role)),
                     is_active: u.is_active,
                     last_login: SharedString::from(
-                        u.last_login
-                            .map(|dt| dt.format("%d.%m.%Y %H:%M").to_string())
-                            .unwrap_or_else(|| "-".to_string()),
+                        u.last_login.map_or_else(|| "-".to_string(), |dt| dt.format("%d.%m.%Y %H:%M").to_string()),
                     ),
                     created_at: SharedString::from(u.created_at.format("%d.%m.%Y").to_string()),
                 })
@@ -847,37 +831,33 @@ async fn main() -> Result<()> {
                                 server_name: SharedString::from(
                                     config["server_name"].as_str().unwrap_or(""),
                                 ),
-                                port: config["port"].as_i64().unwrap_or(8443) as i32,
+                                port: i32::try_from(config["port"].as_i64().unwrap_or(8443)).unwrap_or(8443),
                                 enable_tls: config["enable_tls"].as_bool().unwrap_or(true),
                                 enable_mdns: config["enable_mdns"].as_bool().unwrap_or(true),
                                 encryption_enabled: config["encryption_enabled"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                session_timeout_minutes: config["session_timeout_minutes"]
+                                session_timeout_minutes: i32::try_from(config["session_timeout_minutes"]
                                     .as_i64()
-                                    .unwrap_or(60)
-                                    as i32,
+                                    .unwrap_or(60)).unwrap_or(60),
                                 allow_self_registration: config["allow_self_registration"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                max_concurrent_sessions: config["max_concurrent_sessions"]
+                                max_concurrent_sessions: i32::try_from(config["max_concurrent_sessions"]
                                     .as_i64()
-                                    .unwrap_or(5)
-                                    as i32,
+                                    .unwrap_or(5)).unwrap_or(5),
                                 auto_backup_enabled: config["auto_backup_enabled"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                backup_retention_count: config["backup_retention_count"]
+                                backup_retention_count: i32::try_from(config["backup_retention_count"]
                                     .as_i64()
-                                    .unwrap_or(7)
-                                    as i32,
+                                    .unwrap_or(7)).unwrap_or(7),
                                 audit_logging_enabled: config["audit_logging_enabled"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                license_plate_display: config["license_plate_display"]
+                                license_plate_display: i32::try_from(config["license_plate_display"]
                                     .as_i64()
-                                    .unwrap_or(0)
-                                    as i32,
+                                    .unwrap_or(0)).unwrap_or(0),
                                 organization_name: SharedString::from(
                                     config["organization_name"].as_str().unwrap_or(""),
                                 ),
@@ -895,7 +875,7 @@ async fn main() -> Result<()> {
 
     // Save server config callback
     let ui_weak_config2 = ui.as_weak();
-    let state_for_save = state.clone();
+    let state_for_save = state;
     ui.on_admin_save_server_config(move |config| {
         info!("Saving server configuration");
         let state = state_for_save.clone();
@@ -921,7 +901,7 @@ async fn main() -> Result<()> {
             let state = state.read().await;
             if let Some(ref server) = state.server {
                 match server.update_server_config(updates).await {
-                    Ok(_) => {
+                    Ok(()) => {
                         info!("Server config saved successfully");
                     }
                     Err(e) => {
@@ -933,9 +913,7 @@ async fn main() -> Result<()> {
     });
 
     // Load accessibility settings from local config
-    let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client")
-        .map(|p| p.config_dir().to_path_buf())
-        .unwrap_or_else(|| std::path::PathBuf::from(".").join("config"));
+    let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client").map_or_else(|| std::path::PathBuf::from(".").join("config"), |p| p.config_dir().to_path_buf());
     let config_path = config_dir.join("accessibility.toml");
 
     if config_path.exists() {
@@ -967,9 +945,7 @@ async fn main() -> Result<()> {
                 };
 
                 // Save to file
-                let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client")
-                    .map(|p| p.config_dir().to_path_buf())
-                    .unwrap_or_else(|| std::path::PathBuf::from(".").join("config"));
+                let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client").map_or_else(|| std::path::PathBuf::from(".").join("config"), |p| p.config_dir().to_path_buf());
 
                 if let Err(e) = std::fs::create_dir_all(&config_dir) {
                     warn!("Failed to create config dir: {}", e);
@@ -1052,16 +1028,12 @@ async fn load_parking_data(state: Arc<RwLock<AppState>>, ui_weak: slint::Weak<Ma
                                             parkhub_common::SlotStatus::Available => {
                                                 SlotStatus::Available
                                             }
-                                            parkhub_common::SlotStatus::Occupied => {
+                                            parkhub_common::SlotStatus::Occupied
+                                            | parkhub_common::SlotStatus::Reserved => {
                                                 SlotStatus::Occupied
                                             }
-                                            parkhub_common::SlotStatus::Reserved => {
-                                                SlotStatus::Occupied
-                                            }
-                                            parkhub_common::SlotStatus::Maintenance => {
-                                                SlotStatus::Disabled
-                                            }
-                                            parkhub_common::SlotStatus::Disabled => {
+                                            parkhub_common::SlotStatus::Maintenance
+                                            | parkhub_common::SlotStatus::Disabled => {
                                                 SlotStatus::Disabled
                                             }
                                         },
