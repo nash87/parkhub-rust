@@ -141,18 +141,18 @@ use crate::{
             ReadyResponse,
 
             // Swap Requests
-            crate::api::CreateSwapRequestBody,
-            crate::api::UpdateSwapRequestBody,
+            crate::api::swap::CreateSwapRequestBody,
+            crate::api::swap::UpdateSwapRequestBody,
 
             // Recurring Bookings
-            crate::api::CreateRecurringBookingRequest,
+            crate::api::recurring::CreateRecurringBookingRequest,
 
             // Guest Bookings
-            crate::api::CreateGuestBookingRequest,
+            crate::api::guest::CreateGuestBookingRequest,
 
             // Announcements
-            crate::api::CreateAnnouncementRequest,
-            crate::api::UpdateAnnouncementRequest,
+            crate::api::announcements::CreateAnnouncementRequest,
+            crate::api::announcements::UpdateAnnouncementRequest,
 
             // Admin Settings
             crate::api::AutoReleaseSettingsRequest,
@@ -283,10 +283,10 @@ use crate::{
         crate::api::admin_update_user_status,
         crate::api::admin_delete_user,
         crate::api::admin_list_bookings,
-        crate::api::admin_get_settings,
-        crate::api::admin_update_settings,
-        crate::api::admin_get_features,
-        crate::api::admin_update_features,
+        crate::api::settings::admin_get_settings,
+        crate::api::settings::admin_update_settings,
+        crate::api::settings::admin_get_features,
+        crate::api::settings::admin_update_features,
         crate::api::admin_stats,
         crate::api::admin_reports,
         crate::api::admin_heatmap,
@@ -295,66 +295,66 @@ use crate::{
         crate::api::admin_reset,
         crate::api::get_impressum_admin,
         crate::api::update_impressum,
-        crate::api::admin_list_announcements,
+        crate::api::announcements::admin_list_announcements,
 
         // Public (mod.rs)
         crate::api::get_impressum,
-        crate::api::get_features,
-        crate::api::get_public_theme,
-        crate::api::get_active_announcements,
+        crate::api::settings::get_features,
+        crate::api::settings::get_public_theme,
+        crate::api::announcements::get_active_announcements,
         crate::api::public_occupancy,
         crate::api::public_display,
 
-        // Absences (mod.rs)
-        crate::api::list_absences,
-        crate::api::create_absence,
-        crate::api::delete_absence,
+        // Absences
+        crate::api::absences::list_absences,
+        crate::api::absences::create_absence,
+        crate::api::absences::delete_absence,
 
-        // Notifications (mod.rs)
-        crate::api::list_notifications,
-        crate::api::mark_notification_read,
-        crate::api::mark_all_notifications_read,
+        // Notifications
+        crate::api::notifications::list_notifications,
+        crate::api::notifications::mark_notification_read,
+        crate::api::notifications::mark_all_notifications_read,
 
-        // Waitlist (mod.rs)
-        crate::api::list_waitlist,
-        crate::api::join_waitlist,
-        crate::api::leave_waitlist,
+        // Waitlist
+        crate::api::waitlist::list_waitlist,
+        crate::api::waitlist::join_waitlist,
+        crate::api::waitlist::leave_waitlist,
 
-        // Calendar (mod.rs)
-        crate::api::calendar_events,
-        crate::api::user_calendar_ics,
+        // Calendar
+        crate::api::calendar::calendar_events,
+        crate::api::calendar::user_calendar_ics,
 
-        // Team (mod.rs)
-        crate::api::team_today,
-        crate::api::team_list,
+        // Team
+        crate::api::team::team_today,
+        crate::api::team::team_list,
 
-        // Swap Requests (mod.rs)
-        crate::api::list_swap_requests,
-        crate::api::create_swap_request,
-        crate::api::update_swap_request,
+        // Swap Requests
+        crate::api::swap::list_swap_requests,
+        crate::api::swap::create_swap_request,
+        crate::api::swap::update_swap_request,
 
-        // Recurring Bookings (mod.rs)
-        crate::api::list_recurring_bookings,
-        crate::api::create_recurring_booking,
-        crate::api::delete_recurring_booking,
+        // Recurring Bookings
+        crate::api::recurring::list_recurring_bookings,
+        crate::api::recurring::create_recurring_booking,
+        crate::api::recurring::delete_recurring_booking,
 
-        // Guest Bookings (mod.rs)
-        crate::api::create_guest_booking,
-        crate::api::admin_list_guest_bookings,
-        crate::api::admin_cancel_guest_booking,
+        // Guest Bookings
+        crate::api::guest::create_guest_booking,
+        crate::api::guest::admin_list_guest_bookings,
+        crate::api::guest::admin_cancel_guest_booking,
 
-        // Absences — additional (mod.rs)
-        crate::api::list_team_absences,
-        crate::api::get_absence_pattern,
-        crate::api::save_absence_pattern,
+        // Absences — additional
+        crate::api::absences::list_team_absences,
+        crate::api::absences::get_absence_pattern,
+        crate::api::absences::save_absence_pattern,
 
-        // Announcements (mod.rs)
-        crate::api::admin_create_announcement,
-        crate::api::admin_update_announcement,
-        crate::api::admin_delete_announcement,
+        // Announcements
+        crate::api::announcements::admin_create_announcement,
+        crate::api::announcements::admin_update_announcement,
+        crate::api::announcements::admin_delete_announcement,
 
-        // Admin — additional settings (mod.rs)
-        crate::api::admin_get_use_case,
+        // Admin — additional settings
+        crate::api::settings::admin_get_use_case,
         crate::api::admin_get_auto_release,
         crate::api::admin_update_auto_release,
         crate::api::admin_get_email_settings,
