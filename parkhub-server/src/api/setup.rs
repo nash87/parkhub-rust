@@ -92,7 +92,8 @@ pub async fn setup_init(
     State(state): State<SharedState>,
     Json(req): Json<SetupRequest>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Guard: only allow setup once
     if !state_guard.db.is_fresh().await.unwrap_or(false) {

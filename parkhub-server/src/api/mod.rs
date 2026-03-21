@@ -2318,7 +2318,8 @@ pub async fn update_vehicle(
     Path(id): Path<String>,
     Json(req): Json<serde_json::Value>,
 ) -> (StatusCode, Json<ApiResponse<Vehicle>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     let mut vehicle = match state_guard.db.get_vehicle(&id).await {
         Ok(Some(v)) => v,
@@ -4108,7 +4109,8 @@ pub async fn admin_update_features(
     Extension(auth_user): Extension<AuthUser>,
     Json(body): Json<UpdateFeaturesRequest>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
@@ -6897,7 +6899,8 @@ pub async fn booking_checkin(
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     let mut booking = match state_guard.db.get_booking(&id).await {
         Ok(Some(b)) => b,
@@ -6980,7 +6983,8 @@ pub async fn admin_reset(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<AdminResetRequest>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }

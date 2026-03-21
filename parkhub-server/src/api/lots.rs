@@ -94,7 +94,10 @@ pub async fn create_lot(
         );
     }
 
-    let state_guard = state.write().await;
+    // The outer AppState RwLock is held as a read lock here: individual DB
+    // operations use the Database's internal Arc<RwLock<RedbDatabase>>, so a
+    // write lock on AppState is not needed for atomicity on creation.
+    let state_guard = state.read().await;
 
     // Check if user is admin
     let Ok(Some(user)) = state_guard
@@ -290,7 +293,8 @@ pub async fn update_lot(
         );
     }
 
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Check if user is admin
     let Ok(Some(user)) = state_guard
@@ -424,7 +428,8 @@ pub async fn delete_lot(
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Check if user is admin
     let Ok(Some(user)) = state_guard
@@ -557,7 +562,8 @@ pub async fn create_slot(
     Path(lot_id): Path<String>,
     Json(req): Json<serde_json::Value>,
 ) -> (StatusCode, Json<ApiResponse<ParkingSlot>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
@@ -683,7 +689,8 @@ pub async fn update_slot(
     Path((lot_id, slot_id)): Path<(String, String)>,
     Json(req): Json<serde_json::Value>,
 ) -> (StatusCode, Json<ApiResponse<ParkingSlot>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
@@ -790,7 +797,8 @@ pub async fn delete_slot(
     Extension(auth_user): Extension<AuthUser>,
     Path((lot_id, slot_id)): Path<(String, String)>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard

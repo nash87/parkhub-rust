@@ -60,7 +60,29 @@ use tray_icon::{
     Icon, TrayIconBuilder, TrayIconEvent,
 };
 
-/// Application state shared across handlers
+/// Application state shared across handlers.
+///
+/// # Locking strategy (Tech Debt #64)
+///
+/// `AppState` is wrapped in `Arc<RwLock<AppState>>` (aliased as `SharedState`).
+/// Most fields are logically read-only after startup:
+/// - `config` is never mutated after the server starts.
+/// - `db` wraps its own `Arc<RwLock<RedbDatabase>>` internally, so DB calls do
+///   not require holding the outer lock at all.
+/// - `ws_events` is a `tokio::sync::broadcast::Sender` whose `.clone()` /
+///   `.send()` are already thread-safe.
+/// - `mdns` and `scheduler` are only written once during startup.
+///
+/// Handlers that perform simple CRUD via `db.*` should use `state.read().await`.
+/// Write locks (`state.write().await`) are reserved for multi-step atomic
+/// sequences that must not interleave with concurrent requests, e.g.:
+/// - `create_booking` / `cancel_booking` — slot availability check + status
+///   update must be atomic to prevent double-booking.
+/// - `quick_book` — auto-pick + create must be atomic.
+/// - `update_swap_request` — swap acceptance swaps two bookings atomically.
+///
+/// Future: consider removing the outer `RwLock` entirely and replacing the
+/// booking-level atomicity with DB-layer transactions once redb supports them.
 pub struct AppState {
     pub config: ServerConfig,
     pub db: Database,

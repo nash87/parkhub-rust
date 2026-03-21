@@ -83,7 +83,8 @@ pub async fn create_zone(
     Path(lot_id): Path<String>,
     Json(req): Json<CreateZoneRequest>,
 ) -> (StatusCode, Json<ApiResponse<Zone>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
@@ -175,7 +176,8 @@ pub async fn delete_zone(
     Extension(auth_user): Extension<AuthUser>,
     Path((lot_id, zone_id)): Path<(String, String)>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
-    let state_guard = state.write().await;
+    // Read lock suffices: Database handles its own internal locking.
+    let state_guard = state.read().await;
 
     // Admin check
     match state_guard
