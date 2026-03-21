@@ -75,6 +75,7 @@ mod bookings;
 pub mod credits;
 pub mod export;
 pub mod favorites;
+pub mod import;
 pub mod lots;
 pub mod payments;
 pub mod push;
@@ -326,6 +327,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/export/revenue",
             get(admin_export_revenue_csv),
+        )
+        // Admin-only: CSV import
+        .route(
+            "/api/v1/admin/users/import",
+            post(import::import_users_csv),
         )
         // Absences (user-scoped)
         .route("/api/v1/absences", get(list_absences).post(create_absence))
