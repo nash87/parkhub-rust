@@ -557,18 +557,23 @@ impl Database {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
         drop(db);
+
+        // Primary store
         {
             let mut table = write_txn.open_table(SESSIONS)?;
             table.insert(token, data.as_slice())?;
-
-            // Secondary index: refresh_token -> access_token
+        }
+        // Secondary index: refresh_token -> access_token
+        {
             let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
             rt_idx.insert(session.refresh_token.as_str(), token)?;
-
-            // Secondary index: user_id -> access_token (multimap)
+        }
+        // Secondary index: user_id -> access_token (multimap)
+        {
             let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
             user_idx.insert(user_id.as_str(), token)?;
         }
+
         write_txn.commit()?;
         debug!("Saved session for user: {}", session.username);
         Ok(())
@@ -656,19 +661,34 @@ impl Database {
         if count > 0 {
             let write_txn = db.begin_write()?;
             drop(db);
+
+            // Collect refresh tokens while removing primary records
+            let mut refresh_tokens: Vec<String> = Vec::new();
             {
                 let mut table = write_txn.open_table(SESSIONS)?;
-                let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
-                let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
                 for token in &tokens_to_delete {
                     if let Ok(Some(entry)) = table.remove(token.as_str()) {
                         if let Ok(session) = self.deserialize::<Session>(entry.value()) {
-                            let _ = rt_idx.remove(session.refresh_token.as_str())?;
+                            refresh_tokens.push(session.refresh_token);
                         }
                     }
+                }
+            }
+            // Remove refresh-token index entries
+            {
+                let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+                for rt in &refresh_tokens {
+                    let _ = rt_idx.remove(rt.as_str())?;
+                }
+            }
+            // Remove user-id index entries
+            {
+                let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
+                for token in &tokens_to_delete {
                     let _ = user_idx.remove(user_id_str.as_str(), token.as_str())?;
                 }
             }
+
             write_txn.commit()?;
             debug!("Deleted {} session(s) for user {}", count, user_id);
         }
@@ -680,22 +700,33 @@ impl Database {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
         drop(db);
-        let existed = {
+
+        // Extract index keys before dropping the table handle (redb requires it).
+        let (existed, refresh_token_opt, user_id_opt) = {
             let mut table = write_txn.open_table(SESSIONS)?;
             let result = table.remove(token)?;
-            if let Some(ref entry) = result {
-                // Deserialize to get refresh_token and user_id for index cleanup
+            let (rt, uid) = if let Some(ref entry) = result {
                 if let Ok(session) = self.deserialize::<Session>(entry.value()) {
-                    let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
-                    let _ = rt_idx.remove(session.refresh_token.as_str())?;
-
-                    let user_id = session.user_id.to_string();
-                    let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
-                    let _ = user_idx.remove(user_id.as_str(), token)?;
+                    (Some(session.refresh_token), Some(session.user_id.to_string()))
+                } else {
+                    (None, None)
                 }
-            }
-            result.is_some()
+            } else {
+                (None, None)
+            };
+            (result.is_some(), rt, uid)
         };
+
+        // Now clean up secondary indices (table handle dropped above)
+        if let (Some(rt), Some(uid)) = (refresh_token_opt, user_id_opt) {
+            let mut rt_idx = write_txn.open_table(SESSIONS_BY_REFRESH_TOKEN)?;
+            let _ = rt_idx.remove(rt.as_str())?;
+            drop(rt_idx);
+
+            let mut user_idx = write_txn.open_multimap_table(SESSIONS_BY_USER_ID)?;
+            let _ = user_idx.remove(uid.as_str(), token)?;
+        }
+
         write_txn.commit()?;
         Ok(existed)
     }
@@ -1098,14 +1129,18 @@ impl Database {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
         drop(db);
+
+        // Primary store
         {
             let mut table = write_txn.open_table(BOOKINGS)?;
             table.insert(id.as_str(), data.as_slice())?;
-
-            // Secondary index: (user_id, date) -> booking_id
+        }
+        // Secondary index: (user_id, date) -> booking_id
+        {
             let mut date_idx = write_txn.open_table(BOOKINGS_BY_USER_DATE)?;
             date_idx.insert((user_id.as_str(), date_str.as_str()), id.as_str())?;
         }
+
         write_txn.commit()?;
         debug!("Saved booking: {}", booking.id);
         Ok(())
@@ -1168,7 +1203,7 @@ impl Database {
         // The compound key type means we can only get exact matches — we scan all
         // index entries and filter by user_id+date prefix.
         let date_idx = read_txn.open_table(BOOKINGS_BY_USER_DATE)?;
-        let sessions_table = read_txn.open_table(BOOKINGS)?;
+        let bookings_table = read_txn.open_table(BOOKINGS)?;
 
         let mut count = 0usize;
         for entry in date_idx.iter()? {
@@ -1178,7 +1213,7 @@ impl Database {
                 continue;
             }
             let booking_id = booking_id_val.value();
-            if let Some(raw) = sessions_table.get(booking_id)? {
+            if let Some(raw) = bookings_table.get(booking_id)? {
                 if let Ok(booking) = self.deserialize::<Booking>(raw.value()) {
                     if booking.status != BookingStatus::Cancelled {
                         count += 1;
@@ -1194,20 +1229,32 @@ impl Database {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
         drop(db);
-        let existed = {
+
+        // Extract index key before dropping table handle
+        let (existed, user_date) = {
             let mut table = write_txn.open_table(BOOKINGS)?;
             let result = table.remove(id)?;
-            if let Some(ref entry) = result {
-                // Remove the BOOKINGS_BY_USER_DATE index entry
+            let key = if let Some(ref entry) = result {
                 if let Ok(booking) = self.deserialize::<Booking>(entry.value()) {
-                    let user_id = booking.user_id.to_string();
-                    let date_str = booking.start_time.date_naive().to_string();
-                    let mut date_idx = write_txn.open_table(BOOKINGS_BY_USER_DATE)?;
-                    let _ = date_idx.remove((user_id.as_str(), date_str.as_str()))?;
+                    Some((
+                        booking.user_id.to_string(),
+                        booking.start_time.date_naive().to_string(),
+                    ))
+                } else {
+                    None
                 }
-            }
-            result.is_some()
+            } else {
+                None
+            };
+            (result.is_some(), key)
         };
+
+        // Remove BOOKINGS_BY_USER_DATE index entry (table handle dropped)
+        if let Some((user_id, date_str)) = user_date {
+            let mut date_idx = write_txn.open_table(BOOKINGS_BY_USER_DATE)?;
+            let _ = date_idx.remove((user_id.as_str(), date_str.as_str()))?;
+        }
+
         write_txn.commit()?;
         if existed {
             debug!("Deleted booking: {}", id);
