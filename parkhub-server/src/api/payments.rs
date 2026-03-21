@@ -298,30 +298,22 @@ mod tests {
         assert_eq!(j["status"], "pending");
     }
 
+    // Env var tests consolidated into one to avoid parallel race conditions
     #[test]
-    fn test_demo_mode_disabled_by_default() {
+    fn test_demo_mode_env_var() {
+        // Must run sequentially — env vars are process-global
         std::env::remove_var("DEMO_MODE");
-        assert!(!is_demo_mode());
-    }
+        assert!(!is_demo_mode(), "should be disabled by default");
 
-    #[test]
-    fn test_demo_mode_enabled() {
         std::env::set_var("DEMO_MODE", "true");
-        assert!(is_demo_mode());
-        std::env::remove_var("DEMO_MODE");
-    }
+        assert!(is_demo_mode(), "should be enabled with 'true'");
 
-    #[test]
-    fn test_demo_mode_enabled_1() {
         std::env::set_var("DEMO_MODE", "1");
-        assert!(is_demo_mode());
-        std::env::remove_var("DEMO_MODE");
-    }
+        assert!(is_demo_mode(), "should be enabled with '1'");
 
-    #[test]
-    fn test_demo_mode_disabled_false() {
         std::env::set_var("DEMO_MODE", "false");
-        assert!(!is_demo_mode());
+        assert!(!is_demo_mode(), "should be disabled with 'false'");
+
         std::env::remove_var("DEMO_MODE");
     }
 
