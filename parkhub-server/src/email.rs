@@ -49,11 +49,21 @@ impl SmtpConfig {
     }
 }
 
-/// Send an HTML email.
+/// Maximum retry attempts for transient SMTP failures.
+const EMAIL_MAX_RETRIES: u32 = 3;
+
+/// Base delay for exponential backoff (doubles each retry: 1s, 2s, 4s).
+const EMAIL_RETRY_BASE_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+
+/// Send an HTML email with automatic retry on transient failures.
 ///
 /// If SMTP is not configured (`SMTP_HOST` env var is absent) the call is a
 /// no-op and returns `Ok(())`.  This provides graceful degradation in
 /// development and self-hosted environments without an SMTP relay.
+///
+/// On SMTP transport errors the send is retried up to [`EMAIL_MAX_RETRIES`]
+/// times with exponential backoff. Message-building errors (invalid addresses,
+/// etc.) are not retried.
 pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> {
     let Some(config) = SmtpConfig::from_env() else {
         warn!(
@@ -63,14 +73,6 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
         );
         return Ok(());
     };
-
-    let message = Message::builder()
-        .from(config.from.parse().context("Invalid SMTP_FROM address")?)
-        .to(to.parse().context("Invalid recipient email address")?)
-        .subject(subject)
-        .header(ContentType::TEXT_HTML)
-        .body(html_body.to_string())
-        .context("Failed to build email message")?;
 
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
         AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.host)
@@ -82,10 +84,57 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
             ))
             .build();
 
-    mailer.send(message).await.context("Failed to send email")?;
+    let mut last_err = None;
 
-    info!(to = %to, subject = %subject, "Email sent successfully");
-    Ok(())
+    for attempt in 0..=EMAIL_MAX_RETRIES {
+        if attempt > 0 {
+            let delay = EMAIL_RETRY_BASE_DELAY * 2u32.saturating_pow(attempt - 1);
+            warn!(
+                to = %to,
+                subject = %subject,
+                attempt = attempt + 1,
+                "Retrying email send in {:?}",
+                delay,
+            );
+            tokio::time::sleep(delay).await;
+        }
+
+        // Re-build the message each attempt (Message is consumed by send).
+        let message = Message::builder()
+            .from(config.from.parse().context("Invalid SMTP_FROM address")?)
+            .to(to.parse().context("Invalid recipient email address")?)
+            .subject(subject)
+            .header(ContentType::TEXT_HTML)
+            .body(html_body.to_string())
+            .context("Failed to build email message")?;
+
+        match mailer.send(message).await {
+            Ok(_) => {
+                if attempt > 0 {
+                    info!(to = %to, subject = %subject, attempt = attempt + 1, "Email sent successfully after retry");
+                } else {
+                    info!(to = %to, subject = %subject, "Email sent successfully");
+                }
+                return Ok(());
+            }
+            Err(e) => {
+                warn!(
+                    to = %to,
+                    subject = %subject,
+                    attempt = attempt + 1,
+                    max_attempts = EMAIL_MAX_RETRIES + 1,
+                    "SMTP send failed: {}",
+                    e,
+                );
+                last_err = Some(e);
+            }
+        }
+    }
+
+    Err(last_err
+        .map(|e| anyhow::anyhow!(e))
+        .unwrap_or_else(|| anyhow::anyhow!("Email send failed"))
+        .context("Failed to send email after retries"))
 }
 
 /// Build a booking confirmation email body.

@@ -623,10 +623,16 @@ fn compute_signature(secret: &str, body: &str) -> String {
     format!("sha256={}", hex::encode(result.into_bytes()))
 }
 
+/// Maximum number of retry attempts for webhook delivery.
+const MAX_RETRIES: u32 = 3;
+
+/// Base delay for exponential backoff (doubles each retry: 1s, 2s, 4s).
+const RETRY_BASE_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+
 /// Dispatch a webhook event to all matching active webhooks.
 ///
 /// Non-blocking: reads webhooks from DB, spawns a task per match, returns immediately.
-/// Delivery failures are logged but not retried.
+/// Delivery failures are retried up to [`MAX_RETRIES`] times with exponential backoff.
 ///
 /// Call from any async handler that has access to `SharedState`.
 pub async fn dispatch_webhook_event(
@@ -667,43 +673,109 @@ pub async fn dispatch_webhook_event(
         let url = webhook.url.clone();
         let secret = webhook.secret.clone();
         let event = event_type.clone();
+        let webhook_id = webhook.id;
 
         tokio::spawn(async move {
-            let signature = compute_signature(&secret, &body);
-            let client = reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(10))
-                .build()
-                .unwrap_or_default();
-
-            match client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .header("X-Webhook-Signature", &signature)
-                .body(body)
-                .send()
-                .await
-            {
-                Ok(resp) => {
-                    tracing::info!(
-                        "Webhook {} delivered event '{}' to {} — HTTP {}",
-                        webhook.id,
-                        event,
-                        url,
-                        resp.status()
-                    );
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        "Webhook {} failed to deliver '{}' to {}: {}",
-                        webhook.id,
-                        event,
-                        url,
-                        e
-                    );
-                }
-            }
+            deliver_with_retry(&webhook_id, &url, &secret, &body, &event).await;
         });
     }
+}
+
+/// Attempt delivery with exponential backoff.
+///
+/// Retries on network errors and 5xx responses. 4xx and 2xx/3xx are final.
+async fn deliver_with_retry(
+    webhook_id: &Uuid,
+    url: &str,
+    secret: &str,
+    body: &str,
+    event: &str,
+) {
+    let signature = compute_signature(secret, body);
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .unwrap_or_default();
+
+    for attempt in 0..=MAX_RETRIES {
+        if attempt > 0 {
+            let delay = RETRY_BASE_DELAY * 2u32.saturating_pow(attempt - 1);
+            tracing::debug!(
+                "Webhook {} retry {}/{} for '{}' in {:?}",
+                webhook_id,
+                attempt,
+                MAX_RETRIES,
+                event,
+                delay,
+            );
+            tokio::time::sleep(delay).await;
+        }
+
+        match client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .header("X-Webhook-Signature", &signature)
+            .header("X-Webhook-Attempt", (attempt + 1).to_string())
+            .body(body.to_owned())
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() || status.is_redirection() {
+                    tracing::info!(
+                        "Webhook {} delivered event '{}' to {} — HTTP {} (attempt {})",
+                        webhook_id,
+                        event,
+                        url,
+                        status,
+                        attempt + 1,
+                    );
+                    return;
+                }
+                if status.is_client_error() {
+                    // 4xx — don't retry, the receiver rejected it permanently
+                    tracing::warn!(
+                        "Webhook {} got HTTP {} for '{}' at {} — not retrying (client error)",
+                        webhook_id,
+                        status,
+                        event,
+                        url,
+                    );
+                    return;
+                }
+                // 5xx — retry
+                tracing::warn!(
+                    "Webhook {} got HTTP {} for '{}' at {} (attempt {}/{})",
+                    webhook_id,
+                    status,
+                    event,
+                    url,
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Webhook {} network error for '{}' at {} (attempt {}/{}): {}",
+                    webhook_id,
+                    event,
+                    url,
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                    e,
+                );
+            }
+        }
+    }
+
+    tracing::error!(
+        "Webhook {} permanently failed to deliver '{}' to {} after {} attempts",
+        webhook_id,
+        event,
+        url,
+        MAX_RETRIES + 1,
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
