@@ -12,6 +12,7 @@ use parkhub_common::{
 
 use crate::audit::{AuditEntry, AuditEventType};
 use crate::db::Session;
+#[cfg(feature = "mod-email")]
 use crate::email;
 use crate::metrics;
 
@@ -320,6 +321,7 @@ pub async fn register(
     metrics::record_auth_event("register", true);
 
     // Dispatch webhook for user creation
+    #[cfg(feature = "mod-webhooks")]
     {
         let state_clone = state.clone();
         let payload = serde_json::json!({
@@ -333,6 +335,7 @@ pub async fn register(
     }
 
     // Send welcome email (async, best-effort — failures are logged, not propagated)
+    #[cfg(feature = "mod-email")]
     {
         let user_email = user.email.clone();
         let user_name = user.name.clone();
@@ -590,14 +593,26 @@ pub async fn forgot_password(
 
     drop(state_guard);
 
-    let html = email::build_password_reset_email(&reset_url, &org_name);
+    #[cfg(feature = "mod-email")]
+    {
+        let html = email::build_password_reset_email(&reset_url, &org_name);
 
-    // Fire-and-forget: email errors are logged but do not fail the request
-    if let Err(e) = email::send_email(&user.email, "Reset your password", &html).await {
-        tracing::warn!(
+        // Fire-and-forget: email errors are logged but do not fail the request
+        if let Err(e) = email::send_email(&user.email, "Reset your password", &html).await {
+            tracing::warn!(
+                user_id = %user.id,
+                error = %e,
+                "Failed to send password-reset email"
+            );
+        }
+    }
+
+    #[cfg(not(feature = "mod-email"))]
+    {
+        let _ = (&reset_url, &org_name);
+        tracing::info!(
             user_id = %user.id,
-            error = %e,
-            "Failed to send password-reset email"
+            "Email module disabled — password reset email not sent"
         );
     }
 
