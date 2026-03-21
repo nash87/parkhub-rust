@@ -13,7 +13,7 @@ use parkhub_common::ApiResponse;
 
 use super::{AuthUser, SharedState};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RecommendationQuery {
     pub lot_id: Option<String>,
 }

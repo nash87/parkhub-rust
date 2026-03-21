@@ -60,7 +60,8 @@ use crate::{
         (name = "Waitlist", description = "Parking lot waitlist"),
         (name = "Calendar", description = "Calendar events and iCal export"),
         (name = "Team", description = "Team overview and member status"),
-        (name = "Payments", description = "Stripe payment stub (demo mode)")
+        (name = "Payments", description = "Stripe payment stub (demo mode)"),
+        (name = "Translations", description = "Community translation proposals, voting, and overrides")
     ),
     components(
         schemas(
@@ -157,6 +158,18 @@ use crate::{
             crate::api::payments::PaymentIntentResponse,
             crate::api::payments::PaymentStatusResponse,
             crate::api::payments::StripePaymentStatus,
+
+            // Recommendations
+            crate::api::recommendations::SlotRecommendation,
+            crate::api::recommendations::RecommendationQuery,
+
+            // Translations
+            crate::api::translations::CreateProposalRequest,
+            crate::api::translations::VoteRequest,
+            crate::api::translations::ReviewRequest,
+            parkhub_common::models::TranslationProposal,
+            parkhub_common::models::TranslationOverride,
+            parkhub_common::models::ProposalStatus,
         )
     ),
     paths(
@@ -345,6 +358,17 @@ use crate::{
         crate::api::payments::create_payment_intent,
         crate::api::payments::confirm_payment,
         crate::api::payments::payment_status,
+
+        // Recommendations
+        crate::api::recommendations::get_recommendations,
+
+        // Translations
+        crate::api::translations::list_overrides,
+        crate::api::translations::list_proposals,
+        crate::api::translations::get_proposal,
+        crate::api::translations::create_proposal,
+        crate::api::translations::vote_on_proposal,
+        crate::api::translations::review_proposal,
     )
 )]
 pub struct ApiDoc;
