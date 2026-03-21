@@ -976,7 +976,15 @@ pub async fn readiness_check(State(state): State<SharedState>) -> impl IntoRespo
 }
 
 
-/// `GET /api/v1/system/version` — server version information
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/version",
+    tag = "Health",
+    summary = "Server version information",
+    responses(
+        (status = 200, description = "Version info", body = serde_json::Value),
+    )
+)]
 pub async fn system_version() -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "version": env!("CARGO_PKG_VERSION"),
@@ -984,7 +992,15 @@ pub async fn system_version() -> Json<serde_json::Value> {
     }))
 }
 
-/// `GET /api/v1/system/maintenance` — maintenance mode status
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/maintenance",
+    tag = "Health",
+    summary = "Maintenance mode status",
+    responses(
+        (status = 200, description = "Maintenance status", body = serde_json::Value),
+    )
+)]
 pub async fn system_maintenance(State(state): State<SharedState>) -> Json<serde_json::Value> {
     let state = state.read().await;
     let maintenance = match state.db.get_setting("maintenance_mode").await {
@@ -3846,7 +3862,7 @@ pub async fn admin_update_features(
     Extension(auth_user): Extension<AuthUser>,
     Json(body): Json<UpdateFeaturesRequest>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
@@ -6653,7 +6669,7 @@ pub async fn booking_checkin(
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
-    let state_guard = state.write().await;
+    let state_guard = state.read().await;
 
     let mut booking = match state_guard.db.get_booking(&id).await {
         Ok(Some(b)) => b,

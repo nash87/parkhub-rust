@@ -619,5 +619,57 @@ mod tests {
     fn test_max_rows_constant() {
         assert_eq!(MAX_IMPORT_ROWS, 500);
     }
+
+    #[test]
+    fn test_parse_ical_date_compact() {
+        assert_eq!(parse_ical_date("20240101"), Some("2024-01-01".to_string()));
+        assert_eq!(parse_ical_date("20241231"), Some("2024-12-31".to_string()));
+    }
+
+    #[test]
+    fn test_parse_ical_date_dashed() {
+        assert_eq!(parse_ical_date("2024-01-01"), Some("2024-01-01".to_string()));
+    }
+
+    #[test]
+    fn test_parse_ical_date_invalid() {
+        assert_eq!(parse_ical_date("not-a-date"), None);
+        assert_eq!(parse_ical_date("2024010"), None);
+    }
+
+    #[test]
+    fn test_summary_to_absence_type() {
+        use parkhub_common::models::AbsenceType;
+        assert!(matches!(summary_to_absence_type("Urlaub"), AbsenceType::Vacation));
+        assert!(matches!(summary_to_absence_type("Homeoffice"), AbsenceType::Homeoffice));
+        assert!(matches!(summary_to_absence_type("remote work"), AbsenceType::Homeoffice));
+        assert!(matches!(summary_to_absence_type("Krank"), AbsenceType::Sick));
+        assert!(matches!(summary_to_absence_type("Training Day"), AbsenceType::Training));
+        assert!(matches!(summary_to_absence_type("something else"), AbsenceType::Other));
+    }
+
+    #[test]
+    fn test_parse_vevents_basic() {
+        let ical = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nDTSTART;VALUE=DATE:20240101\r\nDTEND;VALUE=DATE:20240115\r\nSUMMARY:Vacation\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let events = parse_vevents(ical);
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0, "2024-01-01");
+        assert_eq!(events[0].1, "2024-01-15");
+        assert_eq!(events[0].2, "Vacation");
+    }
+
+    #[test]
+    fn test_parse_vevents_missing_dates() {
+        let ical = "BEGIN:VEVENT\nSUMMARY:No dates\nEND:VEVENT\n";
+        let events = parse_vevents(ical);
+        assert_eq!(events.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_vevents_multiple() {
+        let ical = "BEGIN:VEVENT\nDTSTART:20240101\nDTEND:20240107\nSUMMARY:First\nEND:VEVENT\nBEGIN:VEVENT\nDTSTART:20240201\nDTEND:20240210\nSUMMARY:Second\nEND:VEVENT\n";
+        let events = parse_vevents(ical);
+        assert_eq!(events.len(), 2);
+    }
 }
 

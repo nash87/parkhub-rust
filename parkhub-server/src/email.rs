@@ -64,14 +64,6 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
         return Ok(());
     };
 
-    let message = Message::builder()
-        .from(config.from.parse().context("Invalid SMTP_FROM address")?)
-        .to(to.parse().context("Invalid recipient email address")?)
-        .subject(subject)
-        .header(ContentType::TEXT_HTML)
-        .body(html_body.to_string())
-        .context("Failed to build email message")?;
-
     let mailer: AsyncSmtpTransport<Tokio1Executor> =
         AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&config.host)
             .context("Failed to create SMTP transport")?
@@ -82,10 +74,36 @@ pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> 
             ))
             .build();
 
-    mailer.send(message).await.context("Failed to send email")?;
+    const MAX_ATTEMPTS: u32 = 3;
+    let mut delay = std::time::Duration::from_millis(200);
 
-    info!(to = %to, subject = %subject, "Email sent successfully");
-    Ok(())
+    for attempt in 1..=MAX_ATTEMPTS {
+        // Rebuild message each attempt — lettre Message is not Clone
+        let msg = Message::builder()
+            .from(config.from.parse().context("Invalid SMTP_FROM address")?)
+            .to(to.parse().context("Invalid recipient email address")?)
+            .subject(subject)
+            .header(ContentType::TEXT_HTML)
+            .body(html_body.to_string())
+            .context("Failed to build email message")?;
+
+        match mailer.send(msg).await {
+            Ok(_) => {
+                info!(to = %to, subject = %subject, attempt, "Email sent successfully");
+                return Ok(());
+            }
+            Err(e) if attempt < MAX_ATTEMPTS => {
+                warn!(to = %to, subject = %subject, attempt, error = %e, "Email delivery failed, retrying");
+                tokio::time::sleep(delay).await;
+                delay *= 2;
+            }
+            Err(e) => {
+                return Err(anyhow::anyhow!("Failed to send email after {MAX_ATTEMPTS} attempts: {e}"));
+            }
+        }
+    }
+
+    unreachable!()
 }
 
 /// Build a booking confirmation email body.

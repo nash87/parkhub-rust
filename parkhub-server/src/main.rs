@@ -63,7 +63,16 @@ use tray_icon::{
     Icon, TrayIconBuilder, TrayIconEvent,
 };
 
-/// Application state shared across handlers
+/// Application state shared across handlers via `Arc<RwLock<AppState>>`.
+///
+/// ## Locking strategy
+/// - **Read lock** (`state.read().await`): all handlers that only query or write through
+///   `Database`'s own internal locking (`Arc<RwLock<RedbDatabase>>`).
+/// - **Write lock** (`state.write().await`): only handlers that require an *atomic
+///   check-and-set* across multiple DB operations where no other booking can interleave:
+///   `create_booking`, `cancel_booking`, `quick_book`, `update_swap_request`, `admin_reset`.
+/// - All other mutations (features, checkin, credits, webhooks, etc.) use read locks
+///   because `Database` handles its own concurrency internally.
 pub struct AppState {
     pub config: ServerConfig,
     pub db: Database,

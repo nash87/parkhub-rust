@@ -106,6 +106,7 @@ use crate::{
             UpdateQuotaRequest,
             crate::api::import::ImportResult,
             crate::api::import::ImportError,
+            crate::api::import::IcalImportResult,
 
             // Credits
             AdminGrantCreditsRequest,
@@ -239,6 +240,7 @@ use crate::{
         crate::api::export::admin_export_revenue_csv,
         // Import
         crate::api::import::import_users_csv,
+        crate::api::import::import_absences_ical,
 
         // Health & Discovery (mod.rs)
         crate::api::health_check,
@@ -296,6 +298,10 @@ use crate::{
         crate::api::get_impressum_admin,
         crate::api::update_impressum,
         crate::api::admin_list_announcements,
+
+        // System (mod.rs)
+        crate::api::system_version,
+        crate::api::system_maintenance,
 
         // Public (mod.rs)
         crate::api::get_impressum,
