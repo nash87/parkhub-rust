@@ -426,7 +426,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Payments (Stripe stub)
         .route("/api/v1/payments/create-intent", post(payments::create_payment_intent))
         .route("/api/v1/payments/confirm", post(payments::confirm_payment))
-        .route("/api/v1/payments/{booking_id}/status", get(payments::payment_status))
+        .route("/api/v1/payments/{id}/status", get(payments::payment_status))
+        .layer(Extension(payments::new_payment_store()))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
