@@ -35,6 +35,7 @@ const USERS_BY_USERNAME: TableDefinition<&str, &str> = TableDefinition::new("use
 const USERS_BY_EMAIL: TableDefinition<&str, &str> = TableDefinition::new("users_by_email");
 const SESSIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("sessions");
 const BOOKINGS: TableDefinition<&str, &[u8]> = TableDefinition::new("bookings");
+const BOOKINGS_BY_USER: TableDefinition<&str, &str> = TableDefinition::new("bookings_by_user");
 const PARKING_LOTS: TableDefinition<&str, &[u8]> = TableDefinition::new("parking_lots");
 const PARKING_SLOTS: TableDefinition<&str, &[u8]> = TableDefinition::new("parking_slots");
 const SLOTS_BY_LOT: TableDefinition<&str, &[u8]> = TableDefinition::new("slots_by_lot");
@@ -310,6 +311,7 @@ impl Database {
             let _ = write_txn.open_table(USERS_BY_EMAIL)?;
             let _ = write_txn.open_table(SESSIONS)?;
             let _ = write_txn.open_table(BOOKINGS)?;
+            let _ = write_txn.open_table(BOOKINGS_BY_USER)?;
             let _ = write_txn.open_table(PARKING_LOTS)?;
             let _ = write_txn.open_table(PARKING_SLOTS)?;
             let _ = write_txn.open_table(SLOTS_BY_LOT)?;
@@ -422,6 +424,7 @@ impl Database {
         drain_table!(write_txn, USERS_BY_EMAIL);
         drain_table!(write_txn, SESSIONS);
         drain_table!(write_txn, BOOKINGS);
+        drain_table!(write_txn, BOOKINGS_BY_USER);
         drain_table!(write_txn, PARKING_LOTS);
         drain_table!(write_txn, PARKING_SLOTS);
         drain_table!(write_txn, SLOTS_BY_LOT);
@@ -1021,6 +1024,7 @@ impl Database {
     /// Save a booking
     pub async fn save_booking(&self, booking: &Booking) -> Result<()> {
         let id = booking.id.to_string();
+        let user_id = booking.user_id.to_string();
         let data = self.serialize(booking)?;
 
         let db = self.inner.write().await;
@@ -1029,6 +1033,11 @@ impl Database {
         {
             let mut table = write_txn.open_table(BOOKINGS)?;
             table.insert(id.as_str(), data.as_slice())?;
+
+            // Maintain user → booking secondary index
+            let mut idx = write_txn.open_table(BOOKINGS_BY_USER)?;
+            let idx_key = format!("{user_id}:{id}");
+            idx.insert(idx_key.as_str(), id.as_str())?;
         }
         write_txn.commit()?;
         debug!("Saved booking: {}", booking.id);
@@ -1063,23 +1072,64 @@ impl Database {
         Ok(bookings)
     }
 
-    /// Get bookings for a user (`list_bookings_by_user`)
+    /// Get bookings for a user using the BOOKINGS_BY_USER secondary index.
+    ///
+    /// O(k) where k = number of bookings for this user, instead of O(n) over
+    /// all bookings.
     pub async fn list_bookings_by_user(&self, user_id: &str) -> Result<Vec<Booking>> {
-        let all_bookings = self.list_bookings().await?;
-        Ok(all_bookings
-            .into_iter()
-            .filter(|b| b.user_id.to_string() == user_id)
-            .collect())
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+
+        let idx = read_txn.open_table(BOOKINGS_BY_USER)?;
+        let bookings_table = read_txn.open_table(BOOKINGS)?;
+
+        let prefix = format!("{user_id}:");
+        let mut bookings = Vec::new();
+
+        for entry in idx.iter()? {
+            let (key, booking_id_val) = entry?;
+            if !key.value().starts_with(&prefix) {
+                continue;
+            }
+            let booking_id = booking_id_val.value();
+            if let Some(data) = bookings_table.get(booking_id)? {
+                bookings.push(self.deserialize(data.value())?);
+            }
+        }
+        Ok(bookings)
     }
 
     /// Delete a booking
     pub async fn delete_booking(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
+
+        // Read pass: find the user_id to remove the secondary-index entry
+        let user_id_opt: Option<String> = {
+            let read_txn = db.begin_read()?;
+            let table = read_txn.open_table(BOOKINGS)?;
+            match table.get(id)? {
+                Some(value) => {
+                    let booking: Booking = self.deserialize(value.value())?;
+                    Some(booking.user_id.to_string())
+                }
+                None => None,
+            }
+        };
+
         let write_txn = db.begin_write()?;
         drop(db);
         let existed = {
             let mut table = write_txn.open_table(BOOKINGS)?;
             let result = table.remove(id)?;
+            // Remove secondary index entry if booking was found
+            if result.is_some() {
+                if let Some(ref uid) = user_id_opt {
+                    let mut idx = write_txn.open_table(BOOKINGS_BY_USER)?;
+                    let idx_key = format!("{uid}:{id}");
+                    idx.remove(idx_key.as_str())?;
+                }
+            }
             result.is_some()
         };
         write_txn.commit()?;
