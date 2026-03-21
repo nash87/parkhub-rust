@@ -20,16 +20,19 @@ mod config;
 mod db;
 mod demo;
 mod discovery;
+#[cfg(feature = "mod-email")]
 mod email;
 #[allow(dead_code)]
 mod error;
 #[allow(dead_code)]
 mod health;
+#[cfg(feature = "mod-jobs")]
 mod jobs;
 #[allow(dead_code)]
 mod jwt;
 #[allow(dead_code)]
 mod metrics;
+#[cfg(feature = "full")]
 #[allow(dead_code)]
 mod openapi;
 #[allow(dead_code)]
@@ -44,9 +47,9 @@ pub mod utils;
 #[allow(dead_code)]
 mod validation;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 mod booking_tests;
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 mod integration_tests;
 
 use config::ServerConfig;
@@ -634,41 +637,54 @@ async fn main() -> Result<()> {
                         };
 
                         let minutes_until = (booking.start_time - now).num_minutes().max(0);
-                        let email_html = crate::email::build_booking_reminder_email(
-                            &user.name,
-                            &booking.id.to_string(),
-                            &booking.floor_name,
-                            booking.slot_number,
-                            &booking.start_time.format("%Y-%m-%d %H:%M").to_string(),
-                            &booking.end_time.format("%Y-%m-%d %H:%M").to_string(),
-                            minutes_until,
-                            &org_name,
-                        );
-                        let subject =
-                            format!("Parking reminder: your booking starts in {minutes_until} minutes — ParkHub");
-                        if let Err(e) =
-                            crate::email::send_email(&user.email, &subject, &email_html).await
+
+                        #[cfg(feature = "mod-email")]
                         {
-                            tracing::warn!(
-                                "Failed to send booking reminder (booking {}): {}",
-                                booking.id,
-                                e
+                            let email_html = crate::email::build_booking_reminder_email(
+                                &user.name,
+                                &booking.id.to_string(),
+                                &booking.floor_name,
+                                booking.slot_number,
+                                &booking.start_time.format("%Y-%m-%d %H:%M").to_string(),
+                                &booking.end_time.format("%Y-%m-%d %H:%M").to_string(),
+                                minutes_until,
+                                &org_name,
                             );
-                        } else {
-                            // Mark as reminded so we don't send again
+                            let subject =
+                                format!("Parking reminder: your booking starts in {minutes_until} minutes — ParkHub");
                             if let Err(e) =
-                                state_guard.db.set_setting(&reminder_key, "1").await
+                                crate::email::send_email(&user.email, &subject, &email_html).await
                             {
                                 tracing::warn!(
-                                    "Failed to mark reminder sent for booking {}: {}",
+                                    "Failed to send booking reminder (booking {}): {}",
                                     booking.id,
                                     e
                                 );
+                            } else {
+                                // Mark as reminded so we don't send again
+                                if let Err(e) =
+                                    state_guard.db.set_setting(&reminder_key, "1").await
+                                {
+                                    tracing::warn!(
+                                        "Failed to mark reminder sent for booking {}: {}",
+                                        booking.id,
+                                        e
+                                    );
+                                }
+                                tracing::info!(
+                                    booking_id = %booking.id,
+                                    user_id = %user.id,
+                                    "Booking reminder sent"
+                                );
                             }
-                            tracing::info!(
+                        }
+
+                        #[cfg(not(feature = "mod-email"))]
+                        {
+                            let _ = (minutes_until, &org_name, &user);
+                            tracing::debug!(
                                 booking_id = %booking.id,
-                                user_id = %user.id,
-                                "Booking reminder sent"
+                                "Email module disabled — skipping booking reminder"
                             );
                         }
                     }
@@ -835,6 +851,7 @@ async fn main() -> Result<()> {
     }
 
     // Start background jobs (AutoRelease, ExpandRecurring, PurgeExpired, AggregateOccupancy)
+    #[cfg(feature = "mod-jobs")]
     jobs::start_background_jobs(state.clone());
 
     // Show status GUI or wait for shutdown signal

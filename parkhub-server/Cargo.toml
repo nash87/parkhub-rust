@@ -133,9 +133,46 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [features]
-default = ["gui"]
+default = ["gui", "full"]
+full = [
+    "mod-bookings", "mod-vehicles", "mod-absences", "mod-branding",
+    "mod-import", "mod-qr", "mod-pwa", "mod-payments", "mod-webhooks",
+    "mod-notifications", "mod-announcements", "mod-recurring",
+    "mod-guest", "mod-calendar", "mod-team", "mod-settings",
+    "mod-jobs", "mod-swap", "mod-waitlist", "mod-zones", "mod-credits",
+    "mod-email", "mod-export", "mod-favorites", "mod-push",
+    "mod-recommendations", "mod-translations", "mod-social",
+]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
+mod-bookings = []
+mod-vehicles = []
+mod-absences = []
+mod-branding = []
+mod-import = []
+mod-qr = []
+mod-pwa = []
+mod-payments = []
+mod-webhooks = []
+mod-notifications = []
+mod-announcements = []
+mod-recurring = []
+mod-guest = []
+mod-calendar = []
+mod-team = []
+mod-settings = []
+mod-jobs = []
+mod-swap = []
+mod-waitlist = []
+mod-zones = []
+mod-credits = []
+mod-email = []
+mod-export = []
+mod-favorites = []
+mod-push = []
+mod-recommendations = []
+mod-translations = []
+mod-social = []
 
 [dev-dependencies]
 tempfile = "3"

@@ -294,6 +294,7 @@ pub async fn create_lot(
     );
 
     // Dispatch webhook
+    #[cfg(feature = "mod-webhooks")]
     {
         let state_clone = state.clone();
         let lot_json = serde_json::json!({
