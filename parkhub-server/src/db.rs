@@ -56,8 +56,7 @@ const FAVORITES: TableDefinition<&str, &[u8]> = TableDefinition::new("favorites"
 const AUDIT_LOG: TableDefinition<&str, &[u8]> = TableDefinition::new("audit_log");
 const TRANSLATION_PROPOSALS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("translation_proposals");
-const TRANSLATION_VOTES: TableDefinition<&str, &[u8]> =
-    TableDefinition::new("translation_votes");
+const TRANSLATION_VOTES: TableDefinition<&str, &[u8]> = TableDefinition::new("translation_votes");
 const TRANSLATION_OVERRIDES: TableDefinition<&str, &[u8]> =
     TableDefinition::new("translation_overrides");
 
@@ -79,7 +78,7 @@ pub struct DatabaseConfig {
     pub path: PathBuf,
     /// Enable encryption for stored data
     pub encryption_enabled: bool,
-    /// Passphrase for encryption (required if encryption_enabled)
+    /// Passphrase for encryption (required if `encryption_enabled`)
     pub passphrase: Option<String>,
     /// Create database if it doesn't exist
     pub create_if_missing: bool,
@@ -235,8 +234,8 @@ impl Encryptor {
     fn new(passphrase: &str, salt: &[u8]) -> Result<Self> {
         let mut key = [0u8; 32];
         pbkdf2_hmac::<Sha256>(passphrase.as_bytes(), salt, PBKDF2_ITERATIONS, &mut key);
-        let cipher = Aes256Gcm::new_from_slice(&key)
-            .map_err(|e| anyhow!("Failed to create cipher: {}", e))?;
+        let cipher =
+            Aes256Gcm::new_from_slice(&key).map_err(|e| anyhow!("Failed to create cipher: {e}"))?;
         Ok(Self { cipher })
     }
 
@@ -248,7 +247,7 @@ impl Encryptor {
         let ciphertext = self
             .cipher
             .encrypt(nonce, data)
-            .map_err(|e| anyhow!("Encryption failed: {}", e))?;
+            .map_err(|e| anyhow!("Encryption failed: {e}"))?;
 
         // Prepend nonce to ciphertext
         let mut result = nonce_bytes.to_vec();
@@ -266,7 +265,7 @@ impl Encryptor {
 
         self.cipher
             .decrypt(nonce, ciphertext)
-            .map_err(|e| anyhow!("Decryption failed: {}", e))
+            .map_err(|e| anyhow!("Decryption failed: {e}"))
     }
 }
 
@@ -283,15 +282,15 @@ pub struct Database {
 
 impl Database {
     /// Open or create a database with the given configuration
-    pub fn open(config: DatabaseConfig) -> Result<Self> {
+    pub fn open(config: &DatabaseConfig) -> Result<Self> {
         let db_path = config.path.join("parkhub.redb");
 
         // Check if database exists
         let db_exists = db_path.exists();
         if !db_exists && !config.create_if_missing {
             return Err(anyhow!(
-                "Database not found at {:?} and create_if_missing is false",
-                db_path
+                "Database not found at {} and create_if_missing is false",
+                db_path.display()
             ));
         }
 
@@ -346,25 +345,22 @@ impl Database {
             let salt = {
                 let read_txn = db.begin_read()?;
                 let table = read_txn.open_table(SETTINGS)?;
-                match table.get(SETTING_ENCRYPTION_SALT)? {
-                    Some(value) => {
-                        hex::decode(value.value()).context("Invalid salt in database")?
-                    }
-                    None => {
-                        // Generate new salt
-                        let mut salt = [0u8; 32];
-                        rand::rng().fill_bytes(&mut salt);
+                if let Some(value) = table.get(SETTING_ENCRYPTION_SALT)? {
+                    hex::decode(value.value()).context("Invalid salt in database")?
+                } else {
+                    // Generate new salt
+                    let mut salt = [0u8; 32];
+                    rand::rng().fill_bytes(&mut salt);
 
-                        // Store salt
-                        let write_txn = db.begin_write()?;
-                        {
-                            let mut table = write_txn.open_table(SETTINGS)?;
-                            table.insert(SETTING_ENCRYPTION_SALT, hex::encode(salt).as_str())?;
-                        }
-                        write_txn.commit()?;
-
-                        salt.to_vec()
+                    // Store salt
+                    let write_txn = db.begin_write()?;
+                    {
+                        let mut table = write_txn.open_table(SETTINGS)?;
+                        table.insert(SETTING_ENCRYPTION_SALT, hex::encode(salt).as_str())?;
                     }
+                    write_txn.commit()?;
+
+                    salt.to_vec()
                 }
             };
 
@@ -391,7 +387,7 @@ impl Database {
     }
 
     /// Check if encryption is enabled
-    pub fn is_encrypted(&self) -> bool {
+    pub const fn is_encrypted(&self) -> bool {
         self.encryption_enabled
     }
 
@@ -420,6 +416,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         drain_table!(write_txn, USERS);
         drain_table!(write_txn, USERS_BY_USERNAME);
         drain_table!(write_txn, USERS_BY_EMAIL);
@@ -455,18 +452,19 @@ impl Database {
     pub async fn is_fresh(&self) -> Result<bool> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SETTINGS)?;
 
-        match table.get(SETTING_SETUP_COMPLETED)? {
-            Some(value) => Ok(value.value() != "true"),
-            None => Ok(true),
-        }
+        Ok(table
+            .get(SETTING_SETUP_COMPLETED)?
+            .is_none_or(|value| value.value() != "true"))
     }
 
     /// Mark the initial setup as completed
     pub async fn mark_setup_completed(&self) -> Result<()> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(SETTINGS)?;
             table.insert(SETTING_SETUP_COMPLETED, "true")?;
@@ -480,6 +478,7 @@ impl Database {
     pub async fn stats(&self) -> Result<DatabaseStats> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
 
         Ok(DatabaseStats {
             users: read_txn.open_table(USERS)?.len()?,
@@ -523,6 +522,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(SESSIONS)?;
             table.insert(token, data.as_slice())?;
@@ -536,6 +536,7 @@ impl Database {
     pub async fn get_session(&self, token: &str) -> Result<Option<Session>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SESSIONS)?;
 
         match table.get(token)? {
@@ -554,13 +555,14 @@ impl Database {
 
     /// Find a session by its refresh token (scans all sessions)
     ///
-    /// Returns a tuple of (access_token, session) if found and not expired.
+    /// Returns a tuple of (`access_token`, session) if found and not expired.
     pub async fn get_session_by_refresh_token(
         &self,
         refresh_token: &str,
     ) -> Result<Option<(String, Session)>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SESSIONS)?;
 
         for entry in table.iter()? {
@@ -601,6 +603,7 @@ impl Database {
         let count = tokens_to_delete.len() as u64;
         if count > 0 {
             let write_txn = db.begin_write()?;
+            drop(db);
             {
                 let mut table = write_txn.open_table(SESSIONS)?;
                 for token in &tokens_to_delete {
@@ -617,6 +620,7 @@ impl Database {
     pub async fn delete_session(&self, token: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(SESSIONS)?;
             let result = table.remove(token)?;
@@ -637,6 +641,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(USERS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -658,6 +663,7 @@ impl Database {
     pub async fn get_user(&self, id: &str) -> Result<Option<User>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(USERS)?;
 
         match table.get(id)? {
@@ -670,6 +676,7 @@ impl Database {
     pub async fn get_user_by_username(&self, username: &str) -> Result<Option<User>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
 
         // Look up user ID from username index
         let idx = read_txn.open_table(USERS_BY_USERNAME)?;
@@ -690,6 +697,7 @@ impl Database {
     pub async fn get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
 
         // Look up user ID from email index
         let idx = read_txn.open_table(USERS_BY_EMAIL)?;
@@ -710,6 +718,7 @@ impl Database {
     pub async fn list_users(&self) -> Result<Vec<User>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(USERS)?;
 
         let mut users = Vec::new();
@@ -723,13 +732,13 @@ impl Database {
     /// Delete a user
     pub async fn delete_user(&self, id: &str) -> Result<bool> {
         // First get the user to find the username/email
-        let user = match self.get_user(id).await? {
-            Some(u) => u,
-            None => return Ok(false),
+        let Some(user) = self.get_user(id).await? else {
+            return Ok(false);
         };
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(USERS)?;
             table.remove(id)?;
@@ -756,6 +765,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(PARKING_LOTS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -769,6 +779,7 @@ impl Database {
     pub async fn get_parking_lot(&self, id: &str) -> Result<Option<ParkingLot>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(PARKING_LOTS)?;
 
         match table.get(id)? {
@@ -781,6 +792,7 @@ impl Database {
     pub async fn list_parking_lots(&self) -> Result<Vec<ParkingLot>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(PARKING_LOTS)?;
 
         let mut lots = Vec::new();
@@ -795,6 +807,7 @@ impl Database {
     pub async fn delete_parking_lot(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(PARKING_LOTS)?;
             let result = table.remove(id)?;
@@ -819,6 +832,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             // Save main slot data
             let mut table = write_txn.open_table(PARKING_SLOTS)?;
@@ -826,7 +840,7 @@ impl Database {
 
             // Update lot->slots index
             let mut idx = write_txn.open_table(SLOTS_BY_LOT)?;
-            let key = format!("{}:{}", lot_id, id);
+            let key = format!("{lot_id}:{id}");
             idx.insert(key.as_str(), data.as_slice())?;
         }
         write_txn.commit()?;
@@ -838,6 +852,7 @@ impl Database {
     pub async fn get_parking_slot(&self, id: &str) -> Result<Option<ParkingSlot>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(PARKING_SLOTS)?;
 
         match table.get(id)? {
@@ -846,13 +861,14 @@ impl Database {
         }
     }
 
-    /// Get all parking slots for a lot (list_slots_by_lot)
+    /// Get all parking slots for a lot (`list_slots_by_lot`)
     pub async fn list_slots_by_lot(&self, lot_id: &str) -> Result<Vec<ParkingSlot>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SLOTS_BY_LOT)?;
 
-        let prefix = format!("{}:", lot_id);
+        let prefix = format!("{lot_id}:");
         let mut slots = Vec::new();
 
         for entry in table.iter()? {
@@ -865,9 +881,9 @@ impl Database {
     }
 
     /// Delete all parking slots belonging to a lot (cascade delete).
-    /// Removes entries from both PARKING_SLOTS and SLOTS_BY_LOT index.
+    /// Removes entries from both `PARKING_SLOTS` and `SLOTS_BY_LOT` index.
     pub async fn delete_slots_by_lot(&self, lot_id: &str) -> Result<()> {
-        let prefix = format!("{}:", lot_id);
+        let prefix = format!("{lot_id}:");
 
         let db = self.inner.write().await;
 
@@ -894,6 +910,7 @@ impl Database {
 
         // Delete all matching entries in a single write transaction
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut slots_table = write_txn.open_table(PARKING_SLOTS)?;
             let mut idx_table = write_txn.open_table(SLOTS_BY_LOT)?;
@@ -913,7 +930,7 @@ impl Database {
 
     /// Delete a single parking slot by ID.
     pub async fn delete_parking_slot(&self, id: &str) -> Result<bool> {
-        let id_suffix = format!(":{}", id);
+        let id_suffix = format!(":{id}");
         let db = self.inner.write().await;
 
         // First collect index keys to remove (read pass)
@@ -932,6 +949,7 @@ impl Database {
 
         // Write pass: remove slot + index entries
         let write_txn = db.begin_write()?;
+        drop(db);
         let removed = {
             let mut table = write_txn.open_table(PARKING_SLOTS)?;
             let r = table.remove(id)?.is_some();
@@ -966,12 +984,13 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(PARKING_SLOTS)?;
             let mut idx = write_txn.open_table(SLOTS_BY_LOT)?;
             for (id, lot_id, data) in &serialized {
                 table.insert(id.as_str(), data.as_slice())?;
-                let key = format!("{}:{}", lot_id, id);
+                let key = format!("{lot_id}:{id}");
                 idx.insert(key.as_str(), data.as_slice())?;
             }
         }
@@ -986,9 +1005,8 @@ impl Database {
         slot_id: &str,
         status: parkhub_common::models::SlotStatus,
     ) -> Result<bool> {
-        let mut slot = match self.get_parking_slot(slot_id).await? {
-            Some(s) => s,
-            None => return Ok(false),
+        let Some(mut slot) = self.get_parking_slot(slot_id).await? else {
+            return Ok(false);
         };
 
         slot.status = status;
@@ -1007,6 +1025,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(BOOKINGS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1020,6 +1039,7 @@ impl Database {
     pub async fn get_booking(&self, id: &str) -> Result<Option<Booking>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(BOOKINGS)?;
 
         match table.get(id)? {
@@ -1032,6 +1052,7 @@ impl Database {
     pub async fn list_bookings(&self) -> Result<Vec<Booking>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(BOOKINGS)?;
 
         let mut bookings = Vec::new();
@@ -1042,7 +1063,7 @@ impl Database {
         Ok(bookings)
     }
 
-    /// Get bookings for a user (list_bookings_by_user)
+    /// Get bookings for a user (`list_bookings_by_user`)
     pub async fn list_bookings_by_user(&self, user_id: &str) -> Result<Vec<Booking>> {
         let all_bookings = self.list_bookings().await?;
         Ok(all_bookings
@@ -1055,6 +1076,7 @@ impl Database {
     pub async fn delete_booking(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(BOOKINGS)?;
             let result = table.remove(id)?;
@@ -1078,6 +1100,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(VEHICLES)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1091,6 +1114,7 @@ impl Database {
     pub async fn get_vehicle(&self, id: &str) -> Result<Option<Vehicle>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(VEHICLES)?;
 
         match table.get(id)? {
@@ -1099,10 +1123,11 @@ impl Database {
         }
     }
 
-    /// Get vehicles for a user (list_vehicles_by_user)
+    /// Get vehicles for a user (`list_vehicles_by_user`)
     pub async fn list_vehicles_by_user(&self, user_id: &str) -> Result<Vec<Vehicle>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(VEHICLES)?;
 
         let mut vehicles = Vec::new();
@@ -1120,6 +1145,7 @@ impl Database {
     pub async fn delete_vehicle(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(VEHICLES)?;
             let removed = table.remove(id)?.is_some();
@@ -1136,15 +1162,14 @@ impl Database {
     /// Atomically replaces user's name/email/username/password with placeholder values,
     /// removes old index entries, and deletes all linked vehicle records.
     pub async fn anonymize_user(&self, user_id: &str) -> Result<bool> {
-        let user = match self.get_user(user_id).await? {
-            Some(u) => u,
-            None => return Ok(false),
+        let Some(user) = self.get_user(user_id).await? else {
+            return Ok(false);
         };
 
         let old_username = user.username.clone();
         let old_email = user.email.clone();
         let anon_id = format!("deleted-{}", Uuid::new_v4());
-        let anon_email = format!("{}@deleted.invalid", anon_id);
+        let anon_email = format!("{anon_id}@deleted.invalid");
         let anon_password = format!("DELETED_{}", Uuid::new_v4());
 
         // Anonymize user record + clean indexes atomically
@@ -1157,6 +1182,7 @@ impl Database {
         let user_data = self.serialize(&anon_user)?;
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             // Overwrite user record
             let mut table = write_txn.open_table(USERS)?;
@@ -1172,7 +1198,6 @@ impl Database {
             email_idx.insert(anon_email.as_str(), user_id)?;
         }
         write_txn.commit()?;
-        drop(db);
 
         // Delete all vehicles (personal data — can be deleted per GDPR Art. 17)
         let vehicles = self
@@ -1212,18 +1237,17 @@ impl Database {
     pub async fn get_setting(&self, key: &str) -> Result<Option<String>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SETTINGS)?;
 
-        match table.get(key)? {
-            Some(value) => Ok(Some(value.value().to_string())),
-            None => Ok(None),
-        }
+        Ok(table.get(key)?.map(|value| value.value().to_string()))
     }
 
     /// Set a setting value
     pub async fn set_setting(&self, key: &str, value: &str) -> Result<()> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(SETTINGS)?;
             table.insert(key, value)?;
@@ -1243,6 +1267,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(ABSENCES)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1256,6 +1281,7 @@ impl Database {
     pub async fn get_absence(&self, id: &str) -> Result<Option<Absence>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(ABSENCES)?;
 
         match table.get(id)? {
@@ -1268,6 +1294,7 @@ impl Database {
     pub async fn list_absences_by_user(&self, user_id: &str) -> Result<Vec<Absence>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(ABSENCES)?;
 
         let mut absences = Vec::new();
@@ -1285,6 +1312,7 @@ impl Database {
     pub async fn list_absences_team(&self) -> Result<Vec<Absence>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(ABSENCES)?;
 
         let mut absences = Vec::new();
@@ -1299,6 +1327,7 @@ impl Database {
     pub async fn delete_absence(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(ABSENCES)?;
             let result = table.remove(id)?;
@@ -1322,6 +1351,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(WAITLIST)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1335,6 +1365,7 @@ impl Database {
     pub async fn get_waitlist_entry(&self, id: &str) -> Result<Option<WaitlistEntry>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(WAITLIST)?;
 
         match table.get(id)? {
@@ -1347,6 +1378,7 @@ impl Database {
     pub async fn list_waitlist_by_user(&self, user_id: &str) -> Result<Vec<WaitlistEntry>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(WAITLIST)?;
 
         let mut entries = Vec::new();
@@ -1364,6 +1396,7 @@ impl Database {
     pub async fn delete_waitlist_entry(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(WAITLIST)?;
             let result = table.remove(id)?;
@@ -1387,6 +1420,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(GUEST_BOOKINGS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1400,6 +1434,7 @@ impl Database {
     pub async fn get_guest_booking(&self, id: &str) -> Result<Option<GuestBooking>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(GUEST_BOOKINGS)?;
 
         match table.get(id)? {
@@ -1412,6 +1447,7 @@ impl Database {
     pub async fn list_guest_bookings(&self) -> Result<Vec<GuestBooking>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(GUEST_BOOKINGS)?;
 
         let mut bookings = Vec::new();
@@ -1433,6 +1469,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(SWAP_REQUESTS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1446,6 +1483,7 @@ impl Database {
     pub async fn get_swap_request(&self, id: &str) -> Result<Option<SwapRequest>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SWAP_REQUESTS)?;
 
         match table.get(id)? {
@@ -1458,6 +1496,7 @@ impl Database {
     pub async fn list_swap_requests_by_user(&self, user_id: &str) -> Result<Vec<SwapRequest>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(SWAP_REQUESTS)?;
 
         let mut requests = Vec::new();
@@ -1482,6 +1521,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(RECURRING_BOOKINGS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1498,6 +1538,7 @@ impl Database {
     ) -> Result<Vec<RecurringBooking>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(RECURRING_BOOKINGS)?;
 
         let mut bookings = Vec::new();
@@ -1515,6 +1556,7 @@ impl Database {
     pub async fn delete_recurring_booking(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(RECURRING_BOOKINGS)?;
             let result = table.remove(id)?;
@@ -1538,6 +1580,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(ANNOUNCEMENTS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1551,6 +1594,7 @@ impl Database {
     pub async fn list_announcements(&self) -> Result<Vec<Announcement>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(ANNOUNCEMENTS)?;
 
         let mut announcements = Vec::new();
@@ -1565,6 +1609,7 @@ impl Database {
     pub async fn delete_announcement(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(ANNOUNCEMENTS)?;
             let result = table.remove(id)?;
@@ -1588,6 +1633,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(NOTIFICATIONS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1601,6 +1647,7 @@ impl Database {
     pub async fn list_notifications_by_user(&self, user_id: &str) -> Result<Vec<Notification>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(NOTIFICATIONS)?;
 
         let mut notifications = Vec::new();
@@ -1616,9 +1663,8 @@ impl Database {
 
     /// Mark a notification as read
     pub async fn mark_notification_read(&self, id: &str) -> Result<bool> {
-        let mut notification = match self.get_notification(id).await? {
-            Some(n) => n,
-            None => return Ok(false),
+        let Some(mut notification) = self.get_notification(id).await? else {
+            return Ok(false);
         };
 
         notification.read = true;
@@ -1626,10 +1672,11 @@ impl Database {
         Ok(true)
     }
 
-    /// Get a notification by ID (helper for mark_notification_read)
+    /// Get a notification by ID (helper for `mark_notification_read`)
     async fn get_notification(&self, id: &str) -> Result<Option<Notification>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(NOTIFICATIONS)?;
 
         match table.get(id)? {
@@ -1647,6 +1694,7 @@ impl Database {
         let data = self.serialize(tx)?;
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(CREDIT_TRANSACTIONS)?;
             table.insert(tx.id.to_string().as_str(), data.as_slice())?;
@@ -1661,6 +1709,7 @@ impl Database {
     ) -> Result<Vec<parkhub_common::models::CreditTransaction>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(CREDIT_TRANSACTIONS)?;
         let mut transactions = Vec::new();
         for entry in table.iter()? {
@@ -1685,6 +1734,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(WEBHOOKS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1698,6 +1748,7 @@ impl Database {
     pub async fn get_webhook(&self, id: &str) -> Result<Option<Webhook>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(WEBHOOKS)?;
 
         match table.get(id)? {
@@ -1710,6 +1761,7 @@ impl Database {
     pub async fn list_webhooks(&self) -> Result<Vec<Webhook>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(WEBHOOKS)?;
 
         let mut webhooks = Vec::new();
@@ -1724,6 +1776,7 @@ impl Database {
     pub async fn delete_webhook(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(WEBHOOKS)?;
             let result = table.remove(id)?;
@@ -1747,6 +1800,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1766,6 +1820,7 @@ impl Database {
     ) -> Result<Vec<PushSubscription>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(PUSH_SUBSCRIPTIONS)?;
 
         let mut subs = Vec::new();
@@ -1796,6 +1851,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(PUSH_SUBSCRIPTIONS)?;
             for id in &ids {
@@ -1814,6 +1870,7 @@ impl Database {
     pub async fn list_all_push_subscriptions(&self) -> Result<Vec<PushSubscription>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(PUSH_SUBSCRIPTIONS)?;
 
         let mut subs = Vec::new();
@@ -1835,6 +1892,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(ZONES)?;
             table.insert(key.as_str(), data.as_slice())?;
@@ -1848,9 +1906,10 @@ impl Database {
     pub async fn list_zones_by_lot(&self, lot_id: &str) -> Result<Vec<Zone>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(ZONES)?;
 
-        let prefix = format!("{}:", lot_id);
+        let prefix = format!("{lot_id}:");
         let mut zones = Vec::new();
         for entry in table.iter()? {
             let (key, value) = entry?;
@@ -1861,12 +1920,13 @@ impl Database {
         Ok(zones)
     }
 
-    /// Delete a zone by lot_id and zone_id
+    /// Delete a zone by `lot_id` and `zone_id`
     pub async fn delete_zone(&self, lot_id: &str, zone_id: &str) -> Result<bool> {
-        let key = format!("{}:{}", lot_id, zone_id);
+        let key = format!("{lot_id}:{zone_id}");
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(ZONES)?;
             let result = table.remove(key.as_str())?;
@@ -1890,6 +1950,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(FAVORITES)?;
             table.insert(key.as_str(), data.as_slice())?;
@@ -1903,9 +1964,10 @@ impl Database {
     pub async fn list_favorites_by_user(&self, user_id: &str) -> Result<Vec<Favorite>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(FAVORITES)?;
 
-        let prefix = format!("{}:", user_id);
+        let prefix = format!("{user_id}:");
         let mut favs = Vec::new();
         for entry in table.iter()? {
             let (key, value) = entry?;
@@ -1916,12 +1978,13 @@ impl Database {
         Ok(favs)
     }
 
-    /// Delete a favorite by user_id and slot_id
+    /// Delete a favorite by `user_id` and `slot_id`
     pub async fn delete_favorite(&self, user_id: &str, slot_id: &str) -> Result<bool> {
-        let key = format!("{}:{}", user_id, slot_id);
+        let key = format!("{user_id}:{slot_id}");
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(FAVORITES)?;
             let result = table.remove(key.as_str())?;
@@ -1945,6 +2008,7 @@ impl Database {
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(AUDIT_LOG)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1957,6 +2021,7 @@ impl Database {
     pub async fn list_audit_log(&self, limit: usize) -> Result<Vec<AuditLogEntry>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(AUDIT_LOG)?;
 
         let mut entries: Vec<AuditLogEntry> = Vec::new();
@@ -1974,15 +2039,13 @@ impl Database {
     // ═══════════════════════════════════════════════════════════════════════════
 
     /// Save a translation proposal
-    pub async fn save_translation_proposal(
-        &self,
-        proposal: &TranslationProposal,
-    ) -> Result<()> {
+    pub async fn save_translation_proposal(&self, proposal: &TranslationProposal) -> Result<()> {
         let id = proposal.id.to_string();
         let data = self.serialize(proposal)?;
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(TRANSLATION_PROPOSALS)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -1999,6 +2062,7 @@ impl Database {
     ) -> Result<Vec<TranslationProposal>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(TRANSLATION_PROPOSALS)?;
 
         let mut proposals = Vec::new();
@@ -2018,12 +2082,10 @@ impl Database {
     }
 
     /// Get a single translation proposal by ID
-    pub async fn get_translation_proposal(
-        &self,
-        id: &str,
-    ) -> Result<Option<TranslationProposal>> {
+    pub async fn get_translation_proposal(&self, id: &str) -> Result<Option<TranslationProposal>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(TRANSLATION_PROPOSALS)?;
 
         match table.get(id)? {
@@ -2036,6 +2098,7 @@ impl Database {
     pub async fn delete_translation_proposal(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(TRANSLATION_PROPOSALS)?;
             let result = table.remove(id)?;
@@ -2046,15 +2109,13 @@ impl Database {
     }
 
     /// Save a translation vote
-    pub async fn save_translation_vote(
-        &self,
-        vote: &TranslationVote,
-    ) -> Result<()> {
+    pub async fn save_translation_vote(&self, vote: &TranslationVote) -> Result<()> {
         let id = vote.id.to_string();
         let data = self.serialize(vote)?;
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(TRANSLATION_VOTES)?;
             table.insert(id.as_str(), data.as_slice())?;
@@ -2064,12 +2125,10 @@ impl Database {
     }
 
     /// List votes for a specific proposal
-    pub async fn list_votes_for_proposal(
-        &self,
-        proposal_id: Uuid,
-    ) -> Result<Vec<TranslationVote>> {
+    pub async fn list_votes_for_proposal(&self, proposal_id: Uuid) -> Result<Vec<TranslationVote>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(TRANSLATION_VOTES)?;
 
         let mut votes = Vec::new();
@@ -2097,6 +2156,7 @@ impl Database {
     pub async fn delete_translation_vote(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         let existed = {
             let mut table = write_txn.open_table(TRANSLATION_VOTES)?;
             let result = table.remove(id)?;
@@ -2107,25 +2167,20 @@ impl Database {
     }
 
     /// Save a translation override (approved translation)
-    pub async fn save_translation_override(
-        &self,
-        ovr: &TranslationOverride,
-    ) -> Result<()> {
+    pub async fn save_translation_override(&self, ovr: &TranslationOverride) -> Result<()> {
         // Key format: "language:key" for uniqueness
         let composite_key = format!("{}:{}", ovr.language, ovr.key);
         let data = self.serialize(ovr)?;
 
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
+        drop(db);
         {
             let mut table = write_txn.open_table(TRANSLATION_OVERRIDES)?;
             table.insert(composite_key.as_str(), data.as_slice())?;
         }
         write_txn.commit()?;
-        debug!(
-            "Saved translation override: {}:{}",
-            ovr.language, ovr.key
-        );
+        debug!("Saved translation override: {}:{}", ovr.language, ovr.key);
         Ok(())
     }
 
@@ -2133,6 +2188,7 @@ impl Database {
     pub async fn list_translation_overrides(&self) -> Result<Vec<TranslationOverride>> {
         let db = self.inner.read().await;
         let read_txn = db.begin_read()?;
+        drop(db);
         let table = read_txn.open_table(TRANSLATION_OVERRIDES)?;
 
         let mut overrides = Vec::new();
@@ -2171,7 +2227,7 @@ mod tests {
     async fn test_database_create() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
         assert!(!db.is_encrypted());
         assert!(db.is_fresh().await.unwrap());
     }
@@ -2180,7 +2236,7 @@ mod tests {
     async fn test_database_encrypted() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), true);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
         assert!(db.is_encrypted());
     }
 
@@ -2188,7 +2244,7 @@ mod tests {
     async fn test_setup_completed() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         assert!(db.is_fresh().await.unwrap());
         db.mark_setup_completed().await.unwrap();
@@ -2199,7 +2255,7 @@ mod tests {
     async fn test_settings() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         assert!(db.get_setting("test_key").await.unwrap().is_none());
         db.set_setting("test_key", "test_value").await.unwrap();
@@ -2213,7 +2269,7 @@ mod tests {
     async fn test_stats() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         let stats = db.stats().await.unwrap();
         assert_eq!(stats.users, 0);
@@ -2225,7 +2281,7 @@ mod tests {
     async fn test_push_subscriptions_crud() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         let user_id = Uuid::new_v4();
         let other_user = Uuid::new_v4();
@@ -2303,7 +2359,7 @@ mod tests {
     async fn test_webhook_crud() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         // Empty initially
         let all = db.list_webhooks().await.unwrap();
@@ -2368,7 +2424,7 @@ mod tests {
     async fn test_zone_crud() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         let lot_a = Uuid::new_v4();
         let lot_b = Uuid::new_v4();
@@ -2457,7 +2513,7 @@ mod tests {
     async fn test_audit_log() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         // Empty initially
         let entries = db.list_audit_log(10).await.unwrap();
@@ -2536,7 +2592,7 @@ mod tests {
     async fn test_clear_all_data_includes_new_tables() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         // Populate webhooks
         let wh = Webhook {
@@ -2626,7 +2682,7 @@ mod tests {
     async fn test_delete_parking_slot() {
         let dir = tempdir().unwrap();
         let config = test_config(dir.path().to_path_buf(), false);
-        let db = Database::open(config).unwrap();
+        let db = Database::open(&config).unwrap();
 
         let lot_id = Uuid::new_v4();
         let floor_id = Uuid::new_v4();
@@ -2854,7 +2910,7 @@ mod tests {
     #[tokio::test]
     async fn test_user_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let mut user = make_user("alice", "alice@example.com");
 
@@ -2900,7 +2956,7 @@ mod tests {
     #[tokio::test]
     async fn test_user_list() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let u1 = make_user("alice", "alice@test.com");
         let u2 = make_user("bob", "bob@test.com");
@@ -2921,7 +2977,7 @@ mod tests {
     #[tokio::test]
     async fn test_user_not_found() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let fake_id = Uuid::new_v4().to_string();
         assert!(db.get_user(&fake_id).await.unwrap().is_none());
@@ -2944,7 +3000,7 @@ mod tests {
     #[tokio::test]
     async fn test_booking_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user = make_user("parker", "parker@test.com");
         let vehicle = make_vehicle(user.id, "M-PH 1234");
@@ -2989,7 +3045,7 @@ mod tests {
     #[tokio::test]
     async fn test_booking_by_lot() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user = make_user("parker", "parker@test.com");
         let vehicle = make_vehicle(user.id, "M-PH 5678");
@@ -3021,7 +3077,7 @@ mod tests {
     #[tokio::test]
     async fn test_vehicle_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let vehicle = make_vehicle(user_id, "B-AB 9876");
@@ -3058,7 +3114,7 @@ mod tests {
     #[tokio::test]
     async fn test_vehicle_delete_nonexistent() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let result = db
             .delete_vehicle(&Uuid::new_v4().to_string())
@@ -3074,7 +3130,7 @@ mod tests {
     #[tokio::test]
     async fn test_session_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let session = Session::new(user_id, 24, "testuser", "user");
@@ -3103,7 +3159,7 @@ mod tests {
     #[tokio::test]
     async fn test_session_expiry() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         // Create a session that expired 1 hour ago
@@ -3123,7 +3179,7 @@ mod tests {
     #[tokio::test]
     async fn test_delete_sessions_by_user() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_a = Uuid::new_v4();
         let user_b = Uuid::new_v4();
@@ -3159,7 +3215,7 @@ mod tests {
     #[tokio::test]
     async fn test_settings_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         // Non-existent key returns None
         assert!(db.get_setting("theme").await.unwrap().is_none());
@@ -3185,7 +3241,7 @@ mod tests {
     #[tokio::test]
     async fn test_setup_workflow() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         // Fresh DB
         assert!(db.is_fresh().await.unwrap());
@@ -3206,7 +3262,7 @@ mod tests {
     #[tokio::test]
     async fn test_notification_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let notif = Notification {
@@ -3254,7 +3310,7 @@ mod tests {
     #[tokio::test]
     async fn test_announcement_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let ann = Announcement {
             id: Uuid::new_v4(),
@@ -3299,7 +3355,7 @@ mod tests {
     #[tokio::test]
     async fn test_absence_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let absence = Absence {
@@ -3341,7 +3397,7 @@ mod tests {
     #[tokio::test]
     async fn test_credit_transaction_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let tx1 = parkhub_common::models::CreditTransaction {
@@ -3388,7 +3444,7 @@ mod tests {
     #[tokio::test]
     async fn test_slot_batch_save() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let lot_id = Uuid::new_v4();
         let floor_id = Uuid::new_v4();
@@ -3414,7 +3470,7 @@ mod tests {
     #[tokio::test]
     async fn test_slot_status_update() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let lot_id = Uuid::new_v4();
         let floor_id = Uuid::new_v4();
@@ -3457,7 +3513,7 @@ mod tests {
     #[tokio::test]
     async fn test_stats_after_data() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         // Users
         let u1 = make_user("alice", "alice@stats.com");
@@ -3500,7 +3556,7 @@ mod tests {
     #[tokio::test]
     async fn test_database_stats_empty() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let stats = db.stats().await.unwrap();
         assert_eq!(stats.users, 0);
@@ -3518,7 +3574,7 @@ mod tests {
     #[tokio::test]
     async fn test_favorites_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let slot_a = Uuid::new_v4();
@@ -3582,7 +3638,7 @@ mod tests {
     #[tokio::test]
     async fn test_favorites_isolation_between_users() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_a = Uuid::new_v4();
         let user_b = Uuid::new_v4();
@@ -3646,7 +3702,7 @@ mod tests {
     #[tokio::test]
     async fn test_gdpr_anonymize_user() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user = make_user("alice", "alice@example.com");
         db.save_user(&user).await.unwrap();
@@ -3701,7 +3757,7 @@ mod tests {
     #[tokio::test]
     async fn test_gdpr_anonymize_nonexistent_user() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let result = db
             .anonymize_user(&Uuid::new_v4().to_string())
@@ -3717,7 +3773,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_session_by_refresh_token() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let session = Session::new(user_id, 24, "alice", "user");
@@ -3747,7 +3803,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_session_by_refresh_token_expired() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let user_id = Uuid::new_v4();
         let mut session = Session::new(user_id, 1, "expired", "user");
@@ -3771,7 +3827,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_all_data_preserves_settings() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         // Add some data
         let user = make_user("alice", "alice@test.com");
@@ -3798,7 +3854,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_all_data_sessions_and_bookings() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         // Sessions
         let session = Session::new(Uuid::new_v4(), 24, "test", "user");
@@ -3825,7 +3881,7 @@ mod tests {
     #[tokio::test]
     async fn test_announcement_multiple_and_order() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let a1 = Announcement {
             id: Uuid::new_v4(),
@@ -3874,7 +3930,7 @@ mod tests {
     #[tokio::test]
     async fn test_parking_lot_crud() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), false)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), false)).unwrap();
 
         let lot = make_parking_lot();
 
@@ -3939,7 +3995,7 @@ mod tests {
     #[tokio::test]
     async fn test_encrypted_data_roundtrip() {
         let dir = tempdir().unwrap();
-        let db = Database::open(test_config(dir.path().to_path_buf(), true)).unwrap();
+        let db = Database::open(&test_config(dir.path().to_path_buf(), true)).unwrap();
         assert!(db.is_encrypted());
 
         // Save and retrieve a user through encryption

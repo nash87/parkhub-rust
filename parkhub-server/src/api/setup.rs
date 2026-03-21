@@ -16,6 +16,7 @@ use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct SetupStatus {
     /// Whether initial setup has been completed
@@ -60,15 +61,16 @@ pub struct SetupRequest {
     )
 )]
 pub async fn setup_status(State(state): State<SharedState>) -> Json<ApiResponse<SetupStatus>> {
-    let state = state.read().await;
-    let is_fresh = state.db.is_fresh().await.unwrap_or(true);
-    let stats = state.db.stats().await.unwrap_or_default();
+    let guard = state.read().await;
+    let is_fresh = guard.db.is_fresh().await.unwrap_or(true);
+    let db_stats = guard.db.stats().await.unwrap_or_default();
+    drop(guard);
 
     Json(ApiResponse::success(SetupStatus {
         setup_completed: !is_fresh,
-        has_admin: stats.users > 0,
-        has_parking_lots: stats.parking_lots > 0,
-        has_users: stats.users > 0,
+        has_admin: db_stats.users > 0,
+        has_parking_lots: db_stats.parking_lots > 0,
+        has_users: db_stats.users > 0,
     }))
 }
 
@@ -85,6 +87,7 @@ pub async fn setup_status(State(state): State<SharedState>) -> Json<ApiResponse<
         (status = 400, description = "Setup already completed or validation error"),
     )
 )]
+#[allow(clippy::too_many_lines)]
 pub async fn setup_init(
     State(state): State<SharedState>,
     Json(req): Json<SetupRequest>,
@@ -210,6 +213,7 @@ pub async fn setup_init(
     if let Err(e) = state_guard.db.save_session(&token, &session).await {
         tracing::error!("Failed to create admin session: {}", e);
     }
+    drop(state_guard);
 
     tracing::info!(
         "Setup completed: admin user '{}' created",

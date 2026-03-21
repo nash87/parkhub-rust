@@ -88,6 +88,14 @@ vi.mock('../constants/animations', () => ({
   fadeUp: { hidden: {}, show: {} },
 }));
 
+vi.mock('../hooks/useWebSocket', () => ({
+  useWebSocket: () => ({ connected: false, lastEvent: null }),
+}));
+
+vi.mock('../components/SimpleChart', () => ({
+  BarChart: ({ data }: any) => <div data-testid="bar-chart">{data?.length} bars</div>,
+}));
+
 import { DashboardPage } from './Dashboard';
 
 describe('DashboardPage', () => {
@@ -136,7 +144,8 @@ describe('DashboardPage', () => {
       expect(screen.getAllByText('Active Bookings').length).toBeGreaterThanOrEqual(2);
     });
     expect(screen.getByText('Credits Left')).toBeInTheDocument();
-    expect(screen.getByText('This Month')).toBeInTheDocument();
+    // "This Month" appears as stat card label and chart section heading
+    expect(screen.getAllByText('This Month').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Next Booking')).toBeInTheDocument();
   });
 
@@ -147,7 +156,8 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No active bookings')).toBeInTheDocument();
+      // "No active bookings" appears in both empty booking list and empty chart section
+      expect(screen.getAllByText('No active bookings').length).toBeGreaterThanOrEqual(1);
     });
     // "Book a Spot" appears both in empty state and quick actions
     expect(screen.getAllByText('Book a Spot').length).toBeGreaterThanOrEqual(1);

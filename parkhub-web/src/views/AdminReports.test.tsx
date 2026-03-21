@@ -6,11 +6,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 
 const mockAdminStats = vi.fn();
 const mockGetBookings = vi.fn();
+const mockGetLots = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
     adminStats: (...args: any[]) => mockAdminStats(...args),
     getBookings: (...args: any[]) => mockGetBookings(...args),
+    getLots: (...args: any[]) => mockGetLots(...args),
   },
 }));
 
@@ -35,6 +37,41 @@ vi.mock('../components/SimpleChart', () => ({
   DonutChart: ({ slices }: any) => <div data-testid="donut-chart">{slices?.length} slices</div>,
 }));
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'common.loading': 'Loading',
+        'admin.reports': 'Reports',
+        'admin.totalUsers': 'Total Users',
+        'admin.totalLots': 'Total Lots',
+        'admin.totalBookings': 'Total Bookings',
+        'admin.activeBookings': 'Active Bookings',
+        'admin.overview': 'Overview',
+        'admin.utilizationRate': 'Utilization Rate',
+        'admin.avgBookingsPerUser': 'Avg. Bookings per User',
+        'admin.activeBookingRate': 'Active Booking Rate',
+        'admin.bookingsThisWeek': 'Bookings This Week',
+        'admin.lotOccupancy': 'Lot Occupancy',
+        'heatmap.title': 'Occupancy Heatmap',
+        'heatmap.subtitle': 'Average hourly occupancy by day of week (last 30 days)',
+        'reports.weekdays.mon': 'Mon',
+        'reports.weekdays.tue': 'Tue',
+        'reports.weekdays.wed': 'Wed',
+        'reports.weekdays.thu': 'Thu',
+        'reports.weekdays.fri': 'Fri',
+        'reports.weekdays.sat': 'Sat',
+        'reports.weekdays.sun': 'Sun',
+      };
+      return map[key] || key;
+    },
+  }),
+}));
+
+vi.mock('../components/ExportButton', () => ({
+  ExportButton: () => <button data-testid="export-button">Export</button>,
+}));
+
 vi.mock('../components/OccupancyHeatmap', () => ({
   OccupancyHeatmap: ({ bookings, totalSlots }: any) => (
     <div data-testid="occupancy-heatmap">heatmap: {bookings?.length ?? 0} bookings, {totalSlots} slots</div>
@@ -47,7 +84,9 @@ describe('AdminReportsPage', () => {
   beforeEach(() => {
     mockAdminStats.mockClear();
     mockGetBookings.mockClear();
+    mockGetLots.mockClear();
     mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
   });
 
   afterEach(() => {
@@ -127,6 +166,14 @@ describe('AdminReportsPage', () => {
     mockAdminStats.mockResolvedValue({
       success: true,
       data: { total_users: 10, total_lots: 3, total_bookings: 50, active_bookings: 5 },
+    });
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'l1', name: 'Lot A', total_slots: 20, available_slots: 10, status: 'open' },
+        { id: 'l2', name: 'Lot B', total_slots: 30, available_slots: 5, status: 'open' },
+        { id: 'l3', name: 'Lot C', total_slots: 15, available_slots: 15, status: 'open' },
+      ],
     });
 
     render(<AdminReportsPage />);

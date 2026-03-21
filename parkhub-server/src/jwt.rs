@@ -66,7 +66,7 @@ pub struct Claims {
 }
 
 /// Token type
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum TokenType {
     Access,
@@ -130,7 +130,7 @@ impl JwtManager {
         };
 
         let access_token = encode(&Header::default(), &access_claims, &self.encoding_key)
-            .map_err(|e| AppError::InvalidInput(format!("Failed to create token: {}", e)))?;
+            .map_err(|e| AppError::InvalidInput(format!("Failed to create token: {e}")))?;
 
         // Refresh token
         let refresh_exp = now + Duration::days(self.config.refresh_token_expiry_days);
@@ -145,7 +145,7 @@ impl JwtManager {
         };
 
         let refresh_token = encode(&Header::default(), &refresh_claims, &self.encoding_key)
-            .map_err(|e| AppError::InvalidInput(format!("Failed to create token: {}", e)))?;
+            .map_err(|e| AppError::InvalidInput(format!("Failed to create token: {e}")))?;
 
         Ok(TokenPair {
             access_token,
@@ -234,7 +234,7 @@ where
 
         let user_id = Uuid::parse_str(&claims.sub).map_err(|_| AppError::InvalidToken)?;
 
-        Ok(AuthUser {
+        Ok(Self {
             user_id,
             username: claims.username,
             role: claims.role,
@@ -253,10 +253,9 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        match AuthUser::from_request_parts(parts, state).await {
-            Ok(user) => Ok(OptionalAuthUser(Some(user))),
-            Err(_) => Ok(OptionalAuthUser(None)),
-        }
+        Ok(AuthUser::from_request_parts(parts, state)
+            .await
+            .map_or(Self(None), |user| Self(Some(user))))
     }
 }
 

@@ -86,7 +86,7 @@ pub struct AuditEntry {
 impl AuditEntry {
     /// Create a new audit entry builder
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(event_type: AuditEventType) -> AuditEntryBuilder {
+    pub const fn new(event_type: AuditEventType) -> AuditEntryBuilder {
         AuditEntryBuilder {
             event_type,
             user_id: None,
@@ -123,7 +123,7 @@ impl AuditEntryBuilder {
         self
     }
 
-    pub fn ip(mut self, ip: IpAddr) -> Self {
+    pub const fn ip(mut self, ip: IpAddr) -> Self {
         self.ip_address = Some(ip);
         self
     }
@@ -144,7 +144,7 @@ impl AuditEntryBuilder {
         self
     }
 
-    pub fn success(mut self, success: bool) -> Self {
+    pub const fn success(mut self, success: bool) -> Self {
         self.success = success;
         self
     }
@@ -210,7 +210,7 @@ impl AuditEntry {
             event_type: format!("{:?}", self.event_type),
             user_id: self.user_id,
             username: self.username.clone(),
-            details: self.details.as_ref().map(|v| v.to_string()),
+            details: self.details.as_ref().map(std::string::ToString::to_string),
         };
         if let Err(e) = db.save_audit_log(&log_entry).await {
             tracing::warn!("Failed to persist audit entry: {e}");
@@ -220,7 +220,7 @@ impl AuditEntry {
 
 /// Convenience functions for common audit events
 pub mod events {
-    use super::*;
+    use super::{AuditEntry, AuditEventType, IpAddr, Uuid};
 
     pub fn login_success(user_id: Uuid, username: &str, ip: IpAddr) -> AuditEntry {
         AuditEntry::new(AuditEventType::LoginSuccess)

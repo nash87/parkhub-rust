@@ -92,7 +92,7 @@ pub enum AppError {
 
 impl AppError {
     /// Get error code for this error type
-    pub fn code(&self) -> &'static str {
+    pub const fn code(&self) -> &'static str {
         match self {
             Self::InvalidCredentials => "INVALID_CREDENTIALS",
             Self::TokenExpired => "TOKEN_EXPIRED",
@@ -114,11 +114,12 @@ impl AppError {
     }
 
     /// Get HTTP status code for this error
-    pub fn status_code(&self) -> StatusCode {
+    pub const fn status_code(&self) -> StatusCode {
         match self {
-            Self::InvalidCredentials | Self::InvalidToken => StatusCode::UNAUTHORIZED,
-            Self::TokenExpired => StatusCode::UNAUTHORIZED,
-            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::InvalidCredentials
+            | Self::InvalidToken
+            | Self::TokenExpired
+            | Self::Unauthorized => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::ValidationFailed(_) | Self::InvalidInput(_) => StatusCode::BAD_REQUEST,
             Self::NotFound(_) => StatusCode::NOT_FOUND,
@@ -183,8 +184,7 @@ impl From<validator::ValidationErrors> for AppError {
                     message: e
                         .message
                         .as_ref()
-                        .map(|m| m.to_string())
-                        .unwrap_or_else(|| e.code.to_string()),
+                        .map_or_else(|| e.code.to_string(), std::string::ToString::to_string),
                 })
             })
             .collect();
@@ -217,10 +217,7 @@ mod tests {
             AppError::NotFound("test".into()).status_code(),
             StatusCode::NOT_FOUND
         );
-        assert_eq!(
-            AppError::Forbidden.status_code(),
-            StatusCode::FORBIDDEN
-        );
+        assert_eq!(AppError::Forbidden.status_code(), StatusCode::FORBIDDEN);
         assert_eq!(
             AppError::InvalidInput("bad".into()).status_code(),
             StatusCode::BAD_REQUEST

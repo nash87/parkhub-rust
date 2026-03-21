@@ -25,13 +25,13 @@ use super::{
 
 /// Request body for the forgot-password endpoint
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct ForgotPasswordRequest {
+pub struct ForgotPasswordRequest {
     email: String,
 }
 
 /// Request body for the reset-password endpoint
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct ResetPasswordRequest {
+pub struct ResetPasswordRequest {
     token: String,
     password: String,
 }
@@ -61,7 +61,7 @@ struct PasswordResetToken {
     )
 )]
 #[tracing::instrument(skip(state, request), fields(username = %request.username))]
-pub(crate) async fn login(
+pub async fn login(
     State(state): State<SharedState>,
     Json(request): Json<LoginRequest>,
 ) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
@@ -72,21 +72,20 @@ pub(crate) async fn login(
         Ok(Some(u)) => u,
         Ok(None) => {
             // Also try by email
-            match state_guard.db.get_user_by_email(&request.username).await {
-                Ok(Some(u)) => u,
-                _ => {
-                    AuditEntry::new(AuditEventType::LoginFailed)
-                        .error("User not found")
-                        .log();
-                    metrics::record_auth_event("login", false);
-                    return (
-                        StatusCode::UNAUTHORIZED,
-                        Json(ApiResponse::error(
-                            "INVALID_CREDENTIALS",
-                            "Invalid username or password",
-                        )),
-                    );
-                }
+            if let Ok(Some(u)) = state_guard.db.get_user_by_email(&request.username).await {
+                u
+            } else {
+                AuditEntry::new(AuditEventType::LoginFailed)
+                    .error("User not found")
+                    .log();
+                metrics::record_auth_event("login", false);
+                return (
+                    StatusCode::UNAUTHORIZED,
+                    Json(ApiResponse::error(
+                        "INVALID_CREDENTIALS",
+                        "Invalid username or password",
+                    )),
+                );
             }
         }
         Err(e) => {
@@ -137,7 +136,7 @@ pub(crate) async fn login(
     }
 
     // Create session using configured timeout (converted from minutes to hours, minimum 1h)
-    let session_hours = (state_guard.config.session_timeout_minutes as i64).max(60) / 60;
+    let session_hours = i64::from(state_guard.config.session_timeout_minutes).max(60) / 60;
     let role_str = format!("{:?}", user.role).to_lowercase();
     let session = Session::new(user.id, session_hours, &user.username, &role_str);
     let access_token = generate_access_token();
@@ -157,6 +156,7 @@ pub(crate) async fn login(
         .user(user.id, &user.username)
         .log();
     audit.persist(&state_guard.db).await;
+    drop(state_guard);
     metrics::record_auth_event("login", true);
 
     // Create response — never send password_hash to clients
@@ -192,7 +192,8 @@ pub(crate) async fn login(
     )
 )]
 #[tracing::instrument(skip(state, request), fields(email = %request.email))]
-pub(crate) async fn register(
+#[allow(clippy::too_many_lines)]
+pub async fn register(
     State(state): State<SharedState>,
     Json(request): Json<RegisterRequest>,
 ) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
@@ -259,7 +260,7 @@ pub(crate) async fn register(
     let mut final_username = username.clone();
     let mut counter = 1;
     while let Ok(Some(_)) = state_guard.db.get_user_by_username(&final_username).await {
-        final_username = format!("{}{}", username, counter);
+        final_username = format!("{username}{counter}");
         counter += 1;
     }
 
@@ -332,7 +333,7 @@ pub(crate) async fn register(
     }
 
     // Create session using configured timeout (converted from minutes to hours, minimum 1h)
-    let session_hours = (state_guard.config.session_timeout_minutes as i64).max(60) / 60;
+    let session_hours = i64::from(state_guard.config.session_timeout_minutes).max(60) / 60;
     let role_str = format!("{:?}", user.role).to_lowercase();
     let session = Session::new(user.id, session_hours, &user.username, &role_str);
     let access_token = generate_access_token();
@@ -347,6 +348,7 @@ pub(crate) async fn register(
             )),
         );
     }
+    drop(state_guard);
 
     // Create response — never send password_hash to clients
     let mut response_user = user;
@@ -379,7 +381,7 @@ pub(crate) async fn register(
     )
 )]
 #[tracing::instrument(skip(state, request))]
-pub(crate) async fn refresh_token(
+pub async fn refresh_token(
     State(state): State<SharedState>,
     Json(request): Json<RefreshTokenRequest>,
 ) -> (StatusCode, Json<ApiResponse<AuthTokens>>) {
@@ -432,9 +434,11 @@ pub(crate) async fn refresh_token(
 
     // Invalidate old session
     drop(state_guard);
-    let state_guard = state.read().await;
-    if let Err(e) = state_guard.db.delete_session(&old_access_token).await {
-        tracing::warn!("Failed to delete old session during refresh: {}", e);
+    {
+        let state_guard = state.read().await;
+        if let Err(e) = state_guard.db.delete_session(&old_access_token).await {
+            tracing::warn!("Failed to delete old session during refresh: {}", e);
+        }
     }
 
     tracing::info!(
@@ -472,22 +476,19 @@ pub(crate) async fn refresh_token(
     )
 )]
 #[tracing::instrument(skip(state, request), fields(email = %request.email))]
-pub(crate) async fn forgot_password(
+pub async fn forgot_password(
     State(state): State<SharedState>,
     Json(request): Json<ForgotPasswordRequest>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
     let state_guard = state.read().await;
 
     // Look up the user — silently succeed even if not found (anti-enumeration)
-    let user = match state_guard.db.get_user_by_email(&request.email).await {
-        Ok(Some(u)) => u,
-        _ => {
-            tracing::info!(
-                email = %request.email,
-                "Forgot-password request for unknown email — silently accepted"
-            );
-            return (StatusCode::OK, Json(ApiResponse::success(())));
-        }
+    let Ok(Some(user)) = state_guard.db.get_user_by_email(&request.email).await else {
+        tracing::info!(
+            email = %request.email,
+            "Forgot-password request for unknown email — silently accepted"
+        );
+        return (StatusCode::OK, Json(ApiResponse::success(())));
     };
 
     // Generate a cryptographically random token (32 bytes, hex-encoded)
@@ -513,7 +514,7 @@ pub(crate) async fn forgot_password(
     };
 
     // Store reset token in settings with key "pwreset:<token>"
-    let settings_key = format!("pwreset:{}", reset_token);
+    let settings_key = format!("pwreset:{reset_token}");
     if let Err(e) = state_guard.db.set_setting(&settings_key, &token_json).await {
         tracing::error!("Failed to store reset token: {}", e);
         return (
@@ -524,8 +525,10 @@ pub(crate) async fn forgot_password(
 
     // Build and send the reset email (gracefully degraded if SMTP not configured)
     let app_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:8443".to_string());
-    let reset_url = format!("{}/reset-password?token={}", app_url, reset_token);
+    let reset_url = format!("{app_url}/reset-password?token={reset_token}");
     let org_name = state_guard.config.organization_name.clone();
+
+    drop(state_guard);
 
     let html = email::build_password_reset_email(&reset_url, &org_name);
 
@@ -563,7 +566,7 @@ pub(crate) async fn forgot_password(
     )
 )]
 #[tracing::instrument(skip(state, request))]
-pub(crate) async fn reset_password(
+pub async fn reset_password(
     State(state): State<SharedState>,
     Json(request): Json<ResetPasswordRequest>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
@@ -571,17 +574,14 @@ pub(crate) async fn reset_password(
 
     // Retrieve token data from settings
     let settings_key = format!("pwreset:{}", request.token);
-    let token_json = match state_guard.db.get_setting(&settings_key).await {
-        Ok(Some(v)) => v,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_TOKEN",
-                    "Reset token is invalid or has already been used",
-                )),
-            );
-        }
+    let Ok(Some(token_json)) = state_guard.db.get_setting(&settings_key).await else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_TOKEN",
+                "Reset token is invalid or has already been used",
+            )),
+        );
     };
 
     let token_data: PasswordResetToken = match serde_json::from_str(&token_json) {
@@ -623,10 +623,10 @@ pub(crate) async fn reset_password(
 
     // Validate new password using strong password rules
     if let Err(e) = crate::validation::validate_password_strength(&request.password) {
-        let msg = e
-            .message
-            .map(|m| m.to_string())
-            .unwrap_or_else(|| "Password does not meet strength requirements".to_string());
+        let msg = e.message.map_or_else(
+            || "Password does not meet strength requirements".to_string(),
+            |m| m.to_string(),
+        );
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error("INVALID_PASSWORD", msg)),
@@ -634,14 +634,11 @@ pub(crate) async fn reset_password(
     }
 
     // Fetch and update the user
-    let mut user = match state_guard.db.get_user(&token_data.user_id).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_TOKEN", "User not found")),
-            );
-        }
+    let Ok(Some(mut user)) = state_guard.db.get_user(&token_data.user_id).await else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_TOKEN", "User not found")),
+        );
     };
 
     // Hash the new password
@@ -680,6 +677,7 @@ pub(crate) async fn reset_password(
     if let Err(e) = state_guard.db.delete_sessions_by_user(user.id).await {
         tracing::warn!(user_id = %user.id, error = %e, "Failed to invalidate sessions after password reset");
     }
+    drop(state_guard);
 
     AuditEntry::new(AuditEventType::PasswordChanged)
         .user(user.id, &user.username)

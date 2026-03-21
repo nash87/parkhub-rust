@@ -31,7 +31,7 @@ pub fn init_metrics() -> PrometheusHandle {
         (status = 200, description = "Prometheus metrics", content_type = "text/plain"),
     )
 )]
-pub async fn metrics_handler(handle: PrometheusHandle) -> impl IntoResponse {
+pub fn metrics_handler(handle: &PrometheusHandle) -> impl IntoResponse {
     (
         StatusCode::OK,
         [("content-type", "text/plain; charset=utf-8")],
@@ -71,16 +71,19 @@ pub fn record_db_operation(
 }
 
 /// Record active sessions
+#[allow(clippy::cast_precision_loss)]
 pub fn record_active_sessions(count: u64) {
     gauge!("active_sessions").set(count as f64);
 }
 
 /// Record active bookings
+#[allow(clippy::cast_precision_loss)]
 pub fn record_active_bookings(count: u64) {
     gauge!("active_bookings").set(count as f64);
 }
 
 /// Record parking lot occupancy
+#[allow(clippy::cast_precision_loss)]
 pub fn record_lot_occupancy(lot_id: &str, lot_name: &str, total: u64, occupied: u64) {
     let labels = [
         ("lot_id", lot_id.to_string()),
@@ -113,6 +116,7 @@ pub fn record_booking_event(event_type: &str) {
 }
 
 /// Record the total number of registered users
+#[allow(clippy::cast_precision_loss)]
 pub fn record_registered_users(count: u64) {
     gauge!("registered_users_total").set(count as f64);
 }

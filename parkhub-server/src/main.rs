@@ -1,4 +1,4 @@
-//! ParkHub Server
+//! `ParkHub` Server
 //!
 //! Database server with HTTP API and LAN autodiscovery.
 //! Can run headless or with a configuration GUI.
@@ -74,6 +74,7 @@ pub struct AppState {
 }
 
 /// CLI arguments for the server
+#[allow(clippy::struct_excessive_bools)] // CLI flags are naturally boolean
 #[derive(Debug, Clone)]
 struct CliArgs {
     /// Show help message
@@ -95,7 +96,7 @@ struct CliArgs {
 impl CliArgs {
     fn parse() -> Self {
         let args: Vec<String> = std::env::args().collect();
-        let mut cli = CliArgs {
+        let mut cli = Self {
             help: false,
             debug: false,
             headless: false,
@@ -171,7 +172,7 @@ impl CliArgs {
 }
 
 #[tokio::main]
-#[allow(clippy::field_reassign_with_default)]
+#[allow(clippy::field_reassign_with_default, clippy::too_many_lines)]
 async fn main() -> Result<()> {
     // Parse CLI arguments first
     let cli = CliArgs::parse();
@@ -246,12 +247,11 @@ async fn main() -> Result<()> {
         // Unattended/headless mode - auto-configure with defaults
         info!("Auto-configuring with defaults (unattended mode)...");
         let mut config = ServerConfig::default();
-        config.server_name = hostname::get()
-            .map(|h| h.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "ParkHub Server".to_string());
-        let admin_password = if let Ok(pw) = std::env::var("PARKHUB_ADMIN_PASSWORD") {
-            pw
-        } else {
+        config.server_name = hostname::get().map_or_else(
+            |_| "ParkHub Server".to_string(),
+            |h| h.to_string_lossy().to_string(),
+        );
+        let admin_password = std::env::var("PARKHUB_ADMIN_PASSWORD").unwrap_or_else(|_| {
             use rand::Rng;
             let generated: String = rand::rng()
                 .sample_iter(&rand::distr::Alphanumeric)
@@ -259,12 +259,12 @@ async fn main() -> Result<()> {
                 .map(char::from)
                 .collect();
             println!("╔══════════════════════════════════════════════════════════╗");
-            println!("║  GENERATED ADMIN PASSWORD: {}  ║", generated);
+            println!("║  GENERATED ADMIN PASSWORD: {generated}  ║");
             println!("║  CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!    ║");
             println!("╚══════════════════════════════════════════════════════════╝");
             warn!("Using auto-generated admin password. Change it immediately after first login!");
             generated
-        };
+        });
         config.admin_password_hash = hash_password(&admin_password)?;
         config.encryption_enabled = false; // Disable encryption for unattended setup
         config.enable_tls = false; // Disable TLS for easier initial setup
@@ -290,9 +290,7 @@ async fn main() -> Result<()> {
             warn!("Running in headless mode - using default configuration");
             let mut config = ServerConfig::default();
             // Generate a random password or use env var
-            let admin_password = if let Ok(pw) = std::env::var("PARKHUB_ADMIN_PASSWORD") {
-                pw
-            } else {
+            let admin_password = std::env::var("PARKHUB_ADMIN_PASSWORD").unwrap_or_else(|_| {
                 use rand::Rng;
                 let generated: String = rand::rng()
                     .sample_iter(&rand::distr::Alphanumeric)
@@ -300,14 +298,14 @@ async fn main() -> Result<()> {
                     .map(char::from)
                     .collect();
                 println!("╔══════════════════════════════════════════════════════════╗");
-                println!("║  GENERATED ADMIN PASSWORD: {}  ║", generated);
+                println!("║  GENERATED ADMIN PASSWORD: {generated}  ║");
                 println!("║  CHANGE THIS PASSWORD IMMEDIATELY AFTER FIRST LOGIN!    ║");
                 println!("╚══════════════════════════════════════════════════════════╝");
                 warn!(
                     "Using auto-generated admin password. Change it immediately after first login!"
                 );
                 generated
-            };
+            });
             config.admin_password_hash = hash_password(&admin_password)?;
             // Use environment variable for encryption passphrase in headless mode
             config.encryption_passphrase = std::env::var("PARKHUB_DB_PASSPHRASE").ok();
@@ -356,7 +354,7 @@ async fn main() -> Result<()> {
         passphrase: config.encryption_passphrase.clone(),
         create_if_missing: true,
     };
-    let db = Database::open(db_config).context("Failed to open database")?;
+    let db = Database::open(&db_config).context("Failed to open database")?;
     info!(
         "Database opened: {} (encrypted: {})",
         data_dir.display(),
@@ -389,7 +387,7 @@ async fn main() -> Result<()> {
 
     // Start mDNS service for autodiscovery
     let mdns = if config.enable_mdns {
-        match MdnsService::new(&config).await {
+        match MdnsService::new(&config) {
             Ok(service) => {
                 info!("mDNS autodiscovery enabled");
                 Some(service)
@@ -502,6 +500,7 @@ async fn main() -> Result<()> {
                                 return;
                             }
                         };
+                        drop(state_guard);
                         users
                             .into_iter()
                             .filter(|user| {
@@ -511,10 +510,9 @@ async fn main() -> Result<()> {
                                     // Idempotency: skip users already refilled this month
                                     && !user
                                         .credits_last_refilled
-                                        .map(|t| {
+                                        .is_some_and(|t| {
                                             t.month() == now.month() && t.year() == now.year()
                                         })
-                                        .unwrap_or(false)
                             })
                             .map(|u| u.id)
                             .collect()
@@ -525,23 +523,26 @@ async fn main() -> Result<()> {
                     for chunk in user_ids_to_refill.chunks(50) {
                         let state_guard = state.write().await;
                         for user_id in chunk {
-                            let mut user = match state_guard.db.get_user(&user_id.to_string()).await
-                            {
-                                Ok(Some(u)) => u,
-                                _ => continue,
+                            let Some(mut user) = state_guard
+                                .db
+                                .get_user(&user_id.to_string())
+                                .await
+                                .ok()
+                                .flatten()
+                            else {
+                                continue;
                             };
                             // Re-check idempotency under write lock
                             if user
                                 .credits_last_refilled
-                                .map(|t| t.month() == now.month() && t.year() == now.year())
-                                .unwrap_or(false)
+                                .is_some_and(|t| t.month() == now.month() && t.year() == now.year())
                             {
                                 continue;
                             }
                             let old_balance = user.credits_balance;
                             user.credits_balance = user.credits_monthly_quota;
                             user.credits_last_refilled = Some(now);
-                            if let Ok(()) = state_guard.db.save_user(&user).await {
+                            if matches!(state_guard.db.save_user(&user).await, Ok(())) {
                                 let tx = parkhub_common::CreditTransaction {
                                     id: uuid::Uuid::new_v4(),
                                     user_id: user.id,
@@ -561,7 +562,7 @@ async fn main() -> Result<()> {
                                 refilled += 1;
                             }
                         }
-                        // write lock dropped at end of each batch iteration
+                        drop(state_guard);
                     }
                     info!(
                         "Monthly credit refill complete: {} users refilled",
@@ -580,7 +581,9 @@ async fn main() -> Result<()> {
     // Demo auto-reset scheduler (every 6 hours when DEMO_MODE=true)
     {
         let demo_enabled = {
-            let ds = demo_state.lock().unwrap_or_else(|e| e.into_inner());
+            let ds = demo_state
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             ds.enabled
         };
         if demo_enabled {
@@ -636,7 +639,7 @@ async fn main() -> Result<()> {
                             match tokio::process::Command::new("python3")
                                 .arg(seed_script)
                                 .arg("--base-url")
-                                .arg(format!("http://127.0.0.1:{}", port))
+                                .arg(format!("http://127.0.0.1:{port}"))
                                 .env("PARKHUB_ADMIN_PASSWORD", &admin_pw)
                                 .output()
                                 .await
@@ -706,7 +709,9 @@ async fn main() -> Result<()> {
                     // Lot occupancy
                     if let Ok(lots) = state_guard.db.list_parking_lots().await {
                         for lot in &lots {
-                            let total = lot.total_slots as u64;
+                            #[allow(clippy::cast_sign_loss)] // values are clamped to >= 0
+                            let total = lot.total_slots.max(0) as u64;
+                            #[allow(clippy::cast_sign_loss)]
                             let occupied = (lot.total_slots - lot.available_slots).max(0) as u64;
                             metrics::record_lot_occupancy(
                                 &lot.id.to_string(),
@@ -725,7 +730,12 @@ async fn main() -> Result<()> {
 
     // Show status GUI or wait for shutdown signal
     #[cfg(feature = "gui")]
-    if !cli.headless {
+    if cli.headless {
+        // Headless mode requested via CLI
+        info!("Server running in headless mode. Press Ctrl+C to stop.");
+        tokio::signal::ctrl_c().await?;
+        info!("Shutting down...");
+    } else {
         match run_status_gui(config, state, data_dir).await {
             Ok(()) => {}
             Err(e) => {
@@ -737,11 +747,6 @@ async fn main() -> Result<()> {
                 info!("Shutting down...");
             }
         }
-    } else {
-        // Headless mode requested via CLI
-        info!("Server running in headless mode. Press Ctrl+C to stop.");
-        tokio::signal::ctrl_c().await?;
-        info!("Shutting down...");
     }
 
     #[cfg(not(feature = "gui"))]
@@ -771,14 +776,13 @@ fn get_data_directory(portable_mode: Option<bool>) -> Result<PathBuf> {
         if portable {
             std::fs::create_dir_all(&portable_data)?;
             return Ok(portable_data);
-        } else {
-            // Use system data directory
-            let dirs = directories::ProjectDirs::from("com", "parkhub", "ParkHub Server")
-                .context("Could not determine data directory")?;
-            let data_dir = dirs.data_dir().to_path_buf();
-            std::fs::create_dir_all(&data_dir)?;
-            return Ok(data_dir);
         }
+        // Use system data directory
+        let dirs = directories::ProjectDirs::from("com", "parkhub", "ParkHub Server")
+            .context("Could not determine data directory")?;
+        let data_dir = dirs.data_dir().to_path_buf();
+        std::fs::create_dir_all(&data_dir)?;
+        return Ok(data_dir);
     }
 
     // Auto-detect: Check for existing portable data first
@@ -820,7 +824,7 @@ pub(crate) fn hash_password(password: &str) -> Result<String> {
     let argon2 = Argon2::default();
     let hash = argon2
         .hash_password(password.as_bytes(), &salt)
-        .map_err(|e| anyhow::anyhow!("Password hashing failed: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Password hashing failed: {e}"))?;
 
     Ok(hash.to_string())
 }
@@ -838,7 +842,7 @@ fn run_setup_wizard() -> Result<ServerConfig> {
 
     // Set initial values
     ui.set_local_ip(local_ip.into());
-    ui.set_port(parkhub_common::DEFAULT_PORT as i32);
+    ui.set_port(i32::from(parkhub_common::DEFAULT_PORT));
 
     // Store the result
     let result: Rc<RefCell<Option<ServerConfig>>> = Rc::new(RefCell::new(None));
@@ -859,6 +863,7 @@ fn run_setup_wizard() -> Result<ServerConfig> {
         let server_name = ui.get_server_name().to_string();
         let admin_username = ui.get_admin_username().to_string();
         let admin_password = ui.get_admin_password().to_string();
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let port = ui.get_port() as u16;
         let enable_tls = ui.get_enable_tls();
         let enable_mdns = ui.get_enable_mdns();
@@ -881,7 +886,7 @@ fn run_setup_wizard() -> Result<ServerConfig> {
         let password_hash = match hash_password(&admin_password) {
             Ok(hash) => hash,
             Err(e) => {
-                eprintln!("Failed to hash password: {}", e);
+                eprintln!("Failed to hash password: {e}");
                 return;
             }
         };
@@ -903,7 +908,9 @@ fn run_setup_wizard() -> Result<ServerConfig> {
         // Get portable mode and dummy users settings
         let portable_mode = ui.get_use_portable_mode();
         let generate_dummy_users = ui.get_generate_dummy_users();
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let username_style = ui.get_username_style() as u8;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let license_plate_display = ui.get_license_plate_display() as u8;
 
         // Create config with defaults for advanced settings
@@ -938,14 +945,14 @@ fn run_setup_wizard() -> Result<ServerConfig> {
 
         *result_clone.borrow_mut() = Some(config);
         if let Err(e) = slint::quit_event_loop() {
-            eprintln!("Failed to quit event loop: {}", e);
+            eprintln!("Failed to quit event loop: {e}");
         }
     });
 
     // Handle cancel
     ui.on_cancel_setup(|| {
         if let Err(e) = slint::quit_event_loop() {
-            eprintln!("Failed to quit event loop: {}", e);
+            eprintln!("Failed to quit event loop: {e}");
         }
     });
 
@@ -971,13 +978,13 @@ fn prompt_passphrase_gui() -> Result<String> {
     ui.on_submit(move |passphrase| {
         *result_clone.borrow_mut() = Some(passphrase.to_string());
         if let Err(e) = slint::quit_event_loop() {
-            eprintln!("Failed to quit event loop: {}", e);
+            eprintln!("Failed to quit event loop: {e}");
         }
     });
 
     ui.on_cancel(|| {
         if let Err(e) = slint::quit_event_loop() {
-            eprintln!("Failed to quit event loop: {}", e);
+            eprintln!("Failed to quit event loop: {e}");
         }
     });
 
@@ -989,6 +996,7 @@ fn prompt_passphrase_gui() -> Result<String> {
 
 /// Run the server status GUI with system tray support
 #[cfg(feature = "gui")]
+#[allow(clippy::too_many_lines, clippy::unused_async)]
 async fn run_status_gui(
     config: ServerConfig,
     state: Arc<RwLock<AppState>>,
@@ -1136,7 +1144,7 @@ async fn run_status_gui(
 
     // Set up periodic stats update
     let ui_weak = ui.as_weak();
-    let state_for_timer = state.clone();
+    let state_for_timer = state;
     let timer = slint::Timer::default();
     timer.start(
         slint::TimerMode::Repeated,
@@ -1150,6 +1158,7 @@ async fn run_status_gui(
                     if let Ok(stats) = state.db.stats().await {
                         // Update UI from event loop thread
                         let _ = slint::invoke_from_event_loop(move || {
+                            #[allow(clippy::cast_possible_truncation)]
                             if let Some(ui) = ui_weak_clone.upgrade() {
                                 ui.set_user_count(stats.users as i32);
                                 ui.set_booking_count(stats.bookings as i32);
@@ -1282,14 +1291,15 @@ async fn run_status_gui(
     // Intercept window close button (X)
     let ui_weak_window_close = ui.as_weak();
     ui.window().on_close_requested(move || {
-        if let Some(ui) = ui_weak_window_close.upgrade() {
-            // Trigger our close_requested handler
-            ui.invoke_close_requested();
-            // Don't actually close - let the handler decide
-            slint::CloseRequestResponse::KeepWindowShown
-        } else {
-            slint::CloseRequestResponse::HideWindow
-        }
+        ui_weak_window_close.upgrade().map_or(
+            slint::CloseRequestResponse::HideWindow,
+            |ui| {
+                // Trigger our close_requested handler
+                ui.invoke_close_requested();
+                // Don't actually close - let the handler decide
+                slint::CloseRequestResponse::KeepWindowShown
+            },
+        )
     });
 
     // Run the UI event loop
@@ -1451,7 +1461,7 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
 }
 
 /// Username generation styles for dummy users
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UsernameStyle {
     /// First letter + last letter (e.g., "Alex Smith" -> "ah")
     FirstLastLetter,
@@ -1465,9 +1475,9 @@ pub enum UsernameStyle {
 
 impl UsernameStyle {
     /// Generate username from first and last name
-    fn generate(&self, first: &str, last: &str, index: usize) -> String {
+    fn generate(self, first: &str, last: &str, index: usize) -> String {
         let base = match self {
-            UsernameStyle::FirstLastLetter => {
+            Self::FirstLastLetter => {
                 let first_char = first
                     .chars()
                     .next()
@@ -1482,12 +1492,12 @@ impl UsernameStyle {
                     .to_lowercase()
                     .next()
                     .unwrap();
-                format!("{}{}", first_char, last_char)
+                format!("{first_char}{last_char}")
             }
-            UsernameStyle::FirstDotLast => {
+            Self::FirstDotLast => {
                 format!("{}.{}", first.to_lowercase(), last.to_lowercase())
             }
-            UsernameStyle::InitialLast => {
+            Self::InitialLast => {
                 let first_char = first
                     .chars()
                     .next()
@@ -1497,7 +1507,7 @@ impl UsernameStyle {
                     .unwrap();
                 format!("{}{}", first_char, last.to_lowercase())
             }
-            UsernameStyle::FirstInitial => {
+            Self::FirstInitial => {
                 let last_char = last
                     .chars()
                     .next()
@@ -1515,6 +1525,7 @@ impl UsernameStyle {
 
 /// Generate 50 GDPR-compliant dummy users for testing
 /// All users have password "12351235" and can login immediately
+#[allow(clippy::too_many_lines)]
 async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> Result<()> {
     use chrono::Utc;
     use parkhub_common::models::{User, UserPreferences, UserRole};
@@ -1533,56 +1544,12 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
 
     // GDPR-compliant fictional last names (common, not identifying real people)
     let last_names = [
-        "Smith",
-        "Johnson",
-        "Williams",
-        "Brown",
-        "Jones",
-        "Garcia",
-        "Miller",
-        "Davis",
-        "Rodriguez",
-        "Martinez",
-        "Anderson",
-        "Taylor",
-        "Thomas",
-        "Jackson",
-        "White",
-        "Harris",
-        "Martin",
-        "Thompson",
-        "Moore",
-        "Young",
-        "Allen",
-        "King",
-        "Wright",
-        "Scott",
-        "Green",
-        "Baker",
-        "Adams",
-        "Nelson",
-        "Hill",
-        "Ramirez",
-        "Campbell",
-        "Mitchell",
-        "Roberts",
-        "Carter",
-        "Phillips",
-        "Evans",
-        "Turner",
-        "Torres",
-        "Parker",
-        "Collins",
-        "Edwards",
-        "Stewart",
-        "Flores",
-        "Morris",
-        "Murphy",
-        "Rivera",
-        "Cook",
-        "Rogers",
-        "Morgan",
-        "Peterson",
+        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
+        "Rodriguez", "Martinez", "Anderson", "Taylor", "Thomas", "Jackson", "White", "Harris",
+        "Martin", "Thompson", "Moore", "Young", "Allen", "King", "Wright", "Scott", "Green",
+        "Baker", "Adams", "Nelson", "Hill", "Ramirez", "Campbell", "Mitchell", "Roberts",
+        "Carter", "Phillips", "Evans", "Turner", "Torres", "Parker", "Collins", "Edwards",
+        "Stewart", "Flores", "Morris", "Murphy", "Rivera", "Cook", "Rogers", "Morgan", "Peterson",
     ];
 
     // Default password for all dummy users - they can login with this
@@ -1598,48 +1565,51 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
         UserRole::Premium,
         UserRole::Admin,
     ];
-    let mut rng = rand::rng();
 
     info!(
-        "Generating 50 GDPR-compliant dummy users (password: {})...",
-        default_password
+        "Generating 50 GDPR-compliant dummy users (password: {default_password})...",
     );
 
-    for i in 0..50 {
-        let first = first_names[rng.random_range(0..first_names.len())];
-        let last = last_names[rng.random_range(0..last_names.len())];
-        let role = roles[rng.random_range(0..roles.len())].clone();
+    // Pre-generate all users with rng (ThreadRng is not Send, so must not cross await)
+    let users: Vec<User> = {
+        let mut rng = rand::rng();
+        (0..50)
+            .map(|i| {
+                let first = first_names[rng.random_range(0..first_names.len())];
+                let last = last_names[rng.random_range(0..last_names.len())];
+                let role = roles[rng.random_range(0..roles.len())].clone();
+                let username = username_style.generate(first, last, i);
+                let email = format!("{username}@example.com");
 
-        // Generate username based on selected style
-        let username = username_style.generate(first, last, i);
-        let email = format!("{}@example.com", username);
+                User {
+                    id: Uuid::new_v4(),
+                    username,
+                    email,
+                    password_hash: password_hash.clone(),
+                    name: format!("{first} {last}"),
+                    picture: None,
+                    phone: Some(format!("+1-555-{:04}", rng.random_range(1000..9999))),
+                    role,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                    last_login: None,
+                    preferences: UserPreferences::default(),
+                    is_active: true,
+                    credits_balance: rng.random_range(10..41),
+                    credits_monthly_quota: 40,
+                    credits_last_refilled: Some(Utc::now()),
+                }
+            })
+            .collect()
+    };
 
-        let user = User {
-            id: Uuid::new_v4(),
-            username: username.clone(),
-            email,
-            password_hash: password_hash.clone(),
-            name: format!("{} {}", first, last),
-            picture: None,
-            phone: Some(format!("+1-555-{:04}", rng.random_range(1000..9999))),
-            role,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            last_login: None,
-            preferences: UserPreferences::default(),
-            is_active: true,
-            credits_balance: rng.random_range(10..41),
-            credits_monthly_quota: 40,
-            credits_last_refilled: Some(Utc::now()),
-        };
-
-        db.save_user(&user).await?;
+    for user in &users {
+        db.save_user(user).await?;
     }
 
     info!("Created 50 dummy users successfully");
     info!(
-        "Default login: any username with password '{}'",
-        default_password
+        "Default login: any username with password '{default_password}'",
     );
     Ok(())
 }

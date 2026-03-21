@@ -31,7 +31,7 @@ const HEARTBEAT_INTERVAL_SECS: u64 = 30;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Event types that can be broadcast over the WebSocket.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum WsEventType {
     BookingCreated,
@@ -116,6 +116,8 @@ pub async fn ws_handler(
 /// Manages a single WebSocket connection: subscribes to the broadcast channel,
 /// forwards events to the client, and sends periodic pings.
 async fn handle_socket(socket: WebSocket, state: SharedState) {
+    use futures_util::{SinkExt, StreamExt};
+
     let broadcaster = {
         let s = state.read().await;
         s.ws_events.clone()
@@ -124,12 +126,9 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
 
     let (mut sender, mut receiver) = socket.split();
 
-    use futures_util::{SinkExt, StreamExt};
-
     // Heartbeat timer
-    let mut heartbeat = tokio::time::interval(std::time::Duration::from_secs(
-        HEARTBEAT_INTERVAL_SECS,
-    ));
+    let mut heartbeat =
+        tokio::time::interval(std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS));
 
     debug!("WebSocket client connected");
 
@@ -164,16 +163,13 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
             // Handle incoming messages from client (pong, close)
             msg = receiver.next() => {
                 match msg {
-                    Some(Ok(Message::Pong(_))) => {
-                        // Client is alive
-                    }
                     Some(Ok(Message::Close(_))) | None => {
                         break; // Client disconnected
                     }
                     Some(Err(_)) => {
                         break; // Connection error
                     }
-                    _ => {} // Ignore text/binary from client
+                    _ => {} // Pong (client alive) or text/binary from client — ignore
                 }
             }
         }
@@ -291,10 +287,7 @@ mod tests {
         drop(rx);
         assert_eq!(broadcaster.receiver_count(), 0);
 
-        let event = WsEvent::new(
-            WsEventType::BookingCreated,
-            serde_json::json!({}),
-        );
+        let event = WsEvent::new(WsEventType::BookingCreated, serde_json::json!({}));
         assert_eq!(broadcaster.broadcast(event), 0);
     }
 }

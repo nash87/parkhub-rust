@@ -1,10 +1,10 @@
 //! Error Types
 //!
-//! Common error types used across ParkHub.
+//! Common error types used across `ParkHub`.
 
 use thiserror::Error;
 
-/// Common errors for the ParkHub system
+/// Common errors for the `ParkHub` system
 #[derive(Error, Debug)]
 pub enum ParkHubError {
     // Authentication errors

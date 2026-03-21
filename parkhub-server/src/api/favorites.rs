@@ -42,7 +42,7 @@ pub struct AddFavoriteRequest {
         (status = 200, description = "List of favorites"),
     )
 )]
-pub(crate) async fn list_favorites(
+pub async fn list_favorites(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<Favorite>>> {
@@ -77,7 +77,7 @@ pub(crate) async fn list_favorites(
         (status = 404, description = "Parking slot not found"),
     )
 )]
-pub(crate) async fn add_favorite(
+pub async fn add_favorite(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<AddFavoriteRequest>,
@@ -134,6 +134,7 @@ pub(crate) async fn add_favorite(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to add favorite")),
         );
     }
+    drop(state_guard);
 
     tracing::info!(
         "User {} favorited slot {} in lot {}",
@@ -158,7 +159,7 @@ pub(crate) async fn add_favorite(
         (status = 404, description = "Favorite not found"),
     )
 )]
-pub(crate) async fn remove_favorite(
+pub async fn remove_favorite(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(slot_id): Path<String>,

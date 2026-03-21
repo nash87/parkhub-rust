@@ -11,6 +11,9 @@ repository.workspace = true
 name = "parkhub"
 path = "src/main.rs"
 
+[lints]
+workspace = true
+
 [dependencies]
 parkhub-common.workspace = true
 

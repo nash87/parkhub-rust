@@ -6,7 +6,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::models::*;
+use crate::models::{AuthTokens, Booking, Notification, SlotBookingInfo, SlotStatus, User};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // API REQUEST/RESPONSE
@@ -22,7 +22,7 @@ pub struct ApiResponse<T> {
 }
 
 impl<T> ApiResponse<T> {
-    pub fn success(data: T) -> Self {
+    pub const fn success(data: T) -> Self {
         Self {
             success: true,
             data: Some(data),

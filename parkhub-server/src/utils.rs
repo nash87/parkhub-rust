@@ -4,6 +4,7 @@
 ///
 /// Replaces the five characters that have special meaning in HTML:
 /// `&`, `<`, `>`, `"`, and `'` with their corresponding HTML entities.
+#[must_use]
 pub fn html_escape(s: &str) -> String {
     let mut escaped = String::with_capacity(s.len());
     for ch in s.chars() {

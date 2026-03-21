@@ -61,16 +61,13 @@ pub async fn load_or_create_tls_config(
 /// Generate a self-signed certificate
 fn generate_self_signed_cert() -> Result<(String, String)> {
     // Get hostname for certificate
-    let hostname = hostname::get()
-        .map(|h| h.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "localhost".to_string());
+    let hostname = hostname::get().map_or_else(
+        |_| "localhost".to_string(),
+        |h| h.to_string_lossy().to_string(),
+    );
 
     // Subject alternative names
-    let subject_alt_names = vec![
-        hostname.clone(),
-        "localhost".to_string(),
-        "127.0.0.1".to_string(),
-    ];
+    let subject_alt_names = vec![hostname, "localhost".to_string(), "127.0.0.1".to_string()];
 
     // Generate certificate
     let CertifiedKey { cert, signing_key } = generate_simple_self_signed(subject_alt_names)
@@ -90,7 +87,7 @@ pub fn certificate_fingerprint(cert_der: &[u8]) -> String {
         if i > 0 {
             fingerprint.push(':');
         }
-        write!(fingerprint, "{:02X}", byte).unwrap();
+        write!(fingerprint, "{byte:02X}").unwrap();
     }
 
     fingerprint

@@ -45,7 +45,7 @@ pub struct CreateZoneRequest {
         (status = 200, description = "List of zones"),
     )
 )]
-pub(crate) async fn list_zones(
+pub async fn list_zones(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
     Path(lot_id): Path<String>,
@@ -77,7 +77,7 @@ pub(crate) async fn list_zones(
         (status = 404, description = "Parking lot not found"),
     )
 )]
-pub(crate) async fn create_zone(
+pub async fn create_zone(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(lot_id): Path<String>,
@@ -118,14 +118,11 @@ pub(crate) async fn create_zone(
         }
     }
 
-    let lot_uuid = match lot_id.parse::<Uuid>() {
-        Ok(u) => u,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("VALIDATION_ERROR", "Invalid lot ID")),
-            );
-        }
+    let Ok(lot_uuid) = lot_id.parse::<Uuid>() else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("VALIDATION_ERROR", "Invalid lot ID")),
+        );
     };
 
     let zone = Zone {
@@ -144,6 +141,7 @@ pub(crate) async fn create_zone(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to create zone")),
         );
     }
+    drop(state_guard);
 
     tracing::info!(
         "Created zone '{}' ({}) in lot {}",
@@ -172,7 +170,7 @@ pub(crate) async fn create_zone(
         (status = 404, description = "Zone not found"),
     )
 )]
-pub(crate) async fn delete_zone(
+pub async fn delete_zone(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path((lot_id, zone_id)): Path<(String, String)>,

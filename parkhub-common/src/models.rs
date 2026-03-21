@@ -1,6 +1,6 @@
 //! Data Models
 //!
-//! All shared data structures for the ParkHub system.
+//! All shared data structures for the `ParkHub` system.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -34,12 +34,12 @@ pub struct User {
     pub credits_last_refilled: Option<DateTime<Utc>>,
 }
 
-fn default_credits_quota() -> i32 {
+const fn default_credits_quota() -> i32 {
     40
 }
 
 /// User role for access control
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum UserRole {
     #[default]
@@ -122,7 +122,7 @@ pub struct ParkingSlot {
 }
 
 /// Slot type classification
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum SlotType {
     #[default]
@@ -137,7 +137,7 @@ pub enum SlotType {
 }
 
 /// Slot availability status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum SlotStatus {
     #[default]
@@ -160,7 +160,7 @@ pub struct SlotBookingInfo {
 }
 
 /// Additional slot features
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum SlotFeature {
     NearExit,
@@ -184,7 +184,7 @@ pub struct SlotPosition {
 }
 
 /// Lot operational status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LotStatus {
     #[default]
@@ -253,7 +253,7 @@ pub struct CreditTransaction {
 }
 
 /// Credit transaction types
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum CreditTransactionType {
     Grant,
@@ -290,7 +290,7 @@ pub struct Booking {
 }
 
 /// Booking status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum BookingStatus {
     #[default]
@@ -316,7 +316,7 @@ pub struct BookingPricing {
 }
 
 /// Payment status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum PaymentStatus {
     #[default]
@@ -342,7 +342,7 @@ pub struct Vehicle {
 }
 
 /// Vehicle type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum VehicleType {
     #[default]
@@ -401,7 +401,7 @@ pub struct Notification {
 }
 
 /// Notification type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationType {
     BookingConfirmed,
@@ -476,7 +476,7 @@ pub struct LayoutElement {
 }
 
 /// Type of layout element
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum LayoutElementType {
     ParkingSlot,
@@ -496,7 +496,7 @@ pub enum LayoutElementType {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Absence type classification
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AbsenceType {
     Homeoffice,
@@ -567,7 +567,7 @@ pub struct SwapRequest {
 }
 
 /// Swap request status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SwapRequestStatus {
     Pending,
@@ -607,7 +607,7 @@ pub struct Announcement {
 }
 
 /// Announcement severity level
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum AnnouncementSeverity {
     Info,
@@ -621,7 +621,7 @@ pub enum AnnouncementSeverity {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Status of a translation proposal
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProposalStatus {
     Pending,

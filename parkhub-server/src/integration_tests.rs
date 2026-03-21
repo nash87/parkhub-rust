@@ -28,7 +28,7 @@ async fn test_state() -> Arc<RwLock<AppState>> {
         passphrase: None,
         create_if_missing: true,
     };
-    let db = Database::open(db_config).expect("open test db");
+    let db = Database::open(&db_config).expect("open test db");
 
     let config = ServerConfig {
         admin_password_hash: hash_password_for_test("admin123"),
@@ -127,11 +127,7 @@ async fn readiness_returns_200_with_ready_true() {
     let app = router(state);
 
     let resp = app
-        .oneshot(
-            Request::get("/health/ready")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::get("/health/ready").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -555,10 +551,7 @@ async fn responses_include_security_headers() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let headers = resp.headers();
-    assert_eq!(
-        headers.get("x-content-type-options").unwrap(),
-        "nosniff"
-    );
+    assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
     assert_eq!(headers.get("x-frame-options").unwrap(), "DENY");
     assert!(headers.get("content-security-policy").is_some());
     assert!(headers.get("referrer-policy").is_some());
@@ -596,11 +589,7 @@ async fn theme_endpoint_returns_success() {
     let app = router(state);
 
     let resp = app
-        .oneshot(
-            Request::get("/api/v1/theme")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::get("/api/v1/theme").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -720,11 +709,7 @@ async fn post_on_get_only_endpoint_returns_405() {
     let app = router(state);
 
     let resp = app
-        .oneshot(
-            Request::post("/status")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::post("/status").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -792,11 +777,7 @@ async fn metrics_endpoint_returns_200_without_token_env() {
 
     // When METRICS_TOKEN is not set, metrics should be accessible without auth
     let resp = app
-        .oneshot(
-            Request::get("/metrics")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::get("/metrics").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
