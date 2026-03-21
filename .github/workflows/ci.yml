@@ -34,6 +34,20 @@ jobs:
           cargo check --package parkhub-common --all-targets
           cargo check --package parkhub-server --no-default-features --features headless --all-targets
 
+  fmt:
+    name: Cargo Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
   clippy:
     name: Cargo Clippy
     runs-on: ubuntu-latest
@@ -107,13 +121,17 @@ jobs:
   ci:
     name: CI
     if: always()
-    needs: [check, clippy, test, frontend]
+    needs: [check, fmt, clippy, test, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |
           if [[ "${{ needs.check.result }}" != "success" ]]; then
             echo "check failed: ${{ needs.check.result }}"
+            exit 1
+          fi
+          if [[ "${{ needs.fmt.result }}" != "success" ]]; then
+            echo "fmt failed: ${{ needs.fmt.result }}"
             exit 1
           fi
           if [[ "${{ needs.clippy.result }}" != "success" ]]; then
