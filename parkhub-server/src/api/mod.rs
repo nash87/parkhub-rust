@@ -74,6 +74,7 @@ pub mod auth;
 mod bookings;
 pub mod credits;
 pub mod export;
+pub mod import;
 pub mod favorites;
 pub mod lots;
 pub mod payments;
@@ -94,6 +95,7 @@ use credits::{
     admin_grant_credits, admin_refill_all_credits, admin_update_user_quota, get_user_credits,
 };
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
+use import::import_users_csv;
 use favorites::{add_favorite, list_favorites, remove_favorite};
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
@@ -162,6 +164,22 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             ip_rate_limit_middleware(forgot_limiter.clone(), req, next)
         }));
 
+    // POST /api/v1/auth/refresh — 10 requests per minute per IP
+    let refresh_limiter = rate_limiters.token_refresh.clone();
+    let refresh_route = Router::new()
+        .route("/api/v1/auth/refresh", post(refresh_token))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(refresh_limiter.clone(), req, next)
+        }));
+
+    // POST /api/v1/auth/reset-password — 5 requests per 15 minutes per IP
+    let reset_pw_limiter = rate_limiters.password_reset.clone();
+    let reset_password_route = Router::new()
+        .route("/api/v1/auth/reset-password", post(reset_password))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(reset_pw_limiter.clone(), req, next)
+        }));
+
     // GET /api/v1/bookings/:id/qr — 10 requests per minute per IP (QR pass generation)
     let qr_limiter = rate_limiters.qr_pass.clone();
     let qr_route = Router::new()
@@ -181,8 +199,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/health/ready", get(readiness_check))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
-        .route("/api/v1/auth/refresh", post(refresh_token))
-        .route("/api/v1/auth/reset-password", post(reset_password))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
         // Feature flags — public (frontend needs to know which features are enabled)
@@ -314,7 +330,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/admin/settings/use-case", get(admin_get_use_case))
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
-        // Admin-only: CSV exports
+        // Admin-only: CSV import
+        .route(
+            "/api/v1/admin/users/import",
+            post(import_users_csv),
+        )
         .route(
             "/api/v1/admin/export/users",
             get(admin_export_users_csv),
@@ -509,6 +529,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .merge(login_route)
         .merge(register_route)
         .merge(forgot_route)
+        .merge(refresh_route)
+        .merge(reset_password_route)
         .merge(qr_route)
         .merge(demo_routes)
         .merge(protected_routes)
@@ -2931,6 +2953,19 @@ pub fn generate_access_token() -> String {
 // PASSWORD UTILITIES
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// OWASP-recommended Argon2id parameters (2024).
+///
+/// - Memory:      65 536 KiB  (64 MiB) — OWASP minimum for interactive logins
+/// - Iterations:  3           — balances security and latency on modern hardware
+/// - Parallelism: 4           — matches typical server core count
+///
+/// These are set explicitly rather than relying on crate defaults so that
+/// future crate upgrades cannot silently alter the tuning (issue #56).
+fn argon2_params() -> argon2::Params {
+    argon2::Params::new(65_536, 3, 4, None)
+        .expect("OWASP Argon2 params are statically valid")
+}
+
 /// Hash a password using Argon2id.
 ///
 /// Returns `Err` on the (extremely unlikely) event that hashing fails so the
@@ -2941,11 +2976,11 @@ pub fn hash_password(
 ) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-        Argon2,
+        Algorithm, Argon2, Version,
     };
 
     let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params());
     argon2
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
@@ -2965,10 +3000,10 @@ pub fn hash_password(
 pub fn hash_password_simple(password: &str) -> anyhow::Result<String> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-        Argon2,
+        Algorithm, Argon2, Version,
     };
     let salt = SaltString::generate(&mut OsRng);
-    Argon2::default()
+    Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params())
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
         .map_err(|e| anyhow::anyhow!("Argon2 hashing failed: {e}"))
@@ -2977,14 +3012,14 @@ pub fn hash_password_simple(password: &str) -> anyhow::Result<String> {
 pub fn verify_password(password: &str, hash: &str) -> bool {
     use argon2::{
         password_hash::{PasswordHash, PasswordVerifier},
-        Argon2,
+        Algorithm, Argon2, Version,
     };
 
     let Ok(parsed_hash) = PasswordHash::new(hash) else {
         return false;
     };
 
-    Argon2::default()
+    Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params())
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
 }
@@ -3481,6 +3516,18 @@ pub async fn admin_update_user_status(
             tracing::error!("Failed to revoke sessions for disabled user {}: {}", id, e);
         }
     }
+
+    let event_type = if user.is_active {
+        AuditEventType::UserActivated
+    } else {
+        AuditEventType::UserDeactivated
+    };
+    let audit = AuditEntry::new(event_type)
+        .user(auth_user.user_id, "admin")
+        .resource("user", &id)
+        .details(serde_json::json!({ "new_status": req.status }))
+        .log();
+    audit.persist(&state_guard.db).await;
 
     tracing::info!(
         admin_id = %auth_user.user_id,
@@ -4645,10 +4692,18 @@ pub async fn admin_create_announcement(
     };
 
     match state_guard.db.save_announcement(&announcement).await {
-        Ok(()) => (
-            StatusCode::CREATED,
-            Json(ApiResponse::success(announcement)),
-        ),
+        Ok(()) => {
+            let audit = AuditEntry::new(AuditEventType::ConfigChanged)
+                .user(auth_user.user_id, "admin")
+                .resource("announcement", &announcement.id.to_string())
+                .details(serde_json::json!({ "action": "create", "title": &announcement.title }))
+                .log();
+            audit.persist(&state_guard.db).await;
+            (
+                StatusCode::CREATED,
+                Json(ApiResponse::success(announcement)),
+            )
+        }
         Err(e) => {
             tracing::error!("Failed to save announcement: {}", e);
             (

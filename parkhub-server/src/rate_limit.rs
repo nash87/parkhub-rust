@@ -173,8 +173,12 @@ pub struct EndpointRateLimiters {
     pub login: Arc<per_ip::IpRateLimiter>,
     /// Registration — 3 per minute per IP
     pub register: Arc<per_ip::IpRateLimiter>,
+    /// Token refresh — 10 per minute per IP
+    pub token_refresh: Arc<per_ip::IpRateLimiter>,
     /// Forgot-password — 3 per 15 minutes per IP
     pub forgot_password: Arc<per_ip::IpRateLimiter>,
+    /// Password reset (token submission) — 5 per 15 minutes per IP
+    pub password_reset: Arc<per_ip::IpRateLimiter>,
     /// Demo vote/reset — 3 per minute per IP
     pub demo: Arc<per_ip::IpRateLimiter>,
     /// QR pass generation — 10 per minute per IP
@@ -190,9 +194,16 @@ impl EndpointRateLimiters {
             login: per_ip::create_ip_rate_limiter(5),
             // 3 registrations per minute per IP
             register: per_ip::create_ip_rate_limiter(3),
+            // 10 token-refresh requests per minute per IP
+            token_refresh: per_ip::create_ip_rate_limiter(10),
             // 3 forgot-password requests per 15 minutes per IP
             forgot_password: per_ip::create_ip_rate_limiter_with_period(
                 3,
+                Duration::from_secs(15 * 60),
+            ),
+            // 5 password-reset submissions per 15 minutes per IP
+            password_reset: per_ip::create_ip_rate_limiter_with_period(
+                5,
                 Duration::from_secs(15 * 60),
             ),
             // 3 demo vote/reset per minute per IP
@@ -275,19 +286,13 @@ mod tests {
     #[test]
     fn test_endpoint_rate_limiters_creation() {
         let limiters = EndpointRateLimiters::new();
-        // All limiters should be created
-        assert!(limiters
-            .login
-            .check_key(&"10.0.0.1".parse().unwrap())
-            .is_ok());
-        assert!(limiters
-            .register
-            .check_key(&"10.0.0.1".parse().unwrap())
-            .is_ok());
-        assert!(limiters
-            .forgot_password
-            .check_key(&"10.0.0.1".parse().unwrap())
-            .is_ok());
+        let test_ip: std::net::IpAddr = "10.0.0.1".parse().unwrap();
+        // All limiters should be created and accept the first request
+        assert!(limiters.login.check_key(&test_ip).is_ok());
+        assert!(limiters.register.check_key(&test_ip).is_ok());
+        assert!(limiters.token_refresh.check_key(&test_ip).is_ok());
+        assert!(limiters.forgot_password.check_key(&test_ip).is_ok());
+        assert!(limiters.password_reset.check_key(&test_ip).is_ok());
         assert!(limiters.general.check().is_ok());
     }
 }

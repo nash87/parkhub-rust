@@ -427,8 +427,44 @@ pub async fn refresh_token(
         }
     };
 
-    // Create a fresh session (7-day expiry)
-    let new_session = Session::new(session.user_id, 168, &session.username, &session.role); // 168h = 7 days
+    // Re-query the database to get the current role and verify the user is still active.
+    // This prevents stale role claims (issue #55): a role change takes effect on the next
+    // refresh rather than being carried forward from the old session indefinitely.
+    let current_user = match state_guard.db.get_user(&session.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse::error(
+                    "INVALID_REFRESH_TOKEN",
+                    "User account no longer exists",
+                )),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error during role re-validation: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    if !current_user.is_active {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error(
+                "ACCOUNT_DISABLED",
+                "This account has been disabled",
+            )),
+        );
+    }
+
+    let current_role = format!("{:?}", current_user.role).to_lowercase();
+
+    // Create a fresh session using the configured session timeout (minimum 1 h)
+    let session_hours = i64::from(state_guard.config.session_timeout_minutes).max(60) / 60;
+    let new_session = Session::new(session.user_id, session_hours, &session.username, &current_role);
     let new_access_token = generate_access_token();
 
     // Save new session
