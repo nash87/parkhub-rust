@@ -1545,7 +1545,7 @@ pub async fn create_booking(
     // Drop write lock before spawning async tasks
     drop(state_guard);
 
-    // Dispatch webhook event (non-blocking)
+    // Dispatch webhook event (non-blocking, with retry + failure tracking)
     {
         let state_clone = state.clone();
         let booking_json = serde_json::json!({
@@ -1557,12 +1557,17 @@ pub async fn create_booking(
             "end_time": booking.end_time,
         });
         tokio::spawn(async move {
-            webhooks::dispatch_webhook_event(&state_clone, "booking.created", booking_json).await;
+            webhooks::dispatch_webhook_event_with_retry(
+                &state_clone,
+                "booking.created",
+                booking_json,
+            )
+            .await;
         });
     }
     metrics::record_booking_event("created");
 
-    // Send booking confirmation email (non-blocking, fire-and-forget).
+    // Send booking confirmation email (non-blocking, with exponential-backoff retry).
     if let Some(u) = user_info_opt {
         let booking_id_str = booking.id.to_string();
         let floor_name = booking.floor_name.clone();
@@ -1581,10 +1586,14 @@ pub async fn create_booking(
                 &end_time_str,
                 &org_name,
             );
-            if let Err(e) =
-                email::send_email(&user_email, "Booking Confirmation — ParkHub", &email_html).await
+            if let Err(e) = email::send_email_with_retry(
+                &user_email,
+                "Booking Confirmation — ParkHub",
+                &email_html,
+            )
+            .await
             {
-                tracing::warn!("Failed to send booking confirmation email: {}", e);
+                tracing::error!("Failed to send booking confirmation email after retries: {e}");
             }
         });
     }
@@ -1781,7 +1790,7 @@ pub async fn cancel_booking(
         "Booking cancelled"
     );
 
-    // Send cancellation confirmation email (async, best-effort)
+    // Send cancellation confirmation email (async, with exponential-backoff retry)
     if let Some(ref user) = user {
         let user_email = user.email.clone();
         let user_name = user.name.clone();
@@ -1801,15 +1810,19 @@ pub async fn cancel_booking(
                 &end_time,
                 &org_name,
             );
-            if let Err(e) =
-                email::send_email(&user_email, "Booking Cancelled — ParkHub", &email_html).await
+            if let Err(e) = email::send_email_with_retry(
+                &user_email,
+                "Booking Cancelled — ParkHub",
+                &email_html,
+            )
+            .await
             {
-                tracing::warn!("Failed to send cancellation email: {}", e);
+                tracing::error!("Failed to send cancellation email after retries: {e}");
             }
         });
     }
 
-    // Dispatch webhook event
+    // Dispatch webhook event (with retry + failure tracking)
     {
         let state_clone = state.clone();
         let payload = serde_json::json!({
@@ -1818,7 +1831,12 @@ pub async fn cancel_booking(
             "action": "cancelled",
         });
         tokio::spawn(async move {
-            webhooks::dispatch_webhook_event(&state_clone, "booking.cancelled", payload).await;
+            webhooks::dispatch_webhook_event_with_retry(
+                &state_clone,
+                "booking.cancelled",
+                payload,
+            )
+            .await;
         });
     }
     metrics::record_booking_event("cancelled");

@@ -706,6 +706,134 @@ pub async fn dispatch_webhook_event(
     }
 }
 
+/// Dispatch a webhook event with per-webhook exponential-backoff retry.
+///
+/// Each matching webhook is attempted up to 3 times (100 ms / 200 ms / 400 ms
+/// between retries).  On permanent failure the cumulative failure count is
+/// persisted to the settings store under key `webhook_failure_<id>` so
+/// operators can observe it via the admin API.
+///
+/// The spawned tasks are non-blocking with respect to the HTTP handler.
+pub async fn dispatch_webhook_event_with_retry(
+    state: &SharedState,
+    event_type: &str,
+    payload: serde_json::Value,
+) {
+    const MAX_ATTEMPTS: u32 = 3;
+
+    let webhooks = {
+        let state_guard = state.read().await;
+        match state_guard.db.list_webhooks().await {
+            Ok(w) => w,
+            Err(e) => {
+                tracing::error!("Failed to list webhooks for dispatch: {}", e);
+                return;
+            }
+        }
+    };
+
+    let matching: Vec<Webhook> = webhooks
+        .into_iter()
+        .filter(|w| w.active && w.events.iter().any(|e| e == event_type || e == "*"))
+        .collect();
+
+    if matching.is_empty() {
+        return;
+    }
+
+    let event_type = event_type.to_string();
+    let body = serde_json::to_string(&serde_json::json!({
+        "event": event_type,
+        "timestamp": Utc::now().to_rfc3339(),
+        "data": payload,
+    }))
+    .unwrap_or_default();
+
+    for webhook in matching {
+        let body = body.clone();
+        let url = webhook.url.clone();
+        let secret = webhook.secret.clone();
+        let event = event_type.clone();
+        let state_for_task = state.clone();
+
+        tokio::spawn(async move {
+            let signature = compute_signature(&secret, &body);
+            let client = reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()
+                .unwrap_or_default();
+
+            let mut delivered = false;
+            for attempt in 1..=MAX_ATTEMPTS {
+                let result = client
+                    .post(&url)
+                    .header("Content-Type", "application/json")
+                    .header("X-Webhook-Signature", &signature)
+                    .body(body.clone())
+                    .send()
+                    .await;
+
+                match result {
+                    Ok(resp) => {
+                        tracing::info!(
+                            "Webhook {} delivered '{}' to {} — HTTP {} (attempt {attempt})",
+                            webhook.id,
+                            event,
+                            url,
+                            resp.status()
+                        );
+                        delivered = true;
+                        break;
+                    }
+                    Err(e) => {
+                        if attempt < MAX_ATTEMPTS {
+                            let backoff_ms = 100u64 * (1u64 << (attempt - 1));
+                            tracing::warn!(
+                                "Webhook {} failed attempt {attempt}/{MAX_ATTEMPTS} for '{}' to \
+                                 {}: {e}. Retrying in {backoff_ms}ms",
+                                webhook.id,
+                                event,
+                                url
+                            );
+                            tokio::time::sleep(std::time::Duration::from_millis(backoff_ms))
+                                .await;
+                        } else {
+                            tracing::error!(
+                                "Webhook {} permanently failed '{}' to {} after {MAX_ATTEMPTS} \
+                                 attempts: {e}",
+                                webhook.id,
+                                event,
+                                url
+                            );
+                        }
+                    }
+                }
+            }
+
+            // Persist failure count so operators can observe via admin API.
+            if !delivered {
+                let key = format!("webhook_failure_{}", webhook.id);
+                let prev: u64 = {
+                    let g = state_for_task.read().await;
+                    g.db.get_setting(&key)
+                        .await
+                        .ok()
+                        .flatten()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(0)
+                };
+                let g = state_for_task.write().await;
+                if let Err(e) = g.db.set_setting(&key, &(prev + 1).to_string()).await {
+                    tracing::warn!(
+                        "Failed to persist webhook failure count for {}: {e}",
+                        webhook.id
+                    );
+                }
+            }
+        });
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
