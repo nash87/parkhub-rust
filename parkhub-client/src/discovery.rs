@@ -159,10 +159,10 @@ pub async fn discover_servers(state: Arc<RwLock<AppState>>) -> Result<()> {
                         .is_some_and(|s| s == "true");
 
                     // Get first address
-                    let host = info
-                        .get_addresses()
-                        .iter()
-                        .next().map_or_else(|| info.get_hostname().trim_end_matches('.').to_string(), std::string::ToString::to_string);
+                    let host = info.get_addresses().iter().next().map_or_else(
+                        || info.get_hostname().trim_end_matches('.').to_string(),
+                        std::string::ToString::to_string,
+                    );
 
                     let server_info = parkhub_common::ServerInfo {
                         name: info.get_fullname().to_string(),

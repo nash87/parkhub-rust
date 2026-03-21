@@ -3,19 +3,16 @@
 //! - `POST /api/v1/admin/users/import` — import users from CSV (admin only)
 //! - `POST /api/v1/absences/import/ical` — import absences from iCal (user-scoped)
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Extension, Json,
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
+use base64::Engine;
 use chrono::Utc;
 use uuid::Uuid;
 
-use parkhub_common::{ApiResponse, User, UserPreferences, UserRole};
 use parkhub_common::models::{Absence, AbsenceType};
+use parkhub_common::{ApiResponse, User, UserPreferences, UserRole};
 
-use super::{check_admin, AuthUser, SharedState};
 use super::hash_password_simple;
+use super::{check_admin, AuthUser, SharedState};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -54,6 +51,7 @@ pub struct ImportError {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// One parsed (but not yet validated) CSV data row.
+#[derive(Debug)]
 struct CsvRow {
     username: String,
     email: String,
@@ -78,9 +76,18 @@ fn parse_csv_line(line: &str) -> Result<CsvRow, (String, String)> {
 
     let username = fields[0].trim().to_string();
     let email = fields[1].trim().to_string();
-    let name = fields.get(2).map(|s| s.trim().to_string()).unwrap_or_default();
-    let role = fields.get(3).map(|s| s.trim().to_string()).unwrap_or_default();
-    let password = fields.get(4).map(|s| s.trim().to_string()).unwrap_or_default();
+    let name = fields
+        .get(2)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    let role = fields
+        .get(3)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    let password = fields
+        .get(4)
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
 
     if username.is_empty() {
         return Err(("username".to_string(), "username is required".to_string()));
@@ -89,7 +96,13 @@ fn parse_csv_line(line: &str) -> Result<CsvRow, (String, String)> {
         return Err(("email".to_string(), "email is required".to_string()));
     }
 
-    Ok(CsvRow { username, email, name, role, password })
+    Ok(CsvRow {
+        username,
+        email,
+        name,
+        role,
+        password,
+    })
 }
 
 /// Parse a role string into a [`UserRole`], defaulting to [`UserRole::User`].
@@ -107,7 +120,6 @@ fn generate_password() -> String {
     let mut bytes = [0u8; 12];
     rand::RngCore::fill_bytes(&mut rand::rng(), &mut bytes);
     // base64url without padding — 16 chars
-    use base64::Engine;
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }
 
@@ -144,10 +156,7 @@ pub async fn import_users_csv(
     let state_guard = state.read().await;
 
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-        return (
-            status,
-            Json(ApiResponse::error("FORBIDDEN", msg)),
-        );
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
     // Collect non-empty lines, skip header
@@ -188,7 +197,7 @@ pub async fn import_users_csv(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "TOO_MANY_ROWS",
-                &format!("CSV exceeds maximum of {MAX_IMPORT_ROWS} rows"),
+                format!("CSV exceeds maximum of {MAX_IMPORT_ROWS} rows"),
             )),
         );
     }
@@ -204,7 +213,11 @@ pub async fn import_users_csv(
         let csv_row = match parse_csv_line(line) {
             Ok(r) => r,
             Err((field, message)) => {
-                errors.push(ImportError { row: row_num, field, message });
+                errors.push(ImportError {
+                    row: row_num,
+                    field,
+                    message,
+                });
                 continue;
             }
         };
@@ -300,7 +313,7 @@ pub async fn import_users_csv(
 
         // Persist
         match state_guard.db.save_user(&user).await {
-            Ok(_) => imported += 1,
+            Ok(()) => imported += 1,
             Err(e) => {
                 tracing::error!("Failed to save imported user row {}: {}", row_num, e);
                 errors.push(ImportError {
@@ -410,18 +423,23 @@ fn parse_vevents(ical: &str) -> Vec<(String, String, String, Option<String>)> {
             "END:VEVENT" if in_event => {
                 in_event = false;
                 if !dtstart.is_empty() && !dtend.is_empty() {
-                    events.push((dtstart.clone(), dtend.clone(), summary.clone(), description.clone()));
+                    events.push((
+                        dtstart.clone(),
+                        dtend.clone(),
+                        summary.clone(),
+                        description.clone(),
+                    ));
                 }
             }
             _ if in_event => {
                 if let Some(rest) = line.strip_prefix("DTSTART") {
                     // strip property params: DTSTART;VALUE=DATE:20240101 or DTSTART:20240101
-                    let val = rest.splitn(2, ':').nth(1).unwrap_or("").trim();
+                    let val = rest.split_once(':').map_or("", |x| x.1).trim();
                     if let Some(d) = parse_ical_date(val) {
                         dtstart = d;
                     }
                 } else if let Some(rest) = line.strip_prefix("DTEND") {
-                    let val = rest.splitn(2, ':').nth(1).unwrap_or("").trim();
+                    let val = rest.split_once(':').map_or("", |x| x.1).trim();
                     if let Some(d) = parse_ical_date(val) {
                         dtend = d;
                     }
@@ -473,7 +491,10 @@ pub async fn import_absences_ical(
     if events.is_empty() {
         return (
             StatusCode::OK,
-            Json(ApiResponse::success(IcalImportResult { imported: 0, skipped: 0 })),
+            Json(ApiResponse::success(IcalImportResult {
+                imported: 0,
+                skipped: 0,
+            })),
         );
     }
 
@@ -489,7 +510,13 @@ pub async fn import_absences_ical(
         }
 
         let absence_type = summary_to_absence_type(&summary);
-        let note = desc.or_else(|| if summary.is_empty() { None } else { Some(summary.clone()) });
+        let note = desc.or_else(|| {
+            if summary.is_empty() {
+                None
+            } else {
+                Some(summary.clone())
+            }
+        });
 
         let absence = Absence {
             id: Uuid::new_v4(),
@@ -503,7 +530,7 @@ pub async fn import_absences_ical(
         };
 
         match state_guard.db.save_absence(&absence).await {
-            Ok(_) => imported += 1,
+            Ok(()) => imported += 1,
             Err(e) => {
                 tracing::error!("Failed to save iCal-imported absence: {e}");
                 skipped += 1;
@@ -582,7 +609,11 @@ mod tests {
 
     #[test]
     fn test_parse_csv_empty_body() {
-        let lines: Vec<&str> = "".lines().map(str::trim).filter(|l| !l.is_empty()).collect();
+        let lines: Vec<&str> = ""
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.is_empty())
+            .collect();
         assert!(lines.is_empty());
     }
 
@@ -620,4 +651,3 @@ mod tests {
         assert_eq!(MAX_IMPORT_ROWS, 500);
     }
 }
-

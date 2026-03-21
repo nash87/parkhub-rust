@@ -5,8 +5,8 @@ use axum::{
     http::StatusCode,
     Extension, Json,
 };
-use serde::Deserialize;
 use chrono::Utc;
+use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -650,7 +650,10 @@ pub async fn update_lot_pricing(
         if hourly_rate < 0.0 {
             return (
                 StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("VALIDATION_ERROR", "hourly_rate must be >= 0")),
+                Json(ApiResponse::error(
+                    "VALIDATION_ERROR",
+                    "hourly_rate must be >= 0",
+                )),
             );
         }
         if let Some(rate) = lot
@@ -672,7 +675,10 @@ pub async fn update_lot_pricing(
         if daily_max < 0.0 {
             return (
                 StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("VALIDATION_ERROR", "daily_max must be >= 0")),
+                Json(ApiResponse::error(
+                    "VALIDATION_ERROR",
+                    "daily_max must be >= 0",
+                )),
             );
         }
         lot.pricing.daily_max = Some(daily_max);
@@ -699,7 +705,10 @@ pub async fn update_lot_pricing(
         tracing::error!("Failed to update lot pricing: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update pricing")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update pricing",
+            )),
         );
     }
 
@@ -833,12 +842,12 @@ pub async fn get_lot_slots(
     // Apply in-memory filters
     let filtered: Vec<ParkingSlot> = slots
         .into_iter()
-        .filter(|s| type_filter.as_ref().map_or(true, |t| &s.slot_type == t))
-        .filter(|s| status_filter.as_ref().map_or(true, |st| &s.status == st))
+        .filter(|s| type_filter.as_ref().is_none_or(|t| &s.slot_type == t))
+        .filter(|s| status_filter.as_ref().is_none_or(|st| &s.status == st))
         .filter(|s| {
             feature_filter
                 .as_ref()
-                .map_or(true, |f| s.features.contains(f))
+                .is_none_or(|f| s.features.contains(f))
         })
         .collect();
 
@@ -1206,7 +1215,10 @@ mod tests {
         assert_eq!(parse_slot_status("available"), Some(SlotStatus::Available));
         assert_eq!(parse_slot_status("occupied"), Some(SlotStatus::Occupied));
         assert_eq!(parse_slot_status("reserved"), Some(SlotStatus::Reserved));
-        assert_eq!(parse_slot_status("maintenance"), Some(SlotStatus::Maintenance));
+        assert_eq!(
+            parse_slot_status("maintenance"),
+            Some(SlotStatus::Maintenance)
+        );
         assert_eq!(parse_slot_status("disabled"), Some(SlotStatus::Disabled));
         assert_eq!(parse_slot_status("unknown"), None);
     }
@@ -1222,13 +1234,25 @@ mod tests {
     #[test]
     fn test_parse_slot_feature_all_variants() {
         assert_eq!(parse_slot_feature("near_exit"), Some(SlotFeature::NearExit));
-        assert_eq!(parse_slot_feature("near_elevator"), Some(SlotFeature::NearElevator));
-        assert_eq!(parse_slot_feature("near_stairs"), Some(SlotFeature::NearStairs));
+        assert_eq!(
+            parse_slot_feature("near_elevator"),
+            Some(SlotFeature::NearElevator)
+        );
+        assert_eq!(
+            parse_slot_feature("near_stairs"),
+            Some(SlotFeature::NearStairs)
+        );
         assert_eq!(parse_slot_feature("covered"), Some(SlotFeature::Covered));
-        assert_eq!(parse_slot_feature("security_camera"), Some(SlotFeature::SecurityCamera));
+        assert_eq!(
+            parse_slot_feature("security_camera"),
+            Some(SlotFeature::SecurityCamera)
+        );
         assert_eq!(parse_slot_feature("well_lit"), Some(SlotFeature::WellLit));
         assert_eq!(parse_slot_feature("wide_lane"), Some(SlotFeature::WideLane));
-        assert_eq!(parse_slot_feature("charging_station"), Some(SlotFeature::ChargingStation));
+        assert_eq!(
+            parse_slot_feature("charging_station"),
+            Some(SlotFeature::ChargingStation)
+        );
         assert_eq!(parse_slot_feature("unknown"), None);
     }
 
@@ -1523,11 +1547,7 @@ mod tests {
     /// Simulate the price calculation with daily_max cap.
     fn calculate_price(hourly_rate: f64, duration_hours: f64, daily_max: Option<f64>) -> f64 {
         let raw = duration_hours * hourly_rate;
-        if let Some(cap) = daily_max {
-            raw.min(cap)
-        } else {
-            raw
-        }
+        daily_max.map_or(raw, |cap| raw.min(cap))
     }
 
     #[test]
