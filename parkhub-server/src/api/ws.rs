@@ -79,10 +79,7 @@ impl EventBroadcaster {
     /// Returns the number of receivers that will get the message.
     /// Returns 0 if there are no active subscribers (which is fine).
     pub fn broadcast(&self, event: WsEvent) -> usize {
-        match self.sender.send(event) {
-            Ok(n) => n,
-            Err(_) => 0, // No active receivers
-        }
+        self.sender.send(event).unwrap_or_default()
     }
 
     /// Subscribe to receive events.
