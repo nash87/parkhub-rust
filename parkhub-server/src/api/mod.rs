@@ -72,12 +72,14 @@ type SharedState = Arc<RwLock<AppState>>;
 pub mod admin;
 pub mod auth;
 mod bookings;
+pub mod branding;
 pub mod credits;
 pub mod export;
 pub mod favorites;
 pub mod lots;
 pub mod payments;
 pub mod push;
+pub mod pwa;
 pub mod qr;
 pub mod recommendations;
 pub mod setup;
@@ -202,6 +204,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/public/display", get(public_display))
         // VAPID public key (no auth — frontend needs it before login)
         .route("/api/v1/push/vapid-key", get(push::get_vapid_key))
+        // PWA manifest and service worker (no auth)
+        .route("/manifest.json", get(pwa::pwa_manifest))
+        .route("/sw.js", get(pwa::service_worker))
+        // Branding logo (public, cached)
+        .route("/api/v1/branding/logo", get(branding::get_branding_logo))
         // WebSocket real-time events
         .route("/api/v1/ws", get(ws::ws_handler));
 
@@ -238,6 +245,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
+        // QR code for individual slot
+        .route("/api/v1/lots/{lot_id}/slots/{slot_id}/qr", get(qr::slot_qr_code))
         // Zones (admin-only CRUD, nested under lots)
         .route(
             "/api/v1/lots/{lot_id}/zones",
@@ -434,6 +443,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/privacy",
             get(admin_get_privacy).put(admin_update_privacy),
+        )
+        // Admin: branding config
+        .route(
+            "/api/v1/admin/branding",
+            get(branding::admin_get_branding).put(branding::admin_update_branding),
+        )
+        .route(
+            "/api/v1/admin/branding/logo",
+            post(branding::admin_upload_logo),
         )
         // Admin: update user
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
