@@ -132,10 +132,7 @@ async fn register_user_token(
         .as_str()
         .unwrap()
         .to_string();
-    let user_id = json["data"]["user"]["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
+    let user_id = json["data"]["user"]["id"].as_str().unwrap().to_string();
     (token, user_id)
 }
 
@@ -170,16 +167,14 @@ async fn create_lot_and_get_slot(
     let resp2 = app2
         .oneshot(
             Request::get(format!("/api/v1/lots/{lot_id}/slots"))
+                .header("authorization", format!("Bearer {admin_tok}"))
                 .body(Body::empty())
                 .unwrap(),
         )
         .await
         .unwrap();
     let slots_json = body_json(resp2).await;
-    let slot_id = slots_json["data"][0]["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
+    let slot_id = slots_json["data"][0]["id"].as_str().unwrap().to_string();
 
     (lot_id, slot_id)
 }
@@ -294,9 +289,16 @@ async fn test_create_booking_insufficient_credits() {
             .expect("set credits_per_booking");
     }
 
-    // Register a regular user (credits_balance starts at 0 by default)
-    let (user_token, _) =
+    // Register a regular user then drain their credits to 0
+    let (user_token, user_id) =
         register_user_token(state.clone(), "nocredits@example.com", "SecurePass1!").await;
+    {
+        let guard = state.read().await;
+        if let Ok(Some(mut user)) = guard.db.get_user(&user_id).await {
+            user.credits_balance = 0;
+            guard.db.save_user(&user).await.expect("drain credits");
+        }
+    }
 
     let start_time = Utc::now() + TimeDelta::hours(1);
     let body = serde_json::json!({
@@ -645,7 +647,7 @@ async fn test_quick_book() {
         .await
         .unwrap();
 
-    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(resp.status(), StatusCode::CREATED);
     let json = body_json(resp).await;
     assert_eq!(json["success"], true);
     assert!(json["data"]["id"].is_string());
@@ -693,7 +695,7 @@ async fn test_quick_book_no_slots_available() {
             )
             .await
             .unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 
     // Quick-book again — no slots left
@@ -894,6 +896,8 @@ async fn test_non_admin_rejected_from_dashboard_charts() {
 #[tokio::test]
 async fn test_rate_limit_login() {
     let state = test_state().await;
+    // Use a single router so rate-limiter state is shared across requests
+    let app = router(state);
 
     let bad_body = serde_json::json!({
         "username": "admin",
@@ -902,8 +906,8 @@ async fn test_rate_limit_login() {
 
     let mut last_status = StatusCode::OK;
     for _ in 0..6 {
-        let app = router(state.clone());
         let resp = app
+            .clone()
             .oneshot(
                 Request::post("/api/v1/auth/login")
                     .header("content-type", "application/json")
@@ -922,14 +926,15 @@ async fn test_rate_limit_login() {
     );
 }
 
-/// Register endpoint is limited to 3 per minute — 4th attempt should be 429.
+/// Register endpoint is limited to 3 per minute -- 4th attempt should be 429.
 #[tokio::test]
 async fn test_rate_limit_register() {
     let state = test_state().await;
+    // Use a single router so rate-limiter state is shared across requests
+    let app = router(state);
 
     let mut last_status = StatusCode::OK;
     for i in 0..4 {
-        let app = router(state.clone());
         let body = serde_json::json!({
             "email": format!("ratelimit{i}@example.com"),
             "password": "SecurePass1!",
@@ -937,6 +942,7 @@ async fn test_rate_limit_register() {
             "name": "RL User",
         });
         let resp = app
+            .clone()
             .oneshot(
                 Request::post("/api/v1/auth/register")
                     .header("content-type", "application/json")

@@ -644,8 +644,14 @@ mod tests {
     #[test]
     fn reminder_email_contains_booking_details() {
         let html = build_booking_reminder_email(
-            "Alice", "BK-001", "Ground Floor", 5,
-            "2026-03-20 09:00", "2026-03-20 17:00", 30, "Acme",
+            "Alice",
+            "BK-001",
+            "Ground Floor",
+            5,
+            "2026-03-20 09:00",
+            "2026-03-20 17:00",
+            30,
+            "Acme",
         );
         assert!(html.contains("Alice"));
         assert!(html.contains("BK-001"));
@@ -656,9 +662,8 @@ mod tests {
 
     #[test]
     fn reminder_email_singular_minute() {
-        let html = build_booking_reminder_email(
-            "Bob", "BK-002", "Level 1", 3, "09:00", "10:00", 1, "",
-        );
+        let html =
+            build_booking_reminder_email("Bob", "BK-002", "Level 1", 3, "09:00", "10:00", 1, "");
         assert!(html.contains("1 minute"));
         assert!(!html.contains("1 minutes"));
     }
@@ -666,7 +671,14 @@ mod tests {
     #[test]
     fn reminder_email_escapes_html() {
         let html = build_booking_reminder_email(
-            "<b>Hacker</b>", "BK-XSS", "Floor", 1, "09:00", "10:00", 30, "",
+            "<b>Hacker</b>",
+            "BK-XSS",
+            "Floor",
+            1,
+            "09:00",
+            "10:00",
+            30,
+            "",
         );
         assert!(!html.contains("<b>Hacker</b>"));
         assert!(html.contains("&lt;b&gt;"));
@@ -724,7 +736,13 @@ mod tests {
     #[test]
     fn cancellation_email_contains_booking_details() {
         let html = build_booking_cancellation_email(
-            "Alice", "BK-001", "Ground Floor", 5, "2026-03-20 09:00", "2026-03-20 17:00", "Acme",
+            "Alice",
+            "BK-001",
+            "Ground Floor",
+            5,
+            "2026-03-20 09:00",
+            "2026-03-20 17:00",
+            "Acme",
         );
         assert!(html.contains("Alice"));
         assert!(html.contains("BK-001"));
@@ -735,17 +753,15 @@ mod tests {
 
     #[test]
     fn cancellation_email_defaults_org_to_parkhub() {
-        let html = build_booking_cancellation_email(
-            "Bob", "BK-002", "Level 2", 3, "09:00", "12:00", "",
-        );
+        let html =
+            build_booking_cancellation_email("Bob", "BK-002", "Level 2", 3, "09:00", "12:00", "");
         assert!(html.contains("ParkHub"));
     }
 
     #[test]
     fn cancellation_email_escapes_html() {
-        let html = build_booking_cancellation_email(
-            "<img src=x>", "BK-XSS", "F", 1, "09:00", "10:00", "",
-        );
+        let html =
+            build_booking_cancellation_email("<img src=x>", "BK-XSS", "F", 1, "09:00", "10:00", "");
         assert!(!html.contains("<img src=x>"));
         assert!(html.contains("&lt;img"));
     }
@@ -762,9 +778,7 @@ mod tests {
 
     #[test]
     fn cancellation_email_mentions_credit_refund() {
-        let html = build_booking_cancellation_email(
-            "Eve", "BK-004", "B1", 7, "10:00", "11:00", "",
-        );
+        let html = build_booking_cancellation_email("Eve", "BK-004", "B1", 7, "10:00", "11:00", "");
         assert!(html.contains("refunded"));
     }
 

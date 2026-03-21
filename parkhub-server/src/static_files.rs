@@ -45,8 +45,12 @@ fn serve_file(path: &str, file: rust_embed::EmbeddedFile) -> Response {
     // Add cache headers for assets (not index.html)
     if path != "index.html"
         && (path.contains("/assets/")
-            || Path::new(path).extension().is_some_and(|e| e.eq_ignore_ascii_case("js"))
-            || Path::new(path).extension().is_some_and(|e| e.eq_ignore_ascii_case("css")))
+            || Path::new(path)
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("js"))
+            || Path::new(path)
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("css")))
     {
         response = response.header(header::CACHE_CONTROL, "public, max-age=31536000, immutable");
     } else {

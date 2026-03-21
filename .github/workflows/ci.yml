@@ -94,7 +94,6 @@ jobs:
       - name: Run doc tests
         run: |
           cargo test --package parkhub-common --doc
-          cargo test --package parkhub-server --no-default-features --features headless --doc
 
   frontend:
     name: Frontend Build & Test

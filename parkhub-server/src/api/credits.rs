@@ -11,8 +11,8 @@ use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, CreditTransaction, CreditTransactionType, UserRole};
 
-use crate::audit::{AuditEntry, AuditEventType};
 use super::{admin::AdminUserResponse, check_admin, AuthUser, SharedState};
+use crate::audit::{AuditEntry, AuditEventType};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -587,13 +587,21 @@ pub async fn admin_list_credit_transactions(
 ) -> (StatusCode, Json<ApiResponse<Vec<CreditTransaction>>>) {
     let state_guard = state.read().await;
 
-    if let Err(resp) = check_admin(&state_guard.db, &auth_user).await {
-        return (StatusCode::FORBIDDEN, Json(resp));
+    if let Err(resp) = check_admin(&state_guard, &auth_user).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", resp.1)),
+        );
     }
 
     match state_guard
         .db
-        .list_all_credit_transactions(params.user_id, params.transaction_type, params.from, params.to)
+        .list_all_credit_transactions(
+            params.user_id,
+            params.transaction_type,
+            params.from,
+            params.to,
+        )
         .await
     {
         Ok(txs) => (StatusCode::OK, Json(ApiResponse::success(txs))),
@@ -601,7 +609,10 @@ pub async fn admin_list_credit_transactions(
             tracing::error!("Failed to list credit transactions: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list transactions")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list transactions",
+                )),
             )
         }
     }

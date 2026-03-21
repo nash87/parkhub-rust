@@ -28,13 +28,13 @@ pub struct BrandingConfig {
     pub logo_url: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct BrandingUpdate {
     pub app_name: Option<String>,
     pub primary_color: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct LogoUpload {
     /// Base64-encoded image data, optionally with a `data:<mime>;base64,` prefix.
     pub logo: String,
@@ -81,7 +81,11 @@ pub async fn admin_get_branding(
     let state_guard = state.read().await;
 
     // Admin-only
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -113,8 +117,13 @@ pub async fn admin_get_branding(
         .await
         .ok()
         .flatten()
-        .map(|v| if v.is_empty() { None } else { Some("/api/v1/branding/logo".to_string()) })
-        .flatten();
+        .and_then(|v| {
+            if v.is_empty() {
+                None
+            } else {
+                Some("/api/v1/branding/logo".to_string())
+            }
+        });
 
     (
         StatusCode::OK,
@@ -147,7 +156,11 @@ pub async fn admin_update_branding(
     let state_guard = state.read().await;
 
     // Admin-only
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -162,17 +175,27 @@ pub async fn admin_update_branding(
             tracing::error!("Failed to save branding_app_name: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to save branding")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to save branding",
+                )),
             );
         }
     }
 
     if let Some(ref color) = req.primary_color {
-        if let Err(e) = state_guard.db.set_setting("branding_primary_color", color).await {
+        if let Err(e) = state_guard
+            .db
+            .set_setting("branding_primary_color", color)
+            .await
+        {
             tracing::error!("Failed to save branding_primary_color: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to save branding")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to save branding",
+                )),
             );
         }
     }
@@ -199,8 +222,13 @@ pub async fn admin_update_branding(
         .await
         .ok()
         .flatten()
-        .map(|v| if v.is_empty() { None } else { Some("/api/v1/branding/logo".to_string()) })
-        .flatten();
+        .and_then(|v| {
+            if v.is_empty() {
+                None
+            } else {
+                Some("/api/v1/branding/logo".to_string())
+            }
+        });
 
     (
         StatusCode::OK,
@@ -234,7 +262,11 @@ pub async fn admin_upload_logo(
     let state_guard = state.read().await;
 
     // Admin-only
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -246,20 +278,20 @@ pub async fn admin_upload_logo(
 
     let b64 = strip_data_uri(&req.logo);
 
-    let raw_bytes = match base64::engine::general_purpose::STANDARD.decode(b64) {
-        Ok(b) => b,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_INPUT", "Invalid base64 data")),
-            );
-        }
+    let Ok(raw_bytes) = base64::engine::general_purpose::STANDARD.decode(b64) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_INPUT", "Invalid base64 data")),
+        );
     };
 
     if raw_bytes.len() > MAX_LOGO_BYTES {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("PAYLOAD_TOO_LARGE", "Logo exceeds 2 MB limit")),
+            Json(ApiResponse::error(
+                "PAYLOAD_TOO_LARGE",
+                "Logo exceeds 2 MB limit",
+            )),
         );
     }
 
@@ -273,7 +305,11 @@ pub async fn admin_upload_logo(
         );
     }
 
-    if let Err(e) = state_guard.db.set_setting("branding_logo_base64", b64).await {
+    if let Err(e) = state_guard
+        .db
+        .set_setting("branding_logo_base64", b64)
+        .await
+    {
         tracing::error!("Failed to save branding logo: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -321,15 +357,15 @@ pub async fn get_branding_logo(State(state): State<SharedState>) -> Response {
 
     let b64 = strip_data_uri(&stored);
 
-    let raw_bytes = match base64::engine::general_purpose::STANDARD.decode(b64) {
-        Ok(b) => b,
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "Corrupt logo data")),
-            )
-                .into_response();
-        }
+    let Ok(raw_bytes) = base64::engine::general_purpose::STANDARD.decode(b64) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(
+                "SERVER_ERROR",
+                "Corrupt logo data",
+            )),
+        )
+            .into_response();
     };
 
     let content_type = detect_mime(&raw_bytes).unwrap_or("application/octet-stream");
@@ -340,6 +376,10 @@ pub async fn get_branding_logo(State(state): State<SharedState>) -> Response {
         .header(header::CACHE_CONTROL, "public, max-age=3600")
         .body(Body::from(raw_bytes))
         .unwrap_or_else(|_| {
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to build response").into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to build response",
+            )
+                .into_response()
         })
 }

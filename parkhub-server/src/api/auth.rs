@@ -339,8 +339,12 @@ pub async fn register(
         let org_name = state_guard.config.organization_name.clone();
         tokio::spawn(async move {
             let email_html = crate::email::build_welcome_email(&user_name, &org_name);
-            if let Err(e) =
-                crate::email::send_email(&user_email, &format!("Welcome to {org_name}"), &email_html).await
+            if let Err(e) = crate::email::send_email(
+                &user_email,
+                &format!("Welcome to {org_name}"),
+                &email_html,
+            )
+            .await
             {
                 tracing::warn!("Failed to send welcome email: {}", e);
             }
@@ -464,7 +468,12 @@ pub async fn refresh_token(
 
     // Create a fresh session using the configured session timeout (minimum 1 h)
     let session_hours = i64::from(state_guard.config.session_timeout_minutes).max(60) / 60;
-    let new_session = Session::new(session.user_id, session_hours, &session.username, &current_role);
+    let new_session = Session::new(
+        session.user_id,
+        session_hours,
+        &session.username,
+        &current_role,
+    );
     let new_access_token = generate_access_token();
 
     // Save new session

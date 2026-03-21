@@ -267,14 +267,14 @@ use crate::{
         crate::api::quick_book,
         crate::api::booking_checkin,
 
-        // Vehicles (mod.rs)
-        crate::api::list_vehicles,
-        crate::api::create_vehicle,
-        crate::api::update_vehicle,
-        crate::api::delete_vehicle,
-        crate::api::upload_vehicle_photo,
-        crate::api::get_vehicle_photo,
-        crate::api::vehicle_city_codes,
+        // Vehicles
+        crate::api::vehicles::list_vehicles,
+        crate::api::vehicles::create_vehicle,
+        crate::api::vehicles::update_vehicle,
+        crate::api::vehicles::delete_vehicle,
+        crate::api::vehicles::upload_vehicle_photo,
+        crate::api::vehicles::get_vehicle_photo,
+        crate::api::vehicles::vehicle_city_codes,
         crate::api::lot_qr_code,
 
         // Admin (mod.rs)

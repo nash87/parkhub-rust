@@ -116,7 +116,8 @@ impl ServerConnection {
 
         let login_response = response.data.ok_or_else(|| {
             let error_msg = response
-                .error.map_or_else(|| "Login failed".to_string(), |e| e.message);
+                .error
+                .map_or_else(|| "Login failed".to_string(), |e| e.message);
             anyhow::anyhow!(error_msg)
         })?;
 
@@ -152,7 +153,8 @@ impl ServerConnection {
 
         let login_response = response.data.ok_or_else(|| {
             let error_msg = response
-                .error.map_or_else(|| "Registration failed".to_string(), |e| e.message);
+                .error
+                .map_or_else(|| "Registration failed".to_string(), |e| e.message);
             anyhow::anyhow!(error_msg)
         })?;
 

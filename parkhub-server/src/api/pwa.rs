@@ -13,7 +13,11 @@ use super::SharedState;
 pub async fn pwa_manifest(State(state): State<SharedState>) -> impl IntoResponse {
     let state_guard = state.read().await;
     let app_name = if let Ok(Some(v)) = state_guard.db.get_setting("branding_app_name").await {
-        if v.is_empty() { "ParkHub".to_string() } else { v }
+        if v.is_empty() {
+            "ParkHub".to_string()
+        } else {
+            v
+        }
     } else {
         "ParkHub".to_string()
     };
@@ -51,8 +55,5 @@ self.addEventListener('fetch', e => {
 });
 "#;
 
-    (
-        [(header::CONTENT_TYPE, "application/javascript")],
-        sw_js,
-    )
+    ([(header::CONTENT_TYPE, "application/javascript")], sw_js)
 }

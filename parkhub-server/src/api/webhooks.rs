@@ -690,20 +690,35 @@ pub async fn dispatch_webhook_event(
                     Ok(resp) if resp.status().is_success() => {
                         tracing::info!(
                             "Webhook {} delivered event '{}' to {} — HTTP {} (attempt {}/{})",
-                            webhook.id, event, url, resp.status(), attempt, max_attempts
+                            webhook.id,
+                            event,
+                            url,
+                            resp.status(),
+                            attempt,
+                            max_attempts
                         );
                         return;
                     }
                     Ok(resp) => {
                         tracing::warn!(
                             "Webhook {} event '{}' to {} returned HTTP {} (attempt {}/{})",
-                            webhook.id, event, url, resp.status(), attempt, max_attempts
+                            webhook.id,
+                            event,
+                            url,
+                            resp.status(),
+                            attempt,
+                            max_attempts
                         );
                     }
                     Err(e) => {
                         tracing::warn!(
                             "Webhook {} failed to deliver '{}' to {}: {} (attempt {}/{})",
-                            webhook.id, event, url, e, attempt, max_attempts
+                            webhook.id,
+                            event,
+                            url,
+                            e,
+                            attempt,
+                            max_attempts
                         );
                     }
                 }
@@ -716,7 +731,10 @@ pub async fn dispatch_webhook_event(
 
             tracing::error!(
                 "Webhook {} delivery exhausted all {} attempts for event '{}' to {}",
-                webhook.id, max_attempts, event, url
+                webhook.id,
+                max_attempts,
+                event,
+                url
             );
         });
     }
