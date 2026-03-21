@@ -246,6 +246,139 @@ pub fn build_welcome_email(user_name: &str, org_name: &str) -> String {
     )
 }
 
+/// Build a booking reminder email body sent before the booking starts.
+///
+/// `minutes_until` — how many minutes until the booking begins (e.g. 30).
+#[allow(clippy::too_many_arguments)]
+pub fn build_booking_reminder_email(
+    user_name: &str,
+    booking_id: &str,
+    floor_name: &str,
+    slot_number: i32,
+    start_time: &str,
+    end_time: &str,
+    minutes_until: i64,
+    org_name: &str,
+) -> String {
+    use crate::utils::html_escape;
+    let org_raw = if org_name.is_empty() {
+        "ParkHub"
+    } else {
+        org_name
+    };
+    let org = html_escape(org_raw);
+    let user_name = html_escape(user_name);
+    let booking_id = html_escape(booking_id);
+    let floor_name = html_escape(floor_name);
+    let start_time = html_escape(start_time);
+    let end_time = html_escape(end_time);
+    let countdown = if minutes_until == 1 {
+        "1 minute".to_string()
+    } else {
+        format!("{minutes_until} minutes")
+    };
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Booking Reminder — {org}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+    .container {{ max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px;
+                  padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+    h1 {{ color: #f9a825; margin-top: 0; }}
+    p  {{ color: #333333; line-height: 1.6; }}
+    .detail-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+    .detail-table td {{ padding: 10px 12px; border-bottom: 1px solid #eeeeee; font-size: 14px; color: #333333; }}
+    .detail-table td:first-child {{ font-weight: bold; width: 40%; color: #555555; }}
+    .booking-ref {{ display: inline-block; background: #fff8e1; color: #f9a825; padding: 8px 16px;
+                    border-radius: 4px; font-family: monospace; font-size: 13px; margin: 8px 0; }}
+    .highlight {{ background: #fff8e1; border-left: 4px solid #f9a825; padding: 12px 16px;
+                  border-radius: 4px; margin: 16px 0; }}
+    .footer {{ margin-top: 40px; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee;
+               padding-top: 16px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>{org} — Booking Reminder</h1>
+    <p>Dear <strong>{user_name}</strong>,</p>
+    <div class="highlight">
+      <p>Your parking booking starts in <strong>{countdown}</strong>.</p>
+    </div>
+    <div class="booking-ref">{booking_id}</div>
+    <table class="detail-table">
+      <tr><td>Floor</td><td>{floor_name}</td></tr>
+      <tr><td>Slot Number</td><td>{slot_number}</td></tr>
+      <tr><td>Start Time</td><td>{start_time}</td></tr>
+      <tr><td>End Time</td><td>{end_time}</td></tr>
+    </table>
+    <p>Please make your way to the parking area on time. The slot will be held for the duration of your booking.</p>
+    <div class="footer">
+      <p>This email was sent by {org}. If you have questions, contact your administrator.</p>
+    </div>
+  </div>
+</body>
+</html>"#,
+    )
+}
+
+/// Build a waitlist-slot-available notification email body.
+///
+/// Sent to the first user on the waitlist when a slot in their desired lot
+/// becomes available (e.g. after a cancellation).
+pub fn build_waitlist_slot_available_email(
+    user_name: &str,
+    lot_name: &str,
+    org_name: &str,
+) -> String {
+    use crate::utils::html_escape;
+    let org_raw = if org_name.is_empty() {
+        "ParkHub"
+    } else {
+        org_name
+    };
+    let org = html_escape(org_raw);
+    let user_name = html_escape(user_name);
+    let lot_name = html_escape(lot_name);
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parking Slot Available — {org}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+    .container {{ max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px;
+                  padding: 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
+    h1 {{ color: #34a853; margin-top: 0; }}
+    p  {{ color: #333333; line-height: 1.6; }}
+    .highlight {{ background: #e6f4ea; border-left: 4px solid #34a853; padding: 16px;
+                  border-radius: 4px; margin: 20px 0; }}
+    .footer {{ margin-top: 40px; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee;
+               padding-top: 16px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>{org} — Parking Slot Available</h1>
+    <p>Dear <strong>{user_name}</strong>,</p>
+    <div class="highlight">
+      <p>Good news! A parking slot has become available at <strong>{lot_name}</strong>.</p>
+      <p>You are on the waitlist for this parking lot. Log in now to book your slot before it is taken.</p>
+    </div>
+    <p>Please note that slots are available on a first-come, first-served basis. Act quickly to secure your spot.</p>
+    <div class="footer">
+      <p>This email was sent by {org}. You received this because you are on the waitlist for {lot_name}.</p>
+      <p>To remove yourself from the waitlist, log in to your account.</p>
+    </div>
+  </div>
+</body>
+</html>"#,
+    )
+}
+
 /// Build a booking cancellation confirmation email body.
 #[allow(clippy::too_many_arguments)]
 pub fn build_booking_cancellation_email(
@@ -504,6 +637,86 @@ mod tests {
     fn welcome_email_mentions_getting_started() {
         let html = build_welcome_email("Dave", "");
         assert!(html.contains("Getting started"));
+    }
+
+    // ── build_booking_reminder_email ──
+
+    #[test]
+    fn reminder_email_contains_booking_details() {
+        let html = build_booking_reminder_email(
+            "Alice", "BK-001", "Ground Floor", 5,
+            "2026-03-20 09:00", "2026-03-20 17:00", 30, "Acme",
+        );
+        assert!(html.contains("Alice"));
+        assert!(html.contains("BK-001"));
+        assert!(html.contains("Ground Floor"));
+        assert!(html.contains("30 minutes"));
+        assert!(html.contains("Acme"));
+    }
+
+    #[test]
+    fn reminder_email_singular_minute() {
+        let html = build_booking_reminder_email(
+            "Bob", "BK-002", "Level 1", 3, "09:00", "10:00", 1, "",
+        );
+        assert!(html.contains("1 minute"));
+        assert!(!html.contains("1 minutes"));
+    }
+
+    #[test]
+    fn reminder_email_escapes_html() {
+        let html = build_booking_reminder_email(
+            "<b>Hacker</b>", "BK-XSS", "Floor", 1, "09:00", "10:00", 30, "",
+        );
+        assert!(!html.contains("<b>Hacker</b>"));
+        assert!(html.contains("&lt;b&gt;"));
+    }
+
+    #[test]
+    fn reminder_email_is_valid_html() {
+        let html = build_booking_reminder_email(
+            "Carol", "BK-003", "A", 42, "08:00", "18:00", 30, "ParkCo",
+        );
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("</html>"));
+        assert!(html.contains("<title>Booking Reminder"));
+    }
+
+    // ── build_waitlist_slot_available_email ──
+
+    #[test]
+    fn waitlist_email_contains_lot_name() {
+        let html = build_waitlist_slot_available_email("Alice", "Lot A", "ParkCo");
+        assert!(html.contains("Alice"));
+        assert!(html.contains("Lot A"));
+        assert!(html.contains("ParkCo"));
+    }
+
+    #[test]
+    fn waitlist_email_defaults_org_to_parkhub() {
+        let html = build_waitlist_slot_available_email("Bob", "Lot B", "");
+        assert!(html.contains("ParkHub"));
+    }
+
+    #[test]
+    fn waitlist_email_escapes_html() {
+        let html = build_waitlist_slot_available_email("<script>xss</script>", "Lot", "");
+        assert!(!html.contains("<script>xss"));
+        assert!(html.contains("&lt;script&gt;"));
+    }
+
+    #[test]
+    fn waitlist_email_is_valid_html() {
+        let html = build_waitlist_slot_available_email("Carol", "Main Lot", "TestOrg");
+        assert!(html.starts_with("<!DOCTYPE html>"));
+        assert!(html.contains("</html>"));
+        assert!(html.contains("Parking Slot Available"));
+    }
+
+    #[test]
+    fn waitlist_email_mentions_waitlist() {
+        let html = build_waitlist_slot_available_email("Dave", "Lot D", "");
+        assert!(html.contains("waitlist"));
     }
 
     // ── build_booking_cancellation_email ──

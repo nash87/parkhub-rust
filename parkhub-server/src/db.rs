@@ -1442,6 +1442,26 @@ impl Database {
         Ok(entries)
     }
 
+    /// List all waitlist entries for a specific parking lot, ordered by creation time.
+    pub async fn list_waitlist_by_lot(&self, lot_id: &str) -> Result<Vec<WaitlistEntry>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(WAITLIST)?;
+
+        let mut entries = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let waitlist_entry: WaitlistEntry = self.deserialize(value.value())?;
+            if waitlist_entry.lot_id.to_string() == lot_id {
+                entries.push(waitlist_entry);
+            }
+        }
+        // Sort by created_at so earlier waitlist entries are notified first
+        entries.sort_by_key(|e| e.created_at);
+        Ok(entries)
+    }
+
     /// Delete a waitlist entry
     pub async fn delete_waitlist_entry(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;

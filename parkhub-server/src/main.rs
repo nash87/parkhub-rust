@@ -571,8 +571,111 @@ async fn main() -> Result<()> {
                 })
             })?)
             .await?;
+        // Booking reminder job — runs every 5 minutes, emails users whose
+        // booking starts within the next 30–35 minutes and haven't been reminded.
+        let state_for_reminder = state.clone();
+        sched
+            .add(Job::new_async("0 */5 * * * *", move |_uuid, _lock| {
+                let state = state_for_reminder.clone();
+                Box::pin(async move {
+                    let now = chrono::Utc::now();
+                    let window_start = now + chrono::Duration::minutes(30);
+                    let window_end = now + chrono::Duration::minutes(35);
+
+                    let state_guard = state.read().await;
+                    let bookings = match state_guard.db.list_bookings().await {
+                        Ok(b) => b,
+                        Err(e) => {
+                            tracing::warn!("Reminder cron: failed to list bookings: {}", e);
+                            return;
+                        }
+                    };
+
+                    let org_name = state_guard.config.organization_name.clone();
+
+                    // Filter to bookings starting in the 30-35 minute window
+                    let due: Vec<_> = bookings
+                        .into_iter()
+                        .filter(|b| {
+                            matches!(
+                                b.status,
+                                parkhub_common::BookingStatus::Confirmed
+                                    | parkhub_common::BookingStatus::Pending
+                            ) && b.start_time >= window_start
+                                && b.start_time < window_end
+                        })
+                        .collect();
+
+                    for booking in due {
+                        // Skip if already reminded (stored as setting key)
+                        let reminder_key = format!("reminder_sent_{}", booking.id);
+                        if state_guard
+                            .db
+                            .get_setting(&reminder_key)
+                            .await
+                            .ok()
+                            .flatten()
+                            .is_some()
+                        {
+                            continue;
+                        }
+
+                        let Some(user) = state_guard
+                            .db
+                            .get_user(&booking.user_id.to_string())
+                            .await
+                            .ok()
+                            .flatten()
+                        else {
+                            continue;
+                        };
+
+                        let minutes_until = (booking.start_time - now).num_minutes().max(0);
+                        let email_html = crate::email::build_booking_reminder_email(
+                            &user.name,
+                            &booking.id.to_string(),
+                            &booking.floor_name,
+                            booking.slot_number,
+                            &booking.start_time.format("%Y-%m-%d %H:%M").to_string(),
+                            &booking.end_time.format("%Y-%m-%d %H:%M").to_string(),
+                            minutes_until,
+                            &org_name,
+                        );
+                        let subject =
+                            format!("Parking reminder: your booking starts in {minutes_until} minutes — ParkHub");
+                        if let Err(e) =
+                            crate::email::send_email(&user.email, &subject, &email_html).await
+                        {
+                            tracing::warn!(
+                                "Failed to send booking reminder (booking {}): {}",
+                                booking.id,
+                                e
+                            );
+                        } else {
+                            // Mark as reminded so we don't send again
+                            if let Err(e) =
+                                state_guard.db.set_setting(&reminder_key, "1").await
+                            {
+                                tracing::warn!(
+                                    "Failed to mark reminder sent for booking {}: {}",
+                                    booking.id,
+                                    e
+                                );
+                            }
+                            tracing::info!(
+                                booking_id = %booking.id,
+                                user_id = %user.id,
+                                "Booking reminder sent"
+                            );
+                        }
+                    }
+                })
+            })?)
+            .await?;
+
         sched.start().await?;
         info!("Credit refill scheduler started (runs 1st of each month at 00:00)");
+        info!("Booking reminder scheduler started (runs every 5 minutes, 30-min window)");
         // Store scheduler in AppState so it is properly dropped on shutdown
         // instead of leaked via mem::forget.
         state.write().await.scheduler = Some(sched);
