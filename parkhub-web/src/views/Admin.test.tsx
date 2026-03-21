@@ -10,6 +10,25 @@ vi.mock('react-router-dom', () => ({
   useLocation: () => ({ pathname: '/admin' }),
 }));
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'admin.title': 'Administration',
+        'admin.subtitle': 'Manage your ParkHub instance',
+        'admin.overview': 'Overview',
+        'admin.settings': 'Settings',
+        'admin.users': 'Users',
+        'admin.lots': 'Parking Lots',
+        'admin.announcements': 'Announcements',
+        'admin.reports': 'Reports',
+        'admin.translations': 'Translations',
+      };
+      return map[key] || key;
+    },
+  }),
+}));
+
 vi.mock('framer-motion', () => ({
   motion: {
     div: React.forwardRef(({ children, ...props }: any, ref: any) => (
@@ -25,6 +44,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Megaphone: (props: any) => <span data-testid="icon-megaphone" {...props} />,
   ChartLine: (props: any) => <span data-testid="icon-chart-line" {...props} />,
   MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
 }));
 
 import { AdminPage } from './Admin';
@@ -48,6 +68,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Parking Lots')).toBeInTheDocument();
     expect(screen.getByText('Announcements')).toBeInTheDocument();
     expect(screen.getByText('Reports')).toBeInTheDocument();
+    expect(screen.getByText('Translations')).toBeInTheDocument();
   });
 
   it('renders tab links with correct paths', () => {
@@ -58,6 +79,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Parking Lots').closest('a')).toHaveAttribute('href', '/admin/lots');
     expect(screen.getByText('Announcements').closest('a')).toHaveAttribute('href', '/admin/announcements');
     expect(screen.getByText('Reports').closest('a')).toHaveAttribute('href', '/admin/reports');
+    expect(screen.getByText('Translations').closest('a')).toHaveAttribute('href', '/admin/translations');
   });
 
   it('renders the outlet for child routes', () => {

@@ -46,6 +46,54 @@ vi.mock('@phosphor-icons/react', () => ({
   Gauge: (props: any) => <span data-testid="icon-gauge" {...props} />,
   UserMinus: (props: any) => <span data-testid="icon-user-minus" {...props} />,
   UserPlus: (props: any) => <span data-testid="icon-user-plus" {...props} />,
+  CaretUp: (props: any) => <span data-testid="icon-caret-up" {...props} />,
+  CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const map: Record<string, string> = {
+        'admin.users': 'Users',
+        'admin.searchUsers': 'Search users',
+        'admin.clearSearch': 'Clear search',
+        'admin.noUsersMatch': 'No users match your search.',
+        'admin.noUsersFound': 'No users found.',
+        'admin.editRole': 'Edit Role',
+        'admin.credits': 'Credits',
+        'admin.monthlyQuota': 'Monthly Quota',
+        'admin.status': 'Status',
+        'admin.active': 'Active',
+        'admin.inactive': 'Inactive',
+        'admin.grantCredits': 'Grant Credits',
+        'admin.grantCreditsFor': 'Grant credits for user',
+        'admin.grantingTo': 'Granting to',
+        'admin.amount': 'Amount',
+        'admin.description': 'Description',
+        'admin.grant': 'Grant',
+        'admin.roleUpdated': 'Role updated',
+        'admin.roleUpdateFailed': 'Role update failed',
+        'admin.userDeactivated': 'User deactivated',
+        'admin.userActivated': 'User activated',
+        'admin.userUpdateFailed': 'User update failed',
+        'admin.creditsGranted': 'Credits granted',
+        'admin.creditsGrantFailed': 'Credits grant failed',
+        'admin.quotaUpdated': 'Quota updated',
+        'admin.quotaUpdateFailed': 'Quota update failed',
+        'admin.quotaRange': 'Quota must be 0-999',
+        'admin.saveQuota': 'Save quota',
+        'admin.cancelEditQuota': 'Cancel edit quota',
+        'admin.editQuota': 'Edit quota',
+        'admin.deactivate': 'Deactivate',
+        'admin.activate': 'Activate',
+        'common.loading': 'Loading',
+        'common.save': 'Save',
+        'common.cancel': 'Cancel',
+        'common.close': 'Close',
+      };
+      return map[key] || key;
+    },
+  }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -153,7 +201,7 @@ describe('AdminUsersPage', () => {
     });
   });
 
-  it('filters by email', async () => {
+  it('filters by name (DataTable global filter on column accessors)', async () => {
     const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
     mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
     render(<AdminUsersPage />);
@@ -161,7 +209,7 @@ describe('AdminUsersPage', () => {
     await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
 
     const input = screen.getByRole('textbox', { name: /search users/i });
-    await user.type(input, 'acme');
+    await user.type(input, 'Carol');
     act(() => { vi.advanceTimersByTime(200); });
     await waitFor(() => {
       expect(screen.getByText('Carol Admin')).toBeInTheDocument();
@@ -169,7 +217,7 @@ describe('AdminUsersPage', () => {
     });
   });
 
-  it('filters by username', async () => {
+  it('filters by role', async () => {
     const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
     mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
     render(<AdminUsersPage />);
@@ -177,10 +225,10 @@ describe('AdminUsersPage', () => {
     await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
 
     const input = screen.getByRole('textbox', { name: /search users/i });
-    await user.type(input, 'bjones');
+    await user.type(input, 'superadmin');
     act(() => { vi.advanceTimersByTime(200); });
     await waitFor(() => {
-      expect(screen.getByText('Bob Jones')).toBeInTheDocument();
+      expect(screen.getByText('Carol Admin')).toBeInTheDocument();
       expect(screen.queryByText('Alice Smith')).not.toBeInTheDocument();
     });
   });
