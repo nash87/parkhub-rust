@@ -71,7 +71,7 @@
 | Auto-release (release no-show bookings after N minutes) | Done |
 | Favorite slots per user | Done |
 | In-app notification feed | Done |
-| Email notifications (SMTP) | Planned |
+| Email notifications (SMTP) — welcome, booking confirm, cancellation, password reset | Done |
 
 ### Parking Lot Management
 

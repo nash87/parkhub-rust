@@ -1758,14 +1758,16 @@ pub async fn cancel_booking(
         }
     }
 
-    // Fetch username for audit log (best-effort)
-    let username = state_guard
+    // Fetch user for audit log + cancellation email
+    let user = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
         .ok()
-        .flatten()
-        .map(|u| u.username)
+        .flatten();
+    let username = user
+        .as_ref()
+        .map(|u| u.username.clone())
         .unwrap_or_default();
 
     AuditEntry::new(AuditEventType::BookingCancelled)
@@ -1778,6 +1780,34 @@ pub async fn cancel_booking(
         booking_id = %id,
         "Booking cancelled"
     );
+
+    // Send cancellation confirmation email (async, best-effort)
+    if let Some(ref user) = user {
+        let user_email = user.email.clone();
+        let user_name = user.name.clone();
+        let booking_id_str = booking.id.to_string();
+        let org_name = state_guard.config.organization_name.clone();
+        let start_time = booking.start_time.format("%Y-%m-%d %H:%M").to_string();
+        let end_time = booking.end_time.format("%Y-%m-%d %H:%M").to_string();
+        let floor = booking.floor_name.clone();
+        let slot = booking.slot_number;
+        tokio::spawn(async move {
+            let email_html = email::build_booking_cancellation_email(
+                &user_name,
+                &booking_id_str,
+                &floor,
+                slot,
+                &start_time,
+                &end_time,
+                &org_name,
+            );
+            if let Err(e) =
+                email::send_email(&user_email, "Booking Cancelled — ParkHub", &email_html).await
+            {
+                tracing::warn!("Failed to send cancellation email: {}", e);
+            }
+        });
+    }
 
     // Dispatch webhook event
     {
