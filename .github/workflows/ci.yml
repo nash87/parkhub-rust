@@ -95,6 +95,33 @@ jobs:
         run: |
           cargo test --package parkhub-common --doc
 
+  msrv:
+    name: MSRV Check (1.82)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.82
+        uses: dtolnay/rust-toolchain@1.82
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Create placeholder web dist
+        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
+      - name: Verify MSRV compiles
+        run: cargo check --package parkhub-server --no-default-features --features headless
+
+  docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --target builder -t parkhub-test .
+
   frontend:
     name: Frontend Build & Test
     runs-on: ubuntu-latest
@@ -125,7 +152,7 @@ jobs:
   ci:
     name: CI
     if: always()
-    needs: [check, fmt, clippy, test, frontend]
+    needs: [check, fmt, clippy, test, msrv, docker, frontend]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
@@ -144,6 +171,14 @@ jobs:
           fi
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "test failed: ${{ needs.test.result }}"
+            exit 1
+          fi
+          if [[ "${{ needs.msrv.result }}" != "success" ]]; then
+            echo "msrv failed: ${{ needs.msrv.result }}"
+            exit 1
+          fi
+          if [[ "${{ needs.docker.result }}" != "success" ]]; then
+            echo "docker failed: ${{ needs.docker.result }}"
             exit 1
           fi
           if [[ "${{ needs.frontend.result }}" != "success" ]]; then
