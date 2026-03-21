@@ -438,6 +438,7 @@ impl Database {
         drain_table!(write_txn, ANNOUNCEMENTS);
         drain_table!(write_txn, NOTIFICATIONS);
         drain_table!(write_txn, WEBHOOKS);
+        drain_table!(write_txn, PUSH_SUBSCRIPTIONS);
         drain_table!(write_txn, ZONES);
         drain_table!(write_txn, FAVORITES);
         drain_table!(write_txn, AUDIT_LOG);
