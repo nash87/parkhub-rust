@@ -113,7 +113,7 @@ use translations::{
     vote_on_proposal,
 };
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
-use zones::{create_zone, delete_zone, list_zones};
+use zones::{create_zone, delete_zone, list_zones, update_zone};
 
 /// User ID extracted from auth token
 #[derive(Clone, Debug)]
@@ -270,7 +270,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/lots/{lot_id}/zones",
             get(list_zones).post(create_zone),
         )
-        .route("/api/v1/lots/{lot_id}/zones/{zone_id}", delete(delete_zone))
+        .route(
+            "/api/v1/lots/{lot_id}/zones/{zone_id}",
+            put(update_zone).delete(delete_zone),
+        )
         .route("/api/v1/bookings", get(list_bookings).post(create_booking))
         .route(
             "/api/v1/bookings/{id}",
