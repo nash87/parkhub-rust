@@ -7,7 +7,7 @@
 <p align="center">
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.6.0-brightgreen.svg?style=for-the-badge" alt="v1.6.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.8.0-brightgreen.svg?style=for-the-badge" alt="v1.8.0"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
@@ -65,6 +65,7 @@
 | Booking swap requests between users | Done |
 | Booking cancellation with automatic slot release | Done |
 | Full booking history (active, past, cancelled) | Done |
+| QR code parking pass (PNG generation, download) | Done |
 | Booking invoice endpoint | Done |
 | Waitlist for fully booked lots | Done |
 | Auto-release (release no-show bookings after N minutes) | Done |
@@ -134,7 +135,8 @@
 | Inline slot layout editor | Done |
 | Admin booking overview | Done |
 | Admin reports (bookings by day, status, type) | Done |
-| Booking heatmap by weekday and hour | Done |
+| CSV export (bookings, users, revenue with date filtering) | Done |
+| Occupancy heatmap by weekday and hour | Done |
 | Announcements system (info, warning, error, success) | Done |
 | Admin settings (company, booking rules, credits, waitlist) | Done |
 | Guest booking management | Done |
@@ -163,7 +165,9 @@
 | React 19 useActionState for form handling | Done |
 | Tailwind CSS 4 with @utility directives | Done |
 | PWA (installable, offline-capable, service worker) | Done |
-| i18n — English + German (8 locale stubs) | Done |
+| i18n — 10 languages (EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH) | Done |
+| WebSocket real-time events (booking/occupancy updates) | Done |
+| Stripe payment stub (demo mode, mock checkout flow) | Done |
 
 ---
 
