@@ -153,6 +153,107 @@ pub async fn create_zone(
     (StatusCode::CREATED, Json(ApiResponse::success(zone)))
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Update zone
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct UpdateZoneRequest {
+    /// New zone name (optional)
+    pub name: Option<String>,
+    /// New description (optional)
+    pub description: Option<String>,
+    /// New display color (optional, hex code e.g. "#FFD700")
+    pub color: Option<String>,
+}
+
+/// `PUT /api/v1/lots/{lot_id}/zones/{zone_id}` — update a zone (admin only)
+#[utoipa::path(
+    put,
+    path = "/api/v1/lots/{lot_id}/zones/{zone_id}",
+    tag = "Zones",
+    summary = "Update a zone",
+    description = "Partially update a zone's name, description, or color. Admin only.",
+    params(
+        ("lot_id" = String, Path, description = "Parking lot ID"),
+        ("zone_id" = String, Path, description = "Zone ID"),
+    ),
+    request_body = UpdateZoneRequest,
+    responses(
+        (status = 200, description = "Zone updated"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Zone not found"),
+    )
+)]
+pub async fn update_zone(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path((lot_id, zone_id)): Path<(String, String)>,
+    Json(req): Json<UpdateZoneRequest>,
+) -> (StatusCode, Json<ApiResponse<Zone>>) {
+    let state_guard = state.write().await;
+
+    // Admin check
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+            );
+        }
+    }
+
+    // Load zones for the lot and find the target zone
+    let zones = match state_guard.db.list_zones_by_lot(&lot_id).await {
+        Ok(z) => z,
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let mut zone = match zones.into_iter().find(|z| z.id.to_string() == zone_id) {
+        Some(z) => z,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Zone not found")),
+            );
+        }
+    };
+
+    // Apply partial updates
+    if let Some(name) = req.name {
+        zone.name = name;
+    }
+    if let Some(description) = req.description {
+        zone.description = Some(description);
+    }
+    if let Some(color) = req.color {
+        zone.color = Some(color);
+    }
+
+    if let Err(e) = state_guard.db.save_zone(&zone).await {
+        tracing::error!("Failed to update zone: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update zone")),
+        );
+    }
+
+    tracing::info!("Updated zone '{}' ({}) in lot {}", zone.name, zone.id, lot_id);
+
+    (StatusCode::OK, Json(ApiResponse::success(zone)))
+}
+
 /// `DELETE /api/v1/lots/{lot_id}/zones/{zone_id}` — delete a zone (admin only)
 #[utoipa::path(
     delete,
@@ -256,6 +357,33 @@ mod tests {
         assert_eq!(zone.name, deserialized.name);
         assert_eq!(zone.description, deserialized.description);
         assert_eq!(zone.color, deserialized.color);
+    }
+
+    #[test]
+    fn test_update_zone_request_full() {
+        let json = r##"{"name":"Updated Name","description":"New desc","color":"#123456"}"##;
+        let req: UpdateZoneRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name.as_deref(), Some("Updated Name"));
+        assert_eq!(req.description.as_deref(), Some("New desc"));
+        assert_eq!(req.color.as_deref(), Some("#123456"));
+    }
+
+    #[test]
+    fn test_update_zone_request_empty() {
+        let json = r#"{}"#;
+        let req: UpdateZoneRequest = serde_json::from_str(json).unwrap();
+        assert!(req.name.is_none());
+        assert!(req.description.is_none());
+        assert!(req.color.is_none());
+    }
+
+    #[test]
+    fn test_update_zone_request_partial() {
+        let json = r#"{"name":"Only Name"}"#;
+        let req: UpdateZoneRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name.as_deref(), Some("Only Name"));
+        assert!(req.description.is_none());
+        assert!(req.color.is_none());
     }
 
     #[test]
