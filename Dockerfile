@@ -12,7 +12,7 @@ WORKDIR /app
 COPY parkhub-web/package*.json ./
 RUN npm ci --omit=dev
 COPY parkhub-web/ ./
-RUN npm run build
+RUN DOCKER=1 npm run build
 
 # ---------------------------------------------------------------------------
 # Stage 2: Cargo chef — prepare dependency recipe
