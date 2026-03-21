@@ -283,8 +283,8 @@ where
 
         // Validate token (optionally check revocation list if present)
         let revocation_list = parts.extensions.get::<Arc<TokenRevocationList>>();
-        let claims = jwt_manager
-            .validate_token(token, revocation_list.map(|rl| rl.as_ref()))?;
+        let claims =
+            jwt_manager.validate_token(token, revocation_list.map(std::convert::AsRef::as_ref))?;
 
         // Ensure it's an access token
         if claims.token_type != TokenType::Access {

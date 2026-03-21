@@ -16,27 +16,25 @@ use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
-use tracing::Instrument;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::trace::TraceLayer;
+use tracing::Instrument;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
-use base64::Engine;
-
 use crate::audit::{AuditEntry, AuditEventType};
-use crate::utils::html_escape;
 use crate::demo;
 use crate::email;
 use crate::metrics;
 use crate::openapi::ApiDoc;
 use crate::rate_limit::{ip_rate_limit_middleware, EndpointRateLimiters};
 use crate::static_files;
+use crate::utils::html_escape;
 
 /// Maximum allowed request body size: 4 MiB.
 /// Raised from 1 MiB to accommodate base64-encoded vehicle photos (max 2 MB raw
@@ -44,7 +42,7 @@ use crate::static_files;
 const MAX_REQUEST_BODY_BYTES: usize = 4 * 1024 * 1024; // 4 MiB
 
 /// Maximum raw photo size in bytes (2 MB).
-pub(super) const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
+pub const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
 
 /// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
 const VAT_RATE: f64 = 0.19;
@@ -60,7 +58,6 @@ use parkhub_common::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::requests::VehicleRequest;
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -98,13 +95,9 @@ use credits::{
     admin_grant_credits, admin_list_credit_transactions, admin_refill_all_credits,
     admin_update_user_quota, get_user_credits,
 };
-use vehicles::{
-    create_vehicle, delete_vehicle, get_vehicle_photo, list_vehicles, update_vehicle,
-    upload_vehicle_photo, vehicle_city_codes,
-};
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
-use import::{import_absences_ical, import_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
+use import::import_users_csv;
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_pricing, get_lot_slots,
     list_lots, update_lot, update_lot_pricing, update_slot,
@@ -113,6 +106,10 @@ use recommendations::get_recommendations;
 use translations::{
     create_proposal, get_proposal, list_overrides, list_proposals, review_proposal,
     vote_on_proposal,
+};
+use vehicles::{
+    create_vehicle, delete_vehicle, get_vehicle_photo, list_vehicles, update_vehicle,
+    upload_vehicle_photo, vehicle_city_codes,
 };
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 use zones::{create_zone, delete_zone, list_zones, update_zone};
@@ -378,11 +375,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/export/revenue",
             get(admin_export_revenue_csv),
-        )
-        // Admin-only: CSV import
-        .route(
-            "/api/v1/admin/users/import",
-            post(import::import_users_csv),
         )
         // Absence iCal import (user-scoped)
         .route(
@@ -879,11 +871,7 @@ async fn auth_middleware(
     // Re-validate the user against the DB: reject disabled or deleted accounts
     // even when their session token is still technically valid. This prevents
     // suspended users from continuing to make requests until their token expires.
-    match state_guard
-        .db
-        .get_user(&session.user_id.to_string())
-        .await
-    {
+    match state_guard.db.get_user(&session.user_id.to_string()).await {
         Ok(Some(u)) if u.is_active => {}
         Ok(Some(_)) => {
             return Err((
@@ -897,10 +885,7 @@ async fn auth_middleware(
         _ => {
             return Err((
                 StatusCode::UNAUTHORIZED,
-                Json(ApiResponse::error(
-                    "UNAUTHORIZED",
-                    "User not found",
-                )),
+                Json(ApiResponse::error("UNAUTHORIZED", "User not found")),
             ));
         }
     }
@@ -974,7 +959,6 @@ pub async fn readiness_check(State(state): State<SharedState>) -> impl IntoRespo
         }
     }
 }
-
 
 /// `GET /api/v1/system/version` — server version information
 pub async fn system_version() -> Json<serde_json::Value> {
@@ -1443,14 +1427,11 @@ pub async fn create_booking(
             .and_then(|v| v.parse().ok())
             .unwrap_or(1);
 
-        let booking_user = match rg.db.get_user(&auth_user.user_id.to_string()).await {
-            Ok(Some(u)) => u,
-            _ => {
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
-                );
-            }
+        let Ok(Some(booking_user)) = rg.db.get_user(&auth_user.user_id.to_string()).await else {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
+            );
         };
 
         let lot_opt = rg
@@ -1582,16 +1563,11 @@ pub async fn create_booking(
     let daily_max = lot_opt.as_ref().and_then(|lot| lot.pricing.daily_max);
     let lot_currency = lot_opt
         .as_ref()
-        .map(|lot| lot.pricing.currency.clone())
-        .unwrap_or_else(|| "EUR".to_string());
+        .map_or_else(|| "EUR".to_string(), |lot| lot.pricing.currency.clone());
 
     // Cap at daily_max if configured (e.g. all-day price ceiling)
     let raw_price = (f64::from(req.duration_minutes) / 60.0) * hourly_rate;
-    let base_price = if let Some(cap) = daily_max {
-        raw_price.min(cap)
-    } else {
-        raw_price
-    };
+    let base_price = daily_max.map_or(raw_price, |cap| raw_price.min(cap));
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
@@ -1642,7 +1618,11 @@ pub async fn create_booking(
         let state_guard = state.write().await;
 
         // Re-check slot availability now that we hold the write lock.
-        match state_guard.db.get_parking_slot(&req.slot_id.to_string()).await {
+        match state_guard
+            .db
+            .get_parking_slot(&req.slot_id.to_string())
+            .await
+        {
             Ok(Some(s)) if s.status != SlotStatus::Available => {
                 return (
                     StatusCode::CONFLICT,
@@ -2011,8 +1991,7 @@ pub async fn cancel_booking(
                 .await
                 .ok()
                 .flatten()
-                .map(|l| l.name)
-                .unwrap_or_else(|| lot_id_str.clone());
+                .map_or_else(|| lot_id_str.clone(), |l| l.name);
 
             let waitlist = state_r
                 .db
@@ -2029,9 +2008,7 @@ pub async fn cancel_booking(
                         &org_name_wl,
                     );
                     let subject = format!("Parking slot available at {lot_name} — ParkHub");
-                    if let Err(e) =
-                        email::send_email(&wl_user.email, &subject, &email_html).await
-                    {
+                    if let Err(e) = email::send_email(&wl_user.email, &subject, &email_html).await {
                         tracing::warn!("Failed to send waitlist notification: {}", e);
                     } else {
                         // Mark the entry as notified
@@ -2381,7 +2358,6 @@ pub async fn get_booking_invoice(
     )
 }
 
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // QR CODE GENERATION (EXTERNAL SERVICE)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2653,8 +2629,7 @@ pub fn generate_access_token() -> String {
 /// These are set explicitly rather than relying on crate defaults so that
 /// future crate upgrades cannot silently alter the tuning (issue #56).
 fn argon2_params() -> argon2::Params {
-    argon2::Params::new(65_536, 3, 4, None)
-        .expect("OWASP Argon2 params are statically valid")
+    argon2::Params::new(65_536, 3, 4, None).expect("OWASP Argon2 params are statically valid")
 }
 
 /// Hash a password using Argon2id.
@@ -3655,9 +3630,10 @@ pub async fn admin_update_settings(
             );
         }
 
-        let value_str = val
-            .as_str()
-            .map_or_else(|| val.to_string().trim_matches('"').to_string(), String::from);
+        let value_str = val.as_str().map_or_else(
+            || val.to_string().trim_matches('"').to_string(),
+            String::from,
+        );
 
         if let Err(msg) = validate_setting_value(key, &value_str) {
             return (
@@ -4119,7 +4095,8 @@ pub async fn get_absence_pattern(
     let key = format!("absence_pattern:{}", auth_user.user_id);
     match state_guard.db.get_setting(&key).await {
         Ok(val) => {
-            let pattern = val.and_then(|json_str| serde_json::from_str::<AbsencePattern>(&json_str).ok());
+            let pattern =
+                val.and_then(|json_str| serde_json::from_str::<AbsencePattern>(&json_str).ok());
             (StatusCode::OK, Json(ApiResponse::success(pattern)))
         }
         Err(e) => {
@@ -4292,10 +4269,7 @@ pub async fn get_active_announcements(
             let now = Utc::now();
             let active: Vec<Announcement> = announcements
                 .into_iter()
-                .filter(|a| {
-                    a.active
-                        && a.expires_at.is_none_or(|exp| exp > now)
-                })
+                .filter(|a| a.active && a.expires_at.is_none_or(|exp| exp > now))
                 .collect();
             (StatusCode::OK, Json(ApiResponse::success(active)))
         }
@@ -4426,8 +4400,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for NullableField<T> {
     where
         D: serde::Deserializer<'de>,
     {
-        Option::<T>::deserialize(deserializer)
-            .map(|opt| opt.map_or(Self::Null, Self::Value))
+        Option::<T>::deserialize(deserializer).map(|opt| opt.map_or(Self::Null, Self::Value))
     }
 }
 
@@ -4474,8 +4447,7 @@ pub async fn admin_update_announcement(
         }
     };
 
-    let Some(mut announcement) = announcements.into_iter().find(|a| a.id.to_string() == id)
-    else {
+    let Some(mut announcement) = announcements.into_iter().find(|a| a.id.to_string() == id) else {
         return (
             StatusCode::NOT_FOUND,
             Json(ApiResponse::error("NOT_FOUND", "Announcement not found")),
@@ -5611,16 +5583,11 @@ pub async fn quick_book(
     let daily_max_gs = lot_opt.as_ref().and_then(|lot| lot.pricing.daily_max);
     let lot_currency_gs = lot_opt
         .as_ref()
-        .map(|lot| lot.pricing.currency.clone())
-        .unwrap_or_else(|| "EUR".to_string());
+        .map_or_else(|| "EUR".to_string(), |lot| lot.pricing.currency.clone());
 
     #[allow(clippy::cast_precision_loss)]
     let raw_price_gs = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
-    let base_price = if let Some(cap) = daily_max_gs {
-        raw_price_gs.min(cap)
-    } else {
-        raw_price_gs
-    };
+    let base_price = daily_max_gs.map_or(raw_price_gs, |cap| raw_price_gs.min(cap));
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
@@ -7419,14 +7386,15 @@ pub async fn update_booking(
     };
 
     // Check ownership or admin
-    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    let Ok(Some(caller)) = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
     let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
     if booking.user_id != auth_user.user_id && !is_admin {
@@ -7451,7 +7419,10 @@ pub async fn update_booking(
         tracing::error!("Failed to update booking: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update booking")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update booking",
+            )),
         );
     }
 
@@ -7501,14 +7472,15 @@ pub async fn update_recurring_booking(
     let state_guard = state.read().await;
 
     // Fetch caller to check admin status
-    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    let Ok(Some(caller)) = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
     let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
 
@@ -7519,23 +7491,20 @@ pub async fn update_recurring_booking(
         .await
         .unwrap_or_default();
 
-    let mut booking = match user_bookings.into_iter().find(|b| b.id == id_uuid) {
-        Some(b) => b,
-        None => {
-            if !is_admin {
-                return (
-                    StatusCode::FORBIDDEN,
-                    Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-                );
-            }
+    let Some(mut booking) = user_bookings.into_iter().find(|b| b.id == id_uuid) else {
+        if !is_admin {
             return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error(
-                    "NOT_FOUND",
-                    "Recurring booking not found",
-                )),
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
             );
         }
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error(
+                "NOT_FOUND",
+                "Recurring booking not found",
+            )),
+        );
     };
 
     if let Some(days) = req.days_of_week {
@@ -7619,14 +7588,15 @@ pub async fn update_absence(
     };
 
     // Check ownership or admin
-    let caller = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    let Ok(Some(caller)) = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
     let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
     if absence.user_id != auth_user.user_id && !is_admin {
@@ -7683,7 +7653,10 @@ pub async fn update_absence(
             tracing::error!("Failed to update absence: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to update absence")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to update absence",
+                )),
             )
         }
     }
@@ -8192,5 +8165,4 @@ mod tests {
         // Check rename
         assert!(json.contains(r#""type":"booking"#));
     }
-
 }
