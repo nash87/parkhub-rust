@@ -70,6 +70,8 @@ mod bookings;
 pub(crate) mod credits;
 pub(crate) mod export;
 pub(crate) mod favorites;
+pub(crate) mod translations;
+pub(crate) mod recommendations;
 pub(crate) mod lots;
 pub(crate) mod push;
 pub(crate) mod setup;
@@ -88,6 +90,11 @@ use credits::{
 };
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
+use translations::{
+    create_proposal, get_proposal, list_overrides, list_proposals, review_proposal,
+    vote_on_proposal,
+};
+use recommendations::get_recommendations;
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
     update_lot, update_slot,
@@ -238,6 +245,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(get_booking).delete(cancel_booking),
         )
         .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
+        // Smart parking recommendations
+        .route("/api/v1/bookings/recommendations", get(get_recommendations))
         .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
         // City codes must come before {id} to avoid parameter capture
         .route("/api/v1/vehicles/city-codes", get(vehicle_city_codes))
@@ -423,6 +432,24 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Admin: update user
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        // Translation management
+        .route("/api/v1/translations/overrides", get(list_overrides))
+        .route(
+            "/api/v1/translations/proposals",
+            get(list_proposals).post(create_proposal),
+        )
+        .route(
+            "/api/v1/translations/proposals/{id}",
+            get(get_proposal),
+        )
+        .route(
+            "/api/v1/translations/proposals/{id}/vote",
+            post(vote_on_proposal),
+        )
+        .route(
+            "/api/v1/translations/proposals/{id}/review",
+            put(review_proposal),
+        )
         // Payments (Stripe stub)
         .route("/api/v1/payments/create-intent", post(payments::create_payment_intent))
         .route("/api/v1/payments/confirm", post(payments::confirm_payment))

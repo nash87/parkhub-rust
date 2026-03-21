@@ -201,7 +201,7 @@ export function CalendarPage() {
         </motion.div>
       ) : (
         <div className="text-center py-4">
-          <p className="text-sm text-surface-400 dark:text-surface-500">{t('calendar.selectDay', 'Klicke auf einen Tag, um Eintr\u00e4ge zu sehen')}</p>
+          <p className="text-sm text-surface-500 dark:text-surface-400">{t('calendar.selectDay', 'Klicke auf einen Tag, um Eintr\u00e4ge zu sehen')}</p>
         </div>
       )}
     </motion.div>

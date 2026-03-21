@@ -175,7 +175,7 @@ export function DemoOverlay() {
 
                 {/* Auto-reset info */}
                 {(lastReset || nextReset) && (
-                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-400 space-y-0.5">
+                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-500 dark:text-surface-400 space-y-0.5">
                     {lastReset && (
                       <div className="flex justify-between">
                         <span>{t('demo.lastReset', 'Last reset')}</span>

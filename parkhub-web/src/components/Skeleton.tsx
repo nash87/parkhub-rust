@@ -3,7 +3,42 @@
  *
  * All variants use the existing `.skeleton` CSS class (shimmer gradient)
  * defined in global.css, which is already dark-mode aware.
+ *
+ * Wrap with AnimatePresence and use `skeletonExit` from constants/animations.ts
+ * for smooth fade-out when real content loads.
  */
+import { motion, AnimatePresence } from 'framer-motion';
+
+const exitProps = {
+  exit: { opacity: 0, scale: 0.98 },
+  transition: { duration: 0.2 },
+};
+
+/** Wrapper that animates skeleton exit when `loading` transitions from true to false. */
+export function SkeletonContainer({ loading, skeleton, children }: {
+  loading: boolean;
+  skeleton: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <AnimatePresence mode="wait">
+      {loading ? (
+        <motion.div key="skeleton" {...exitProps}>
+          {skeleton}
+        </motion.div>
+      ) : (
+        <motion.div
+          key="content"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, ease: 'easeOut' }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 interface SkeletonTextProps {
   /** Tailwind width class, e.g. "w-48", "w-full". Default "w-full". */

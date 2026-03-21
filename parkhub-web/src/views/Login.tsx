@@ -1,49 +1,65 @@
-import { useState, useActionState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { CarSimple, Eye, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
+import { FormField, FormInput } from '../components/ui/FormField';
 // @ts-ignore — Vite resolves JSON imports at build time
 import { version as APP_VERSION } from '../../package.json';
+
+const loginSchema = z.object({
+  username: z.string().min(1, 'Required'),
+  password: z.string().min(1, 'Required'),
+});
+
+type LoginForm = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { login, user } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const [error, dispatch, isPending] = useActionState(
-    async (_prev: string | null, _formData: FormData) => {
-      const result = await login(username, password);
-      if (result.success) {
-        navigate('/', { replace: true });
-        return null;
-      }
-      return result.error || t('auth.loginError');
-    },
-    null
-  );
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { username: '', password: '' },
+  });
 
   if (user) {
     navigate('/', { replace: true });
     return null;
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    dispatch(new FormData(e.currentTarget));
+  async function onSubmit(data: LoginForm) {
+    setServerError(null);
+    const result = await login(data.username, data.password);
+    if (result.success) {
+      navigate('/', { replace: true });
+    } else {
+      setServerError(result.error || t('auth.loginError'));
+    }
+  }
+
+  function autofillDemo() {
+    setValue('username', 'admin@parkhub.test');
+    setValue('password', 'demo');
   }
 
   return (
     <div className="min-h-dvh bg-white dark:bg-surface-950 flex">
-      {/* Left panel — clean branding, no floating shapes */}
+      {/* Left panel — clean branding */}
       <div className="hidden lg:flex lg:w-[45%] bg-surface-950 dark:bg-surface-900 relative items-end p-12 overflow-hidden">
-        {/* Subtle gradient accent */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 via-primary-400 to-emerald-400" />
-
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center">
@@ -51,7 +67,6 @@ export function LoginPage() {
             </div>
             <span className="text-xl font-bold text-white tracking-tight">ParkHub</span>
           </div>
-
           <h2 className="text-3xl font-bold text-white mb-4 leading-tight whitespace-pre-line">
             {t('auth.heroTitle')}
           </h2>
@@ -97,29 +112,24 @@ export function LoginPage() {
           <button
             type="button"
             id="demo-autofill"
-            onClick={() => { setUsername('admin@parkhub.test'); setPassword('demo'); }}
+            onClick={autofillDemo}
             className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 text-sm text-primary-700 dark:text-primary-300 mb-6 w-full text-left cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-950/50 transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
             {t('auth.demoHint')}
           </button>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-                {t('auth.email')}
-              </label>
-              <input
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+            <FormField label={t('auth.email')} htmlFor="username" error={errors.username}>
+              <FormInput
+                registration={register('username')}
+                hasError={!!errors.username}
                 id="username"
                 type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
                 placeholder="admin@parkhub.test"
                 autoComplete="username"
-                className="input"
-                required
               />
-            </div>
+            </FormField>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -131,15 +141,14 @@ export function LoginPage() {
                 </Link>
               </div>
               <div className="relative">
-                <input
+                <FormInput
+                  registration={register('password')}
+                  hasError={!!errors.password}
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
                   placeholder="demo"
                   autoComplete="current-password"
-                  className="input pr-10"
-                  required
+                  className="pr-10"
                 />
                 <button
                   type="button"
@@ -152,24 +161,24 @@ export function LoginPage() {
               </div>
             </div>
 
-            {error && (
+            {serverError && (
               <motion.p
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="text-sm text-red-600 dark:text-red-400"
                 role="alert"
               >
-                {error}
+                {serverError}
               </motion.p>
             )}
 
             <button
               id="login-submit"
               type="submit"
-              disabled={isPending || !username || !password}
+              disabled={isSubmitting}
               className="btn btn-primary w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isPending ? (
+              {isSubmitting ? (
                 <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.loggingIn')}</>
               ) : (
                 t('auth.signIn')
@@ -184,7 +193,7 @@ export function LoginPage() {
             </Link>
           </p>
 
-          <p className="text-center text-xs text-surface-400 mt-8">
+          <p className="text-center text-xs text-surface-500 dark:text-surface-400 mt-8">
             ParkHub v{APP_VERSION}
           </p>
         </motion.div>
