@@ -17,7 +17,7 @@ use std::io::Cursor;
 
 use parkhub_common::ApiResponse;
 
-use super::{AuthUser, SharedState};
+use super::{read_admin_setting, AuthUser, SharedState};
 
 /// JSON payload embedded in the QR code.
 #[derive(Debug, Serialize)]
@@ -324,6 +324,65 @@ pub async fn slot_qr_code(
             )
                 .into_response()
         })
+}
+
+
+
+/// QR code response with URLs for generating a QR code externally.
+#[derive(Debug, Serialize)]
+pub struct LotQrResponse {
+    /// URL to an external QR code image service.
+    /// NOTE: Uses api.qrserver.com. For privacy-sensitive deployments,
+    /// operators should generate QR codes locally.
+    qr_url: String,
+    /// The lot's booking page URL that the QR code encodes.
+    lot_url: String,
+}
+)]
+pub async fn lot_qr_code(
+    State(state): State<SharedState>,
+    Extension(_auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<LotQrResponse>>) {
+    let state_guard = state.read().await;
+
+    // Verify lot exists
+    match state_guard.db.get_parking_lot(&id).await {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Parking lot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    }
+
+    // Derive base_url from admin setting or fall back to localhost
+    let base_url = read_admin_setting(&state_guard.db, "base_url").await;
+    let base_url = if base_url.is_empty() {
+        format!("https://localhost:{}", state_guard.config.port)
+    } else {
+        base_url
+    };
+
+    let lot_url = format!("{base_url}/book?lot={id}");
+    let encoded = url::form_urlencoded::Serializer::new(String::new())
+        .append_pair("data", &lot_url)
+        .append_pair("size", "256x256")
+        .finish();
+    let qr_url = format!("https://api.qrserver.com/v1/create-qr-code/?{encoded}");
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(LotQrResponse { qr_url, lot_url })),
+    )
 }
 
 #[cfg(test)]
