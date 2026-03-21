@@ -95,6 +95,21 @@ export default {
         searchProposals: 'Pesquisar propostas...',
       },
     },
+    favorites: {
+      title: 'Meus Favoritos',
+      subtitle: 'Suas vagas de estacionamento favoritas',
+      empty: 'Nenhum favorito ainda',
+      emptyHint: 'Marque uma vaga ao reservar para adicioná-la aqui',
+      slot: 'Vaga',
+      available: 'Disponível',
+      occupied: 'Ocupada',
+      unknownLot: 'Estacionamento desconhecido',
+      removed: 'Favorito removido',
+      added: 'Adicionado aos favoritos',
+      remove: 'Remover {{slot}} dos favoritos',
+      addedOn: 'Adicionado em {{date}}',
+      count: '{{count}} favorito(s)',
+    },
     vehicles: {
       colors: {
         black: 'Preto',

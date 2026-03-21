@@ -189,6 +189,13 @@ export const api = {
     request<TranslationProposal>(`/api/v1/translations/proposals/${id}/review`, {
       method: 'PUT', body: JSON.stringify(data),
     }),
+
+  // ── Favorites ──
+  getFavorites: () => request<Favorite[]>('/api/v1/user/favorites'),
+  addFavorite: (slot_id: string, lot_id: string) =>
+    request<Favorite>('/api/v1/user/favorites', { method: 'POST', body: JSON.stringify({ slot_id, lot_id }) }),
+  removeFavorite: (slotId: string) =>
+    request<void>(`/api/v1/user/favorites/${slotId}`, { method: 'DELETE' }),
 };
 
 // ── Types ──
@@ -239,6 +246,13 @@ export interface ParkingSlot {
   slot_type?: SlotType;
   features?: SlotFeature[];
   zone_id?: string;
+}
+
+export interface Favorite {
+  user_id: string;
+  slot_id: string;
+  lot_id: string;
+  created_at: string;
 }
 
 export interface Booking {

@@ -94,6 +94,21 @@ export default {
         searchProposals: '提案を検索...',
       },
     },
+    favorites: {
+      title: 'お気に入り',
+      subtitle: 'よく使う駐車スペース',
+      empty: 'お気に入りはまだありません',
+      emptyHint: '予約時にスターを付けるとここに追加されます',
+      slot: 'スペース',
+      available: '空き',
+      occupied: '使用中',
+      unknownLot: '不明な駐車場',
+      removed: 'お気に入りを削除しました',
+      added: 'お気に入りに追加しました',
+      remove: '{{slot}}をお気に入りから削除',
+      addedOn: '{{date}}に追加',
+      count: '{{count}}件のお気に入り',
+    },
     vehicles: {
       colors: {
         black: '\u9ed2',

@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, useDragControls 
 import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
-  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate,
+  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { to: '/', icon: House, key: 'dashboard', end: true },
   { to: '/bookings', icon: CalendarCheck, key: 'bookings' },
   { to: '/vehicles', icon: Car, key: 'vehicles' },
+  { to: '/favorites', icon: Star, key: 'favorites' },
   { to: '/absences', icon: CalendarX, key: 'absences' },
   { to: '/team', icon: Users, key: 'team' },
   { to: '/calendar', icon: Calendar, key: 'calendar' },

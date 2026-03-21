@@ -113,6 +113,21 @@ export default {
         searchProposals: 'Önerileri ara...',
       },
     },
+    favorites: {
+      title: 'Favorilerim',
+      subtitle: 'Kayıtlı park yerleriniz',
+      empty: 'Henüz favori yok',
+      emptyHint: 'Rezervasyon sırasında bir yeri yıldızlayarak buraya ekleyin',
+      slot: 'Yer',
+      available: 'Müsait',
+      occupied: 'Dolu',
+      unknownLot: 'Bilinmeyen otopark',
+      removed: 'Favori kaldırıldı',
+      added: 'Favorilere eklendi',
+      remove: '{{slot}} favorilerden kaldır',
+      addedOn: '{{date}} tarihinde eklendi',
+      count: '{{count}} favori',
+    },
     vehicles: {
       colors: {
         black: 'Siyah',
