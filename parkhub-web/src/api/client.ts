@@ -72,7 +72,7 @@ export const api = {
 
   // ── Setup ──
   getSetupStatus: () => request<SetupStatus>('/api/v1/setup/status'),
-  completeSetup: (data: any) => request('/api/v1/setup/complete', { method: 'POST', body: JSON.stringify(data) }),
+  completeSetup: (data: SetupPayload) => request('/api/v1/setup/complete', { method: 'POST', body: JSON.stringify(data) }),
 
   // ── Lots ──
   getLots: () => request<ParkingLot[]>('/api/v1/lots'),
@@ -87,12 +87,12 @@ export const api = {
 
   // ── Bookings ──
   getBookings: () => request<Booking[]>('/api/v1/bookings'),
-  createBooking: (data: any) => request<Booking>('/api/v1/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  createBooking: (data: CreateBookingPayload) => request<Booking>('/api/v1/bookings', { method: 'POST', body: JSON.stringify(data) }),
   cancelBooking: (id: string) => request<void>(`/api/v1/bookings/${id}`, { method: 'DELETE' }),
 
   // ── Vehicles ──
   getVehicles: () => request<Vehicle[]>('/api/v1/vehicles'),
-  createVehicle: (data: any) => request<Vehicle>('/api/v1/vehicles', { method: 'POST', body: JSON.stringify(data) }),
+  createVehicle: (data: CreateVehiclePayload) => request<Vehicle>('/api/v1/vehicles', { method: 'POST', body: JSON.stringify(data) }),
   deleteVehicle: (id: string) => request<void>(`/api/v1/vehicles/${id}`, { method: 'DELETE' }),
 
   // ── Absences ──
@@ -122,7 +122,7 @@ export const api = {
   // ── Admin ──
   adminStats: () => request<AdminStats>('/api/v1/admin/stats'),
   adminUsers: () => request<User[]>('/api/v1/admin/users'),
-  adminUpdateUser: (id: string, data: any) => request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  adminUpdateUser: (id: string, data: UpdateUserPayload) => request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteUser: (id: string) => request<void>(`/api/v1/admin/users/${id}`, { method: 'DELETE' }),
   adminUpdateUserRole: (id: string, role: string) =>
     request<User>(`/api/v1/admin/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
@@ -411,6 +411,36 @@ export interface CreateLotRequest {
   monthly_pass?: number;
   currency?: string;
   status?: LotStatus;
+}
+
+export interface SetupPayload {
+  password: string;
+  password_confirmation: string;
+  company_name?: string;
+  use_case?: string;
+}
+
+export interface CreateBookingPayload {
+  lot_id: string;
+  slot_id: string;
+  start_time: string;
+  end_time: string;
+  vehicle_id?: string;
+}
+
+export interface CreateVehiclePayload {
+  plate: string;
+  make?: string;
+  model?: string;
+  color?: string;
+}
+
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  role?: string;
+  is_active?: boolean;
+  department?: string;
 }
 
 export interface UpdateLotRequest {

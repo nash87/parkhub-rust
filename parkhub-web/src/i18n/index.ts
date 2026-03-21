@@ -38,4 +38,26 @@ i18n
     },
   });
 
+/** Fetch approved translation overrides from the API and patch into i18n bundles. */
+export async function loadTranslationOverrides(): Promise<void> {
+  try {
+    const base = (import.meta as Record<string, any>).env?.VITE_API_URL || '';
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('parkhub_token') : null;
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const res = await fetch(`${base}/api/v1/translations/overrides`, { headers });
+    if (!res.ok) return;
+    const json = await res.json();
+    const overrides: { language: string; key: string; value: string }[] =
+      Array.isArray(json) ? json : json?.data ?? [];
+    for (const override of overrides) {
+      i18n.addResource(override.language, 'translation', override.key, override.value);
+    }
+  } catch {
+    // Silently ignore — overrides are optional
+  }
+}
+
 export default i18n;

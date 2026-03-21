@@ -7,17 +7,25 @@ import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
-const COLOR_OPTIONS = [
-  { value: 'Schwarz', bg: 'bg-gray-900' },
-  { value: 'Wei\u00df', bg: 'bg-white border border-surface-300' },
-  { value: 'Silber', bg: 'bg-gray-400' },
-  { value: 'Grau', bg: 'bg-gray-500' },
-  { value: 'Blau', bg: 'bg-blue-600' },
-  { value: 'Rot', bg: 'bg-red-600' },
-  { value: 'Gr\u00fcn', bg: 'bg-green-600' },
+const COLOR_DEFS = [
+  { key: 'black', bg: 'bg-gray-900' },
+  { key: 'white', bg: 'bg-white border border-surface-300' },
+  { key: 'silver', bg: 'bg-gray-400' },
+  { key: 'gray', bg: 'bg-gray-500' },
+  { key: 'blue', bg: 'bg-blue-600' },
+  { key: 'red', bg: 'bg-red-600' },
+  { key: 'green', bg: 'bg-green-600' },
+  { key: 'brown', bg: 'bg-amber-800' },
+  { key: 'beige', bg: 'bg-amber-200' },
+  { key: 'other', bg: 'bg-surface-400' },
 ];
 
-const colorMap: Record<string, string> = {
+const colorBgMap: Record<string, string> = {
+  black: 'bg-gray-900', white: 'bg-white border border-surface-300',
+  silver: 'bg-gray-400', gray: 'bg-gray-500', blue: 'bg-blue-600',
+  red: 'bg-red-600', green: 'bg-green-600', brown: 'bg-amber-800',
+  beige: 'bg-amber-200', other: 'bg-surface-400',
+  // Legacy German keys for backward compatibility
   Schwarz: 'bg-gray-900', 'Wei\u00df': 'bg-white border border-surface-300',
   Silber: 'bg-gray-400', Grau: 'bg-gray-500', Blau: 'bg-blue-600',
   Rot: 'bg-red-600', 'Gr\u00fcn': 'bg-green-600',
@@ -117,10 +125,10 @@ export function VehiclesPage() {
                 <div>
                   <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.color', 'Farbe')}</label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {COLOR_OPTIONS.map(c => (
-                      <button key={c.value} type="button" onClick={() => setForm({ ...form, color: form.color === c.value ? '' : c.value })}
-                        aria-label={c.value} aria-pressed={form.color === c.value}
-                        className={`w-8 h-8 rounded-full ${c.bg} transition-all ${form.color === c.value ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-surface-900 scale-110' : ''}`}
+                    {COLOR_DEFS.map(c => (
+                      <button key={c.key} type="button" onClick={() => setForm({ ...form, color: form.color === c.key ? '' : c.key })}
+                        aria-label={t(`vehicles.colors.${c.key}`)} aria-pressed={form.color === c.key}
+                        className={`w-8 h-8 rounded-full ${c.bg} transition-all ${form.color === c.key ? 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-surface-900 scale-110' : ''}`}
                       />
                     ))}
                   </div>
@@ -151,7 +159,7 @@ export function VehiclesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {vehicles.map((v, i) => {
-            const colorClass = v.color ? (colorMap[v.color] || 'bg-surface-400') : 'bg-surface-400';
+            const colorClass = v.color ? (colorBgMap[v.color] || 'bg-surface-400') : 'bg-surface-400';
             return (
               <motion.div key={v.id} variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
                 <div className="flex items-start justify-between">
@@ -160,7 +168,7 @@ export function VehiclesPage() {
                     <div>
                       <p className="text-lg font-semibold text-surface-900 dark:text-white font-mono tracking-wider">{v.plate}</p>
                       {(v.make || v.model) && <p className="text-sm text-surface-500 dark:text-surface-400">{[v.make, v.model].filter(Boolean).join(' ')}</p>}
-                      {v.color && <p className="text-xs text-surface-400 mt-0.5">{v.color}</p>}
+                      {v.color && <p className="text-xs text-surface-400 mt-0.5">{t(`vehicles.colors.${v.color}`, v.color)}</p>}
                     </div>
                   </div>
                   <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label={t('vehicles.deleteVehicle', { plate: v.plate })}>

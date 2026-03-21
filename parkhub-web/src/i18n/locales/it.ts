@@ -95,6 +95,31 @@ export default {
         searchProposals: 'Cerca proposte...',
       },
     },
+    vehicles: {
+      colors: {
+        black: 'Nero',
+        white: 'Bianco',
+        silver: 'Argento',
+        gray: 'Grigio',
+        blue: 'Blu',
+        red: 'Rosso',
+        green: 'Verde',
+        brown: 'Marrone',
+        beige: 'Beige',
+        other: 'Altro',
+      },
+    },
+    reports: {
+      weekdays: {
+        mon: 'Lun',
+        tue: 'Mar',
+        wed: 'Mer',
+        thu: 'Gio',
+        fri: 'Ven',
+        sat: 'Sab',
+        sun: 'Dom',
+      },
+    },
     ui: {
       breadcrumb: 'Briciole di pane',
       sortAsc: 'Ordina crescente',

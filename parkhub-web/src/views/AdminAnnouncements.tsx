@@ -7,6 +7,7 @@ import {
 import { api, type Announcement } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 type Severity = 'info' | 'warning' | 'error' | 'success';
 
@@ -78,6 +79,7 @@ export function AdminAnnouncementsPage() {
   const [form, setForm] = useState<AnnouncementForm>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void}>({open: false, action: () => {}});
 
   useEffect(() => { load(); }, []);
 
@@ -143,21 +145,26 @@ export function AdminAnnouncementsPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t('admin.announcementDeleteConfirm'))) return;
-    setDeletingId(id);
-    try {
-      const res = await api.adminDeleteAnnouncement(id);
-      if (res.success) {
-        setAnnouncements(prev => prev.filter(a => a.id !== id));
-        toast.success(t('admin.announcementDeleted'));
-        if (editingId === id) closeForm();
-      } else {
-        toast.error(res.error?.message || t('admin.announcementDeleteFailed'));
-      }
-    } finally {
-      setDeletingId(null);
-    }
+  function handleDelete(id: string) {
+    setConfirmState({
+      open: true,
+      action: async () => {
+        setConfirmState({open: false, action: () => {}});
+        setDeletingId(id);
+        try {
+          const res = await api.adminDeleteAnnouncement(id);
+          if (res.success) {
+            setAnnouncements(prev => prev.filter(a => a.id !== id));
+            toast.success(t('admin.announcementDeleted'));
+            if (editingId === id) closeForm();
+          } else {
+            toast.error(res.error?.message || t('admin.announcementDeleteFailed'));
+          }
+        } finally {
+          setDeletingId(null);
+        }
+      },
+    });
   }
 
   if (loading) {
@@ -357,6 +364,14 @@ export function AdminAnnouncementsPage() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={confirmState.open}
+        title={t('common.delete')}
+        message={t('admin.announcementDeleteConfirm')}
+        variant="danger"
+        onConfirm={confirmState.action}
+        onCancel={() => setConfirmState({open: false, action: () => {}})}
+      />
     </motion.div>
   );
 }

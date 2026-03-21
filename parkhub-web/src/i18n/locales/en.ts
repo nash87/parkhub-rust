@@ -212,6 +212,18 @@ export default {
       newVehicle: 'New Vehicle',
       isDefault: 'Default vehicle',
       deleteVehicle: 'Delete {{plate}}',
+      colors: {
+        black: 'Black',
+        white: 'White',
+        silver: 'Silver',
+        gray: 'Gray',
+        blue: 'Blue',
+        red: 'Red',
+        green: 'Green',
+        brown: 'Brown',
+        beige: 'Beige',
+        other: 'Other',
+      },
     },
     admin: {
       title: 'Administration',
@@ -685,6 +697,17 @@ export default {
       minutesAgo: '{{count}}m ago',
       hoursAgo: '{{count}}h ago',
       daysAgo: '{{count}}d ago',
+    },
+    reports: {
+      weekdays: {
+        mon: 'Mon',
+        tue: 'Tue',
+        wed: 'Wed',
+        thu: 'Thu',
+        fri: 'Fri',
+        sat: 'Sat',
+        sun: 'Sun',
+      },
     },
     payment: {
       title: 'Payment',

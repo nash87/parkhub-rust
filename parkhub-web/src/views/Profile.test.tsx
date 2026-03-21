@@ -104,6 +104,7 @@ vi.mock('@phosphor-icons/react', () => ({
   CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
   CaretUp: (props: any) => <span data-testid="icon-caret-up" {...props} />,
   Shield: (props: any) => <span data-testid="icon-shield" {...props} />,
+  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

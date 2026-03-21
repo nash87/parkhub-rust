@@ -8,7 +8,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretUp, CaretDown } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, DownloadSimple } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DataTableProps<T> {
@@ -19,6 +19,16 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   /** Optional row click handler */
   onRowClick?: (row: T) => void;
+  /** When provided, show a CSV download button with this filename (without extension) */
+  exportFilename?: string;
+}
+
+function escapeCsvCell(value: unknown): string {
+  const str = String(value ?? '');
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
 }
 
 /** Reusable data table with sorting, search filtering, and staggered row animation. */
@@ -29,6 +39,7 @@ export function DataTable<T>({
   searchColumn,
   emptyMessage = 'No data',
   onRowClick,
+  exportFilename,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -52,8 +63,54 @@ export function DataTable<T>({
 
   const rows = table.getRowModel().rows;
 
+  function handleExportCsv() {
+    if (!exportFilename) return;
+    const headerGroups = table.getHeaderGroups();
+    const visibleColumns = headerGroups[0]?.headers.filter(h => h.column.columnDef.header) ?? [];
+    const headerRow = visibleColumns
+      .map(h => {
+        const rendered = h.column.columnDef.header;
+        if (typeof rendered === 'function') {
+          // Use the column id as header label for CSV
+          return escapeCsvCell(h.column.id);
+        }
+        return escapeCsvCell(rendered ?? h.column.id);
+      })
+      .join(',');
+
+    const dataRows = rows.map(row =>
+      visibleColumns
+        .map(h => {
+          const cell = row.getAllCells().find(c => c.column.id === h.column.id);
+          return escapeCsvCell(cell?.getValue() ?? '');
+        })
+        .join(',')
+    );
+
+    const csv = [headerRow, ...dataRows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${exportFilename}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="card overflow-hidden">
+      {exportFilename && (
+        <div className="flex justify-end px-5 pt-4">
+          <button
+            onClick={handleExportCsv}
+            className="btn btn-sm btn-secondary"
+            aria-label={`Export ${exportFilename} as CSV`}
+          >
+            <DownloadSimple weight="bold" className="w-4 h-4" />
+            CSV
+          </button>
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full" role="grid">
           <thead>

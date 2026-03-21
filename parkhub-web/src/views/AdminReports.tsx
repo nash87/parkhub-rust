@@ -7,7 +7,7 @@ import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart
 import { OccupancyHeatmap } from '../components/OccupancyHeatmap';
 
 function StatCard({ icon: Icon, label, value }: {
-  icon: any;
+  icon: React.ComponentType<{ weight?: string; className?: string }>;
   label: string;
   value: number;
   color?: string;
@@ -48,12 +48,12 @@ function mockLotOccupancy(totalLots: number, activeBookings: number): DonutSlice
 }
 
 /** Build mock "bookings this week" from total bookings to show a plausible distribution. */
-function weeklyBookingData(totalBookings: number): { label: string; value: number }[] {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+function weeklyBookingData(totalBookings: number, t: (key: string) => string): { label: string; value: number }[] {
+  const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
   // Weights simulate typical office-parking week pattern
   const weights = [0.18, 0.20, 0.22, 0.19, 0.15, 0.04, 0.02];
-  return days.map((label, i) => ({
-    label,
+  return dayKeys.map((key, i) => ({
+    label: t(`reports.weekdays.${key}`),
     value: Math.round(totalBookings * weights[i]),
   }));
 }
@@ -75,8 +75,8 @@ export function AdminReportsPage() {
   }, []);
 
   const weeklyData = useMemo(
-    () => weeklyBookingData(stats?.total_bookings ?? 0),
-    [stats?.total_bookings],
+    () => weeklyBookingData(stats?.total_bookings ?? 0, t),
+    [stats?.total_bookings, t],
   );
 
   const lotOccupancy = useMemo(
