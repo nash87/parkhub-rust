@@ -675,33 +675,49 @@ pub async fn dispatch_webhook_event(
                 .build()
                 .unwrap_or_default();
 
-            match client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .header("X-Webhook-Signature", &signature)
-                .body(body)
-                .send()
-                .await
-            {
-                Ok(resp) => {
-                    tracing::info!(
-                        "Webhook {} delivered event '{}' to {} — HTTP {}",
-                        webhook.id,
-                        event,
-                        url,
-                        resp.status()
-                    );
+            let max_attempts = 3u32;
+            let mut delay = std::time::Duration::from_secs(2);
+
+            for attempt in 1..=max_attempts {
+                match client
+                    .post(&url)
+                    .header("Content-Type", "application/json")
+                    .header("X-Webhook-Signature", &signature)
+                    .body(body.clone())
+                    .send()
+                    .await
+                {
+                    Ok(resp) if resp.status().is_success() => {
+                        tracing::info!(
+                            "Webhook {} delivered event '{}' to {} — HTTP {} (attempt {}/{})",
+                            webhook.id, event, url, resp.status(), attempt, max_attempts
+                        );
+                        return;
+                    }
+                    Ok(resp) => {
+                        tracing::warn!(
+                            "Webhook {} event '{}' to {} returned HTTP {} (attempt {}/{})",
+                            webhook.id, event, url, resp.status(), attempt, max_attempts
+                        );
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "Webhook {} failed to deliver '{}' to {}: {} (attempt {}/{})",
+                            webhook.id, event, url, e, attempt, max_attempts
+                        );
+                    }
                 }
-                Err(e) => {
-                    tracing::warn!(
-                        "Webhook {} failed to deliver '{}' to {}: {}",
-                        webhook.id,
-                        event,
-                        url,
-                        e
-                    );
+
+                if attempt < max_attempts {
+                    tokio::time::sleep(delay).await;
+                    delay *= 4; // exponential backoff: 2s, 8s
                 }
             }
+
+            tracing::error!(
+                "Webhook {} delivery exhausted all {} attempts for event '{}' to {}",
+                webhook.id, max_attempts, event, url
+            );
         });
     }
 }

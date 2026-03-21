@@ -1,6 +1,7 @@
-//! CSV import endpoint for bulk user creation.
+//! Import endpoints: bulk CSV user creation and iCal absence import.
 //!
 //! - `POST /api/v1/admin/users/import` — import users from CSV (admin only)
+//! - `POST /api/v1/absences/import/ical` — import absences from iCal (user-scoped)
 
 use axum::{
     extract::State,
@@ -11,6 +12,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, User, UserPreferences, UserRole};
+use parkhub_common::models::{Absence, AbsenceType};
 
 use super::{check_admin, AuthUser, SharedState};
 use super::hash_password_simple;
@@ -323,6 +325,201 @@ pub async fn import_users_csv(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// iCal absence import
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Result of an iCal absence import.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct IcalImportResult {
+    /// Number of absences successfully imported.
+    pub imported: usize,
+    /// Number of events skipped (missing required fields).
+    pub skipped: usize,
+}
+
+/// Map an iCal SUMMARY or CATEGORIES string to an [`AbsenceType`].
+fn summary_to_absence_type(summary: &str) -> AbsenceType {
+    let lower = summary.to_lowercase();
+    if lower.contains("homeoffice") || lower.contains("home office") || lower.contains("remote") {
+        AbsenceType::Homeoffice
+    } else if lower.contains("vacation")
+        || lower.contains("urlaub")
+        || lower.contains("holiday")
+        || lower.contains("ferien")
+    {
+        AbsenceType::Vacation
+    } else if lower.contains("sick")
+        || lower.contains("krank")
+        || lower.contains("illness")
+        || lower.contains("krankenstand")
+    {
+        AbsenceType::Sick
+    } else if lower.contains("training")
+        || lower.contains("schulung")
+        || lower.contains("workshop")
+        || lower.contains("conference")
+        || lower.contains("konferenz")
+    {
+        AbsenceType::Training
+    } else {
+        AbsenceType::Other
+    }
+}
+
+/// Parse a date string from iCal (YYYYMMDD or YYYY-MM-DD) into "YYYY-MM-DD".
+fn parse_ical_date(value: &str) -> Option<String> {
+    let v = value.trim();
+    if v.len() == 8 && v.chars().all(|c| c.is_ascii_digit()) {
+        // YYYYMMDD
+        Some(format!("{}-{}-{}", &v[0..4], &v[4..6], &v[6..8]))
+    } else if v.len() == 10
+        && v.chars().enumerate().all(|(i, c)| {
+            if i == 4 || i == 7 {
+                c == '-'
+            } else {
+                c.is_ascii_digit()
+            }
+        })
+    {
+        Some(v.to_string())
+    } else {
+        None
+    }
+}
+
+/// Parse VEVENT blocks from an iCal string.
+/// Returns a list of `(dtstart, dtend, summary, description)` tuples.
+fn parse_vevents(ical: &str) -> Vec<(String, String, String, Option<String>)> {
+    let mut events = Vec::new();
+    let mut in_event = false;
+    let mut dtstart = String::new();
+    let mut dtend = String::new();
+    let mut summary = String::new();
+    let mut description: Option<String> = None;
+
+    for line in ical.lines() {
+        let line = line.trim_end_matches('\r');
+        match line {
+            "BEGIN:VEVENT" => {
+                in_event = true;
+                dtstart.clear();
+                dtend.clear();
+                summary.clear();
+                description = None;
+            }
+            "END:VEVENT" if in_event => {
+                in_event = false;
+                if !dtstart.is_empty() && !dtend.is_empty() {
+                    events.push((dtstart.clone(), dtend.clone(), summary.clone(), description.clone()));
+                }
+            }
+            _ if in_event => {
+                if let Some(rest) = line.strip_prefix("DTSTART") {
+                    // strip property params: DTSTART;VALUE=DATE:20240101 or DTSTART:20240101
+                    let val = rest.splitn(2, ':').nth(1).unwrap_or("").trim();
+                    if let Some(d) = parse_ical_date(val) {
+                        dtstart = d;
+                    }
+                } else if let Some(rest) = line.strip_prefix("DTEND") {
+                    let val = rest.splitn(2, ':').nth(1).unwrap_or("").trim();
+                    if let Some(d) = parse_ical_date(val) {
+                        dtend = d;
+                    }
+                } else if let Some(val) = line.strip_prefix("SUMMARY:") {
+                    summary = val.trim().to_string();
+                } else if let Some(val) = line.strip_prefix("DESCRIPTION:") {
+                    description = Some(val.trim().to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    events
+}
+
+/// `POST /api/v1/absences/import/ical` — import absences from an iCal body
+#[utoipa::path(
+    post,
+    path = "/api/v1/absences/import/ical",
+    tag = "Absences",
+    summary = "Import absences from iCal",
+    description = "Parse VEVENT blocks from an iCal (RFC 5545) body and create absences for the \
+        authenticated user. DTSTART and DTEND are required; SUMMARY is used to infer the absence type.",
+    request_body(
+        content = String,
+        content_type = "text/calendar",
+        description = "iCal data (VCALENDAR with VEVENT blocks)"
+    ),
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "Import completed", body = IcalImportResult),
+        (status = 400, description = "Empty or invalid iCal body"),
+    )
+)]
+pub async fn import_absences_ical(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    body: String,
+) -> (StatusCode, Json<ApiResponse<IcalImportResult>>) {
+    if body.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("EMPTY_ICAL", "iCal body is empty")),
+        );
+    }
+
+    let events = parse_vevents(&body);
+    if events.is_empty() {
+        return (
+            StatusCode::OK,
+            Json(ApiResponse::success(IcalImportResult { imported: 0, skipped: 0 })),
+        );
+    }
+
+    let state_guard = state.read().await;
+    let mut imported = 0usize;
+    let mut skipped = 0usize;
+    let now = Utc::now();
+
+    for (dtstart, dtend, summary, desc) in events {
+        if dtstart.is_empty() || dtend.is_empty() {
+            skipped += 1;
+            continue;
+        }
+
+        let absence_type = summary_to_absence_type(&summary);
+        let note = desc.or_else(|| if summary.is_empty() { None } else { Some(summary.clone()) });
+
+        let absence = Absence {
+            id: Uuid::new_v4(),
+            user_id: auth_user.user_id,
+            absence_type,
+            start_date: dtstart,
+            end_date: dtend,
+            note,
+            source: "ical".to_string(),
+            created_at: now,
+        };
+
+        match state_guard.db.save_absence(&absence).await {
+            Ok(_) => imported += 1,
+            Err(e) => {
+                tracing::error!("Failed to save iCal-imported absence: {e}");
+                skipped += 1;
+            }
+        }
+    }
+
+    drop(state_guard);
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(IcalImportResult { imported, skipped })),
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -423,3 +620,4 @@ mod tests {
         assert_eq!(MAX_IMPORT_ROWS, 500);
     }
 }
+
