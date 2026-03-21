@@ -1,11 +1,11 @@
 //! Credits handlers: user balance, admin grant, refill, quota management.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Extension, Json,
 };
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -554,4 +554,55 @@ pub async fn admin_update_user_quota(
         StatusCode::OK,
         Json(ApiResponse::success(AdminUserResponse::from(&target_user))),
     )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin: credit transaction history
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct AdminCreditTransactionsQuery {
+    pub user_id: Option<Uuid>,
+    pub transaction_type: Option<CreditTransactionType>,
+    pub from: Option<DateTime<Utc>>,
+    pub to: Option<DateTime<Utc>>,
+}
+
+/// `GET /api/v1/admin/credits/transactions` — list all credit transactions (admin only)
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/credits/transactions",
+    tag = "Credits",
+    summary = "List all credit transactions (admin)",
+    description = "Returns all credit transactions across all users, with optional filtering.",
+    responses(
+        (status = 200, description = "Transaction list"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
+pub async fn admin_list_credit_transactions(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Query(params): Query<AdminCreditTransactionsQuery>,
+) -> (StatusCode, Json<ApiResponse<Vec<CreditTransaction>>>) {
+    let state_guard = state.read().await;
+
+    if let Err(resp) = check_admin(&state_guard.db, &auth_user).await {
+        return (StatusCode::FORBIDDEN, Json(resp));
+    }
+
+    match state_guard
+        .db
+        .list_all_credit_transactions(params.user_id, params.transaction_type, params.from, params.to)
+        .await
+    {
+        Ok(txs) => (StatusCode::OK, Json(ApiResponse::success(txs))),
+        Err(e) => {
+            tracing::error!("Failed to list credit transactions: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list transactions")),
+            )
+        }
+    }
 }
