@@ -1,15 +1,1758 @@
 //! Booking handlers: create, list, get, cancel, quick-book, guest booking,
-//! invoice generation, and calendar events.
-//!
-//! TODO: Move these handlers from mod.rs into this module:
-//! - `list_bookings`
-//! - `create_booking`
-//! - `get_booking`
-//! - `cancel_booking`
-//! - `get_booking_invoice`
-//! - `quick_book`
-//! - `create_guest_booking`
-//! - `calendar_events`
+//! invoice generation, check-in, recurring bookings, and calendar events.
+
+use axum::{
+    extract::{Path, Query, State},
+    http::{header, StatusCode},
+    response::IntoResponse,
+    Extension, Json,
+};
+use chrono::{DateTime, Datelike, TimeDelta, Timelike, Utc};
+use std::fmt::Write as _;
+use uuid::Uuid;
+
+use crate::audit::{AuditEntry, AuditEventType};
+use crate::email;
+use parkhub_common::models::{GuestBooking, RecurringBooking};
+use parkhub_common::{
+    ApiResponse, Booking, BookingPricing, BookingStatus, CreateBookingRequest,
+    PaymentStatus, SlotStatus, User, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
+};
+use serde::{Deserialize, Serialize};
+
+use super::{check_admin, AuthUser, SharedState};
+
+/// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
+const VAT_RATE: f64 = 0.19;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOKINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[utoipa::path(get, path = "/api/v1/bookings", tag = "Bookings",
+    summary = "List current user's bookings",
+    description = "Returns all bookings for the authenticated user.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "List of bookings"))
+)]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
+pub async fn list_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<Vec<Booking>>> {
+    let state = state.read().await;
+
+    match state
+        .db
+        .list_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(bookings) => {
+            tracing::debug!(count = bookings.len(), "Listed bookings");
+            Json(ApiResponse::success(bookings))
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to list bookings");
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list bookings",
+            ))
+        }
+    }
+}
+
+#[utoipa::path(post, path = "/api/v1/bookings", tag = "Bookings",
+    summary = "Create a new booking",
+    description = "Books a parking slot for the authenticated user.",
+    security(("bearer_auth" = [])),
+    request_body = CreateBookingRequest,
+    responses((status = 201, description = "Booking created"), (status = 404, description = "Not found"), (status = 409, description = "Slot unavailable"))
+)]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, slot_id = %req.slot_id))]
+pub async fn create_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    // Use a WRITE lock for the entire booking creation to prevent race
+    // conditions where two concurrent requests book the same slot simultaneously.
+    // Both would read SlotStatus::Available, and both would succeed — leaving the
+    // slot double-booked. Holding the write lock ensures only one request can
+    // complete the check-and-update atomically.
+    let state_guard = state.write().await;
+
+    // Check if slot exists and is available
+    let slot = match state_guard
+        .db
+        .get_parking_slot(&req.slot_id.to_string())
+        .await
+    {
+        Ok(Some(s)) => s,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Slot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    if slot.status != SlotStatus::Available {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "SLOT_UNAVAILABLE",
+                "This slot is not available",
+            )),
+        );
+    }
+
+    // Get or create vehicle info
+    let vehicle = match state_guard
+        .db
+        .get_vehicle(&req.vehicle_id.to_string())
+        .await
+    {
+        Ok(Some(v)) => {
+            // Verify the vehicle belongs to the authenticated user.
+            if v.user_id != auth_user.user_id {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error(
+                        "FORBIDDEN",
+                        "Vehicle does not belong to you",
+                    )),
+                );
+            }
+            v
+        }
+        _ => Vehicle {
+            id: req.vehicle_id,
+            user_id: auth_user.user_id,
+            license_plate: req.license_plate.clone(),
+            make: None,
+            model: None,
+            color: None,
+            vehicle_type: VehicleType::Car,
+            is_default: false,
+            created_at: Utc::now(),
+        },
+    };
+
+    // Validate duration is positive before arithmetic
+    if req.duration_minutes <= 0 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Duration must be positive",
+            )),
+        );
+    }
+
+    // Validate start_time is in the future (at least 1 minute from now)
+    if req.start_time <= Utc::now() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_BOOKING_TIME",
+                "Booking start time must be in the future",
+            )),
+        );
+    }
+
+    // ── Admin settings enforcement ─────────────────────────────────────────
+
+    // require_vehicle: reject if no vehicle provided
+    let require_vehicle = read_admin_setting(&state_guard.db, "require_vehicle").await;
+    if require_vehicle == "true" && req.vehicle_id == Uuid::nil() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VEHICLE_REQUIRED",
+                "A vehicle is required for booking",
+            )),
+        );
+    }
+
+    // license_plate_mode = "required": reject if plate is empty
+    let plate_mode = read_admin_setting(&state_guard.db, "license_plate_mode").await;
+    if plate_mode == "required" && req.license_plate.trim().is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "LICENSE_PLATE_REQUIRED",
+                "A license plate is required for booking",
+            )),
+        );
+    }
+
+    // min_booking_duration_hours / max_booking_duration_hours
+    let duration_hours = f64::from(req.duration_minutes) / 60.0;
+    let min_hours: f64 = read_admin_setting(&state_guard.db, "min_booking_duration_hours")
+        .await
+        .parse()
+        .unwrap_or(0.0);
+    if min_hours > 0.0 && duration_hours < min_hours {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "DURATION_TOO_SHORT",
+                format!("Minimum booking duration is {min_hours} hour(s)"),
+            )),
+        );
+    }
+    let max_hours: f64 = read_admin_setting(&state_guard.db, "max_booking_duration_hours")
+        .await
+        .parse()
+        .unwrap_or(0.0);
+    if max_hours > 0.0 && duration_hours > max_hours {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "DURATION_TOO_LONG",
+                format!("Maximum booking duration is {max_hours} hour(s)"),
+            )),
+        );
+    }
+
+    // max_bookings_per_day: count user's bookings for the same day (0 = unlimited)
+    let max_per_day: i32 = read_admin_setting(&state_guard.db, "max_bookings_per_day")
+        .await
+        .parse()
+        .unwrap_or(0);
+    if max_per_day > 0 {
+        let user_bookings = state_guard
+            .db
+            .list_bookings_by_user(&auth_user.user_id.to_string())
+            .await
+            .unwrap_or_default();
+        let booking_date = req.start_time.date_naive();
+        let same_day_count = user_bookings
+            .iter()
+            .filter(|b| {
+                b.start_time.date_naive() == booking_date && b.status != BookingStatus::Cancelled
+            })
+            .count();
+        if same_day_count >= usize::try_from(max_per_day).unwrap_or(0) {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(ApiResponse::error(
+                    "MAX_BOOKINGS_REACHED",
+                    format!("Maximum of {max_per_day} booking(s) per day reached"),
+                )),
+            );
+        }
+    }
+
+    // ── End admin settings enforcement ──────────────────────────────────────
+
+    // Credits check — deduct if credits system is enabled
+    let credits_enabled = state_guard
+        .db
+        .get_setting("credits_enabled")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+        == "true";
+    let credits_per_booking: i32 = state_guard
+        .db
+        .get_setting("credits_per_booking")
+        .await
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(1);
+
+    let Ok(Some(mut booking_user)) = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
+        );
+    };
+
+    let is_admin_user =
+        booking_user.role == UserRole::Admin || booking_user.role == UserRole::SuperAdmin;
+
+    if credits_enabled && !is_admin_user && booking_user.credits_balance < credits_per_booking {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(
+                "INSUFFICIENT_CREDITS",
+                "Not enough credits for this booking",
+            )),
+        );
+    }
+
+    // Calculate end time and pricing
+    let end_time = req.start_time + TimeDelta::minutes(i64::from(req.duration_minutes));
+
+    // Look up the lot for pricing and floor name
+    let lot_opt = state_guard
+        .db
+        .get_parking_lot(&req.lot_id.to_string())
+        .await
+        .ok()
+        .flatten();
+
+    let hourly_rate = lot_opt
+        .as_ref()
+        .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
+        .map_or(2.0, |r| r.price);
+
+    let base_price = (f64::from(req.duration_minutes) / 60.0) * hourly_rate;
+    let tax = base_price * VAT_RATE;
+    let total = base_price + tax;
+
+    // Look up human-readable floor name from the lot's floors list
+    let floor_name = lot_opt.as_ref().map_or_else(
+        || "Level 1".to_string(),
+        |lot| {
+            lot.floors
+                .iter()
+                .find(|f| f.id == slot.floor_id)
+                .map_or_else(|| "Level 1".to_string(), |f| f.name.clone())
+        },
+    );
+
+    let now = Utc::now();
+    let booking = Booking {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: req.slot_id,
+        slot_number: slot.slot_number,
+        floor_name,
+        vehicle,
+        start_time: req.start_time,
+        end_time,
+        status: BookingStatus::Confirmed,
+        pricing: BookingPricing {
+            base_price,
+            discount: 0.0,
+            tax,
+            total,
+            currency: "EUR".to_string(),
+            payment_status: PaymentStatus::Pending,
+            payment_method: None,
+        },
+        created_at: now,
+        updated_at: now,
+        check_in_time: None,
+        check_out_time: None,
+        qr_code: Some(Uuid::new_v4().to_string()),
+        notes: req.notes,
+    };
+
+    if let Err(e) = state_guard.db.save_booking(&booking).await {
+        tracing::error!("Failed to save booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create booking",
+            )),
+        );
+    }
+
+    // Update slot status atomically within the same write-lock scope.
+    // The slot status is a critical cache of availability — if we cannot mark it
+    // Reserved the slot will appear available and can be double-booked.
+    let mut updated_slot = slot;
+    updated_slot.status = SlotStatus::Reserved;
+    if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
+        tracing::error!("Failed to update slot status after booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SLOT_UPDATE_FAILED",
+                "Booking created but slot status could not be updated. Please contact support.",
+            )),
+        );
+    }
+
+    tracing::info!(
+        user_id = %auth_user.user_id,
+        booking_id = %booking.id,
+        slot_id = %booking.slot_id,
+        "Booking created"
+    );
+
+    // Deduct credits if enabled and user is not admin
+    if credits_enabled && !is_admin_user {
+        booking_user.credits_balance -= credits_per_booking;
+        if let Err(e) = state_guard.db.save_user(&booking_user).await {
+            tracing::warn!("Failed to save user credit deduction: {e}");
+        }
+        let tx = CreditTransaction {
+            id: Uuid::new_v4(),
+            user_id: auth_user.user_id,
+            booking_id: Some(booking.id),
+            amount: -credits_per_booking,
+            transaction_type: CreditTransactionType::Deduction,
+            description: Some(format!("Booking {}", booking.id)),
+            granted_by: None,
+            created_at: Utc::now(),
+        };
+        if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+            tracing::warn!("Failed to save credit transaction: {e}");
+        }
+    }
+
+    // Fetch user details for audit log and confirmation email
+    let user_info_opt = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten();
+
+    let audit_entry = if let Some(ref u) = user_info_opt {
+        crate::audit::events::booking_created(auth_user.user_id, &u.username, booking.id)
+    } else {
+        crate::audit::events::booking_created(auth_user.user_id, "", booking.id)
+    };
+    // Persist audit entry to DB — use existing write guard to avoid deadlock
+    audit_entry.persist(&state_guard.db).await;
+
+    // Extract config values before releasing write lock
+    let org_name = state_guard.config.organization_name.clone();
+
+    // Drop write lock before spawning async tasks
+    drop(state_guard);
+
+    // Dispatch webhook event (non-blocking)
+    {
+        let state_clone = state.clone();
+        let booking_json = serde_json::json!({
+            "booking_id": booking.id,
+            "user_id": auth_user.user_id,
+            "lot_id": booking.lot_id,
+            "slot_number": booking.slot_number,
+            "start_time": booking.start_time,
+            "end_time": booking.end_time,
+        });
+        tokio::spawn(async move {
+            webhooks::dispatch_webhook_event(&state_clone, "booking.created", booking_json).await;
+        });
+    }
+    metrics::record_booking_event("created");
+
+    // Send booking confirmation email (non-blocking, fire-and-forget).
+    if let Some(u) = user_info_opt {
+        let booking_id_str = booking.id.to_string();
+        let floor_name = booking.floor_name.clone();
+        let slot_number = booking.slot_number;
+        let start_time_str = booking.start_time.format("%Y-%m-%d %H:%M UTC").to_string();
+        let end_time_str = booking.end_time.format("%Y-%m-%d %H:%M UTC").to_string();
+        let user_email = u.email.clone();
+        let user_name = u.name;
+        tokio::spawn(async move {
+            let email_html = email::build_booking_confirmation_email(
+                &user_name,
+                &booking_id_str,
+                &floor_name,
+                slot_number,
+                &start_time_str,
+                &end_time_str,
+                &org_name,
+            );
+            if let Err(e) =
+                email::send_email(&user_email, "Booking Confirmation — ParkHub", &email_html).await
+            {
+                tracing::warn!("Failed to send booking confirmation email: {}", e);
+            }
+        });
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(booking)))
+}
+
+#[utoipa::path(get, path = "/api/v1/bookings/{id}", tag = "Bookings",
+    summary = "Get booking by ID",
+    description = "Returns a single booking. Only the owner can access it.",
+    security(("bearer_auth" = [])),
+    params(("id" = String, Path, description = "Booking UUID")),
+    responses((status = 200, description = "Booking found"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
+)]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
+pub async fn get_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    let state = state.read().await;
+
+    match state.db.get_booking(&id).await {
+        Ok(Some(booking)) => {
+            if booking.user_id != auth_user.user_id {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+                );
+            }
+            (StatusCode::OK, Json(ApiResponse::success(booking)))
+        }
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            )
+        }
+    }
+}
+
+#[utoipa::path(delete, path = "/api/v1/bookings/{id}", tag = "Bookings",
+    summary = "Cancel a booking",
+    description = "Cancels an active booking and releases the slot.",
+    security(("bearer_auth" = [])),
+    params(("id" = String, Path, description = "Booking UUID")),
+    responses((status = 200, description = "Cancelled"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
+)]
+#[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
+pub async fn cancel_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    // Use write lock so the booking status update and slot status update are
+    // made while no other booking creation can interleave.
+    let state_guard = state.write().await;
+
+    let booking = match state_guard.db.get_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    if booking.user_id != auth_user.user_id {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    // Only Confirmed or Pending bookings can be cancelled.
+    if booking.status == BookingStatus::Cancelled {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "ALREADY_CANCELLED",
+                "Booking is already cancelled",
+            )),
+        );
+    }
+
+    let mut updated_booking = booking.clone();
+    updated_booking.status = BookingStatus::Cancelled;
+    updated_booking.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_booking(&updated_booking).await {
+        tracing::error!("Failed to update booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to cancel booking",
+            )),
+        );
+    }
+
+    // Free up the slot — only restore to Available if it was Reserved.
+    // Slots in Maintenance or Disabled state must remain as-is.
+    if let Ok(Some(mut slot)) = state_guard
+        .db
+        .get_parking_slot(&booking.slot_id.to_string())
+        .await
+    {
+        if slot.status == SlotStatus::Reserved {
+            slot.status = SlotStatus::Available;
+            if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+                tracing::error!("Failed to restore slot status after cancellation: {}", e);
+            }
+        }
+    }
+
+    // Refund credits if credits system is enabled
+    let credits_enabled = state_guard
+        .db
+        .get_setting("credits_enabled")
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+        == "true";
+    if credits_enabled {
+        let credits_per_booking: i32 = state_guard
+            .db
+            .get_setting("credits_per_booking")
+            .await
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1);
+        if let Ok(Some(mut user)) = state_guard
+            .db
+            .get_user(&auth_user.user_id.to_string())
+            .await
+        {
+            if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
+                user.credits_balance += credits_per_booking;
+                if let Err(e) = state_guard.db.save_user(&user).await {
+                    tracing::warn!("Failed to save user credit refund: {e}");
+                }
+                let tx = CreditTransaction {
+                    id: Uuid::new_v4(),
+                    user_id: auth_user.user_id,
+                    booking_id: Some(booking.id),
+                    amount: credits_per_booking,
+                    transaction_type: CreditTransactionType::Refund,
+                    description: Some(format!("Cancelled booking {}", booking.id)),
+                    granted_by: None,
+                    created_at: Utc::now(),
+                };
+                if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+                    tracing::warn!("Failed to save credit transaction: {e}");
+                }
+            }
+        }
+    }
+
+    // Fetch user for audit log + cancellation email
+    let user = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+        .ok()
+        .flatten();
+    let username = user
+        .as_ref()
+        .map(|u| u.username.clone())
+        .unwrap_or_default();
+
+    AuditEntry::new(AuditEventType::BookingCancelled)
+        .user(auth_user.user_id, &username)
+        .resource("booking", &id)
+        .log();
+
+    tracing::info!(
+        user_id = %auth_user.user_id,
+        booking_id = %id,
+        "Booking cancelled"
+    );
+
+    // Send cancellation confirmation email (async, best-effort)
+    if let Some(ref user) = user {
+        let user_email = user.email.clone();
+        let user_name = user.name.clone();
+        let booking_id_str = booking.id.to_string();
+        let org_name = state_guard.config.organization_name.clone();
+        let start_time = booking.start_time.format("%Y-%m-%d %H:%M").to_string();
+        let end_time = booking.end_time.format("%Y-%m-%d %H:%M").to_string();
+        let floor = booking.floor_name.clone();
+        let slot = booking.slot_number;
+        tokio::spawn(async move {
+            let email_html = email::build_booking_cancellation_email(
+                &user_name,
+                &booking_id_str,
+                &floor,
+                slot,
+                &start_time,
+                &end_time,
+                &org_name,
+            );
+            if let Err(e) =
+                email::send_email(&user_email, "Booking Cancelled — ParkHub", &email_html).await
+            {
+                tracing::warn!("Failed to send cancellation email: {}", e);
+            }
+        });
+    }
+
+    // Dispatch webhook event
+    {
+        let state_clone = state.clone();
+        let payload = serde_json::json!({
+            "booking_id": id,
+            "user_id": auth_user.user_id,
+            "action": "cancelled",
+        });
+        tokio::spawn(async move {
+            webhooks::dispatch_webhook_event(&state_clone, "booking.cancelled", payload).await;
+        });
+    }
+    metrics::record_booking_event("cancelled");
+
+    (StatusCode::OK, Json(ApiResponse::success(())))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVOICE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/bookings/{id}/invoice`
+///
+/// Returns an HTML invoice for the given booking.  The authenticated user must
+/// own the booking (admin users may retrieve any invoice).
+///
+/// The invoice includes:
+/// - Company/organisation name from server config
+/// - Booking reference (booking UUID)
+/// - User name and email
+/// - Parking lot name and slot number
+/// - Start / end time and duration
+/// - Itemised pricing: base price, VAT at 19% (German standard), total
+#[allow(clippy::format_in_format_args)]
+#[utoipa::path(get, path = "/api/v1/bookings/{id}/invoice", tag = "Bookings",
+    summary = "Download booking invoice",
+    description = "Generates a text invoice for a booking.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Success"))
+)]
+pub async fn get_booking_invoice(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let state_guard = state.read().await;
+
+    // Fetch the booking
+    let booking = match state_guard.db.get_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Booking not found".to_string(),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error fetching booking for invoice: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Internal server error".to_string(),
+            );
+        }
+    };
+
+    // Ownership check — only the booking owner (or admin) may fetch the invoice
+    let Ok(Some(caller)) = state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            "Access denied".to_string(),
+        );
+    };
+
+    let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
+    if booking.user_id != auth_user.user_id && !is_admin {
+        return (
+            StatusCode::FORBIDDEN,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            "Access denied".to_string(),
+        );
+    }
+
+    // Fetch user details for the invoice
+    let booking_user = match state_guard.db.get_user(&booking.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => caller.clone(),
+    };
+
+    // Fetch parking lot name
+    let lot_name = match state_guard
+        .db
+        .get_parking_lot(&booking.lot_id.to_string())
+        .await
+    {
+        Ok(Some(lot)) => lot.name,
+        _ => "Unknown Parking Lot".to_string(),
+    };
+
+    let org_name = state_guard.config.organization_name.clone();
+    let company = if org_name.is_empty() {
+        "ParkHub".to_string()
+    } else {
+        org_name
+    };
+
+    // Calculate duration in minutes
+    let duration_minutes = (booking.end_time - booking.start_time).num_minutes();
+    let duration_hours = duration_minutes / 60;
+    let duration_mins_part = duration_minutes % 60;
+
+    // VAT breakdown (19% German standard — Umsatzsteuergesetz § 12 Abs. 1)
+    let net_price = booking.pricing.base_price;
+    let vat_amount = net_price * VAT_RATE;
+    let gross_total = net_price + vat_amount;
+
+    let invoice_date = booking.created_at.format("%d.%m.%Y").to_string();
+    let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
+    let end_str = booking.end_time.format("%d.%m.%Y %H:%M").to_string();
+
+    let invoice_number = format!(
+        "INV-{}",
+        booking
+            .id
+            .to_string()
+            .to_uppercase()
+            .replace('-', "")
+            .chars()
+            .take(12)
+            .collect::<String>()
+    );
+
+    // HTML-escape all user-controlled values to prevent stored XSS
+    let company = html_escape(&company);
+    let user_name = html_escape(&booking_user.name);
+    let user_email = html_escape(&booking_user.email);
+    let lot_name = html_escape(&lot_name);
+    let floor_name = html_escape(&booking.floor_name);
+    let license_plate = html_escape(&booking.vehicle.license_plate);
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rechnung {invoice_number}</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; background: #f8f9fa; }}
+    .page {{ max-width: 800px; margin: 40px auto; background: #ffffff; padding: 60px;
+             box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-radius: 4px; }}
+    .header {{ display: flex; justify-content: space-between; align-items: flex-start;
+               border-bottom: 3px solid #1a73e8; padding-bottom: 24px; margin-bottom: 40px; }}
+    .company-name {{ font-size: 28px; font-weight: 700; color: #1a73e8; }}
+    .company-sub {{ font-size: 12px; color: #666; margin-top: 4px; }}
+    .invoice-meta {{ text-align: right; }}
+    .invoice-meta h2 {{ font-size: 22px; color: #333; }}
+    .invoice-meta p {{ font-size: 13px; color: #666; margin-top: 4px; }}
+    .section {{ margin-bottom: 32px; }}
+    .section-title {{ font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase;
+                      letter-spacing: 0.1em; margin-bottom: 8px; }}
+    .bill-to {{ background: #f8f9fa; padding: 16px 20px; border-radius: 4px; border-left: 3px solid #1a73e8; }}
+    .bill-to p {{ font-size: 14px; line-height: 1.6; color: #333; }}
+    table {{ width: 100%; border-collapse: collapse; margin-bottom: 0; }}
+    thead tr {{ background: #1a73e8; color: white; }}
+    thead th {{ padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; }}
+    tbody tr {{ border-bottom: 1px solid #e8ecf0; }}
+    tbody tr:hover {{ background: #f8f9fa; }}
+    tbody td {{ padding: 14px 16px; font-size: 14px; color: #333; }}
+    .text-right {{ text-align: right; }}
+    .totals {{ margin-top: 0; border-top: 2px solid #e8ecf0; }}
+    .totals tr td {{ padding: 10px 16px; font-size: 14px; }}
+    .totals .total-row td {{ font-size: 16px; font-weight: 700; color: #1a73e8;
+                              border-top: 2px solid #1a73e8; padding-top: 14px; }}
+    .badge {{ display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px;
+              font-weight: 600; }}
+    .badge-confirmed {{ background: #e8f5e9; color: #2e7d32; }}
+    .footer {{ margin-top: 48px; padding-top: 24px; border-top: 1px solid #e8ecf0;
+               font-size: 11px; color: #999; text-align: center; line-height: 1.6; }}
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <div class="company-name">{company}</div>
+        <div class="company-sub">Parkverwaltungssystem</div>
+      </div>
+      <div class="invoice-meta">
+        <h2>RECHNUNG</h2>
+        <p><strong>{invoice_number}</strong></p>
+        <p>Datum: {invoice_date}</p>
+      </div>
+    </div>
+
+    <!-- Bill To -->
+    <div class="section">
+      <div class="section-title">Rechnungsempfänger</div>
+      <div class="bill-to">
+        <p><strong>{user_name}</strong></p>
+        <p>{user_email}</p>
+      </div>
+    </div>
+
+    <!-- Booking Details -->
+    <div class="section">
+      <div class="section-title">Buchungsdetails</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Beschreibung</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Buchungsnummer</td>
+            <td>{booking_id}</td>
+          </tr>
+          <tr>
+            <td>Parkhaus</td>
+            <td>{lot_name}</td>
+          </tr>
+          <tr>
+            <td>Stellplatz</td>
+            <td>Nr. {slot_number} &nbsp;·&nbsp; {floor_name}</td>
+          </tr>
+          <tr>
+            <td>Fahrzeug (Kennzeichen)</td>
+            <td>{license_plate}</td>
+          </tr>
+          <tr>
+            <td>Beginn</td>
+            <td>{start_str}</td>
+          </tr>
+          <tr>
+            <td>Ende</td>
+            <td>{end_str}</td>
+          </tr>
+          <tr>
+            <td>Dauer</td>
+            <td>{duration_hours} Std. {duration_mins_part} Min.</td>
+          </tr>
+          <tr>
+            <td>Status</td>
+            <td><span class="badge badge-confirmed">{status}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pricing -->
+    <div class="section">
+      <div class="section-title">Rechnungsbetrag</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Position</th>
+            <th class="text-right">Betrag ({currency})</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Parkgebühr (Netto)</td>
+            <td class="text-right">{net_price:.2}</td>
+          </tr>
+        </tbody>
+        <tbody class="totals">
+          <tr>
+            <td>Zwischensumme (Netto)</td>
+            <td class="text-right">{net_price:.2}</td>
+          </tr>
+          <tr>
+            <td>MwSt. 19% (§ 12 UStG)</td>
+            <td class="text-right">{vat_amount:.2}</td>
+          </tr>
+          <tr class="total-row">
+            <td>Gesamtbetrag (Brutto)</td>
+            <td class="text-right">{gross_total:.2}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>{company} · Parkverwaltungssystem · Automatisch generierte Rechnung</p>
+      <p>Diese Rechnung wurde automatisch erstellt und ist ohne Unterschrift gültig.</p>
+    </div>
+
+  </div>
+</body>
+</html>"#,
+        invoice_number = invoice_number,
+        invoice_date = invoice_date,
+        company = company,
+        user_name = user_name,
+        user_email = user_email,
+        booking_id = booking.id,
+        lot_name = lot_name,
+        slot_number = booking.slot_number,
+        floor_name = floor_name,
+        license_plate = license_plate,
+        start_str = start_str,
+        end_str = end_str,
+        duration_hours = duration_hours,
+        duration_mins_part = duration_mins_part,
+        status = format!("{:?}", booking.status),
+        currency = booking.pricing.currency,
+        net_price = net_price,
+        vat_amount = vat_amount,
+        gross_total = gross_total,
+    );
+
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        html,
+    )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RECURRING BOOKINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `GET /api/v1/recurring-bookings` — list user's recurring bookings
+#[utoipa::path(
+    get,
+    path = "/api/v1/recurring-bookings",
+    tag = "Bookings",
+    summary = "List recurring bookings",
+    description = "List the current user's recurring booking patterns.",
+    security(("bearer_auth" = []))
+)]
+pub async fn list_recurring_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<Vec<RecurringBooking>>> {
+    let state_guard = state.read().await;
+    match state_guard
+        .db
+        .list_recurring_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(bookings) => Json(ApiResponse::success(bookings)),
+        Err(e) => {
+            tracing::error!("Failed to list recurring bookings: {}", e);
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to list recurring bookings",
+            ))
+        }
+    }
+}
+
+/// Request body for creating a recurring booking
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct CreateRecurringBookingRequest {
+    lot_id: Uuid,
+    slot_id: Option<Uuid>,
+    days_of_week: Vec<u8>,
+    start_date: String,
+    end_date: Option<String>,
+    start_time: String,
+    end_time: String,
+    vehicle_plate: Option<String>,
+}
+
+/// `POST /api/v1/recurring-bookings` — create a recurring booking
+#[utoipa::path(
+    post,
+    path = "/api/v1/recurring-bookings",
+    tag = "Bookings",
+    summary = "Create recurring booking",
+    description = "Create a new recurring booking pattern (e.g. every Tuesday 8-17).",
+    security(("bearer_auth" = []))
+)]
+pub async fn create_recurring_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateRecurringBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<RecurringBooking>>) {
+    let state_guard = state.read().await;
+
+    let booking = RecurringBooking {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: req.slot_id,
+        days_of_week: req.days_of_week,
+        start_date: req.start_date,
+        end_date: req.end_date,
+        start_time: req.start_time,
+        end_time: req.end_time,
+        vehicle_plate: req.vehicle_plate,
+        active: true,
+        created_at: Utc::now(),
+    };
+
+    if let Err(e) = state_guard.db.save_recurring_booking(&booking).await {
+        tracing::error!("Failed to save recurring booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create recurring booking",
+            )),
+        );
+    }
+
+    (StatusCode::CREATED, Json(ApiResponse::success(booking)))
+}
+
+/// `DELETE /api/v1/recurring-bookings/{id}` — delete recurring booking (verify ownership)
+#[utoipa::path(
+    delete,
+    path = "/api/v1/recurring-bookings/{id}",
+    tag = "Bookings",
+    summary = "Delete recurring booking",
+    description = "Delete a recurring booking pattern. Verifies ownership.",
+    security(("bearer_auth" = []))
+)]
+pub async fn delete_recurring_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    let state_guard = state.read().await;
+
+    // Check ownership via listing user's recurring bookings
+    let user_bookings = state_guard
+        .db
+        .list_recurring_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+        .unwrap_or_default();
+
+    let Ok(id_uuid) = Uuid::parse_str(&id) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_ID", "Invalid ID format")),
+        );
+    };
+
+    if !user_bookings.iter().any(|b| b.id == id_uuid) {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
+    }
+
+    match state_guard.db.delete_recurring_booking(&id).await {
+        Ok(true) => (StatusCode::OK, Json(ApiResponse::success(()))),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error(
+                "NOT_FOUND",
+                "Recurring booking not found",
+            )),
+        ),
+        Err(e) => {
+            tracing::error!("Failed to delete recurring booking: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete recurring booking",
+                )),
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GUEST BOOKINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for creating a guest booking
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct CreateGuestBookingRequest {
+    lot_id: Uuid,
+    slot_id: Uuid,
+    start_time: chrono::DateTime<Utc>,
+    end_time: chrono::DateTime<Utc>,
+    guest_name: String,
+    guest_email: Option<String>,
+}
+
+/// Generate an 8-character random alphanumeric guest code
+fn generate_guest_code() -> String {
+    use rand::Rng;
+    const CHARSET: &[u8] = b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let mut rng = rand::rng();
+    (0..8)
+        .map(|_| {
+            let idx = rng.random_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect()
+}
+
+/// `POST /api/v1/bookings/guest` — create a guest booking
+#[utoipa::path(
+    post,
+    path = "/api/v1/bookings/guest",
+    tag = "Bookings",
+    summary = "Create guest booking",
+    description = "Create a visitor parking booking with a guest code.",
+    security(("bearer_auth" = []))
+)]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, guest_name = %req.guest_name))]
+pub async fn create_guest_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<CreateGuestBookingRequest>,
+) -> (StatusCode, Json<ApiResponse<GuestBooking>>) {
+    let state_guard = state.read().await;
+
+    // Check allow_guest_bookings setting
+    let allowed = read_admin_setting(&state_guard.db, "allow_guest_bookings").await;
+    if allowed != "true" {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(
+                "GUEST_BOOKINGS_DISABLED",
+                "Guest bookings are not enabled",
+            )),
+        );
+    }
+
+    let guest_booking = GuestBooking {
+        id: Uuid::new_v4(),
+        created_by: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: req.slot_id,
+        guest_name: req.guest_name,
+        guest_email: req.guest_email,
+        guest_code: generate_guest_code(),
+        start_time: req.start_time,
+        end_time: req.end_time,
+        vehicle_plate: None,
+        status: BookingStatus::Confirmed,
+        created_at: Utc::now(),
+    };
+
+    if let Err(e) = state_guard.db.save_guest_booking(&guest_booking).await {
+        tracing::error!("Failed to save guest booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create guest booking",
+            )),
+        );
+    }
+
+    (
+        StatusCode::CREATED,
+        Json(ApiResponse::success(guest_booking)),
+    )
+}
+
+/// `GET /api/v1/admin/guest-bookings` — admin: list all guest bookings
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/guest-bookings",
+    tag = "Admin",
+    summary = "List guest bookings",
+    description = "List all guest bookings. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub async fn admin_list_guest_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<GuestBooking>>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    match state_guard.db.list_guest_bookings().await {
+        Ok(bookings) => (StatusCode::OK, Json(ApiResponse::success(bookings))),
+        Err(e) => {
+            tracing::error!("Failed to list guest bookings: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list guest bookings",
+                )),
+            )
+        }
+    }
+}
+
+/// `PATCH /api/v1/admin/guest-bookings/{id}/cancel` — admin: cancel a guest booking
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/guest-bookings/{id}/cancel",
+    tag = "Admin",
+    summary = "Cancel guest booking",
+    description = "Cancel a guest booking by ID. Admin only.",
+    security(("bearer_auth" = []))
+)]
+pub async fn admin_cancel_guest_booking(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<GuestBooking>>) {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut booking = match state_guard.db.get_guest_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Guest booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    booking.status = BookingStatus::Cancelled;
+
+    if let Err(e) = state_guard.db.save_guest_booking(&booking).await {
+        tracing::error!("Failed to cancel guest booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to cancel guest booking",
+            )),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(booking)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUICK BOOK
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Request body for quick booking
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+#[allow(dead_code)]
+pub struct QuickBookRequest {
+    lot_id: Uuid,
+    date: Option<String>,
+    booking_type: Option<String>,
+}
+
+/// `POST /api/v1/bookings/quick` — quick book with auto-assigned slot
+#[utoipa::path(post, path = "/api/v1/bookings/quick", tag = "Bookings",
+    summary = "Quick book (auto-assign slot)",
+    description = "Auto-picks an available slot and creates a booking.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Success"))
+)]
+#[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, lot_id = %req.lot_id))]
+pub async fn quick_book(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<QuickBookRequest>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    let state_guard = state.write().await;
+
+    // Find first available slot in the lot
+    let slots = match state_guard
+        .db
+        .list_slots_by_lot(&req.lot_id.to_string())
+        .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("Failed to list slots: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Failed to list slots")),
+            );
+        }
+    };
+
+    let available_slot = match slots.iter().find(|s| s.status == SlotStatus::Available) {
+        Some(s) => s.clone(),
+        None => {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::error(
+                    "NO_SLOTS_AVAILABLE",
+                    "No available slots in this lot",
+                )),
+            );
+        }
+    };
+
+    // Get user's default vehicle (or first vehicle)
+    let vehicles = state_guard
+        .db
+        .list_vehicles_by_user(&auth_user.user_id.to_string())
+        .await
+        .unwrap_or_default();
+
+    let vehicle = vehicles
+        .iter()
+        .find(|v| v.is_default)
+        .or_else(|| vehicles.first())
+        .cloned()
+        .unwrap_or_else(|| Vehicle {
+            id: Uuid::new_v4(),
+            user_id: auth_user.user_id,
+            license_plate: String::new(),
+            make: None,
+            model: None,
+            color: None,
+            vehicle_type: VehicleType::Car,
+            is_default: false,
+            created_at: Utc::now(),
+        });
+
+    // Determine booking times based on type
+    let booking_type = req.booking_type.as_deref().unwrap_or("full_day");
+    let now = Utc::now();
+    let (start_time, end_time) = match booking_type {
+        "half_day_am" | "half_day_pm" => {
+            let start = now + TimeDelta::minutes(1);
+            let end = start + TimeDelta::hours(4);
+            (start, end)
+        }
+        _ => {
+            // full_day default: 8 hours
+            let start = now + TimeDelta::minutes(1);
+            let end = start + TimeDelta::hours(8);
+            (start, end)
+        }
+    };
+
+    // Look up floor name and pricing from the lot
+    let lot_opt = state_guard
+        .db
+        .get_parking_lot(&req.lot_id.to_string())
+        .await
+        .ok()
+        .flatten();
+
+    let floor_name = lot_opt.as_ref().map_or_else(
+        || "Level 1".to_string(),
+        |lot| {
+            lot.floors
+                .iter()
+                .find(|f| f.id == available_slot.floor_id)
+                .map_or_else(|| "Level 1".to_string(), |f| f.name.clone())
+        },
+    );
+
+    let hourly_rate = lot_opt
+        .as_ref()
+        .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
+        .map_or(2.0, |r| r.price);
+
+    #[allow(clippy::cast_precision_loss)]
+    let base_price = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
+    let tax = base_price * VAT_RATE;
+    let total = base_price + tax;
+
+    let booking = Booking {
+        id: Uuid::new_v4(),
+        user_id: auth_user.user_id,
+        lot_id: req.lot_id,
+        slot_id: available_slot.id,
+        slot_number: available_slot.slot_number,
+        floor_name,
+        vehicle,
+        start_time,
+        end_time,
+        status: BookingStatus::Confirmed,
+        pricing: BookingPricing {
+            base_price,
+            discount: 0.0,
+            tax,
+            total,
+            currency: "EUR".to_string(),
+            payment_status: PaymentStatus::Pending,
+            payment_method: None,
+        },
+        created_at: now,
+        updated_at: now,
+        check_in_time: None,
+        check_out_time: None,
+        qr_code: Some(Uuid::new_v4().to_string()),
+        notes: Some(format!("Quick book ({booking_type})")),
+    };
+
+    if let Err(e) = state_guard.db.save_booking(&booking).await {
+        tracing::error!("Failed to save quick booking: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create booking",
+            )),
+        );
+    }
+
+    // Update slot status — fail the booking if slot update fails to prevent double-booking
+    let mut updated_slot = available_slot;
+    updated_slot.status = SlotStatus::Reserved;
+    if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
+        tracing::error!("Failed to update slot status after quick booking: {}", e);
+        // Roll back the booking to avoid inconsistent state
+        let _ = state_guard.db.delete_booking(&booking.id.to_string()).await;
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SLOT_UPDATE_FAILED",
+                "Failed to reserve slot",
+            )),
+        );
+    }
+
+    tracing::info!(
+        user_id = %auth_user.user_id,
+        booking_id = %booking.id,
+        slot_id = %booking.slot_id,
+        "Quick booking created"
+    );
+
+    (StatusCode::CREATED, Json(ApiResponse::success(booking)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Query params for calendar events
+#[derive(Debug, Deserialize)]
+pub struct CalendarQuery {
+    from: Option<String>,
+    to: Option<String>,
+}
+
+/// Calendar event response
+#[derive(Debug, Serialize)]
+pub struct CalendarEvent {
+    id: String,
+    #[serde(rename = "type")]
+    event_type: String,
+    title: String,
+    start: chrono::DateTime<Utc>,
+    end: chrono::DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lot_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    slot_number: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<String>,
+}
+
+/// `GET /api/v1/calendar/events` — return user's bookings + absences as calendar events
+#[utoipa::path(get, path = "/api/v1/calendar/events", tag = "Calendar",
+    summary = "Calendar events",
+    description = "Returns bookings and absences as calendar events.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Success"))
+)]
+pub async fn calendar_events(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Query(query): Query<CalendarQuery>,
+) -> Json<ApiResponse<Vec<CalendarEvent>>> {
+    let state_guard = state.read().await;
+    let mut events = Vec::new();
+
+    // Parse date range for filtering
+    let from_date = query
+        .from
+        .as_deref()
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
+    let to_date = query
+        .to
+        .as_deref()
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
+
+    // Bookings as events
+    if let Ok(bookings) = state_guard
+        .db
+        .list_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        for b in bookings {
+            // Filter by date range if provided
+            if let Some(from) = from_date {
+                if b.start_time.date_naive() < from {
+                    continue;
+                }
+            }
+            if let Some(to) = to_date {
+                if b.start_time.date_naive() > to {
+                    continue;
+                }
+            }
+
+            events.push(CalendarEvent {
+                id: b.id.to_string(),
+                event_type: "booking".to_string(),
+                title: format!("Parking - Slot {}", b.slot_number),
+                start: b.start_time,
+                end: b.end_time,
+                lot_name: Some(b.floor_name.clone()),
+                slot_number: Some(b.slot_number),
+                status: Some(format!("{:?}", b.status).to_lowercase()),
+            });
+        }
+    }
+
+    // Absences as events
+    if let Ok(absences) = state_guard
+        .db
+        .list_absences_by_user(&auth_user.user_id.to_string())
+        .await
+    {
+        for a in absences {
+            let start = chrono::NaiveDate::parse_from_str(&a.start_date, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
+            let end = chrono::NaiveDate::parse_from_str(&a.end_date, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(23, 59, 59))
+                .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
+
+            if let (Some(start_dt), Some(end_dt)) = (start, end) {
+                // Filter by date range
+                if let Some(from) = from_date {
+                    if end_dt.date_naive() < from {
+                        continue;
+                    }
+                }
+                if let Some(to) = to_date {
+                    if start_dt.date_naive() > to {
+                        continue;
+                    }
+                }
+
+                let type_label = format!("{:?}", a.absence_type);
+                events.push(CalendarEvent {
+                    id: a.id.to_string(),
+                    event_type: "absence".to_string(),
+                    title: type_label,
+                    start: start_dt,
+                    end: end_dt,
+                    lot_name: None,
+                    slot_number: None,
+                    status: None,
+                });
+            }
+        }
+    }
+
+    // Sort by start time
+    events.sort_by(|a, b| a.start.cmp(&b.start));
+
+    Json(ApiResponse::success(events))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BOOKING CHECKIN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// `POST /api/v1/bookings/{id}/checkin` — mark booking as checked in
+#[utoipa::path(post, path = "/api/v1/bookings/{id}/checkin", tag = "Bookings",
+    summary = "Check in to a booking",
+    description = "Marks a booking as checked-in.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Success"))
+)]
+pub async fn booking_checkin(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    let state_guard = state.write().await;
+
+    let mut booking = match state_guard.db.get_booking(&id).await {
+        Ok(Some(b)) => b,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Only booking owner or admin can check in
+    if booking.user_id != auth_user.user_id {
+        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+        }
+    }
+
+    // Only Confirmed or Pending bookings can be checked in
+    if booking.status != BookingStatus::Confirmed && booking.status != BookingStatus::Pending {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "INVALID_STATUS",
+                "Only confirmed or pending bookings can be checked in",
+            )),
+        );
+    }
+
+    booking.status = BookingStatus::Active;
+    booking.check_in_time = Some(Utc::now());
+    booking.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_booking(&booking).await {
+        tracing::error!("Failed to save booking checkin: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to check in booking",
+            )),
+        );
+    }
+
+    AuditEntry::new(AuditEventType::BookingUpdated)
+        .user(auth_user.user_id, "")
+        .resource("booking", &id)
+        .details(serde_json::json!({"action": "checkin"}))
+        .log();
+
+    (StatusCode::OK, Json(ApiResponse::success(booking)))
+}
 
 #[cfg(test)]
 mod tests {
