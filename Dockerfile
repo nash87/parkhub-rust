@@ -10,7 +10,7 @@
 FROM node:22-alpine AS web-builder
 WORKDIR /app
 COPY parkhub-web/package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 COPY parkhub-web/ ./
 RUN DOCKER=1 npm run build
 
