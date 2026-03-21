@@ -95,6 +95,21 @@ export default {
         searchProposals: 'Buscar propuestas...',
       },
     },
+    favorites: {
+      title: 'Mis Favoritos',
+      subtitle: 'Tus plazas de aparcamiento guardadas',
+      empty: 'Sin favoritos aún',
+      emptyHint: 'Marca una plaza al reservar para añadirla aquí',
+      slot: 'Plaza',
+      available: 'Disponible',
+      occupied: 'Ocupada',
+      unknownLot: 'Parking desconocido',
+      removed: 'Favorito eliminado',
+      added: 'Añadido a favoritos',
+      remove: 'Eliminar {{slot}} de favoritos',
+      addedOn: 'Añadido el {{date}}',
+      count: '{{count}} favorito(s)',
+    },
     vehicles: {
       colors: {
         black: 'Negro',

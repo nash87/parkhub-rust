@@ -95,6 +95,21 @@ export default {
         searchProposals: 'Cerca proposte...',
       },
     },
+    favorites: {
+      title: 'I Miei Preferiti',
+      subtitle: 'I tuoi posti auto preferiti',
+      empty: 'Nessun preferito ancora',
+      emptyHint: 'Segna un posto durante la prenotazione per aggiungerlo qui',
+      slot: 'Posto',
+      available: 'Disponibile',
+      occupied: 'Occupato',
+      unknownLot: 'Parcheggio sconosciuto',
+      removed: 'Preferito rimosso',
+      added: 'Aggiunto ai preferiti',
+      remove: 'Rimuovi {{slot}} dai preferiti',
+      addedOn: 'Aggiunto il {{date}}',
+      count: '{{count}} preferito/i',
+    },
     vehicles: {
       colors: {
         black: 'Nero',

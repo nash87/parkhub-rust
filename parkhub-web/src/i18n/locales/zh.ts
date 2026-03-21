@@ -94,6 +94,21 @@ export default {
         searchProposals: '搜索提案...',
       },
     },
+    favorites: {
+      title: '我的收藏',
+      subtitle: '您收藏的停车位',
+      empty: '暂无收藏',
+      emptyHint: '预订时标记停车位以添加到这里',
+      slot: '车位',
+      available: '空闲',
+      occupied: '已占',
+      unknownLot: '未知停车场',
+      removed: '已取消收藏',
+      added: '已添加到收藏',
+      remove: '从收藏中移除{{slot}}',
+      addedOn: '添加于{{date}}',
+      count: '{{count}}个收藏',
+    },
     vehicles: {
       colors: {
         black: '\u9ed1\u8272',
