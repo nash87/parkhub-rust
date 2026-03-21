@@ -45,6 +45,8 @@ mod validation;
 
 #[cfg(test)]
 mod integration_tests;
+#[cfg(test)]
+mod booking_tests;
 
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};
