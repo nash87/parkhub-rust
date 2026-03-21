@@ -21,6 +21,7 @@ mod db;
 mod demo;
 mod discovery;
 mod email;
+mod jobs;
 #[allow(dead_code)]
 mod error;
 #[allow(dead_code)]
@@ -830,6 +831,9 @@ async fn main() -> Result<()> {
         sched.start().await?;
         info!("Metrics gauge updater started (runs every 5 minutes)");
     }
+
+    // Start background jobs (AutoRelease, ExpandRecurring, PurgeExpired, AggregateOccupancy)
+    jobs::start_background_jobs(state.clone()).await;
 
     // Show status GUI or wait for shutdown signal
     #[cfg(feature = "gui")]
