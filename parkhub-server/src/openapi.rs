@@ -103,6 +103,8 @@ use crate::{
             UpdateParkingLotRequest,
             AdminUserResponse,
             UpdateQuotaRequest,
+            crate::api::import::ImportResult,
+            crate::api::import::ImportError,
 
             // Credits
             AdminGrantCreditsRequest,
@@ -232,6 +234,8 @@ use crate::{
         crate::api::export::admin_export_users_csv,
         crate::api::export::admin_export_bookings_csv,
         crate::api::export::admin_export_revenue_csv,
+        // Import
+        crate::api::import::import_users_csv,
 
         // Health & Discovery (mod.rs)
         crate::api::health_check,
