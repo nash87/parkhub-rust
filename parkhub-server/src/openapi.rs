@@ -101,6 +101,7 @@ use crate::{
             // Admin
             CreateParkingLotRequest,
             UpdateParkingLotRequest,
+            crate::api::lots::UpdateLotPricingRequest,
             AdminUserResponse,
             UpdateQuotaRequest,
 
@@ -195,6 +196,8 @@ use crate::{
         crate::api::lots::create_slot,
         crate::api::lots::update_slot,
         crate::api::lots::delete_slot,
+        crate::api::lots::get_lot_pricing,
+        crate::api::lots::update_lot_pricing,
 
         // Zones
         crate::api::zones::list_zones,

@@ -473,6 +473,178 @@ pub async fn delete_lot(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Dedicated pricing endpoint
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Request body for updating lot pricing.
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+pub struct UpdateLotPricingRequest {
+    /// Hourly rate in the lot's currency (e.g. 2.50 for €2.50/h)
+    pub hourly_rate: Option<f64>,
+    /// Daily price cap — the maximum charged for any single day of parking.
+    /// When set, `hourly_rate × hours` is capped at this value.
+    pub daily_max: Option<f64>,
+    /// Monthly pass price (flat rate for the whole month)
+    pub monthly_pass: Option<f64>,
+    /// ISO 4217 currency code (e.g. "EUR", "USD")
+    pub currency: Option<String>,
+}
+
+/// `GET /api/v1/lots/{id}/pricing` — get the pricing configuration for a lot
+#[utoipa::path(
+    get,
+    path = "/api/v1/lots/{id}/pricing",
+    tag = "Lots",
+    summary = "Get lot pricing",
+    description = "Returns the current pricing configuration for the specified parking lot.",
+    params(("id" = String, Path, description = "Parking lot ID")),
+    responses(
+        (status = 200, description = "Pricing configuration"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
+pub async fn get_lot_pricing(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<ApiResponse<PricingInfo>>) {
+    let state = state.read().await;
+
+    match state.db.get_parking_lot(&id).await {
+        Ok(Some(lot)) => (StatusCode::OK, Json(ApiResponse::success(lot.pricing))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Parking lot not found")),
+        ),
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            )
+        }
+    }
+}
+
+/// `PUT /api/v1/lots/{id}/pricing` — update the pricing for a lot (admin only)
+#[utoipa::path(
+    put,
+    path = "/api/v1/lots/{id}/pricing",
+    tag = "Lots",
+    summary = "Update lot pricing",
+    description = "Update hourly rate, daily cap, monthly pass, and currency for a parking lot. \
+        All fields are optional — only provided fields are updated. Admin only.",
+    params(("id" = String, Path, description = "Parking lot ID")),
+    request_body = UpdateLotPricingRequest,
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "Updated pricing configuration"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Parking lot not found"),
+    )
+)]
+pub async fn update_lot_pricing(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdateLotPricingRequest>,
+) -> (StatusCode, Json<ApiResponse<PricingInfo>>) {
+    let state_guard = state.write().await;
+
+    // Admin check
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
+        Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
+        _ => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+            );
+        }
+    }
+
+    let mut lot = match state_guard.db.get_parking_lot(&id).await {
+        Ok(Some(l)) => l,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "Parking lot not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    // Apply pricing updates
+    if let Some(hourly_rate) = req.hourly_rate {
+        if hourly_rate < 0.0 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("VALIDATION_ERROR", "hourly_rate must be >= 0")),
+            );
+        }
+        if let Some(rate) = lot
+            .pricing
+            .rates
+            .iter_mut()
+            .find(|r| r.duration_minutes == 60)
+        {
+            rate.price = hourly_rate;
+        } else {
+            lot.pricing.rates.push(PricingRate {
+                duration_minutes: 60,
+                price: hourly_rate,
+                label: "1 hour".to_string(),
+            });
+        }
+    }
+    if let Some(daily_max) = req.daily_max {
+        if daily_max < 0.0 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("VALIDATION_ERROR", "daily_max must be >= 0")),
+            );
+        }
+        lot.pricing.daily_max = Some(daily_max);
+    }
+    if let Some(monthly_pass) = req.monthly_pass {
+        if monthly_pass < 0.0 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "VALIDATION_ERROR",
+                    "monthly_pass must be >= 0",
+                )),
+            );
+        }
+        lot.pricing.monthly_pass = Some(monthly_pass);
+    }
+    if let Some(currency) = req.currency {
+        lot.pricing.currency = currency;
+    }
+
+    lot.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_parking_lot(&lot).await {
+        tracing::error!("Failed to update lot pricing: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to update pricing")),
+        );
+    }
+
+    tracing::info!(lot_id = %id, "Updated lot pricing");
+    (StatusCode::OK, Json(ApiResponse::success(lot.pricing)))
+}
+
 #[utoipa::path(
     get,
     path = "/api/v1/lots/{id}",
@@ -1138,5 +1310,80 @@ mod tests {
         assert!((back.rates[0].price - 2.50).abs() < 1e-9);
         assert_eq!(back.daily_max, Some(20.0));
         assert!(back.monthly_pass.is_none());
+    }
+
+    // ── daily_max price cap logic ───────────────────────────────────────────
+
+    /// Simulate the price calculation with daily_max cap.
+    fn calculate_price(hourly_rate: f64, duration_hours: f64, daily_max: Option<f64>) -> f64 {
+        let raw = duration_hours * hourly_rate;
+        if let Some(cap) = daily_max {
+            raw.min(cap)
+        } else {
+            raw
+        }
+    }
+
+    #[test]
+    fn test_daily_max_cap_applied_when_exceeded() {
+        // 10h × €3/h = €30, but daily_max = €20 → should be €20
+        let price = calculate_price(3.0, 10.0, Some(20.0));
+        assert!((price - 20.0).abs() < 1e-9, "expected 20.0, got {price}");
+    }
+
+    #[test]
+    fn test_daily_max_cap_not_applied_when_not_exceeded() {
+        // 2h × €3/h = €6, daily_max = €20 → should be €6
+        let price = calculate_price(3.0, 2.0, Some(20.0));
+        assert!((price - 6.0).abs() < 1e-9, "expected 6.0, got {price}");
+    }
+
+    #[test]
+    fn test_no_daily_max_cap() {
+        // 10h × €3/h = €30, no daily_max → should be €30
+        let price = calculate_price(3.0, 10.0, None);
+        assert!((price - 30.0).abs() < 1e-9, "expected 30.0, got {price}");
+    }
+
+    #[test]
+    fn test_daily_max_equals_computed_price() {
+        // Exactly at the cap boundary
+        let price = calculate_price(2.0, 10.0, Some(20.0));
+        assert!((price - 20.0).abs() < 1e-9, "expected 20.0, got {price}");
+    }
+
+    // ── UpdateLotPricingRequest serde ───────────────────────────────────────
+
+    #[test]
+    fn test_update_lot_pricing_request_partial() {
+        use super::UpdateLotPricingRequest;
+        let json = r#"{"hourly_rate": 3.5}"#;
+        let req: UpdateLotPricingRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.hourly_rate, Some(3.5));
+        assert!(req.daily_max.is_none());
+        assert!(req.monthly_pass.is_none());
+        assert!(req.currency.is_none());
+    }
+
+    #[test]
+    fn test_update_lot_pricing_request_full() {
+        use super::UpdateLotPricingRequest;
+        let json = r#"{"hourly_rate":2.5,"daily_max":20.0,"monthly_pass":150.0,"currency":"USD"}"#;
+        let req: UpdateLotPricingRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.hourly_rate, Some(2.5));
+        assert_eq!(req.daily_max, Some(20.0));
+        assert_eq!(req.monthly_pass, Some(150.0));
+        assert_eq!(req.currency.as_deref(), Some("USD"));
+    }
+
+    #[test]
+    fn test_update_lot_pricing_request_empty() {
+        use super::UpdateLotPricingRequest;
+        let json = r#"{}"#;
+        let req: UpdateLotPricingRequest = serde_json::from_str(json).unwrap();
+        assert!(req.hourly_rate.is_none());
+        assert!(req.daily_max.is_none());
+        assert!(req.monthly_pass.is_none());
+        assert!(req.currency.is_none());
     }
 }

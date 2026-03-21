@@ -96,8 +96,8 @@ use credits::{
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
 use lots::{
-    create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
-    update_lot, update_slot,
+    create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_pricing, get_lot_slots,
+    list_lots, update_lot, update_lot_pricing, update_slot,
 };
 use recommendations::get_recommendations;
 use translations::{
@@ -235,6 +235,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/lots/{lot_id}/slots/{slot_id}",
             put(update_slot).delete(delete_slot),
+        )
+        // Per-lot pricing
+        .route(
+            "/api/v1/lots/{id}/pricing",
+            get(get_lot_pricing).put(update_lot_pricing),
         )
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
@@ -1423,8 +1428,19 @@ pub async fn create_booking(
         .as_ref()
         .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
         .map_or(2.0, |r| r.price);
+    let daily_max = lot_opt.as_ref().and_then(|lot| lot.pricing.daily_max);
+    let lot_currency = lot_opt
+        .as_ref()
+        .map(|lot| lot.pricing.currency.clone())
+        .unwrap_or_else(|| "EUR".to_string());
 
-    let base_price = (f64::from(req.duration_minutes) / 60.0) * hourly_rate;
+    // Cap at daily_max if configured (e.g. all-day price ceiling)
+    let raw_price = (f64::from(req.duration_minutes) / 60.0) * hourly_rate;
+    let base_price = if let Some(cap) = daily_max {
+        raw_price.min(cap)
+    } else {
+        raw_price
+    };
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
@@ -1456,7 +1472,7 @@ pub async fn create_booking(
             discount: 0.0,
             tax,
             total,
-            currency: "EUR".to_string(),
+            currency: lot_currency,
             payment_status: PaymentStatus::Pending,
             payment_method: None,
         },
@@ -5862,9 +5878,19 @@ pub async fn quick_book(
         .as_ref()
         .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
         .map_or(2.0, |r| r.price);
+    let daily_max_gs = lot_opt.as_ref().and_then(|lot| lot.pricing.daily_max);
+    let lot_currency_gs = lot_opt
+        .as_ref()
+        .map(|lot| lot.pricing.currency.clone())
+        .unwrap_or_else(|| "EUR".to_string());
 
     #[allow(clippy::cast_precision_loss)]
-    let base_price = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
+    let raw_price_gs = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
+    let base_price = if let Some(cap) = daily_max_gs {
+        raw_price_gs.min(cap)
+    } else {
+        raw_price_gs
+    };
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
@@ -5884,7 +5910,7 @@ pub async fn quick_book(
             discount: 0.0,
             tax,
             total,
-            currency: "EUR".to_string(),
+            currency: lot_currency_gs,
             payment_status: PaymentStatus::Pending,
             payment_method: None,
         },
