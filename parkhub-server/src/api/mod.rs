@@ -23,14 +23,18 @@ use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Instrument;
+#[cfg(feature = "full")]
 use utoipa::OpenApi;
+#[cfg(feature = "full")]
 use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 use crate::audit::{AuditEntry, AuditEventType};
 use crate::demo;
+#[cfg(feature = "mod-email")]
 use crate::email;
 use crate::metrics;
+#[cfg(feature = "full")]
 use crate::openapi::ApiDoc;
 use crate::rate_limit::{ip_rate_limit_middleware, EndpointRateLimiters};
 use crate::static_files;
@@ -42,6 +46,7 @@ use crate::utils::html_escape;
 const MAX_REQUEST_BODY_BYTES: usize = 4 * 1024 * 1024; // 4 MiB
 
 /// Maximum raw photo size in bytes (2 MB).
+#[cfg(feature = "mod-vehicles")]
 pub const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
 
 /// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
@@ -62,84 +67,154 @@ type SharedState = Arc<RwLock<AppState>>;
 // Submodules
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "mod-absences")]
 pub mod absences;
 pub mod admin;
+#[cfg(feature = "mod-announcements")]
 pub mod announcements;
 pub mod auth;
+#[cfg(feature = "mod-bookings")]
 mod bookings;
+#[cfg(feature = "mod-branding")]
 pub mod branding;
+#[cfg(feature = "mod-calendar")]
 pub mod calendar;
+#[cfg(feature = "mod-credits")]
 pub mod credits;
+#[cfg(feature = "mod-export")]
 pub mod export;
+#[cfg(feature = "mod-favorites")]
 pub mod favorites;
+#[cfg(feature = "mod-guest")]
 pub mod guest;
+#[cfg(feature = "mod-import")]
 pub mod import;
 pub mod lots;
+#[cfg(feature = "mod-notifications")]
 pub mod notifications;
+#[cfg(feature = "mod-payments")]
 pub mod payments;
+#[cfg(feature = "mod-push")]
 pub mod push;
+#[cfg(feature = "mod-pwa")]
 pub mod pwa;
+#[cfg(feature = "mod-qr")]
 pub mod qr;
+#[cfg(feature = "mod-recommendations")]
 pub mod recommendations;
+#[cfg(feature = "mod-recurring")]
 pub mod recurring;
+#[cfg(feature = "mod-settings")]
 pub mod settings;
 pub mod setup;
+#[cfg(feature = "mod-social")]
 mod social;
+#[cfg(feature = "mod-swap")]
 pub mod swap;
+#[cfg(feature = "mod-team")]
 pub mod team;
+#[cfg(feature = "mod-translations")]
 pub mod translations;
 mod users;
+#[cfg(feature = "mod-vehicles")]
 pub mod vehicles;
+#[cfg(feature = "mod-waitlist")]
 pub mod waitlist;
+#[cfg(feature = "mod-webhooks")]
 pub mod webhooks;
 pub mod ws;
+#[cfg(feature = "mod-zones")]
 pub mod zones;
 
 // Re-import handler functions so the router can reference them unqualified.
+#[cfg(feature = "mod-absences")]
 use absences::{
     create_absence, delete_absence, get_absence_pattern, list_absences, list_team_absences,
     save_absence_pattern, update_absence,
 };
+#[cfg(feature = "mod-announcements")]
 use announcements::{
     admin_create_announcement, admin_delete_announcement, admin_list_announcements,
     admin_update_announcement, get_active_announcements,
 };
 use auth::{forgot_password, login, refresh_token, register, reset_password};
+#[cfg(feature = "mod-calendar")]
 use calendar::{calendar_events, user_calendar_ics};
+#[cfg(feature = "mod-credits")]
 use credits::{
     admin_grant_credits, admin_list_credit_transactions, admin_refill_all_credits,
     admin_update_user_quota, get_user_credits,
 };
+#[cfg(feature = "mod-export")]
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
+#[cfg(feature = "mod-favorites")]
 use favorites::{add_favorite, list_favorites, remove_favorite};
+#[cfg(feature = "mod-guest")]
 use guest::{admin_cancel_guest_booking, admin_list_guest_bookings, create_guest_booking};
+#[cfg(feature = "mod-import")]
 use import::import_users_csv;
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_pricing, get_lot_slots,
     list_lots, update_lot, update_lot_pricing, update_slot,
 };
+#[cfg(feature = "mod-notifications")]
 use notifications::{list_notifications, mark_all_notifications_read, mark_notification_read};
+#[cfg(feature = "mod-recommendations")]
 use recommendations::get_recommendations;
+#[cfg(feature = "mod-recurring")]
 use recurring::{
     create_recurring_booking, delete_recurring_booking, list_recurring_bookings,
     update_recurring_booking,
 };
+#[cfg(feature = "mod-settings")]
 use settings::{
     admin_get_features, admin_get_settings, admin_get_use_case, admin_update_features,
-    admin_update_settings, get_features, get_public_theme, read_admin_setting,
+    admin_update_settings, get_features, get_public_theme,
 };
+// Re-export read_admin_setting from settings module when available,
+// otherwise provide inline fallback (used by core handlers like auto-release).
+#[cfg(feature = "mod-settings")]
+use settings::read_admin_setting;
+#[cfg(not(feature = "mod-settings"))]
+async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
+    const DEFAULTS: &[(&str, &str)] = &[
+        ("auto_release_enabled", "true"),
+        ("auto_release_minutes", "30"),
+        ("require_vehicle", "false"),
+        ("waitlist_enabled", "true"),
+        ("min_booking_duration_hours", "0"),
+        ("max_booking_duration_hours", "0"),
+        ("credits_enabled", "false"),
+        ("credits_per_booking", "1"),
+    ];
+    if let Ok(Some(val)) = db.get_setting(key).await {
+        return val;
+    }
+    DEFAULTS
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map(|(_, v)| (*v).to_string())
+        .unwrap_or_default()
+}
+#[cfg(feature = "mod-swap")]
 use swap::{create_swap_request, list_swap_requests, update_swap_request};
+#[cfg(feature = "mod-team")]
 use team::{team_list, team_today};
+#[cfg(feature = "mod-translations")]
 use translations::{
     create_proposal, get_proposal, list_overrides, list_proposals, review_proposal,
     vote_on_proposal,
 };
+#[cfg(feature = "mod-vehicles")]
 use vehicles::{
     create_vehicle, delete_vehicle, get_vehicle_photo, list_vehicles, update_vehicle,
     upload_vehicle_photo, vehicle_city_codes,
 };
+#[cfg(feature = "mod-waitlist")]
 use waitlist::{join_waitlist, leave_waitlist, list_waitlist};
+#[cfg(feature = "mod-webhooks")]
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
+#[cfg(feature = "mod-zones")]
 use zones::{create_zone, delete_zone, list_zones, update_zone};
 
 /// User ID extracted from auth token
@@ -160,8 +235,63 @@ pub async fn check_admin(
     }
 }
 
+/// `GET /api/v1/modules` — compile-time module feature introspection.
+///
+/// Returns which optional modules are compiled into this binary.
+/// Always available (no auth required, no feature gate).
+async fn list_module_features() -> impl IntoResponse {
+    let mut modules = serde_json::Map::new();
+
+    modules.insert("bookings".into(), cfg!(feature = "mod-bookings").into());
+    modules.insert("vehicles".into(), cfg!(feature = "mod-vehicles").into());
+    modules.insert("absences".into(), cfg!(feature = "mod-absences").into());
+    modules.insert("branding".into(), cfg!(feature = "mod-branding").into());
+    modules.insert("import".into(), cfg!(feature = "mod-import").into());
+    modules.insert("qr".into(), cfg!(feature = "mod-qr").into());
+    modules.insert("pwa".into(), cfg!(feature = "mod-pwa").into());
+    modules.insert("payments".into(), cfg!(feature = "mod-payments").into());
+    modules.insert("webhooks".into(), cfg!(feature = "mod-webhooks").into());
+    modules.insert(
+        "notifications".into(),
+        cfg!(feature = "mod-notifications").into(),
+    );
+    modules.insert(
+        "announcements".into(),
+        cfg!(feature = "mod-announcements").into(),
+    );
+    modules.insert("recurring".into(), cfg!(feature = "mod-recurring").into());
+    modules.insert("guest".into(), cfg!(feature = "mod-guest").into());
+    modules.insert("calendar".into(), cfg!(feature = "mod-calendar").into());
+    modules.insert("team".into(), cfg!(feature = "mod-team").into());
+    modules.insert("settings".into(), cfg!(feature = "mod-settings").into());
+    modules.insert("jobs".into(), cfg!(feature = "mod-jobs").into());
+    modules.insert("swap".into(), cfg!(feature = "mod-swap").into());
+    modules.insert("waitlist".into(), cfg!(feature = "mod-waitlist").into());
+    modules.insert("zones".into(), cfg!(feature = "mod-zones").into());
+    modules.insert("credits".into(), cfg!(feature = "mod-credits").into());
+    modules.insert("email".into(), cfg!(feature = "mod-email").into());
+    modules.insert("export".into(), cfg!(feature = "mod-export").into());
+    modules.insert("favorites".into(), cfg!(feature = "mod-favorites").into());
+    modules.insert("push".into(), cfg!(feature = "mod-push").into());
+    modules.insert(
+        "recommendations".into(),
+        cfg!(feature = "mod-recommendations").into(),
+    );
+    modules.insert(
+        "translations".into(),
+        cfg!(feature = "mod-translations").into(),
+    );
+    modules.insert("social".into(), cfg!(feature = "mod-social").into());
+
+    Json(serde_json::json!({
+        "modules": modules,
+        "version": env!("CARGO_PKG_VERSION")
+    }))
+}
+
 /// Create the API router with `OpenAPI` docs and metrics.
 /// Returns (router, `demo_state`) so the demo state can be used for scheduled resets.
+#[allow(unused_mut, unused_variables)]
 pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Initialize Prometheus metrics
     let metrics_handle = metrics::init_metrics();
@@ -214,19 +344,22 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         }));
 
     // GET /api/v1/bookings/:id/qr — 10 requests per minute per IP (QR pass generation)
-    let qr_limiter = rate_limiters.qr_pass.clone();
-    let qr_route = Router::new()
-        .route("/api/v1/bookings/{id}/qr", get(qr::booking_qr_code))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth_middleware,
-        ))
-        .route_layer(middleware::from_fn(move |req, next| {
-            ip_rate_limit_middleware(qr_limiter.clone(), req, next)
-        }));
+    #[cfg(feature = "mod-qr")]
+    let qr_route = {
+        let qr_limiter = rate_limiters.qr_pass.clone();
+        Router::new()
+            .route("/api/v1/bookings/{id}/qr", get(qr::booking_qr_code))
+            .route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                auth_middleware,
+            ))
+            .route_layer(middleware::from_fn(move |req, next| {
+                ip_rate_limit_middleware(qr_limiter.clone(), req, next)
+            }))
+    };
 
     // Remaining public routes (no rate limiting needed)
-    let public_routes = Router::new()
+    let mut public_routes = Router::new()
         .route("/health", get(health_check))
         .route("/health/live", get(liveness_check))
         .route("/health/ready", get(readiness_check))
@@ -234,36 +367,58 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/status", get(server_status))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
-        // Feature flags — public (frontend needs to know which features are enabled)
-        .route("/api/v1/features", get(get_features))
-        // Theme — public (frontend needs theme before auth for login page styling)
-        .route("/api/v1/theme", get(get_public_theme))
-        // Announcements — public (active announcements visible without auth)
-        .route(
-            "/api/v1/announcements/active",
-            get(get_active_announcements),
-        )
+        // Module feature flags — public (compile-time feature introspection)
+        .route("/api/v1/modules", get(list_module_features))
         // Setup wizard — only works before initial setup is completed
         .route("/api/v1/setup/status", get(setup::setup_status))
         .route("/api/v1/setup", post(setup::setup_init))
         // Public occupancy display (no auth)
         .route("/api/v1/public/occupancy", get(public_occupancy))
         .route("/api/v1/public/display", get(public_display))
-        // VAPID public key (no auth — frontend needs it before login)
-        .route("/api/v1/push/vapid-key", get(push::get_vapid_key))
-        // PWA manifest and service worker (no auth)
-        .route("/manifest.json", get(pwa::pwa_manifest))
-        .route("/sw.js", get(pwa::service_worker))
-        // Branding logo (public, cached)
-        .route("/api/v1/branding/logo", get(branding::get_branding_logo))
         // System info (public — no auth needed for version/maintenance checks)
         .route("/api/v1/system/version", get(system_version))
         .route("/api/v1/system/maintenance", get(system_maintenance))
         // WebSocket real-time events
         .route("/api/v1/ws", get(ws::ws_handler));
 
-    // Protected routes (auth required)
-    let protected_routes = Router::new()
+    // Feature-gated public routes
+    #[cfg(feature = "mod-settings")]
+    {
+        // Feature flags — public (frontend needs to know which features are enabled)
+        public_routes = public_routes
+            .route("/api/v1/features", get(get_features))
+            // Theme — public (frontend needs theme before auth for login page styling)
+            .route("/api/v1/theme", get(get_public_theme));
+    }
+    #[cfg(feature = "mod-announcements")]
+    {
+        // Announcements — public (active announcements visible without auth)
+        public_routes = public_routes.route(
+            "/api/v1/announcements/active",
+            get(get_active_announcements),
+        );
+    }
+    #[cfg(feature = "mod-push")]
+    {
+        // VAPID public key (no auth — frontend needs it before login)
+        public_routes = public_routes.route("/api/v1/push/vapid-key", get(push::get_vapid_key));
+    }
+    #[cfg(feature = "mod-pwa")]
+    {
+        // PWA manifest and service worker (no auth)
+        public_routes = public_routes
+            .route("/manifest.json", get(pwa::pwa_manifest))
+            .route("/sw.js", get(pwa::service_worker));
+    }
+    #[cfg(feature = "mod-branding")]
+    {
+        // Branding logo (public, cached)
+        public_routes =
+            public_routes.route("/api/v1/branding/logo", get(branding::get_branding_logo));
+    }
+
+    // Protected routes (auth required) — core user + admin routes
+    let mut protected_routes = Router::new()
         .route(
             "/api/v1/users/me",
             get(get_current_user).put(update_current_user),
@@ -276,8 +431,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/users/me/password",
             axum::routing::patch(change_password),
         )
-        // iCal export for user's bookings
-        .route("/api/v1/user/calendar.ics", get(user_calendar_ics))
         // Admin-only: retrieve any user by ID
         .route("/api/v1/users/{id}", get(get_user))
         .route("/api/v1/lots", get(list_lots).post(create_lot))
@@ -300,47 +453,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
-        // QR code for individual slot
-        .route("/api/v1/lots/{lot_id}/slots/{slot_id}/qr", get(qr::slot_qr_code))
-        // Zones (admin-only CRUD, nested under lots)
-        .route(
-            "/api/v1/lots/{lot_id}/zones",
-            get(list_zones).post(create_zone),
-        )
-        .route(
-            "/api/v1/lots/{lot_id}/zones/{zone_id}",
-            put(update_zone).delete(delete_zone),
-        )
-        .route("/api/v1/bookings", get(list_bookings).post(create_booking))
-        .route(
-            "/api/v1/bookings/{id}",
-            get(get_booking)
-                .delete(cancel_booking)
-                .patch(update_booking),
-        )
-        .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
-        // Smart parking recommendations
-        .route("/api/v1/bookings/recommendations", get(get_recommendations))
-        .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
-        // City codes must come before {id} to avoid parameter capture
-        .route("/api/v1/vehicles/city-codes", get(vehicle_city_codes))
-        .route(
-            "/api/v1/vehicles/{id}",
-            put(update_vehicle).delete(delete_vehicle),
-        )
-        // Vehicle photos
-        .route(
-            "/api/v1/vehicles/{id}/photo",
-            post(upload_vehicle_photo).get(get_vehicle_photo),
-        )
-        // Credits
-        .route("/api/v1/user/credits", get(get_user_credits))
-        // Favorites (user-authenticated)
-        .route(
-            "/api/v1/user/favorites",
-            get(list_favorites).post(add_favorite),
-        )
-        .route("/api/v1/user/favorites/{slot_id}", delete(remove_favorite))
         // Admin-only: update Impressum settings
         .route(
             "/api/v1/admin/impressum",
@@ -357,123 +469,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             axum::routing::patch(admin_update_user_status),
         )
         .route("/api/v1/admin/users/{id}", delete(admin_delete_user))
-        // Admin-only: credits management
-        .route(
-            "/api/v1/admin/users/{id}/credits",
-            post(admin_grant_credits),
-        )
-        .route(
-            "/api/v1/admin/credits/refill-all",
-            post(admin_refill_all_credits),
-        )
-        .route(
-            "/api/v1/admin/credits/transactions",
-            get(admin_list_credit_transactions),
-        )
-        .route(
-            "/api/v1/admin/users/{id}/quota",
-            put(admin_update_user_quota),
-        )
-        // Admin-only: feature flags management
-        .route(
-            "/api/v1/admin/features",
-            get(admin_get_features).put(admin_update_features),
-        )
-        // Admin-only: system settings
-        .route(
-            "/api/v1/admin/settings",
-            get(admin_get_settings).put(admin_update_settings),
-        )
-        .route("/api/v1/admin/settings/use-case", get(admin_get_use_case))
         // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
-        // Admin-only: CSV import
-        .route(
-            "/api/v1/admin/users/import",
-            post(import_users_csv),
-        )
-        .route(
-            "/api/v1/admin/export/users",
-            get(admin_export_users_csv),
-        )
-        .route(
-            "/api/v1/admin/export/bookings",
-            get(admin_export_bookings_csv),
-        )
-        .route(
-            "/api/v1/admin/export/revenue",
-            get(admin_export_revenue_csv),
-        )
-        // Absence iCal import (user-scoped)
-        .route(
-            "/api/v1/absences/import/ical",
-            post(import::import_absences_ical),
-        )
-        // Absences (user-scoped)
-        .route("/api/v1/absences", get(list_absences).post(create_absence))
-        .route("/api/v1/absences/team", get(list_team_absences))
-        .route(
-            "/api/v1/absences/pattern",
-            get(get_absence_pattern).post(save_absence_pattern),
-        )
-        .route(
-            "/api/v1/absences/{id}",
-            delete(delete_absence).put(update_absence),
-        )
-        // Team view
-        .route("/api/v1/team/today", get(team_today))
-        // Admin-only: announcements management
-        .route(
-            "/api/v1/admin/announcements",
-            get(admin_list_announcements).post(admin_create_announcement),
-        )
-        .route(
-            "/api/v1/admin/announcements/{id}",
-            put(admin_update_announcement).delete(admin_delete_announcement),
-        )
-        // Notifications (user-scoped)
-        .route("/api/v1/notifications", get(list_notifications))
-        .route(
-            "/api/v1/notifications/{id}/read",
-            put(mark_notification_read),
-        )
-        .route(
-            "/api/v1/notifications/read-all",
-            post(mark_all_notifications_read),
-        )
-        // Waitlist
-        .route("/api/v1/waitlist", get(list_waitlist).post(join_waitlist))
-        .route("/api/v1/waitlist/{id}", delete(leave_waitlist))
-        // Swap requests
-        .route("/api/v1/swap-requests", get(list_swap_requests))
-        .route(
-            "/api/v1/bookings/{id}/swap-request",
-            post(create_swap_request),
-        )
-        .route("/api/v1/swap-requests/{id}", put(update_swap_request))
-        // Recurring bookings
-        .route(
-            "/api/v1/recurring-bookings",
-            get(list_recurring_bookings).post(create_recurring_booking),
-        )
-        .route(
-            "/api/v1/recurring-bookings/{id}",
-            delete(delete_recurring_booking).put(update_recurring_booking),
-        )
-        // Guest bookings
-        .route("/api/v1/bookings/guest", post(create_guest_booking))
-        .route(
-            "/api/v1/admin/guest-bookings",
-            get(admin_list_guest_bookings),
-        )
-        .route(
-            "/api/v1/admin/guest-bookings/{id}/cancel",
-            axum::routing::patch(admin_cancel_guest_booking),
-        )
         // Quick book
         .route("/api/v1/bookings/quick", post(quick_book))
-        // Calendar
-        .route("/api/v1/calendar/events", get(calendar_events))
         // Admin reports & dashboard
         .route("/api/v1/admin/stats", get(admin_stats))
         .route("/api/v1/admin/reports", get(admin_reports))
@@ -483,18 +482,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(admin_dashboard_charts),
         )
         .route("/api/v1/admin/audit-log", get(admin_audit_log))
-        // Team
-        .route("/api/v1/team", get(team_list))
-        // Admin-only: webhooks
-        .route("/api/v1/webhooks", get(list_webhooks).post(create_webhook))
-        .route(
-            "/api/v1/webhooks/{id}",
-            put(update_webhook).delete(delete_webhook),
-        )
-        .route("/api/v1/webhooks/{id}/test", post(test_webhook))
-        // Push notifications
-        .route("/api/v1/push/subscribe", post(push::subscribe))
-        .route("/api/v1/push/unsubscribe", delete(push::unsubscribe))
         // User stats & preferences
         .route("/api/v1/user/stats", get(user_stats))
         .route(
@@ -520,44 +507,338 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/privacy",
             get(admin_get_privacy).put(admin_update_privacy),
         )
-        // Admin: branding config
-        .route(
-            "/api/v1/admin/branding",
-            get(branding::admin_get_branding).put(branding::admin_update_branding),
-        )
-        .route(
-            "/api/v1/admin/branding/logo",
-            post(branding::admin_upload_logo),
-        )
         // Admin: update user
-        .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        .route("/api/v1/admin/users/{id}/update", put(admin_update_user));
+
+    // ── Feature-gated protected routes ──────────────────────────────────────
+
+    #[cfg(feature = "mod-bookings")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/bookings", get(list_bookings).post(create_booking))
+            .route(
+                "/api/v1/bookings/{id}",
+                get(get_booking)
+                    .delete(cancel_booking)
+                    .patch(update_booking),
+            )
+            .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice));
+    }
+
+    #[cfg(feature = "mod-qr")]
+    {
+        // QR code for individual slot
+        protected_routes = protected_routes.route(
+            "/api/v1/lots/{lot_id}/slots/{slot_id}/qr",
+            get(qr::slot_qr_code),
+        );
+    }
+
+    #[cfg(feature = "mod-zones")]
+    {
+        // Zones (admin-only CRUD, nested under lots)
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/lots/{lot_id}/zones",
+                get(list_zones).post(create_zone),
+            )
+            .route(
+                "/api/v1/lots/{lot_id}/zones/{zone_id}",
+                put(update_zone).delete(delete_zone),
+            );
+    }
+
+    #[cfg(feature = "mod-recommendations")]
+    {
+        // Smart parking recommendations
+        protected_routes =
+            protected_routes.route("/api/v1/bookings/recommendations", get(get_recommendations));
+    }
+
+    #[cfg(feature = "mod-vehicles")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
+            // City codes must come before {id} to avoid parameter capture
+            .route("/api/v1/vehicles/city-codes", get(vehicle_city_codes))
+            .route(
+                "/api/v1/vehicles/{id}",
+                put(update_vehicle).delete(delete_vehicle),
+            )
+            // Vehicle photos
+            .route(
+                "/api/v1/vehicles/{id}/photo",
+                post(upload_vehicle_photo).get(get_vehicle_photo),
+            );
+    }
+
+    #[cfg(feature = "mod-credits")]
+    {
+        // Credits
+        protected_routes = protected_routes
+            .route("/api/v1/user/credits", get(get_user_credits))
+            // Admin-only: credits management
+            .route(
+                "/api/v1/admin/users/{id}/credits",
+                post(admin_grant_credits),
+            )
+            .route(
+                "/api/v1/admin/credits/refill-all",
+                post(admin_refill_all_credits),
+            )
+            .route(
+                "/api/v1/admin/credits/transactions",
+                get(admin_list_credit_transactions),
+            )
+            .route(
+                "/api/v1/admin/users/{id}/quota",
+                put(admin_update_user_quota),
+            );
+    }
+
+    #[cfg(feature = "mod-favorites")]
+    {
+        // Favorites (user-authenticated)
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/user/favorites",
+                get(list_favorites).post(add_favorite),
+            )
+            .route("/api/v1/user/favorites/{slot_id}", delete(remove_favorite));
+    }
+
+    #[cfg(feature = "mod-settings")]
+    {
+        // Admin-only: feature flags management
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/admin/features",
+                get(admin_get_features).put(admin_update_features),
+            )
+            // Admin-only: system settings
+            .route(
+                "/api/v1/admin/settings",
+                get(admin_get_settings).put(admin_update_settings),
+            )
+            .route("/api/v1/admin/settings/use-case", get(admin_get_use_case));
+    }
+
+    #[cfg(feature = "mod-import")]
+    {
+        // Admin-only: CSV import
+        protected_routes =
+            protected_routes.route("/api/v1/admin/users/import", post(import_users_csv));
+    }
+
+    #[cfg(feature = "mod-export")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/admin/export/users", get(admin_export_users_csv))
+            .route(
+                "/api/v1/admin/export/bookings",
+                get(admin_export_bookings_csv),
+            )
+            .route(
+                "/api/v1/admin/export/revenue",
+                get(admin_export_revenue_csv),
+            );
+    }
+
+    #[cfg(feature = "mod-absences")]
+    {
+        // Absences (user-scoped)
+        protected_routes = protected_routes
+            .route("/api/v1/absences", get(list_absences).post(create_absence))
+            .route("/api/v1/absences/team", get(list_team_absences))
+            .route(
+                "/api/v1/absences/pattern",
+                get(get_absence_pattern).post(save_absence_pattern),
+            )
+            .route(
+                "/api/v1/absences/{id}",
+                delete(delete_absence).put(update_absence),
+            );
+    }
+
+    // Absence iCal import needs both absences + import modules
+    #[cfg(all(feature = "mod-absences", feature = "mod-import"))]
+    {
+        protected_routes = protected_routes.route(
+            "/api/v1/absences/import/ical",
+            post(import::import_absences_ical),
+        );
+    }
+
+    #[cfg(feature = "mod-team")]
+    {
+        // Team view
+        protected_routes = protected_routes
+            .route("/api/v1/team/today", get(team_today))
+            .route("/api/v1/team", get(team_list));
+    }
+
+    #[cfg(feature = "mod-announcements")]
+    {
+        // Admin-only: announcements management
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/admin/announcements",
+                get(admin_list_announcements).post(admin_create_announcement),
+            )
+            .route(
+                "/api/v1/admin/announcements/{id}",
+                put(admin_update_announcement).delete(admin_delete_announcement),
+            );
+    }
+
+    #[cfg(feature = "mod-notifications")]
+    {
+        // Notifications (user-scoped)
+        protected_routes = protected_routes
+            .route("/api/v1/notifications", get(list_notifications))
+            .route(
+                "/api/v1/notifications/{id}/read",
+                put(mark_notification_read),
+            )
+            .route(
+                "/api/v1/notifications/read-all",
+                post(mark_all_notifications_read),
+            );
+    }
+
+    #[cfg(feature = "mod-waitlist")]
+    {
+        // Waitlist
+        protected_routes = protected_routes
+            .route("/api/v1/waitlist", get(list_waitlist).post(join_waitlist))
+            .route("/api/v1/waitlist/{id}", delete(leave_waitlist));
+    }
+
+    #[cfg(feature = "mod-swap")]
+    {
+        // Swap requests
+        protected_routes = protected_routes
+            .route("/api/v1/swap-requests", get(list_swap_requests))
+            .route(
+                "/api/v1/bookings/{id}/swap-request",
+                post(create_swap_request),
+            )
+            .route("/api/v1/swap-requests/{id}", put(update_swap_request));
+    }
+
+    #[cfg(feature = "mod-recurring")]
+    {
+        // Recurring bookings
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/recurring-bookings",
+                get(list_recurring_bookings).post(create_recurring_booking),
+            )
+            .route(
+                "/api/v1/recurring-bookings/{id}",
+                delete(delete_recurring_booking).put(update_recurring_booking),
+            );
+    }
+
+    #[cfg(feature = "mod-guest")]
+    {
+        // Guest bookings
+        protected_routes = protected_routes
+            .route("/api/v1/bookings/guest", post(create_guest_booking))
+            .route(
+                "/api/v1/admin/guest-bookings",
+                get(admin_list_guest_bookings),
+            )
+            .route(
+                "/api/v1/admin/guest-bookings/{id}/cancel",
+                axum::routing::patch(admin_cancel_guest_booking),
+            );
+    }
+
+    #[cfg(feature = "mod-calendar")]
+    {
+        // Calendar
+        protected_routes = protected_routes
+            .route("/api/v1/calendar/events", get(calendar_events))
+            // iCal export for user's bookings
+            .route("/api/v1/user/calendar.ics", get(user_calendar_ics));
+    }
+
+    #[cfg(feature = "mod-webhooks")]
+    {
+        // Admin-only: webhooks
+        protected_routes = protected_routes
+            .route("/api/v1/webhooks", get(list_webhooks).post(create_webhook))
+            .route(
+                "/api/v1/webhooks/{id}",
+                put(update_webhook).delete(delete_webhook),
+            )
+            .route("/api/v1/webhooks/{id}/test", post(test_webhook));
+    }
+
+    #[cfg(feature = "mod-push")]
+    {
+        // Push notifications
+        protected_routes = protected_routes
+            .route("/api/v1/push/subscribe", post(push::subscribe))
+            .route("/api/v1/push/unsubscribe", delete(push::unsubscribe));
+    }
+
+    #[cfg(feature = "mod-branding")]
+    {
+        // Admin: branding config
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/admin/branding",
+                get(branding::admin_get_branding).put(branding::admin_update_branding),
+            )
+            .route(
+                "/api/v1/admin/branding/logo",
+                post(branding::admin_upload_logo),
+            );
+    }
+
+    #[cfg(feature = "mod-translations")]
+    {
         // Translation management
-        .route("/api/v1/translations/overrides", get(list_overrides))
-        .route(
-            "/api/v1/translations/proposals",
-            get(list_proposals).post(create_proposal),
-        )
-        .route(
-            "/api/v1/translations/proposals/{id}",
-            get(get_proposal),
-        )
-        .route(
-            "/api/v1/translations/proposals/{id}/vote",
-            post(vote_on_proposal),
-        )
-        .route(
-            "/api/v1/translations/proposals/{id}/review",
-            put(review_proposal),
-        )
+        protected_routes = protected_routes
+            .route("/api/v1/translations/overrides", get(list_overrides))
+            .route(
+                "/api/v1/translations/proposals",
+                get(list_proposals).post(create_proposal),
+            )
+            .route("/api/v1/translations/proposals/{id}", get(get_proposal))
+            .route(
+                "/api/v1/translations/proposals/{id}/vote",
+                post(vote_on_proposal),
+            )
+            .route(
+                "/api/v1/translations/proposals/{id}/review",
+                put(review_proposal),
+            );
+    }
+
+    #[cfg(feature = "mod-payments")]
+    {
         // Payments (Stripe stub)
-        .route("/api/v1/payments/create-intent", post(payments::create_payment_intent))
-        .route("/api/v1/payments/confirm", post(payments::confirm_payment))
-        .route("/api/v1/payments/{id}/status", get(payments::payment_status))
-        .layer(Extension(payments::new_payment_store()))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            auth_middleware,
-        ));
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/payments/create-intent",
+                post(payments::create_payment_intent),
+            )
+            .route("/api/v1/payments/confirm", post(payments::confirm_payment))
+            .route(
+                "/api/v1/payments/{id}/status",
+                get(payments::payment_status),
+            )
+            .layer(Extension(payments::new_payment_store()));
+    }
+
+    // Apply auth middleware to all protected routes
+    let protected_routes = protected_routes.route_layer(middleware::from_fn_with_state(
+        state.clone(),
+        auth_middleware,
+    ));
 
     // Demo mode routes (no auth — by design for public demo, rate-limited POST endpoints)
     let demo_state = demo::new_demo_state();
@@ -598,16 +879,29 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
 
     let x_request_id = HeaderName::from_static("x-request-id");
 
-    let router = Router::new()
+    let mut router = Router::new()
         .merge(public_routes)
         .merge(login_route)
         .merge(register_route)
         .merge(forgot_route)
         .merge(refresh_route)
         .merge(reset_password_route)
-        .merge(qr_route)
         .merge(demo_routes)
-        .merge(protected_routes)
+        .merge(protected_routes);
+
+    #[cfg(feature = "mod-qr")]
+    {
+        router = router.merge(qr_route);
+    }
+
+    // Swagger UI (only available when all modules are compiled)
+    #[cfg(feature = "full")]
+    {
+        router = router
+            .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()));
+    }
+
+    let router = router
         // Prometheus metrics endpoint — protected by METRICS_TOKEN env var when set
         .route(
             "/metrics",
@@ -636,8 +930,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 )
             }),
         )
-        // Swagger UI
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         // Static files (web frontend) - fallback for all other routes
         .fallback(static_files::static_handler)
         .with_state(state)
@@ -1288,6 +1580,7 @@ pub async fn get_user(
     responses((status = 200, description = "List of bookings"))
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub async fn list_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1321,6 +1614,7 @@ pub async fn list_bookings(
     responses((status = 201, description = "Booking created"), (status = 404, description = "Not found"), (status = 409, description = "Slot unavailable"))
 )]
 #[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, slot_id = %req.slot_id))]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub async fn create_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1329,6 +1623,7 @@ pub async fn create_booking(
     // ── Phase 1: reads under a read lock ──────────────────────────────────────
     // Collect all data needed to validate and price the booking.  A read lock
     // allows concurrent readers; we release it before any mutation.
+    #[allow(unused_variables)]
     let (
         slot,
         vehicle,
@@ -1642,6 +1937,7 @@ pub async fn create_booking(
     // Re-check slot availability and commit all mutations atomically.
     // The write lock serialises concurrent booking attempts for the same slot,
     // preventing double-booking between the availability check and the insert.
+    #[allow(unused_variables)]
     let user_info_opt = {
         let state_guard = state.write().await;
 
@@ -1743,6 +2039,7 @@ pub async fn create_booking(
     };
 
     // Dispatch webhook event (non-blocking)
+    #[cfg(feature = "mod-webhooks")]
     {
         let state_clone = state.clone();
         let booking_json = serde_json::json!({
@@ -1760,6 +2057,7 @@ pub async fn create_booking(
     metrics::record_booking_event("created");
 
     // Send booking confirmation email (non-blocking, fire-and-forget).
+    #[cfg(feature = "mod-email")]
     if let Some(u) = user_info_opt {
         let booking_id_str = booking.id.to_string();
         let floor_name = booking.floor_name.clone();
@@ -1797,6 +2095,7 @@ pub async fn create_booking(
     responses((status = 200, description = "Booking found"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub async fn get_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1836,6 +2135,7 @@ pub async fn get_booking(
     responses((status = 200, description = "Cancelled"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub async fn cancel_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -1979,6 +2279,7 @@ pub async fn cancel_booking(
     );
 
     // Send cancellation confirmation email (async, best-effort)
+    #[cfg(feature = "mod-email")]
     if let Some(ref user) = user {
         let user_email = user.email.clone();
         let user_name = user.name.clone();
@@ -2007,6 +2308,7 @@ pub async fn cancel_booking(
     }
 
     // Notify the first waitlist member that a slot is now available (async, best-effort)
+    #[cfg(feature = "mod-email")]
     {
         let state_clone = state.clone();
         let lot_id_str = booking.lot_id.to_string();
@@ -2057,6 +2359,7 @@ pub async fn cancel_booking(
     }
 
     // Dispatch webhook event
+    #[cfg(feature = "mod-webhooks")]
     {
         let state_clone = state.clone();
         let payload = serde_json::json!({
@@ -2096,6 +2399,7 @@ pub async fn cancel_booking(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub async fn get_booking_invoice(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -5038,6 +5342,7 @@ pub async fn admin_update_user(
 
 /// Request body for patching a booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub struct PatchBookingRequest {
     pub notes: Option<String>,
     pub start_time: Option<DateTime<Utc>>,
@@ -5053,6 +5358,7 @@ pub struct PatchBookingRequest {
     description = "Update notes and/or times on a booking. Only the booking owner or an admin may update.",
     security(("bearer_auth" = []))
 )]
+#[cfg_attr(not(feature = "mod-bookings"), allow(dead_code))]
 pub async fn update_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
