@@ -1,4 +1,4 @@
-//! ParkHub Common Library
+//! `ParkHub` Common Library
 //!
 //! Shared types, API models, and protocol definitions used by both
 //! the server and client applications.

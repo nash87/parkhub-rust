@@ -16,7 +16,7 @@ pub struct MdnsService {
 
 impl MdnsService {
     /// Create and register a new mDNS service
-    pub async fn new(config: &ServerConfig) -> Result<Self> {
+    pub fn new(config: &ServerConfig) -> Result<Self> {
         let daemon = ServiceDaemon::new()?;
 
         // Build service properties
@@ -29,9 +29,10 @@ impl MdnsService {
         properties.insert("tls".to_string(), config.enable_tls.to_string());
 
         // Get hostname
-        let hostname = hostname::get()
-            .map(|h| h.to_string_lossy().to_string())
-            .unwrap_or_else(|_| "parkhub-server".to_string());
+        let hostname = hostname::get().map_or_else(
+            |_| "parkhub-server".to_string(),
+            |h| h.to_string_lossy().to_string(),
+        );
 
         // Create service info
         let service_type = parkhub_common::MDNS_SERVICE_TYPE;
@@ -40,7 +41,7 @@ impl MdnsService {
         let service = ServiceInfo::new(
             service_type,
             &instance_name,
-            &format!("{}.local.", hostname),
+            &format!("{hostname}.local."),
             "",
             config.port,
             properties,

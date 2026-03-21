@@ -65,7 +65,9 @@ impl DemoState {
     }
 
     fn prune_viewers(&mut self) {
-        let cutoff = Instant::now() - Duration::from_secs(VIEWER_TIMEOUT_SECS);
+        let cutoff = Instant::now()
+            .checked_sub(Duration::from_secs(VIEWER_TIMEOUT_SECS))
+            .unwrap();
         self.viewers.retain(|_, ts| *ts > cutoff);
     }
 
@@ -141,8 +143,11 @@ pub async fn demo_status(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
 ) -> impl IntoResponse {
-    let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
+    let mut s = state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if !s.enabled {
+        drop(s);
         return (
             StatusCode::FORBIDDEN,
             Json(serde_json::json!({"error": "Demo mode is not enabled"})),
@@ -171,6 +176,7 @@ pub async fn demo_status(
         next_scheduled_reset: s.next_scheduled_reset.map(|t| t.to_rfc3339()),
         reset_in_progress: s.reset_in_progress,
     };
+    drop(s);
 
     Json(resp).into_response()
 }
@@ -187,21 +193,28 @@ async fn perform_db_reset(app_state: &SharedAppState, demo_state: &SharedDemoSta
         let state_guard = app_state.write().await;
 
         // Clear all data
-        state_guard.db.clear_all_data().await
+        state_guard
+            .db
+            .clear_all_data()
+            .await
             .map_err(|e| format!("failed to clear data: {e}"))?;
 
         // Re-create admin user and sample lot
-        crate::create_admin_user(&state_guard.db, &state_guard.config).await
+        crate::create_admin_user(&state_guard.db, &state_guard.config)
+            .await
             .map_err(|e| format!("failed to create admin: {e}"))?;
-        crate::create_sample_parking_lot(&state_guard.db).await
+        crate::create_sample_parking_lot(&state_guard.db)
+            .await
             .map_err(|e| format!("failed to create sample lot: {e}"))?;
 
         // Re-enable credits
         let _ = state_guard.db.set_setting("credits_enabled", "true").await;
         let _ = state_guard.db.set_setting("credits_per_booking", "1").await;
 
+        drop(state_guard);
         Ok(())
-    }.await;
+    }
+    .await;
 
     // Always update demo state and clear reset_in_progress
     if let Ok(mut ds) = demo_state.lock() {
@@ -227,7 +240,9 @@ pub async fn demo_vote(
 ) -> impl IntoResponse {
     // Check enabled + existing vote + reset_in_progress under short lock
     let should_reset = {
-        let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut s = state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if !s.enabled {
             return (
                 StatusCode::FORBIDDEN,
@@ -274,7 +289,7 @@ pub async fn demo_vote(
 
     let votes = state
         .lock()
-        .unwrap_or_else(|e| e.into_inner())
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .votes
         .len();
     Json(VoteResponse {
@@ -294,7 +309,9 @@ pub async fn demo_reset(
 ) -> impl IntoResponse {
     // Pre-checks under short lock
     {
-        let mut s = state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut s = state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if !s.enabled {
             return (
                 StatusCode::FORBIDDEN,
@@ -341,7 +358,9 @@ pub async fn demo_reset(
 pub async fn demo_config(
     axum::extract::Extension(state): axum::extract::Extension<SharedDemoState>,
 ) -> Json<DemoConfigResponse> {
-    let s = state.lock().unwrap_or_else(|e| e.into_inner());
+    let s = state
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     Json(DemoConfigResponse {
         demo_mode: s.enabled,
     })

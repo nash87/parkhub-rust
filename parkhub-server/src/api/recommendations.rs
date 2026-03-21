@@ -41,7 +41,7 @@ pub struct SlotRecommendation {
         (status = 200, description = "Slot recommendations"),
     )
 )]
-pub(crate) async fn get_recommendations(
+pub async fn get_recommendations(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<RecommendationQuery>,
@@ -49,7 +49,11 @@ pub(crate) async fn get_recommendations(
     let state = state.read().await;
 
     // 1. Get user's booking history
-    let bookings = match state.db.list_bookings_by_user(&auth_user.user_id.to_string()).await {
+    let bookings = match state
+        .db
+        .list_bookings_by_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(b) => b,
         Err(e) => {
             tracing::error!("Failed to load bookings for recommendations: {}", e);
@@ -61,7 +65,10 @@ pub(crate) async fn get_recommendations(
     let mut slot_frequency: HashMap<Uuid, i32> = HashMap::new();
     let mut lot_frequency: HashMap<Uuid, i32> = HashMap::new();
     for b in &bookings {
-        if matches!(b.status, BookingStatus::Active | BookingStatus::Completed | BookingStatus::Pending) {
+        if matches!(
+            b.status,
+            BookingStatus::Active | BookingStatus::Completed | BookingStatus::Pending
+        ) {
             *slot_frequency.entry(b.slot_id).or_default() += 1;
             *lot_frequency.entry(b.lot_id).or_default() += 1;
         }
@@ -101,14 +108,14 @@ pub(crate) async fn get_recommendations(
             // Factor 1: User's favorite slot (past usage frequency)
             let freq = slot_frequency.get(&slot.id).copied().unwrap_or(0);
             if freq > 0 {
-                score += (freq as f64).min(10.0) * 4.0; // max 40 points
+                score += f64::from(freq).min(10.0) * 4.0; // max 40 points
                 reasons.push(format!("Used {freq} times before"));
             }
 
             // Factor 2: User's preferred lot
             let lot_freq = lot_frequency.get(&lot.id).copied().unwrap_or(0);
             if lot_freq > 0 {
-                score += (lot_freq as f64).min(10.0) * 2.0; // max 20 points
+                score += f64::from(lot_freq).min(10.0) * 2.0; // max 20 points
                 if freq == 0 {
                     reasons.push(format!("In your preferred lot (used {lot_freq} times)"));
                 }
@@ -117,14 +124,13 @@ pub(crate) async fn get_recommendations(
             // Factor 3: Slot features bonus
             if !slot.features.is_empty() {
                 score += 5.0;
-                let feature_names: Vec<String> = slot.features.iter()
-                    .map(|f| format!("{f:?}"))
-                    .collect();
+                let feature_names: Vec<String> =
+                    slot.features.iter().map(|f| format!("{f:?}")).collect();
                 reasons.push(format!("Features: {}", feature_names.join(", ")));
             }
 
             // Factor 4: Low row number preference (closer to entrance typically)
-            let row_bonus = 10.0 / (slot.row as f64 + 1.0).max(1.0);
+            let row_bonus = 10.0 / (f64::from(slot.row) + 1.0).max(1.0);
             score += row_bonus;
 
             // Factor 5: Base availability score (available = good)
@@ -133,7 +139,9 @@ pub(crate) async fn get_recommendations(
                 reasons.push("Available now".to_string());
             }
 
-            let floor_name = lot.floors.first()
+            let floor_name = lot
+                .floors
+                .first()
                 .map_or_else(|| "Ground".to_string(), |f| f.name.clone());
 
             candidates.push(SlotRecommendation {
@@ -147,9 +155,14 @@ pub(crate) async fn get_recommendations(
             });
         }
     }
+    drop(state);
 
     // Sort by score descending, take top 5
-    candidates.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    candidates.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     candidates.truncate(5);
 
     Json(ApiResponse::success(candidates))

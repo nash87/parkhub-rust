@@ -1,6 +1,6 @@
 //! HTTP API Routes
 //!
-//! RESTful API for the parking system.
+//! `RESTful` API for the parking system.
 
 use axum::{
     body::Body,
@@ -11,10 +11,12 @@ use axum::{
     routing::{delete, get, post, put},
     Extension, Json, Router,
 };
-use chrono::{DateTime, Datelike, Timelike, TimeDelta, Utc};
+use chrono::{DateTime, Datelike, TimeDelta, Timelike, Utc};
+use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
+use tracing::Instrument;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
@@ -25,7 +27,10 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
+use base64::Engine;
+
 use crate::audit::{AuditEntry, AuditEventType};
+use crate::utils::html_escape;
 use crate::demo;
 use crate::email;
 use crate::metrics;
@@ -64,24 +69,24 @@ type SharedState = Arc<RwLock<AppState>>;
 // Submodules
 // ─────────────────────────────────────────────────────────────────────────────
 
-pub(crate) mod admin;
-pub(crate) mod auth;
+pub mod admin;
+pub mod auth;
 mod bookings;
-pub(crate) mod credits;
-pub(crate) mod export;
-pub(crate) mod favorites;
-pub(crate) mod translations;
-pub(crate) mod recommendations;
-pub(crate) mod lots;
-pub(crate) mod push;
-pub(crate) mod setup;
+pub mod credits;
+pub mod export;
+pub mod favorites;
+pub mod lots;
+pub mod payments;
+pub mod push;
+pub mod qr;
+pub mod recommendations;
+pub mod setup;
 mod social;
+pub mod translations;
 mod users;
-pub(crate) mod webhooks;
-pub(crate) mod payments;
-pub(crate) mod qr;
+pub mod webhooks;
 pub mod ws;
-pub(crate) mod zones;
+pub mod zones;
 
 // Re-import handler functions so the router can reference them unqualified.
 use auth::{forgot_password, login, refresh_token, register, reset_password};
@@ -90,14 +95,14 @@ use credits::{
 };
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
 use favorites::{add_favorite, list_favorites, remove_favorite};
-use translations::{
-    create_proposal, get_proposal, list_overrides, list_proposals, review_proposal,
-    vote_on_proposal,
-};
-use recommendations::get_recommendations;
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_slots, list_lots,
     update_lot, update_slot,
+};
+use recommendations::get_recommendations;
+use translations::{
+    create_proposal, get_proposal, list_overrides, list_proposals, review_proposal,
+    vote_on_proposal,
 };
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 use zones::{create_zone, delete_zone, list_zones};
@@ -110,7 +115,7 @@ pub struct AuthUser {
 
 /// Helper: verify the caller is an admin or superadmin.
 /// Returns `Ok(())` on success, `Err(forbidden_response)` otherwise.
-pub(crate) async fn check_admin(
+pub async fn check_admin(
     state: &crate::AppState,
     auth_user: &AuthUser,
 ) -> Result<(), (StatusCode, &'static str)> {
@@ -120,8 +125,8 @@ pub(crate) async fn check_admin(
     }
 }
 
-/// Create the API router with OpenAPI docs and metrics.
-/// Returns (router, demo_state) so the demo state can be used for scheduled resets.
+/// Create the API router with `OpenAPI` docs and metrics.
+/// Returns (router, `demo_state`) so the demo state can be used for scheduled resets.
 pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Initialize Prometheus metrics
     let metrics_handle = metrics::init_metrics();
@@ -463,7 +468,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Demo mode routes (no auth — by design for public demo, rate-limited POST endpoints)
     let demo_state = demo::new_demo_state();
     let demo_state_ret = demo_state.clone();
-    let demo_limiter = rate_limiters.demo.clone();
+    let demo_limiter = rate_limiters.demo;
     let demo_limiter2 = demo_limiter.clone();
     let demo_vote_route = Router::new()
         .route("/api/v1/demo/vote", post(demo::demo_vote))
@@ -484,7 +489,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .layer(Extension(state.clone()));
 
     // Clone handle for the closure
-    let metrics_handle_clone = metrics_handle.clone();
+    let metrics_handle_clone = metrics_handle;
 
     // Build CORS allowed-origins list.
     // `PARKHUB_CORS_ORIGINS` can be set to a comma-separated list of allowed origins
@@ -518,8 +523,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                             .get(header::AUTHORIZATION)
                             .and_then(|v| v.to_str().ok())
                             .and_then(|v| v.strip_prefix("Bearer "))
-                            .map(|token| token == expected)
-                            .unwrap_or(false);
+                            .is_some_and(|token| token == expected);
                         if !authorized {
                             return (
                                 StatusCode::UNAUTHORIZED,
@@ -684,13 +688,12 @@ async fn request_id_tracing_middleware(request: Request<Body>, next: Next) -> Re
         .to_owned();
 
     let span = tracing::info_span!("request", request_id = %request_id);
-    let _guard = span.enter();
+    let guard = span.enter();
 
     let mut response = {
         // Drop the span guard before awaiting so the span covers the full
         // request lifecycle via the instrument approach.
-        drop(_guard);
-        use tracing::Instrument;
+        drop(guard);
         next.run(request).instrument(span).await
     };
 
@@ -730,7 +733,7 @@ async fn http_metrics_middleware(request: Request<Body>, next: Next) -> Response
         http.method = %method,
         http.path = %path,
         http.status = status,
-        http.latency_ms = duration.as_millis() as u64,
+        http.latency_ms = u64::try_from(duration.as_millis()).unwrap_or(u64::MAX),
         "request completed"
     );
 
@@ -819,7 +822,7 @@ async fn auth_middleware(
     responses((status = 200, description = "Healthy"))
 )]
 #[tracing::instrument]
-pub(crate) async fn health_check() -> &'static str {
+pub async fn health_check() -> &'static str {
     "OK"
 }
 
@@ -833,7 +836,7 @@ pub(crate) async fn health_check() -> &'static str {
     responses((status = 200, description = "Alive"))
 )]
 #[tracing::instrument]
-pub(crate) async fn liveness_check() -> StatusCode {
+pub async fn liveness_check() -> StatusCode {
     StatusCode::OK
 }
 
@@ -853,7 +856,7 @@ pub(crate) async fn liveness_check() -> StatusCode {
     )
 )]
 #[tracing::instrument(skip(state))]
-pub(crate) async fn readiness_check(State(state): State<SharedState>) -> impl IntoResponse {
+pub async fn readiness_check(State(state): State<SharedState>) -> impl IntoResponse {
     let state = state.read().await;
     match state.db.stats().await {
         Ok(_) => (StatusCode::OK, Json(serde_json::json!({"ready": true}))),
@@ -875,7 +878,7 @@ pub(crate) async fn readiness_check(State(state): State<SharedState>) -> impl In
     description = "Verifies protocol version compatibility between client and server.",
     responses((status = 200, description = "Handshake result"))
 )]
-pub(crate) async fn handshake(
+pub async fn handshake(
     State(state): State<SharedState>,
     Json(request): Json<HandshakeRequest>,
 ) -> Json<ApiResponse<HandshakeResponse>> {
@@ -909,22 +912,24 @@ pub(crate) async fn handshake(
     description = "Returns aggregate server statistics.",
     responses((status = 200, description = "Server status"))
 )]
-pub(crate) async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse<ServerStatus>> {
-    let state = state.read().await;
-    let db_stats = state.db.stats().await.unwrap_or(crate::db::DatabaseStats {
-        users: 0,
-        bookings: 0,
-        parking_lots: 0,
-        slots: 0,
-        sessions: 0,
-        vehicles: 0,
-    });
+pub async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse<ServerStatus>> {
+    let db_stats = {
+        let state = state.read().await;
+        state.db.stats().await.unwrap_or(crate::db::DatabaseStats {
+            users: 0,
+            bookings: 0,
+            parking_lots: 0,
+            slots: 0,
+            sessions: 0,
+            vehicles: 0,
+        })
+    };
 
     Json(ApiResponse::success(ServerStatus {
         uptime_seconds: 0,
         connected_clients: 0,
-        total_users: db_stats.users as u32,
-        total_bookings: db_stats.bookings as u32,
+        total_users: u32::try_from(db_stats.users).unwrap_or(u32::MAX),
+        total_bookings: u32::try_from(db_stats.bookings).unwrap_or(u32::MAX),
         database_size_bytes: 0,
     }))
 }
@@ -946,7 +951,7 @@ pub(crate) async fn server_status(State(state): State<SharedState>) -> Json<ApiR
     )
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
-pub(crate) async fn get_current_user(
+pub async fn get_current_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<User>>) {
@@ -973,7 +978,7 @@ pub(crate) async fn get_current_user(
 
 /// Request body for updating the current user's profile
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdateCurrentUserRequest {
+pub struct UpdateCurrentUserRequest {
     name: Option<String>,
     phone: Option<String>,
     picture: Option<String>,
@@ -997,7 +1002,7 @@ pub(crate) struct UpdateCurrentUserRequest {
         (status = 404, description = "User not found")
     )
 )]
-pub(crate) async fn update_current_user(
+pub async fn update_current_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<UpdateCurrentUserRequest>,
@@ -1084,7 +1089,7 @@ pub(crate) async fn update_current_user(
 
 /// Retrieve a user by ID.
 ///
-/// Restricted to Admin and SuperAdmin roles. Regular users must use
+/// Restricted to Admin and `SuperAdmin` roles. Regular users must use
 /// `GET /api/v1/users/me` to access their own profile.
 #[utoipa::path(get, path = "/api/v1/users/{id}", tag = "Admin",
     summary = "Get user by ID (admin)",
@@ -1093,7 +1098,7 @@ pub(crate) async fn update_current_user(
     params(("id" = String, Path, description = "User UUID")),
     responses((status = 200, description = "User found"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
-pub(crate) async fn get_user(
+pub async fn get_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -1101,14 +1106,11 @@ pub(crate) async fn get_user(
     let state = state.read().await;
 
     // Verify caller is an admin before exposing arbitrary user records.
-    let caller = match state.db.get_user(&auth_user.user_id.to_string()).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    let Ok(Some(caller)) = state.db.get_user(&auth_user.user_id.to_string()).await else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
 
     if caller.role != UserRole::Admin && caller.role != UserRole::SuperAdmin {
@@ -1147,7 +1149,7 @@ pub(crate) async fn get_user(
     responses((status = 200, description = "List of bookings"))
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
-pub(crate) async fn list_bookings(
+pub async fn list_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<Booking>>> {
@@ -1180,7 +1182,7 @@ pub(crate) async fn list_bookings(
     responses((status = 201, description = "Booking created"), (status = 404, description = "Not found"), (status = 409, description = "Slot unavailable"))
 )]
 #[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, slot_id = %req.slot_id))]
-pub(crate) async fn create_booking(
+pub async fn create_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateBookingRequest>,
@@ -1305,7 +1307,7 @@ pub(crate) async fn create_booking(
     }
 
     // min_booking_duration_hours / max_booking_duration_hours
-    let duration_hours = req.duration_minutes as f64 / 60.0;
+    let duration_hours = f64::from(req.duration_minutes) / 60.0;
     let min_hours: f64 = read_admin_setting(&state_guard.db, "min_booking_duration_hours")
         .await
         .parse()
@@ -1315,7 +1317,7 @@ pub(crate) async fn create_booking(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "DURATION_TOO_SHORT",
-                format!("Minimum booking duration is {} hour(s)", min_hours),
+                format!("Minimum booking duration is {min_hours} hour(s)"),
             )),
         );
     }
@@ -1328,7 +1330,7 @@ pub(crate) async fn create_booking(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "DURATION_TOO_LONG",
-                format!("Maximum booking duration is {} hour(s)", max_hours),
+                format!("Maximum booking duration is {max_hours} hour(s)"),
             )),
         );
     }
@@ -1350,13 +1352,13 @@ pub(crate) async fn create_booking(
             .filter(|b| {
                 b.start_time.date_naive() == booking_date && b.status != BookingStatus::Cancelled
             })
-            .count() as i32;
-        if same_day_count >= max_per_day {
+            .count();
+        if same_day_count >= usize::try_from(max_per_day).unwrap_or(0) {
             return (
                 StatusCode::UNPROCESSABLE_ENTITY,
                 Json(ApiResponse::error(
                     "MAX_BOOKINGS_REACHED",
-                    format!("Maximum of {} booking(s) per day reached", max_per_day),
+                    format!("Maximum of {max_per_day} booking(s) per day reached"),
                 )),
             );
         }
@@ -1382,18 +1384,15 @@ pub(crate) async fn create_booking(
         .and_then(|v| v.parse().ok())
         .unwrap_or(1);
 
-    let mut booking_user = match state_guard
+    let Ok(Some(mut booking_user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
-            );
-        }
+    else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to load user")),
+        );
     };
 
     let is_admin_user =
@@ -1410,7 +1409,7 @@ pub(crate) async fn create_booking(
     }
 
     // Calculate end time and pricing
-    let end_time = req.start_time + TimeDelta::minutes(req.duration_minutes as i64);
+    let end_time = req.start_time + TimeDelta::minutes(i64::from(req.duration_minutes));
 
     // Look up the lot for pricing and floor name
     let lot_opt = state_guard
@@ -1423,23 +1422,22 @@ pub(crate) async fn create_booking(
     let hourly_rate = lot_opt
         .as_ref()
         .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
-        .map(|r| r.price)
-        .unwrap_or(2.0);
+        .map_or(2.0, |r| r.price);
 
-    let base_price = (req.duration_minutes as f64 / 60.0) * hourly_rate;
+    let base_price = (f64::from(req.duration_minutes) / 60.0) * hourly_rate;
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
 
     // Look up human-readable floor name from the lot's floors list
-    let floor_name = if let Some(lot) = &lot_opt {
-        lot.floors
-            .iter()
-            .find(|f| f.id == slot.floor_id)
-            .map(|f| f.name.clone())
-            .unwrap_or_else(|| "Level 1".to_string())
-    } else {
-        "Level 1".to_string()
-    };
+    let floor_name = lot_opt.as_ref().map_or_else(
+        || "Level 1".to_string(),
+        |lot| {
+            lot.floors
+                .iter()
+                .find(|f| f.id == slot.floor_id)
+                .map_or_else(|| "Level 1".to_string(), |f| f.name.clone())
+        },
+    );
 
     let now = Utc::now();
     let booking = Booking {
@@ -1572,7 +1570,7 @@ pub(crate) async fn create_booking(
         let start_time_str = booking.start_time.format("%Y-%m-%d %H:%M UTC").to_string();
         let end_time_str = booking.end_time.format("%Y-%m-%d %H:%M UTC").to_string();
         let user_email = u.email.clone();
-        let user_name = u.name.clone();
+        let user_name = u.name;
         tokio::spawn(async move {
             let email_html = email::build_booking_confirmation_email(
                 &user_name,
@@ -1602,7 +1600,7 @@ pub(crate) async fn create_booking(
     responses((status = 200, description = "Booking found"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
-pub(crate) async fn get_booking(
+pub async fn get_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -1641,7 +1639,7 @@ pub(crate) async fn get_booking(
     responses((status = 200, description = "Cancelled"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id, booking_id = %id))]
-pub(crate) async fn cancel_booking(
+pub async fn cancel_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -1821,7 +1819,7 @@ pub(crate) async fn cancel_booking(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn get_booking_invoice(
+pub async fn get_booking_invoice(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -1849,19 +1847,16 @@ pub(crate) async fn get_booking_invoice(
     };
 
     // Ownership check — only the booking owner (or admin) may fetch the invoice
-    let caller = match state_guard
+    let Ok(Some(caller)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
-                "Access denied".to_string(),
-            );
-        }
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            "Access denied".to_string(),
+        );
     };
 
     let is_admin = caller.role == UserRole::Admin || caller.role == UserRole::SuperAdmin;
@@ -1923,7 +1918,6 @@ pub(crate) async fn get_booking_invoice(
     );
 
     // HTML-escape all user-controlled values to prevent stored XSS
-    use crate::utils::html_escape;
     let company = html_escape(&company);
     let user_name = html_escape(&booking_user.name);
     let user_email = html_escape(&booking_user.email);
@@ -2125,7 +2119,7 @@ pub(crate) async fn get_booking_invoice(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "List of vehicles"))
 )]
-pub(crate) async fn list_vehicles(
+pub async fn list_vehicles(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<Vehicle>>> {
@@ -2154,7 +2148,7 @@ pub(crate) async fn list_vehicles(
     request_body = VehicleRequest,
     responses((status = 201, description = "Vehicle created"))
 )]
-pub(crate) async fn create_vehicle(
+pub async fn create_vehicle(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<VehicleRequest>,
@@ -2211,7 +2205,7 @@ pub(crate) async fn create_vehicle(
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "Vehicle UUID")),
     responses((status = 200, description = "Deleted"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
-pub(crate) async fn delete_vehicle(
+pub async fn delete_vehicle(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2288,7 +2282,7 @@ pub(crate) async fn delete_vehicle(
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "Vehicle UUID")),
     responses((status = 200, description = "Updated"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
-pub(crate) async fn update_vehicle(
+pub async fn update_vehicle(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2334,7 +2328,7 @@ pub(crate) async fn update_vehicle(
     if let Some(color) = req.get("color").and_then(|v| v.as_str()) {
         vehicle.color = Some(color.to_string());
     }
-    if let Some(is_default) = req.get("is_default").and_then(|v| v.as_bool()) {
+    if let Some(is_default) = req.get("is_default").and_then(serde_json::Value::as_bool) {
         vehicle.is_default = is_default;
     }
 
@@ -2358,7 +2352,7 @@ pub(crate) async fn update_vehicle(
 
 /// Request body for uploading a vehicle photo as base64-encoded image data.
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct VehiclePhotoUpload {
+pub struct VehiclePhotoUpload {
     /// Base64-encoded image, optionally prefixed with a data URI scheme
     /// (e.g. `data:image/jpeg;base64,...`).
     photo: String,
@@ -2383,11 +2377,9 @@ fn detect_image_mime(bytes: &[u8]) -> Option<&'static str> {
 
 /// Strip an optional `data:<mime>;base64,` prefix and return the raw base64 payload.
 fn strip_data_uri_prefix(input: &str) -> &str {
-    if let Some(pos) = input.find(";base64,") {
-        &input[pos + 8..]
-    } else {
-        input
-    }
+    input
+        .find(";base64,")
+        .map_or(input, |pos| &input[pos + 8..])
 }
 
 /// `POST /api/v1/vehicles/{id}/photo` — upload a vehicle photo (base64 JSON body).
@@ -2400,7 +2392,7 @@ fn strip_data_uri_prefix(input: &str) -> &str {
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "Vehicle UUID")),
     responses((status = 200, description = "Photo uploaded"), (status = 400, description = "Invalid image"), (status = 404, description = "Not found"))
 )]
-pub(crate) async fn upload_vehicle_photo(
+pub async fn upload_vehicle_photo(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2436,15 +2428,11 @@ pub(crate) async fn upload_vehicle_photo(
     let b64_payload = strip_data_uri_prefix(&req.photo);
 
     // Decode base64 to validate the image
-    use base64::Engine;
-    let raw_bytes = match base64::engine::general_purpose::STANDARD.decode(b64_payload) {
-        Ok(b) => b,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_INPUT", "Invalid base64 data")),
-            );
-        }
+    let Ok(raw_bytes) = base64::engine::general_purpose::STANDARD.decode(b64_payload) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_INPUT", "Invalid base64 data")),
+        );
     };
 
     // Size check (2 MB max)
@@ -2470,7 +2458,7 @@ pub(crate) async fn upload_vehicle_photo(
     }
 
     // Store the full data URI (or raw base64) so we can reconstruct content-type on GET
-    let key = format!("vehicle_photo_{}", id);
+    let key = format!("vehicle_photo_{id}");
     let value = req.photo.clone();
 
     if let Err(e) = state_guard.db.set_setting(&key, &value).await {
@@ -2494,7 +2482,7 @@ pub(crate) async fn upload_vehicle_photo(
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "Vehicle UUID")),
     responses((status = 200, description = "Photo bytes"), (status = 404, description = "No photo"))
 )]
-pub(crate) async fn get_vehicle_photo(
+pub async fn get_vehicle_photo(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2502,15 +2490,12 @@ pub(crate) async fn get_vehicle_photo(
     let state_guard = state.read().await;
 
     // Verify vehicle exists and belongs to caller
-    let vehicle = match state_guard.db.get_vehicle(&id).await {
-        Ok(Some(v)) => v,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::<()>::error("NOT_FOUND", "Vehicle not found")),
-            )
-                .into_response();
-        }
+    let Ok(Some(vehicle)) = state_guard.db.get_vehicle(&id).await else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("NOT_FOUND", "Vehicle not found")),
+        )
+            .into_response();
     };
 
     if vehicle.user_id != auth_user.user_id {
@@ -2521,33 +2506,26 @@ pub(crate) async fn get_vehicle_photo(
             .into_response();
     }
 
-    let key = format!("vehicle_photo_{}", id);
-    let stored = match state_guard.db.get_setting(&key).await {
-        Ok(Some(v)) => v,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::<()>::error("NOT_FOUND", "No photo found")),
-            )
-                .into_response();
-        }
+    let key = format!("vehicle_photo_{id}");
+    let Ok(Some(stored)) = state_guard.db.get_setting(&key).await else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::<()>::error("NOT_FOUND", "No photo found")),
+        )
+            .into_response();
     };
 
     let b64_payload = strip_data_uri_prefix(&stored);
 
-    use base64::Engine;
-    let raw_bytes = match base64::engine::general_purpose::STANDARD.decode(b64_payload) {
-        Ok(b) => b,
-        Err(_) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error(
-                    "SERVER_ERROR",
-                    "Corrupt photo data",
-                )),
-            )
-                .into_response();
-        }
+    let Ok(raw_bytes) = base64::engine::general_purpose::STANDARD.decode(b64_payload) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(
+                "SERVER_ERROR",
+                "Corrupt photo data",
+            )),
+        )
+            .into_response();
     };
 
     let content_type = detect_image_mime(&raw_bytes).unwrap_or("application/octet-stream");
@@ -2572,7 +2550,7 @@ pub(crate) async fn get_vehicle_photo(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "City code map"))
 )]
-pub(crate) async fn vehicle_city_codes(
+pub async fn vehicle_city_codes(
 ) -> Json<ApiResponse<std::collections::HashMap<&'static str, &'static str>>> {
     // Top ~75 German Kfz-Kennzeichen area codes → city/district names.
     // Built once per call (tiny cost) to avoid the serde_json::json! recursion limit.
@@ -2667,7 +2645,7 @@ pub(crate) async fn vehicle_city_codes(
 
 /// QR code response with URLs for generating a QR code externally.
 #[derive(Debug, Serialize)]
-pub(crate) struct LotQrResponse {
+pub struct LotQrResponse {
     /// URL to an external QR code image service.
     /// NOTE: Uses api.qrserver.com. For privacy-sensitive deployments,
     /// operators should generate QR codes locally.
@@ -2686,7 +2664,7 @@ pub(crate) struct LotQrResponse {
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "Lot UUID")),
     responses((status = 200, description = "QR URLs"), (status = 404, description = "Lot not found"))
 )]
-pub(crate) async fn lot_qr_code(
+pub async fn lot_qr_code(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -2719,12 +2697,12 @@ pub(crate) async fn lot_qr_code(
         base_url
     };
 
-    let lot_url = format!("{}/book?lot={}", base_url, id);
+    let lot_url = format!("{base_url}/book?lot={id}");
     let encoded = url::form_urlencoded::Serializer::new(String::new())
         .append_pair("data", &lot_url)
         .append_pair("size", "256x256")
         .finish();
-    let qr_url = format!("https://api.qrserver.com/v1/create-qr-code/?{}", encoded);
+    let qr_url = format!("https://api.qrserver.com/v1/create-qr-code/?{encoded}");
 
     (
         StatusCode::OK,
@@ -2761,7 +2739,7 @@ struct TopUser {
 }
 
 #[derive(Debug, Serialize)]
-pub(crate) struct DashboardCharts {
+pub struct DashboardCharts {
     bookings_by_day: Vec<BookingsByDay>,
     bookings_by_lot: Vec<BookingsByLot>,
     occupancy_by_hour: Vec<OccupancyByHour>,
@@ -2777,7 +2755,7 @@ pub(crate) struct DashboardCharts {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Chart data"), (status = 403, description = "Forbidden"))
 )]
-pub(crate) async fn admin_dashboard_charts(
+pub async fn admin_dashboard_charts(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<DashboardCharts>>) {
@@ -2859,14 +2837,15 @@ pub(crate) async fn admin_dashboard_charts(
 
     let occupancy_by_hour: Vec<OccupancyByHour> = (0..24)
         .map(|h| {
+            #[allow(clippy::cast_precision_loss)]
             let avg_count = hour_totals[h] as f64 / hour_days[h] as f64;
             let avg_occ = if total_slots > 0 {
-                (avg_count / total_slots as f64).min(1.0)
+                (avg_count / f64::from(total_slots)).min(1.0)
             } else {
                 0.0
             };
             OccupancyByHour {
-                hour: h as u32,
+                hour: u32::try_from(h).unwrap_or(0),
                 avg_occupancy: (avg_occ * 100.0).round() / 100.0,
             }
         })
@@ -2912,7 +2891,7 @@ pub(crate) async fn admin_dashboard_charts(
 ///
 /// UUIDs v4 have a fixed structure that reduces effective entropy to ~122 bits.
 /// Using a raw 256-bit random value is both simpler and more secure.
-pub(super) fn generate_access_token() -> String {
+pub fn generate_access_token() -> String {
     let mut bytes = [0u8; 32];
     rand::RngCore::fill_bytes(&mut rand::rng(), &mut bytes);
     hex::encode(bytes)
@@ -2927,7 +2906,7 @@ pub(super) fn generate_access_token() -> String {
 /// Returns `Err` on the (extremely unlikely) event that hashing fails so the
 /// caller can propagate a proper HTTP 500 instead of panicking.
 #[allow(clippy::result_large_err)]
-pub(super) fn hash_password(
+pub fn hash_password(
     password: &str,
 ) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
@@ -2953,7 +2932,7 @@ pub(super) fn hash_password(
 ///
 /// Used by code paths (e.g. password reset) that cannot return the typed
 /// HTTP error tuple used by `hash_password`.
-pub(super) fn hash_password_simple(password: &str) -> anyhow::Result<String> {
+pub fn hash_password_simple(password: &str) -> anyhow::Result<String> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
@@ -2962,18 +2941,17 @@ pub(super) fn hash_password_simple(password: &str) -> anyhow::Result<String> {
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
-        .map_err(|e| anyhow::anyhow!("Argon2 hashing failed: {}", e))
+        .map_err(|e| anyhow::anyhow!("Argon2 hashing failed: {e}"))
 }
 
-pub(super) fn verify_password(password: &str, hash: &str) -> bool {
+pub fn verify_password(password: &str, hash: &str) -> bool {
     use argon2::{
         password_hash::{PasswordHash, PasswordVerifier},
         Argon2,
     };
 
-    let parsed_hash = match PasswordHash::new(hash) {
-        Ok(h) => h,
-        Err(_) => return false,
+    let Ok(parsed_hash) = PasswordHash::new(hash) else {
+        return false;
     };
 
     Argon2::default()
@@ -3023,19 +3001,20 @@ const IMPRESSUM_FIELDS: &[&str] = &[
     summary = "Get Impressum (public)", description = "Returns DDG paragraph 5 Impressum data. No auth required.",
     responses((status = 200, description = "Impressum fields"))
 )]
-pub(crate) async fn get_impressum(State(state): State<SharedState>) -> Json<serde_json::Value> {
-    let state = state.read().await;
+pub async fn get_impressum(State(state): State<SharedState>) -> Json<serde_json::Value> {
     let mut data = serde_json::json!({});
-
-    for field in IMPRESSUM_FIELDS {
-        let key = format!("impressum_{}", field);
-        let value = state
-            .db
-            .get_setting(&key)
-            .await
-            .unwrap_or(None)
-            .unwrap_or_default();
-        data[field] = serde_json::Value::String(value);
+    {
+        let state = state.read().await;
+        for field in IMPRESSUM_FIELDS {
+            let key = format!("impressum_{field}");
+            let value = state
+                .db
+                .get_setting(&key)
+                .await
+                .unwrap_or(None)
+                .unwrap_or_default();
+            data[field] = serde_json::Value::String(value);
+        }
     }
 
     Json(data)
@@ -3051,25 +3030,22 @@ pub(crate) async fn get_impressum(State(state): State<SharedState>) -> Json<serd
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Impressum fields"), (status = 403, description = "Forbidden"))
 )]
-pub(crate) async fn get_impressum_admin(
+pub async fn get_impressum_admin(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<serde_json::Value>) {
     let state_guard = state.read().await;
 
     // Verify admin role.
-    let caller = match state_guard
+    let Ok(Some(caller)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(serde_json::json!({"error": "FORBIDDEN", "message": "Admin access required"})),
-            );
-        }
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"error": "FORBIDDEN", "message": "Admin access required"})),
+        );
     };
 
     if caller.role != UserRole::Admin && caller.role != UserRole::SuperAdmin {
@@ -3081,7 +3057,7 @@ pub(crate) async fn get_impressum_admin(
 
     let mut data = serde_json::json!({});
     for field in IMPRESSUM_FIELDS {
-        let key = format!("impressum_{}", field);
+        let key = format!("impressum_{field}");
         let value = state_guard
             .db
             .get_setting(&key)
@@ -3100,7 +3076,7 @@ pub(crate) async fn get_impressum_admin(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Saved"), (status = 403, description = "Forbidden"))
 )]
-pub(crate) async fn update_impressum(
+pub async fn update_impressum(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(payload): Json<serde_json::Value>,
@@ -3108,14 +3084,11 @@ pub(crate) async fn update_impressum(
     // Verify admin role
     let user_id_str = auth_user.user_id.to_string();
     let state_guard = state.read().await;
-    let user = match state_guard.db.get_user(&user_id_str).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Admin required")),
-            )
-        }
+    let Ok(Some(user)) = state_guard.db.get_user(&user_id_str).await else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Admin required")),
+        );
     };
     drop(state_guard);
 
@@ -3129,7 +3102,7 @@ pub(crate) async fn update_impressum(
     let state_guard = state.read().await;
     for field in IMPRESSUM_FIELDS {
         if let Some(serde_json::Value::String(value)) = payload.get(*field) {
-            let key = format!("impressum_{}", field);
+            let key = format!("impressum_{field}");
             if let Err(e) = state_guard.db.set_setting(&key, value).await {
                 tracing::warn!("Failed to save impressum setting {key}: {e}");
             }
@@ -3149,23 +3122,20 @@ pub(crate) async fn update_impressum(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "JSON data export"))
 )]
-pub(crate) async fn gdpr_export_data(
+pub async fn gdpr_export_data(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl IntoResponse {
     let state = state.read().await;
     let user_id = auth_user.user_id.to_string();
 
-    let user = match state.db.get_user(&user_id).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                [(header::CONTENT_TYPE, "application/json")],
-                serde_json::to_string(&ApiResponse::<()>::error("NOT_FOUND", "User not found"))
-                    .unwrap_or_default(),
-            );
-        }
+    let Ok(Some(user)) = state.db.get_user(&user_id).await else {
+        return (
+            StatusCode::NOT_FOUND,
+            [(header::CONTENT_TYPE, "application/json")],
+            serde_json::to_string(&ApiResponse::<()>::error("NOT_FOUND", "User not found"))
+                .unwrap_or_default(),
+        );
     };
 
     let bookings = state
@@ -3236,7 +3206,7 @@ pub(crate) async fn gdpr_export_data(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Account anonymized"), (status = 404, description = "Not found"))
 )]
-pub(crate) async fn gdpr_delete_account(
+pub async fn gdpr_delete_account(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
@@ -3283,13 +3253,13 @@ pub(crate) async fn gdpr_delete_account(
 
 /// Request body for updating a user's role
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdateUserRoleRequest {
+pub struct UpdateUserRoleRequest {
     role: String,
 }
 
 /// Request body for updating a user's status
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdateUserStatusRequest {
+pub struct UpdateUserStatusRequest {
     status: String,
 }
 
@@ -3302,7 +3272,7 @@ use admin::AdminUserResponse;
     responses((status = 200, description = "User list"), (status = 403, description = "Forbidden"))
 )]
 #[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id))]
-pub(crate) async fn admin_list_users(
+pub async fn admin_list_users(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<AdminUserResponse>>>) {
@@ -3335,7 +3305,7 @@ pub(crate) async fn admin_list_users(
     responses((status = 200, description = "Role updated"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, target_user_id = %id, new_role = %req.role))]
-pub(crate) async fn admin_update_user_role(
+pub async fn admin_update_user_role(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -3347,18 +3317,15 @@ pub(crate) async fn admin_update_user_role(
     }
 
     // Fetch the caller to check their role for privilege escalation prevention
-    let caller = match state_guard
+    let Ok(Some(caller)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
 
     // Only SuperAdmin may promote users to SuperAdmin (prevent privilege escalation)
@@ -3439,7 +3406,7 @@ pub(crate) async fn admin_update_user_role(
     responses((status = 200, description = "Updated"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, target_user_id = %id))]
-pub(crate) async fn admin_update_user_status(
+pub async fn admin_update_user_status(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -3505,7 +3472,7 @@ pub(crate) async fn admin_update_user_status(
     responses((status = 200, description = "Deleted"), (status = 403, description = "Forbidden"), (status = 404, description = "Not found"))
 )]
 #[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id, target_user_id = %id))]
-pub(crate) async fn admin_delete_user(
+pub async fn admin_delete_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -3568,7 +3535,7 @@ pub(crate) async fn admin_delete_user(
 
 /// Response type for admin booking listing (includes user details)
 #[derive(Debug, Serialize)]
-pub(crate) struct AdminBookingResponse {
+pub struct AdminBookingResponse {
     id: String,
     user_id: String,
     user_name: String,
@@ -3590,7 +3557,7 @@ pub(crate) struct AdminBookingResponse {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "All bookings"), (status = 403, description = "Forbidden"))
 )]
-pub(crate) async fn admin_list_bookings(
+pub async fn admin_list_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<AdminBookingResponse>>>) {
@@ -3693,7 +3660,7 @@ async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
         .unwrap_or_default()
 }
 
-/// Use-case theme definitions — maps use_case key to display config
+/// Use-case theme definitions — maps `use_case` key to display config
 fn use_case_theme(key: &str) -> serde_json::Value {
     match key {
         "company" => serde_json::json!({
@@ -3778,7 +3745,7 @@ fn use_case_theme(key: &str) -> serde_json::Value {
     description = "Return current use-case with theme config. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_get_use_case(
+pub async fn admin_get_use_case(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -3809,7 +3776,7 @@ pub(crate) async fn admin_get_use_case(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Settings"), (status = 403, description = "Forbidden"))
 )]
-pub(crate) async fn admin_get_settings(
+pub async fn admin_get_settings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -3886,7 +3853,7 @@ fn validate_setting_value(key: &str, value: &str) -> Result<(), &'static str> {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Saved"), (status = 403, description = "Forbidden"))
 )]
-pub(crate) async fn admin_update_settings(
+pub async fn admin_update_settings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(payload): Json<serde_json::Value>,
@@ -3896,17 +3863,14 @@ pub(crate) async fn admin_update_settings(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    let obj = match payload.as_object() {
-        Some(o) => o,
-        None => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_INPUT",
-                    "Request body must be a JSON object of key-value pairs",
-                )),
-            );
-        }
+    let Some(obj) = payload.as_object() else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Request body must be a JSON object of key-value pairs",
+            )),
+        );
     };
 
     let allowed_keys: Vec<&str> = ADMIN_SETTINGS.iter().map(|(k, _)| *k).collect();
@@ -3918,15 +3882,14 @@ pub(crate) async fn admin_update_settings(
                 StatusCode::BAD_REQUEST,
                 Json(ApiResponse::error(
                     "INVALID_KEY",
-                    format!("Unknown setting: {}", key),
+                    format!("Unknown setting: {key}"),
                 )),
             );
         }
 
-        let value_str = match val.as_str() {
-            Some(s) => s.to_string(),
-            None => val.to_string().trim_matches('"').to_string(),
-        };
+        let value_str = val
+            .as_str()
+            .map_or_else(|| val.to_string().trim_matches('"').to_string(), String::from);
 
         if let Err(msg) = validate_setting_value(key, &value_str) {
             return (
@@ -4003,9 +3966,16 @@ const SETTINGS_FEATURES_KEY: &str = "features_enabled";
 /// Read enabled features from DB, falling back to defaults.
 async fn read_features(db: &crate::db::Database) -> Vec<String> {
     match db.get_setting(SETTINGS_FEATURES_KEY).await {
-        Ok(Some(json_str)) => serde_json::from_str::<Vec<String>>(&json_str)
-            .unwrap_or_else(|_| DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect()),
-        _ => DEFAULT_FEATURES.iter().map(|s| s.to_string()).collect(),
+        Ok(Some(json_str)) => serde_json::from_str::<Vec<String>>(&json_str).unwrap_or_else(|_| {
+            DEFAULT_FEATURES
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect()
+        }),
+        _ => DEFAULT_FEATURES
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect(),
     }
 }
 
@@ -4015,7 +3985,7 @@ async fn read_features(db: &crate::db::Database) -> Vec<String> {
     description = "Returns enabled and available features. No auth required.",
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn get_features(
+pub async fn get_features(
     State(state): State<SharedState>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
     let state_guard = state.read().await;
@@ -4036,7 +4006,7 @@ pub(crate) async fn get_features(
     description = "Returns theme and company name. No auth required.",
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn get_public_theme(
+pub async fn get_public_theme(
     State(state): State<SharedState>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
     let state_guard = state.read().await;
@@ -4060,7 +4030,7 @@ pub(crate) async fn get_public_theme(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_get_features(
+pub async fn admin_get_features(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -4092,7 +4062,7 @@ pub(crate) async fn admin_get_features(
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdateFeaturesRequest {
+pub struct UpdateFeaturesRequest {
     enabled: Vec<String>,
 }
 
@@ -4103,7 +4073,7 @@ pub(crate) struct UpdateFeaturesRequest {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_update_features(
+pub async fn admin_update_features(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(body): Json<UpdateFeaturesRequest>,
@@ -4159,7 +4129,7 @@ pub(crate) async fn admin_update_features(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Deserialize)]
-pub(crate) struct AbsenceQuery {
+pub struct AbsenceQuery {
     #[serde(rename = "type")]
     absence_type: Option<AbsenceType>,
 }
@@ -4171,7 +4141,7 @@ pub(crate) struct AbsenceQuery {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn list_absences(
+pub async fn list_absences(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<AbsenceQuery>,
@@ -4206,7 +4176,7 @@ pub(crate) async fn list_absences(
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub(crate) struct CreateAbsenceRequest {
+pub struct CreateAbsenceRequest {
     absence_type: AbsenceType,
     start_date: String,
     end_date: String,
@@ -4225,7 +4195,7 @@ fn is_valid_date(s: &str) -> bool {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn create_absence(
+pub async fn create_absence(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateAbsenceRequest>,
@@ -4284,7 +4254,7 @@ pub(crate) async fn create_absence(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn delete_absence(
+pub async fn delete_absence(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -4344,7 +4314,7 @@ pub(crate) async fn delete_absence(
     description = "List all team member absences visible to the current user.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn list_team_absences(
+pub async fn list_team_absences(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<Absence>>>) {
@@ -4373,20 +4343,19 @@ pub(crate) async fn list_team_absences(
     description = "Get the current user's recurring absence pattern.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn get_absence_pattern(
+pub async fn get_absence_pattern(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Option<AbsencePattern>>>) {
     let state_guard = state.read().await;
     let key = format!("absence_pattern:{}", auth_user.user_id);
     match state_guard.db.get_setting(&key).await {
-        Ok(Some(json_str)) => match serde_json::from_str::<AbsencePattern>(&json_str) {
-            Ok(pattern) => (StatusCode::OK, Json(ApiResponse::success(Some(pattern)))),
-            Err(_) => (StatusCode::OK, Json(ApiResponse::success(None))),
-        },
-        Ok(None) => (StatusCode::OK, Json(ApiResponse::success(None))),
+        Ok(val) => {
+            let pattern = val.and_then(|json_str| serde_json::from_str::<AbsencePattern>(&json_str).ok());
+            (StatusCode::OK, Json(ApiResponse::success(pattern)))
+        }
         Err(e) => {
-            tracing::error!("Failed to get absence pattern: {}", e);
+            tracing::error!("Failed to get absence pattern: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::error(
@@ -4407,7 +4376,7 @@ pub(crate) async fn get_absence_pattern(
     description = "Save or update the current user's recurring absence pattern (e.g. homeoffice every Monday).",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn save_absence_pattern(
+pub async fn save_absence_pattern(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(pattern): Json<AbsencePattern>,
@@ -4445,7 +4414,7 @@ pub(crate) async fn save_absence_pattern(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Serialize)]
-pub(crate) struct TeamMemberStatus {
+pub struct TeamMemberStatus {
     user_id: Uuid,
     name: String,
     username: String,
@@ -4460,7 +4429,7 @@ pub(crate) struct TeamMemberStatus {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn team_today(
+pub async fn team_today(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<TeamMemberStatus>>>) {
@@ -4503,8 +4472,7 @@ pub(crate) async fn team_today(
                 AbsenceType::Homeoffice => "homeoffice",
                 AbsenceType::Vacation => "vacation",
                 AbsenceType::Sick => "sick",
-                AbsenceType::Training => "absent",
-                AbsenceType::Other => "absent",
+                AbsenceType::Training | AbsenceType::Other => "absent",
             };
             result.push(TeamMemberStatus {
                 user_id: user.id,
@@ -4547,7 +4515,7 @@ pub(crate) async fn team_today(
     description = "Returns active non-expired announcements. No auth required.",
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn get_active_announcements(
+pub async fn get_active_announcements(
     State(state): State<SharedState>,
 ) -> (StatusCode, Json<ApiResponse<Vec<Announcement>>>) {
     let state_guard = state.read().await;
@@ -4558,10 +4526,7 @@ pub(crate) async fn get_active_announcements(
                 .into_iter()
                 .filter(|a| {
                     a.active
-                        && match a.expires_at {
-                            Some(exp) => exp > now,
-                            None => true,
-                        }
+                        && a.expires_at.is_none_or(|exp| exp > now)
                 })
                 .collect();
             (StatusCode::OK, Json(ApiResponse::success(active)))
@@ -4586,7 +4551,7 @@ pub(crate) async fn get_active_announcements(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_list_announcements(
+pub async fn admin_list_announcements(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<Announcement>>>) {
@@ -4611,7 +4576,7 @@ pub(crate) async fn admin_list_announcements(
 }
 
 #[derive(Deserialize, utoipa::ToSchema)]
-pub(crate) struct CreateAnnouncementRequest {
+pub struct CreateAnnouncementRequest {
     title: String,
     message: String,
     severity: AnnouncementSeverity,
@@ -4628,7 +4593,7 @@ pub(crate) struct CreateAnnouncementRequest {
     description = "Create a new system announcement. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_create_announcement(
+pub async fn admin_create_announcement(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateAnnouncementRequest>,
@@ -4667,13 +4632,38 @@ pub(crate) async fn admin_create_announcement(
     }
 }
 
+/// Represents a field that can be absent, explicitly null, or a value.
+/// This avoids `Option<Option<T>>` which clippy flags.
+#[derive(Default)]
+pub enum NullableField<T> {
+    /// Field was not present in the request
+    #[default]
+    Absent,
+    /// Field was explicitly set to null
+    Null,
+    /// Field was set to a value
+    Value(T),
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for NullableField<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Option::<T>::deserialize(deserializer)
+            .map(|opt| opt.map_or(Self::Null, Self::Value))
+    }
+}
+
 #[derive(Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdateAnnouncementRequest {
+pub struct UpdateAnnouncementRequest {
     title: Option<String>,
     message: Option<String>,
     severity: Option<AnnouncementSeverity>,
     active: Option<bool>,
-    expires_at: Option<Option<DateTime<Utc>>>,
+    #[schema(value_type = Option<String>)]
+    #[serde(default)]
+    expires_at: NullableField<DateTime<Utc>>,
 }
 
 /// `PUT /api/v1/admin/announcements/{id}` — admin: update announcement
@@ -4685,7 +4675,7 @@ pub(crate) struct UpdateAnnouncementRequest {
     description = "Update an existing announcement by ID. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_update_announcement(
+pub async fn admin_update_announcement(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -4708,14 +4698,12 @@ pub(crate) async fn admin_update_announcement(
         }
     };
 
-    let mut announcement = match announcements.into_iter().find(|a| a.id.to_string() == id) {
-        Some(a) => a,
-        None => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "Announcement not found")),
-            );
-        }
+    let Some(mut announcement) = announcements.into_iter().find(|a| a.id.to_string() == id)
+    else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Announcement not found")),
+        );
     };
 
     if let Some(title) = req.title {
@@ -4730,8 +4718,10 @@ pub(crate) async fn admin_update_announcement(
     if let Some(active) = req.active {
         announcement.active = active;
     }
-    if let Some(expires_at) = req.expires_at {
-        announcement.expires_at = expires_at;
+    match req.expires_at {
+        NullableField::Value(v) => announcement.expires_at = Some(v),
+        NullableField::Null => announcement.expires_at = None,
+        NullableField::Absent => {}
     }
 
     match state_guard.db.save_announcement(&announcement).await {
@@ -4758,7 +4748,7 @@ pub(crate) async fn admin_update_announcement(
     description = "Delete an announcement by ID. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_delete_announcement(
+pub async fn admin_delete_announcement(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -4798,7 +4788,7 @@ pub(crate) async fn admin_delete_announcement(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn list_notifications(
+pub async fn list_notifications(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<Notification>>>) {
@@ -4834,7 +4824,7 @@ pub(crate) async fn list_notifications(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn mark_notification_read(
+pub async fn mark_notification_read(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -4891,7 +4881,7 @@ pub(crate) async fn mark_notification_read(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn mark_all_notifications_read(
+pub async fn mark_all_notifications_read(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<u32>>) {
@@ -4916,14 +4906,16 @@ pub(crate) async fn mark_all_notifications_read(
 
     let mut count = 0u32;
     for notif in &notifications {
-        if !notif.read {
-            if let Ok(true) = state_guard
-                .db
-                .mark_notification_read(&notif.id.to_string())
-                .await
-            {
-                count += 1;
-            }
+        if !notif.read
+            && matches!(
+                state_guard
+                    .db
+                    .mark_notification_read(&notif.id.to_string())
+                    .await,
+                Ok(true)
+            )
+        {
+            count += 1;
         }
     }
 
@@ -4941,7 +4933,7 @@ pub(crate) async fn mark_all_notifications_read(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn list_waitlist(
+pub async fn list_waitlist(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<WaitlistEntry>>> {
@@ -4964,7 +4956,7 @@ pub(crate) async fn list_waitlist(
 
 /// Request body for joining the waitlist
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct JoinWaitlistRequest {
+pub struct JoinWaitlistRequest {
     lot_id: Uuid,
 }
 
@@ -4975,7 +4967,7 @@ pub(crate) struct JoinWaitlistRequest {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn join_waitlist(
+pub async fn join_waitlist(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<JoinWaitlistRequest>,
@@ -5033,7 +5025,7 @@ pub(crate) async fn join_waitlist(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn leave_waitlist(
+pub async fn leave_waitlist(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5097,7 +5089,7 @@ pub(crate) async fn leave_waitlist(
     description = "List the current user's swap requests (as requester or target).",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn list_swap_requests(
+pub async fn list_swap_requests(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<SwapRequest>>> {
@@ -5120,7 +5112,7 @@ pub(crate) async fn list_swap_requests(
 
 /// Request body for creating a swap request
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct CreateSwapRequestBody {
+pub struct CreateSwapRequestBody {
     target_booking_id: Uuid,
     message: Option<String>,
 }
@@ -5134,7 +5126,7 @@ pub(crate) struct CreateSwapRequestBody {
     description = "Create a parking slot swap request for a booking.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn create_swap_request(
+pub async fn create_swap_request(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(booking_id): Path<String>,
@@ -5245,7 +5237,7 @@ pub(crate) async fn create_swap_request(
 
 /// Request body for accepting/declining a swap request
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdateSwapRequestBody {
+pub struct UpdateSwapRequestBody {
     action: String,
 }
 
@@ -5258,7 +5250,7 @@ pub(crate) struct UpdateSwapRequestBody {
     description = "Accept or decline a swap request.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn update_swap_request(
+pub async fn update_swap_request(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5308,38 +5300,32 @@ pub(crate) async fn update_swap_request(
     match req.action.as_str() {
         "accept" => {
             // Get both bookings
-            let mut requester_booking = match state_guard
+            let Ok(Some(mut requester_booking)) = state_guard
                 .db
                 .get_booking(&swap.requester_booking_id.to_string())
                 .await
-            {
-                Ok(Some(b)) => b,
-                _ => {
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ApiResponse::error(
-                            "SERVER_ERROR",
-                            "Requester booking not found",
-                        )),
-                    );
-                }
+            else {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        "SERVER_ERROR",
+                        "Requester booking not found",
+                    )),
+                );
             };
 
-            let mut target_booking = match state_guard
+            let Ok(Some(mut target_booking)) = state_guard
                 .db
                 .get_booking(&swap.target_booking_id.to_string())
                 .await
-            {
-                Ok(Some(b)) => b,
-                _ => {
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ApiResponse::error(
-                            "SERVER_ERROR",
-                            "Target booking not found",
-                        )),
-                    );
-                }
+            else {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        "SERVER_ERROR",
+                        "Target booking not found",
+                    )),
+                );
             };
 
             // Swap slot_ids between the two bookings
@@ -5414,7 +5400,7 @@ pub(crate) async fn update_swap_request(
     description = "List the current user's recurring booking patterns.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn list_recurring_bookings(
+pub async fn list_recurring_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<RecurringBooking>>> {
@@ -5437,7 +5423,7 @@ pub(crate) async fn list_recurring_bookings(
 
 /// Request body for creating a recurring booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct CreateRecurringBookingRequest {
+pub struct CreateRecurringBookingRequest {
     lot_id: Uuid,
     slot_id: Option<Uuid>,
     days_of_week: Vec<u8>,
@@ -5457,7 +5443,7 @@ pub(crate) struct CreateRecurringBookingRequest {
     description = "Create a new recurring booking pattern (e.g. every Tuesday 8-17).",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn create_recurring_booking(
+pub async fn create_recurring_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateRecurringBookingRequest>,
@@ -5502,7 +5488,7 @@ pub(crate) async fn create_recurring_booking(
     description = "Delete a recurring booking pattern. Verifies ownership.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn delete_recurring_booking(
+pub async fn delete_recurring_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5516,14 +5502,11 @@ pub(crate) async fn delete_recurring_booking(
         .await
         .unwrap_or_default();
 
-    let id_uuid = match Uuid::parse_str(&id) {
-        Ok(u) => u,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_ID", "Invalid ID format")),
-            );
-        }
+    let Ok(id_uuid) = Uuid::parse_str(&id) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_ID", "Invalid ID format")),
+        );
     };
 
     if !user_bookings.iter().any(|b| b.id == id_uuid) {
@@ -5561,7 +5544,7 @@ pub(crate) async fn delete_recurring_booking(
 
 /// Request body for creating a guest booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct CreateGuestBookingRequest {
+pub struct CreateGuestBookingRequest {
     lot_id: Uuid,
     slot_id: Uuid,
     start_time: chrono::DateTime<Utc>,
@@ -5593,7 +5576,7 @@ fn generate_guest_code() -> String {
     security(("bearer_auth" = []))
 )]
 #[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, guest_name = %req.guest_name))]
-pub(crate) async fn create_guest_booking(
+pub async fn create_guest_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateGuestBookingRequest>,
@@ -5653,7 +5636,7 @@ pub(crate) async fn create_guest_booking(
     description = "List all guest bookings. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_list_guest_bookings(
+pub async fn admin_list_guest_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<GuestBooking>>>) {
@@ -5686,7 +5669,7 @@ pub(crate) async fn admin_list_guest_bookings(
     description = "Cancel a guest booking by ID. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_cancel_guest_booking(
+pub async fn admin_cancel_guest_booking(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -5736,7 +5719,7 @@ pub(crate) async fn admin_cancel_guest_booking(
 /// Request body for quick booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 #[allow(dead_code)]
-pub(crate) struct QuickBookRequest {
+pub struct QuickBookRequest {
     lot_id: Uuid,
     date: Option<String>,
     booking_type: Option<String>,
@@ -5750,7 +5733,7 @@ pub(crate) struct QuickBookRequest {
     responses((status = 200, description = "Success"))
 )]
 #[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id, lot_id = %req.lot_id))]
-pub(crate) async fn quick_book(
+pub async fn quick_book(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<QuickBookRequest>,
@@ -5798,7 +5781,7 @@ pub(crate) async fn quick_book(
         .find(|v| v.is_default)
         .or_else(|| vehicles.first())
         .cloned()
-        .unwrap_or(Vehicle {
+        .unwrap_or_else(|| Vehicle {
             id: Uuid::new_v4(),
             user_id: auth_user.user_id,
             license_plate: String::new(),
@@ -5814,12 +5797,7 @@ pub(crate) async fn quick_book(
     let booking_type = req.booking_type.as_deref().unwrap_or("full_day");
     let now = Utc::now();
     let (start_time, end_time) = match booking_type {
-        "half_day_am" => {
-            let start = now + TimeDelta::minutes(1);
-            let end = start + TimeDelta::hours(4);
-            (start, end)
-        }
-        "half_day_pm" => {
+        "half_day_am" | "half_day_pm" => {
             let start = now + TimeDelta::minutes(1);
             let end = start + TimeDelta::hours(4);
             (start, end)
@@ -5840,22 +5818,22 @@ pub(crate) async fn quick_book(
         .ok()
         .flatten();
 
-    let floor_name = if let Some(lot) = &lot_opt {
-        lot.floors
-            .iter()
-            .find(|f| f.id == available_slot.floor_id)
-            .map(|f| f.name.clone())
-            .unwrap_or_else(|| "Level 1".to_string())
-    } else {
-        "Level 1".to_string()
-    };
+    let floor_name = lot_opt.as_ref().map_or_else(
+        || "Level 1".to_string(),
+        |lot| {
+            lot.floors
+                .iter()
+                .find(|f| f.id == available_slot.floor_id)
+                .map_or_else(|| "Level 1".to_string(), |f| f.name.clone())
+        },
+    );
 
     let hourly_rate = lot_opt
         .as_ref()
         .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
-        .map(|r| r.price)
-        .unwrap_or(2.0);
+        .map_or(2.0, |r| r.price);
 
+    #[allow(clippy::cast_precision_loss)]
     let base_price = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
     let tax = base_price * VAT_RATE;
     let total = base_price + tax;
@@ -5885,7 +5863,7 @@ pub(crate) async fn quick_book(
         check_in_time: None,
         check_out_time: None,
         qr_code: Some(Uuid::new_v4().to_string()),
-        notes: Some(format!("Quick book ({})", booking_type)),
+        notes: Some(format!("Quick book ({booking_type})")),
     };
 
     if let Err(e) = state_guard.db.save_booking(&booking).await {
@@ -5905,10 +5883,7 @@ pub(crate) async fn quick_book(
     if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
         tracing::error!("Failed to update slot status after quick booking: {}", e);
         // Roll back the booking to avoid inconsistent state
-        let _ = state_guard
-            .db
-            .delete_booking(&booking.id.to_string())
-            .await;
+        let _ = state_guard.db.delete_booking(&booking.id.to_string()).await;
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::error(
@@ -5934,14 +5909,14 @@ pub(crate) async fn quick_book(
 
 /// Query params for calendar events
 #[derive(Debug, Deserialize)]
-pub(crate) struct CalendarQuery {
+pub struct CalendarQuery {
     from: Option<String>,
     to: Option<String>,
 }
 
 /// Calendar event response
 #[derive(Debug, Serialize)]
-pub(crate) struct CalendarEvent {
+pub struct CalendarEvent {
     id: String,
     #[serde(rename = "type")]
     event_type: String,
@@ -5963,7 +5938,7 @@ pub(crate) struct CalendarEvent {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn calendar_events(
+pub async fn calendar_events(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<CalendarQuery>,
@@ -6069,7 +6044,7 @@ pub(crate) async fn calendar_events(
 
 /// Dashboard stats response
 #[derive(Debug, Serialize)]
-pub(crate) struct AdminStatsResponse {
+pub struct AdminStatsResponse {
     total_users: u64,
     total_lots: u64,
     total_slots: u64,
@@ -6086,7 +6061,7 @@ pub(crate) struct AdminStatsResponse {
     responses((status = 200, description = "Success"))
 )]
 #[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id))]
-pub(crate) async fn admin_stats(
+pub async fn admin_stats(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<AdminStatsResponse>>) {
@@ -6123,6 +6098,7 @@ pub(crate) async fn admin_stats(
         })
         .unwrap_or(0);
 
+    #[allow(clippy::cast_precision_loss)]
     let occupancy = if db_stats.slots > 0 {
         (active_bookings as f64 / db_stats.slots as f64) * 100.0
     } else {
@@ -6144,13 +6120,13 @@ pub(crate) async fn admin_stats(
 
 /// Query params for reports
 #[derive(Debug, Deserialize)]
-pub(crate) struct ReportsQuery {
+pub struct ReportsQuery {
     days: Option<i64>,
 }
 
 /// Booking stats by day
 #[derive(Debug, Serialize)]
-pub(crate) struct DailyBookingStat {
+pub struct DailyBookingStat {
     date: String,
     count: usize,
 }
@@ -6162,7 +6138,7 @@ pub(crate) struct DailyBookingStat {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_reports(
+pub async fn admin_reports(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<ReportsQuery>,
@@ -6186,17 +6162,17 @@ pub(crate) async fn admin_reports(
         }
     }
 
-    let stats: Vec<DailyBookingStat> = by_date
+    let daily_stats: Vec<DailyBookingStat> = by_date
         .into_iter()
         .map(|(date, count)| DailyBookingStat { date, count })
         .collect();
 
-    (StatusCode::OK, Json(ApiResponse::success(stats)))
+    (StatusCode::OK, Json(ApiResponse::success(daily_stats)))
 }
 
 /// Heatmap cell: booking count by weekday x hour
 #[derive(Debug, Serialize)]
-pub(crate) struct HeatmapCell {
+pub struct HeatmapCell {
     weekday: u32,
     hour: u32,
     count: usize,
@@ -6209,7 +6185,7 @@ pub(crate) struct HeatmapCell {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_heatmap(
+pub async fn admin_heatmap(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<HeatmapCell>>>) {
@@ -6238,8 +6214,8 @@ pub(crate) async fn admin_heatmap(
                 .iter()
                 .enumerate()
                 .map(move |(h, &count)| HeatmapCell {
-                    weekday: wd as u32,
-                    hour: h as u32,
+                    weekday: u32::try_from(wd).unwrap_or(0),
+                    hour: u32::try_from(h).unwrap_or(0),
                     count,
                 })
         })
@@ -6259,7 +6235,7 @@ pub(crate) async fn admin_heatmap(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_audit_log(
+pub async fn admin_audit_log(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
@@ -6295,7 +6271,7 @@ pub(crate) async fn admin_audit_log(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[derive(Serialize)]
-pub(crate) struct TeamMember {
+pub struct TeamMember {
     id: Uuid,
     name: String,
     username: String,
@@ -6310,7 +6286,7 @@ pub(crate) struct TeamMember {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn team_list(
+pub async fn team_list(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<TeamMember>>> {
@@ -6338,7 +6314,7 @@ pub(crate) async fn team_list(
 
 /// Request body for password change
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct ChangePasswordRequest {
+pub struct ChangePasswordRequest {
     current_password: String,
     new_password: String,
 }
@@ -6351,7 +6327,7 @@ pub(crate) struct ChangePasswordRequest {
     responses((status = 200, description = "Success"))
 )]
 #[tracing::instrument(skip(state, req), fields(user_id = %auth_user.user_id))]
-pub(crate) async fn change_password(
+pub async fn change_password(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<ChangePasswordRequest>,
@@ -6442,7 +6418,7 @@ pub(crate) async fn change_password(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn user_calendar_ics(
+pub async fn user_calendar_ics(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl axum::response::IntoResponse {
@@ -6477,13 +6453,14 @@ pub(crate) async fn user_calendar_ics(
         let dtend = b.end_time.format("%Y%m%dT%H%M%SZ");
 
         ical.push_str("BEGIN:VEVENT\r\n");
-        ical.push_str(&format!("UID:{}@parkhub\r\n", b.id));
-        ical.push_str(&format!("DTSTART:{}\r\n", dtstart));
-        ical.push_str(&format!("DTEND:{}\r\n", dtend));
-        ical.push_str(&format!(
+        let _ = write!(ical, "UID:{}@parkhub\r\n", b.id);
+        let _ = write!(ical, "DTSTART:{dtstart}\r\n");
+        let _ = write!(ical, "DTEND:{dtend}\r\n");
+        let _ = write!(
+            ical,
             "SUMMARY:Parking - {} - Slot {}\r\n",
             lot_name, b.slot_number
-        ));
+        );
         ical.push_str("END:VEVENT\r\n");
     }
 
@@ -6502,7 +6479,7 @@ pub(crate) async fn user_calendar_ics(
 
 /// Occupancy info for a single lot
 #[derive(Debug, Serialize)]
-pub(crate) struct LotOccupancy {
+pub struct LotOccupancy {
     lot_id: String,
     lot_name: String,
     total_slots: i32,
@@ -6516,7 +6493,7 @@ pub(crate) struct LotOccupancy {
     description = "Returns real-time occupancy. No auth required.",
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn public_occupancy(
+pub async fn public_occupancy(
     State(state): State<SharedState>,
 ) -> (StatusCode, Json<ApiResponse<Vec<LotOccupancy>>>) {
     let state_guard = state.read().await;
@@ -6541,19 +6518,22 @@ pub(crate) async fn public_occupancy(
 
     let mut occupancy = Vec::with_capacity(lots.len());
     for lot in &lots {
-        let occupied = bookings
-            .iter()
-            .filter(|b| {
-                b.lot_id == lot.id
-                    && b.start_time <= now
-                    && b.end_time >= now
-                    && matches!(
-                        b.status,
-                        parkhub_common::BookingStatus::Confirmed
-                            | parkhub_common::BookingStatus::Active
-                    )
-            })
-            .count() as i32;
+        let occupied = i32::try_from(
+            bookings
+                .iter()
+                .filter(|b| {
+                    b.lot_id == lot.id
+                        && b.start_time <= now
+                        && b.end_time >= now
+                        && matches!(
+                            b.status,
+                            parkhub_common::BookingStatus::Confirmed
+                                | parkhub_common::BookingStatus::Active
+                        )
+                })
+                .count(),
+        )
+        .unwrap_or(i32::MAX);
 
         let available = (lot.total_slots - occupied).max(0);
 
@@ -6575,7 +6555,7 @@ pub(crate) async fn public_occupancy(
     description = "Returns minimal HTML for digital signage.",
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn public_display(State(state): State<SharedState>) -> impl axum::response::IntoResponse {
+pub async fn public_display(State(state): State<SharedState>) -> impl axum::response::IntoResponse {
     let state_guard = state.read().await;
 
     let lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
@@ -6610,23 +6590,26 @@ pub(crate) async fn public_display(State(state): State<SharedState>) -> impl axu
     );
 
     for lot in &lots {
-        let occupied = bookings
-            .iter()
-            .filter(|b| {
-                b.lot_id == lot.id
-                    && b.start_time <= now
-                    && b.end_time >= now
-                    && matches!(
-                        b.status,
-                        parkhub_common::BookingStatus::Confirmed
-                            | parkhub_common::BookingStatus::Active
-                    )
-            })
-            .count() as i32;
+        let occupied = i32::try_from(
+            bookings
+                .iter()
+                .filter(|b| {
+                    b.lot_id == lot.id
+                        && b.start_time <= now
+                        && b.end_time >= now
+                        && matches!(
+                            b.status,
+                            parkhub_common::BookingStatus::Confirmed
+                                | parkhub_common::BookingStatus::Active
+                        )
+                })
+                .count(),
+        )
+        .unwrap_or(i32::MAX);
 
         let available = (lot.total_slots - occupied).max(0);
         let pct = if lot.total_slots > 0 {
-            (available as f64 / lot.total_slots as f64) * 100.0
+            (f64::from(available) / f64::from(lot.total_slots)) * 100.0
         } else {
             0.0
         };
@@ -6638,15 +6621,21 @@ pub(crate) async fn public_display(State(state): State<SharedState>) -> impl axu
             "red"
         };
 
-        html.push_str(&format!(
-            r#"<div class="lot">
+        {
+            let _ = write!(
+                html,
+                r#"<div class="lot">
   <div class="lot-name">{}</div>
   <div class="available {}">{}</div>
   <div class="label">of {} available</div>
 </div>
 "#,
-            crate::utils::html_escape(&lot.name), color_class, available, lot.total_slots
-        ));
+                crate::utils::html_escape(&lot.name),
+                color_class,
+                available,
+                lot.total_slots
+            );
+        }
     }
 
     html.push_str("</div>\n</body>\n</html>\n");
@@ -6669,21 +6658,18 @@ pub(crate) async fn public_display(State(state): State<SharedState>) -> impl axu
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn user_stats(
+pub async fn user_stats(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
     let state_guard = state.read().await;
     let uid = auth_user.user_id.to_string();
 
-    let user = match state_guard.db.get_user(&uid).await {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "User not found")),
-            );
-        }
+    let Ok(Some(user)) = state_guard.db.get_user(&uid).await else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
     };
 
     let bookings = state_guard
@@ -6692,7 +6678,7 @@ pub(crate) async fn user_stats(
         .await
         .unwrap_or_default();
 
-    let total_bookings = bookings.len() as i64;
+    let total_bookings = bookings.len();
     let active_bookings = bookings
         .iter()
         .filter(|b| {
@@ -6701,11 +6687,11 @@ pub(crate) async fn user_stats(
                 BookingStatus::Confirmed | BookingStatus::Active | BookingStatus::Pending
             )
         })
-        .count() as i64;
+        .count();
     let cancelled_bookings = bookings
         .iter()
         .filter(|b| b.status == BookingStatus::Cancelled)
-        .count() as i64;
+        .count();
 
     // Sum credits spent from deduction transactions
     let total_credits_spent = state_guard
@@ -6715,7 +6701,7 @@ pub(crate) async fn user_stats(
         .unwrap_or_default()
         .iter()
         .filter(|tx| tx.transaction_type == CreditTransactionType::Deduction)
-        .map(|tx| tx.amount.abs() as i64)
+        .map(|tx| i64::from(tx.amount.abs()))
         .sum::<i64>();
 
     // Find favorite lot by most bookings
@@ -6732,8 +6718,7 @@ pub(crate) async fn user_stats(
                 .await
                 .ok()
                 .flatten()
-                .map(|l| l.name)
-                .unwrap_or_else(|| "Unknown".to_string())
+                .map_or_else(|| "Unknown".to_string(), |l| l.name)
         } else {
             "None".to_string()
         }
@@ -6763,7 +6748,7 @@ pub(crate) async fn user_stats(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn get_user_preferences(
+pub async fn get_user_preferences(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -6793,7 +6778,7 @@ pub(crate) async fn get_user_preferences(
 
 /// Request body for updating user preferences
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct UpdatePreferencesRequest {
+pub struct UpdatePreferencesRequest {
     language: Option<String>,
     theme: Option<String>,
     notifications_enabled: Option<bool>,
@@ -6808,25 +6793,22 @@ pub(crate) struct UpdatePreferencesRequest {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn update_user_preferences(
+pub async fn update_user_preferences(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<UpdatePreferencesRequest>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
     let state_guard = state.read().await;
 
-    let mut user = match state_guard
+    let Ok(Some(mut user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "User not found")),
-            );
-        }
+    else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
     };
 
     if let Some(lang) = req.language {
@@ -6880,7 +6862,7 @@ pub(crate) async fn update_user_preferences(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn booking_checkin(
+pub async fn booking_checkin(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -6952,7 +6934,7 @@ pub(crate) async fn booking_checkin(
 
 /// Request body for database reset confirmation
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct AdminResetRequest {
+pub struct AdminResetRequest {
     confirm: String,
 }
 
@@ -6963,7 +6945,7 @@ pub(crate) struct AdminResetRequest {
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
-pub(crate) async fn admin_reset(
+pub async fn admin_reset(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<AdminResetRequest>,
@@ -6984,21 +6966,18 @@ pub(crate) async fn admin_reset(
     }
 
     // Capture admin info before wipe
-    let admin = match state_guard
+    let Ok(Some(admin)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(
-                    "SERVER_ERROR",
-                    "Failed to read admin user before reset",
-                )),
-            );
-        }
+    else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to read admin user before reset",
+            )),
+        );
     };
 
     if let Err(e) = state_guard.db.clear_all_data().await {
@@ -7069,7 +7048,7 @@ pub(crate) async fn admin_reset(
     description = "Return the auto-release timing configuration. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_get_auto_release(
+pub async fn admin_get_auto_release(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -7092,7 +7071,7 @@ pub(crate) async fn admin_get_auto_release(
 
 /// Request body for auto-release settings update
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct AutoReleaseSettingsRequest {
+pub struct AutoReleaseSettingsRequest {
     auto_release_enabled: Option<bool>,
     auto_release_minutes: Option<i32>,
 }
@@ -7106,7 +7085,7 @@ pub(crate) struct AutoReleaseSettingsRequest {
     description = "Update auto-release timing for unclaimed bookings. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_update_auto_release(
+pub async fn admin_update_auto_release(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<AutoReleaseSettingsRequest>,
@@ -7179,7 +7158,7 @@ pub(crate) async fn admin_update_auto_release(
     description = "Return SMTP configuration (password masked). Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_get_email_settings(
+pub async fn admin_get_email_settings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -7215,8 +7194,7 @@ pub(crate) async fn admin_get_email_settings(
         .await
         .ok()
         .flatten()
-        .map(|p| !p.is_empty())
-        .unwrap_or(false);
+        .is_some_and(|p| !p.is_empty());
     let from = state_guard
         .db
         .get_setting("smtp_from")
@@ -7247,13 +7225,19 @@ pub(crate) async fn admin_get_email_settings(
 
 /// Request body for email settings update
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct EmailSettingsRequest {
-    smtp_host: Option<String>,
-    smtp_port: Option<i32>,
-    smtp_username: Option<String>,
-    smtp_password: Option<String>,
-    smtp_from: Option<String>,
-    smtp_enabled: Option<bool>,
+pub struct EmailSettingsRequest {
+    #[serde(alias = "smtp_host")]
+    host: Option<String>,
+    #[serde(alias = "smtp_port")]
+    port: Option<i32>,
+    #[serde(alias = "smtp_username")]
+    username: Option<String>,
+    #[serde(alias = "smtp_password")]
+    password: Option<String>,
+    #[serde(alias = "smtp_from")]
+    from: Option<String>,
+    #[serde(alias = "smtp_enabled")]
+    enabled: Option<bool>,
 }
 
 /// `PUT /api/v1/admin/settings/email` — update SMTP settings
@@ -7265,7 +7249,7 @@ pub(crate) struct EmailSettingsRequest {
     description = "Update SMTP settings for outgoing emails. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_update_email_settings(
+pub async fn admin_update_email_settings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<EmailSettingsRequest>,
@@ -7277,25 +7261,25 @@ pub(crate) async fn admin_update_email_settings(
 
     let db = &state_guard.db;
 
-    if let Some(host) = &req.smtp_host {
+    if let Some(host) = &req.host {
         let _ = db.set_setting("smtp_host", host).await;
     }
-    if let Some(port) = req.smtp_port {
+    if let Some(port) = req.port {
         let _ = db.set_setting("smtp_port", &port.to_string()).await;
     }
-    if let Some(username) = &req.smtp_username {
+    if let Some(username) = &req.username {
         let _ = db.set_setting("smtp_username", username).await;
     }
-    if let Some(password) = &req.smtp_password {
+    if let Some(password) = &req.password {
         // Don't overwrite with the masked placeholder
         if password != "********" {
             let _ = db.set_setting("smtp_password", password).await;
         }
     }
-    if let Some(from) = &req.smtp_from {
+    if let Some(from) = &req.from {
         let _ = db.set_setting("smtp_from", from).await;
     }
-    if let Some(enabled) = req.smtp_enabled {
+    if let Some(enabled) = req.enabled {
         let _ = db.set_setting("smtp_enabled", &enabled.to_string()).await;
     }
 
@@ -7325,7 +7309,7 @@ pub(crate) async fn admin_update_email_settings(
     description = "Return privacy and GDPR settings. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_get_privacy(
+pub async fn admin_get_privacy(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -7374,7 +7358,7 @@ pub(crate) async fn admin_get_privacy(
 
 /// Request body for privacy settings update
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct PrivacySettingsRequest {
+pub struct PrivacySettingsRequest {
     privacy_policy_url: Option<String>,
     data_retention_days: Option<i32>,
     require_consent: Option<bool>,
@@ -7390,7 +7374,7 @@ pub(crate) struct PrivacySettingsRequest {
     description = "Update privacy and GDPR settings. Admin only.",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_update_privacy(
+pub async fn admin_update_privacy(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<PrivacySettingsRequest>,
@@ -7478,7 +7462,7 @@ pub(crate) async fn admin_update_privacy(
 
 /// Request body for admin user update
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct AdminUpdateUserRequest {
+pub struct AdminUpdateUserRequest {
     name: Option<String>,
     email: Option<String>,
     role: Option<String>,
@@ -7494,7 +7478,7 @@ pub(crate) struct AdminUpdateUserRequest {
     description = "Admin can update any user's details (name, email, department, etc.).",
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn admin_update_user(
+pub async fn admin_update_user(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -7977,18 +7961,18 @@ mod tests {
             "smtp_enabled":true
         }"#;
         let req: EmailSettingsRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.smtp_host.as_deref(), Some("smtp.example.com"));
-        assert_eq!(req.smtp_port, Some(587));
-        assert_eq!(req.smtp_enabled, Some(true));
+        assert_eq!(req.host.as_deref(), Some("smtp.example.com"));
+        assert_eq!(req.port, Some(587));
+        assert_eq!(req.enabled, Some(true));
     }
 
     #[test]
     fn test_email_settings_request_empty() {
         let json = r#"{}"#;
         let req: EmailSettingsRequest = serde_json::from_str(json).unwrap();
-        assert!(req.smtp_host.is_none());
-        assert!(req.smtp_port.is_none());
-        assert!(req.smtp_enabled.is_none());
+        assert!(req.host.is_none());
+        assert!(req.port.is_none());
+        assert!(req.enabled.is_none());
     }
 
     // ─── PrivacySettingsRequest ────────────────────────────────────────

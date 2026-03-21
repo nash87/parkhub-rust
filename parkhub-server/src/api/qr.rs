@@ -1,7 +1,7 @@
 //! QR code parking pass generation.
 //!
 //! `GET /api/v1/bookings/:id/qr` generates a QR code PNG image encoding
-//! booking details (booking_id, user_email, lot_name, start/end timestamps).
+//! booking details (`booking_id`, `user_email`, `lot_name`, start/end timestamps).
 
 use axum::{
     body::Body,
@@ -51,7 +51,8 @@ struct QrPassPayload {
     ),
     security(("bearer_auth" = []))
 )]
-pub(crate) async fn booking_qr_code(
+#[allow(clippy::too_many_lines)]
+pub async fn booking_qr_code(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -72,7 +73,10 @@ pub(crate) async fn booking_qr_code(
             tracing::error!("Database error fetching booking for QR: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "Internal server error")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "Internal server error",
+                )),
             )
                 .into_response();
         }
@@ -100,11 +104,7 @@ pub(crate) async fn booking_qr_code(
     }
 
     // Resolve user email
-    let user_email = match state_guard
-        .db
-        .get_user(&booking.user_id.to_string())
-        .await
-    {
+    let user_email = match state_guard.db.get_user(&booking.user_id.to_string()).await {
         Ok(Some(u)) => u.email,
         _ => String::from("unknown"),
     };
@@ -136,7 +136,10 @@ pub(crate) async fn booking_qr_code(
             tracing::error!("Failed to serialize QR payload: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "QR generation failed",
+                )),
             )
                 .into_response();
         }
@@ -149,17 +152,17 @@ pub(crate) async fn booking_qr_code(
             tracing::error!("QR code generation failed: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "QR generation failed",
+                )),
             )
                 .into_response();
         }
     };
 
     // Render to PNG bytes in memory
-    let image = code
-        .render::<Luma<u8>>()
-        .min_dimensions(300, 300)
-        .build();
+    let image = code.render::<Luma<u8>>().min_dimensions(300, 300).build();
 
     let mut png_bytes: Vec<u8> = Vec::new();
     let mut cursor = Cursor::new(&mut png_bytes);
@@ -167,7 +170,10 @@ pub(crate) async fn booking_qr_code(
         tracing::error!("PNG encoding failed: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+            Json(ApiResponse::<()>::error(
+                "SERVER_ERROR",
+                "QR generation failed",
+            )),
         )
             .into_response();
     }

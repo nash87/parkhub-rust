@@ -1,4 +1,4 @@
-//! Build script for ParkHub Server
+//! Build script for `ParkHub` Server
 //!
 //! Compiles Slint UI files for the setup wizard (when gui feature is enabled).
 

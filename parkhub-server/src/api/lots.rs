@@ -35,9 +35,7 @@ use parkhub_common::UserRole;
     )
 )]
 #[tracing::instrument(skip(state))]
-pub(crate) async fn list_lots(
-    State(state): State<SharedState>,
-) -> Json<ApiResponse<Vec<ParkingLot>>> {
+pub async fn list_lots(State(state): State<SharedState>) -> Json<ApiResponse<Vec<ParkingLot>>> {
     let state = state.read().await;
 
     match state.db.list_parking_lots().await {
@@ -69,7 +67,8 @@ pub(crate) async fn list_lots(
     )
 )]
 #[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, lot_name = %req.name))]
-pub(crate) async fn create_lot(
+#[allow(clippy::too_many_lines)]
+pub async fn create_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateParkingLotRequest>,
@@ -98,18 +97,15 @@ pub(crate) async fn create_lot(
     let state_guard = state.write().await;
 
     // Check if user is admin
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
 
     if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
@@ -212,7 +208,9 @@ pub(crate) async fn create_lot(
             current_booking: None,
             features: Vec::new(),
             position: SlotPosition {
+                #[allow(clippy::cast_precision_loss)]
                 x: (((i - 1) % 10) as f32) * 3.0,
+                #[allow(clippy::cast_precision_loss)]
                 y: (((i - 1) / 10) as f32) * 5.0,
                 width: 2.5,
                 height: 5.0,
@@ -224,6 +222,7 @@ pub(crate) async fn create_lot(
     if let Err(e) = state_guard.db.save_parking_slots_batch(&slots).await {
         tracing::error!("Failed to batch-save parking slots: {}", e);
     }
+    drop(state_guard);
 
     tracing::info!(
         "Created parking lot '{}' ({}) with {} slots",
@@ -263,7 +262,8 @@ pub(crate) async fn create_lot(
         (status = 404, description = "Parking lot not found"),
     )
 )]
-pub(crate) async fn update_lot(
+#[allow(clippy::too_many_lines)]
+pub async fn update_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -293,18 +293,15 @@ pub(crate) async fn update_lot(
     let state_guard = state.write().await;
 
     // Check if user is admin
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
 
     if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
@@ -402,6 +399,7 @@ pub(crate) async fn update_lot(
             )),
         );
     }
+    drop(state_guard);
 
     tracing::info!("Updated parking lot '{}' ({})", lot.name, lot.id);
 
@@ -421,7 +419,7 @@ pub(crate) async fn update_lot(
         (status = 404, description = "Parking lot not found"),
     )
 )]
-pub(crate) async fn delete_lot(
+pub async fn delete_lot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -429,18 +427,15 @@ pub(crate) async fn delete_lot(
     let state_guard = state.write().await;
 
     // Check if user is admin
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Access denied")),
-            );
-        }
+    else {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Access denied")),
+        );
     };
 
     if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
@@ -450,12 +445,14 @@ pub(crate) async fn delete_lot(
         );
     }
 
-    match state_guard.db.delete_parking_lot(&id).await {
+    let result = state_guard.db.delete_parking_lot(&id).await;
+    match result {
         Ok(true) => {
             // Cascade-delete orphaned slots belonging to this lot
             if let Err(e) = state_guard.db.delete_slots_by_lot(&id).await {
                 tracing::error!("Failed to cascade-delete slots for lot {}: {}", id, e);
             }
+            drop(state_guard);
             tracing::info!("Deleted parking lot: {}", id);
             (StatusCode::OK, Json(ApiResponse::success(())))
         }
@@ -488,7 +485,7 @@ pub(crate) async fn delete_lot(
         (status = 404, description = "Parking lot not found"),
     )
 )]
-pub(crate) async fn get_lot(
+pub async fn get_lot(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<ParkingLot>>) {
@@ -521,7 +518,7 @@ pub(crate) async fn get_lot(
         (status = 200, description = "List of slots in the parking lot"),
     )
 )]
-pub(crate) async fn get_lot_slots(
+pub async fn get_lot_slots(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Json<ApiResponse<Vec<ParkingSlot>>> {
@@ -554,7 +551,7 @@ pub(crate) async fn get_lot_slots(
         (status = 404, description = "Parking lot not found"),
     )
 )]
-pub(crate) async fn create_slot(
+pub async fn create_slot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(lot_id): Path<String>,
@@ -595,11 +592,7 @@ pub(crate) async fn create_slot(
         }
     };
 
-    let floor_id = lot
-        .floors
-        .first()
-        .map(|f| f.id)
-        .unwrap_or_else(Uuid::new_v4);
+    let floor_id = lot.floors.first().map_or_else(Uuid::new_v4, |f| f.id);
     let existing_slots = state_guard
         .db
         .list_slots_by_lot(&lot_id)
@@ -626,14 +619,18 @@ pub(crate) async fn create_slot(
         _ => SlotType::Standard,
     };
 
+    let raw_slot_number = req
+        .get("slot_number")
+        .and_then(serde_json::Value::as_i64)
+        .unwrap_or_else(|| i64::from(next_number));
+    #[allow(clippy::cast_possible_truncation)]
+    let slot_number = raw_slot_number as i32;
+
     let slot = ParkingSlot {
         id: Uuid::new_v4(),
         lot_id: lot.id,
         floor_id,
-        slot_number: req
-            .get("slot_number")
-            .and_then(|v| v.as_i64())
-            .unwrap_or(next_number as i64) as i32,
+        slot_number,
         row: ((next_number - 1) / 10) + 1,
         column: ((next_number - 1) % 10) + 1,
         slot_type,
@@ -641,7 +638,9 @@ pub(crate) async fn create_slot(
         current_booking: None,
         features: Vec::new(),
         position: SlotPosition {
+            #[allow(clippy::cast_precision_loss)]
             x: (((next_number - 1) % 10) as f32) * 3.0,
+            #[allow(clippy::cast_precision_loss)]
             y: (((next_number - 1) / 10) as f32) * 5.0,
             width: 2.5,
             height: 5.0,
@@ -656,6 +655,7 @@ pub(crate) async fn create_slot(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to create slot")),
         );
     }
+    drop(state_guard);
 
     (StatusCode::CREATED, Json(ApiResponse::success(slot)))
 }
@@ -677,7 +677,7 @@ pub(crate) async fn create_slot(
         (status = 404, description = "Slot not found"),
     )
 )]
-pub(crate) async fn update_slot(
+pub async fn update_slot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path((lot_id, slot_id)): Path<(String, String)>,
@@ -750,8 +750,10 @@ pub(crate) async fn update_slot(
         };
     }
 
-    if let Some(number) = req.get("slot_number").and_then(|v| v.as_i64()) {
-        slot.slot_number = number as i32;
+    if let Some(number) = req.get("slot_number").and_then(serde_json::Value::as_i64) {
+        #[allow(clippy::cast_possible_truncation)]
+        let num = number as i32;
+        slot.slot_number = num;
     }
 
     if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
@@ -761,6 +763,7 @@ pub(crate) async fn update_slot(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to update slot")),
         );
     }
+    drop(state_guard);
 
     (StatusCode::OK, Json(ApiResponse::success(slot)))
 }
@@ -782,7 +785,7 @@ pub(crate) async fn update_slot(
         (status = 404, description = "Slot not found"),
     )
 )]
-pub(crate) async fn delete_slot(
+pub async fn delete_slot(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path((lot_id, slot_id)): Path<(String, String)>,
@@ -838,6 +841,7 @@ pub(crate) async fn delete_slot(
             Json(ApiResponse::error("SERVER_ERROR", "Failed to delete slot")),
         );
     }
+    drop(state_guard);
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }

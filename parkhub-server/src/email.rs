@@ -37,7 +37,7 @@ impl SmtpConfig {
         let username = std::env::var("SMTP_USER").unwrap_or_default();
         let password = std::env::var("SMTP_PASS").unwrap_or_default();
         let from =
-            std::env::var("SMTP_FROM").unwrap_or_else(|_| format!("ParkHub <noreply@{}>", host));
+            std::env::var("SMTP_FROM").unwrap_or_else(|_| format!("ParkHub <noreply@{host}>"));
 
         Some(Self {
             host,
@@ -55,16 +55,13 @@ impl SmtpConfig {
 /// no-op and returns `Ok(())`.  This provides graceful degradation in
 /// development and self-hosted environments without an SMTP relay.
 pub async fn send_email(to: &str, subject: &str, html_body: &str) -> Result<()> {
-    let config = match SmtpConfig::from_env() {
-        Some(c) => c,
-        None => {
-            warn!(
-                to = %to,
-                subject = %subject,
-                "SMTP not configured (SMTP_HOST not set) — email skipped"
-            );
-            return Ok(());
-        }
+    let Some(config) = SmtpConfig::from_env() else {
+        warn!(
+            to = %to,
+            subject = %subject,
+            "SMTP not configured (SMTP_HOST not set) — email skipped"
+        );
+        return Ok(());
     };
 
     let message = Message::builder()
@@ -155,13 +152,6 @@ pub fn build_booking_confirmation_email(
   </div>
 </body>
 </html>"#,
-        org = org,
-        user_name = user_name,
-        booking_id = booking_id,
-        floor_name = floor_name,
-        slot_number = slot_number,
-        start_time = start_time,
-        end_time = end_time,
     )
 }
 
@@ -206,8 +196,6 @@ pub fn build_password_reset_email(reset_url: &str, org_name: &str) -> String {
   </div>
 </body>
 </html>"#,
-        org = org,
-        reset_url = reset_url,
     )
 }
 

@@ -51,6 +51,7 @@ vi.mock('react-i18next', () => ({
         'nav.dashboard': 'Dashboard',
         'nav.bookings': 'Bookings',
         'nav.vehicles': 'Vehicles',
+        'nav.favorites': 'Favorites',
         'nav.absences': 'Absences',
         'nav.team': 'Team',
         'nav.calendar': 'Calendar',
@@ -104,6 +105,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Moon: (props: any) => <span data-testid="icon-moon" {...props} />,
   CalendarPlus: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
   Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
+  Star: (props: any) => <span data-testid="icon-star" {...props} />,
 }));
 
 import { Layout } from './Layout';

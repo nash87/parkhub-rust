@@ -12,6 +12,7 @@ use axum::{
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Deserialize;
+use std::fmt::Write;
 
 use super::{check_admin, AuthUser, SharedState};
 
@@ -21,7 +22,7 @@ use super::{check_admin, AuthUser, SharedState};
 
 /// Optional date-range filter for CSV exports.
 #[derive(Debug, Deserialize, Default, utoipa::IntoParams)]
-pub(crate) struct ExportDateRange {
+pub struct ExportDateRange {
     /// Start date (inclusive), e.g. `2026-01-01`
     pub from: Option<NaiveDate>,
     /// End date (inclusive), e.g. `2026-03-21`
@@ -43,7 +44,7 @@ fn csv_escape(value: &str) -> String {
         || value.starts_with('@');
 
     let val = if needs_prefix {
-        format!("'{}", value)
+        format!("'{value}")
     } else {
         value.to_string()
     };
@@ -64,8 +65,12 @@ fn csv_response(
     filename: &str,
     body: String,
 ) -> (StatusCode, [(header::HeaderName, &'static str); 2], String) {
-    let disposition: &'static str =
-        Box::leak(format!("attachment; filename=\"{}\"", filename).into_boxed_str());
+    let disposition = match filename {
+        "bookings.csv" => "attachment; filename=\"bookings.csv\"",
+        "users.csv" => "attachment; filename=\"users.csv\"",
+        "revenue.csv" => "attachment; filename=\"revenue.csv\"",
+        _ => "attachment",
+    };
     (
         StatusCode::OK,
         [
@@ -123,7 +128,7 @@ fn in_date_range(dt: &DateTime<Utc>, range: &ExportDateRange) -> bool {
         (status = 403, description = "Admin access required"),
     )
 )]
-pub(crate) async fn admin_export_bookings_csv(
+pub async fn admin_export_bookings_csv(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(range): Query<ExportDateRange>,
@@ -171,13 +176,11 @@ pub(crate) async fn admin_export_bookings_csv(
         csv.push(',');
         csv.push_str(&b.end_time.to_rfc3339());
         csv.push(',');
-        csv.push_str(&csv_escape(
-            &format!("{:?}", b.status).to_lowercase(),
-        ));
+        csv.push_str(&csv_escape(&format!("{:?}", b.status).to_lowercase()));
         csv.push(',');
         csv.push_str(&csv_escape(&b.vehicle.license_plate));
         csv.push(',');
-        csv.push_str(&format!("{:.2}", b.pricing.total));
+        let _ = write!(csv, "{:.2}", b.pricing.total);
         csv.push(',');
         csv.push_str(&csv_escape(&b.pricing.currency));
         csv.push(',');
@@ -186,6 +189,7 @@ pub(crate) async fn admin_export_bookings_csv(
         ));
         csv.push('\n');
     }
+    drop(state_guard);
 
     csv_response("bookings.csv", csv)
 }
@@ -208,7 +212,7 @@ pub(crate) async fn admin_export_bookings_csv(
         (status = 403, description = "Admin access required"),
     )
 )]
-pub(crate) async fn admin_export_users_csv(
+pub async fn admin_export_users_csv(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(range): Query<ExportDateRange>,
@@ -222,10 +226,7 @@ pub(crate) async fn admin_export_users_csv(
         Ok(u) => u,
         Err(e) => {
             tracing::error!("Failed to list users for CSV export: {}", e);
-            return error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to export users",
-            );
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to export users");
         }
     };
 
@@ -244,9 +245,7 @@ pub(crate) async fn admin_export_users_csv(
         csv.push(',');
         csv.push_str(&csv_escape(&u.name));
         csv.push(',');
-        csv.push_str(&csv_escape(
-            &format!("{:?}", u.role).to_lowercase(),
-        ));
+        csv.push_str(&csv_escape(&format!("{:?}", u.role).to_lowercase()));
         csv.push(',');
         csv.push_str(if u.is_active { "true" } else { "false" });
         csv.push(',');
@@ -255,6 +254,7 @@ pub(crate) async fn admin_export_users_csv(
         csv.push_str(&u.created_at.to_rfc3339());
         csv.push('\n');
     }
+    drop(state_guard);
 
     csv_response("users.csv", csv)
 }
@@ -277,7 +277,7 @@ pub(crate) async fn admin_export_users_csv(
         (status = 403, description = "Admin access required"),
     )
 )]
-pub(crate) async fn admin_export_revenue_csv(
+pub async fn admin_export_revenue_csv(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(range): Query<ExportDateRange>,
@@ -297,6 +297,7 @@ pub(crate) async fn admin_export_revenue_csv(
             );
         }
     };
+    drop(state_guard);
 
     // Aggregate revenue by date (completed/active/confirmed bookings)
     let mut daily: std::collections::BTreeMap<String, (usize, f64, f64)> =
@@ -325,8 +326,7 @@ pub(crate) async fn admin_export_revenue_csv(
         entry.2 += b.pricing.tax; // tax
     }
 
-    let mut csv =
-        String::from("date,booking_count,gross_revenue,tax,net_revenue,currency\n");
+    let mut csv = String::from("date,booking_count,gross_revenue,tax,net_revenue,currency\n");
 
     for (date, (count, gross, tax)) in &daily {
         let net = gross - tax;
@@ -334,11 +334,11 @@ pub(crate) async fn admin_export_revenue_csv(
         csv.push(',');
         csv.push_str(&count.to_string());
         csv.push(',');
-        csv.push_str(&format!("{:.2}", gross));
+        let _ = write!(csv, "{gross:.2}");
         csv.push(',');
-        csv.push_str(&format!("{:.2}", tax));
+        let _ = write!(csv, "{tax:.2}");
         csv.push(',');
-        csv.push_str(&format!("{:.2}", net));
+        let _ = write!(csv, "{net:.2}");
         csv.push(',');
         csv.push_str("EUR");
         csv.push('\n');
@@ -470,10 +470,10 @@ mod tests {
 
     #[test]
     fn test_csv_response_headers() {
-        let (status, headers, body) = csv_response("test.csv", "a,b\n1,2\n".to_string());
+        let (status, headers, body) = csv_response("bookings.csv", "a,b\n1,2\n".to_string());
         assert_eq!(status, StatusCode::OK);
         assert_eq!(headers[0].1, "text/csv; charset=utf-8");
-        assert!(headers[1].1.contains("test.csv"));
+        assert!(headers[1].1.contains("bookings.csv"));
         assert_eq!(body, "a,b\n1,2\n");
     }
 }

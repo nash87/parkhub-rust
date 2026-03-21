@@ -75,7 +75,7 @@ impl From<&PushSubscription> for SubscriptionResponse {
         (status = 404, description = "VAPID keys not configured"),
     )
 )]
-pub(crate) async fn get_vapid_key() -> (StatusCode, Json<ApiResponse<VapidKeyResponse>>) {
+pub async fn get_vapid_key() -> (StatusCode, Json<ApiResponse<VapidKeyResponse>>) {
     match std::env::var("VAPID_PUBLIC_KEY") {
         Ok(key) if !key.is_empty() => (
             StatusCode::OK,
@@ -104,7 +104,7 @@ pub(crate) async fn get_vapid_key() -> (StatusCode, Json<ApiResponse<VapidKeyRes
         (status = 400, description = "Validation error"),
     )
 )]
-pub(crate) async fn subscribe(
+pub async fn subscribe(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<SubscribeRequest>,
@@ -165,7 +165,7 @@ pub(crate) async fn subscribe(
         (status = 200, description = "Subscriptions removed"),
     )
 )]
-pub(crate) async fn unsubscribe(
+pub async fn unsubscribe(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<()>>) {

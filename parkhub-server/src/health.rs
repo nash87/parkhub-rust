@@ -24,7 +24,7 @@ pub struct HealthResponse {
 }
 
 /// Health status
-#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum HealthStatus {
     Healthy,
@@ -75,7 +75,7 @@ pub struct AppHealth {
         (status = 200, description = "Service is alive"),
     )
 )]
-pub async fn liveness() -> impl IntoResponse {
+pub fn liveness() -> impl IntoResponse {
     StatusCode::OK
 }
 
@@ -96,6 +96,7 @@ pub async fn readiness(State(health): State<Arc<AppHealth>>) -> impl IntoRespons
     // Check database
     let db = health.db.read().await;
     let db_check = db.stats().await;
+    drop(db);
 
     match db_check {
         Ok(_) => (
@@ -109,7 +110,7 @@ pub async fn readiness(State(health): State<Arc<AppHealth>>) -> impl IntoRespons
             StatusCode::SERVICE_UNAVAILABLE,
             Json(ReadyResponse {
                 ready: false,
-                reason: Some(format!("Database unavailable: {}", e)),
+                reason: Some(format!("Database unavailable: {e}")),
             }),
         ),
     }
@@ -132,6 +133,8 @@ pub async fn health_check(State(health): State<Arc<AppHealth>>) -> Json<HealthRe
     let db_start = std::time::Instant::now();
     let db = health.db.read().await;
     let db_check = db.stats().await;
+    drop(db);
+    #[allow(clippy::cast_possible_truncation)]
     let db_response_time = db_start.elapsed().as_millis() as u64;
 
     match db_check {
@@ -178,7 +181,7 @@ pub async fn health_check(State(health): State<Arc<AppHealth>>) -> Json<HealthRe
                         checks.push(ComponentHealth {
                             name: "memory".to_string(),
                             status,
-                            message: Some(format!("{} MB", mb)),
+                            message: Some(format!("{mb} MB")),
                             response_time_ms: None,
                         });
                     }

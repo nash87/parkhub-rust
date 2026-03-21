@@ -58,19 +58,20 @@ pub async fn rate_limit_middleware(
     request: Request<Body>,
     next: Next,
 ) -> Response {
-    match rate_limiter.check() {
-        Ok(_) => next.run(request).await,
-        Err(_) => {
-            // Return 429 Too Many Requests
-            let error = AppError::RateLimited;
-            error.into_response()
-        }
+    if rate_limiter.check() == Ok(()) {
+        next.run(request).await
+    } else {
+        // Return 429 Too Many Requests
+        let error = AppError::RateLimited;
+        error.into_response()
     }
 }
 
 /// Per-IP rate limiter for more granular control
 pub mod per_ip {
-    use super::*;
+    use super::{
+        Arc, DefaultClock, Duration, NoOpMiddleware, NonZeroU32, Quota, RateLimiter, SocketAddr,
+    };
     use governor::state::keyed::DashMapStateStore;
     use std::net::IpAddr;
 
@@ -105,12 +106,12 @@ pub mod per_ip {
     /// Trusting the header unconditionally allows any remote client to spoof
     /// an arbitrary source IP and bypass per-IP rate limiting.
     pub fn get_client_ip(addr: Option<&SocketAddr>, forwarded_for: Option<&str>) -> IpAddr {
-        let peer_ip = addr.map(|a| a.ip());
+        let peer_ip = addr.map(std::net::SocketAddr::ip);
 
         // Only honour X-Forwarded-For when the request arrives from a trusted
         // proxy (private network or loopback).  Requests from public IPs use
         // their direct peer address regardless of the header value.
-        let is_trusted_proxy = peer_ip.map(|ip| is_private_ip(&ip)).unwrap_or(false);
+        let is_trusted_proxy = peer_ip.is_some_and(|ip| is_private_ip(&ip));
 
         if is_trusted_proxy {
             if let Some(forwarded) = forwarded_for {
@@ -128,7 +129,7 @@ pub mod per_ip {
 
     /// Returns true if `ip` is a private, loopback, or link-local address —
     /// i.e., an address that can only originate from a trusted internal host.
-    fn is_private_ip(ip: &IpAddr) -> bool {
+    const fn is_private_ip(ip: &IpAddr) -> bool {
         match ip {
             IpAddr::V4(ipv4) => ipv4.is_private() || ipv4.is_loopback() || ipv4.is_link_local(),
             IpAddr::V6(ipv6) => ipv6.is_loopback(),
@@ -151,7 +152,7 @@ pub async fn ip_rate_limit_middleware(
         .headers()
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_owned());
+        .map(std::borrow::ToOwned::to_owned);
 
     let peer_addr = request
         .extensions()
@@ -161,7 +162,7 @@ pub async fn ip_rate_limit_middleware(
     let client_ip = per_ip::get_client_ip(peer_addr.as_ref(), forwarded_for.as_deref());
 
     match limiter.check_key(&client_ip) {
-        Ok(_) => next.run(request).await,
+        Ok(()) => next.run(request).await,
         Err(_) => AppError::RateLimited.into_response(),
     }
 }

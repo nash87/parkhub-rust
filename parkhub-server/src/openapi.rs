@@ -1,6 +1,6 @@
-//! OpenAPI Documentation
+//! `OpenAPI` Documentation
 //!
-//! Generates OpenAPI 3.0 specification and Swagger UI.
+//! Generates `OpenAPI` 3.0 specification and Swagger UI.
 
 use axum::Router;
 use utoipa::OpenApi;
@@ -19,10 +19,15 @@ use crate::{
     error::{ApiError, FieldError},
     health::{ComponentHealth, HealthResponse, HealthStatus, ReadyResponse},
     jwt::TokenPair,
-    requests::*,
+    requests::{
+        BookingFiltersParams, ChangePasswordRequest, CreateBookingRequest, CreateParkingLotRequest,
+        ExtendBookingRequest, LoginRequest, PaginationParams, RefreshTokenRequest, RegisterRequest,
+        UpdateBookingRequest, UpdateParkingLotRequest, UpdatePreferencesRequest,
+        UpdateProfileRequest, UpdateQuotaRequest, VehicleRequest,
+    },
 };
 
-/// OpenAPI documentation
+/// `OpenAPI` documentation
 #[derive(OpenApi)]
 #[openapi(
     info(
@@ -378,7 +383,7 @@ pub fn swagger_ui() -> SwaggerUi {
     SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi())
 }
 
-/// Add OpenAPI routes to router
+/// Add `OpenAPI` routes to router
 pub fn with_openapi(router: Router) -> Router {
     router.merge(swagger_ui())
 }
@@ -486,7 +491,10 @@ mod tests {
     fn test_openapi_has_export_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in ["/api/v1/admin/export/users", "/api/v1/admin/export/bookings"] {
+        for path in [
+            "/api/v1/admin/export/users",
+            "/api/v1/admin/export/bookings",
+        ] {
             assert!(json.contains(path), "Missing path: {path}");
         }
     }
@@ -607,10 +615,7 @@ mod tests {
     fn test_openapi_has_guest_booking_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in [
-            "/api/v1/bookings/guest",
-            "/api/v1/admin/guest-bookings",
-        ] {
+        for path in ["/api/v1/bookings/guest", "/api/v1/admin/guest-bookings"] {
             assert!(json.contains(path), "Missing path: {path}");
         }
     }
@@ -643,10 +648,7 @@ mod tests {
     fn test_openapi_has_absence_pattern_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in [
-            "/api/v1/absences/team",
-            "/api/v1/absences/pattern",
-        ] {
+        for path in ["/api/v1/absences/team", "/api/v1/absences/pattern"] {
             assert!(json.contains(path), "Missing path: {path}");
         }
     }

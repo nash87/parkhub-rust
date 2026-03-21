@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 /// Server configuration
+#[allow(clippy::struct_excessive_bools)] // config struct — bools are independent settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
     /// Display name for this server
@@ -102,15 +103,15 @@ pub struct ServerConfig {
     pub reduce_motion: bool,
 }
 
-fn default_font_scale() -> f32 {
+const fn default_font_scale() -> f32 {
     1.0
 }
 
-fn default_session_timeout() -> u32 {
+const fn default_session_timeout() -> u32 {
     60 // 1 hour default
 }
 
-fn default_backup_count() -> u32 {
+const fn default_backup_count() -> u32 {
     7 // Keep 7 days of backups
 }
 
@@ -122,7 +123,7 @@ fn default_close_behavior() -> String {
     "ask".to_string()
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 

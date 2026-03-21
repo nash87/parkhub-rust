@@ -100,7 +100,7 @@ pub struct CreateBookingRequest {
     #[serde(default)]
     pub vehicle_id: Option<Uuid>,
 
-    /// License plate (required if no vehicle_id)
+    /// License plate (required if no `vehicle_id`)
     #[serde(default)]
     #[validate(custom(function = "validate_license_plate"))]
     pub license_plate: Option<String>,
@@ -266,7 +266,7 @@ pub struct CreateParkingLotRequest {
 
     /// Monthly pass price (optional)
     #[serde(default)]
-    #[validate(range(min = 0.0, max = 100000.0, message = "Monthly pass must be 0-100000"))]
+    #[validate(range(min = 0.0, max = 100_000.0, message = "Monthly pass must be 0-100000"))]
     pub monthly_pass: Option<f64>,
 
     /// Currency code (defaults to "EUR")
@@ -311,7 +311,7 @@ pub struct UpdateParkingLotRequest {
     pub daily_max: Option<f64>,
 
     /// Monthly pass price
-    #[validate(range(min = 0.0, max = 100000.0, message = "Monthly pass must be 0-100000"))]
+    #[validate(range(min = 0.0, max = 100_000.0, message = "Monthly pass must be 0-100000"))]
     pub monthly_pass: Option<f64>,
 
     /// Currency code
@@ -326,11 +326,11 @@ fn default_currency() -> String {
     "EUR".to_string()
 }
 
-fn default_total_slots() -> i32 {
+const fn default_total_slots() -> i32 {
     10
 }
 
-/// Parse a status string into a LotStatus enum.
+/// Parse a status string into a `LotStatus` enum.
 /// Returns None for unrecognized values.
 pub fn parse_lot_status(s: &str) -> Option<parkhub_common::models::LotStatus> {
     use parkhub_common::models::LotStatus;
@@ -361,10 +361,10 @@ pub struct PaginationParams {
     pub per_page: i32,
 }
 
-fn default_page() -> i32 {
+const fn default_page() -> i32 {
     1
 }
-fn default_per_page() -> i32 {
+const fn default_per_page() -> i32 {
     20
 }
 

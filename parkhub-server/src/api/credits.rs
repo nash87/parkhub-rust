@@ -19,7 +19,7 @@ use super::{admin::AdminUserResponse, check_admin, AuthUser, SharedState};
 
 /// Response for user credits endpoint
 #[derive(Debug, Serialize)]
-pub(crate) struct UserCreditsResponse {
+pub struct UserCreditsResponse {
     pub credits_balance: i32,
     pub credits_monthly_quota: i32,
     pub credits_last_refilled: Option<chrono::DateTime<Utc>>,
@@ -28,7 +28,7 @@ pub(crate) struct UserCreditsResponse {
 
 /// Request body for admin credit grant
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-pub(crate) struct AdminGrantCreditsRequest {
+pub struct AdminGrantCreditsRequest {
     amount: i32,
     description: Option<String>,
 }
@@ -50,24 +50,21 @@ pub(crate) struct AdminGrantCreditsRequest {
     )
 )]
 #[tracing::instrument(skip(state), fields(user_id = %auth_user.user_id))]
-pub(crate) async fn get_user_credits(
+pub async fn get_user_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<UserCreditsResponse>>) {
     let state_guard = state.read().await;
 
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "User not found")),
-            );
-        }
+    else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
     };
 
     let transactions = state_guard
@@ -75,6 +72,7 @@ pub(crate) async fn get_user_credits(
         .list_credit_transactions_for_user(auth_user.user_id)
         .await
         .unwrap_or_default();
+    drop(state_guard);
 
     // Return last 20 transactions
     let recent: Vec<CreditTransaction> = transactions.into_iter().take(20).collect();
@@ -107,7 +105,7 @@ pub(crate) async fn get_user_credits(
     )
 )]
 #[tracing::instrument(skip(state, req), fields(admin_id = %auth_user.user_id, target_user_id = %user_id, amount = req.amount))]
-pub(crate) async fn admin_grant_credits(
+pub async fn admin_grant_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(user_id): Path<String>,
@@ -164,13 +162,14 @@ pub(crate) async fn admin_grant_credits(
         booking_id: None,
         amount: req.amount,
         transaction_type: CreditTransactionType::Grant,
-        description: req.description.or(Some("Admin grant".to_string())),
+        description: req.description.or_else(|| Some("Admin grant".to_string())),
         granted_by: Some(auth_user.user_id),
         created_at: Utc::now(),
     };
     if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
         tracing::warn!("Failed to save credit grant transaction: {e}");
     }
+    drop(state_guard);
 
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
@@ -379,7 +378,7 @@ mod tests {
         (status = 403, description = "Admin access required"),
     )
 )]
-pub(crate) async fn admin_refill_all_credits(
+pub async fn admin_refill_all_credits(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
@@ -412,7 +411,7 @@ pub(crate) async fn admin_refill_all_credits(
         let old_balance = user.credits_balance;
         user.credits_balance = user.credits_monthly_quota;
         user.credits_last_refilled = Some(now);
-        if let Ok(()) = state_guard.db.save_user(&user).await {
+        if matches!(state_guard.db.save_user(&user).await, Ok(())) {
             let tx = CreditTransaction {
                 id: Uuid::new_v4(),
                 user_id: user.id,
@@ -432,6 +431,7 @@ pub(crate) async fn admin_refill_all_credits(
             refilled += 1;
         }
     }
+    drop(state_guard);
 
     (
         StatusCode::OK,
@@ -456,7 +456,7 @@ pub(crate) async fn admin_refill_all_credits(
         (status = 404, description = "User not found"),
     )
 )]
-pub(crate) async fn admin_update_user_quota(
+pub async fn admin_update_user_quota(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(user_id): Path<String>,
@@ -526,6 +526,7 @@ pub(crate) async fn admin_update_user_quota(
     if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
         tracing::warn!("Failed to save quota adjustment transaction: {e}");
     }
+    drop(state_guard);
 
     tracing::info!(
         "Admin {} updated quota for user {} from {} to {}",

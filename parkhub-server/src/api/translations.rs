@@ -48,7 +48,7 @@ pub struct ProposalQuery {
 // Validation helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn validate_proposal_input(req: &CreateProposalRequest) -> Result<(), &'static str> {
+const fn validate_proposal_input(req: &CreateProposalRequest) -> Result<(), &'static str> {
     if req.language.is_empty() || req.language.len() > 10 {
         return Err("Language must be 1-10 characters");
     }
@@ -79,7 +79,7 @@ fn validate_proposal_input(req: &CreateProposalRequest) -> Result<(), &'static s
     description = "Returns all approved translation overrides for runtime i18n patching.",
     responses((status = 200, description = "List of overrides"))
 )]
-pub(crate) async fn list_overrides(
+pub async fn list_overrides(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
 ) -> Json<ApiResponse<Vec<TranslationOverride>>> {
@@ -105,7 +105,7 @@ pub(crate) async fn list_overrides(
     params(("status" = Option<String>, Query, description = "Filter: pending, approved, rejected")),
     responses((status = 200, description = "List of proposals"))
 )]
-pub(crate) async fn list_proposals(
+pub async fn list_proposals(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<ProposalQuery>,
@@ -136,12 +136,12 @@ pub(crate) async fn list_proposals(
                 if let Some(obj) = val.as_object_mut() {
                     obj.insert(
                         "user_vote".into(),
-                        user_vote
-                            .map_or(serde_json::Value::Null, serde_json::Value::String),
+                        user_vote.map_or(serde_json::Value::Null, serde_json::Value::String),
                     );
                 }
                 enriched.push(val);
             }
+            drop(state);
 
             Json(ApiResponse::success(enriched))
         }
@@ -167,7 +167,7 @@ pub(crate) async fn list_proposals(
         (status = 404, description = "Not found"),
     )
 )]
-pub(crate) async fn get_proposal(
+pub async fn get_proposal(
     State(state): State<SharedState>,
     Extension(_auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -200,7 +200,7 @@ pub(crate) async fn get_proposal(
         (status = 201, description = "Proposal created"),
     )
 )]
-pub(crate) async fn create_proposal(
+pub async fn create_proposal(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateProposalRequest>,
@@ -244,9 +244,13 @@ pub(crate) async fn create_proposal(
         tracing::error!("Failed to save proposal: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to create proposal")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to create proposal",
+            )),
         );
     }
+    drop(state);
 
     tracing::info!(
         "User {} created translation proposal {} for key {}",
@@ -272,7 +276,8 @@ pub(crate) async fn create_proposal(
         (status = 404, description = "Proposal not found"),
     )
 )]
-pub(crate) async fn vote_on_proposal(
+#[allow(clippy::too_many_lines)]
+pub async fn vote_on_proposal(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -413,7 +418,10 @@ pub(crate) async fn vote_on_proposal(
         tracing::error!("Failed to save proposal after vote: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to update proposal")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update proposal",
+            )),
         );
     }
 
@@ -425,13 +433,13 @@ pub(crate) async fn vote_on_proposal(
         .ok()
         .flatten()
         .map(|v| v.vote);
+    drop(state);
 
     let mut val = serde_json::to_value(&proposal).unwrap_or_default();
     if let Some(obj) = val.as_object_mut() {
         obj.insert(
             "user_vote".into(),
-            user_vote
-                .map_or(serde_json::Value::Null, serde_json::Value::String),
+            user_vote.map_or(serde_json::Value::Null, serde_json::Value::String),
         );
     }
 
@@ -453,7 +461,7 @@ pub(crate) async fn vote_on_proposal(
         (status = 404, description = "Not found"),
     )
 )]
-pub(crate) async fn review_proposal(
+pub async fn review_proposal(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -463,10 +471,7 @@ pub(crate) async fn review_proposal(
 
     // Admin check
     if let Err((status, msg)) = check_admin(&state, &auth_user).await {
-        return (
-            status,
-            Json(ApiResponse::error("FORBIDDEN", msg)),
-        );
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
     let new_status = match req.status.as_str() {
@@ -526,10 +531,7 @@ pub(crate) async fn review_proposal(
         tracing::error!("Failed to save reviewed proposal: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to save review",
-            )),
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to save review")),
         );
     }
 

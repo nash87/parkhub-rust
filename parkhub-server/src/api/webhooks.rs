@@ -67,7 +67,7 @@ pub struct WebhookResponse {
     pub updated_at: String,
 }
 
-fn default_true() -> bool {
+const fn default_true() -> bool {
     true
 }
 
@@ -105,9 +105,8 @@ const VALID_EVENTS: &[&str] = &[
 /// Validate a webhook URL for SSRF safety.
 /// Returns an error message string if invalid, None if OK.
 fn validate_webhook_url(url: &str) -> Option<&'static str> {
-    let parsed = match url::Url::parse(url) {
-        Ok(u) => u,
-        Err(_) => return Some("Invalid URL format"),
+    let Ok(parsed) = url::Url::parse(url) else {
+        return Some("Invalid URL format");
     };
 
     // Must be HTTPS (allow HTTP only for localhost in dev builds)
@@ -125,9 +124,8 @@ fn validate_webhook_url(url: &str) -> Option<&'static str> {
         }
     }
 
-    let host = match parsed.host_str() {
-        Some(h) => h,
-        None => return Some("URL must have a host"),
+    let Some(host) = parsed.host_str() else {
+        return Some("URL must have a host");
     };
 
     // Block localhost and related
@@ -193,7 +191,7 @@ fn generate_secret() -> String {
         (status = 403, description = "Admin access required"),
     )
 )]
-pub(crate) async fn list_webhooks(
+pub async fn list_webhooks(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<WebhookResponse>>>) {
@@ -247,7 +245,7 @@ pub(crate) async fn list_webhooks(
         (status = 403, description = "Admin access required"),
     )
 )]
-pub(crate) async fn create_webhook(
+pub async fn create_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateWebhookRequest>,
@@ -321,6 +319,7 @@ pub(crate) async fn create_webhook(
             )),
         );
     }
+    drop(state_guard);
 
     tracing::info!("Created webhook {} -> {}", webhook.id, webhook.url);
 
@@ -346,7 +345,7 @@ pub(crate) async fn create_webhook(
         (status = 404, description = "Webhook not found"),
     )
 )]
-pub(crate) async fn update_webhook(
+pub async fn update_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -439,6 +438,7 @@ pub(crate) async fn update_webhook(
             )),
         );
     }
+    drop(state_guard);
 
     tracing::info!("Updated webhook {}", webhook.id);
 
@@ -462,7 +462,7 @@ pub(crate) async fn update_webhook(
         (status = 404, description = "Webhook not found"),
     )
 )]
-pub(crate) async fn delete_webhook(
+pub async fn delete_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -520,7 +520,7 @@ pub(crate) async fn delete_webhook(
         (status = 404, description = "Webhook not found"),
     )
 )]
-pub(crate) async fn test_webhook(
+pub async fn test_webhook(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
@@ -558,6 +558,7 @@ pub(crate) async fn test_webhook(
             );
         }
     };
+    drop(state_guard);
 
     let payload = serde_json::json!({
         "event": "test",
