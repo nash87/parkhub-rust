@@ -1793,6 +1793,48 @@ impl Database {
         Ok(transactions)
     }
 
+    /// List all credit transactions across all users, with optional filters.
+    pub async fn list_all_credit_transactions(
+        &self,
+        user_id_filter: Option<uuid::Uuid>,
+        type_filter: Option<parkhub_common::models::CreditTransactionType>,
+        from: Option<chrono::DateTime<chrono::Utc>>,
+        to: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<Vec<parkhub_common::models::CreditTransaction>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(CREDIT_TRANSACTIONS)?;
+        let mut transactions = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let tx: parkhub_common::models::CreditTransaction = self.deserialize(value.value())?;
+            if let Some(uid) = user_id_filter {
+                if tx.user_id != uid {
+                    continue;
+                }
+            }
+            if let Some(ref t) = type_filter {
+                if &tx.transaction_type != t {
+                    continue;
+                }
+            }
+            if let Some(f) = from {
+                if tx.created_at < f {
+                    continue;
+                }
+            }
+            if let Some(t) = to {
+                if tx.created_at > t {
+                    continue;
+                }
+            }
+            transactions.push(tx);
+        }
+        transactions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        Ok(transactions)
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // WEBHOOK OPERATIONS
     // ═══════════════════════════════════════════════════════════════════════════
