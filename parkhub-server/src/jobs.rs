@@ -18,13 +18,13 @@ use crate::AppState;
 pub type SharedState = Arc<RwLock<AppState>>;
 
 /// Start all background jobs.  Call once after `AppState` is initialised.
-pub async fn start_background_jobs(state: SharedState) {
+#[allow(clippy::needless_pass_by_value)] // state is cloned into multiple spawned tasks
+pub fn start_background_jobs(state: SharedState) {
     // ── AutoRelease: every 5 minutes ────────────────────────────────────────
     {
         let s = state.clone();
         tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(300));
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
             loop {
                 interval.tick().await;
                 if let Err(e) = auto_release_no_shows(&s).await {
@@ -38,8 +38,7 @@ pub async fn start_background_jobs(state: SharedState) {
     {
         let s = state.clone();
         tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(3600));
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600));
             loop {
                 interval.tick().await;
                 if let Err(e) = expand_recurring_bookings(&s).await {
@@ -54,8 +53,7 @@ pub async fn start_background_jobs(state: SharedState) {
         let s = state.clone();
         tokio::spawn(async move {
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-            let mut interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(86400));
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86400));
             loop {
                 interval.tick().await;
                 if let Err(e) = purge_expired_bookings(&s).await {
@@ -69,8 +67,7 @@ pub async fn start_background_jobs(state: SharedState) {
     {
         let s = state.clone();
         tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(tokio::time::Duration::from_secs(900));
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(900));
             loop {
                 interval.tick().await;
                 if let Err(e) = aggregate_occupancy_stats(&s).await {
@@ -129,8 +126,7 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
         .filter(|b| {
             matches!(
                 b.status,
-                parkhub_common::BookingStatus::Active
-                    | parkhub_common::BookingStatus::Confirmed
+                parkhub_common::BookingStatus::Active | parkhub_common::BookingStatus::Confirmed
             ) && b.check_in_time.is_none()
                 && now > b.start_time + threshold
         })
@@ -140,7 +136,10 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    info!("AutoRelease: releasing {} no-show booking(s)", to_release.len());
+    info!(
+        "AutoRelease: releasing {} no-show booking(s)",
+        to_release.len()
+    );
 
     for mut booking in to_release {
         let slot_id = booking.slot_id.to_string();
@@ -199,12 +198,12 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
 
         for rec in recurring.iter().filter(|r| r.active) {
             // Parse series start/end dates
-            let series_start = match NaiveDate::parse_from_str(&rec.start_date, "%Y-%m-%d") {
-                Ok(d) => d,
-                Err(_) => {
-                    warn!("ExpandRecurring: bad start_date '{}' on {}", rec.start_date, rec.id);
-                    continue;
-                }
+            let Ok(series_start) = NaiveDate::parse_from_str(&rec.start_date, "%Y-%m-%d") else {
+                warn!(
+                    "ExpandRecurring: bad start_date '{}' on {}",
+                    rec.start_date, rec.id
+                );
+                continue;
             };
             let series_end: Option<NaiveDate> = rec
                 .end_date
@@ -212,24 +211,23 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
                 .and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
 
             // Parse HH:MM slot times
-            let slot_start = match NaiveTime::parse_from_str(&rec.start_time, "%H:%M") {
-                Ok(t) => t,
-                Err(_) => {
-                    warn!("ExpandRecurring: bad start_time '{}' on {}", rec.start_time, rec.id);
-                    continue;
-                }
+            let Ok(slot_start) = NaiveTime::parse_from_str(&rec.start_time, "%H:%M") else {
+                warn!(
+                    "ExpandRecurring: bad start_time '{}' on {}",
+                    rec.start_time, rec.id
+                );
+                continue;
             };
-            let slot_end = match NaiveTime::parse_from_str(&rec.end_time, "%H:%M") {
-                Ok(t) => t,
-                Err(_) => {
-                    warn!("ExpandRecurring: bad end_time '{}' on {}", rec.end_time, rec.id);
-                    continue;
-                }
+            let Ok(slot_end) = NaiveTime::parse_from_str(&rec.end_time, "%H:%M") else {
+                warn!(
+                    "ExpandRecurring: bad end_time '{}' on {}",
+                    rec.end_time, rec.id
+                );
+                continue;
             };
 
             // days_of_week: 0 = Monday … 6 = Sunday (matches chrono Weekday::num_days_from_monday)
-            let day_set: std::collections::HashSet<u8> =
-                rec.days_of_week.iter().copied().collect();
+            let day_set: std::collections::HashSet<u8> = rec.days_of_week.iter().copied().collect();
 
             // Build set of existing booking dates for this user+slot to avoid duplicates
             let slot_id_opt = rec.slot_id;
@@ -237,7 +235,7 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
                 .iter()
                 .filter(|b| {
                     b.user_id == rec.user_id
-                        && slot_id_opt.map_or(true, |sid| b.slot_id == sid)
+                        && slot_id_opt.is_none_or(|sid| b.slot_id == sid)
                         && !matches!(
                             b.status,
                             parkhub_common::BookingStatus::Cancelled
@@ -254,6 +252,7 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
 
             let mut cursor = walk_start;
             while cursor <= walk_end {
+                #[allow(clippy::cast_possible_truncation)] // weekday is always 0..6
                 let dow = cursor.weekday().num_days_from_monday() as u8;
                 if day_set.contains(&dow) && !existing_dates.contains(&cursor) {
                     // Create a new booking for this date (treat stored times as UTC)
@@ -270,34 +269,32 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
                             .await
                             .unwrap_or_default()
                             .into_iter()
-                            .find(|v| v.is_default || true) // first available
+                            .next() // first available (prefer default if sorted)
                     };
                     let Some(vehicle) = vehicle else {
                         continue;
                     };
 
                     // Resolve slot_id: recurring bookings may not pin a slot
-                    let slot_id = match rec.slot_id {
-                        Some(sid) => sid,
-                        None => {
-                            // Pick the first available slot in the lot (best-effort)
-                            let guard = state.read().await;
-                            let slots = guard
-                                .db
-                                .list_slots_by_lot(&rec.lot_id.to_string())
-                                .await
-                                .unwrap_or_default();
-                            match slots.into_iter().find(|s| {
-                                s.status == parkhub_common::SlotStatus::Available
-                            }) {
-                                Some(s) => s.id,
-                                None => {
-                                    // No available slot — skip this date
-                                    cursor += Duration::days(1);
-                                    continue;
-                                }
-                            }
-                        }
+                    let slot_id = if let Some(sid) = rec.slot_id {
+                        sid
+                    } else {
+                        // Pick the first available slot in the lot (best-effort)
+                        let guard = state.read().await;
+                        let slots = guard
+                            .db
+                            .list_slots_by_lot(&rec.lot_id.to_string())
+                            .await
+                            .unwrap_or_default();
+                        let Some(s) = slots
+                            .into_iter()
+                            .find(|s| s.status == parkhub_common::SlotStatus::Available)
+                        else {
+                            // No available slot -- skip this date
+                            cursor += Duration::days(1);
+                            continue;
+                        };
+                        s.id
                     };
 
                     // Fetch slot + lot for metadata
@@ -470,7 +467,10 @@ async fn aggregate_occupancy_stats(state: &SharedState) -> anyhow::Result<()> {
 
         let guard = state.write().await;
         if let Err(e) = guard.db.set_setting(&key, &value).await {
-            error!("AggregateOccupancy: failed to write stats for lot {}: {e}", lot.id);
+            error!(
+                "AggregateOccupancy: failed to write stats for lot {}: {e}",
+                lot.id
+            );
         } else {
             stats_written += 1;
         }

@@ -11,7 +11,7 @@ use base64::Engine;
 use chrono::Utc;
 use uuid::Uuid;
 
-use parkhub_common::{ApiResponse, Vehicle, VehicleType};
+use parkhub_common::{ApiResponse, Vehicle};
 
 use crate::audit::{AuditEntry, AuditEventType};
 use crate::requests::VehicleRequest;

@@ -21,11 +21,11 @@ mod db;
 mod demo;
 mod discovery;
 mod email;
-mod jobs;
 #[allow(dead_code)]
 mod error;
 #[allow(dead_code)]
 mod health;
+mod jobs;
 #[allow(dead_code)]
 mod jwt;
 #[allow(dead_code)]
@@ -45,9 +45,9 @@ pub mod utils;
 mod validation;
 
 #[cfg(test)]
-mod integration_tests;
-#[cfg(test)]
 mod booking_tests;
+#[cfg(test)]
+mod integration_tests;
 
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};
@@ -835,7 +835,7 @@ async fn main() -> Result<()> {
     }
 
     // Start background jobs (AutoRelease, ExpandRecurring, PurgeExpired, AggregateOccupancy)
-    jobs::start_background_jobs(state.clone()).await;
+    jobs::start_background_jobs(state.clone());
 
     // Show status GUI or wait for shutdown signal
     #[cfg(feature = "gui")]
@@ -1400,15 +1400,14 @@ async fn run_status_gui(
     // Intercept window close button (X)
     let ui_weak_window_close = ui.as_weak();
     ui.window().on_close_requested(move || {
-        ui_weak_window_close.upgrade().map_or(
-            slint::CloseRequestResponse::HideWindow,
-            |ui| {
+        ui_weak_window_close
+            .upgrade()
+            .map_or(slint::CloseRequestResponse::HideWindow, |ui| {
                 // Trigger our close_requested handler
                 ui.invoke_close_requested();
                 // Don't actually close - let the handler decide
                 slint::CloseRequestResponse::KeepWindowShown
-            },
-        )
+            })
     });
 
     // Run the UI event loop
@@ -1653,12 +1652,56 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
 
     // GDPR-compliant fictional last names (common, not identifying real people)
     let last_names = [
-        "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-        "Rodriguez", "Martinez", "Anderson", "Taylor", "Thomas", "Jackson", "White", "Harris",
-        "Martin", "Thompson", "Moore", "Young", "Allen", "King", "Wright", "Scott", "Green",
-        "Baker", "Adams", "Nelson", "Hill", "Ramirez", "Campbell", "Mitchell", "Roberts",
-        "Carter", "Phillips", "Evans", "Turner", "Torres", "Parker", "Collins", "Edwards",
-        "Stewart", "Flores", "Morris", "Murphy", "Rivera", "Cook", "Rogers", "Morgan", "Peterson",
+        "Smith",
+        "Johnson",
+        "Williams",
+        "Brown",
+        "Jones",
+        "Garcia",
+        "Miller",
+        "Davis",
+        "Rodriguez",
+        "Martinez",
+        "Anderson",
+        "Taylor",
+        "Thomas",
+        "Jackson",
+        "White",
+        "Harris",
+        "Martin",
+        "Thompson",
+        "Moore",
+        "Young",
+        "Allen",
+        "King",
+        "Wright",
+        "Scott",
+        "Green",
+        "Baker",
+        "Adams",
+        "Nelson",
+        "Hill",
+        "Ramirez",
+        "Campbell",
+        "Mitchell",
+        "Roberts",
+        "Carter",
+        "Phillips",
+        "Evans",
+        "Turner",
+        "Torres",
+        "Parker",
+        "Collins",
+        "Edwards",
+        "Stewart",
+        "Flores",
+        "Morris",
+        "Murphy",
+        "Rivera",
+        "Cook",
+        "Rogers",
+        "Morgan",
+        "Peterson",
     ];
 
     // Default password for all dummy users - they can login with this
@@ -1675,9 +1718,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
         UserRole::Admin,
     ];
 
-    info!(
-        "Generating 50 GDPR-compliant dummy users (password: {default_password})...",
-    );
+    info!("Generating 50 GDPR-compliant dummy users (password: {default_password})...",);
 
     // Pre-generate all users with rng (ThreadRng is not Send, so must not cross await)
     let users: Vec<User> = {
@@ -1717,9 +1758,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
     }
 
     info!("Created 50 dummy users successfully");
-    info!(
-        "Default login: any username with password '{default_password}'",
-    );
+    info!("Default login: any username with password '{default_password}'",);
     Ok(())
 }
 

@@ -40,8 +40,8 @@ where
 
 // === Common Validation Rules ===
 
-use std::sync::LazyLock;
 use regex::Regex;
+use std::sync::LazyLock;
 
 /// Email regex pattern
 pub static EMAIL_REGEX: LazyLock<Regex> =

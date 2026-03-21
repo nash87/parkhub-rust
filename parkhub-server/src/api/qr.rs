@@ -237,7 +237,10 @@ pub async fn slot_qr_code(
         Ok(None) => {
             return (
                 StatusCode::NOT_FOUND,
-                Json(ApiResponse::<()>::error("NOT_FOUND", "Parking slot not found")),
+                Json(ApiResponse::<()>::error(
+                    "NOT_FOUND",
+                    "Parking slot not found",
+                )),
             )
                 .into_response();
         }
@@ -245,7 +248,10 @@ pub async fn slot_qr_code(
             tracing::error!("Database error fetching slot for QR: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "Internal server error")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "Internal server error",
+                )),
             )
                 .into_response();
         }
@@ -255,7 +261,10 @@ pub async fn slot_qr_code(
     if slot.lot_id.to_string() != lot_id {
         return (
             StatusCode::NOT_FOUND,
-            Json(ApiResponse::<()>::error("NOT_FOUND", "Parking slot not found in this lot")),
+            Json(ApiResponse::<()>::error(
+                "NOT_FOUND",
+                "Parking slot not found in this lot",
+            )),
         )
             .into_response();
     }
@@ -275,7 +284,10 @@ pub async fn slot_qr_code(
             tracing::error!("Failed to serialize slot QR payload: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "QR generation failed",
+                )),
             )
                 .into_response();
         }
@@ -288,7 +300,10 @@ pub async fn slot_qr_code(
             tracing::error!("Slot QR code generation failed: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "QR generation failed",
+                )),
             )
                 .into_response();
         }
@@ -303,7 +318,10 @@ pub async fn slot_qr_code(
         tracing::error!("PNG encoding failed for slot QR: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::<()>::error("SERVER_ERROR", "QR generation failed")),
+            Json(ApiResponse::<()>::error(
+                "SERVER_ERROR",
+                "QR generation failed",
+            )),
         )
             .into_response();
     }

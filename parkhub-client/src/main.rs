@@ -574,13 +574,18 @@ async fn main() -> Result<()> {
                                         u.name
                                             .chars()
                                             .next()
-                                            .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
+                                            .or_else(|| u.username.chars().next())
+                                            .map_or_else(
+                                                || "?".to_string(),
+                                                |c| c.to_uppercase().to_string(),
+                                            ),
                                     ),
                                     role: SharedString::from(format!("{:?}", u.role)),
                                     is_active: u.is_active,
-                                    last_login: SharedString::from(
-                                        u.last_login.map_or_else(|| "-".to_string(), |dt| dt.format("%d.%m.%Y %H:%M").to_string()),
-                                    ),
+                                    last_login: SharedString::from(u.last_login.map_or_else(
+                                        || "-".to_string(),
+                                        |dt| dt.format("%d.%m.%Y %H:%M").to_string(),
+                                    )),
                                     created_at: SharedString::from(
                                         u.created_at.format("%d.%m.%Y").to_string(),
                                     ),
@@ -637,13 +642,18 @@ async fn main() -> Result<()> {
                                             u.name
                                                 .chars()
                                                 .next()
-                                                .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
+                                                .or_else(|| u.username.chars().next())
+                                                .map_or_else(
+                                                    || "?".to_string(),
+                                                    |c| c.to_uppercase().to_string(),
+                                                ),
                                         ),
                                         role: SharedString::from(format!("{:?}", u.role)),
                                         is_active: u.is_active,
-                                        last_login: SharedString::from(
-                                            u.last_login.map_or_else(|| "-".to_string(), |dt| dt.format("%d.%m.%Y %H:%M").to_string()),
-                                        ),
+                                        last_login: SharedString::from(u.last_login.map_or_else(
+                                            || "-".to_string(),
+                                            |dt| dt.format("%d.%m.%Y %H:%M").to_string(),
+                                        )),
                                         created_at: SharedString::from(
                                             u.created_at.format("%d.%m.%Y").to_string(),
                                         ),
@@ -722,14 +732,21 @@ async fn main() -> Result<()> {
                                                     u.name
                                                         .chars()
                                                         .next()
-                                                        .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
+                                                        .or_else(|| u.username.chars().next())
+                                                        .map_or_else(
+                                                            || "?".to_string(),
+                                                            |c| c.to_uppercase().to_string(),
+                                                        ),
                                                 ),
                                                 role: SharedString::from(format!("{:?}", u.role)),
                                                 is_active: u.is_active,
                                                 last_login: SharedString::from(
-                                                    u.last_login.map_or_else(|| "-".to_string(), |dt| {
+                                                    u.last_login.map_or_else(
+                                                        || "-".to_string(),
+                                                        |dt| {
                                                             dt.format("%d.%m.%Y %H:%M").to_string()
-                                                        }),
+                                                        },
+                                                    ),
                                                 ),
                                                 created_at: SharedString::from(
                                                     u.created_at.format("%d.%m.%Y").to_string(),
@@ -792,13 +809,15 @@ async fn main() -> Result<()> {
                         u.name
                             .chars()
                             .next()
-                            .or_else(|| u.username.chars().next()).map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
+                            .or_else(|| u.username.chars().next())
+                            .map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
                     ),
                     role: SharedString::from(format!("{:?}", u.role)),
                     is_active: u.is_active,
-                    last_login: SharedString::from(
-                        u.last_login.map_or_else(|| "-".to_string(), |dt| dt.format("%d.%m.%Y %H:%M").to_string()),
-                    ),
+                    last_login: SharedString::from(u.last_login.map_or_else(
+                        || "-".to_string(),
+                        |dt| dt.format("%d.%m.%Y %H:%M").to_string(),
+                    )),
                     created_at: SharedString::from(u.created_at.format("%d.%m.%Y").to_string()),
                 })
                 .collect();
@@ -831,33 +850,38 @@ async fn main() -> Result<()> {
                                 server_name: SharedString::from(
                                     config["server_name"].as_str().unwrap_or(""),
                                 ),
-                                port: i32::try_from(config["port"].as_i64().unwrap_or(8443)).unwrap_or(8443),
+                                port: i32::try_from(config["port"].as_i64().unwrap_or(8443))
+                                    .unwrap_or(8443),
                                 enable_tls: config["enable_tls"].as_bool().unwrap_or(true),
                                 enable_mdns: config["enable_mdns"].as_bool().unwrap_or(true),
                                 encryption_enabled: config["encryption_enabled"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                session_timeout_minutes: i32::try_from(config["session_timeout_minutes"]
-                                    .as_i64()
-                                    .unwrap_or(60)).unwrap_or(60),
+                                session_timeout_minutes: i32::try_from(
+                                    config["session_timeout_minutes"].as_i64().unwrap_or(60),
+                                )
+                                .unwrap_or(60),
                                 allow_self_registration: config["allow_self_registration"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                max_concurrent_sessions: i32::try_from(config["max_concurrent_sessions"]
-                                    .as_i64()
-                                    .unwrap_or(5)).unwrap_or(5),
+                                max_concurrent_sessions: i32::try_from(
+                                    config["max_concurrent_sessions"].as_i64().unwrap_or(5),
+                                )
+                                .unwrap_or(5),
                                 auto_backup_enabled: config["auto_backup_enabled"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                backup_retention_count: i32::try_from(config["backup_retention_count"]
-                                    .as_i64()
-                                    .unwrap_or(7)).unwrap_or(7),
+                                backup_retention_count: i32::try_from(
+                                    config["backup_retention_count"].as_i64().unwrap_or(7),
+                                )
+                                .unwrap_or(7),
                                 audit_logging_enabled: config["audit_logging_enabled"]
                                     .as_bool()
                                     .unwrap_or(true),
-                                license_plate_display: i32::try_from(config["license_plate_display"]
-                                    .as_i64()
-                                    .unwrap_or(0)).unwrap_or(0),
+                                license_plate_display: i32::try_from(
+                                    config["license_plate_display"].as_i64().unwrap_or(0),
+                                )
+                                .unwrap_or(0),
                                 organization_name: SharedString::from(
                                     config["organization_name"].as_str().unwrap_or(""),
                                 ),
@@ -913,7 +937,11 @@ async fn main() -> Result<()> {
     });
 
     // Load accessibility settings from local config
-    let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client").map_or_else(|| std::path::PathBuf::from(".").join("config"), |p| p.config_dir().to_path_buf());
+    let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client")
+        .map_or_else(
+            || std::path::PathBuf::from(".").join("config"),
+            |p| p.config_dir().to_path_buf(),
+        );
     let config_path = config_dir.join("accessibility.toml");
 
     if config_path.exists() {
@@ -945,7 +973,11 @@ async fn main() -> Result<()> {
                 };
 
                 // Save to file
-                let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client").map_or_else(|| std::path::PathBuf::from(".").join("config"), |p| p.config_dir().to_path_buf());
+                let config_dir = directories::ProjectDirs::from("com", "parkhub", "ParkHub Client")
+                    .map_or_else(
+                        || std::path::PathBuf::from(".").join("config"),
+                        |p| p.config_dir().to_path_buf(),
+                    );
 
                 if let Err(e) = std::fs::create_dir_all(&config_dir) {
                     warn!("Failed to create config dir: {}", e);

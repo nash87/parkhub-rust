@@ -220,14 +220,11 @@ pub async fn update_zone(
         }
     };
 
-    let mut zone = match zones.into_iter().find(|z| z.id.to_string() == zone_id) {
-        Some(z) => z,
-        None => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "Zone not found")),
-            );
-        }
+    let Some(mut zone) = zones.into_iter().find(|z| z.id.to_string() == zone_id) else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "Zone not found")),
+        );
     };
 
     // Apply partial updates
@@ -249,7 +246,12 @@ pub async fn update_zone(
         );
     }
 
-    tracing::info!("Updated zone '{}' ({}) in lot {}", zone.name, zone.id, lot_id);
+    tracing::info!(
+        "Updated zone '{}' ({}) in lot {}",
+        zone.name,
+        zone.id,
+        lot_id
+    );
 
     (StatusCode::OK, Json(ApiResponse::success(zone)))
 }
