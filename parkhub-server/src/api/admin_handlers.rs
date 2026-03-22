@@ -600,10 +600,20 @@ pub async fn admin_heatmap(
 // AUDIT LOG
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// `GET /api/v1/admin/audit-log` — list recent audit entries
+/// Paginated audit log response
+#[derive(Debug, Serialize)]
+pub struct PaginatedAuditLog {
+    pub entries: Vec<crate::db::AuditLogEntry>,
+    pub total: usize,
+    pub page: usize,
+    pub per_page: usize,
+    pub total_pages: usize,
+}
+
+/// `GET /api/v1/admin/audit-log` — paginated, filterable audit log
 #[utoipa::path(get, path = "/api/v1/admin/audit-log", tag = "Admin",
     summary = "Audit log (admin)",
-    description = "Returns recent audit log entries.",
+    description = "Returns paginated audit log entries. Filterable by action, user, date range.",
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Success"))
 )]
@@ -611,20 +621,77 @@ pub async fn admin_audit_log(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
-) -> (StatusCode, Json<ApiResponse<Vec<crate::db::AuditLogEntry>>>) {
+) -> (StatusCode, Json<ApiResponse<PaginatedAuditLog>>) {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    let limit = params
-        .get("limit")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(100usize)
-        .min(500);
+    let page = params
+        .get("page")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(1)
+        .max(1);
+    let per_page = params
+        .get("per_page")
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(25)
+        .min(100);
+    let action_filter = params.get("action").cloned();
+    let user_filter = params.get("user").cloned();
+    let from_filter = params
+        .get("from")
+        .and_then(|v| chrono::NaiveDate::parse_from_str(v, "%Y-%m-%d").ok());
+    let to_filter = params
+        .get("to")
+        .and_then(|v| chrono::NaiveDate::parse_from_str(v, "%Y-%m-%d").ok());
 
-    match state_guard.db.list_audit_log(limit).await {
-        Ok(entries) => (StatusCode::OK, Json(ApiResponse::success(entries))),
+    match state_guard.db.list_all_audit_log().await {
+        Ok(mut entries) => {
+            // Apply filters
+            if let Some(ref action) = action_filter {
+                entries.retain(|e| e.event_type.to_lowercase().contains(&action.to_lowercase()));
+            }
+            if let Some(ref user) = user_filter {
+                let q = user.to_lowercase();
+                entries.retain(|e| {
+                    e.username
+                        .as_ref()
+                        .is_some_and(|u| u.to_lowercase().contains(&q))
+                        || e.user_id.is_some_and(|id| id.to_string().contains(&q))
+                });
+            }
+            if let Some(from) = from_filter {
+                entries.retain(|e| e.timestamp.date_naive() >= from);
+            }
+            if let Some(to) = to_filter {
+                entries.retain(|e| e.timestamp.date_naive() <= to);
+            }
+
+            let total = entries.len();
+            let total_pages = if total == 0 {
+                1
+            } else {
+                (total + per_page - 1) / per_page
+            };
+            let start = (page - 1) * per_page;
+            let page_entries = if start < total {
+                entries[start..(start + per_page).min(total)].to_vec()
+            } else {
+                Vec::new()
+            };
+
+            (
+                StatusCode::OK,
+                Json(ApiResponse::success(PaginatedAuditLog {
+                    entries: page_entries,
+                    total,
+                    page,
+                    per_page,
+                    total_pages,
+                })),
+            )
+        }
         Err(e) => {
             tracing::error!("Failed to list audit log: {e}");
             (
@@ -635,6 +702,128 @@ pub async fn admin_audit_log(
                 )),
             )
         }
+    }
+}
+
+/// `GET /api/v1/admin/audit-log/export` — CSV export of audit log
+#[utoipa::path(get, path = "/api/v1/admin/audit-log/export", tag = "Admin",
+    summary = "Export audit log as CSV",
+    description = "Download all audit log entries as a CSV file. Supports optional date filtering via from and to query params (YYYY-MM-DD). Admin only.",
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "CSV file", content_type = "text/csv"),
+        (status = 403, description = "Admin access required"),
+    )
+)]
+pub async fn admin_audit_log_export(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl axum::response::IntoResponse {
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (
+            status,
+            [
+                (axum::http::header::CONTENT_TYPE, "text/plain"),
+                (axum::http::header::CONTENT_DISPOSITION, "inline"),
+            ],
+            msg.to_string(),
+        );
+    }
+
+    let action_filter = params.get("action").cloned();
+    let user_filter = params.get("user").cloned();
+    let from_filter = params
+        .get("from")
+        .and_then(|v| chrono::NaiveDate::parse_from_str(v, "%Y-%m-%d").ok());
+    let to_filter = params
+        .get("to")
+        .and_then(|v| chrono::NaiveDate::parse_from_str(v, "%Y-%m-%d").ok());
+
+    match state_guard.db.list_all_audit_log().await {
+        Ok(mut entries) => {
+            if let Some(ref action) = action_filter {
+                entries.retain(|e| e.event_type.to_lowercase().contains(&action.to_lowercase()));
+            }
+            if let Some(ref user) = user_filter {
+                let q = user.to_lowercase();
+                entries.retain(|e| {
+                    e.username
+                        .as_ref()
+                        .is_some_and(|u| u.to_lowercase().contains(&q))
+                });
+            }
+            if let Some(from) = from_filter {
+                entries.retain(|e| e.timestamp.date_naive() >= from);
+            }
+            if let Some(to) = to_filter {
+                entries.retain(|e| e.timestamp.date_naive() <= to);
+            }
+
+            let mut csv = String::from(
+                "id,timestamp,event_type,user_id,username,target_type,target_id,ip_address,details\n",
+            );
+            for e in &entries {
+                use std::fmt::Write;
+                let _ = write!(
+                    csv,
+                    "{},{},{},{},{},{},{},{},{}\n",
+                    e.id,
+                    e.timestamp.to_rfc3339(),
+                    csv_escape(&e.event_type),
+                    e.user_id.map_or_else(String::new, |id| id.to_string()),
+                    csv_escape(e.username.as_deref().unwrap_or("")),
+                    csv_escape(e.target_type.as_deref().unwrap_or("")),
+                    csv_escape(e.target_id.as_deref().unwrap_or("")),
+                    csv_escape(e.ip_address.as_deref().unwrap_or("")),
+                    csv_escape(e.details.as_deref().unwrap_or("")),
+                );
+            }
+
+            (
+                StatusCode::OK,
+                [
+                    (axum::http::header::CONTENT_TYPE, "text/csv; charset=utf-8"),
+                    (
+                        axum::http::header::CONTENT_DISPOSITION,
+                        "attachment; filename=\"audit-log.csv\"",
+                    ),
+                ],
+                csv,
+            )
+        }
+        Err(e) => {
+            tracing::error!("Failed to export audit log: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [
+                    (axum::http::header::CONTENT_TYPE, "text/plain"),
+                    (axum::http::header::CONTENT_DISPOSITION, "inline"),
+                ],
+                "Failed to export audit log".to_string(),
+            )
+        }
+    }
+}
+
+/// Escape a cell value for CSV (protection against CSV injection).
+fn csv_escape(value: &str) -> String {
+    let needs_prefix = value.starts_with('=')
+        || value.starts_with('+')
+        || value.starts_with('-')
+        || value.starts_with('@');
+
+    let val = if needs_prefix {
+        format!("'{value}")
+    } else {
+        value.to_string()
+    };
+
+    if val.contains(',') || val.contains('"') || val.contains('\n') {
+        format!("\"{}\"", val.replace('"', "\"\""))
+    } else {
+        val
     }
 }
 
@@ -1400,5 +1589,103 @@ mod tests {
         assert!(req.email.is_none());
         assert!(req.role.is_none());
         assert_eq!(req.is_active, Some(true));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // AUDIT LOG TESTS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_paginated_audit_log_serialization() {
+        let entry = crate::db::AuditLogEntry {
+            id: uuid::Uuid::new_v4(),
+            timestamp: Utc::now(),
+            event_type: "LoginSuccess".to_string(),
+            user_id: Some(uuid::Uuid::new_v4()),
+            username: Some("admin".to_string()),
+            details: Some(r#"{"ip":"127.0.0.1"}"#.to_string()),
+            target_type: Some("user".to_string()),
+            target_id: Some("abc-123".to_string()),
+            ip_address: Some("192.168.1.1".to_string()),
+        };
+        let paginated = PaginatedAuditLog {
+            entries: vec![entry],
+            total: 1,
+            page: 1,
+            per_page: 25,
+            total_pages: 1,
+        };
+        let json = serde_json::to_value(&paginated).unwrap();
+        assert_eq!(json["total"], 1);
+        assert_eq!(json["page"], 1);
+        assert_eq!(json["per_page"], 25);
+        assert_eq!(json["total_pages"], 1);
+        assert_eq!(json["entries"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_paginated_audit_log_empty() {
+        let paginated = PaginatedAuditLog {
+            entries: vec![],
+            total: 0,
+            page: 1,
+            per_page: 25,
+            total_pages: 1,
+        };
+        let json = serde_json::to_value(&paginated).unwrap();
+        assert_eq!(json["total"], 0);
+        assert!(json["entries"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_paginated_audit_log_pagination_math() {
+        // 55 entries, 25 per page = 3 pages
+        let paginated = PaginatedAuditLog {
+            entries: vec![],
+            total: 55,
+            page: 3,
+            per_page: 25,
+            total_pages: 3,
+        };
+        let json = serde_json::to_value(&paginated).unwrap();
+        assert_eq!(json["total_pages"], 3);
+        assert_eq!(json["page"], 3);
+    }
+
+    #[test]
+    fn test_csv_escape_plain() {
+        assert_eq!(csv_escape("hello"), "hello");
+        assert_eq!(csv_escape("John Doe"), "John Doe");
+    }
+
+    #[test]
+    fn test_csv_escape_injection() {
+        assert_eq!(csv_escape("=SUM(A1)"), "'=SUM(A1)");
+        assert_eq!(csv_escape("+cmd"), "'+cmd");
+        assert_eq!(csv_escape("-evil"), "'-evil");
+        assert_eq!(csv_escape("@import"), "'@import");
+    }
+
+    #[test]
+    fn test_csv_escape_special_chars() {
+        assert_eq!(csv_escape("a,b"), "\"a,b\"");
+        assert_eq!(csv_escape("say \"hi\""), "\"say \"\"hi\"\"\"");
+        assert_eq!(csv_escape("line1\nline2"), "\"line1\nline2\"");
+    }
+
+    #[test]
+    fn test_audit_log_entry_new_fields_default() {
+        let json = r#"{
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "timestamp": "2026-03-22T10:00:00Z",
+            "event_type": "LoginSuccess",
+            "user_id": null,
+            "username": null,
+            "details": null
+        }"#;
+        let entry: crate::db::AuditLogEntry = serde_json::from_str(json).unwrap();
+        assert!(entry.target_type.is_none());
+        assert!(entry.target_id.is_none());
+        assert!(entry.ip_address.is_none());
     }
 }

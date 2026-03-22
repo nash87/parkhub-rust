@@ -305,6 +305,28 @@ export const api = {
   getRateLimitStats: () => request<RateLimitStats>('/api/v1/admin/rate-limits'),
   getRateLimitHistory: () => request<RateLimitHistory>('/api/v1/admin/rate-limits/history'),
 
+  // ── Audit Log ──
+  getAuditLog: (params?: { page?: number; per_page?: number; action?: string; user?: string; from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
+    if (params?.action) qs.set('action', params.action);
+    if (params?.user) qs.set('user', params.user);
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return request<PaginatedAuditLog>(`/api/v1/admin/audit-log${q ? `?${q}` : ''}`);
+  },
+  exportAuditLog: (params?: { action?: string; user?: string; from?: string; to?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.action) qs.set('action', params.action);
+    if (params?.user) qs.set('user', params.user);
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    const q = qs.toString();
+    return `/api/v1/admin/audit-log/export${q ? `?${q}` : ''}`;
+  },
+
   // ── Tenants ──
   listTenants: () => request<TenantInfo[]>('/api/v1/admin/tenants'),
   createTenant: (data: CreateTenantRequest) =>
@@ -800,4 +822,25 @@ export interface CreateTenantRequest {
   name: string;
   domain?: string;
   branding?: TenantBranding;
+}
+
+// ── Audit Log ──
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  event_type: string;
+  user_id?: string;
+  username?: string;
+  target_type?: string;
+  target_id?: string;
+  ip_address?: string;
+  details?: string;
+}
+
+export interface PaginatedAuditLog {
+  entries: AuditLogEntry[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
 }
