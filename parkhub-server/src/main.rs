@@ -22,6 +22,8 @@ mod demo;
 mod discovery;
 #[cfg(feature = "mod-email")]
 mod email;
+#[cfg(feature = "mod-email-templates")]
+mod email_templates;
 #[allow(dead_code)]
 mod error;
 #[allow(dead_code)]
