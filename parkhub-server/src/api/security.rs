@@ -933,7 +933,7 @@ pub async fn create_api_key(
     let now = Utc::now();
     let expires_at = req
         .expires_in_days
-        .map(|d| now + chrono::Duration::days(i64::from(d)));
+        .map(|d| now + chrono::Duration::days(i64::from(d.min(365))));
 
     let api_key = ApiKey {
         id: Uuid::new_v4(),
