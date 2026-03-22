@@ -1941,7 +1941,7 @@ async fn test_admin_list_users() {
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
     let users = json["data"].as_array().unwrap();
-    assert!(users.len() >= 1); // at least admin
+    assert!(!users.is_empty()); // at least admin
 }
 
 #[tokio::test]
