@@ -333,6 +333,19 @@ export const api = {
     request<TenantInfo>('/api/v1/admin/tenants', { method: 'POST', body: JSON.stringify(data) }),
   updateTenant: (id: string, data: CreateTenantRequest) =>
     request<TenantInfo>(`/api/v1/admin/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // ── Parking History ──
+  getBookingHistory: (params?: { lot_id?: string; from?: string; to?: string; page?: number; per_page?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.lot_id) qs.set('lot_id', params.lot_id);
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.per_page) qs.set('per_page', String(params.per_page));
+    const q = qs.toString();
+    return request<BookingHistoryResponse>(`/api/v1/bookings/history${q ? `?${q}` : ''}`);
+  },
+  getBookingStats: () => request<PersonalParkingStats>('/api/v1/bookings/stats'),
 };
 
 // ── Types ──
@@ -844,4 +857,27 @@ export interface PaginatedAuditLog {
   page: number;
   per_page: number;
   total_pages: number;
+}
+
+// ── Parking History ──
+export interface BookingHistoryResponse {
+  items: Booking[];
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface MonthlyTrend {
+  month: string;
+  bookings: number;
+}
+
+export interface PersonalParkingStats {
+  total_bookings: number;
+  favorite_lot: string | null;
+  avg_duration_minutes: number;
+  busiest_day: string | null;
+  credits_spent: number;
+  monthly_trend: MonthlyTrend[];
 }

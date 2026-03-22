@@ -162,6 +162,7 @@ full = [
     "mod-cost-center",
     "mod-visitors",
     "mod-ev-charging",
+    "mod-history",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -214,6 +215,7 @@ mod-maintenance = []
 mod-cost-center = []
 mod-visitors = []
 mod-ev-charging = []
+mod-history = []
 
 [dev-dependencies]
 tempfile = "3"
