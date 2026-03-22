@@ -196,6 +196,30 @@ export const api = {
     request<Favorite>('/api/v1/user/favorites', { method: 'POST', body: JSON.stringify({ slot_id, lot_id }) }),
   removeFavorite: (slotId: string) =>
     request<void>(`/api/v1/user/favorites/${slotId}`, { method: 'DELETE' }),
+
+  // ── 2FA ──
+  setup2FA: () => request<TwoFactorSetup>('/api/v1/auth/2fa/setup', { method: 'POST' }),
+  verify2FA: (code: string) => request<{ enabled: boolean }>('/api/v1/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ code }) }),
+  disable2FA: (current_password: string) => request<{ enabled: boolean }>('/api/v1/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ current_password }) }),
+  get2FAStatus: () => request<{ enabled: boolean }>('/api/v1/auth/2fa/status'),
+
+  // ── Login History ──
+  getLoginHistory: () => request<LoginHistoryEntry[]>('/api/v1/auth/login-history'),
+
+  // ── Sessions ──
+  getSessions: () => request<SessionInfo[]>('/api/v1/auth/sessions'),
+  revokeSession: (id: string) => request<void>(`/api/v1/auth/sessions/${id}`, { method: 'DELETE' }),
+
+  // ── Notification Preferences ──
+  getNotificationPreferences: () => request<NotificationPreferences>('/api/v1/preferences/notifications'),
+  updateNotificationPreferences: (prefs: NotificationPreferences) =>
+    request<NotificationPreferences>('/api/v1/preferences/notifications', { method: 'PUT', body: JSON.stringify(prefs) }),
+
+  // ── Bulk Admin ──
+  adminBulkUpdate: (user_ids: string[], action: string, role?: string) =>
+    request<BulkResult>('/api/v1/admin/users/bulk-update', { method: 'POST', body: JSON.stringify({ user_ids, action, role }) }),
+  adminBulkDelete: (user_ids: string[]) =>
+    request<BulkResult>('/api/v1/admin/users/bulk-delete', { method: 'POST', body: JSON.stringify({ user_ids }) }),
 };
 
 // ── Types ──
@@ -511,4 +535,45 @@ export interface CreateProposalRequest {
 export interface ReviewProposalRequest {
   status: 'approved' | 'rejected';
   comment?: string;
+}
+
+// ── 2FA Types ──
+export interface TwoFactorSetup {
+  secret: string;
+  otpauth_uri: string;
+  qr_code_base64: string;
+}
+
+// ── Login History ──
+export interface LoginHistoryEntry {
+  timestamp: string;
+  ip_address: string;
+  user_agent: string;
+  success: boolean;
+}
+
+// ── Session Info ──
+export interface SessionInfo {
+  id: string;
+  username: string;
+  role: string;
+  created_at: string;
+  expires_at: string;
+  is_current: boolean;
+}
+
+// ── Notification Preferences ──
+export interface NotificationPreferences {
+  email_booking_confirm: boolean;
+  email_booking_reminder: boolean;
+  email_swap_request: boolean;
+  push_enabled: boolean;
+}
+
+// ── Bulk Result ──
+export interface BulkResult {
+  total: number;
+  succeeded: number;
+  failed: number;
+  errors: string[];
 }
