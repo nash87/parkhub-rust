@@ -18,9 +18,21 @@ use crate::AppState;
 // Test helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Owns both the shared state *and* the temporary directory backing the DB.
+/// Drop order is guaranteed: state first (closing the DB), then the dir.
+/// This replaces the old `std::mem::forget(dir)` pattern (issue #108).
+struct TestHarness {
+    state: Arc<RwLock<AppState>>,
+    _dir: tempfile::TempDir,
+}
+
 /// Create a fresh `SharedState` backed by a temporary database.
 /// The admin user is created so auth-related tests have something to hit.
 async fn test_state() -> Arc<RwLock<AppState>> {
+    test_harness().await.state
+}
+
+async fn test_harness() -> TestHarness {
     let dir = tempfile::tempdir().expect("tempdir");
     let db_config = DatabaseConfig {
         path: dir.path().to_path_buf(),
@@ -52,11 +64,7 @@ async fn test_state() -> Arc<RwLock<AppState>> {
             .expect("seed admin");
     }
 
-    // Leak the tempdir so it lives for the duration of the test.
-    // In tests this is acceptable — the OS will clean up on process exit.
-    std::mem::forget(dir);
-
-    state
+    TestHarness { state, _dir: dir }
 }
 
 /// Build the router from state (returns just the Router, dropping demo state).
