@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, X, Copy, Check } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, X, Copy, Check, Question, ArrowsClockwise } from '@phosphor-icons/react';
 import { api, type CalendarEvent } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -39,6 +39,11 @@ export function CalendarPage() {
   const [subscriptionUrl, setSubscriptionUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [generatingToken, setGeneratingToken] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [dragEvent, setDragEvent] = useState<CalendarEvent | null>(null);
+  const [dropTarget, setDropTarget] = useState<Date | null>(null);
+  const [showRescheduleConfirm, setShowRescheduleConfirm] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -146,6 +151,70 @@ export function CalendarPage() {
     });
   }, []);
 
+  // ── Drag-to-Reschedule handlers ──
+  function handleDragStart(e: React.DragEvent, event: CalendarEvent) {
+    if (event.type !== 'booking') return;
+    setDragEvent(event);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', event.id);
+  }
+
+  function handleDragOver(e: React.DragEvent, day: Date) {
+    if (!dragEvent) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget(day);
+  }
+
+  function handleDragLeave() {
+    setDropTarget(null);
+  }
+
+  function handleDrop(e: React.DragEvent, day: Date) {
+    e.preventDefault();
+    if (!dragEvent) return;
+    setDropTarget(day);
+    setShowRescheduleConfirm(true);
+  }
+
+  function handleDragEnd() {
+    if (!showRescheduleConfirm) {
+      setDragEvent(null);
+      setDropTarget(null);
+    }
+  }
+
+  async function confirmReschedule() {
+    if (!dragEvent || !dropTarget) return;
+    setRescheduling(true);
+    try {
+      const oldStart = new Date(dragEvent.start);
+      const oldEnd = new Date(dragEvent.end);
+      const duration = oldEnd.getTime() - oldStart.getTime();
+      const newStart = new Date(dropTarget.getFullYear(), dropTarget.getMonth(), dropTarget.getDate(), oldStart.getHours(), oldStart.getMinutes());
+      const newEnd = new Date(newStart.getTime() + duration);
+      const res = await api.rescheduleBooking(dragEvent.id, newStart.toISOString(), newEnd.toISOString());
+      if (res.success && res.data?.success) {
+        toast.success(t('calendarDrag.rescheduled'));
+        loadEvents();
+      } else {
+        toast.error(res.data?.message || res.error?.message || t('common.error'));
+      }
+    } catch {
+      toast.error(t('common.error'));
+    }
+    setRescheduling(false);
+    setShowRescheduleConfirm(false);
+    setDragEvent(null);
+    setDropTarget(null);
+  }
+
+  function cancelReschedule() {
+    setShowRescheduleConfirm(false);
+    setDragEvent(null);
+    setDropTarget(null);
+  }
+
   function prevMonth() {
     setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   }
@@ -165,6 +234,9 @@ export function CalendarPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('calendar.title', 'Kalender')}</h1>
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500 min-w-[44px] min-h-[44px] flex items-center justify-center" title={t('calendarDrag.helpLabel')}>
+            <Question size={20} />
+          </button>
           <button
             onClick={handleSubscribe}
             disabled={generatingToken}
@@ -197,13 +269,22 @@ export function CalendarPage() {
             const inMonth = isSameMonth(day, currentMonth);
             const today = isToday(day);
             const selected = selectedDate && isSameDay(day, selectedDate);
+            const isDropTarget = dropTarget && isSameDay(day, dropTarget);
             return (
-              <button key={idx} onClick={() => setSelectedDate(day)}
+              <div key={idx}
+                onClick={() => setSelectedDate(day)}
+                onDragOver={(e) => handleDragOver(e, day)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, day)}
+                role="button"
+                tabIndex={0}
                 aria-label={`${day.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}${dayEvents.length > 0 ? `, ${dayEvents.length} ${t('calendar.events', 'events')}` : ''}`}
                 aria-pressed={!!selected}
-                className={`min-h-[44px] sm:min-h-[80px] p-1 border-b border-r border-surface-100 dark:border-surface-800 text-left transition-colors ${
+                className={`min-h-[44px] sm:min-h-[80px] p-1 border-b border-r border-surface-100 dark:border-surface-800 text-left transition-colors cursor-pointer ${
                   !inMonth ? 'opacity-30' : ''
-                } ${selected ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-surface-50 dark:hover:bg-surface-800/50'}`}
+                } ${selected ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-surface-50 dark:hover:bg-surface-800/50'} ${
+                  isDropTarget ? 'ring-2 ring-primary-500 bg-primary-50/50 dark:bg-primary-900/30' : ''
+                }`}
               >
                 <span className={`inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full ${
                   today ? 'bg-primary-600 text-white' : 'text-surface-700 dark:text-surface-300'
@@ -212,11 +293,16 @@ export function CalendarPage() {
                 </span>
                 <div className="mt-0.5 space-y-0.5">
                   {dayEvents.slice(0, 3).map(e => (
-                    <div key={e.id} className={`h-1.5 rounded-full ${statusColors[e.status] || 'bg-surface-300'}`} />
+                    <div key={e.id}
+                      draggable={e.type === 'booking'}
+                      onDragStart={(ev) => handleDragStart(ev, e)}
+                      onDragEnd={handleDragEnd}
+                      className={`h-1.5 rounded-full ${statusColors[e.status] || 'bg-surface-300'} ${e.type === 'booking' ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    />
                   ))}
                   {dayEvents.length > 3 && <span className="text-[10px] text-surface-400">+{dayEvents.length - 3}</span>}
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -255,6 +341,54 @@ export function CalendarPage() {
           <p className="text-sm text-surface-500 dark:text-surface-400">{t('calendar.selectDay', 'Klicke auf einen Tag, um Eintr\u00e4ge zu sehen')}</p>
         </div>
       )}
+
+      {/* Drag help tooltip */}
+      <AnimatePresence>
+        {showHelp && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="p-3 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-sm text-primary-800 dark:text-primary-300 flex items-start gap-2">
+            <ArrowsClockwise size={18} className="mt-0.5 shrink-0" />
+            <span>{t('calendarDrag.help')}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reschedule confirmation dialog */}
+      <AnimatePresence>
+        {showRescheduleConfirm && dragEvent && dropTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" data-testid="reschedule-confirm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6 max-w-sm w-full mx-4 shadow-xl"
+            >
+              <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-3">
+                {t('calendarDrag.confirmTitle')}
+              </h3>
+              <p className="text-sm text-surface-600 dark:text-surface-400 mb-2">
+                {t('calendarDrag.confirmDesc')}
+              </p>
+              <div className="text-sm text-surface-700 dark:text-surface-300 mb-4 space-y-1">
+                <p><strong>{dragEvent.title}</strong></p>
+                <p>{t('calendarDrag.from')}: {new Date(dragEvent.start).toLocaleDateString()}</p>
+                <p>{t('calendarDrag.to')}: {dropTarget.toLocaleDateString()}</p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={cancelReschedule}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700">
+                  {t('common.cancel', 'Cancel')}
+                </button>
+                <button onClick={confirmReschedule} disabled={rescheduling}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1">
+                  <ArrowsClockwise size={14} />
+                  {rescheduling ? t('calendarDrag.rescheduling') : t('calendarDrag.confirmBtn')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Subscribe modal */}
       <AnimatePresence>
