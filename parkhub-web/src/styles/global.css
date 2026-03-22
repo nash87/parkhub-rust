@@ -424,6 +424,34 @@ p { line-height: 1.6; }
   }
 }
 
+/* Print styles for booking confirmation */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-pass,
+  .print-pass * {
+    visibility: visible;
+  }
+  .print-pass {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 400px;
+    box-shadow: none;
+    border-radius: 0;
+    background: white !important;
+    color: black !important;
+    padding: 2rem;
+  }
+  .print-pass img {
+    max-width: 200px;
+    margin: 0 auto;
+  }
+}
+
 /* Page transitions */
 @view-transition {
   navigation: auto;
