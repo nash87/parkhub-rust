@@ -31,12 +31,11 @@ export function DashboardPage() {
         toast(t('dashboard.wsBookingCancelled', 'A booking was cancelled'), { icon: '📋' });
         break;
       case 'occupancy_changed':
-        toast(t('dashboard.wsOccupancyChanged', 'Occupancy updated'), { icon: '🅿' });
-        break;
+        break; // Occupancy updates handled via hook state
     }
   }, [t]);
 
-  useWebSocket({ onEvent: handleWsEvent });
+  const { connected: wsConnected, occupancy } = useWebSocket({ onEvent: handleWsEvent });
 
   useEffect(() => {
     Promise.all([api.getBookings(), api.getUserStats()]).then(([bRes, sRes]) => {
@@ -85,9 +84,21 @@ export function DashboardPage() {
         variants={item}
         className={`relative overflow-hidden rounded-2xl px-6 py-5 bg-gradient-to-r ${greetingGradient}`}
       >
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white tracking-tight" style={{ letterSpacing: '-0.025em' }}>
-          {t('dashboard.greeting', { timeOfDay, name })}
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white tracking-tight" style={{ letterSpacing: '-0.025em' }}>
+            {t('dashboard.greeting', { timeOfDay, name })}
+          </h1>
+          {wsConnected && (
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+              title={t('dashboard.wsConnected', 'Live updates active')}
+              data-testid="ws-connected-indicator"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 pulse-dot" />
+              {t('dashboard.live', 'Live')}
+            </span>
+          )}
+        </div>
       </motion.div>
 
       {/* Bento stats grid — asymmetric layout */}
