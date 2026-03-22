@@ -489,6 +489,7 @@ export default {
         fab_quick_actions: { name: 'Schnellaktionen', desc: 'Schwebende Aktionsschaltflache fur schnellen Zugriff', help: 'Befehlspalette (Strg+K) und schwebende Schaltflache.' },
         rich_empty_states: { name: 'Illustrierte Leerzustande', desc: 'Illustrierte Leerzustande mit hilfreichen Vorschlagen', help: 'Hilfreiche Illustrationen wenn Listen leer sind.' },
         onboarding_hints: { name: 'Onboarding-Hinweise', desc: 'Kontextbezogene Tipps fur neue Benutzer', help: 'Gefuhrte Tooltips fur Erstbenutzer.' },
+        themes: { name: 'Design-Themen', desc: 'Zwischen visuellen Design-Themen wechseln', help: 'Wahlen Sie zwischen Klassisch, Glas, Bento, Brutalistisch, Neon oder Warm.' },
       },
       compliance: {
         title: 'Integrierte Compliance',
@@ -766,6 +767,29 @@ export default {
         fri: 'Fr',
         sat: 'Sa',
         sun: 'So',
+      },
+    },
+    themes: {
+      title: 'Design-Themen',
+      subtitle: 'Wahlen Sie ein visuelles Design fur Ihre ParkHub-Oberflache.',
+      openSwitcher: 'Design andern',
+      applyTheme: '{{name}}-Design anwenden',
+      currentTheme: 'Aktuelles Design',
+      names: {
+        classic: 'Klassisch',
+        glass: 'Glas',
+        bento: 'Bento',
+        brutalist: 'Brutalistisch',
+        neon: 'Neon',
+        warm: 'Warm',
+      },
+      descriptions: {
+        classic: 'Sauber, professionell. Der originale ParkHub-Look.',
+        glass: 'Milchglas-Optik mit Unschärfe und Transparenz.',
+        bento: 'Rasterbasiert, minimalistisch. Japanisch inspiriert.',
+        brutalist: 'Roh, fett, kontraststark. Keine Rundungen.',
+        neon: 'Leuchtende Akzente mit Cyberpunk-Glühen.',
+        warm: 'Erdtöne, sanfte Verläufe, gemütliches Gefühl.',
       },
     },
     payment: {

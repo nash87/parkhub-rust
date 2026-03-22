@@ -16,7 +16,8 @@ export type FeatureModule =
   | 'micro_animations'
   | 'fab_quick_actions'
   | 'rich_empty_states'
-  | 'onboarding_hints';
+  | 'onboarding_hints'
+  | 'themes';
 
 export type FeatureCategory = 'core' | 'collaboration' | 'billing' | 'admin' | 'experience';
 
@@ -46,13 +47,14 @@ export const FEATURE_REGISTRY: FeatureInfo[] = [
   { id: 'fab_quick_actions', category: 'experience',    defaultEnabled: true },
   { id: 'rich_empty_states', category: 'experience',    defaultEnabled: true },
   { id: 'onboarding_hints',  category: 'experience',    defaultEnabled: false },
+  { id: 'themes',            category: 'experience',    defaultEnabled: true },
 ];
 
 /** Use-case presets — which features are enabled by default per use case */
 export const USE_CASE_PRESETS: Record<UseCase, FeatureModule[]> = {
-  business: ['credits', 'absences', 'vehicles', 'analytics', 'team_view', 'booking_types', 'invoices', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'rich_empty_states', 'onboarding_hints'],
-  residential: ['vehicles', 'booking_types', 'self_registration', 'generative_bg', 'micro_animations', 'rich_empty_states'],
-  personal: ['vehicles', 'booking_types', 'generative_bg', 'micro_animations', 'fab_quick_actions'],
+  business: ['credits', 'absences', 'vehicles', 'analytics', 'team_view', 'booking_types', 'invoices', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'rich_empty_states', 'onboarding_hints', 'themes'],
+  residential: ['vehicles', 'booking_types', 'self_registration', 'generative_bg', 'micro_animations', 'rich_empty_states', 'themes'],
+  personal: ['vehicles', 'booking_types', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'themes'],
 };
 
 const STORAGE_KEY = 'parkhub_features';

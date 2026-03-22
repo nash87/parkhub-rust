@@ -42,18 +42,27 @@ const { localStorageMock, matchMediaState, persistentMql } = vi.hoisted(() => {
   return { localStorageMock, matchMediaState, persistentMql };
 });
 
-import { ThemeProvider, useTheme } from './ThemeContext';
+import { ThemeProvider, useTheme, DESIGN_THEMES, type DesignThemeId } from './ThemeContext';
 
 // Helper component to consume the context
 function ThemeConsumer() {
-  const { theme, resolved, setTheme } = useTheme();
+  const { theme, resolved, setTheme, designTheme, setDesignTheme, designThemes, currentDesignTheme } = useTheme();
   return (
     <div>
       <span data-testid="theme">{theme}</span>
       <span data-testid="resolved">{resolved}</span>
+      <span data-testid="design-theme">{designTheme}</span>
+      <span data-testid="design-theme-name">{currentDesignTheme.name}</span>
+      <span data-testid="design-themes-count">{designThemes.length}</span>
       <button data-testid="set-dark" onClick={() => setTheme('dark')}>Dark</button>
       <button data-testid="set-light" onClick={() => setTheme('light')}>Light</button>
       <button data-testid="set-system" onClick={() => setTheme('system')}>System</button>
+      <button data-testid="set-glass" onClick={() => setDesignTheme('glass')}>Glass</button>
+      <button data-testid="set-neon" onClick={() => setDesignTheme('neon')}>Neon</button>
+      <button data-testid="set-brutalist" onClick={() => setDesignTheme('brutalist')}>Brutalist</button>
+      <button data-testid="set-warm" onClick={() => setDesignTheme('warm')}>Warm</button>
+      <button data-testid="set-bento" onClick={() => setDesignTheme('bento')}>Bento</button>
+      <button data-testid="set-classic" onClick={() => setDesignTheme('classic')}>Classic</button>
     </div>
   );
 }
@@ -64,6 +73,9 @@ describe('ThemeContext', () => {
     matchMediaState.dark = false;
     matchMediaState.listeners.length = 0;
     document.documentElement.classList.remove('dark');
+    delete document.documentElement.dataset.designTheme;
+    // Mock fetch for design theme sync
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) })));
   });
 
   afterEach(() => {
@@ -197,5 +209,131 @@ describe('ThemeContext', () => {
     await user.click(screen.getByTestId('set-system'));
     expect(screen.getByTestId('theme').textContent).toBe('system');
     expect(screen.getByTestId('resolved').textContent).toBe('dark');
+  });
+
+  // ── Design Theme Tests ──
+
+  it('defaults design theme to classic', () => {
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('design-theme').textContent).toBe('classic');
+    expect(screen.getByTestId('design-theme-name').textContent).toBe('Classic');
+  });
+
+  it('exposes all 6 design themes', () => {
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('design-themes-count').textContent).toBe('6');
+  });
+
+  it('setDesignTheme changes the active design theme', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByTestId('set-glass'));
+    expect(screen.getByTestId('design-theme').textContent).toBe('glass');
+
+    await user.click(screen.getByTestId('set-neon'));
+    expect(screen.getByTestId('design-theme').textContent).toBe('neon');
+
+    await user.click(screen.getByTestId('set-brutalist'));
+    expect(screen.getByTestId('design-theme').textContent).toBe('brutalist');
+
+    await user.click(screen.getByTestId('set-warm'));
+    expect(screen.getByTestId('design-theme').textContent).toBe('warm');
+
+    await user.click(screen.getByTestId('set-bento'));
+    expect(screen.getByTestId('design-theme').textContent).toBe('bento');
+
+    await user.click(screen.getByTestId('set-classic'));
+    expect(screen.getByTestId('design-theme').textContent).toBe('classic');
+  });
+
+  it('persists design theme to localStorage', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    await user.click(screen.getByTestId('set-glass'));
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('parkhub_design_theme', 'glass');
+  });
+
+  it('reads initial design theme from localStorage', () => {
+    localStorageMock.setItem('parkhub_design_theme', 'neon');
+
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('design-theme').textContent).toBe('neon');
+  });
+
+  it('sets data-design-theme attribute on document element', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    // Initial
+    expect(document.documentElement.dataset.designTheme).toBe('classic');
+
+    await user.click(screen.getByTestId('set-brutalist'));
+    expect(document.documentElement.dataset.designTheme).toBe('brutalist');
+  });
+
+  it('falls back to classic for invalid localStorage design theme', () => {
+    localStorageMock.setItem('parkhub_design_theme', 'invalid_theme');
+
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('design-theme').textContent).toBe('classic');
+  });
+
+  it('each DESIGN_THEMES entry has required fields', () => {
+    for (const theme of DESIGN_THEMES) {
+      expect(theme.id).toBeTruthy();
+      expect(theme.name).toBeTruthy();
+      expect(theme.description).toBeTruthy();
+      expect(theme.previewColors.light).toHaveLength(5);
+      expect(theme.previewColors.dark).toHaveLength(5);
+      expect(theme.tags.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('DESIGN_THEMES contains all 6 themes', () => {
+    const ids = DESIGN_THEMES.map(t => t.id);
+    expect(ids).toContain('classic');
+    expect(ids).toContain('glass');
+    expect(ids).toContain('bento');
+    expect(ids).toContain('brutalist');
+    expect(ids).toContain('neon');
+    expect(ids).toContain('warm');
+    expect(ids).toHaveLength(6);
   });
 });

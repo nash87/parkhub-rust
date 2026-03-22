@@ -230,6 +230,11 @@ export const api = {
   updateNotificationPreferences: (prefs: NotificationPreferences) =>
     request<NotificationPreferences>('/api/v1/preferences/notifications', { method: 'PUT', body: JSON.stringify(prefs) }),
 
+  // ── Design Theme Preferences ──
+  getDesignThemePreference: () => request<{ design_theme: string }>('/api/v1/preferences/theme'),
+  updateDesignThemePreference: (design_theme: string) =>
+    request<{ design_theme: string }>('/api/v1/preferences/theme', { method: 'PUT', body: JSON.stringify({ design_theme }) }),
+
   // ── Bulk Admin ──
   adminBulkUpdate: (user_ids: string[], action: string, role?: string) =>
     request<BulkResult>('/api/v1/admin/users/bulk-update', { method: 'POST', body: JSON.stringify({ user_ids, action, role }) }),

@@ -1,0 +1,290 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ParkHub Design Theme System
+   Each theme defines a complete visual identity via CSS custom properties.
+   Themes support both light and dark mode variants.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Theme: Classic ──────────────────────────────────────────────────────────
+   Clean, professional. The original ParkHub look.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="classic"] {
+  --dt-bg-primary: var(--color-surface-50);
+  --dt-bg-secondary: white;
+  --dt-bg-card: white;
+  --dt-text-primary: var(--color-surface-900);
+  --dt-text-secondary: var(--color-surface-500);
+  --dt-border: var(--color-surface-200);
+  --dt-border-subtle: var(--color-surface-100);
+  --dt-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --dt-card-radius: var(--radius-lg);
+  --dt-sidebar-bg: rgba(255, 255, 255, 0.9);
+  --dt-sidebar-blur: 12px;
+  --dt-sidebar-border: var(--color-surface-200);
+  --dt-accent-gradient: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+  --dt-input-bg: white;
+  --dt-input-border: var(--color-surface-300);
+  --dt-badge-radius: var(--radius-md);
+  --dt-nav-active-bg: var(--color-primary-50);
+  --dt-nav-hover-bg: var(--color-surface-100);
+  --dt-header-bg: rgba(255, 255, 255, 0.9);
+}
+
+[data-design-theme="classic"].dark,
+.dark [data-design-theme="classic"] {
+  --dt-bg-primary: var(--color-surface-950);
+  --dt-bg-secondary: var(--color-surface-900);
+  --dt-bg-card: var(--color-surface-900);
+  --dt-text-primary: var(--color-surface-100);
+  --dt-text-secondary: var(--color-surface-400);
+  --dt-border: var(--color-surface-800);
+  --dt-border-subtle: var(--color-surface-800);
+  --dt-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --dt-sidebar-bg: rgba(15, 23, 42, 0.9);
+  --dt-sidebar-border: var(--color-surface-800);
+  --dt-input-bg: var(--color-surface-800);
+  --dt-input-border: var(--color-surface-600);
+  --dt-nav-active-bg: rgba(20, 184, 166, 0.1);
+  --dt-nav-hover-bg: var(--color-surface-800);
+  --dt-header-bg: rgba(15, 23, 42, 0.9);
+}
+
+/* ── Theme: Glass ────────────────────────────────────────────────────────────
+   Frosted glassmorphism with blur, translucency, and depth.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="glass"] {
+  --dt-bg-primary: var(--color-surface-50);
+  --dt-bg-secondary: rgba(255, 255, 255, 0.7);
+  --dt-bg-card: rgba(255, 255, 255, 0.6);
+  --dt-text-primary: var(--color-surface-900);
+  --dt-text-secondary: var(--color-surface-500);
+  --dt-border: rgba(255, 255, 255, 0.3);
+  --dt-border-subtle: rgba(255, 255, 255, 0.15);
+  --dt-card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --dt-card-radius: var(--radius-2xl);
+  --dt-sidebar-bg: rgba(255, 255, 255, 0.7);
+  --dt-sidebar-blur: 40px;
+  --dt-sidebar-border: rgba(255, 255, 255, 0.2);
+  --dt-accent-gradient: linear-gradient(135deg, var(--color-primary-500), var(--color-accent-400));
+  --dt-input-bg: rgba(255, 255, 255, 0.5);
+  --dt-input-border: rgba(255, 255, 255, 0.3);
+  --dt-badge-radius: var(--radius-full);
+  --dt-nav-active-bg: rgba(20, 184, 166, 0.12);
+  --dt-nav-hover-bg: rgba(255, 255, 255, 0.4);
+  --dt-header-bg: rgba(255, 255, 255, 0.7);
+}
+
+[data-design-theme="glass"].dark,
+.dark [data-design-theme="glass"] {
+  --dt-bg-primary: oklch(0.12 0.02 260);
+  --dt-bg-secondary: rgba(15, 23, 42, 0.7);
+  --dt-bg-card: rgba(255, 255, 255, 0.05);
+  --dt-text-primary: var(--color-surface-100);
+  --dt-text-secondary: var(--color-surface-400);
+  --dt-border: rgba(255, 255, 255, 0.06);
+  --dt-border-subtle: rgba(255, 255, 255, 0.03);
+  --dt-card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --dt-sidebar-bg: rgba(15, 23, 42, 0.7);
+  --dt-sidebar-border: rgba(255, 255, 255, 0.06);
+  --dt-input-bg: rgba(255, 255, 255, 0.05);
+  --dt-input-border: rgba(255, 255, 255, 0.1);
+  --dt-nav-active-bg: rgba(20, 184, 166, 0.15);
+  --dt-nav-hover-bg: rgba(255, 255, 255, 0.05);
+  --dt-header-bg: rgba(15, 23, 42, 0.7);
+}
+
+/* ── Theme: Bento ────────────────────────────────────────────────────────────
+   Grid-focused, minimal, Japanese-inspired. Clean borders, generous spacing.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="bento"] {
+  --dt-bg-primary: #fafaf9;
+  --dt-bg-secondary: #ffffff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #1c1917;
+  --dt-text-secondary: #78716c;
+  --dt-border: #e7e5e4;
+  --dt-border-subtle: #f5f5f4;
+  --dt-card-shadow: none;
+  --dt-card-radius: var(--radius-xl);
+  --dt-sidebar-bg: #ffffff;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #e7e5e4;
+  --dt-accent-gradient: linear-gradient(135deg, #0d9488, #14b8a6);
+  --dt-input-bg: #fafaf9;
+  --dt-input-border: #d6d3d1;
+  --dt-badge-radius: var(--radius-sm);
+  --dt-nav-active-bg: #f5f5f4;
+  --dt-nav-hover-bg: #fafaf9;
+  --dt-header-bg: #ffffff;
+}
+
+[data-design-theme="bento"].dark,
+.dark [data-design-theme="bento"] {
+  --dt-bg-primary: #0c0a09;
+  --dt-bg-secondary: #1c1917;
+  --dt-bg-card: #1c1917;
+  --dt-text-primary: #fafaf9;
+  --dt-text-secondary: #a8a29e;
+  --dt-border: #292524;
+  --dt-border-subtle: #1c1917;
+  --dt-card-shadow: none;
+  --dt-sidebar-bg: #1c1917;
+  --dt-sidebar-border: #292524;
+  --dt-input-bg: #292524;
+  --dt-input-border: #44403c;
+  --dt-nav-active-bg: #292524;
+  --dt-nav-hover-bg: #1c1917;
+  --dt-header-bg: #1c1917;
+}
+
+/* ── Theme: Brutalist ────────────────────────────────────────────────────────
+   Raw, bold, high-contrast. Thick borders, monospace accents, no rounded corners.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="brutalist"] {
+  --dt-bg-primary: #ffffff;
+  --dt-bg-secondary: #ffffff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #000000;
+  --dt-text-secondary: #525252;
+  --dt-border: #000000;
+  --dt-border-subtle: #d4d4d4;
+  --dt-card-shadow: 4px 4px 0px #000000;
+  --dt-card-radius: 0px;
+  --dt-sidebar-bg: #ffffff;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #000000;
+  --dt-accent-gradient: linear-gradient(135deg, #000000, #404040);
+  --dt-input-bg: #ffffff;
+  --dt-input-border: #000000;
+  --dt-badge-radius: 0px;
+  --dt-nav-active-bg: #000000;
+  --dt-nav-hover-bg: #f5f5f5;
+  --dt-header-bg: #ffffff;
+}
+
+[data-design-theme="brutalist"].dark,
+.dark [data-design-theme="brutalist"] {
+  --dt-bg-primary: #0a0a0a;
+  --dt-bg-secondary: #0a0a0a;
+  --dt-bg-card: #171717;
+  --dt-text-primary: #ffffff;
+  --dt-text-secondary: #a3a3a3;
+  --dt-border: #ffffff;
+  --dt-border-subtle: #404040;
+  --dt-card-shadow: 4px 4px 0px #ffffff;
+  --dt-sidebar-bg: #0a0a0a;
+  --dt-sidebar-border: #ffffff;
+  --dt-input-bg: #171717;
+  --dt-input-border: #ffffff;
+  --dt-nav-active-bg: #ffffff;
+  --dt-nav-hover-bg: #171717;
+  --dt-header-bg: #0a0a0a;
+}
+
+/* ── Theme: Neon ─────────────────────────────────────────────────────────────
+   Dark-first with vibrant neon accents, cyberpunk-inspired glow effects.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="neon"] {
+  --dt-bg-primary: #f8fafc;
+  --dt-bg-secondary: #ffffff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #0f172a;
+  --dt-text-secondary: #64748b;
+  --dt-border: #e2e8f0;
+  --dt-border-subtle: #f1f5f9;
+  --dt-card-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+  --dt-card-radius: var(--radius-lg);
+  --dt-sidebar-bg: #ffffff;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #e2e8f0;
+  --dt-accent-gradient: linear-gradient(135deg, #6366f1, #a855f7);
+  --dt-input-bg: #ffffff;
+  --dt-input-border: #cbd5e1;
+  --dt-badge-radius: var(--radius-md);
+  --dt-nav-active-bg: rgba(99, 102, 241, 0.08);
+  --dt-nav-hover-bg: #f1f5f9;
+  --dt-header-bg: #ffffff;
+}
+
+[data-design-theme="neon"].dark,
+.dark [data-design-theme="neon"] {
+  --dt-bg-primary: #050510;
+  --dt-bg-secondary: #0a0a1a;
+  --dt-bg-card: rgba(99, 102, 241, 0.06);
+  --dt-text-primary: #e2e8f0;
+  --dt-text-secondary: #94a3b8;
+  --dt-border: rgba(99, 102, 241, 0.2);
+  --dt-border-subtle: rgba(99, 102, 241, 0.08);
+  --dt-card-shadow: 0 0 20px rgba(99, 102, 241, 0.12), 0 0 40px rgba(168, 85, 247, 0.06);
+  --dt-sidebar-bg: rgba(5, 5, 16, 0.95);
+  --dt-sidebar-border: rgba(99, 102, 241, 0.2);
+  --dt-input-bg: rgba(99, 102, 241, 0.06);
+  --dt-input-border: rgba(99, 102, 241, 0.25);
+  --dt-nav-active-bg: rgba(99, 102, 241, 0.15);
+  --dt-nav-hover-bg: rgba(99, 102, 241, 0.08);
+  --dt-header-bg: rgba(5, 5, 16, 0.95);
+}
+
+/* ── Theme: Warm ─────────────────────────────────────────────────────────────
+   Earth tones, soft gradients, cozy feel. Inspired by natural materials.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="warm"] {
+  --dt-bg-primary: #fef7ee;
+  --dt-bg-secondary: #fffbf5;
+  --dt-bg-card: #fffbf5;
+  --dt-text-primary: #431407;
+  --dt-text-secondary: #9a3412;
+  --dt-border: #fed7aa;
+  --dt-border-subtle: #fff1e0;
+  --dt-card-shadow: 0 2px 8px rgba(194, 65, 12, 0.06);
+  --dt-card-radius: var(--radius-xl);
+  --dt-sidebar-bg: #fffbf5;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #fed7aa;
+  --dt-accent-gradient: linear-gradient(135deg, #ea580c, #f59e0b);
+  --dt-input-bg: #fffbf5;
+  --dt-input-border: #fdba74;
+  --dt-badge-radius: var(--radius-lg);
+  --dt-nav-active-bg: rgba(234, 88, 12, 0.08);
+  --dt-nav-hover-bg: #fff1e0;
+  --dt-header-bg: #fffbf5;
+}
+
+[data-design-theme="warm"].dark,
+.dark [data-design-theme="warm"] {
+  --dt-bg-primary: #1a0e04;
+  --dt-bg-secondary: #271505;
+  --dt-bg-card: #271505;
+  --dt-text-primary: #fed7aa;
+  --dt-text-secondary: #fb923c;
+  --dt-border: #7c2d12;
+  --dt-border-subtle: #431407;
+  --dt-card-shadow: 0 2px 8px rgba(194, 65, 12, 0.12);
+  --dt-sidebar-bg: #271505;
+  --dt-sidebar-border: #7c2d12;
+  --dt-input-bg: #431407;
+  --dt-input-border: #9a3412;
+  --dt-nav-active-bg: rgba(234, 88, 12, 0.15);
+  --dt-nav-hover-bg: #431407;
+  --dt-header-bg: #271505;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Theme Application Layer
+   Maps design-theme tokens onto existing semantic tokens so all existing
+   components automatically pick up the active theme.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-design-theme] {
+  --theme-bg: var(--dt-bg-primary);
+  --theme-bg-subtle: var(--dt-bg-secondary);
+  --theme-bg-muted: var(--dt-bg-secondary);
+  --theme-text: var(--dt-text-primary);
+  --theme-text-muted: var(--dt-text-secondary);
+  --theme-border: var(--dt-border);
+  --theme-border-subtle: var(--dt-border-subtle);
+  --theme-card-bg: var(--dt-bg-card);
+  --theme-card-border: var(--dt-border);
+  --glass-bg: var(--dt-sidebar-bg);
+  --glass-border: var(--dt-border-subtle);
+  --glass-shadow: var(--dt-card-shadow);
+}
