@@ -7,6 +7,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.6.0] - 2026-03-22
+
+### Added
+- **Personal Parking History**: Paginated booking history with lot/date filters. Personal stats dashboard: total bookings, favorite lot, avg duration, busiest day, monthly trend chart, credits spent. `GET /api/v1/bookings/history`, `GET /api/v1/bookings/stats`. Timeline view with status badges. Feature flag: `mod-history`. 8 backend + 6 frontend tests. (#238)
+- **Geofencing & Auto Check-in**: Auto check-in when user enters lot geofence area using GPS proximity (haversine distance). `POST /api/v1/geofence/check-in`, `GET /api/v1/lots/:id/geofence`, `PUT /api/v1/admin/lots/:id/geofence`. Auto check-in toggle in Profile settings. Feature flag: `mod-geofence`. 8 backend + 4 frontend tests. (#239)
+- **i18n**: History and geofence keys added to all 10 locales
+- **43 feature flags**: Added `mod-history`, `mod-geofence` (was 41)
+
+### Fixed
+- **Icon Audit**: Synced test mocks with component icon imports across AdminLots, AdminUsers, and Book tests (#237)
+
+---
+
 ## [3.5.0] - 2026-03-22
 
 ### Added
