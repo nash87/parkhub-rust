@@ -36,6 +36,9 @@ sha2 = "0.10"
 rand = "0.9"  # updated from 0.8
 zeroize = { version = "1", features = ["derive"] }
 
+# TOTP (2FA)
+totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
+
 # HTTP/API
 axum = { version = "0.8", features = ["tokio", "json", "ws"] }  # updated from 0.7
 tower = "0.5"

@@ -109,6 +109,7 @@ reqwest.workspace = true
 hmac = "0.12"
 url = "2"
 base64 = "0.22"
+totp-rs = { workspace = true }
 regex = "1.12.3"
 rust-embed = "8.11.0"
 mime_guess = "2.0.5"
