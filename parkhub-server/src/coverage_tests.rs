@@ -1647,9 +1647,10 @@ async fn test_modules_endpoint() {
     let json = body_json(resp).await;
     assert!(json["modules"].is_object());
     assert!(json["version"].is_string());
-    // In headless mode, all optional modules should be false
-    assert_eq!(json["modules"]["bookings"], false);
-    assert_eq!(json["modules"]["vehicles"], false);
+    // Verify module flags match compile-time feature state
+    assert_eq!(json["modules"]["bookings"], cfg!(feature = "mod-bookings"));
+    assert_eq!(json["modules"]["vehicles"], cfg!(feature = "mod-vehicles"));
+    assert_eq!(json["modules"]["oauth"], cfg!(feature = "mod-oauth"));
 }
 
 #[tokio::test]
