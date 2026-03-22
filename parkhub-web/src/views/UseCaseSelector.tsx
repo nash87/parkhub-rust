@@ -110,7 +110,7 @@ export function UseCaseSelectorPage() {
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
           className="btn btn-ghost btn-icon border border-surface-200 dark:border-surface-800"
-          aria-label="Toggle theme"
+          aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
         >
           {resolved === 'dark'
             ? <SunDim weight="bold" className="w-4 h-4 text-accent-400" />
@@ -284,7 +284,7 @@ export function UseCaseSelectorPage() {
                               <button
                                 onClick={() => handleFeatureToggle(mod.id)}
                                 className="flex-shrink-0 cursor-pointer"
-                                aria-label={`Toggle ${mod.id}`}
+                                aria-label={t(`features.modules.${mod.id}.name`)}
                               >
                                 {enabled ? (
                                   <ToggleRight weight="fill" className="w-7 h-7 text-accent-500" />
@@ -314,7 +314,7 @@ export function UseCaseSelectorPage() {
                                 className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md transition-colors cursor-pointer ${
                                   helpOpen ? 'bg-accent-100 dark:bg-accent-900/20 text-accent-600' : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-300'
                                 }`}
-                                aria-label="More info"
+                                aria-label={t('common.info', 'More info')}
                               >
                                 <Info weight={helpOpen ? 'fill' : 'regular'} className="w-4 h-4" />
                               </button>

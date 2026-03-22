@@ -337,7 +337,10 @@ function AddAbsenceModal({ onClose, onAdd, t }: {
         <label htmlFor="absence-note" className="sr-only">{t('absences.notePlaceholder', 'Notiz (optional)')}</label>
         <input id="absence-note" type="text" placeholder={t('absences.notePlaceholder', 'Notiz (optional)')} value={note} onChange={e => setNote(e.target.value)} className="input w-full mb-4" />
 
-        <button onClick={() => onAdd(type, startDate, endDate, note)} disabled={!startDate || !endDate} className="btn btn-primary w-full">
+        <button onClick={() => {
+          if (!startDate || !endDate || endDate < startDate) return;
+          onAdd(type, startDate, endDate, note);
+        }} disabled={!startDate || !endDate || endDate < startDate} className="btn btn-primary w-full">
           <Plus weight="bold" className="w-4 h-4" /> {t('absences.addBtn', 'Eintragen')}
         </button>
       </motion.div>

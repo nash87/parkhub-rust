@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CaretLeft, CaretRight, CalendarBlank } from '@phosphor-icons/react';
 import { api, type CalendarEvent } from '../api/client';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
 
 const statusColors: Record<string, string> = {
   confirmed: 'bg-emerald-500',
@@ -34,12 +35,17 @@ export function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     loadEvents();
+    return () => { abortRef.current?.abort(); };
   }, [currentMonth]);
 
   async function loadEvents() {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -47,9 +53,13 @@ export function CalendarPage() {
     const end = formatDate(new Date(year, month + 1, 0));
     try {
       const res = await api.calendarEvents(start, end);
+      if (controller.signal.aborted) return;
       if (res.success && res.data) setEvents(res.data);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+    } catch {
+      if (!controller.signal.aborted) toast.error(t('common.error'));
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+    }
   }
 
   // Build calendar grid (Monday start)

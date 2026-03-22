@@ -262,7 +262,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
         <div className="flex items-center gap-2">
           {isActiveOrConfirmed && (
             <button
-              onClick={() => onShowPass(booking)}
+              onClick={() => onShowPass?.(booking)}
               aria-label={`${t('pass.showPass')} ${booking.lot_name}`}
               className="btn btn-sm btn-ghost text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
             >

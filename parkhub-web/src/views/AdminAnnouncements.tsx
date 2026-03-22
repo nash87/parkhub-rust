@@ -217,7 +217,7 @@ export function AdminAnnouncementsPage() {
                   value={form.title}
                   onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
                   className="input"
-                  placeholder="Announcement title..."
+                  placeholder={t('admin.announcementTitle')}
                 />
               </div>
 
@@ -229,7 +229,7 @@ export function AdminAnnouncementsPage() {
                   value={form.message}
                   onChange={e => setForm(prev => ({ ...prev, message: e.target.value }))}
                   className="input h-28 resize-y"
-                  placeholder="Announcement message..."
+                  placeholder={t('admin.announcementMessage')}
                 />
               </div>
 
