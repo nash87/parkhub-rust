@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.0.0] - 2026-03-22
+
+### Added
+- **10-Language Support**: Complete translations for FR, ES, IT, PT, TR, PL, JA, ZH — all 904 keys matching EN. Language selector dropdown in sidebar with flag + native name. 29 new i18n tests. (#207)
+- **Admin Analytics Dashboard**: `GET /api/v1/admin/analytics/overview` — daily bookings, revenue, peak hours histogram (24 bins), top 10 lots by utilization, user growth (12 months), avg booking duration. Frontend with stat cards, SVG charts, heatmap, date range picker, CSV export. Feature flag: `mod-analytics`. 6 backend + 7 frontend tests. (#208)
+- **Email Notification Templates**: 6 professional HTML email templates with inline CSS — booking confirmation, reminder, cancellation, password reset, welcome, weekly admin summary. Template engine with `{{key}}` variable substitution. Feature flag: `mod-email-templates`. 9 unit tests. (#209)
+
+---
+
 ## [2.9.0] - 2026-03-22
 
 ### Added
