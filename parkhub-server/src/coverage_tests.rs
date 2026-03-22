@@ -1411,8 +1411,18 @@ async fn test_update_design_theme_invalid() {
 #[tokio::test]
 async fn test_update_design_theme_all_valid_themes() {
     let valid_themes = [
-        "classic", "glass", "bento", "brutalist", "neon", "warm", "liquid", "mono", "ocean",
-        "forest", "synthwave", "zen",
+        "classic",
+        "glass",
+        "bento",
+        "brutalist",
+        "neon",
+        "warm",
+        "liquid",
+        "mono",
+        "ocean",
+        "forest",
+        "synthwave",
+        "zen",
     ];
 
     for theme_name in valid_themes {
@@ -2736,6 +2746,7 @@ fn test_notification_preferences_all_disabled() {
         email_booking_reminder: false,
         email_swap_request: false,
         push_enabled: false,
+        ..Default::default()
     };
     let json = serde_json::to_string(&prefs).unwrap();
     let back: NotificationPreferences = serde_json::from_str(&json).unwrap();
