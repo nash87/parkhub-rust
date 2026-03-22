@@ -1152,5 +1152,17 @@ export default {
         maintenance: 'Maintenance',
       },
     },
+    recommendations: {
+      title: 'Smart Recommendations',
+      subtitle: 'Personalized parking slot suggestions',
+      recommendedForYou: 'Recommended for you',
+      yourUsualSpot: 'Your usual spot',
+      bestPrice: 'Best price',
+      closest: 'Closest',
+      availableNow: 'Available now',
+      preferredLot: 'Preferred lot',
+      accessible: 'Accessible',
+      help: 'Smart recommendations use your booking history, availability, pricing, and distance to suggest the best parking slots. The scoring algorithm weighs frequency (40%), availability (30%), price (20%), and distance (10%).',
+    },
   },
 };
