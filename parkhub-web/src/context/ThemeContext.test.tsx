@@ -63,6 +63,12 @@ function ThemeConsumer() {
       <button data-testid="set-warm" onClick={() => setDesignTheme('warm')}>Warm</button>
       <button data-testid="set-bento" onClick={() => setDesignTheme('bento')}>Bento</button>
       <button data-testid="set-classic" onClick={() => setDesignTheme('classic')}>Classic</button>
+      <button data-testid="set-liquid" onClick={() => setDesignTheme('liquid')}>Liquid</button>
+      <button data-testid="set-mono" onClick={() => setDesignTheme('mono')}>Mono</button>
+      <button data-testid="set-ocean" onClick={() => setDesignTheme('ocean')}>Ocean</button>
+      <button data-testid="set-forest" onClick={() => setDesignTheme('forest')}>Forest</button>
+      <button data-testid="set-synthwave" onClick={() => setDesignTheme('synthwave')}>Synthwave</button>
+      <button data-testid="set-zen" onClick={() => setDesignTheme('zen')}>Zen</button>
     </div>
   );
 }
@@ -224,14 +230,14 @@ describe('ThemeContext', () => {
     expect(screen.getByTestId('design-theme-name').textContent).toBe('Classic');
   });
 
-  it('exposes all 6 design themes', () => {
+  it('exposes all 12 design themes', () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('design-themes-count').textContent).toBe('6');
+    expect(screen.getByTestId('design-themes-count').textContent).toBe('12');
   });
 
   it('setDesignTheme changes the active design theme', async () => {
@@ -326,7 +332,7 @@ describe('ThemeContext', () => {
     }
   });
 
-  it('DESIGN_THEMES contains all 6 themes', () => {
+  it('DESIGN_THEMES contains all 12 themes', () => {
     const ids = DESIGN_THEMES.map(t => t.id);
     expect(ids).toContain('classic');
     expect(ids).toContain('glass');
@@ -334,6 +340,45 @@ describe('ThemeContext', () => {
     expect(ids).toContain('brutalist');
     expect(ids).toContain('neon');
     expect(ids).toContain('warm');
-    expect(ids).toHaveLength(6);
+    expect(ids).toContain('liquid');
+    expect(ids).toContain('mono');
+    expect(ids).toContain('ocean');
+    expect(ids).toContain('forest');
+    expect(ids).toContain('synthwave');
+    expect(ids).toContain('zen');
+    expect(ids).toHaveLength(12);
+  });
+
+  it('can switch to all 12 design themes', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>,
+    );
+
+    const allThemes: DesignThemeId[] = [
+      'classic', 'glass', 'bento', 'brutalist', 'neon', 'warm',
+      'liquid', 'mono', 'ocean', 'forest', 'synthwave', 'zen',
+    ];
+
+    for (const themeId of allThemes) {
+      await user.click(screen.getByTestId(`set-${themeId}`));
+      expect(screen.getByTestId('design-theme').textContent).toBe(themeId);
+      expect(document.documentElement.dataset.designTheme).toBe(themeId);
+    }
+  });
+
+  it('each new theme has valid preview colors', () => {
+    const newThemes: DesignThemeId[] = ['liquid', 'mono', 'ocean', 'forest', 'synthwave', 'zen'];
+    for (const id of newThemes) {
+      const theme = DESIGN_THEMES.find(t => t.id === id);
+      expect(theme).toBeDefined();
+      expect(theme!.previewColors.light).toHaveLength(5);
+      expect(theme!.previewColors.dark).toHaveLength(5);
+      expect(theme!.tags.length).toBeGreaterThan(0);
+      expect(theme!.description.length).toBeGreaterThan(10);
+    }
   });
 });
