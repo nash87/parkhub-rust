@@ -3046,19 +3046,52 @@ fn argon2_params() -> argon2::Params {
     argon2::Params::new(65_536, 3, 4, None).expect("OWASP Argon2 params are statically valid")
 }
 
-/// Hash a password using Argon2id.
-///
-/// Returns `Err` on the (extremely unlikely) event that hashing fails so the
-/// caller can propagate a proper HTTP 500 instead of panicking.
+/// Hash a password using Argon2id, wrapped in `spawn_blocking` to avoid
+/// blocking the async runtime (issue #117).
 #[allow(clippy::result_large_err)]
-pub fn hash_password(
+pub async fn hash_password(
+    password: &str,
+) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
+    let password = password.to_string();
+    tokio::task::spawn_blocking(move || hash_password_sync(&password))
+        .await
+        .map_err(|e| {
+            tracing::error!("spawn_blocking failed for password hashing: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            )
+        })?
+}
+
+/// Hash a password using Argon2id, returning an `anyhow::Result`.
+/// Wrapped in `spawn_blocking` (issue #117).
+pub async fn hash_password_simple(password: &str) -> anyhow::Result<String> {
+    let password = password.to_string();
+    tokio::task::spawn_blocking(move || hash_password_simple_sync(&password))
+        .await
+        .map_err(|e| anyhow::anyhow!("spawn_blocking failed: {e}"))?
+}
+
+/// Verify a password against a hash via `spawn_blocking` (issue #117).
+pub async fn verify_password(password: &str, hash: &str) -> bool {
+    let password = password.to_string();
+    let hash = hash.to_string();
+    tokio::task::spawn_blocking(move || verify_password_sync(&password, &hash))
+        .await
+        .unwrap_or(false)
+}
+
+// ── Synchronous inner functions (run on blocking threadpool) ─────────────
+
+#[allow(clippy::result_large_err)]
+fn hash_password_sync(
     password: &str,
 ) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Algorithm, Argon2, Version,
     };
-
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params());
     argon2
@@ -3073,11 +3106,7 @@ pub fn hash_password(
         })
 }
 
-/// Hash a password using Argon2id, returning an `anyhow::Result`.
-///
-/// Used by code paths (e.g. password reset) that cannot return the typed
-/// HTTP error tuple used by `hash_password`.
-pub fn hash_password_simple(password: &str) -> anyhow::Result<String> {
+fn hash_password_simple_sync(password: &str) -> anyhow::Result<String> {
     use argon2::{
         password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Algorithm, Argon2, Version,
@@ -3089,16 +3118,14 @@ pub fn hash_password_simple(password: &str) -> anyhow::Result<String> {
         .map_err(|e| anyhow::anyhow!("Argon2 hashing failed: {e}"))
 }
 
-pub fn verify_password(password: &str, hash: &str) -> bool {
+fn verify_password_sync(password: &str, hash: &str) -> bool {
     use argon2::{
         password_hash::{PasswordHash, PasswordVerifier},
         Algorithm, Argon2, Version,
     };
-
     let Ok(parsed_hash) = PasswordHash::new(hash) else {
         return false;
     };
-
     Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params())
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
@@ -4264,7 +4291,7 @@ pub async fn change_password(
     };
 
     // Verify current password
-    if !verify_password(&req.current_password, &user.password_hash) {
+    if !verify_password(&req.current_password, &user.password_hash).await {
         return (
             StatusCode::UNAUTHORIZED,
             Json(ApiResponse::error(
@@ -4275,7 +4302,7 @@ pub async fn change_password(
     }
 
     // Hash new password
-    let new_hash = match hash_password_simple(&req.new_password) {
+    let new_hash = match hash_password_simple(&req.new_password).await {
         Ok(h) => h,
         Err(e) => {
             tracing::error!("Password hashing failed: {}", e);
