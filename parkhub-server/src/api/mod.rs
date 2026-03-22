@@ -946,7 +946,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                             .get(header::AUTHORIZATION)
                             .and_then(|v| v.to_str().ok())
                             .and_then(|v| v.strip_prefix("Bearer "))
-                            .is_some_and(|token| token == expected);
+                            .is_some_and(|token| {
+                                // Constant-time comparison to prevent timing attacks (issue #114)
+                                use subtle::ConstantTimeEq;
+                                token.as_bytes().ct_eq(expected.as_bytes()).into()
+                            });
                         if !authorized {
                             return (
                                 StatusCode::UNAUTHORIZED,
