@@ -32,6 +32,15 @@ vi.mock('../api/client', () => ({
     getUserStats: (...args: any[]) => mockGetUserStats(...args),
     updateMe: (...args: any[]) => mockUpdateMe(...args),
     changePassword: (...args: any[]) => mockChangePassword(...args),
+    getNotificationPreferences: vi.fn().mockResolvedValue({ success: true, data: { email_bookings: true, email_reminders: true, push_bookings: false, push_reminders: false } }),
+    updateNotificationPreferences: vi.fn().mockResolvedValue({ success: true }),
+    getLoginHistory: vi.fn().mockResolvedValue({ success: true, data: [] }),
+    getSessions: vi.fn().mockResolvedValue({ success: true, data: [] }),
+    revokeSession: vi.fn().mockResolvedValue({ success: true }),
+    get2FAStatus: vi.fn().mockResolvedValue({ success: true, data: { enabled: false } }),
+    setup2FA: vi.fn().mockResolvedValue({ success: true, data: { secret: 'ABCD', qr_url: 'otpauth://test' } }),
+    verify2FA: vi.fn().mockResolvedValue({ success: true }),
+    disable2FA: vi.fn().mockResolvedValue({ success: true }),
   },
 }));
 
@@ -105,6 +114,16 @@ vi.mock('@phosphor-icons/react', () => ({
   CaretUp: (props: any) => <span data-testid="icon-caret-up" {...props} />,
   Shield: (props: any) => <span data-testid="icon-shield" {...props} />,
   Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  ShieldCheck: (props: any) => <span data-testid="icon-shield-check" {...props} />,
+  Bell: (props: any) => <span data-testid="icon-bell" {...props} />,
+  EnvelopeSimple: (props: any) => <span data-testid="icon-envelope-simple" {...props} />,
+  DeviceMobile: (props: any) => <span data-testid="icon-device-mobile" {...props} />,
+  ClockCounterClockwise: (props: any) => <span data-testid="icon-clock" {...props} />,
+  Desktop: (props: any) => <span data-testid="icon-desktop" {...props} />,
+  Globe: (props: any) => <span data-testid="icon-globe" {...props} />,
+  ShieldWarning: (props: any) => <span data-testid="icon-shield-warning" {...props} />,
+  Check: (props: any) => <span data-testid="icon-check" {...props} />,
+  X: (props: any) => <span data-testid="icon-x" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

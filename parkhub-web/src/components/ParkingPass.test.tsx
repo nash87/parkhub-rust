@@ -27,6 +27,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@phosphor-icons/react', () => ({
   X: (props: any) => <span data-testid="icon-x" {...props} />,
   DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
+  Printer: (props: any) => <span data-testid="icon-printer" {...props} />,
 }));
 
 vi.mock('date-fns', () => ({

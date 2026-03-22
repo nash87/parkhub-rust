@@ -196,9 +196,7 @@ pub async fn bulk_delete_users(
 
     AuditEntry::new(AuditEventType::UserDeleted)
         .user(auth_user.user_id, "")
-        .detail(&format!(
-            "Bulk delete: {succeeded}/{total} users deleted"
-        ))
+        .detail(&format!("Bulk delete: {succeeded}/{total} users deleted"))
         .log();
 
     let failed = total - succeeded;
@@ -304,21 +302,21 @@ pub async fn revenue_report(
             .cloned()
             .unwrap_or_else(|| "Unknown".to_string());
         let price = b.pricing.total;
-        let entry = revenue_map
-            .entry((period, lot_name))
-            .or_insert((0.0, 0));
+        let entry = revenue_map.entry((period, lot_name)).or_insert((0.0, 0));
         entry.0 += price;
         entry.1 += 1;
     }
 
     let entries: Vec<RevenueReportEntry> = revenue_map
         .into_iter()
-        .map(|((period, lot_name), (total_revenue, booking_count))| RevenueReportEntry {
-            period,
-            lot_name,
-            total_revenue: (total_revenue * 100.0).round() / 100.0,
-            booking_count,
-        })
+        .map(
+            |((period, lot_name), (total_revenue, booking_count))| RevenueReportEntry {
+                period,
+                lot_name,
+                total_revenue: (total_revenue * 100.0).round() / 100.0,
+                booking_count,
+            },
+        )
         .collect();
 
     (StatusCode::OK, Json(ApiResponse::success(entries)))
@@ -637,17 +635,13 @@ pub struct BookingPolicies {
 
 impl BookingPolicies {
     /// Validate a booking against policies. Returns `Ok(())` or an error message.
-    pub fn check(
-        &self,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
-    ) -> Result<(), String> {
+    #[allow(dead_code)]
+    pub fn check(&self, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Result<(), String> {
         let now = Utc::now();
 
         // Check max advance booking
         if self.max_advance_booking_days > 0 {
-            let max_future =
-                now + chrono::Duration::days(i64::from(self.max_advance_booking_days));
+            let max_future = now + chrono::Duration::days(i64::from(self.max_advance_booking_days));
             if start_time > max_future {
                 return Err(format!(
                     "Bookings can only be made up to {} days in advance",
@@ -659,17 +653,13 @@ impl BookingPolicies {
         // Check duration
         let duration_hours = (end_time - start_time).num_hours();
         let duration_u32 = u32::try_from(duration_hours).unwrap_or(0);
-        if self.min_booking_duration_hours > 0
-            && duration_u32 < self.min_booking_duration_hours
-        {
+        if self.min_booking_duration_hours > 0 && duration_u32 < self.min_booking_duration_hours {
             return Err(format!(
                 "Minimum booking duration is {} hours",
                 self.min_booking_duration_hours
             ));
         }
-        if self.max_booking_duration_hours > 0
-            && duration_u32 > self.max_booking_duration_hours
-        {
+        if self.max_booking_duration_hours > 0 && duration_u32 > self.max_booking_duration_hours {
             return Err(format!(
                 "Maximum booking duration is {} hours",
                 self.max_booking_duration_hours
@@ -740,7 +730,10 @@ pub async fn update_booking_policies(
         tracing::error!("Failed to save booking policies: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error("SERVER_ERROR", "Failed to save policies")),
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save policies",
+            )),
         );
     }
 
