@@ -619,6 +619,92 @@ pub async fn load_notification_preferences(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DESIGN THEME PREFERENCES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Available design theme IDs.
+const VALID_DESIGN_THEMES: &[&str] = &[
+    "classic", "glass", "bento", "brutalist", "neon", "warm",
+];
+
+/// Design theme preference.
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct DesignThemePreference {
+    pub design_theme: String,
+}
+
+/// `GET /api/v1/preferences/theme` — Get the user's design theme preference.
+#[utoipa::path(
+    get,
+    path = "/api/v1/preferences/theme",
+    tag = "Users",
+    summary = "Get design theme preference",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Design theme preference")),
+)]
+pub async fn get_design_theme_preference(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<DesignThemePreference>>) {
+    let state_guard = state.read().await;
+    let key = format!("design_theme:{}", auth_user.user_id);
+    let theme = match state_guard.db.get_setting(&key).await {
+        Ok(Some(val)) if VALID_DESIGN_THEMES.contains(&val.as_str()) => val,
+        _ => "classic".to_string(),
+    };
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(DesignThemePreference {
+            design_theme: theme,
+        })),
+    )
+}
+
+/// `PUT /api/v1/preferences/theme` — Update the user's design theme preference.
+#[utoipa::path(
+    put,
+    path = "/api/v1/preferences/theme",
+    tag = "Users",
+    summary = "Update design theme preference",
+    security(("bearer_auth" = [])),
+    request_body = DesignThemePreference,
+    responses((status = 200, description = "Design theme updated")),
+)]
+pub async fn update_design_theme_preference(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(body): Json<DesignThemePreference>,
+) -> (StatusCode, Json<ApiResponse<DesignThemePreference>>) {
+    if !VALID_DESIGN_THEMES.contains(&body.design_theme.as_str()) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_THEME",
+                "Invalid design theme. Valid: classic, glass, bento, brutalist, neon, warm",
+            )),
+        );
+    }
+
+    let state_guard = state.read().await;
+    let key = format!("design_theme:{}", auth_user.user_id);
+    if let Err(e) = state_guard
+        .db
+        .set_setting(&key, &body.design_theme)
+        .await
+    {
+        tracing::error!("Failed to save design theme: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save design theme",
+            )),
+        );
+    }
+    (StatusCode::OK, Json(ApiResponse::success(body)))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // BOOKING POLICIES
 // ═══════════════════════════════════════════════════════════════════════════════
 

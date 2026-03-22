@@ -313,6 +313,7 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-translations").into(),
     );
     modules.insert("social".into(), cfg!(feature = "mod-social").into());
+    modules.insert("themes".into(), cfg!(feature = "mod-themes").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -516,6 +517,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/preferences/notifications",
             get(admin_ext::get_notification_preferences)
                 .put(admin_ext::update_notification_preferences),
+        )
+        // ── Design theme preferences ──
+        .route(
+            "/api/v1/preferences/theme",
+            get(admin_ext::get_design_theme_preference)
+                .put(admin_ext::update_design_theme_preference),
         );
 
     // ── Admin routes (guarded by admin_middleware) ────────────────────────

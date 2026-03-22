@@ -489,6 +489,7 @@ export default {
         fab_quick_actions: { name: 'Quick Actions', desc: 'Floating action button for fast access to common tasks', help: 'Shows a command palette (Ctrl+K) and floating button for quick navigation.' },
         rich_empty_states: { name: 'Rich Empty States', desc: 'Illustrated empty states with helpful suggestions', help: 'Shows helpful illustrations and action buttons when lists are empty.' },
         onboarding_hints: { name: 'Onboarding Hints', desc: 'Contextual tips for new users', help: 'Displays guided tooltips and hints for first-time users.' },
+        themes: { name: 'Design Themes', desc: 'Switch between visual design themes', help: 'Choose from Classic, Glass, Bento, Brutalist, Neon, or Warm design themes.' },
       },
       compliance: {
         title: 'Built-in Compliance',
@@ -766,6 +767,29 @@ export default {
         fri: 'Fri',
         sat: 'Sat',
         sun: 'Sun',
+      },
+    },
+    themes: {
+      title: 'Design Themes',
+      subtitle: 'Choose a visual design for your ParkHub experience.',
+      openSwitcher: 'Change theme',
+      applyTheme: 'Apply {{name}} theme',
+      currentTheme: 'Current theme',
+      names: {
+        classic: 'Classic',
+        glass: 'Glass',
+        bento: 'Bento',
+        brutalist: 'Brutalist',
+        neon: 'Neon',
+        warm: 'Warm',
+      },
+      descriptions: {
+        classic: 'Clean, professional. The original ParkHub look.',
+        glass: 'Frosted glassmorphism with blur and translucency.',
+        bento: 'Grid-focused, minimal. Japanese-inspired clean lines.',
+        brutalist: 'Raw, bold, high-contrast. No rounded corners.',
+        neon: 'Vibrant accents with cyberpunk-inspired glow.',
+        warm: 'Earth tones, soft gradients, cozy feel.',
       },
     },
     payment: {

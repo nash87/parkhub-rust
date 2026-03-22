@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./themes.css";
 
 /* Enable class-based dark mode (Tailwind CSS 4 defaults to media query) */
 @custom-variant dark (&:where(.dark, .dark *));

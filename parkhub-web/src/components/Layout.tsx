@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { CommandPalette } from './CommandPalette';
+import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
 
@@ -35,6 +36,7 @@ export function Layout() {
   const { resolved, setTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [themeSwitcherOpen, setThemeSwitcherOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const toggleCommandPalette = useCallback(
@@ -268,6 +270,8 @@ export function Layout() {
       </div>
 
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+      <ThemeSwitcherFab onClick={() => setThemeSwitcherOpen(true)} />
+      <ThemeSwitcher open={themeSwitcherOpen} onClose={() => setThemeSwitcherOpen(false)} />
     </div>
   );
 }

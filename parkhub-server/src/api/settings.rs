@@ -322,6 +322,7 @@ const FEATURE_MODULES: &[&str] = &[
     "fab_quick_actions",
     "rich_empty_states",
     "onboarding_hints",
+    "themes",
 ];
 
 /// Default enabled features (business use case).
@@ -338,6 +339,7 @@ const DEFAULT_FEATURES: &[&str] = &[
     "fab_quick_actions",
     "rich_empty_states",
     "onboarding_hints",
+    "themes",
 ];
 
 const SETTINGS_FEATURES_KEY: &str = "features_enabled";

@@ -257,6 +257,8 @@ use crate::{
         crate::api::update_user_preferences,
         crate::api::gdpr_export_data,
         crate::api::gdpr_delete_account,
+        crate::api::admin_ext::get_design_theme_preference,
+        crate::api::admin_ext::update_design_theme_preference,
 
         // Bookings (mod.rs)
         crate::api::list_bookings,
