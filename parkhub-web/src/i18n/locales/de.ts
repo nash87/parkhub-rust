@@ -807,6 +807,8 @@ export default {
         mono: 'Mono',
         ocean: 'Ozean',
         forest: 'Wald',
+        synthwave: 'Synthwave',
+        zen: 'Zen',
       },
       descriptions: {
         classic: 'Sauber, professionell. Der originale ParkHub-Look.',
@@ -819,6 +821,8 @@ export default {
         mono: 'Ultra-minimales Monochrom. Präzisions-Design.',
         ocean: 'Tiefblaue maritime Palette mit Türkis-Akzenten.',
         forest: 'Naturinspirierte Grüntöne. Nachhaltig und geerdet.',
+        synthwave: '80er-Retro-Futurismus mit Neon-Lila-Pink-Glühen.',
+        zen: 'Wabi-Sabi japanischer Minimalismus. Papier-Texturen, Tusche-Subtilität.',
       },
     },
     payment: {

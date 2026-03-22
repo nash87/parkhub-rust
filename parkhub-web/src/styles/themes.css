@@ -448,6 +448,96 @@
   --dt-header-bg: rgba(13, 26, 13, 0.9);
 }
 
+/* ── Theme: Synthwave ────────────────────────────────────────────────────────
+   80s retro-futurism. Purple-pink gradients, neon cyan/magenta accents,
+   grid horizons, CRT glow effects. Dark-first by design.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="synthwave"] {
+  --dt-bg-primary: #f5f0ff;
+  --dt-bg-secondary: #faf5ff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #2e1065;
+  --dt-text-secondary: #7c3aed;
+  --dt-border: #ddd6fe;
+  --dt-border-subtle: #ede9fe;
+  --dt-card-shadow: 0 2px 12px rgba(139, 92, 246, 0.08);
+  --dt-card-radius: var(--radius-xl);
+  --dt-sidebar-bg: #faf5ff;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #ddd6fe;
+  --dt-accent-gradient: linear-gradient(135deg, #a855f7, #ec4899);
+  --dt-input-bg: #ffffff;
+  --dt-input-border: #c4b5fd;
+  --dt-badge-radius: var(--radius-md);
+  --dt-nav-active-bg: rgba(168, 85, 247, 0.08);
+  --dt-nav-hover-bg: #ede9fe;
+  --dt-header-bg: rgba(250, 245, 255, 0.9);
+}
+
+[data-design-theme="synthwave"].dark,
+.dark [data-design-theme="synthwave"] {
+  --dt-bg-primary: #0f0019;
+  --dt-bg-secondary: #1a0030;
+  --dt-bg-card: rgba(168, 85, 247, 0.06);
+  --dt-text-primary: #e9d5ff;
+  --dt-text-secondary: #c084fc;
+  --dt-border: rgba(168, 85, 247, 0.2);
+  --dt-border-subtle: rgba(168, 85, 247, 0.08);
+  --dt-card-shadow: 0 0 24px rgba(168, 85, 247, 0.1), 0 0 48px rgba(236, 72, 153, 0.05);
+  --dt-sidebar-bg: rgba(15, 0, 25, 0.95);
+  --dt-sidebar-border: rgba(168, 85, 247, 0.2);
+  --dt-input-bg: rgba(168, 85, 247, 0.06);
+  --dt-input-border: rgba(168, 85, 247, 0.25);
+  --dt-nav-active-bg: rgba(168, 85, 247, 0.15);
+  --dt-nav-hover-bg: rgba(168, 85, 247, 0.06);
+  --dt-header-bg: rgba(15, 0, 25, 0.95);
+}
+
+/* ── Theme: Zen ─────────────────────────────────────────────────────────────
+   Wabi-sabi Japanese minimalism. Maximum whitespace, muted earth palette,
+   hairline borders, paper textures, ink-wash subtlety.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="zen"] {
+  --dt-bg-primary: #faf8f5;
+  --dt-bg-secondary: #fdfcfa;
+  --dt-bg-card: #fdfcfa;
+  --dt-text-primary: #3d3731;
+  --dt-text-secondary: #908880;
+  --dt-border: #e8e4df;
+  --dt-border-subtle: #f2efe9;
+  --dt-card-shadow: none;
+  --dt-card-radius: 4px;
+  --dt-sidebar-bg: #fdfcfa;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #e8e4df;
+  --dt-accent-gradient: linear-gradient(135deg, #87a68f, #6b8e72);
+  --dt-input-bg: #fdfcfa;
+  --dt-input-border: #d4cfc8;
+  --dt-badge-radius: 2px;
+  --dt-nav-active-bg: rgba(135, 166, 143, 0.08);
+  --dt-nav-hover-bg: #f2efe9;
+  --dt-header-bg: #fdfcfa;
+}
+
+[data-design-theme="zen"].dark,
+.dark [data-design-theme="zen"] {
+  --dt-bg-primary: #1a1815;
+  --dt-bg-secondary: #221f1b;
+  --dt-bg-card: #221f1b;
+  --dt-text-primary: #d4cfc8;
+  --dt-text-secondary: #908880;
+  --dt-border: #33302b;
+  --dt-border-subtle: #2a2722;
+  --dt-card-shadow: none;
+  --dt-sidebar-bg: #1a1815;
+  --dt-sidebar-border: #33302b;
+  --dt-input-bg: #2a2722;
+  --dt-input-border: #44403a;
+  --dt-nav-active-bg: rgba(135, 166, 143, 0.1);
+  --dt-nav-hover-bg: #2a2722;
+  --dt-header-bg: rgba(26, 24, 21, 0.95);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    Theme Application Layer
    Maps design-theme tokens onto existing semantic tokens so all existing

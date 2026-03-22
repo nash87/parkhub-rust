@@ -7,7 +7,7 @@ type ColorMode = 'light' | 'dark' | 'system';
 
 // ── Design Themes ──
 
-export type DesignThemeId = 'classic' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm' | 'liquid' | 'mono' | 'ocean' | 'forest';
+export type DesignThemeId = 'classic' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm' | 'liquid' | 'mono' | 'ocean' | 'forest' | 'synthwave' | 'zen';
 
 export interface DesignThemeInfo {
   id: DesignThemeId;
@@ -121,6 +121,26 @@ export const DESIGN_THEMES: DesignThemeInfo[] = [
       dark: ['#0d1a0d', '#142814', '#22c55e', '#c8dcc0', '#1e3a1e'],
     },
     tags: ['nature', 'green', 'organic', 'sustainable'],
+  },
+  {
+    id: 'synthwave',
+    name: 'Synthwave',
+    description: '80s retro-futurism with neon purple-pink glow.',
+    previewColors: {
+      light: ['#f5f0ff', '#ffffff', '#a855f7', '#2e1065', '#ddd6fe'],
+      dark: ['#0f0019', 'rgba(168,85,247,0.06)', '#a855f7', '#e9d5ff', 'rgba(168,85,247,0.2)'],
+    },
+    tags: ['retro', '80s', 'cyberpunk', 'purple', 'glow'],
+  },
+  {
+    id: 'zen',
+    name: 'Zen',
+    description: 'Wabi-sabi Japanese minimalism. Paper textures, ink-wash subtlety.',
+    previewColors: {
+      light: ['#faf8f5', '#fdfcfa', '#87a68f', '#3d3731', '#e8e4df'],
+      dark: ['#1a1815', '#221f1b', '#87a68f', '#d4cfc8', '#33302b'],
+    },
+    tags: ['japanese', 'wabi-sabi', 'minimal', 'paper', 'zen'],
   },
 ];
 

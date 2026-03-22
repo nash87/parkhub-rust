@@ -634,6 +634,8 @@ const VALID_DESIGN_THEMES: &[&str] = &[
     "mono",
     "ocean",
     "forest",
+    "synthwave",
+    "zen",
 ];
 
 /// Design theme preference.
