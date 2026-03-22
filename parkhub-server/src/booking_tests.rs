@@ -16,10 +16,24 @@ use crate::db::{Database, DatabaseConfig};
 use crate::AppState;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared helpers (mirrors integration_tests.rs)
+// Shared helpers — each test gets its own isolated state & temp directory.
+// The TempDir is returned alongside the state so it lives exactly as long
+// as the test needs and is cleaned up when dropped (issue #108: no more
+// std::mem::forget leaking temp directories).
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Owns both the shared state *and* the temporary directory backing the DB.
+/// Drop order is guaranteed: state first (closing the DB), then the dir.
+struct TestHarness {
+    state: Arc<RwLock<AppState>>,
+    _dir: tempfile::TempDir,
+}
+
 async fn test_state() -> Arc<RwLock<AppState>> {
+    test_harness().await.state
+}
+
+async fn test_harness() -> TestHarness {
     let dir = tempfile::tempdir().expect("tempdir");
     let db_config = DatabaseConfig {
         path: dir.path().to_path_buf(),
@@ -50,8 +64,7 @@ async fn test_state() -> Arc<RwLock<AppState>> {
             .expect("seed admin");
     }
 
-    std::mem::forget(dir);
-    state
+    TestHarness { state, _dir: dir }
 }
 
 fn router(state: Arc<RwLock<AppState>>) -> axum::Router {
