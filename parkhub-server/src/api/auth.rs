@@ -121,7 +121,7 @@ pub async fn login(
     }
 
     // Verify password
-    if !verify_password(&request.password, &user.password_hash) {
+    if !verify_password(&request.password, &user.password_hash).await {
         AuditEntry::new(AuditEventType::LoginFailed)
             .user(user.id, &user.username)
             .error("Invalid password")
@@ -308,7 +308,7 @@ pub async fn register(
     }
 
     // Hash password
-    let password_hash = match hash_password(&request.password) {
+    let password_hash = match hash_password(&request.password).await {
         Ok(h) => h,
         Err(e) => return e,
     };
@@ -748,7 +748,7 @@ pub async fn reset_password(
     };
 
     // Hash the new password
-    let new_hash = match hash_password_simple(&request.password) {
+    let new_hash = match hash_password_simple(&request.password).await {
         Ok(h) => h,
         Err(e) => {
             tracing::error!("Password hashing failed: {}", e);
