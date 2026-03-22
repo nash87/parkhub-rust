@@ -75,18 +75,15 @@ pub async fn two_factor_setup(
 ) -> (StatusCode, Json<ApiResponse<TwoFactorSetupResponse>>) {
     let state_guard = state.read().await;
 
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "User not found")),
-            );
-        }
+    else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
     };
 
     // Check if 2FA is already enabled
@@ -124,12 +121,17 @@ pub async fn two_factor_setup(
             tracing::error!("Failed to create TOTP: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to generate 2FA secret")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to generate 2FA secret",
+                )),
             );
         }
     };
 
-    let secret = totp_rs::Secret::Raw(totp.secret.clone()).to_encoded().to_string();
+    let secret = totp_rs::Secret::Raw(totp.secret.clone())
+        .to_encoded()
+        .to_string();
     let otpauth_uri = totp.get_url();
 
     // Generate QR code as base64 PNG
@@ -139,7 +141,10 @@ pub async fn two_factor_setup(
             tracing::error!("Failed to generate QR code: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to generate QR code")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to generate QR code",
+                )),
             );
         }
     };
@@ -185,18 +190,15 @@ pub async fn two_factor_verify(
 ) -> (StatusCode, Json<ApiResponse<TwoFactorStatusResponse>>) {
     let state_guard = state.read().await;
 
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "User not found")),
-            );
-        }
+    else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
     };
 
     // Get pending TOTP secret
@@ -272,7 +274,9 @@ pub async fn two_factor_verify(
 
     (
         StatusCode::OK,
-        Json(ApiResponse::success(TwoFactorStatusResponse { enabled: true })),
+        Json(ApiResponse::success(TwoFactorStatusResponse {
+            enabled: true,
+        })),
     )
 }
 
@@ -297,18 +301,15 @@ pub async fn two_factor_disable(
 ) -> (StatusCode, Json<ApiResponse<TwoFactorStatusResponse>>) {
     let state_guard = state.read().await;
 
-    let user = match state_guard
+    let Ok(Some(user)) = state_guard
         .db
         .get_user(&auth_user.user_id.to_string())
         .await
-    {
-        Ok(Some(u)) => u,
-        _ => {
-            return (
-                StatusCode::NOT_FOUND,
-                Json(ApiResponse::error("NOT_FOUND", "User not found")),
-            );
-        }
+    else {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
     };
 
     // Verify password
@@ -335,7 +336,9 @@ pub async fn two_factor_disable(
 
     (
         StatusCode::OK,
-        Json(ApiResponse::success(TwoFactorStatusResponse { enabled: false })),
+        Json(ApiResponse::success(TwoFactorStatusResponse {
+            enabled: false,
+        })),
     )
 }
 
@@ -371,19 +374,23 @@ pub async fn is_2fa_enabled(state: &crate::AppState, user_id: Uuid) -> bool {
 
 /// Verify a TOTP code for a user during login.
 #[allow(dead_code)]
-pub async fn verify_2fa_code(state: &crate::AppState, user_id: Uuid, email: &str, code: &str) -> bool {
+pub async fn verify_2fa_code(
+    state: &crate::AppState,
+    user_id: Uuid,
+    email: &str,
+    code: &str,
+) -> bool {
     let totp_key = format!("totp:{user_id}");
     let secret_b32 = match state.db.get_setting(&totp_key).await {
         Ok(Some(s)) if !s.is_empty() => s,
         _ => return false,
     };
 
-    let secret_bytes = match totp_rs::Secret::Encoded(secret_b32).to_bytes() {
-        Ok(b) => b,
-        Err(_) => return false,
+    let Ok(secret_bytes) = totp_rs::Secret::Encoded(secret_b32).to_bytes() else {
+        return false;
     };
 
-    let totp = match totp_rs::TOTP::new(
+    let Ok(totp) = totp_rs::TOTP::new(
         totp_rs::Algorithm::SHA1,
         6,
         1,
@@ -391,9 +398,8 @@ pub async fn verify_2fa_code(state: &crate::AppState, user_id: Uuid, email: &str
         secret_bytes,
         Some("ParkHub".to_string()),
         email.to_string(),
-    ) {
-        Ok(t) => t,
-        Err(_) => return false,
+    ) else {
+        return false;
     };
 
     totp.check_current(code).unwrap_or(false)
@@ -428,7 +434,7 @@ impl Default for PasswordPolicy {
 impl PasswordPolicy {
     /// Check a password against this policy. Returns `Ok(())` or an error message.
     pub fn check(&self, password: &str) -> Result<(), String> {
-        if (password.len() as u32) < self.min_length {
+        if u32::try_from(password.len()).unwrap_or(u32::MAX) < self.min_length {
             return Err(format!(
                 "Password must be at least {} characters",
                 self.min_length
@@ -724,7 +730,10 @@ pub async fn list_sessions(
             tracing::error!("Failed to list sessions: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list sessions")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list sessions",
+                )),
             );
         }
     };
@@ -779,7 +788,10 @@ pub async fn revoke_session(
             tracing::error!("Failed to list sessions: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list sessions")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list sessions",
+                )),
             );
         }
     };
@@ -797,7 +809,10 @@ pub async fn revoke_session(
                 tracing::error!("Failed to revoke session: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ApiResponse::error("SERVER_ERROR", "Failed to revoke session")),
+                    Json(ApiResponse::error(
+                        "SERVER_ERROR",
+                        "Failed to revoke session",
+                    )),
                 );
             }
             AuditEntry::new(AuditEventType::LoginFailed)
@@ -907,7 +922,10 @@ pub async fn create_api_key(
             tracing::error!("Failed to hash API key: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to create API key")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to create API key",
+                )),
             );
         }
     };
@@ -1056,15 +1074,11 @@ pub async fn revoke_api_key(
 
 /// Validate an API key from the `X-API-Key` header.
 /// Returns the user_id if valid.
-pub async fn validate_api_key(
-    db: &crate::db::Database,
-    api_key: &str,
-) -> Option<Uuid> {
+pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option<Uuid> {
     // API keys are stored per-user; scan all users' keys
     // This is acceptable for moderate scale; for high-scale, a separate index table would be needed.
-    let users = match db.list_users().await {
-        Ok(u) => u,
-        Err(_) => return None,
+    let Ok(users) = db.list_users().await else {
+        return None;
     };
 
     for user in &users {
@@ -1356,11 +1370,16 @@ mod tests {
     fn test_two_factor_setup_response_serialization() {
         let resp = TwoFactorSetupResponse {
             secret: "JBSWY3DPEHPK3PXP".to_string(),
-            otpauth_uri: "otpauth://totp/ParkHub:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=ParkHub".to_string(),
+            otpauth_uri:
+                "otpauth://totp/ParkHub:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=ParkHub"
+                    .to_string(),
             qr_code_base64: "iVBORw0KGgo=".to_string(),
         };
         let json = serde_json::to_value(&resp).unwrap();
-        assert!(json["secret"].as_str().unwrap().contains("JBSWY3DPEHPK3PXP"));
+        assert!(json["secret"]
+            .as_str()
+            .unwrap()
+            .contains("JBSWY3DPEHPK3PXP"));
         assert!(json["otpauth_uri"].as_str().unwrap().contains("otpauth://"));
     }
 
@@ -1390,11 +1409,7 @@ mod tests {
         let b64 = result.unwrap();
         assert!(!b64.is_empty());
         // Should be valid base64
-        assert!(base64::Engine::decode(
-            &base64::engine::general_purpose::STANDARD,
-            &b64,
-        )
-        .is_ok());
+        assert!(base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &b64,).is_ok());
     }
 
     #[test]

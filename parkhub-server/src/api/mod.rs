@@ -74,7 +74,6 @@ pub mod admin_ext;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 pub mod auth;
-pub mod security;
 #[cfg(feature = "mod-bookings")]
 mod bookings;
 #[cfg(feature = "mod-branding")]
@@ -106,6 +105,7 @@ pub mod qr;
 pub mod recommendations;
 #[cfg(feature = "mod-recurring")]
 pub mod recurring;
+pub mod security;
 #[cfg(feature = "mod-settings")]
 pub mod settings;
 pub mod setup;
