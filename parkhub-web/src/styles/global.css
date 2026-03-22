@@ -452,6 +452,94 @@ p { line-height: 1.6; }
   }
 }
 
+/* ── Modern UI 2026 — Gradient borders, glow effects, animations ──── */
+
+/* Animated gradient border */
+@utility gradient-border {
+  position: relative;
+  background: var(--theme-card-bg);
+  border-radius: var(--radius-xl);
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--color-primary-400), var(--color-accent-400));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Glow effect — primary */
+@utility glow-primary {
+  box-shadow: 0 0 20px rgba(13, 148, 136, 0.15), 0 0 60px rgba(13, 148, 136, 0.05);
+}
+
+.dark .glow-primary {
+  box-shadow: 0 0 20px rgba(20, 184, 166, 0.2), 0 0 60px rgba(20, 184, 166, 0.08);
+}
+
+/* Pulse dot — live status indicator */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+@utility pulse-dot {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* Animated gradient mesh background for welcome/auth pages */
+@keyframes mesh-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@utility mesh-gradient-animated {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.97 0.02 175),
+    oklch(0.96 0.03 260),
+    oklch(0.97 0.02 90),
+    oklch(0.98 0.01 175)
+  );
+  background-size: 400% 400%;
+  animation: mesh-shift 15s ease infinite;
+}
+
+.dark .mesh-gradient-animated {
+  background: linear-gradient(
+    -45deg,
+    oklch(0.14 0.03 175),
+    oklch(0.13 0.03 260),
+    oklch(0.14 0.02 90),
+    oklch(0.15 0.02 175)
+  );
+  background-size: 400% 400%;
+}
+
+/* Shimmer effect for loading buttons */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@utility btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-primary-600) 0%,
+    var(--color-primary-400) 50%,
+    var(--color-primary-600) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
 /* Page transitions */
 @view-transition {
   navigation: auto;

@@ -49,40 +49,46 @@ export function WelcomePage() {
   const greeting = CYCLE_GREETINGS[greetingIdx];
 
   return (
-    <div className="min-h-dvh bg-white dark:bg-surface-950 relative overflow-hidden">
-      {/* Subtle background — single gradient strip, not floating blobs */}
-      <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-primary-50 via-transparent to-transparent dark:from-primary-950/30 dark:via-transparent pointer-events-none" />
+    <div className="min-h-dvh mesh-gradient-animated relative overflow-hidden">
+      {/* Decorative gradient orbs */}
+      <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-primary-400/20 via-primary-300/10 to-transparent dark:from-primary-600/10 dark:via-primary-500/5 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-accent-400/15 via-accent-300/8 to-transparent dark:from-accent-600/8 dark:via-accent-500/3 blur-3xl pointer-events-none" />
 
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex items-center gap-3"
+        >
+          <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
             <CarSimple weight="fill" className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
-        </div>
+        </motion.div>
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
-          className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+          className="p-2 rounded-lg hover:bg-surface-100/80 dark:hover:bg-surface-800/80 transition-colors backdrop-blur-sm"
           aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
         >
           {resolved === 'dark' ? <SunDim weight="bold" className="w-5 h-5 text-surface-400" /> : <Moon weight="bold" className="w-5 h-5 text-surface-500" />}
         </button>
       </header>
 
-      {/* Main content — left-aligned, not centered */}
+      {/* Main content */}
       <main className="relative z-10 flex flex-col justify-center min-h-[calc(100dvh-80px)] px-6 sm:px-10 lg:px-20 max-w-3xl">
-        {/* Cycling greeting — large, left-aligned */}
+        {/* Cycling greeting — spring animation */}
         <div className="h-20 sm:h-24 mb-4 flex items-center" aria-live="polite" aria-atomic="true">
           <AnimatePresence mode="wait">
             <motion.div
               key={greeting.lang}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
+              initial={{ opacity: 0, y: 20, filter: 'blur(4px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             >
-              <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-surface-900 dark:text-white">
+              <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.03em' }}>
                 {greeting.text}
               </span>
               <span className="ml-4 text-4xl sm:text-5xl">{greeting.flag}</span>
@@ -90,7 +96,7 @@ export function WelcomePage() {
           </AnimatePresence>
         </div>
 
-        {/* Subtitle — specific, not generic */}
+        {/* Subtitle */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -100,7 +106,7 @@ export function WelcomePage() {
           {t('welcome.subtitle')}
         </motion.p>
 
-        {/* Key stats — horizontal, not 3-column cards */}
+        {/* Feature pills */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -125,31 +131,33 @@ export function WelcomePage() {
           </span>
         </motion.div>
 
-        {/* Actions — left-aligned row */}
+        {/* Actions */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
           className="flex flex-wrap items-center gap-4 mb-10"
         >
-          <button
+          <motion.button
             onClick={handleGetStarted}
-            className="btn btn-primary text-base px-7 py-3"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="btn btn-primary text-base px-7 py-3 shadow-lg shadow-primary-500/20 dark:shadow-primary-500/10"
           >
             {t('welcome.getStarted')}
             <ArrowRight weight="bold" className="w-5 h-5" />
-          </button>
+          </motion.button>
 
           <button
             onClick={() => setShowLanguages(!showLanguages)}
-            className="btn btn-secondary gap-2"
+            className="btn btn-secondary gap-2 backdrop-blur-sm"
           >
             <Globe weight="bold" className="w-4 h-4" />
             {languages.find(l => l.code === selectedLang)?.flag} {languages.find(l => l.code === selectedLang)?.native}
           </button>
         </motion.div>
 
-        {/* Language picker — inline dropdown, not a floating card */}
+        {/* Language picker */}
         <AnimatePresence>
           {showLanguages && (
             <motion.div
@@ -160,18 +168,20 @@ export function WelcomePage() {
             >
               <div className="flex flex-wrap gap-2 pb-2">
                 {languages.map(lang => (
-                  <button
+                  <motion.button
                     key={lang.code}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => { selectLanguage(lang.code); setShowLanguages(false); }}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors backdrop-blur-sm ${
                       selectedLang === lang.code
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700'
+                        ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
+                        : 'bg-surface-100/80 dark:bg-surface-800/80 text-surface-600 dark:text-surface-400 hover:bg-surface-200/80 dark:hover:bg-surface-700/80'
                     }`}
                   >
                     <span>{lang.flag}</span>
                     <span>{lang.native}</span>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </motion.div>

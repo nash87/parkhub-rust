@@ -111,6 +111,12 @@ export function AdminLotsPage() {
       toast.error(t('admin.lotSlotsMin'));
       return;
     }
+    if ((form.hourly_rate && Number(form.hourly_rate) < 0) ||
+        (form.daily_max && Number(form.daily_max) < 0) ||
+        (form.monthly_pass && Number(form.monthly_pass) < 0)) {
+      toast.error(t('admin.lotSaveFailed'));
+      return;
+    }
 
     setSaving(true);
     try {

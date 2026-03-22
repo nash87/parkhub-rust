@@ -65,8 +65,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, ...props }: any, ref: any) => (
+    div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, layoutId, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
+    )),
+    button: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, layoutId, ...props }: any, ref: any) => (
+      <button ref={ref} {...props}>{children}</button>
     )),
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
@@ -446,10 +449,10 @@ describe('BookPage', () => {
     render(<BookPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/1\. Lot/)).toBeInTheDocument();
+      expect(screen.getByText('Lot')).toBeInTheDocument();
     });
-    expect(screen.getByText(/2\. Slot/)).toBeInTheDocument();
-    expect(screen.getByText(/3\. Confirm/)).toBeInTheDocument();
+    expect(screen.getByText('Slot')).toBeInTheDocument();
+    expect(screen.getByText('Confirm')).toBeInTheDocument();
   });
 
   it('selects default vehicle automatically', async () => {
