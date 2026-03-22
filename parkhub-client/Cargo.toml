@@ -14,6 +14,10 @@ path = "src/main.rs"
 [lints]
 workspace = true
 
+[lints.rust]
+# Slint uses unsafe FFI for native window management on Windows
+unsafe_code = "warn"
+
 [dependencies]
 parkhub-common.workspace = true
 
