@@ -156,6 +156,7 @@ full = [
     "mod-ical",
     "mod-multi-tenant",
     "mod-data-import",
+    "mod-fleet",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -199,6 +200,7 @@ mod-analytics = []
 mod-email-templates = []
 mod-map = []
 mod-data-import = []
+mod-fleet = []
 mod-stripe = []
 mod-ical = []
 mod-multi-tenant = []
