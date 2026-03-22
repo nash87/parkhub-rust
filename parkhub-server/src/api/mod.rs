@@ -357,6 +357,10 @@ async fn list_module_features() -> impl IntoResponse {
         "lobby-display".into(),
         cfg!(feature = "mod-lobby-display").into(),
     );
+    modules.insert(
+        "setup-wizard".into(),
+        cfg!(feature = "mod-setup-wizard").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -459,6 +463,14 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/system/maintenance", get(system_maintenance))
         // WebSocket real-time events
         .route("/api/v1/ws", get(ws::ws_handler));
+
+    // Setup wizard (multi-step onboarding) — public for initial setup
+    #[cfg(feature = "mod-setup-wizard")]
+    {
+        public_routes = public_routes
+            .route("/api/v1/setup/wizard/status", get(system::wizard_status))
+            .route("/api/v1/setup/wizard", post(system::wizard_step));
+    }
 
     // Lobby display — rate-limited public route (10 req/min per IP)
     #[cfg(feature = "mod-lobby-display")]
