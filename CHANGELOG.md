@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.7.0] - 2026-03-22
+
+### Added
+- **Enhanced Waitlist with Notifications**: Priority-based waitlist with auto-notification when slots become available. Accept/decline offers with 15-minute expiry. `POST /api/v1/lots/:id/waitlist/subscribe`, `GET /api/v1/lots/:id/waitlist`, `DELETE /api/v1/lots/:id/waitlist`, `POST .../accept`, `POST .../decline`. Frontend: WaitlistPage with join button, position indicator, accept/decline UI. Feature flag: `mod-waitlist-ext`. 9 backend + 7 frontend tests. (#241)
+- **Digital Parking Pass / QR Badge**: Generate digital passes with QR codes from active bookings. Public verification endpoint for QR scanning. `GET /api/v1/bookings/:id/pass`, `GET /api/v1/pass/verify/:code` (public), `GET /api/v1/me/passes`. Mobile-optimized full-screen pass display. Feature flag: `mod-parking-pass`. 10 backend + 7 frontend tests. (#242)
+- **Interactive API Documentation**: Embedded Swagger UI at `/api/v1/docs` for exploring and testing the REST API. Raw OpenAPI 3.0 JSON spec at `/api/v1/docs/openapi.json`. Admin sidebar link. Feature flag: `mod-api-docs`. 5 backend + 3 frontend tests. (#243)
+- **i18n**: waitlistExt, parkingPass, apiDocs keys added to all 10 locales
+- **48 feature flags**: Added `mod-waitlist-ext`, `mod-parking-pass`, `mod-api-docs` (was 45)
+
+---
+
 ## [3.6.0] - 2026-03-22
 
 ### Added
