@@ -378,6 +378,15 @@ export const api = {
     request<RescheduleResponse>(`/api/v1/bookings/${id}/reschedule`, {
       method: 'PUT', body: JSON.stringify({ new_start: newStart, new_end: newEnd }),
     }),
+
+  // ── Admin Widgets ──
+  getWidgetLayout: () => request<WidgetLayoutResponse>('/api/v1/admin/widgets'),
+  saveWidgetLayout: (widgets: WidgetEntryData[]) =>
+    request<WidgetLayoutResponse>('/api/v1/admin/widgets', {
+      method: 'PUT', body: JSON.stringify({ widgets }),
+    }),
+  getWidgetData: (widgetId: string) =>
+    request<WidgetDataResponse>(`/api/v1/admin/widgets/data/${widgetId}`),
 };
 
 // ── Types ──
@@ -957,4 +966,24 @@ export interface AbsenceApprovalRequest {
   reviewer_comment?: string;
   created_at: string;
   reviewed_at?: string;
+}
+
+// ── Admin Widgets ──
+export interface WidgetEntryData {
+  id: string;
+  widget_type: string;
+  position: { x: number; y: number; w: number; h: number };
+  visible: boolean;
+}
+
+export interface WidgetLayoutResponse {
+  user_id: string;
+  widgets: WidgetEntryData[];
+}
+
+export interface WidgetDataResponse {
+  widget_id: string;
+  widget_type: string;
+  title: string;
+  data: Record<string, unknown>;
 }
