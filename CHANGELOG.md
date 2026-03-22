@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.8.0] - 2026-03-22
+
+### Added
+- **WebSocket real-time updates**: Token-based auth via `?token=` query param, heartbeat with missed-pong tracking, initial occupancy snapshot on connect (`mod-websocket`)
+- **WsEvent factory methods**: `BookingCreated`, `BookingCancelled`, `OccupancyChanged`, `AnnouncementPublished`, `SlotStatusChange`
+- **Live booking broadcasts**: Booking create/cancel handlers broadcast WebSocket events to all connected clients
+- **Frontend useWebSocket hook**: Returns `{ connected, lastMessage, occupancy }` with token auth and exponential backoff reconnect
+- **Dashboard live indicator**: Green dot shows active WebSocket connection status
+- **Bookings real-time toasts**: Toast notifications on WebSocket booking events in Bookings page
+
+### Changed
+- **API module extraction (Phase 3)**: `mod.rs` reduced from 4517 to 1503 lines
+  - `system.rs`: health, version, maintenance, handshake, middleware (345 lines)
+  - `users.rs`: profile CRUD, GDPR, password, preferences, stats (757 lines)
+  - `admin_handlers.rs`: user/booking mgmt, stats, reports, audit, settings (1412 lines)
+  - `lots_ext.rs`: lot QR codes, admin dashboard charts (267 lines)
+  - `misc.rs`: legal/Impressum, public occupancy/display (384 lines)
+
+---
+
 ## [2.7.0] - 2026-03-22
 
 ### Added
