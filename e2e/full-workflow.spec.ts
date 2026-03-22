@@ -29,11 +29,11 @@ test.describe('Full User Workflow', () => {
 
   test('login returns token + sets cookie', async ({ request }) => {
     const res = await request.post('/api/v1/auth/login', {
-      data: { email: DEMO_ADMIN.email, password: DEMO_ADMIN.password },
+      data: { username: DEMO_ADMIN.username, password: DEMO_ADMIN.password },
     });
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(body.data?.token || body.token).toBeTruthy();
+    expect(body.data?.tokens?.access_token || body.data?.token || body.token).toBeTruthy();
   });
 
   test('refresh token works', async ({ request }) => {
@@ -326,8 +326,8 @@ test.describe('Full Admin Workflow', () => {
 test.describe('Theme UI Switching (Browser)', () => {
   test('theme switcher FAB is visible after login', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="email"], input[name="email"]', DEMO_ADMIN.email);
-    await page.fill('input[type="password"], input[name="password"]', DEMO_ADMIN.password);
+    await page.locator('input[name="username"], input[type="email"], input[name="email"]').first().fill(DEMO_ADMIN.username);
+    await page.locator('input[type="password"], input[name="password"]').first().fill(DEMO_ADMIN.password);
     await page.click('button[type="submit"]');
     await page.waitForURL('**/(dashboard|/)');
     await page.waitForLoadState('networkidle');

@@ -96,6 +96,8 @@ pub mod import;
 pub mod invoices;
 pub mod lots;
 #[cfg(feature = "mod-notifications")]
+pub mod notification_channels;
+#[cfg(feature = "mod-notifications")]
 pub mod notifications;
 #[cfg(feature = "mod-oauth")]
 pub mod oauth;
