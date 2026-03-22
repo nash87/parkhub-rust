@@ -183,6 +183,8 @@ pub struct EndpointRateLimiters {
     pub demo: Arc<per_ip::IpRateLimiter>,
     /// QR pass generation — 10 per minute per IP
     pub qr_pass: Arc<per_ip::IpRateLimiter>,
+    /// Lobby display — 10 per minute per IP
+    pub lobby_display: Arc<per_ip::IpRateLimiter>,
     /// General API (relaxed global limiter)
     pub general: Arc<GlobalRateLimiter>,
 }
@@ -210,6 +212,8 @@ impl EndpointRateLimiters {
             demo: per_ip::create_ip_rate_limiter(3),
             // 10 QR pass requests per minute per IP
             qr_pass: per_ip::create_ip_rate_limiter(10),
+            // 10 lobby display requests per minute per IP
+            lobby_display: per_ip::create_ip_rate_limiter(10),
             // 100 requests per second globally
             general: create_rate_limiter(&RateLimitConfig::default()),
         }
@@ -293,6 +297,7 @@ mod tests {
         assert!(limiters.token_refresh.check_key(&test_ip).is_ok());
         assert!(limiters.forgot_password.check_key(&test_ip).is_ok());
         assert!(limiters.password_reset.check_key(&test_ip).is_ok());
+        assert!(limiters.lobby_display.check_key(&test_ip).is_ok());
         assert!(limiters.general.check().is_ok());
     }
 }

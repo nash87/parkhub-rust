@@ -871,5 +871,14 @@ export default {
       genericError: 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.',
       retry: 'Erneut versuchen',
     },
+    lobby: {
+      available: 'Verfugbar',
+      total: 'Gesamt',
+      floor: 'Etage',
+      lastUpdated: 'Zuletzt aktualisiert',
+      occupancy: 'Auslastung',
+      error: 'Parkplatz nicht gefunden',
+      networkError: 'Netzwerkfehler',
+    },
   },
 };

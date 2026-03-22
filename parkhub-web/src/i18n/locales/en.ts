@@ -871,5 +871,14 @@ export default {
       genericError: 'Something went wrong. Please try again.',
       retry: 'Try Again',
     },
+    lobby: {
+      available: 'Available',
+      total: 'Total',
+      floor: 'Floor',
+      lastUpdated: 'Last updated',
+      occupancy: 'Occupancy',
+      error: 'Lot not found',
+      networkError: 'Network error',
+    },
   },
 };

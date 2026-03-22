@@ -86,6 +86,8 @@ pub mod guest;
 pub mod import;
 #[cfg(feature = "mod-invoices")]
 pub mod invoices;
+#[cfg(feature = "mod-lobby-display")]
+pub mod lobby;
 pub mod lots;
 pub mod lots_ext;
 pub mod misc;
@@ -351,6 +353,10 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-operating-hours").into(),
     );
     modules.insert("websocket".into(), cfg!(feature = "mod-websocket").into());
+    modules.insert(
+        "lobby-display".into(),
+        cfg!(feature = "mod-lobby-display").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -453,6 +459,19 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/system/maintenance", get(system_maintenance))
         // WebSocket real-time events
         .route("/api/v1/ws", get(ws::ws_handler));
+
+    // Lobby display — rate-limited public route (10 req/min per IP)
+    #[cfg(feature = "mod-lobby-display")]
+    {
+        let lobby_limiter = rate_limiters.lobby_display.clone();
+        let lobby_route = Router::new()
+            .route("/api/v1/lots/{id}/display", get(lobby::lot_display))
+            .route_layer(middleware::from_fn(move |req, next| {
+                ip_rate_limit_middleware(lobby_limiter.clone(), req, next)
+            }))
+            .with_state(state.clone());
+        public_routes = public_routes.merge(lobby_route);
+    }
 
     // Feature-gated public routes
     #[cfg(feature = "mod-settings")]
