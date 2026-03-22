@@ -160,6 +160,8 @@ vi.mock('@phosphor-icons/react', () => ({
   Check: (props: any) => <span data-testid="icon-check" {...props} />,
   X: (props: any) => <span data-testid="icon-x" {...props} />,
   Palette: (props: any) => <span data-testid="icon-palette" {...props} />,
+  MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  Question: (props: any) => <span data-testid="icon-question" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

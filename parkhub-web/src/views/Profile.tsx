@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   UserCircle, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
   CalendarCheck, House, ChartBar, DownloadSimple, Trash, CaretDown, CaretUp,
-  Shield,
+  Shield, MapPin, Question,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type UserStats } from '../api/client';
@@ -295,6 +295,37 @@ export function ProfilePage() {
       {/* Notification Preferences */}
       <motion.div variants={fadeUp} className="card p-6">
         <NotificationPreferencesComponent />
+      </motion.div>
+
+      {/* Geofence Auto Check-in */}
+      <motion.div variants={fadeUp} className="card p-6">
+        <div className="flex items-start gap-3 mb-3">
+          <MapPin weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t('geofence.autoCheckIn')}</h3>
+              <div className="group relative">
+                <Question weight="fill" className="w-4 h-4 text-surface-400 cursor-help" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-surface-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                  {t('geofence.help')}
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{t('geofence.autoCheckInDesc')}</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={localStorage.getItem('parkhub_geofence_auto') === 'true'}
+              onChange={(e) => {
+                localStorage.setItem('parkhub_geofence_auto', String(e.target.checked));
+                toast.success(e.target.checked ? t('geofence.enabled') : t('geofence.disabled'));
+              }}
+            />
+            <div className="w-11 h-6 bg-surface-200 rounded-full peer dark:bg-surface-700 peer-checked:bg-primary-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+          </label>
+        </div>
       </motion.div>
 
       {/* Login History & Sessions */}

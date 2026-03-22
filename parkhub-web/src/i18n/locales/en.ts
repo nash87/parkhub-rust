@@ -1200,5 +1200,18 @@ export default {
         no_show: 'No Show',
       },
     },
+    geofence: {
+      autoCheckIn: 'Auto Check-in',
+      autoCheckInDesc: 'Automatically check in when you arrive at a parking lot',
+      help: 'When enabled, your device location is used to automatically check in to your confirmed booking when you enter the lot geofence area.',
+      enabled: 'Auto check-in enabled',
+      disabled: 'Auto check-in disabled',
+      nearby: "You're nearby!",
+      nearbyDesc: 'You are within range of {{lot}}',
+      radiusLabel: 'Geofence Radius',
+      radiusUnit: 'meters',
+      setGeofence: 'Set Geofence',
+      geofenceUpdated: 'Geofence updated',
+    },
   },
 };
