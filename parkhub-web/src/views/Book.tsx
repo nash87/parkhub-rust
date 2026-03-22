@@ -220,6 +220,81 @@ function isLotOpenNow(hours?: OperatingHoursData): boolean {
   return nowMin >= openMin || nowMin < closeMin; // overnight
 }
 
+interface Recommendation {
+  slot_id: string;
+  slot_number: number;
+  lot_id: string;
+  lot_name: string;
+  floor_name: string;
+  score: number;
+  reasons: string[];
+  reason_badges: string[];
+}
+
+const badgeLabels: Record<string, { label: string; color: string }> = {
+  your_usual_spot: { label: 'Your usual spot', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  best_price: { label: 'Best price', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  closest_entrance: { label: 'Closest', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  available_now: { label: 'Available now', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
+  preferred_lot: { label: 'Preferred lot', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+  accessible: { label: 'Accessible', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' },
+};
+
+function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onSelect: (lot: ParkingLot) => void; t: TFunction }) {
+  const [recs, setRecs] = useState<Recommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/v1/bookings/recommendations')
+      .then(r => r.json())
+      .then(res => { if (res.success) setRecs(res.data || []); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading || recs.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2">
+        <Star weight="duotone" className="w-5 h-5 text-amber-500" />
+        {t('book.recommendedForYou', 'Recommended for you')}
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {recs.slice(0, 3).map((rec, i) => {
+          const lot = lots.find(l => l.id === rec.lot_id);
+          return (
+            <motion.button
+              key={rec.slot_id}
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+              onClick={() => lot && onSelect(lot)}
+              className="text-left glass-card p-4 border-2 border-amber-200 dark:border-amber-800/50 hover:border-amber-400 transition-all"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-semibold text-surface-900 dark:text-white text-sm">{rec.lot_name} - Slot {rec.slot_number}</span>
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <Star key={s} weight={s <= Math.round(rec.score / 20) ? 'fill' : 'regular'} className={`w-3 h-3 ${s <= Math.round(rec.score / 20) ? 'text-amber-500' : 'text-surface-300'}`} />
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-surface-500 mb-2">{rec.floor_name}</p>
+              <div className="flex flex-wrap gap-1">
+                {rec.reason_badges.map(badge => {
+                  const info = badgeLabels[badge] || { label: badge, color: 'bg-surface-100 text-surface-600' };
+                  return <span key={badge} className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${info.color}`}>{info.label}</span>;
+                })}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function StepSelectLot({ lots, loading, onSelect, t }: {
   lots: ParkingLot[]; loading: boolean; onSelect: (lot: ParkingLot) => void; t: TFunction;
 }) {
@@ -232,6 +307,8 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
     <div className="glass-card p-8"><p className="text-surface-500 dark:text-surface-400">{t('book.noLots')}</p></div>
   );
   return (
+    <div>
+    <RecommendationsSection lots={lots} onSelect={onSelect} t={t} />
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {lots.map((lot, i) => (
         <motion.button key={lot.id}
@@ -269,6 +346,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
           )}
         </motion.button>
       ))}
+    </div>
     </div>
   );
 }

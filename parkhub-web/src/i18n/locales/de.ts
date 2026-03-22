@@ -1147,5 +1147,6 @@ export default {
       help: 'Starten und stoppen Sie Ladesitzungen an verfuegbaren Ladestationen.',
       status: { available: 'Verfuegbar', in_use: 'Belegt', offline: 'Offline', maintenance: 'Wartung' },
     },
+    recommendations: { title: 'Smart Recommendations', subtitle: 'Personalized suggestions', recommendedForYou: 'Recommended for you', yourUsualSpot: 'Your usual spot', bestPrice: 'Best price', closest: 'Closest', availableNow: 'Available now', preferredLot: 'Preferred lot', accessible: 'Accessible', help: 'Smart recommendations based on booking history, availability, pricing, and distance.' },
   },
 };

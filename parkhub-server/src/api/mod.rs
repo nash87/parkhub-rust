@@ -202,7 +202,7 @@ use lots::{
 #[cfg(feature = "mod-notifications")]
 use notifications::{list_notifications, mark_all_notifications_read, mark_notification_read};
 #[cfg(feature = "mod-recommendations")]
-use recommendations::get_recommendations;
+use recommendations::{get_recommendation_stats, get_recommendations};
 #[cfg(feature = "mod-recurring")]
 use recurring::{
     create_recurring_booking, delete_recurring_booking, list_recurring_bookings,
@@ -878,8 +878,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     #[cfg(feature = "mod-recommendations")]
     {
         // Smart parking recommendations
-        protected_routes =
-            protected_routes.route("/api/v1/bookings/recommendations", get(get_recommendations));
+        protected_routes = protected_routes
+            .route("/api/v1/bookings/recommendations", get(get_recommendations))
+            .route(
+                "/api/v1/recommendations/stats",
+                get(get_recommendation_stats),
+            );
     }
 
     #[cfg(feature = "mod-vehicles")]
