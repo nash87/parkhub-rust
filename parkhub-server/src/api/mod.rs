@@ -53,9 +53,8 @@ pub const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
 pub(super) const VAT_RATE: f64 = 0.19;
 
 use parkhub_common::{
-    ApiResponse, BookingStatus,
-    CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginResponse,
-    ServerStatus, User, UserRole, PROTOCOL_VERSION,
+    ApiResponse, BookingStatus, CreditTransactionType, HandshakeRequest, HandshakeResponse,
+    LoginResponse, ServerStatus, User, UserRole, PROTOCOL_VERSION,
 };
 use serde::{Deserialize, Serialize};
 
