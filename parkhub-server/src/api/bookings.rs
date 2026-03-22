@@ -342,6 +342,22 @@ pub async fn create_booking(
         );
     }
 
+    // ── Operating hours validation ──────────────────────────────────────────
+    #[cfg(feature = "mod-operating-hours")]
+    if let Some(ref lot) = lot_opt {
+        let end_time = req.start_time + TimeDelta::minutes(i64::from(req.duration_minutes));
+        if let Some(msg) = super::operating_hours::validate_booking_hours(
+            &lot.operating_hours,
+            &req.start_time,
+            &end_time,
+        ) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error("OUTSIDE_OPERATING_HOURS", msg)),
+            );
+        }
+    }
+
     // ── End admin settings enforcement ──────────────────────────────────────
 
     let is_admin_user =

@@ -99,6 +99,8 @@ pub mod lots;
 pub mod notifications;
 #[cfg(feature = "mod-oauth")]
 pub mod oauth;
+#[cfg(feature = "mod-operating-hours")]
+pub mod operating_hours;
 #[cfg(feature = "mod-payments")]
 pub mod payments;
 #[cfg(feature = "mod-push")]
@@ -331,6 +333,10 @@ async fn list_module_features() -> impl IntoResponse {
         "dynamic-pricing".into(),
         cfg!(feature = "mod-dynamic-pricing").into(),
     );
+    modules.insert(
+        "operating-hours".into(),
+        cfg!(feature = "mod-operating-hours").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -533,6 +539,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         protected_routes = protected_routes.route(
             "/api/v1/lots/{id}/pricing/dynamic",
             get(dynamic_pricing::get_dynamic_pricing),
+        );
+    }
+
+    // Operating hours — user-facing read endpoint
+    #[cfg(feature = "mod-operating-hours")]
+    {
+        protected_routes = protected_routes.route(
+            "/api/v1/lots/{id}/hours",
+            get(operating_hours::get_operating_hours),
         );
     }
 
@@ -793,6 +808,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/lots/{id}/pricing/dynamic",
             get(dynamic_pricing::admin_get_dynamic_pricing_rules)
                 .put(dynamic_pricing::admin_update_dynamic_pricing_rules),
+        );
+    }
+
+    #[cfg(feature = "mod-operating-hours")]
+    {
+        // Admin-only: operating hours management
+        protected_routes = protected_routes.route(
+            "/api/v1/admin/lots/{id}/hours",
+            put(operating_hours::admin_update_operating_hours),
         );
     }
 
