@@ -50,6 +50,13 @@ vi.mock('@phosphor-icons/react', () => ({
   PresentationChart: (props: any) => <span data-testid="icon-presentation" {...props} />,
   Gauge: (props: any) => <span data-testid="icon-gauge" {...props} />,
   Buildings: (props: any) => <span data-testid="icon-buildings" {...props} />,
+  ClockCounterClockwise: (props: any) => <span data-testid="icon-clock" {...props} />,
+  Database: (props: any) => <span data-testid="icon-database" {...props} />,
+  Car: (props: any) => <span data-testid="icon-car" {...props} />,
+  Wheelchair: (props: any) => <span data-testid="icon-wheelchair" {...props} />,
+  Wrench: (props: any) => <span data-testid="icon-wrench" {...props} />,
+  CurrencyDollar: (props: any) => <span data-testid="icon-currency" {...props} />,
+  UserPlus: (props: any) => <span data-testid="icon-user-plus" {...props} />,
 }));
 
 import { AdminPage } from './Admin';
