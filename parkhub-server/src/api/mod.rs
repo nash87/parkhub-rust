@@ -94,6 +94,8 @@ pub mod favorites;
 pub mod fleet;
 #[cfg(feature = "mod-guest")]
 pub mod guest;
+#[cfg(feature = "mod-history")]
+pub mod history;
 #[cfg(feature = "mod-import")]
 pub mod import;
 #[cfg(feature = "mod-invoices")]
@@ -193,6 +195,8 @@ use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_u
 use favorites::{add_favorite, list_favorites, remove_favorite};
 #[cfg(feature = "mod-guest")]
 use guest::{admin_cancel_guest_booking, admin_list_guest_bookings, create_guest_booking};
+#[cfg(feature = "mod-history")]
+use history::{booking_history, booking_stats};
 #[cfg(feature = "mod-import")]
 use import::import_users_csv;
 use lots::{
@@ -419,6 +423,7 @@ async fn list_module_features() -> impl IntoResponse {
         "ev-charging".into(),
         cfg!(feature = "mod-ev-charging").into(),
     );
+    modules.insert("history".into(), cfg!(feature = "mod-history").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -841,6 +846,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
             .route("/api/v1/bookings/quick", post(quick_book))
             .route("/api/v1/bookings/{id}/checkin", post(booking_checkin));
+    }
+
+    #[cfg(feature = "mod-history")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/bookings/history", get(booking_history))
+            .route("/api/v1/bookings/stats", get(booking_stats));
     }
 
     #[cfg(feature = "mod-invoices")]

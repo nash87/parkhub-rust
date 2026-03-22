@@ -58,6 +58,7 @@ vi.mock('react-i18next', () => ({
         'nav.team': 'Team',
         'nav.calendar': 'Calendar',
         'nav.map': 'Map',
+        'nav.history': 'History',
         'nav.credits': 'Credits',
         'nav.notifications': 'Notifications',
         'nav.profile': 'Profile',
@@ -117,6 +118,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Globe: (props: any) => <span data-testid="icon-globe" {...props} />,
   CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
   MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  ClockCounterClockwise: (props: any) => <span data-testid="icon-history" {...props} />,
 }));
 
 import { Layout } from './Layout';

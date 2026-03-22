@@ -67,6 +67,7 @@ const VisitorsPage = lazy(() => import('./views/Visitors'), 'VisitorsPage');
 const AdminVisitorsPage = lazy(() => import('./views/Visitors'), 'AdminVisitorsPage');
 const EVChargingPage = lazy(() => import('./views/EVCharging'), 'EVChargingPage');
 const AdminChargersPage = lazy(() => import('./views/EVCharging'), 'AdminChargersPage');
+const ParkingHistoryPage = lazy(() => import('./views/ParkingHistory'), 'ParkingHistoryPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -143,6 +144,7 @@ function AnimatedRoutes() {
           <Route path="calendar" element={<SuspenseRoute><CalendarPage /></SuspenseRoute>} />
           <Route path="visitors" element={<SuspenseRoute><VisitorsPage /></SuspenseRoute>} />
           <Route path="ev-charging" element={<SuspenseRoute><EVChargingPage /></SuspenseRoute>} />
+          <Route path="history" element={<SuspenseRoute><ParkingHistoryPage /></SuspenseRoute>} />
           <Route path="map" element={<SuspenseRoute><MapViewPage /></SuspenseRoute>} />
           <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
           <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
