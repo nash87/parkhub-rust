@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.3.0] - 2026-03-22
+
+### Added
+- **Audit Log UI + Export**: Paginated admin audit log at `/admin/audit-log` with action/user/date filters, color-coded badges, and CSV export. Extended `AuditLogEntry` with `target_type`, `target_id`, `ip_address`. New event types: `PaymentCompleted`, `TwoFactorEnabled/Disabled`, `ApiKeyCreated/Revoked`. 7 backend + 6 frontend tests. (#217)
+- **Data Import/Export Suite**: `POST /api/v1/admin/import/{users,lots}` for CSV/JSON bulk import with validation and error reporting. `GET /api/v1/admin/data/export/{users,lots,bookings}` for enhanced CSV exports with booking stats. Drag-and-drop upload UI with preview and import results. Feature flag: `mod-data-import`. 8 backend + 6 frontend tests. (#218)
+- **Fleet / Vehicle Management**: `GET /api/v1/admin/fleet` (all vehicles with stats), `GET /api/v1/admin/fleet/stats` (types distribution, electric ratio), `PUT /api/v1/admin/fleet/:id/flag` (flag/unflag vehicles). Added `Bicycle` to `VehicleType` enum. Feature flag: `mod-fleet`. 6 backend + 6 frontend tests. (#222)
+- **i18n**: Audit log, data management, fleet keys added to all 10 locales
+- **36 feature flags**: Added `mod-data-import`, `mod-fleet` (was 34)
+
+---
+
 ## [3.2.0] - 2026-03-22
 
 ### Added
