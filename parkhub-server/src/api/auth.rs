@@ -52,9 +52,7 @@ pub(crate) fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
 
 /// Build a `Set-Cookie` header value that clears (expires) the auth cookie.
 fn build_clear_auth_cookie() -> String {
-    format!(
-        "{AUTH_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
-    )
+    format!("{AUTH_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0")
 }
 
 /// Attach a `Set-Cookie` header to an existing `(StatusCode, Json<...>)` response.

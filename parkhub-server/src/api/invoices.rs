@@ -68,7 +68,10 @@ pub async fn get_booking_invoice_pdf(
             tracing::error!("Database error fetching booking for PDF invoice: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("SERVER_ERROR", "Internal server error")),
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "Internal server error",
+                )),
             )
                 .into_response();
         }
@@ -121,7 +124,12 @@ pub async fn get_booking_invoice_pdf(
     };
 
     // Invoice metadata
-    let year = booking.created_at.format("%Y").to_string().parse::<i32>().unwrap_or(2026);
+    let year = booking
+        .created_at
+        .format("%Y")
+        .to_string()
+        .parse::<i32>()
+        .unwrap_or(2026);
     let invoice_number = format_invoice_number(&booking.id.to_string(), year);
     let invoice_date = booking.created_at.format("%d.%m.%Y").to_string();
     let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
@@ -166,7 +174,10 @@ pub async fn get_booking_invoice_pdf(
             tracing::error!("PDF generation failed: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::<()>::error("PDF_ERROR", "Failed to generate PDF")),
+                Json(ApiResponse::<()>::error(
+                    "PDF_ERROR",
+                    "Failed to generate PDF",
+                )),
             )
                 .into_response();
         }
@@ -234,14 +245,18 @@ fn generate_pdf(
         ops.push(Op::SetOutlineColor {
             col: Color::Rgb(Rgb::new(r, g, b, None)),
         });
-        ops.push(Op::SetOutlineThickness {
-            pt: Pt(thickness),
-        });
+        ops.push(Op::SetOutlineThickness { pt: Pt(thickness) });
         ops.push(Op::DrawLine {
             line: Line {
                 points: vec![
-                    LinePoint { p: Point::new(x1, y), bezier: false },
-                    LinePoint { p: Point::new(x2, y), bezier: false },
+                    LinePoint {
+                        p: Point::new(x1, y),
+                        bezier: false,
+                    },
+                    LinePoint {
+                        p: Point::new(x2, y),
+                        bezier: false,
+                    },
                 ],
                 is_closed: false,
             },
@@ -256,10 +271,24 @@ fn generate_pdf(
 
     // ── Header ──
     text_at(&mut ops, company, 22.0, Mm(20.0), y, bold);
-    text_at(&mut ops, "Parking Management", 10.0, Mm(20.0), y - Mm(8.0), regular);
+    text_at(
+        &mut ops,
+        "Parking Management",
+        10.0,
+        Mm(20.0),
+        y - Mm(8.0),
+        regular,
+    );
     text_at(&mut ops, "INVOICE", 18.0, Mm(140.0), y, bold);
     text_at(&mut ops, invoice_number, 10.0, Mm(140.0), y - Mm(7.0), bold);
-    text_at(&mut ops, &format!("Date: {invoice_date}"), 9.0, Mm(140.0), y - Mm(14.0), regular);
+    text_at(
+        &mut ops,
+        &format!("Date: {invoice_date}"),
+        9.0,
+        Mm(140.0),
+        y - Mm(14.0),
+        regular,
+    );
 
     y -= Mm(35.0);
 
@@ -286,7 +315,10 @@ fn generate_pdf(
         ("Vehicle", license_plate.to_string()),
         ("Start", start_str.to_string()),
         ("End", end_str.to_string()),
-        ("Duration", format!("{duration_hours}h {duration_mins_part}min")),
+        (
+            "Duration",
+            format!("{duration_hours}h {duration_mins_part}min"),
+        ),
         ("Status", status.to_string()),
     ];
 
@@ -306,25 +338,67 @@ fn generate_pdf(
     text_at(&mut ops, "PRICING", 9.0, Mm(20.0), y, bold);
     y -= Mm(8.0);
     text_at(&mut ops, "Description", 9.0, Mm(20.0), y, bold);
-    text_at(&mut ops, &format!("Amount ({currency})"), 9.0, Mm(150.0), y, bold);
+    text_at(
+        &mut ops,
+        &format!("Amount ({currency})"),
+        9.0,
+        Mm(150.0),
+        y,
+        bold,
+    );
     y -= Mm(6.0);
     text_at(&mut ops, "Parking Fee (Net)", 9.0, Mm(20.0), y, regular);
-    text_at(&mut ops, &format!("{net_price:.2}"), 9.0, Mm(155.0), y, regular);
+    text_at(
+        &mut ops,
+        &format!("{net_price:.2}"),
+        9.0,
+        Mm(155.0),
+        y,
+        regular,
+    );
     y -= Mm(6.0);
     text_at(&mut ops, "VAT 19%", 9.0, Mm(20.0), y, regular);
-    text_at(&mut ops, &format!("{vat_amount:.2}"), 9.0, Mm(155.0), y, regular);
+    text_at(
+        &mut ops,
+        &format!("{vat_amount:.2}"),
+        9.0,
+        Mm(155.0),
+        y,
+        regular,
+    );
     y -= Mm(8.0);
 
     // ── Total line ──
     hline(&mut ops, Mm(130.0), Mm(190.0), y, 0.1, 0.45, 0.91, 1.0);
     y -= Mm(7.0);
     text_at(&mut ops, "TOTAL (Gross)", 11.0, Mm(20.0), y, bold);
-    text_at(&mut ops, &format!("{gross_total:.2} {currency}"), 11.0, Mm(145.0), y, bold);
+    text_at(
+        &mut ops,
+        &format!("{gross_total:.2} {currency}"),
+        11.0,
+        Mm(145.0),
+        y,
+        bold,
+    );
 
     // ── Footer ──
     let footer_y = Mm(25.0);
-    text_at(&mut ops, &format!("{company} - Parking Management System"), 8.0, Mm(50.0), footer_y, regular);
-    text_at(&mut ops, "This invoice was automatically generated and is valid without signature.", 7.0, Mm(35.0), footer_y - Mm(5.0), regular);
+    text_at(
+        &mut ops,
+        &format!("{company} - Parking Management System"),
+        8.0,
+        Mm(50.0),
+        footer_y,
+        regular,
+    );
+    text_at(
+        &mut ops,
+        "This invoice was automatically generated and is valid without signature.",
+        7.0,
+        Mm(35.0),
+        footer_y - Mm(5.0),
+        regular,
+    );
 
     // Build document
     let page = PdfPage::new(Mm(210.0), Mm(297.0), ops);
