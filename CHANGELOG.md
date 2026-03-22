@@ -7,6 +7,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.7.0] - 2026-03-22
+
+### Added
+- **Dynamic pricing**: Occupancy-based surge/discount with admin-configurable multipliers and thresholds (`mod-dynamic-pricing`)
+- **Operating hours**: Per-lot 7-day schedule with open/close times, booking validation, "Open Now" badges (`mod-operating-hours`)
+- **SMS/WhatsApp stubs**: Notification channel expansion with phone number input and per-event toggles
+- **PDF invoices**: Professional booking invoices with VAT breakdown via `printpdf` (`mod-invoices`)
+- **OAuth/Social login**: Self-service Google + GitHub OAuth configuration (`mod-oauth`)
+- **12 design themes**: Added Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco (was 6)
+- **Playwright E2E**: 65 tests covering API, pages, devtools, parking flow, GDPR, PWA
+- **Lighthouse CI**: Automated quality gates (a11y >= 95, perf >= 90, SEO >= 95)
+- **httpOnly cookie auth**: XSS-proof authentication with CSRF protection and Bearer fallback
+
+### Fixed
+- Workspace lint override for Slint FFI on Windows builds
+- ThemeSwitcher test updated for 12 themes
+- Frontend test mocks for all new API endpoints
+
+---
+
 ## [2.2.0] - 2026-03-22
 
 ### Added

@@ -6,11 +6,11 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.5.0-brightgreen.svg?style=flat-square" alt="v2.5.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.7.0-brightgreen.svg?style=flat-square" alt="v2.7.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
-  <img src="https://img.shields.io/badge/Tests-1620%2B-success.svg?style=flat-square" alt="1620+ tests">
+  <img src="https://img.shields.io/badge/Tests-1339%2B-success.svg?style=flat-square" alt="1339+ tests">
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -67,14 +67,18 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ## Features
 
-### v2.5.0 Highlights
+### v2.7.0 Highlights
 
-- **6 switchable themes** -- Classic, Glass, Bento, Brutalist, Neon, Warm with instant CSS-variable switching
+- **12 switchable themes** -- Classic, Glass, Bento, Brutalist, Neon, Warm, Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco
 - **httpOnly cookie auth** -- XSS-proof authentication with SameSite=Lax and CSRF protection
 - **OAuth/Social login** -- Self-service Google + GitHub OAuth (users configure their own apps)
 - **Glass morphism UI** -- Bento grid dashboard with animated counters, spring physics, frosted-glass cards
 - **2FA/TOTP authentication** -- QR code enrollment, backup codes, per-account enable/disable
-- **30 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **Dynamic pricing** -- Occupancy-based surge/discount pricing with admin-configurable thresholds
+- **Operating hours** -- Per-lot 7-day schedule with booking validation and "Open Now" badges
+- **SMS/WhatsApp stubs** -- Notification channel expansion with per-event toggles
+- **PDF invoices** -- Professional booking invoices with VAT breakdown
+- **28 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
 - **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
 - **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
 - **Community translations** -- 10 languages with proposal voting and admin review
@@ -180,7 +184,10 @@ ParkHub uses Cargo feature flags to let you build only the modules you need. The
 | `mod-recommendations` | Smart slot recommendation engine |
 | `mod-translations` | Community translation management |
 | `mod-social` | Social features |
-| `mod-themes` | 6 switchable design themes |
+| `mod-themes` | 12 switchable design themes |
+| `mod-invoices` | PDF invoice generation with VAT |
+| `mod-dynamic-pricing` | Occupancy-based surge/discount pricing |
+| `mod-operating-hours` | Per-lot 7-day schedule |
 | `mod-oauth` | OAuth/Social login (Google, GitHub) |
 | `gui` | Slint desktop GUI with system tray |
 | `headless` | Server-only mode (no GUI dependencies) |
@@ -209,7 +216,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## Testing
 
-**1,620+ tests** across Rust backend (740+), React frontend (430+), and headless integration tests (460+). Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility >= 95, performance >= 90.
+**1,339+ tests** across Rust backend (813), React frontend (461), and E2E Playwright (65). Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility >= 95, performance >= 90.
 
 ```bash
 cargo test --workspace           # Rust backend
