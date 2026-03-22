@@ -53,6 +53,11 @@ vi.mock('react-i18next', () => ({
         'nav.bookings': 'Bookings',
         'nav.credits': 'Credits',
         'bookings.statusActive': 'Active',
+        'dashboard.live': 'Live',
+        'dashboard.wsConnected': 'Live updates active',
+        'dashboard.wsBookingCreated': 'New booking created',
+        'dashboard.wsBookingCancelled': 'A booking was cancelled',
+        'dashboard.wsOccupancyChanged': 'Occupancy updated',
       };
       return map[key] || key;
     },
@@ -88,8 +93,9 @@ vi.mock('../constants/animations', () => ({
   fadeUp: { hidden: {}, show: {} },
 }));
 
+const mockUseWebSocket = vi.fn().mockReturnValue({ connected: false, lastMessage: null, occupancy: {} });
 vi.mock('../hooks/useWebSocket', () => ({
-  useWebSocket: () => ({ connected: false, lastEvent: null }),
+  useWebSocket: (...args: any[]) => mockUseWebSocket(...args),
 }));
 
 vi.mock('../components/SimpleChart', () => ({
@@ -210,6 +216,32 @@ describe('DashboardPage', () => {
     expect(screen.getByText('My Vehicles')).toBeInTheDocument();
     expect(screen.getByText('View Bookings')).toBeInTheDocument();
     expect(screen.getByText('Credits')).toBeInTheDocument();
+  });
+
+  it('shows live indicator when WebSocket is connected', async () => {
+    mockUseWebSocket.mockReturnValue({ connected: true, lastMessage: null, occupancy: {} });
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetUserStats.mockResolvedValue({ success: true, data: null });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('ws-connected-indicator')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Live')).toBeInTheDocument();
+  });
+
+  it('hides live indicator when WebSocket is disconnected', async () => {
+    mockUseWebSocket.mockReturnValue({ connected: false, lastMessage: null, occupancy: {} });
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetUserStats.mockResolvedValue({ success: true, data: null });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Good/)).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId('ws-connected-indicator')).not.toBeInTheDocument();
   });
 
   it('renders bookings link pointing to /bookings', async () => {

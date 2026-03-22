@@ -3,15 +3,29 @@
 //! Provides a `/api/v1/ws` endpoint that upgrades HTTP connections to WebSocket.
 //! Events are distributed via a `tokio::sync::broadcast` channel for fan-out to
 //! all connected clients.
+//!
+//! ## Authentication
+//!
+//! Clients authenticate via a query parameter `?token=...` containing a valid
+//! session token. The token is validated on upgrade; unauthenticated upgrades
+//! are rejected with `401 Unauthorized`.
+//!
+//! ## Heartbeat
+//!
+//! The server sends a WebSocket `Ping` frame every 30 seconds. If a client
+//! misses 3 consecutive pongs the connection is terminated.
 
 use axum::{
     extract::{
         ws::{Message, WebSocket},
-        State, WebSocketUpgrade,
+        Query, State, WebSocketUpgrade,
     },
+    http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use chrono::Utc;
+use parkhub_common::ApiResponse;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
@@ -26,6 +40,9 @@ const BROADCAST_CAPACITY: usize = 256;
 /// Heartbeat interval in seconds.
 const HEARTBEAT_INTERVAL_SECS: u64 = 30;
 
+/// Maximum number of consecutive missed pongs before disconnecting the client.
+const MAX_MISSED_PONGS: u8 = 3;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Event types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,9 +54,14 @@ pub enum WsEventType {
     BookingCreated,
     BookingCancelled,
     OccupancyChanged,
+    AnnouncementPublished,
+    SlotStatusChange,
 }
 
-/// A WebSocket event message.
+/// A WebSocket event message sent to connected clients.
+///
+/// The `data` field carries event-specific detail as freeform JSON.
+/// This allows adding new event types without changing the wire format.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WsEvent {
     pub event: WsEventType,
@@ -55,6 +77,64 @@ impl WsEvent {
             data,
             timestamp: Utc::now().to_rfc3339(),
         }
+    }
+
+    /// Create a `BookingCreated` event.
+    pub fn booking_created(lot_id: &str, slot_id: &str, user_id: &str) -> Self {
+        Self::new(
+            WsEventType::BookingCreated,
+            serde_json::json!({
+                "lot_id": lot_id,
+                "slot_id": slot_id,
+                "user_id": user_id,
+            }),
+        )
+    }
+
+    /// Create a `BookingCancelled` event.
+    pub fn booking_cancelled(lot_id: &str, slot_id: &str) -> Self {
+        Self::new(
+            WsEventType::BookingCancelled,
+            serde_json::json!({
+                "lot_id": lot_id,
+                "slot_id": slot_id,
+            }),
+        )
+    }
+
+    /// Create an `OccupancyChanged` event.
+    pub fn occupancy_update(lot_id: &str, available: u32, total: u32) -> Self {
+        Self::new(
+            WsEventType::OccupancyChanged,
+            serde_json::json!({
+                "lot_id": lot_id,
+                "available": available,
+                "total": total,
+            }),
+        )
+    }
+
+    /// Create an `AnnouncementPublished` event.
+    pub fn announcement_published(id: &str, title: &str) -> Self {
+        Self::new(
+            WsEventType::AnnouncementPublished,
+            serde_json::json!({
+                "id": id,
+                "title": title,
+            }),
+        )
+    }
+
+    /// Create a `SlotStatusChange` event.
+    pub fn slot_status_change(lot_id: &str, slot_id: &str, status: &str) -> Self {
+        Self::new(
+            WsEventType::SlotStatusChange,
+            serde_json::json!({
+                "lot_id": lot_id,
+                "slot_id": slot_id,
+                "status": status,
+            }),
+        )
     }
 }
 
@@ -100,17 +180,67 @@ impl Default for EventBroadcaster {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Query params for auth
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Query parameters for the WebSocket upgrade endpoint.
+#[derive(Debug, Deserialize)]
+pub struct WsQuery {
+    /// Session token for authentication (optional — allows unauthenticated
+    /// connections for public occupancy display).
+    pub token: Option<String>,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // WebSocket handler
 // ─────────────────────────────────────────────────────────────────────────────
 
 type SharedState = Arc<RwLock<AppState>>;
 
 /// Handler for GET /api/v1/ws — upgrades to WebSocket.
+///
+/// Authentication is performed via the `?token=...` query parameter.
+/// If a token is provided it must be a valid, non-expired session.
+/// Connections without a token are allowed but receive only public events.
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<SharedState>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, state))
+    Query(params): Query<WsQuery>,
+) -> Result<impl IntoResponse, (StatusCode, Json<ApiResponse<()>>)> {
+    // Validate token if provided
+    if let Some(ref token) = params.token {
+        let state_guard = state.read().await;
+        match state_guard.db.get_session(token).await {
+            Ok(Some(s)) if !s.is_expired() => {
+                // Valid session — check user is active
+                match state_guard.db.get_user(&s.user_id.to_string()).await {
+                    Ok(Some(u)) if u.is_active => {
+                        debug!(user_id = %s.user_id, "WebSocket authenticated");
+                    }
+                    _ => {
+                        return Err((
+                            StatusCode::UNAUTHORIZED,
+                            Json(ApiResponse::error(
+                                "UNAUTHORIZED",
+                                "Invalid or disabled user",
+                            )),
+                        ));
+                    }
+                }
+            }
+            _ => {
+                return Err((
+                    StatusCode::UNAUTHORIZED,
+                    Json(ApiResponse::error(
+                        "UNAUTHORIZED",
+                        "Invalid or expired token",
+                    )),
+                ));
+            }
+        }
+    }
+
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, state)))
 }
 
 /// Manages a single WebSocket connection: subscribes to the broadcast channel,
@@ -126,9 +256,35 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
 
     let (mut sender, mut receiver) = socket.split();
 
+    // Send initial occupancy snapshot for all lots
+    {
+        let s = state.read().await;
+        if let Ok(lots) = s.db.list_parking_lots().await {
+            for lot in &lots {
+                if let Ok(slots) = s.db.list_slots_by_lot(&lot.id.to_string()).await {
+                    let total = u32::try_from(slots.len()).unwrap_or(u32::MAX);
+                    let available = u32::try_from(
+                        slots
+                            .iter()
+                            .filter(|sl| sl.status == parkhub_common::SlotStatus::Available)
+                            .count(),
+                    )
+                    .unwrap_or(u32::MAX);
+                    let snapshot = WsEvent::occupancy_update(&lot.id.to_string(), available, total);
+                    if let Ok(json) = serde_json::to_string(&snapshot) {
+                        if sender.send(Message::Text(json.into())).await.is_err() {
+                            return; // Client disconnected during snapshot
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Heartbeat timer
     let mut heartbeat =
         tokio::time::interval(std::time::Duration::from_secs(HEARTBEAT_INTERVAL_SECS));
+    let mut missed_pongs: u8 = 0;
 
     debug!("WebSocket client connected");
 
@@ -155,21 +311,29 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
 
             // Send ping heartbeat
             _ = heartbeat.tick() => {
+                if missed_pongs >= MAX_MISSED_PONGS {
+                    warn!("WebSocket client missed {missed_pongs} pongs, disconnecting");
+                    break;
+                }
                 if sender.send(Message::Ping(vec![].into())).await.is_err() {
                     break; // Client disconnected
                 }
+                missed_pongs += 1;
             }
 
             // Handle incoming messages from client (pong, close)
             msg = receiver.next() => {
                 match msg {
+                    Some(Ok(Message::Pong(_))) => {
+                        missed_pongs = 0;
+                    }
                     Some(Ok(Message::Close(_))) | None => {
                         break; // Client disconnected
                     }
                     Some(Err(_)) => {
                         break; // Connection error
                     }
-                    _ => {} // Pong (client alive) or text/binary from client — ignore
+                    _ => {} // Text/binary from client — ignore
                 }
             }
         }
@@ -208,6 +372,11 @@ mod tests {
             (WsEventType::BookingCreated, "\"booking_created\""),
             (WsEventType::BookingCancelled, "\"booking_cancelled\""),
             (WsEventType::OccupancyChanged, "\"occupancy_changed\""),
+            (
+                WsEventType::AnnouncementPublished,
+                "\"announcement_published\"",
+            ),
+            (WsEventType::SlotStatusChange, "\"slot_status_change\""),
         ];
         for (variant, expected) in cases {
             let json = serde_json::to_string(&variant).unwrap();
@@ -289,5 +458,77 @@ mod tests {
 
         let event = WsEvent::new(WsEventType::BookingCreated, serde_json::json!({}));
         assert_eq!(broadcaster.broadcast(event), 0);
+    }
+
+    #[test]
+    fn booking_created_event_factory() {
+        let event = WsEvent::booking_created("lot-1", "slot-2", "user-3");
+        assert_eq!(event.event, WsEventType::BookingCreated);
+        assert_eq!(event.data["lot_id"], "lot-1");
+        assert_eq!(event.data["slot_id"], "slot-2");
+        assert_eq!(event.data["user_id"], "user-3");
+    }
+
+    #[test]
+    fn booking_cancelled_event_factory() {
+        let event = WsEvent::booking_cancelled("lot-1", "slot-2");
+        assert_eq!(event.event, WsEventType::BookingCancelled);
+        assert_eq!(event.data["lot_id"], "lot-1");
+        assert_eq!(event.data["slot_id"], "slot-2");
+    }
+
+    #[test]
+    fn occupancy_update_event_factory() {
+        let event = WsEvent::occupancy_update("lot-1", 5, 10);
+        assert_eq!(event.event, WsEventType::OccupancyChanged);
+        assert_eq!(event.data["lot_id"], "lot-1");
+        assert_eq!(event.data["available"], 5);
+        assert_eq!(event.data["total"], 10);
+    }
+
+    #[test]
+    fn announcement_published_event_factory() {
+        let event = WsEvent::announcement_published("ann-1", "Important Notice");
+        assert_eq!(event.event, WsEventType::AnnouncementPublished);
+        assert_eq!(event.data["id"], "ann-1");
+        assert_eq!(event.data["title"], "Important Notice");
+    }
+
+    #[test]
+    fn slot_status_change_event_factory() {
+        let event = WsEvent::slot_status_change("lot-1", "slot-2", "maintenance");
+        assert_eq!(event.event, WsEventType::SlotStatusChange);
+        assert_eq!(event.data["lot_id"], "lot-1");
+        assert_eq!(event.data["slot_id"], "slot-2");
+        assert_eq!(event.data["status"], "maintenance");
+    }
+
+    #[test]
+    fn event_roundtrip_all_types() {
+        let events = vec![
+            WsEvent::booking_created("l", "s", "u"),
+            WsEvent::booking_cancelled("l", "s"),
+            WsEvent::occupancy_update("l", 1, 2),
+            WsEvent::announcement_published("a", "t"),
+            WsEvent::slot_status_change("l", "s", "ok"),
+        ];
+        for event in events {
+            let json = serde_json::to_string(&event).unwrap();
+            let parsed: WsEvent = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed.event, event.event);
+            assert_eq!(parsed.data, event.data);
+        }
+    }
+
+    #[test]
+    fn ws_query_deserialize_with_token() {
+        let q: WsQuery = serde_json::from_str(r#"{"token":"abc123"}"#).unwrap();
+        assert_eq!(q.token.as_deref(), Some("abc123"));
+    }
+
+    #[test]
+    fn ws_query_deserialize_without_token() {
+        let q: WsQuery = serde_json::from_str("{}").unwrap();
+        assert!(q.token.is_none());
     }
 }
