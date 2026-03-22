@@ -3,6 +3,21 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+// ── matchMedia mock ──
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // ── Mocks ──
 
 const mockGetBookings = vi.fn();
@@ -53,6 +68,7 @@ vi.mock('react-i18next', () => ({
         'bookingFilters.statusCancelled': 'Cancelled',
         'bookingFilters.statusCompleted': 'Completed',
         'pass.showPass': 'Show Pass',
+        'bookings.downloadInvoice': 'Download Invoice',
       };
       return map[key] || key;
     },
@@ -89,6 +105,7 @@ vi.mock('@phosphor-icons/react', () => ({
   MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
   Funnel: (props: any) => <span data-testid="icon-funnel" {...props} />,
   QrCode: (props: any) => <span data-testid="icon-qrcode" {...props} />,
+  FilePdf: (props: any) => <span data-testid="icon-pdf" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({

@@ -1,4 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// ── matchMedia mock — must run before any module-level code in ThemeContext ──
+vi.hoisted(() => {
+  Object.defineProperty(globalThis.window ?? globalThis, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+});
+
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -11,6 +30,22 @@ const mockUpdateMe = vi.fn();
 const mockChangePassword = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+
+vi.mock('../components/ProfileThemeSection', () => ({
+  ProfileThemeSection: () => <div data-testid="theme-section">Theme Section</div>,
+}));
+
+vi.mock('../components/TwoFactorSetup', () => ({
+  TwoFactorSetupComponent: () => <div data-testid="2fa-setup">2FA Setup</div>,
+}));
+
+vi.mock('../components/NotificationPreferences', () => ({
+  NotificationPreferencesComponent: () => <div data-testid="notification-prefs">Notification Preferences</div>,
+}));
+
+vi.mock('../components/LoginHistory', () => ({
+  LoginHistoryComponent: () => <div data-testid="login-history">Login History</div>,
+}));
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
@@ -124,6 +159,7 @@ vi.mock('@phosphor-icons/react', () => ({
   ShieldWarning: (props: any) => <span data-testid="icon-shield-warning" {...props} />,
   Check: (props: any) => <span data-testid="icon-check" {...props} />,
   X: (props: any) => <span data-testid="icon-x" {...props} />,
+  Palette: (props: any) => <span data-testid="icon-palette" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

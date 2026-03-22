@@ -11,7 +11,7 @@ use axum::{
     routing::{delete, get, post, put},
     Extension, Json, Router,
 };
-use chrono::{DateTime, Datelike, TimeDelta, Timelike, Utc};
+use chrono::{Datelike, TimeDelta, Timelike, Utc};
 use std::fmt::Write as _;
 use std::sync::Arc;
 use std::time::Duration;
@@ -38,7 +38,6 @@ use crate::metrics;
 use crate::openapi::ApiDoc;
 use crate::rate_limit::{ip_rate_limit_middleware, EndpointRateLimiters};
 use crate::static_files;
-use crate::utils::html_escape;
 
 /// Maximum allowed request body size: 4 MiB.
 /// Raised from 1 MiB to accommodate base64-encoded vehicle photos (max 2 MB raw
@@ -50,12 +49,13 @@ const MAX_REQUEST_BODY_BYTES: usize = 4 * 1024 * 1024; // 4 MiB
 pub const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
 
 /// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
-const VAT_RATE: f64 = 0.19;
+#[cfg(feature = "mod-bookings")]
+pub(super) const VAT_RATE: f64 = 0.19;
 
 use parkhub_common::{
-    ApiResponse, Booking, BookingPricing, BookingStatus, CreateBookingRequest, CreditTransaction,
-    CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginResponse, PaymentStatus,
-    ServerStatus, SlotStatus, User, UserRole, Vehicle, VehicleType, PROTOCOL_VERSION,
+    ApiResponse, BookingStatus,
+    CreditTransactionType, HandshakeRequest, HandshakeResponse, LoginResponse,
+    ServerStatus, User, UserRole, PROTOCOL_VERSION,
 };
 use serde::{Deserialize, Serialize};
 

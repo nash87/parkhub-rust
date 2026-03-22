@@ -36,7 +36,7 @@ pub const AUTH_COOKIE_NAME: &str = "parkhub_token";
 ///
 /// The cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` unless
 /// running on localhost (detected via `APP_URL` env var).
-pub(crate) fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
+pub(super) fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
     let secure_flag = std::env::var("APP_URL")
         .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
         .unwrap_or(false);
