@@ -94,6 +94,7 @@ mod tests {
             created_at: Utc::now(),
             updated_at: Utc::now(),
             last_login: None,
+            tenant_id: None,
         }
     }
 

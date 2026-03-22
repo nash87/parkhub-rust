@@ -1578,6 +1578,7 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
         credits_balance: 0,
         credits_monthly_quota: 0,
         credits_last_refilled: None,
+        tenant_id: None,
     };
 
     db.save_user(&admin_user).await?;
@@ -1769,6 +1770,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
                     credits_balance: rng.random_range(10..41),
                     credits_monthly_quota: 40,
                     credits_last_refilled: Some(Utc::now()),
+                    tenant_id: None,
                 }
             })
             .collect()
@@ -1885,6 +1887,7 @@ pub(crate) async fn create_sample_parking_lot(db: &Database) -> Result<()> {
         status: LotStatus::Open,
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        tenant_id: None,
     };
 
     // Save parking lot

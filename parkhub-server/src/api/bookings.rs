@@ -428,6 +428,7 @@ pub async fn create_booking(
         check_out_time: None,
         qr_code: Some(Uuid::new_v4().to_string()),
         notes: req.notes,
+        tenant_id: None,
     };
 
     // ── Phase 2: mutations under a write lock ──────────────────────────────────
@@ -1374,6 +1375,7 @@ pub async fn quick_book(
         check_out_time: None,
         qr_code: Some(Uuid::new_v4().to_string()),
         notes: Some(format!("Quick book ({booking_type})")),
+        tenant_id: None,
     };
 
     if let Err(e) = state_guard.db.save_booking(&booking).await {
@@ -1737,6 +1739,7 @@ mod tests {
             check_out_time: None,
             qr_code: Some("QR_DATA".to_string()),
             notes: None,
+            tenant_id: None,
         };
 
         let json = serde_json::to_string(&booking).unwrap();
@@ -1770,6 +1773,7 @@ mod tests {
             check_out_time: Some(now + chrono::Duration::minutes(65)),
             qr_code: None,
             notes: Some("late arrival".to_string()),
+            tenant_id: None,
         };
 
         let json = serde_json::to_string(&booking).unwrap();

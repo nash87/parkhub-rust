@@ -32,6 +32,9 @@ pub struct User {
     pub credits_monthly_quota: i32,
     #[serde(default)]
     pub credits_last_refilled: Option<DateTime<Utc>>,
+    /// Multi-tenant isolation: tenant ID (None = super-admin / global scope)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tenant_id: Option<String>,
 }
 
 const fn default_credits_quota() -> i32 {
@@ -91,6 +94,9 @@ pub struct ParkingLot {
     pub status: LotStatus,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Multi-tenant isolation: tenant ID (None = global scope)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tenant_id: Option<String>,
 }
 
 /// Parking floor within a lot
@@ -342,6 +348,9 @@ pub struct Booking {
     pub check_out_time: Option<DateTime<Utc>>,
     pub qr_code: Option<String>,
     pub notes: Option<String>,
+    /// Multi-tenant isolation: tenant ID (None = global scope)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tenant_id: Option<String>,
 }
 
 /// Booking status

@@ -304,6 +304,13 @@ export const api = {
   // ── Rate Limits ──
   getRateLimitStats: () => request<RateLimitStats>('/api/v1/admin/rate-limits'),
   getRateLimitHistory: () => request<RateLimitHistory>('/api/v1/admin/rate-limits/history'),
+
+  // ── Tenants ──
+  listTenants: () => request<TenantInfo[]>('/api/v1/admin/tenants'),
+  createTenant: (data: CreateTenantRequest) =>
+    request<TenantInfo>('/api/v1/admin/tenants', { method: 'POST', body: JSON.stringify(data) }),
+  updateTenant: (id: string, data: CreateTenantRequest) =>
+    request<TenantInfo>(`/api/v1/admin/tenants/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 // ── Types ──
@@ -769,4 +776,28 @@ export interface RateLimitHistoryBin {
 
 export interface RateLimitHistory {
   bins: RateLimitHistoryBin[];
+}
+
+// ── Tenants ──
+export interface TenantBranding {
+  primary_color?: string;
+  logo_url?: string;
+  company_name?: string;
+}
+
+export interface TenantInfo {
+  id: string;
+  name: string;
+  domain?: string;
+  branding?: TenantBranding;
+  created_at: string;
+  updated_at: string;
+  user_count: number;
+  lot_count: number;
+}
+
+export interface CreateTenantRequest {
+  name: string;
+  domain?: string;
+  branding?: TenantBranding;
 }
