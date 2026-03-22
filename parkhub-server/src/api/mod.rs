@@ -58,6 +58,8 @@ type SharedState = Arc<RwLock<AppState>>;
 // Submodules
 // ─────────────────────────────────────────────────────────────────────────────
 
+#[cfg(feature = "mod-absence-approval")]
+pub mod absence_approval;
 #[cfg(feature = "mod-absences")]
 pub mod absences;
 #[cfg(feature = "mod-api-docs")]
@@ -169,6 +171,11 @@ pub mod ws;
 pub mod zones;
 
 // Re-import handler functions so the router can reference them unqualified.
+#[cfg(feature = "mod-absence-approval")]
+use absence_approval::{
+    approve_absence, list_pending_absences, my_absence_requests, reject_absence,
+    submit_absence_request,
+};
 #[cfg(feature = "mod-absences")]
 use absences::{
     create_absence, delete_absence, get_absence_pattern, list_absences, list_team_absences,
@@ -453,6 +460,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "api-docs".into(),
         cfg!(feature = "mod-api-docs").into(),
+    );
+    modules.insert(
+        "absence-approval".into(),
+        cfg!(feature = "mod-absence-approval").into(),
     );
 
     Json(serde_json::json!({
@@ -1215,6 +1226,29 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/absences/{id}",
                 delete(delete_absence).put(update_absence),
+            );
+    }
+
+    #[cfg(feature = "mod-absence-approval")]
+    {
+        // Absence approval workflow (user submits, admin approves/rejects)
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/absences/requests",
+                post(submit_absence_request),
+            )
+            .route("/api/v1/absences/my", get(my_absence_requests))
+            .route(
+                "/api/v1/admin/absences/pending",
+                get(list_pending_absences),
+            )
+            .route(
+                "/api/v1/admin/absences/{id}/approve",
+                put(approve_absence),
+            )
+            .route(
+                "/api/v1/admin/absences/{id}/reject",
+                put(reject_absence),
             );
     }
 
