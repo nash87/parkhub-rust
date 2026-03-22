@@ -30,6 +30,7 @@ vi.mock('react-i18next', () => ({
         'forgotPassword.successTitle': 'Check your email',
         'forgotPassword.successMessage': "If an account with that email exists, we've sent a password reset link. Check your inbox and spam folder.",
         'forgotPassword.backToSignIn': 'Back to Sign In',
+        'auth.email': 'you@company.com',
       };
       return map[key] || key;
     },
