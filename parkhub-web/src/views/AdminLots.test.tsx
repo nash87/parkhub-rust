@@ -41,7 +41,9 @@ vi.mock('@phosphor-icons/react', () => ({
   X: (props: any) => <span data-testid="icon-x" {...props} />,
   MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
   CurrencyEur: (props: any) => <span data-testid="icon-currency" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  TrendDown: (props: any) => <span data-testid="icon-trend-down" {...props} />,
+  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({
