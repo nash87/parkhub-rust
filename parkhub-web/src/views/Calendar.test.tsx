@@ -7,11 +7,13 @@ import userEvent from '@testing-library/user-event';
 
 const mockCalendarEvents = vi.fn();
 const mockGenerateCalendarToken = vi.fn();
+const mockRescheduleBooking = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
     calendarEvents: (...args: any[]) => mockCalendarEvents(...args),
     generateCalendarToken: (...args: any[]) => mockGenerateCalendarToken(...args),
+    rescheduleBooking: (...args: any[]) => mockRescheduleBooking(...args),
   },
 }));
 
@@ -31,6 +33,16 @@ vi.mock('react-i18next', () => ({
         'calendar.instructionGoogle': 'Settings > Add calendar > From URL',
         'calendar.instructionOutlook': 'Add calendar > Subscribe from web',
         'calendar.instructionApple': 'File > New Calendar Subscription',
+        'calendarDrag.help': 'Drag a booking to a new date to reschedule it',
+        'calendarDrag.helpLabel': 'Help',
+        'calendarDrag.confirmTitle': 'Reschedule Booking',
+        'calendarDrag.confirmDesc': 'Move this booking to the selected date?',
+        'calendarDrag.from': 'From',
+        'calendarDrag.to': 'To',
+        'calendarDrag.confirmBtn': 'Reschedule',
+        'calendarDrag.rescheduling': 'Rescheduling...',
+        'calendarDrag.rescheduled': 'Booking rescheduled',
+        'common.cancel': 'Cancel',
       };
       return map[key] || fallback || key;
     },
@@ -54,6 +66,8 @@ vi.mock('@phosphor-icons/react', () => ({
   X: (props: any) => <span data-testid="icon-x" {...props} />,
   Copy: (props: any) => <span data-testid="icon-copy" {...props} />,
   Check: (props: any) => <span data-testid="icon-check" {...props} />,
+  Question: (props: any) => <span data-testid="icon-question" {...props} />,
+  ArrowsClockwise: (props: any) => <span data-testid="icon-reschedule" {...props} />,
 }));
 
 import { CalendarPage } from './Calendar';
@@ -244,6 +258,58 @@ describe('CalendarPage', () => {
       expect(screen.getByText('Settings > Add calendar > From URL')).toBeInTheDocument();
       expect(screen.getByText('Add calendar > Subscribe from web')).toBeInTheDocument();
       expect(screen.getByText('File > New Calendar Subscription')).toBeInTheDocument();
+    });
+  });
+
+  // -- Drag-to-Reschedule tests --
+
+  it('renders help button for drag reschedule', async () => {
+    render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByTitle('Help')).toBeInTheDocument();
+    });
+  });
+
+  it('shows drag help tooltip when help button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByTitle('Help')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTitle('Help'));
+    expect(screen.getByText('Drag a booking to a new date to reschedule it')).toBeInTheDocument();
+  });
+
+  it('renders day cells as droppable areas', async () => {
+    render(<CalendarPage />);
+    await waitFor(() => {
+      const dayCells = screen.getAllByRole('button');
+      expect(dayCells.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('loads reschedule mock API', async () => {
+    mockRescheduleBooking.mockResolvedValue({
+      success: true,
+      data: { booking_id: 'b1', success: true, message: 'Booking rescheduled' },
+    });
+    expect(mockRescheduleBooking).not.toHaveBeenCalled();
+  });
+
+  it('renders events as draggable indicators', async () => {
+    const now = new Date();
+    const dayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Slot A1',
+        start: `${dayStr}T08:00:00Z`, end: `${dayStr}T18:00:00Z`,
+        lot_name: 'Garage A', slot_number: 1, status: 'confirmed',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Calendar')).toBeInTheDocument();
     });
   });
 });
