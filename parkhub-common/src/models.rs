@@ -746,6 +746,38 @@ pub struct TranslationOverride {
     pub updated_at: DateTime<Utc>,
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISITOR PRE-REGISTRATION MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Visitor registration status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum VisitorStatus {
+    Pending,
+    CheckedIn,
+    Expired,
+    Cancelled,
+}
+
+/// Pre-registered visitor
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct Visitor {
+    pub id: Uuid,
+    pub host_user_id: Uuid,
+    pub name: String,
+    pub email: String,
+    pub vehicle_plate: Option<String>,
+    pub visit_date: DateTime<Utc>,
+    pub purpose: Option<String>,
+    pub status: VisitorStatus,
+    pub qr_code: Option<String>,
+    pub pass_url: Option<String>,
+    pub checked_in_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

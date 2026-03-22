@@ -146,6 +146,8 @@ pub mod translations;
 mod users;
 #[cfg(feature = "mod-vehicles")]
 pub mod vehicles;
+#[cfg(feature = "mod-visitors")]
+pub mod visitors;
 #[cfg(feature = "mod-waitlist")]
 pub mod waitlist;
 #[cfg(feature = "mod-webhooks")]
@@ -242,6 +244,10 @@ use translations::{
 use vehicles::{
     create_vehicle, delete_vehicle, get_vehicle_photo, list_vehicles, update_vehicle,
     upload_vehicle_photo, vehicle_city_codes,
+};
+#[cfg(feature = "mod-visitors")]
+use visitors::{
+    admin_list_visitors, cancel_visitor, check_in_visitor, list_my_visitors, register_visitor,
 };
 #[cfg(feature = "mod-waitlist")]
 use waitlist::{join_waitlist, leave_waitlist, list_waitlist};
@@ -401,6 +407,7 @@ async fn list_module_features() -> impl IntoResponse {
         "cost-center".into(),
         cfg!(feature = "mod-cost-center").into(),
     );
+    modules.insert("visitors".into(), cfg!(feature = "mod-visitors").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -1176,6 +1183,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 "/api/v1/admin/guest-bookings/{id}/cancel",
                 axum::routing::patch(admin_cancel_guest_booking),
             );
+    }
+
+    #[cfg(feature = "mod-visitors")]
+    {
+        // Visitor pre-registration
+        protected_routes = protected_routes
+            .route("/api/v1/visitors/register", post(register_visitor))
+            .route("/api/v1/visitors", get(list_my_visitors))
+            .route("/api/v1/visitors/{id}/check-in", put(check_in_visitor))
+            .route("/api/v1/visitors/{id}", delete(cancel_visitor))
+            .route("/api/v1/admin/visitors", get(admin_list_visitors));
     }
 
     #[cfg(feature = "mod-calendar")]

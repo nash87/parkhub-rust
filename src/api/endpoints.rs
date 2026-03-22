@@ -155,6 +155,27 @@ pub mod paths {
     pub fn health() -> String {
         "/health".to_string()
     }
+
+    // Visitor endpoints
+    pub fn visitor_register() -> String {
+        format!("/api/{}/visitors/register", API_VERSION)
+    }
+
+    pub fn visitors() -> String {
+        format!("/api/{}/visitors", API_VERSION)
+    }
+
+    pub fn visitor_check_in(id: &str) -> String {
+        format!("/api/{}/visitors/{}/check-in", API_VERSION, id)
+    }
+
+    pub fn visitor_cancel(id: &str) -> String {
+        format!("/api/{}/visitors/{}", API_VERSION, id)
+    }
+
+    pub fn admin_visitors() -> String {
+        format!("/api/{}/admin/visitors", API_VERSION)
+    }
 }
 
 /// HTTP methods
