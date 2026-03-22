@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge, Buildings, ClockCounterClockwise,
+  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge, Buildings, ClockCounterClockwise, Database,
 } from '@phosphor-icons/react';
 
 function AdminNav() {
@@ -21,6 +21,7 @@ function AdminNav() {
     { name: t('admin.rateLimits', 'Rate Limits'), path: '/admin/rate-limits', icon: Gauge },
     { name: t('admin.tenants', 'Tenants'), path: '/admin/tenants', icon: Buildings },
     { name: t('admin.auditLog', 'Audit Log'), path: '/admin/audit-log', icon: ClockCounterClockwise },
+    { name: t('admin.dataManagement', 'Data'), path: '/admin/data', icon: Database },
   ];
 
   function isActive(path: string) {

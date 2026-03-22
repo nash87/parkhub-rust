@@ -423,6 +423,7 @@ export default {
       rateLimits: 'Rate Limits',
       tenants: 'Inquilinos',
       auditLog: 'Registro de auditoria',
+      dataManagement: 'Datos',
       bulkAction: 'Acción masiva',
       bulkActionConfirm: '¿Seguro que quieres {{action}} {{count}} usuario(s)?',
       bulkDeleted: '{{succeeded}}/{{total}} usuarios eliminados',
@@ -593,6 +594,7 @@ export default {
       blocked: 'bloqueadas',
       now: 'ahora',
     },
+    dataManagement: { title: 'Gestion de datos', subtitle: 'Importar y exportar datos de ParkHub', import: 'Importar', export: 'Exportar', importUsers: 'Usuarios', importLots: 'Parkings', dropHint: 'Arrastra un archivo CSV o JSON aqui', usersFormat: 'CSV: usuario, email, nombre, rol, contraseña', lotsFormat: 'CSV: nombre, direccion, plazas, tarifa hora, max dia, moneda', preview: 'Vista previa', rows: 'filas', importNow: 'Importar ahora', importComplete: 'Importacion completada', importSuccess: '{{count}} registros importados', imported: 'Importados', skipped: 'Omitidos', errorsCount: 'Errores', exportUsers: 'Exportar usuarios', exportLots: 'Exportar parkings', exportBookings: 'Exportar reservas', exportUsersDesc: 'Todos los usuarios con estadisticas', exportLotsDesc: 'Todos los parkings con estadisticas', exportBookingsDesc: 'Reservas con filtro de fecha', dateFrom: 'Desde', dateTo: 'Hasta' },
     auditLog: { title: 'Registro de auditoria', totalEntries: '{{count}} entradas', exportCsv: 'Exportar CSV', filters: 'Filtros', allActions: 'Todas las acciones', searchUser: 'Buscar usuario...', filterAction: 'Filtrar por accion', dateFrom: 'Desde', dateTo: 'Hasta', colTime: 'Hora', colAction: 'Accion', colUser: 'Usuario', colTarget: 'Objetivo', colIp: 'IP', colDetails: 'Detalles', empty: 'No se encontraron entradas de auditoria', pageInfo: 'Pagina {{page}} de {{total}}' },
     tenants: { title: 'Inquilinos', create: 'Crear inquilino', name: 'Nombre', domain: 'Dominio', switch: 'Cambiar inquilino', empty: 'No hay inquilinos configurados.', editTitle: 'Editar inquilino', created: 'Inquilino creado', updated: 'Inquilino actualizado', users: 'usuarios', lots: 'parkings', brandColor: 'Color de marca' },
     map: {
