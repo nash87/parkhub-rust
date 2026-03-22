@@ -4,7 +4,15 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ExportButton, type ExportType } from './ExportButton';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_: string, f: string) => f }) }));
-beforeEach(() => { vi.restoreAllMocks(); localStorage.clear(); });
+
+const { mockGetInMemoryToken } = vi.hoisted(() => ({
+  mockGetInMemoryToken: vi.fn(() => null as string | null),
+}));
+vi.mock('../api/client', () => ({
+  getInMemoryToken: mockGetInMemoryToken,
+}));
+
+beforeEach(() => { vi.restoreAllMocks(); mockGetInMemoryToken.mockReturnValue(null); });
 
 describe('ExportButton', () => {
   it('renders toggle', () => { render(<ExportButton />); expect(screen.getByTestId('export-toggle')).toBeDefined(); });
@@ -40,7 +48,7 @@ describe('ExportButton', () => {
 
 describe('ExportButton download', () => {
   it('fetches with auth', async () => {
-    localStorage.setItem('parkhub_token', 'tok');
+    mockGetInMemoryToken.mockReturnValue('tok');
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });
     vi.stubGlobal('fetch', fm);
     vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('b:x'), revokeObjectURL: vi.fn() });
@@ -48,6 +56,7 @@ describe('ExportButton download', () => {
     await waitFor(() => expect(fm).toHaveBeenCalledTimes(1));
     expect(fm.mock.calls[0][0]).toContain('/api/v1/admin/export/bookings');
     expect(fm.mock.calls[0][1].headers.Authorization).toBe('Bearer tok');
+    expect(fm.mock.calls[0][1].credentials).toBe('include');
   });
   it('correct URL per type', async () => {
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });
@@ -65,11 +74,14 @@ describe('ExportButton download', () => {
     render(<ExportButton />); fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId('export-users'));
     await waitFor(() => expect(spy).toHaveBeenCalled()); spy.mockRestore();
   });
-  it('no token', async () => {
+  it('no token still sends CSRF header and credentials', async () => {
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });
     vi.stubGlobal('fetch', fm); vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('b:x'), revokeObjectURL: vi.fn() });
     render(<ExportButton />); fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId('export-revenue'));
-    await waitFor(() => expect(fm).toHaveBeenCalledTimes(1)); expect(fm.mock.calls[0][1].headers).toEqual({});
+    await waitFor(() => expect(fm).toHaveBeenCalledTimes(1));
+    expect(fm.mock.calls[0][1].headers['X-Requested-With']).toBe('XMLHttpRequest');
+    expect(fm.mock.calls[0][1].headers.Authorization).toBeUndefined();
+    expect(fm.mock.calls[0][1].credentials).toBe('include');
   });
   it('custom baseUrl', async () => {
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });

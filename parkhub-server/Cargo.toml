@@ -91,7 +91,7 @@ metrics = "0.24"
 metrics-exporter-prometheus = "0.18"  # updated from 0.16
 
 # Health checks
-axum-extra = { version = "0.12", features = ["typed-header"] }  # updated from 0.9 (matches axum 0.8)
+axum-extra = { version = "0.12", features = ["typed-header", "cookie"] }  # updated from 0.9 (matches axum 0.8)
 
 # === PHASE 3: Features ===
 # Background jobs (for cleanup, notifications)
