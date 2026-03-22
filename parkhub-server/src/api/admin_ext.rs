@@ -623,7 +623,18 @@ pub async fn load_notification_preferences(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Available design theme IDs.
-const VALID_DESIGN_THEMES: &[&str] = &["classic", "glass", "bento", "brutalist", "neon", "warm"];
+const VALID_DESIGN_THEMES: &[&str] = &[
+    "classic",
+    "glass",
+    "bento",
+    "brutalist",
+    "neon",
+    "warm",
+    "liquid",
+    "mono",
+    "ocean",
+    "forest",
+];
 
 /// Design theme preference.
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -678,7 +689,7 @@ pub async fn update_design_theme_preference(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "INVALID_THEME",
-                "Invalid design theme. Valid: classic, glass, bento, brutalist, neon, warm",
+                "Invalid design theme. Valid: classic, glass, bento, brutalist, neon, warm, liquid, mono, ocean, forest",
             )),
         );
     }
