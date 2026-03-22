@@ -423,6 +423,7 @@ export default {
       rateLimits: 'Rate Limits',
       tenants: 'Locataires',
       auditLog: 'Journal d\'audit',
+      dataManagement: 'Donnees',
       bulkAction: 'Action groupée',
       bulkActionConfirm: 'Êtes-vous sûr(e) de vouloir {{action}} {{count}} utilisateur(s) ?',
       bulkDeleted: '{{succeeded}}/{{total}} utilisateurs supprimés',
@@ -593,6 +594,7 @@ export default {
       blocked: 'bloquees',
       now: 'maintenant',
     },
+    dataManagement: { title: 'Gestion des donnees', subtitle: 'Importer et exporter vos donnees ParkHub', import: 'Importer', export: 'Exporter', importUsers: 'Utilisateurs', importLots: 'Parkings', dropHint: 'Deposez un fichier CSV ou JSON ici', usersFormat: 'CSV: identifiant, email, nom, role, mot de passe', lotsFormat: 'CSV: nom, adresse, places, tarif horaire, max jour, devise', preview: 'Apercu', rows: 'lignes', importNow: 'Importer maintenant', importComplete: 'Import termine', importSuccess: '{{count}} enregistrements importes', imported: 'Importes', skipped: 'Ignores', errorsCount: 'Erreurs', exportUsers: 'Exporter les utilisateurs', exportLots: 'Exporter les parkings', exportBookings: 'Exporter les reservations', exportUsersDesc: 'Tous les utilisateurs avec statistiques', exportLotsDesc: 'Tous les parkings avec statistiques', exportBookingsDesc: 'Reservations avec filtre de date', dateFrom: 'Du', dateTo: 'Au' },
     auditLog: { title: 'Journal d\'audit', totalEntries: '{{count}} entrees', exportCsv: 'Exporter CSV', filters: 'Filtres', allActions: 'Toutes les actions', searchUser: 'Rechercher utilisateur...', filterAction: 'Filtrer par action', dateFrom: 'Du', dateTo: 'Au', colTime: 'Heure', colAction: 'Action', colUser: 'Utilisateur', colTarget: 'Cible', colIp: 'IP', colDetails: 'Details', empty: 'Aucune entree d\'audit trouvee', pageInfo: 'Page {{page}} sur {{total}}' },
     tenants: { title: 'Locataires', create: 'Creer un locataire', name: 'Nom', domain: 'Domaine', switch: 'Changer de locataire', empty: 'Aucun locataire configure.', editTitle: 'Modifier le locataire', created: 'Locataire cree', updated: 'Locataire mis a jour', users: 'utilisateurs', lots: 'parkings', brandColor: 'Couleur de marque' },
     map: {

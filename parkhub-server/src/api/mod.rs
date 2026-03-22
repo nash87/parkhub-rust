@@ -76,6 +76,8 @@ pub mod branding;
 pub mod calendar;
 #[cfg(feature = "mod-credits")]
 pub mod credits;
+#[cfg(feature = "mod-data-import")]
+pub mod data_management;
 #[cfg(feature = "mod-dynamic-pricing")]
 pub mod dynamic_pricing;
 #[cfg(feature = "mod-export")]
@@ -316,6 +318,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert("absences".into(), cfg!(feature = "mod-absences").into());
     modules.insert("branding".into(), cfg!(feature = "mod-branding").into());
     modules.insert("import".into(), cfg!(feature = "mod-import").into());
+    modules.insert(
+        "data-import".into(),
+        cfg!(feature = "mod-data-import").into(),
+    );
     modules.insert("qr".into(), cfg!(feature = "mod-qr").into());
     modules.insert("pwa".into(), cfg!(feature = "mod-pwa").into());
     modules.insert("payments".into(), cfg!(feature = "mod-payments").into());
@@ -945,6 +951,31 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/admin/export/revenue",
                 get(admin_export_revenue_csv),
+            );
+    }
+
+    #[cfg(feature = "mod-data-import")]
+    {
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/admin/import/users",
+                post(data_management::import_users),
+            )
+            .route(
+                "/api/v1/admin/import/lots",
+                post(data_management::import_lots),
+            )
+            .route(
+                "/api/v1/admin/data/export/users",
+                get(data_management::export_users_csv),
+            )
+            .route(
+                "/api/v1/admin/data/export/lots",
+                get(data_management::export_lots_csv),
+            )
+            .route(
+                "/api/v1/admin/data/export/bookings",
+                get(data_management::export_bookings_csv),
             );
     }
 
