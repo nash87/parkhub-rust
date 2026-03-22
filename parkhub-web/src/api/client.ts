@@ -1,4 +1,4 @@
-const BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
+const BASE_URL = import.meta.env?.VITE_API_URL || '';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -44,6 +44,16 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<ApiResp
   }
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const token = localStorage.getItem('parkhub_token');
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.blob();
+}
+
 // ── Auth ──
 export const api = {
   login: (username: string, password: string) =>
@@ -69,6 +79,11 @@ export const api = {
     request('/api/v1/users/me/password', {
       method: 'PUT', body: JSON.stringify({ current_password, password, password_confirmation }),
     }),
+
+  exportMyData: () => requestBlob('/api/v1/user/export'),
+
+  deleteMyAccount: () =>
+    request('/api/v1/users/me/delete', { method: 'DELETE' }),
 
   // ── Setup ──
   getSetupStatus: () => request<SetupStatus>('/api/v1/setup/status'),

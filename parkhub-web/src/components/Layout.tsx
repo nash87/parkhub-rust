@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence, useMotionValue, useTransform, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
@@ -44,7 +44,6 @@ export function Layout() {
 
   useKeyboardShortcuts({ onToggleCommandPalette: toggleCommandPalette });
 
-  // Fetch unread notification count
   useEffect(() => {
     fetch('/api/v1/notifications/unread-count')
       .then(r => r.json())
@@ -59,20 +58,17 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 flex">
-      {/* Skip to content */}
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">{t('nav.skipToContent')}</a>
 
-      {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl border-r border-surface-200/60 dark:border-surface-800/60 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
-        {/* Logo */}
+      {/* Sidebar — desktop — glass morphism */}
+      <aside className="hidden lg:flex flex-col w-64 bg-white/70 dark:bg-surface-900/70 backdrop-blur-2xl border-r border-surface-200/40 dark:border-surface-800/40 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
         <div className="flex items-center gap-3 px-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
             <CarSimple weight="fill" className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
+          <span className="text-xl font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>ParkHub</span>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 space-y-0.5">
           {NAV_ITEMS.map(item => (
             <NavLink
@@ -81,18 +77,29 @@ export function Layout() {
               end={item.end}
               aria-current={location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to)) ? 'page' : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors border-l-2 ${
+                `relative flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                   isActive
-                    ? 'border-primary-600 text-primary-700 dark:text-primary-300'
-                    : 'border-transparent text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                    ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
+                    : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
                 }`
               }
             >
-              <span className="relative">
-                <item.icon weight="fill" className="w-5 h-5" />
-                {item.key === 'notifications' && <NotificationBadge count={unreadCount} />}
-              </span>
-              {t(`nav.${item.key}`)}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full bg-gradient-to-b from-primary-500 to-primary-400"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative">
+                    <item.icon weight="fill" className="w-5 h-5" />
+                    {item.key === 'notifications' && <NotificationBadge count={unreadCount} />}
+                  </span>
+                  {t(`nav.${item.key}`)}
+                </>
+              )}
             </NavLink>
           ))}
 
@@ -100,10 +107,10 @@ export function Layout() {
             <NavLink
               to="/admin"
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors border-l-2 ${
+                `relative flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                   isActive
-                    ? 'border-primary-600 text-primary-700 dark:text-primary-300'
-                    : 'border-transparent text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                    ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
+                    : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
                 }`
               }
             >
@@ -113,22 +120,23 @@ export function Layout() {
           )}
         </nav>
 
-        {/* Theme toggle */}
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
-          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white transition-colors mb-2"
+          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-all mb-2"
         >
           {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
           {resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
         </button>
 
-        {/* User + logout */}
-        <div className="border-t border-surface-200 dark:border-surface-800 pt-4 mt-2">
+        <div className="border-t border-surface-200/60 dark:border-surface-800/60 pt-4 mt-2">
           <div className="flex items-center gap-3 px-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-surface-200 dark:bg-surface-700 flex items-center justify-center">
-              <span className="text-sm font-bold text-surface-700 dark:text-surface-300">
-                {(user?.name || user?.username || 'U').charAt(0).toUpperCase()}
-              </span>
+            <div className="relative">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-200 to-primary-100 dark:from-primary-800 dark:to-primary-900 flex items-center justify-center ring-2 ring-primary-500/20 dark:ring-primary-400/20">
+                <span className="text-sm font-bold text-primary-700 dark:text-primary-300">
+                  {(user?.name || user?.username || 'U').charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-surface-900" />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{user?.name || user?.username}</p>
@@ -137,7 +145,7 @@ export function Layout() {
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:hover:text-red-400 transition-colors w-full"
+            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/20 rounded-lg transition-all w-full"
           >
             <SignOut weight="bold" className="w-5 h-5" />
             {t('nav.logout')}
@@ -145,16 +153,15 @@ export function Layout() {
         </div>
       </aside>
 
-      {/* Mobile top bar */}
       <div className="flex-1 flex flex-col">
-        <header className="lg:hidden sticky top-0 z-30 bg-white/80 dark:bg-surface-900/80 backdrop-blur-xl border-b border-surface-200/60 dark:border-surface-800/60 px-4 py-3">
+        <header className="lg:hidden sticky top-0 z-30 bg-white/70 dark:bg-surface-900/70 backdrop-blur-2xl border-b border-surface-200/40 dark:border-surface-800/40 px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon min-w-[44px] min-h-[44px]" aria-label={t('nav.openMenu')}>
                 <List weight="bold" className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-sm">
                   <CarSimple weight="fill" className="w-4 h-4 text-white" />
                 </div>
                 <span className="font-bold text-surface-900 dark:text-white">ParkHub</span>
@@ -170,7 +177,6 @@ export function Layout() {
           </div>
         </header>
 
-        {/* Mobile sidebar overlay */}
         <AnimatePresence>
           {sidebarOpen && (
             <>
@@ -178,7 +184,7 @@ export function Layout() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+                className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
                 onClick={() => setSidebarOpen(false)}
                 aria-hidden="true"
               />
@@ -199,7 +205,7 @@ export function Layout() {
               >
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
                       <CarSimple weight="fill" className="w-5 h-5 text-white" />
                     </div>
                     <span className="text-xl font-bold text-surface-900 dark:text-white">ParkHub</span>
@@ -216,10 +222,10 @@ export function Layout() {
                       end={item.end}
                       onClick={() => setSidebarOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors border-l-2 ${
+                        `flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
                           isActive
-                            ? 'border-primary-600 text-primary-700 dark:text-primary-300'
-                            : 'border-transparent text-surface-600 dark:text-surface-400'
+                            ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
+                            : 'text-surface-600 dark:text-surface-400'
                         }`
                       }
                     >
@@ -233,10 +239,10 @@ export function Layout() {
                       to="/admin"
                       onClick={() => setSidebarOpen(false)}
                       className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors border-l-2 ${
+                        `flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
                           isActive
-                            ? 'border-primary-600 text-primary-700 dark:text-primary-300'
-                            : 'border-transparent text-surface-600 dark:text-surface-400'
+                            ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
+                            : 'text-surface-600 dark:text-surface-400'
                         }`
                       }
                     >
@@ -246,7 +252,7 @@ export function Layout() {
                   )}
                 </nav>
                 <div className="absolute bottom-4 left-4 right-4">
-                  <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 w-full">
+                  <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 w-full rounded-lg hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-all">
                     <SignOut weight="bold" className="w-5 h-5" /> {t('nav.logout')}
                   </button>
                 </div>
@@ -255,14 +261,12 @@ export function Layout() {
           )}
         </AnimatePresence>
 
-        {/* Main content */}
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
           <Breadcrumb />
           <Outlet />
         </main>
       </div>
 
-      {/* Command palette */}
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
     </div>
   );

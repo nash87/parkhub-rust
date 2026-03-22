@@ -154,11 +154,11 @@ export function AdminUsersPage() {
       if (bulkAction === 'delete') {
         const res = await api.adminBulkDelete(Array.from(selectedIds));
         if (res.success && res.data) {
-          toast.success(`Deleted ${res.data.succeeded}/${res.data.total} users`);
+          toast.success(t('admin.bulkDeleted', { succeeded: res.data.succeeded, total: res.data.total }));
           await loadUsers();
           setSelectedIds(new Set());
         } else {
-          toast.error(res.error?.message || 'Bulk delete failed');
+          toast.error(res.error?.message || t('admin.bulkDeleteFailed'));
         }
       } else {
         const res = await api.adminBulkUpdate(
@@ -167,11 +167,11 @@ export function AdminUsersPage() {
           bulkAction === 'set_role' ? bulkRole : undefined,
         );
         if (res.success && res.data) {
-          toast.success(`Updated ${res.data.succeeded}/${res.data.total} users`);
+          toast.success(t('admin.bulkUpdated', { succeeded: res.data.succeeded, total: res.data.total }));
           await loadUsers();
           setSelectedIds(new Set());
         } else {
-          toast.error(res.error?.message || 'Bulk update failed');
+          toast.error(res.error?.message || t('admin.bulkUpdateFailed'));
         }
       }
     } finally {
@@ -362,21 +362,22 @@ export function AdminUsersPage() {
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
           <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-            {selectedIds.size} selected
+            {t('admin.selectedCount', { count: selectedIds.size })}
           </span>
           <select
             value={bulkAction}
             onChange={e => setBulkAction(e.target.value)}
             className="input text-xs py-1 px-2"
+            aria-label={t('admin.selectAction')}
           >
-            <option value="">Select action...</option>
-            <option value="activate">Activate</option>
-            <option value="deactivate">Deactivate</option>
-            <option value="set_role">Change role</option>
-            <option value="delete">Delete</option>
+            <option value="">{t('admin.selectAction')}</option>
+            <option value="activate">{t('admin.bulkActivate')}</option>
+            <option value="deactivate">{t('admin.bulkDeactivate')}</option>
+            <option value="set_role">{t('admin.bulkChangeRole')}</option>
+            <option value="delete">{t('admin.bulkDelete')}</option>
           </select>
           {bulkAction === 'set_role' && (
-            <select value={bulkRole} onChange={e => setBulkRole(e.target.value)} className="input text-xs py-1 px-2">
+            <select value={bulkRole} onChange={e => setBulkRole(e.target.value)} className="input text-xs py-1 px-2" aria-label={t('admin.editRole')}>
               <option value="user">user</option>
               <option value="premium">premium</option>
               <option value="admin">admin</option>
@@ -388,18 +389,18 @@ export function AdminUsersPage() {
             className="px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
           >
             {bulkRunning ? <SpinnerGap className="animate-spin" weight="bold" size={14} /> : <Lightning weight="bold" size={14} />}
-            Apply
+            {t('admin.bulkApply')}
           </button>
           <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
-            Clear
+            {t('admin.bulkClear')}
           </button>
         </div>
       )}
 
       <ConfirmDialog
         open={bulkConfirm}
-        title="Bulk Action"
-        message={`Are you sure you want to ${bulkAction} ${selectedIds.size} user(s)?`}
+        title={t('admin.bulkAction')}
+        message={t('admin.bulkActionConfirm', { action: bulkAction, count: selectedIds.size })}
         variant={bulkAction === 'delete' ? 'danger' : 'default'}
         onConfirm={handleBulkAction}
         onCancel={() => setBulkConfirm(false)}

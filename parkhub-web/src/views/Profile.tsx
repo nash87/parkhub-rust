@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   UserCircle, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
@@ -67,18 +67,12 @@ export function ProfilePage() {
   async function handleExportData() {
     setExporting(true);
     try {
-      const base = (import.meta as any).env?.VITE_API_URL || '';
-      const token = localStorage.getItem('parkhub_token');
-      const res = await fetch(`${base}/api/v1/user/export`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
+      const blob = await api.exportMyData();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = 'my-parkhub-data.json'; a.click();
       URL.revokeObjectURL(url);
-      toast.success(t('gdpr.exported', 'Daten exportiert'));
+      toast.success(t('gdpr.exported'));
     } catch { toast.error(t('gdpr.exportFailed')); }
     finally { setExporting(false); }
   }
@@ -89,15 +83,13 @@ export function ProfilePage() {
       action: async () => {
         setConfirmState({open: false, action: () => {}});
         try {
-          const base = (import.meta as any).env?.VITE_API_URL || '';
-          const token = localStorage.getItem('parkhub_token');
-          const res = await fetch(`${base}/api/v1/users/me/delete`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          });
-          if (!res.ok) throw new Error('Delete failed');
-          toast.success(t('gdpr.deleted', 'Konto gel\u00f6scht'));
-          logout();
+          const res = await api.deleteMyAccount();
+          if (res.success) {
+            toast.success(t('gdpr.deleted'));
+            logout();
+          } else {
+            toast.error(res.error?.message || t('gdpr.deleteFailed'));
+          }
         } catch { toast.error(t('gdpr.deleteFailed')); }
       },
     });

@@ -19,8 +19,10 @@ let mockUser: any = {
 vi.mock('react-router-dom', () => ({
   Outlet: () => <div data-testid="outlet">Page content</div>,
   NavLink: ({ to, children, end, onClick, className, ...props }: any) => {
-    const cls = typeof className === 'function' ? className({ isActive: to === '/' && end }) : className;
-    return <a href={to} onClick={onClick} className={cls} {...props}>{children}</a>;
+    const isActive = to === '/' && end;
+    const cls = typeof className === 'function' ? className({ isActive }) : className;
+    const rendered = typeof children === 'function' ? children({ isActive }) : children;
+    return <a href={to} onClick={onClick} className={cls} {...props}>{rendered}</a>;
   },
   useNavigate: () => mockNavigate,
   useLocation: () => ({ pathname: '/' }),
@@ -76,11 +78,14 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, ...props }: any, ref: any) => (
+    div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, layoutId, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
     )),
     aside: React.forwardRef(({ children, initial, animate, exit, transition, ...props }: any, ref: any) => (
       <aside ref={ref} {...props}>{children}</aside>
+    )),
+    button: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, ...props }: any, ref: any) => (
+      <button ref={ref} {...props}>{children}</button>
     )),
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
