@@ -57,6 +57,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Wrench: (props: any) => <span data-testid="icon-wrench" {...props} />,
   CurrencyDollar: (props: any) => <span data-testid="icon-currency" {...props} />,
   UserPlus: (props: any) => <span data-testid="icon-user-plus" {...props} />,
+  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
 }));
 
 import { AdminPage } from './Admin';

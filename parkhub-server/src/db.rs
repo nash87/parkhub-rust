@@ -21,9 +21,12 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 use parkhub_common::models::{
-    Absence, Announcement, Booking, GuestBooking, Notification, ParkingLot, ParkingSlot,
-    ProposalStatus, RecurringBooking, SwapRequest, TranslationOverride, TranslationProposal,
-    TranslationVote, User, Vehicle, Visitor, WaitlistEntry,
+    Absence, Absence, Announcement, Announcement, Booking, Booking, ChargingSession, EvCharger,
+    GuestBooking, GuestBooking, Notification, Notification, ParkingLot, ParkingLot, ParkingSlot,
+    ParkingSlot, ProposalStatus, ProposalStatus, RecurringBooking, RecurringBooking, SwapRequest,
+    SwapRequest, TranslationOverride, TranslationOverride, TranslationProposal,
+    TranslationProposal, TranslationVote, TranslationVote, User, User, Vehicle, Vehicle, Visitor,
+    Visitor, WaitlistEntry, WaitlistEntry,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -61,6 +64,8 @@ const TRANSLATION_VOTES: TableDefinition<&str, &[u8]> = TableDefinition::new("tr
 const TRANSLATION_OVERRIDES: TableDefinition<&str, &[u8]> =
     TableDefinition::new("translation_overrides");
 const VISITORS: TableDefinition<&str, &[u8]> = TableDefinition::new("visitors");
+const EV_CHARGERS: TableDefinition<&str, &[u8]> = TableDefinition::new("ev_chargers");
+const CHARGING_SESSIONS: TableDefinition<&str, &[u8]> = TableDefinition::new("charging_sessions");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -344,6 +349,8 @@ impl Database {
             let _ = write_txn.open_table(TRANSLATION_VOTES)?;
             let _ = write_txn.open_table(TRANSLATION_OVERRIDES)?;
             let _ = write_txn.open_table(VISITORS)?;
+            let _ = write_txn.open_table(EV_CHARGERS)?;
+            let _ = write_txn.open_table(CHARGING_SESSIONS)?;
         }
         write_txn.commit()?;
 
@@ -457,6 +464,8 @@ impl Database {
         drain_table!(write_txn, TRANSLATION_VOTES);
         drain_table!(write_txn, TRANSLATION_OVERRIDES);
         drain_table!(write_txn, VISITORS);
+        drain_table!(write_txn, EV_CHARGERS);
+        drain_table!(write_txn, CHARGING_SESSIONS);
         // Preserve SETTINGS table (encryption salt, setup status, etc.)
         write_txn.commit()?;
         info!("All data tables cleared for demo reset");
@@ -2382,7 +2391,6 @@ impl Database {
     pub async fn save_visitor(&self, visitor: &Visitor) -> Result<()> {
         let id = visitor.id.to_string();
         let data = self.serialize(visitor)?;
-
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
         drop(db);
@@ -2391,7 +2399,6 @@ impl Database {
             table.insert(id.as_str(), data.as_slice())?;
         }
         write_txn.commit()?;
-
         debug!("Saved visitor: {}", visitor.id);
         Ok(())
     }
@@ -2402,7 +2409,6 @@ impl Database {
         let read_txn = db.begin_read()?;
         drop(db);
         let table = read_txn.open_table(VISITORS)?;
-
         match table.get(id)? {
             Some(value) => Ok(Some(self.deserialize(value.value())?)),
             None => Ok(None),
@@ -2455,6 +2461,124 @@ impl Database {
         };
         write_txn.commit()?;
         Ok(removed)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EV CHARGER OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save an EV charger
+    pub async fn save_charger(&self, charger: &EvCharger) -> Result<()> {
+        let id = charger.id.to_string();
+        let data = self.serialize(charger)?;
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        drop(db);
+        {
+            let mut table = write_txn.open_table(EV_CHARGERS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved EV charger: {}", charger.id);
+        Ok(())
+    }
+
+    /// Get a charger by ID
+    pub async fn get_charger(&self, id: &str) -> Result<Option<EvCharger>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(EV_CHARGERS)?;
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List chargers by lot ID
+    pub async fn list_chargers_by_lot(&self, lot_id: &str) -> Result<Vec<EvCharger>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(EV_CHARGERS)?;
+        let mut chargers = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let charger: EvCharger = self.deserialize(value.value())?;
+            if charger.lot_id.to_string() == lot_id {
+                chargers.push(charger);
+            }
+        }
+        Ok(chargers)
+    }
+
+    /// List all chargers
+    pub async fn list_all_chargers(&self) -> Result<Vec<EvCharger>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(EV_CHARGERS)?;
+        let mut chargers = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            chargers.push(self.deserialize(value.value())?);
+        }
+        Ok(chargers)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CHARGING SESSION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a charging session
+    pub async fn save_charging_session(&self, session: &ChargingSession) -> Result<()> {
+        let id = session.id.to_string();
+        let data = self.serialize(session)?;
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        drop(db);
+        {
+            let mut table = write_txn.open_table(CHARGING_SESSIONS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+        debug!("Saved charging session: {}", session.id);
+        Ok(())
+    }
+
+    /// List charging sessions by user
+    pub async fn list_charging_sessions_by_user(
+        &self,
+        user_id: &str,
+    ) -> Result<Vec<ChargingSession>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(CHARGING_SESSIONS)?;
+        let mut sessions = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let session: ChargingSession = self.deserialize(value.value())?;
+            if session.user_id.to_string() == user_id {
+                sessions.push(session);
+            }
+        }
+        sessions.sort_by(|a, b| b.start_time.cmp(&a.start_time));
+        Ok(sessions)
+    }
+
+    /// List all charging sessions
+    pub async fn list_all_charging_sessions(&self) -> Result<Vec<ChargingSession>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(CHARGING_SESSIONS)?;
+        let mut sessions = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            sessions.push(self.deserialize(value.value())?);
+        }
+        Ok(sessions)
     }
 }
 
