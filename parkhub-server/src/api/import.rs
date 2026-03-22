@@ -309,6 +309,8 @@ pub async fn import_users_csv(
             credits_balance: 40,
             credits_monthly_quota: 40,
             credits_last_refilled: Some(now),
+            tenant_id: None,
+            accessibility_needs: None,
         };
 
         // Persist

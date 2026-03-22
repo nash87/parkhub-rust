@@ -1579,6 +1579,7 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
         credits_monthly_quota: 0,
         credits_last_refilled: None,
         tenant_id: None,
+        accessibility_needs: None,
     };
 
     db.save_user(&admin_user).await?;
@@ -1771,6 +1772,7 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
                     credits_monthly_quota: 40,
                     credits_last_refilled: Some(Utc::now()),
                     tenant_id: None,
+                    accessibility_needs: None,
                 }
             })
             .collect()
@@ -1828,6 +1830,7 @@ pub(crate) async fn create_sample_parking_lot(db: &Database) -> Result<()> {
                 height: 90.0,
                 rotation: 0.0,
             },
+            is_accessible: i == 1, // First slot is accessible (handicap)
         });
     }
 

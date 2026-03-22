@@ -196,6 +196,37 @@ export function ProfilePage() {
         />
       </motion.div>
 
+      {/* Accessibility needs */}
+      <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5" data-testid="accessibility-section">
+        <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-3">
+          {t('accessible.needs', 'Accessibility Needs')}
+        </h3>
+        <p className="text-xs text-surface-500 dark:text-surface-400 mb-3">{t('accessible.needsDesc', 'Select your accessibility requirements for priority parking access.')}</p>
+        <select
+          data-testid="accessibility-selector"
+          className="input"
+          defaultValue=""
+          onChange={async (e) => {
+            try {
+              const res = await fetch('/api/v1/users/me/accessibility-needs', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessibility_needs: e.target.value || 'none' }),
+              });
+              const data = await res.json();
+              if (data.success) toast.success(t('accessible.updated', 'Accessibility needs updated'));
+              else toast.error(data.error?.message || t('common.error'));
+            } catch { toast.error(t('common.error')); }
+          }}
+        >
+          <option value="none">{t('accessible.none', 'No accessibility needs')}</option>
+          <option value="wheelchair">{t('accessible.wheelchair', 'Wheelchair')}</option>
+          <option value="reduced_mobility">{t('accessible.reducedMobility', 'Reduced Mobility')}</option>
+          <option value="visual">{t('accessible.visual', 'Visual impairment')}</option>
+          <option value="hearing">{t('accessible.hearing', 'Hearing impairment')}</option>
+        </select>
+      </motion.div>
+
       {/* Password change */}
       <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
         <button onClick={() => setPwOpen(!pwOpen)} className="w-full flex items-center justify-between" aria-expanded={pwOpen}>

@@ -2892,6 +2892,7 @@ mod tests {
                 height: 5.0,
                 rotation: 0.0,
             },
+            is_accessible: false,
         };
         let slot2 = ParkingSlot {
             id: Uuid::new_v4(),
@@ -2911,6 +2912,7 @@ mod tests {
                 height: 5.0,
                 rotation: 0.0,
             },
+            is_accessible: false,
         };
 
         db.save_parking_slot(&slot1).await.unwrap();
@@ -2990,6 +2992,7 @@ mod tests {
             credits_monthly_quota: 40,
             credits_last_refilled: None,
             tenant_id: None,
+            accessibility_needs: None,
         }
     }
 
@@ -3058,6 +3061,7 @@ mod tests {
                 height: 5.0,
                 rotation: 0.0,
             },
+            is_accessible: false,
         }
     }
 

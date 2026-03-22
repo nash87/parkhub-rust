@@ -567,6 +567,8 @@ async fn complete_oauth_login(
                 credits_balance: 40,
                 credits_monthly_quota: 40,
                 credits_last_refilled: Some(now),
+                tenant_id: None,
+                accessibility_needs: None,
             };
 
             if let Err(e) = state_guard.db.save_user(&new_user).await {
