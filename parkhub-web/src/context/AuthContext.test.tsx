@@ -3,31 +3,22 @@ import React from 'react';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// ── Mock localStorage ──
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, val: string) => { store[key] = val; }),
-    removeItem: vi.fn((key: string) => { delete store[key]; }),
-    clear: vi.fn(() => { store = {}; }),
-    get _store() { return store; },
-  };
-})();
-Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true });
-
 // ── Mock API ──
 // vi.mock is hoisted, so we use vi.hoisted to define mock fns that the factory can reference.
-const { mockLogin, mockMe } = vi.hoisted(() => ({
+const { mockLogin, mockMe, mockLogout, mockSetInMemoryToken } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockMe: vi.fn(),
+  mockLogout: vi.fn(),
+  mockSetInMemoryToken: vi.fn(),
 }));
 
 vi.mock('../api/client', () => ({
   api: {
     login: mockLogin,
     me: mockMe,
+    logout: mockLogout,
   },
+  setInMemoryToken: mockSetInMemoryToken,
 }));
 
 import { AuthProvider, useAuth } from './AuthContext';
@@ -47,8 +38,8 @@ function AuthConsumer() {
 
 describe('AuthContext', () => {
   beforeEach(() => {
-    localStorageMock.clear();
     vi.clearAllMocks();
+    mockLogout.mockResolvedValue({ success: true, data: null });
   });
 
   afterEach(() => {
@@ -66,7 +57,7 @@ describe('AuthContext', () => {
     spy.mockRestore();
   });
 
-  it('starts with loading=true and resolves to false when no token', async () => {
+  it('starts with loading=true and resolves to false when no cookie/token', async () => {
     mockMe.mockResolvedValue({ success: false, data: null });
 
     render(
@@ -75,7 +66,7 @@ describe('AuthContext', () => {
       </AuthProvider>,
     );
 
-    // Initially loading
+    // Resolves to loading=false after cookie auth attempt
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false');
     });
@@ -83,8 +74,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user').textContent).toBe('null');
   });
 
-  it('fetches user on mount when token exists in localStorage', async () => {
-    localStorageMock.setItem('parkhub_token', 'existing-token');
+  it('fetches user on mount via httpOnly cookie', async () => {
     mockMe.mockResolvedValue({
       success: true,
       data: { id: '1', username: 'alice', email: 'alice@test.com', name: 'Alice', role: 'user' },
@@ -102,7 +92,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('loading').textContent).toBe('false');
   });
 
-  it('login stores token and sets user on success', async () => {
+  it('login stores token in memory and sets user on success', async () => {
     const user = userEvent.setup();
     mockLogin.mockResolvedValue({
       success: true,
@@ -130,7 +120,7 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('user').textContent).toBe('bob');
     });
 
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('parkhub_token', 'new-jwt-token');
+    expect(mockSetInMemoryToken).toHaveBeenCalledWith('new-jwt-token');
   });
 
   it('login returns error on failure', async () => {
@@ -169,9 +159,8 @@ describe('AuthContext', () => {
     });
   });
 
-  it('logout clears token from localStorage and resets user', async () => {
+  it('logout calls server, clears in-memory token, and resets user', async () => {
     const user = userEvent.setup();
-    localStorageMock.setItem('parkhub_token', 'existing-token');
     mockMe.mockResolvedValue({
       success: true,
       data: { id: '1', username: 'alice', email: 'alice@test.com', name: 'Alice', role: 'user' },
@@ -189,12 +178,14 @@ describe('AuthContext', () => {
 
     await user.click(screen.getByTestId('logout-btn'));
 
-    expect(screen.getByTestId('user').textContent).toBe('null');
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('parkhub_token');
+    await waitFor(() => {
+      expect(screen.getByTestId('user').textContent).toBe('null');
+    });
+    expect(mockLogout).toHaveBeenCalledOnce();
+    expect(mockSetInMemoryToken).toHaveBeenCalledWith(null);
   });
 
-  it('clears token when me() returns 401/failure on mount', async () => {
-    localStorageMock.setItem('parkhub_token', 'expired-token');
+  it('shows no user when me() returns failure on mount (expired cookie)', async () => {
     mockMe.mockResolvedValue({ success: false, data: null });
 
     render(
@@ -208,7 +199,6 @@ describe('AuthContext', () => {
     });
 
     expect(screen.getByTestId('user').textContent).toBe('null');
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('parkhub_token');
   });
 
   it('login returns generic error when API gives no message', async () => {

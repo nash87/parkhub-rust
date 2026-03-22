@@ -6,20 +6,38 @@ export interface ApiResponse<T> {
   error?: { code: string; message: string };
 }
 
+// In-memory token storage (XSS-safe: not in localStorage).
+// Used as fallback when httpOnly cookie is not available (API/mobile clients).
+let _inMemoryToken: string | null = null;
+
+export function setInMemoryToken(token: string | null) {
+  _inMemoryToken = token;
+}
+
+export function getInMemoryToken(): string | null {
+  return _inMemoryToken;
+}
+
 async function request<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
-  const token = localStorage.getItem('parkhub_token');
+  const token = _inMemoryToken;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+    // CSRF protection: required by backend for cookie-based auth
+    'X-Requested-With': 'XMLHttpRequest',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(opts.headers as Record<string, string> || {}),
   };
 
   try {
-    const res = await fetch(`${BASE_URL}${path}`, { ...opts, headers });
+    const res = await fetch(`${BASE_URL}${path}`, {
+      ...opts,
+      headers,
+      credentials: 'include',  // Send httpOnly cookies automatically
+    });
 
     if (res.status === 401) {
-      localStorage.removeItem('parkhub_token');
+      _inMemoryToken = null;
       window.location.href = '/login';
       return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
     }
@@ -45,11 +63,12 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<ApiResp
 }
 
 async function requestBlob(path: string): Promise<Blob> {
-  const token = localStorage.getItem('parkhub_token');
+  const token = _inMemoryToken;
   const headers: Record<string, string> = {
+    'X-Requested-With': 'XMLHttpRequest',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-  const res = await fetch(`${BASE_URL}${path}`, { headers });
+  const res = await fetch(`${BASE_URL}${path}`, { headers, credentials: 'include' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.blob();
 }
@@ -69,6 +88,8 @@ export const api = {
 
   resetPassword: (token: string, password: string) =>
     request('/api/v1/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+
+  logout: () => request('/api/v1/auth/logout', { method: 'POST' }),
 
   me: () => request<User>('/api/v1/users/me'),
 
@@ -122,10 +143,14 @@ export const api = {
   importAbsenceIcal: async (file: File) => {
     const fd = new FormData();
     fd.append('file', file);
-    const token = localStorage.getItem('parkhub_token');
+    const token = _inMemoryToken;
     const res = await fetch(`${BASE_URL}/api/v1/absences/import`, {
       method: 'POST', body: fd,
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     });
     return res.json();
   },

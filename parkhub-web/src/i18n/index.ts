@@ -42,12 +42,14 @@ i18n
 export async function loadTranslationOverrides(): Promise<void> {
   try {
     const base = (import.meta as Record<string, any>).env?.VITE_API_URL || '';
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('parkhub_token') : null;
+    const { getInMemoryToken } = await import('../api/client');
+    const token = getInMemoryToken();
     const headers: Record<string, string> = {
       Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
-    const res = await fetch(`${base}/api/v1/translations/overrides`, { headers });
+    const res = await fetch(`${base}/api/v1/translations/overrides`, { headers, credentials: 'include' });
     if (!res.ok) return;
     const json = await res.json();
     const overrides: { language: string; key: string; value: string }[] =
