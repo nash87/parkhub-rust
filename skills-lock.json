@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "backend-testing": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "5359a83e79545ec290cfe1a6e7063b12c0ca4f8c4dd95e806a4621fc528df1f6"
+    },
     "design-md": {
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",
@@ -21,10 +26,20 @@
       "sourceType": "github",
       "computedHash": "73a794b428f2bb568859f0db83b66219c842a0a088db9818a45ac72c37b6aa66"
     },
+    "security-best-practices": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "a8c825eb0f2d2d3381f93dad83ea531579445c5646b38be0170f4a782689cf4b"
+    },
     "shadcn-ui": {
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",
       "computedHash": "dadbca54d35a33fe73e40018611af2179689305bf6da812ab2643987fefd9da3"
+    },
+    "sleek-design-mobile-apps": {
+      "source": "sleekdotdesign/agent-skills",
+      "sourceType": "github",
+      "computedHash": "944416c289c18592bd24ab0964dd5808e0caf8c5515e2a12185461a349720219"
     },
     "stitch-design": {
       "source": "google-labs-code/stitch-skills",
@@ -35,6 +50,16 @@
       "source": "google-labs-code/stitch-skills",
       "sourceType": "github",
       "computedHash": "e04912a9719b855afa733cc928d30dde0b8a5b91707ca27b98f0efcb8d9310a9"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    },
+    "webapp-testing": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "cf8e5916d474886bd67b09691247f43f331523008b7d366064bc607ab42d6302"
     }
   }
 }
