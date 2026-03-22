@@ -1410,7 +1410,10 @@ async fn test_update_design_theme_invalid() {
 
 #[tokio::test]
 async fn test_update_design_theme_all_valid_themes() {
-    let valid_themes = ["classic", "glass", "bento", "brutalist", "neon", "warm"];
+    let valid_themes = [
+        "classic", "glass", "bento", "brutalist", "neon", "warm", "liquid", "mono", "ocean",
+        "forest", "synthwave", "zen",
+    ];
 
     for theme_name in valid_themes {
         let state = test_state().await;
