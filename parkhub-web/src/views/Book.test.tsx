@@ -23,6 +23,8 @@ vi.mock('../api/client', () => ({
     getLotSlots: (...args: any[]) => mockGetLotSlots(...args),
     getVehicles: (...args: any[]) => mockGetVehicles(...args),
     createBooking: (...args: any[]) => mockCreateBooking(...args),
+    getDynamicPrice: vi.fn().mockResolvedValue({ price: 5.0, multiplier: 1.0, reason: 'normal' }),
+    getOperatingHours: vi.fn().mockResolvedValue({ hours: [] }),
   },
 }));
 
