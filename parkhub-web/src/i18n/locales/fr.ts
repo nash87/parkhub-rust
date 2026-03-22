@@ -421,6 +421,7 @@ export default {
       useCasePersonal: 'Personnel',
       translations: 'Traductions',
       rateLimits: 'Rate Limits',
+      tenants: 'Locataires',
       bulkAction: 'Action groupée',
       bulkActionConfirm: 'Êtes-vous sûr(e) de vouloir {{action}} {{count}} utilisateur(s) ?',
       bulkDeleted: '{{succeeded}}/{{total}} utilisateurs supprimés',
@@ -591,6 +592,7 @@ export default {
       blocked: 'bloquees',
       now: 'maintenant',
     },
+    tenants: { title: 'Locataires', create: 'Creer un locataire', name: 'Nom', domain: 'Domaine', switch: 'Changer de locataire', empty: 'Aucun locataire configure.', editTitle: 'Modifier le locataire', created: 'Locataire cree', updated: 'Locataire mis a jour', users: 'utilisateurs', lots: 'parkings', brandColor: 'Couleur de marque' },
     map: {
       title: 'Carte des parkings',
       subtitle: 'Trouvez des parkings disponibles pres de chez vous',

@@ -129,6 +129,8 @@ pub mod swap;
 pub mod system;
 #[cfg(feature = "mod-team")]
 pub mod team;
+#[cfg(feature = "mod-multi-tenant")]
+pub mod tenants;
 #[cfg(feature = "mod-translations")]
 pub mod translations;
 mod users;
@@ -370,6 +372,10 @@ async fn list_module_features() -> impl IntoResponse {
     );
     modules.insert("map".into(), cfg!(feature = "mod-map").into());
     modules.insert("stripe".into(), cfg!(feature = "mod-stripe").into());
+    modules.insert(
+        "multi-tenant".into(),
+        cfg!(feature = "mod-multi-tenant").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -755,11 +761,20 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/rate-limits/history",
             get(rate_dashboard::admin_rate_limit_history),
+        );
+
+    #[cfg(feature = "mod-multi-tenant")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/tenants",
+            get(tenants::list_tenants).post(tenants::create_tenant),
         )
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            admin_middleware,
-        ));
+        .route("/api/v1/admin/tenants/{id}", put(tenants::update_tenant));
+
+    let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
+        state.clone(),
+        admin_middleware,
+    ));
 
     // Merge admin routes into protected routes
     protected_routes = protected_routes.merge(admin_routes);

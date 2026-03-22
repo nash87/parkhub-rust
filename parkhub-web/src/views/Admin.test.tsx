@@ -24,6 +24,7 @@ vi.mock('react-i18next', () => ({
         'admin.reports': 'Reports',
         'admin.translations': 'Translations',
         'admin.rateLimits': 'Rate Limits',
+        'admin.tenants': 'Tenants',
       };
       return map[key] || key;
     },
@@ -48,6 +49,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
   PresentationChart: (props: any) => <span data-testid="icon-presentation" {...props} />,
   Gauge: (props: any) => <span data-testid="icon-gauge" {...props} />,
+  Buildings: (props: any) => <span data-testid="icon-buildings" {...props} />,
 }));
 
 import { AdminPage } from './Admin';
@@ -74,6 +76,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Translations')).toBeInTheDocument();
     expect(screen.getByText('Analytics')).toBeInTheDocument();
     expect(screen.getByText('Rate Limits')).toBeInTheDocument();
+    expect(screen.getByText('Tenants')).toBeInTheDocument();
   });
 
   it('renders tab links with correct paths', () => {
@@ -87,6 +90,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Translations').closest('a')).toHaveAttribute('href', '/admin/translations');
     expect(screen.getByText('Analytics').closest('a')).toHaveAttribute('href', '/admin/analytics');
     expect(screen.getByText('Rate Limits').closest('a')).toHaveAttribute('href', '/admin/rate-limits');
+    expect(screen.getByText('Tenants').closest('a')).toHaveAttribute('href', '/admin/tenants');
   });
 
   it('renders the outlet for child routes', () => {
