@@ -133,7 +133,10 @@ pub struct OAuthProvider {
 
 /// Build the Google OAuth consent URL.
 pub fn google_auth_url(config: &OAuthConfig) -> String {
-    let redirect_uri = format!("{}/api/v1/auth/oauth/google/callback", config.redirect_base_url);
+    let redirect_uri = format!(
+        "{}/api/v1/auth/oauth/google/callback",
+        config.redirect_base_url
+    );
     format!(
         "https://accounts.google.com/o/oauth2/v2/auth?\
          client_id={}&\
@@ -149,7 +152,10 @@ pub fn google_auth_url(config: &OAuthConfig) -> String {
 
 /// Build the GitHub OAuth consent URL.
 pub fn github_auth_url(config: &OAuthConfig) -> String {
-    let redirect_uri = format!("{}/api/v1/auth/oauth/github/callback", config.redirect_base_url);
+    let redirect_uri = format!(
+        "{}/api/v1/auth/oauth/github/callback",
+        config.redirect_base_url
+    );
     format!(
         "https://github.com/login/oauth/authorize?\
          client_id={}&\
@@ -199,7 +205,10 @@ pub async fn oauth_providers() -> Json<ApiResponse<OAuthProvidersResponse>> {
         .map(|v| !v.is_empty())
         .unwrap_or(false);
 
-    Json(ApiResponse::success(OAuthProvidersResponse { google, github }))
+    Json(ApiResponse::success(OAuthProvidersResponse {
+        google,
+        github,
+    }))
 }
 
 /// `GET /api/v1/auth/oauth/google` — redirect to Google OAuth consent screen.
@@ -217,7 +226,10 @@ pub async fn oauth_google_redirect() -> Response {
     let Some(config) = OAuthConfig::from_env() else {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(ApiResponse::<()>::error("OAUTH_NOT_CONFIGURED", "Google OAuth is not configured")),
+            Json(ApiResponse::<()>::error(
+                "OAUTH_NOT_CONFIGURED",
+                "Google OAuth is not configured",
+            )),
         )
             .into_response();
     };
@@ -244,12 +256,18 @@ pub async fn oauth_google_callback(
     let Some(config) = OAuthConfig::from_env() else {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(ApiResponse::<()>::error("OAUTH_NOT_CONFIGURED", "Google OAuth is not configured")),
+            Json(ApiResponse::<()>::error(
+                "OAUTH_NOT_CONFIGURED",
+                "Google OAuth is not configured",
+            )),
         )
             .into_response();
     };
 
-    let redirect_uri = format!("{}/api/v1/auth/oauth/google/callback", config.redirect_base_url);
+    let redirect_uri = format!(
+        "{}/api/v1/auth/oauth/google/callback",
+        config.redirect_base_url
+    );
 
     // Exchange authorization code for access token
     let client = reqwest::Client::new();
@@ -335,7 +353,10 @@ pub async fn oauth_github_redirect() -> Response {
     let Some(config) = OAuthConfig::from_env() else {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(ApiResponse::<()>::error("OAUTH_NOT_CONFIGURED", "GitHub OAuth is not configured")),
+            Json(ApiResponse::<()>::error(
+                "OAUTH_NOT_CONFIGURED",
+                "GitHub OAuth is not configured",
+            )),
         )
             .into_response();
     };
@@ -362,12 +383,18 @@ pub async fn oauth_github_callback(
     let Some(config) = OAuthConfig::from_env() else {
         return (
             StatusCode::SERVICE_UNAVAILABLE,
-            Json(ApiResponse::<()>::error("OAUTH_NOT_CONFIGURED", "GitHub OAuth is not configured")),
+            Json(ApiResponse::<()>::error(
+                "OAUTH_NOT_CONFIGURED",
+                "GitHub OAuth is not configured",
+            )),
         )
             .into_response();
     };
 
-    let redirect_uri = format!("{}/api/v1/auth/oauth/github/callback", config.redirect_base_url);
+    let redirect_uri = format!(
+        "{}/api/v1/auth/oauth/github/callback",
+        config.redirect_base_url
+    );
 
     // Exchange code for access token
     let client = reqwest::Client::new();
@@ -441,9 +468,7 @@ pub async fn oauth_github_callback(
         provider_user_id: user_info.id.to_string(),
     };
 
-    let name = user_info
-        .name
-        .unwrap_or_else(|| user_info.login.clone());
+    let name = user_info.name.unwrap_or_else(|| user_info.login.clone());
 
     complete_oauth_login(
         state,

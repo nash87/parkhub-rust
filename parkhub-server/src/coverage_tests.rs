@@ -1430,7 +1430,12 @@ async fn test_update_design_theme_all_valid_themes() {
             .await
             .unwrap();
 
-        assert_eq!(resp.status(), StatusCode::OK, "Theme '{}' should be valid", theme_name);
+        assert_eq!(
+            resp.status(),
+            StatusCode::OK,
+            "Theme '{}' should be valid",
+            theme_name
+        );
         let json = body_json(resp).await;
         assert_eq!(json["data"]["design_theme"], theme_name);
     }

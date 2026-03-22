@@ -623,9 +623,7 @@ pub async fn load_notification_preferences(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Available design theme IDs.
-const VALID_DESIGN_THEMES: &[&str] = &[
-    "classic", "glass", "bento", "brutalist", "neon", "warm",
-];
+const VALID_DESIGN_THEMES: &[&str] = &["classic", "glass", "bento", "brutalist", "neon", "warm"];
 
 /// Design theme preference.
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -687,11 +685,7 @@ pub async fn update_design_theme_preference(
 
     let state_guard = state.read().await;
     let key = format!("design_theme:{}", auth_user.user_id);
-    if let Err(e) = state_guard
-        .db
-        .set_setting(&key, &body.design_theme)
-        .await
-    {
+    if let Err(e) = state_guard.db.set_setting(&key, &body.design_theme).await {
         tracing::error!("Failed to save design theme: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,

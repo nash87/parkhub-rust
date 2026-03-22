@@ -12,8 +12,8 @@ use axum::{
     Extension, Json,
 };
 use chrono::{DateTime, Datelike, TimeDelta, Utc};
-use std::fmt::Write as _;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write as _;
 use uuid::Uuid;
 
 use parkhub_common::{
@@ -532,7 +532,12 @@ pub async fn create_booking(
             "end_time": booking.end_time,
         });
         tokio::spawn(async move {
-            crate::api::webhooks::dispatch_webhook_event(&state_clone, "booking.created", booking_json).await;
+            crate::api::webhooks::dispatch_webhook_event(
+                &state_clone,
+                "booking.created",
+                booking_json,
+            )
+            .await;
         });
     }
     metrics::record_booking_event("created");
@@ -849,7 +854,12 @@ pub async fn cancel_booking(
             "action": "cancelled",
         });
         tokio::spawn(async move {
-            crate::api::webhooks::dispatch_webhook_event(&state_clone, "booking.cancelled", payload).await;
+            crate::api::webhooks::dispatch_webhook_event(
+                &state_clone,
+                "booking.cancelled",
+                payload,
+            )
+            .await;
         });
     }
     metrics::record_booking_event("cancelled");

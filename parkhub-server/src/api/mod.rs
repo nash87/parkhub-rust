@@ -90,9 +90,13 @@ pub mod favorites;
 pub mod guest;
 #[cfg(feature = "mod-import")]
 pub mod import;
+#[cfg(feature = "mod-invoices")]
+pub mod invoices;
 pub mod lots;
 #[cfg(feature = "mod-notifications")]
 pub mod notifications;
+#[cfg(feature = "mod-oauth")]
+pub mod oauth;
 #[cfg(feature = "mod-payments")]
 pub mod payments;
 #[cfg(feature = "mod-push")]
@@ -127,10 +131,6 @@ pub mod webhooks;
 pub mod ws;
 #[cfg(feature = "mod-zones")]
 pub mod zones;
-#[cfg(feature = "mod-invoices")]
-pub mod invoices;
-#[cfg(feature = "mod-oauth")]
-pub mod oauth;
 
 // Re-import handler functions so the router can reference them unqualified.
 #[cfg(feature = "mod-absences")]
@@ -143,12 +143,12 @@ use announcements::{
     admin_create_announcement, admin_delete_announcement, admin_list_announcements,
     admin_update_announcement, get_active_announcements,
 };
+use auth::{forgot_password, login, logout, refresh_token, register, reset_password};
 #[cfg(feature = "mod-bookings")]
 pub use bookings::{
     booking_checkin, cancel_booking, create_booking, get_booking, get_booking_invoice,
     list_bookings, quick_book, update_booking,
 };
-use auth::{forgot_password, login, logout, refresh_token, register, reset_password};
 #[cfg(feature = "mod-calendar")]
 use calendar::{calendar_events, user_calendar_ics};
 #[cfg(feature = "mod-credits")]
@@ -387,8 +387,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         }));
 
     // POST /api/v1/auth/logout — clears httpOnly cookie, invalidates session
-    let logout_route = Router::new()
-        .route("/api/v1/auth/logout", post(logout));
+    let logout_route = Router::new().route("/api/v1/auth/logout", post(logout));
 
     // GET /api/v1/bookings/:id/qr — 10 requests per minute per IP (QR pass generation)
     #[cfg(feature = "mod-qr")]
@@ -469,10 +468,22 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // OAuth: providers list (public, no auth) + redirect + callback
         public_routes = public_routes
             .route("/api/v1/auth/oauth/providers", get(oauth::oauth_providers))
-            .route("/api/v1/auth/oauth/google", get(oauth::oauth_google_redirect))
-            .route("/api/v1/auth/oauth/google/callback", get(oauth::oauth_google_callback))
-            .route("/api/v1/auth/oauth/github", get(oauth::oauth_github_redirect))
-            .route("/api/v1/auth/oauth/github/callback", get(oauth::oauth_github_callback));
+            .route(
+                "/api/v1/auth/oauth/google",
+                get(oauth::oauth_google_redirect),
+            )
+            .route(
+                "/api/v1/auth/oauth/google/callback",
+                get(oauth::oauth_google_callback),
+            )
+            .route(
+                "/api/v1/auth/oauth/github",
+                get(oauth::oauth_github_redirect),
+            )
+            .route(
+                "/api/v1/auth/oauth/github/callback",
+                get(oauth::oauth_github_callback),
+            );
     }
 
     // Protected routes (auth required) — core user + admin routes
@@ -1807,9 +1818,6 @@ pub async fn get_user(
     }
 }
 
-
-
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // QR CODE GENERATION (EXTERNAL SERVICE)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2847,7 +2855,6 @@ pub async fn admin_list_bookings(
     (StatusCode::OK, Json(ApiResponse::success(response)))
 }
 
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN REPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3570,7 +3577,6 @@ pub async fn update_user_preferences(
         }))),
     )
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN: DATABASE RESET
