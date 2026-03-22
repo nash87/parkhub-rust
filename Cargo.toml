@@ -45,7 +45,6 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }  # 0.13 exists
 # Security
 rcgen = "0.14"  # updated from 0.13
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-rustls-pemfile = "2"
 argon2 = { version = "0.5", features = ["std", "rand"] }  # 0.6 is RC only
 
 # Network discovery
