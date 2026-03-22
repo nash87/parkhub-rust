@@ -268,6 +268,186 @@
   --dt-header-bg: #271505;
 }
 
+/* ── Theme: Liquid ───────────────────────────────────────────────────────────
+   iOS 26 / Apple Liquid Glass inspired. Deep translucency, layered depth,
+   frosted surfaces with vivid tints, subtle chromatic shifts.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="liquid"] {
+  --dt-bg-primary: #f0f4f8;
+  --dt-bg-secondary: rgba(255, 255, 255, 0.55);
+  --dt-bg-card: rgba(255, 255, 255, 0.45);
+  --dt-text-primary: #1a2332;
+  --dt-text-secondary: #5b6b7d;
+  --dt-border: rgba(255, 255, 255, 0.5);
+  --dt-border-subtle: rgba(255, 255, 255, 0.25);
+  --dt-card-shadow: 0 2px 20px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  --dt-card-radius: 22px;
+  --dt-sidebar-bg: rgba(245, 248, 252, 0.65);
+  --dt-sidebar-blur: 50px;
+  --dt-sidebar-border: rgba(255, 255, 255, 0.4);
+  --dt-accent-gradient: linear-gradient(135deg, #007aff, #5ac8fa);
+  --dt-input-bg: rgba(255, 255, 255, 0.5);
+  --dt-input-border: rgba(0, 0, 0, 0.08);
+  --dt-badge-radius: var(--radius-full);
+  --dt-nav-active-bg: rgba(0, 122, 255, 0.1);
+  --dt-nav-hover-bg: rgba(255, 255, 255, 0.5);
+  --dt-header-bg: rgba(245, 248, 252, 0.7);
+}
+
+[data-design-theme="liquid"].dark,
+.dark [data-design-theme="liquid"] {
+  --dt-bg-primary: #0d1117;
+  --dt-bg-secondary: rgba(22, 27, 34, 0.75);
+  --dt-bg-card: rgba(255, 255, 255, 0.04);
+  --dt-text-primary: #e6edf3;
+  --dt-text-secondary: #8b949e;
+  --dt-border: rgba(255, 255, 255, 0.08);
+  --dt-border-subtle: rgba(255, 255, 255, 0.04);
+  --dt-card-shadow: 0 2px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --dt-sidebar-bg: rgba(13, 17, 23, 0.8);
+  --dt-sidebar-border: rgba(255, 255, 255, 0.06);
+  --dt-input-bg: rgba(255, 255, 255, 0.04);
+  --dt-input-border: rgba(255, 255, 255, 0.1);
+  --dt-nav-active-bg: rgba(56, 139, 253, 0.15);
+  --dt-nav-hover-bg: rgba(255, 255, 255, 0.04);
+  --dt-header-bg: rgba(13, 17, 23, 0.85);
+}
+
+/* ── Theme: Mono ────────────────────────────────────────────────────────────
+   Linear/Vercel inspired. Hyper-minimal monochrome, crisp borders,
+   systematic spacing, developer-aesthetic precision.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="mono"] {
+  --dt-bg-primary: #fafafa;
+  --dt-bg-secondary: #ffffff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #171717;
+  --dt-text-secondary: #737373;
+  --dt-border: #e5e5e5;
+  --dt-border-subtle: #f5f5f5;
+  --dt-card-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --dt-card-radius: 12px;
+  --dt-sidebar-bg: #fafafa;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #e5e5e5;
+  --dt-accent-gradient: linear-gradient(135deg, #171717, #404040);
+  --dt-input-bg: #ffffff;
+  --dt-input-border: #d4d4d4;
+  --dt-badge-radius: var(--radius-md);
+  --dt-nav-active-bg: #f5f5f5;
+  --dt-nav-hover-bg: #fafafa;
+  --dt-header-bg: rgba(250, 250, 250, 0.8);
+}
+
+[data-design-theme="mono"].dark,
+.dark [data-design-theme="mono"] {
+  --dt-bg-primary: #0a0a0a;
+  --dt-bg-secondary: #111111;
+  --dt-bg-card: #111111;
+  --dt-text-primary: #ededed;
+  --dt-text-secondary: #888888;
+  --dt-border: #222222;
+  --dt-border-subtle: #1a1a1a;
+  --dt-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --dt-sidebar-bg: #0a0a0a;
+  --dt-sidebar-border: #222222;
+  --dt-input-bg: #111111;
+  --dt-input-border: #333333;
+  --dt-nav-active-bg: #1a1a1a;
+  --dt-nav-hover-bg: #111111;
+  --dt-header-bg: rgba(10, 10, 10, 0.8);
+}
+
+/* ── Theme: Ocean ───────────────────────────────────────────────────────────
+   Deep blue maritime palette. Calming gradients, wave-like depth layers,
+   teal accents on navy foundations.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="ocean"] {
+  --dt-bg-primary: #eff8ff;
+  --dt-bg-secondary: #f0f9ff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #0c2d48;
+  --dt-text-secondary: #3b6d8c;
+  --dt-border: #bae6fd;
+  --dt-border-subtle: #e0f2fe;
+  --dt-card-shadow: 0 2px 12px rgba(14, 116, 144, 0.06);
+  --dt-card-radius: var(--radius-xl);
+  --dt-sidebar-bg: #f0f9ff;
+  --dt-sidebar-blur: 12px;
+  --dt-sidebar-border: #bae6fd;
+  --dt-accent-gradient: linear-gradient(135deg, #0891b2, #06b6d4);
+  --dt-input-bg: #ffffff;
+  --dt-input-border: #7dd3fc;
+  --dt-badge-radius: var(--radius-lg);
+  --dt-nav-active-bg: rgba(8, 145, 178, 0.08);
+  --dt-nav-hover-bg: #e0f2fe;
+  --dt-header-bg: rgba(240, 249, 255, 0.9);
+}
+
+[data-design-theme="ocean"].dark,
+.dark [data-design-theme="ocean"] {
+  --dt-bg-primary: #031e30;
+  --dt-bg-secondary: #042f4a;
+  --dt-bg-card: #042f4a;
+  --dt-text-primary: #bae6fd;
+  --dt-text-secondary: #7dd3fc;
+  --dt-border: #0e4d6e;
+  --dt-border-subtle: #083651;
+  --dt-card-shadow: 0 2px 12px rgba(6, 182, 212, 0.08);
+  --dt-sidebar-bg: #031e30;
+  --dt-sidebar-border: #0e4d6e;
+  --dt-input-bg: #083651;
+  --dt-input-border: #0e7490;
+  --dt-nav-active-bg: rgba(6, 182, 212, 0.15);
+  --dt-nav-hover-bg: #083651;
+  --dt-header-bg: rgba(3, 30, 48, 0.9);
+}
+
+/* ── Theme: Forest ──────────────────────────────────────────────────────────
+   Nature-inspired organic palette. Deep greens, wood browns, grain textures,
+   grounded and sustainable aesthetic.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="forest"] {
+  --dt-bg-primary: #f5f7f2;
+  --dt-bg-secondary: #fafcf8;
+  --dt-bg-card: #fafcf8;
+  --dt-text-primary: #1a2e1a;
+  --dt-text-secondary: #4d6b4d;
+  --dt-border: #c8dcc0;
+  --dt-border-subtle: #e8f0e4;
+  --dt-card-shadow: 0 2px 8px rgba(34, 90, 34, 0.05);
+  --dt-card-radius: var(--radius-xl);
+  --dt-sidebar-bg: #fafcf8;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #c8dcc0;
+  --dt-accent-gradient: linear-gradient(135deg, #16a34a, #22c55e);
+  --dt-input-bg: #fafcf8;
+  --dt-input-border: #a3c496;
+  --dt-badge-radius: var(--radius-lg);
+  --dt-nav-active-bg: rgba(22, 163, 74, 0.08);
+  --dt-nav-hover-bg: #e8f0e4;
+  --dt-header-bg: rgba(250, 252, 248, 0.9);
+}
+
+[data-design-theme="forest"].dark,
+.dark [data-design-theme="forest"] {
+  --dt-bg-primary: #0d1a0d;
+  --dt-bg-secondary: #142814;
+  --dt-bg-card: #142814;
+  --dt-text-primary: #c8dcc0;
+  --dt-text-secondary: #6b9a5e;
+  --dt-border: #1e3a1e;
+  --dt-border-subtle: #142814;
+  --dt-card-shadow: 0 2px 8px rgba(22, 163, 74, 0.08);
+  --dt-sidebar-bg: #0d1a0d;
+  --dt-sidebar-border: #1e3a1e;
+  --dt-input-bg: #1e3a1e;
+  --dt-input-border: #2d5a2d;
+  --dt-nav-active-bg: rgba(34, 197, 94, 0.12);
+  --dt-nav-hover-bg: #1e3a1e;
+  --dt-header-bg: rgba(13, 26, 13, 0.9);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    Theme Application Layer
    Maps design-theme tokens onto existing semantic tokens so all existing
