@@ -111,6 +111,7 @@ pub mod push;
 pub mod pwa;
 #[cfg(feature = "mod-qr")]
 pub mod qr;
+pub mod rate_dashboard;
 #[cfg(feature = "mod-recommendations")]
 pub mod recommendations;
 #[cfg(feature = "mod-recurring")]
@@ -745,6 +746,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/settings/booking-policies",
             get(admin_ext::get_booking_policies)
                 .put(admin_ext::update_booking_policies),
+        )
+        // ── Rate limit dashboard ──
+        .route(
+            "/api/v1/admin/rate-limits",
+            get(rate_dashboard::admin_rate_limit_stats),
+        )
+        .route(
+            "/api/v1/admin/rate-limits/history",
+            get(rate_dashboard::admin_rate_limit_history),
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),

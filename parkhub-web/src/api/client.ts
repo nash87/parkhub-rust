@@ -300,6 +300,10 @@ export const api = {
     }),
   getPaymentHistory: () => request<PaymentHistoryEntry[]>('/api/v1/payments/history'),
   getStripeConfig: () => request<StripeConfigResponse>('/api/v1/payments/config'),
+
+  // ── Rate Limits ──
+  getRateLimitStats: () => request<RateLimitStats>('/api/v1/admin/rate-limits'),
+  getRateLimitHistory: () => request<RateLimitHistory>('/api/v1/admin/rate-limits/history'),
 };
 
 // ── Types ──
@@ -741,4 +745,28 @@ export interface BulkResult {
   succeeded: number;
   failed: number;
   errors: string[];
+}
+
+// ── Rate Limits ──
+export interface RateLimitGroup {
+  group: string;
+  limit_per_minute: number;
+  description: string;
+  current_count: number;
+  reset_seconds: number;
+  blocked_last_hour: number;
+}
+
+export interface RateLimitStats {
+  groups: RateLimitGroup[];
+  total_blocked_last_hour: number;
+}
+
+export interface RateLimitHistoryBin {
+  hour: string;
+  count: number;
+}
+
+export interface RateLimitHistory {
+  bins: RateLimitHistoryBin[];
 }
