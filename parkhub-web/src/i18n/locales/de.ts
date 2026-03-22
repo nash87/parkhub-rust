@@ -431,6 +431,7 @@ export default {
       useCaseRental: 'Vermietung',
       useCasePersonal: 'Privat',
       translations: 'Übersetzungen',
+      rateLimits: 'Rate Limits',
       bulkAction: 'Massenaktion',
       bulkActionConfirm: 'Möchten Sie wirklich {{action}} für {{count}} Benutzer durchführen?',
       bulkDeleted: '{{succeeded}}/{{total}} Benutzer gelöscht',
@@ -591,6 +592,15 @@ export default {
       instructionGoogle: 'Einstellungen > Kalender hinzufuegen > Per URL > Link einfuegen',
       instructionOutlook: 'Kalender hinzufuegen > Aus dem Web abonnieren > Link einfuegen',
       instructionApple: 'Ablage > Neues Kalenderabo > Link einfuegen',
+    },
+    rateLimits: {
+      title: 'Rate Limits',
+      allClear: 'Keine blockierten Anfragen',
+      blockedTotal: '{{count}} blockiert (letzte Stunde)',
+      blockedHistory: 'Blockierte Anfragen (24h)',
+      perMinute: 'min',
+      blocked: 'blockiert',
+      now: 'jetzt',
     },
     map: {
       title: 'Parkplatzkarte',
