@@ -338,14 +338,31 @@ mod tests {
     fn analytics_overview_with_data() {
         let overview = AnalyticsOverview {
             daily_bookings: vec![
-                DailyDataPoint { date: "2026-03-20".into(), value: 5.0 },
-                DailyDataPoint { date: "2026-03-21".into(), value: 8.0 },
+                DailyDataPoint {
+                    date: "2026-03-20".into(),
+                    value: 5.0,
+                },
+                DailyDataPoint {
+                    date: "2026-03-21".into(),
+                    value: 8.0,
+                },
             ],
             daily_revenue: vec![
-                DailyDataPoint { date: "2026-03-20".into(), value: 25.0 },
-                DailyDataPoint { date: "2026-03-21".into(), value: 40.0 },
+                DailyDataPoint {
+                    date: "2026-03-20".into(),
+                    value: 25.0,
+                },
+                DailyDataPoint {
+                    date: "2026-03-21".into(),
+                    value: 40.0,
+                },
             ],
-            peak_hours: (0..24).map(|h| HourBin { hour: h, count: h as u64 }).collect(),
+            peak_hours: (0..24)
+                .map(|h| HourBin {
+                    hour: h,
+                    count: h as u64,
+                })
+                .collect(),
             top_lots: vec![TopLot {
                 lot_id: "lot-1".into(),
                 lot_name: "HQ Garage".into(),
@@ -353,7 +370,10 @@ mod tests {
                 bookings: 250,
                 utilization_percent: 83.33,
             }],
-            user_growth: vec![MonthlyGrowth { month: "2026-03".into(), count: 12 }],
+            user_growth: vec![MonthlyGrowth {
+                month: "2026-03".into(),
+                count: 12,
+            }],
             avg_booking_duration_minutes: 180.0,
             total_bookings: 13,
             total_revenue: 65.0,
