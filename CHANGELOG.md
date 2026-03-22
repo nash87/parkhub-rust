@@ -7,6 +7,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.9.0] - 2026-03-22
+
+### Added
+- **Lobby Display / Kiosk Mode**: Public `GET /api/v1/lots/:id/display` endpoint for digital signage monitors — no auth required, rate-limited 10 req/min per IP. Returns lot name, available/total slots, occupancy percentage, color status (green/yellow/red), and per-floor breakdown. Feature flag: `mod-lobby-display`. (#198)
+- **LobbyDisplay frontend**: Full-screen view at `/lobby/:lotId` with auto-refresh every 10 seconds, 8rem+ numbers, color-coded occupancy bar, floor breakdown cards, dark background for screen burn-in prevention. i18n for en/de.
+- **Interactive Onboarding Wizard**: 4-step setup wizard at `/setup` — company info (name/logo/timezone), create lot (floors/slots), user invites, theme picker (all 12 themes). Feature flag: `mod-setup-wizard`. (#200)
+- **Wizard API**: `GET /api/v1/setup/wizard/status` + `POST /api/v1/setup/wizard` with per-step persistence and validation
+- **12 backend tests**: 6 lobby display (color boundaries, serialization) + 8 wizard (DTO serialization, theme list, step validation)
+- **12 frontend tests**: 6 lobby display (loading, display, floors, error, occupancy bar) + 6 wizard (render, validation, navigation, themes, redirect)
+
+### Closed
+- **#199 Digital Parking Pass**: Deferred — requires Apple Developer and Google Pay API accounts
+
+---
+
 ## [2.8.0] - 2026-03-22
 
 ### Added
