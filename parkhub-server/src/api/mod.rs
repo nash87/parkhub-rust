@@ -63,6 +63,8 @@ pub mod absences;
 pub mod admin;
 pub mod admin_ext;
 pub mod admin_handlers;
+#[cfg(feature = "mod-analytics")]
+pub mod analytics;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 pub mod auth;
@@ -661,7 +663,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/dashboard/charts",
             get(admin_dashboard_charts),
         )
-        .route("/api/v1/admin/audit-log", get(admin_audit_log))
+        .route("/api/v1/admin/audit-log", get(admin_audit_log));
+
+    #[cfg(feature = "mod-analytics")]
+    let admin_routes = admin_routes.route(
+        "/api/v1/admin/analytics/overview",
+        get(analytics::analytics_overview),
+    );
+
+    let admin_routes = admin_routes
         .route("/api/v1/admin/reset", post(admin_reset))
         .route(
             "/api/v1/admin/settings/auto-release",

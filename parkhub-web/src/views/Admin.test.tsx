@@ -45,6 +45,7 @@ vi.mock('@phosphor-icons/react', () => ({
   ChartLine: (props: any) => <span data-testid="icon-chart-line" {...props} />,
   MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
   Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
+  PresentationChart: (props: any) => <span data-testid="icon-presentation" {...props} />,
 }));
 
 import { AdminPage } from './Admin';
@@ -69,6 +70,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Announcements')).toBeInTheDocument();
     expect(screen.getByText('Reports')).toBeInTheDocument();
     expect(screen.getByText('Translations')).toBeInTheDocument();
+    expect(screen.getByText('Analytics')).toBeInTheDocument();
   });
 
   it('renders tab links with correct paths', () => {
@@ -80,6 +82,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Announcements').closest('a')).toHaveAttribute('href', '/admin/announcements');
     expect(screen.getByText('Reports').closest('a')).toHaveAttribute('href', '/admin/reports');
     expect(screen.getByText('Translations').closest('a')).toHaveAttribute('href', '/admin/translations');
+    expect(screen.getByText('Analytics').closest('a')).toHaveAttribute('href', '/admin/analytics');
   });
 
   it('renders the outlet for child routes', () => {
