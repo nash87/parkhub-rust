@@ -98,6 +98,8 @@ pub mod invoices;
 pub mod lobby;
 pub mod lots;
 pub mod lots_ext;
+#[cfg(feature = "mod-maintenance")]
+pub mod maintenance;
 #[cfg(feature = "mod-map")]
 pub mod map;
 pub mod misc;
@@ -389,6 +391,10 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-multi-tenant").into(),
     );
     modules.insert("accessible".into(), cfg!(feature = "mod-accessible").into());
+    modules.insert(
+        "maintenance".into(),
+        cfg!(feature = "mod-maintenance").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -1014,6 +1020,23 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/users/me/accessibility-needs",
                 put(accessible::update_accessibility_needs),
+            );
+    }
+
+    #[cfg(feature = "mod-maintenance")]
+    {
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/admin/maintenance",
+                post(maintenance::create_maintenance).get(maintenance::list_maintenance),
+            )
+            .route(
+                "/api/v1/admin/maintenance/{id}",
+                put(maintenance::update_maintenance).delete(maintenance::delete_maintenance),
+            )
+            .route(
+                "/api/v1/maintenance/active",
+                get(maintenance::active_maintenance),
             );
     }
 
