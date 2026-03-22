@@ -56,7 +56,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-white dark:bg-surface-950 flex">
+    <main className="min-h-dvh bg-white dark:bg-surface-950 flex">
       {/* Left panel — premium branding with animated gradient */}
       <div className="hidden lg:flex lg:w-[45%] bg-surface-950 dark:bg-surface-900 relative items-end p-12 overflow-hidden">
         {/* Animated gradient strip at top */}
@@ -220,6 +220,6 @@ export function LoginPage() {
           </p>
         </motion.div>
       </div>
-    </div>
+    </main>
   );
 }
