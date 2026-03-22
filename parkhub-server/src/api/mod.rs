@@ -60,6 +60,8 @@ type SharedState = Arc<RwLock<AppState>>;
 
 #[cfg(feature = "mod-absences")]
 pub mod absences;
+#[cfg(feature = "mod-api-docs")]
+pub mod api_docs;
 #[cfg(feature = "mod-accessible")]
 pub mod accessible;
 pub mod admin;
@@ -448,6 +450,10 @@ async fn list_module_features() -> impl IntoResponse {
         "parking-pass".into(),
         cfg!(feature = "mod-parking-pass").into(),
     );
+    modules.insert(
+        "api-docs".into(),
+        cfg!(feature = "mod-api-docs").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -570,6 +576,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             }))
             .with_state(state.clone());
         public_routes = public_routes.merge(lobby_route);
+    }
+
+    // Interactive API documentation (public)
+    #[cfg(feature = "mod-api-docs")]
+    {
+        public_routes = public_routes
+            .route("/api/v1/docs", get(api_docs::api_docs_ui))
+            .route(
+                "/api/v1/docs/openapi.json",
+                get(api_docs::api_docs_openapi_json),
+            );
     }
 
     // Public pass verification (no auth needed — used by QR scan)
