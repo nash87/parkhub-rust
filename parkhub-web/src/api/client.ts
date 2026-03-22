@@ -672,6 +672,13 @@ export interface NotificationPreferences {
   email_booking_reminder: boolean;
   email_swap_request: boolean;
   push_enabled: boolean;
+  sms_booking_confirm: boolean;
+  sms_booking_reminder: boolean;
+  sms_booking_cancelled: boolean;
+  whatsapp_booking_confirm: boolean;
+  whatsapp_booking_reminder: boolean;
+  whatsapp_booking_cancelled: boolean;
+  phone_number?: string;
 }
 
 // ── Bulk Result ──
