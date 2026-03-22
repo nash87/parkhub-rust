@@ -97,7 +97,7 @@ export function UseCaseSelectorPage() {
   const bgClass = useBgClass('hatch');
 
   return (
-    <div className={`min-h-dvh ${bgClass || 'parking-grid'} relative overflow-hidden`}>
+    <main className={`min-h-dvh ${bgClass || 'parking-grid'} relative overflow-hidden`}>
       {/* Architectural lines */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-accent-500/30 to-transparent" />
@@ -410,6 +410,6 @@ export function UseCaseSelectorPage() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </main>
   );
 }
