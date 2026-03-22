@@ -28,8 +28,9 @@
   <a href="docs/INSTALLATION.md">Installation</a> &nbsp;·&nbsp;
   <a href="docs/API.md">API Docs</a> &nbsp;·&nbsp;
   <a href="docs/GDPR.md">GDPR Guide</a> &nbsp;·&nbsp;
-  <a href="CHANGELOG.md">Changelog</a> &nbsp;·&nbsp;
-  <a href="SECURITY.md">Security</a>
+  <a href="docs/COMPLIANCE.md">Compliance</a> &nbsp;·&nbsp;
+  <a href="docs/SECURITY.md">Security</a> &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 ---
@@ -284,6 +285,25 @@ Interactive API docs are available at `/swagger-ui` when the server is running. 
 A feature-equivalent **PHP edition** (Laravel 12 + MySQL/SQLite/PostgreSQL) exists for environments where shared hosting compatibility matters. Both editions share the same React frontend and REST API surface, so they're fully interchangeable.
 
 **[nash87/parkhub-php](https://github.com/nash87/parkhub-php)**
+
+---
+
+## Legal Compliance
+
+ParkHub is built for GDPR/DSGVO compliance by design. Full documentation:
+
+| Document | Scope |
+|----------|-------|
+| [GDPR Guide](docs/GDPR.md) | Data inventory, user rights (Art. 15--22), retention, TOMs |
+| [Compliance Matrix](docs/COMPLIANCE.md) | German (DSGVO, TTDSG, DDG, BDSG, GoBD), EU, UK, US (CCPA), Swiss (nDSG), Brazilian (LGPD) |
+| [Security Model](docs/SECURITY.md) | Auth, encryption, OWASP Top 10, vulnerability disclosure |
+| [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Ready-to-use Datenschutzerklarung (German) |
+| [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG SS5 provider identification (German) |
+| [Third-Party Licenses](LICENSE-THIRD-PARTY.md) | All Rust crate and npm dependency licenses |
+
+**Key compliance features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3,
+audit logging, data export (Art. 15/20), account erasure (Art. 17), no cookies, no tracking,
+no third-party data processors by default.
 
 ---
 
