@@ -290,6 +290,14 @@ export const api = {
     request<void>(`/api/v1/admin/lots/${lotId}/location`, {
       method: 'PUT', body: JSON.stringify({ latitude, longitude }),
     }),
+
+  // ── Stripe ──
+  createCheckout: (credits: number, pricePerCredit?: number) =>
+    request<CheckoutResponse>('/api/v1/payments/create-checkout', {
+      method: 'POST', body: JSON.stringify({ credits, price_per_credit: pricePerCredit }),
+    }),
+  getPaymentHistory: () => request<PaymentHistoryEntry[]>('/api/v1/payments/history'),
+  getStripeConfig: () => request<StripeConfigResponse>('/api/v1/payments/config'),
 };
 
 // ── Types ──
@@ -472,6 +480,29 @@ export interface UserCredits {
   monthly_quota: number;
   last_refilled?: string;
   transactions: CreditTransaction[];
+}
+
+export interface CheckoutResponse {
+  id: string;
+  checkout_url: string;
+  amount: number;
+  credits: number;
+  currency: string;
+}
+
+export interface PaymentHistoryEntry {
+  id: string;
+  amount: number;
+  credits: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'expired' | 'failed';
+  created_at: string;
+  completed_at?: string;
+}
+
+export interface StripeConfigResponse {
+  publishable_key?: string;
+  configured: boolean;
 }
 
 export interface UserStats {
