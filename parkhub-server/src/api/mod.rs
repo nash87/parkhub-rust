@@ -82,6 +82,8 @@ pub mod bookings;
 pub mod branding;
 #[cfg(feature = "mod-calendar")]
 pub mod calendar;
+#[cfg(feature = "mod-calendar-drag")]
+pub mod calendar_drag;
 #[cfg(feature = "mod-credits")]
 pub mod credits;
 #[cfg(feature = "mod-data-import")]
@@ -194,6 +196,8 @@ pub use bookings::{
 };
 #[cfg(feature = "mod-calendar")]
 use calendar::{calendar_events, user_calendar_ics};
+#[cfg(feature = "mod-calendar-drag")]
+use calendar_drag::reschedule_booking;
 #[cfg(feature = "mod-credits")]
 use credits::{
     admin_grant_credits, admin_list_credit_transactions, admin_refill_all_credits,
@@ -464,6 +468,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "absence-approval".into(),
         cfg!(feature = "mod-absence-approval").into(),
+    );
+    modules.insert(
+        "calendar-drag".into(),
+        cfg!(feature = "mod-calendar-drag").into(),
     );
 
     Json(serde_json::json!({
@@ -951,6 +959,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         protected_routes = protected_routes
             .route("/api/v1/bookings/{id}/pass", get(get_booking_pass))
             .route("/api/v1/me/passes", get(list_my_passes));
+    }
+
+    #[cfg(feature = "mod-calendar-drag")]
+    {
+        // Calendar drag-to-reschedule
+        protected_routes = protected_routes.route(
+            "/api/v1/bookings/{id}/reschedule",
+            put(reschedule_booking),
+        );
     }
 
     #[cfg(feature = "mod-invoices")]

@@ -1262,6 +1262,17 @@ export default {
       setGeofence: 'Set Geofence',
       geofenceUpdated: 'Geofence updated',
     },
+    calendarDrag: {
+      help: 'Drag a booking to a new date to reschedule it',
+      helpLabel: 'Help',
+      confirmTitle: 'Reschedule Booking',
+      confirmDesc: 'Move this booking to the selected date?',
+      from: 'From',
+      to: 'To',
+      confirmBtn: 'Reschedule',
+      rescheduling: 'Rescheduling...',
+      rescheduled: 'Booking rescheduled',
+    },
     absenceApproval: {
       title: 'Absence Approval',
       subtitle: 'Request and manage absences',

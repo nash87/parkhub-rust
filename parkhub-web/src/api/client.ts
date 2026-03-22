@@ -372,6 +372,12 @@ export const api = {
     request<AbsenceApprovalRequest>(`/api/v1/admin/absences/${id}/reject`, {
       method: 'PUT', body: JSON.stringify({ reason }),
     }),
+
+  // ── Calendar Drag Reschedule ──
+  rescheduleBooking: (id: string, newStart: string, newEnd: string) =>
+    request<RescheduleResponse>(`/api/v1/bookings/${id}/reschedule`, {
+      method: 'PUT', body: JSON.stringify({ new_start: newStart, new_end: newEnd }),
+    }),
 };
 
 // ── Types ──
@@ -922,6 +928,19 @@ export interface GeofenceConfig {
   center_lng: number;
   radius_meters: number;
   enabled: boolean;
+}
+
+// ── Calendar Drag Reschedule ──
+export interface RescheduleResponse {
+  booking_id: string;
+  old_start: string;
+  old_end: string;
+  new_start: string;
+  new_end: string;
+  slot_id: string;
+  lot_id: string;
+  success: boolean;
+  message: string;
 }
 
 // ── Absence Approval ──
