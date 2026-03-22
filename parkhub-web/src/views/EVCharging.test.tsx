@@ -48,7 +48,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Stop: (props: any) => <span data-testid="icon-stop" {...props} />,
   Question: (props: any) => <span data-testid="icon-question" {...props} />,
   Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Battery: (props: any) => <span data-testid="icon-battery" {...props} />,
+  BatteryCharging: (props: any) => <span data-testid="icon-battery" {...props} />,
 }));
 
 vi.mock('../context/AuthContext', () => ({
