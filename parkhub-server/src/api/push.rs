@@ -194,32 +194,130 @@ pub async fn unsubscribe(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Push delivery (placeholder)
+// Push event types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Send a push notification to all subscriptions for the given user.
+/// Push notification event types for structured delivery.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PushEventType {
+    /// Booking was confirmed
+    BookingConfirmed,
+    /// Reminder 1h before booking starts
+    BookingReminder,
+    /// Booking was cancelled
+    BookingCancelled,
+    /// New announcement posted
+    NewAnnouncement,
+    /// Generic notification
+    General,
+}
+
+/// Structured push notification payload sent to the service worker.
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct PushPayload {
+    /// Notification title
+    pub title: String,
+    /// Notification body text
+    pub body: String,
+    /// Event type for action routing
+    pub event_type: PushEventType,
+    /// Optional URL to open on click
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    /// Optional booking or announcement ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reference_id: Option<String>,
+}
+
+impl PushPayload {
+    pub fn booking_confirmed(booking_id: &str, lot_name: &str) -> Self {
+        Self {
+            title: "Booking Confirmed".to_string(),
+            body: format!("Your booking at {} has been confirmed.", lot_name),
+            event_type: PushEventType::BookingConfirmed,
+            url: Some(format!("/bookings")),
+            reference_id: Some(booking_id.to_string()),
+        }
+    }
+
+    pub fn booking_reminder(booking_id: &str, lot_name: &str, minutes: u32) -> Self {
+        Self {
+            title: "Booking Reminder".to_string(),
+            body: format!(
+                "Your booking at {} starts in {} minutes.",
+                lot_name, minutes
+            ),
+            event_type: PushEventType::BookingReminder,
+            url: Some(format!("/bookings")),
+            reference_id: Some(booking_id.to_string()),
+        }
+    }
+
+    pub fn booking_cancelled(booking_id: &str, lot_name: &str) -> Self {
+        Self {
+            title: "Booking Cancelled".to_string(),
+            body: format!("Your booking at {} has been cancelled.", lot_name),
+            event_type: PushEventType::BookingCancelled,
+            url: Some(format!("/bookings")),
+            reference_id: Some(booking_id.to_string()),
+        }
+    }
+
+    pub fn new_announcement(title: &str, message: &str) -> Self {
+        Self {
+            title: format!("Announcement: {}", title),
+            body: message.to_string(),
+            event_type: PushEventType::NewAnnouncement,
+            url: Some("/notifications".to_string()),
+            reference_id: None,
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Push delivery
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Send a structured push notification to all subscriptions for the given user.
 ///
-/// This is a placeholder that logs the attempt. Replace with the `web-push`
-/// crate for real Web Push Protocol delivery.
+/// Serializes the `PushPayload` as JSON and delivers to each subscription
+/// endpoint. Currently logs the delivery attempt — replace the inner loop
+/// body with the `web-push` crate for real Web Push Protocol delivery.
 #[allow(dead_code)]
 pub async fn send_push_notification(
     db: &crate::db::Database,
     user_id: &Uuid,
-    title: &str,
-    body: &str,
+    payload: &PushPayload,
 ) {
+    let json_payload = match serde_json::to_string(payload) {
+        Ok(json) => json,
+        Err(e) => {
+            tracing::error!("Failed to serialize push payload: {}", e);
+            return;
+        }
+    };
+
     match db.get_push_subscriptions_by_user(user_id).await {
         Ok(subs) if subs.is_empty() => {
             tracing::debug!("No push subscriptions for user {}", user_id);
         }
         Ok(subs) => {
+            tracing::info!(
+                "Sending push to {} subscription(s) for user {}: event={:?}",
+                subs.len(),
+                user_id,
+                payload.event_type,
+            );
             for sub in &subs {
+                // TODO: Replace with actual web-push delivery
+                // using the web-push crate or reqwest to the push service endpoint.
+                // The subscription endpoint, p256dh, and auth keys are available in `sub`.
                 tracing::info!(
-                    "Would send push to user {} endpoint={} title={:?} body={:?}",
-                    user_id,
+                    "Push delivery: endpoint={} payload_len={} event={:?}",
                     sub.endpoint,
-                    title,
-                    body,
+                    json_payload.len(),
+                    payload.event_type,
                 );
             }
         }
@@ -231,6 +329,19 @@ pub async fn send_push_notification(
             );
         }
     }
+}
+
+/// Send a push notification to all subscriptions for the given user (simple API).
+#[allow(dead_code)]
+pub async fn send_push_simple(db: &crate::db::Database, user_id: &Uuid, title: &str, body: &str) {
+    let payload = PushPayload {
+        title: title.to_string(),
+        body: body.to_string(),
+        event_type: PushEventType::General,
+        url: None,
+        reference_id: None,
+    };
+    send_push_notification(db, user_id, &payload).await;
 }
 
 #[cfg(test)]
@@ -307,6 +418,93 @@ mod tests {
         assert_eq!(resp.id, "550e8400-e29b-41d4-a716-446655440000");
         assert_eq!(resp.endpoint, "https://push.example.com/sub/123");
         assert!(resp.created_at.contains("2026-03-20"));
+    }
+
+    #[test]
+    fn test_push_event_type_serde() {
+        assert_eq!(
+            serde_json::to_string(&PushEventType::BookingConfirmed).unwrap(),
+            "\"booking_confirmed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PushEventType::BookingReminder).unwrap(),
+            "\"booking_reminder\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PushEventType::BookingCancelled).unwrap(),
+            "\"booking_cancelled\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PushEventType::NewAnnouncement).unwrap(),
+            "\"new_announcement\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PushEventType::General).unwrap(),
+            "\"general\""
+        );
+    }
+
+    #[test]
+    fn test_push_payload_booking_confirmed() {
+        let payload = PushPayload::booking_confirmed("booking-123", "Central Parking");
+        assert_eq!(payload.title, "Booking Confirmed");
+        assert!(payload.body.contains("Central Parking"));
+        assert_eq!(payload.event_type, PushEventType::BookingConfirmed);
+        assert_eq!(payload.reference_id.as_deref(), Some("booking-123"));
+        assert!(payload.url.is_some());
+    }
+
+    #[test]
+    fn test_push_payload_booking_reminder() {
+        let payload = PushPayload::booking_reminder("booking-456", "Airport Lot", 60);
+        assert_eq!(payload.title, "Booking Reminder");
+        assert!(payload.body.contains("60 minutes"));
+        assert!(payload.body.contains("Airport Lot"));
+        assert_eq!(payload.event_type, PushEventType::BookingReminder);
+    }
+
+    #[test]
+    fn test_push_payload_booking_cancelled() {
+        let payload = PushPayload::booking_cancelled("booking-789", "Downtown Garage");
+        assert_eq!(payload.title, "Booking Cancelled");
+        assert!(payload.body.contains("Downtown Garage"));
+        assert_eq!(payload.event_type, PushEventType::BookingCancelled);
+    }
+
+    #[test]
+    fn test_push_payload_new_announcement() {
+        let payload = PushPayload::new_announcement("Maintenance", "Lot B will be closed tomorrow");
+        assert!(payload.title.contains("Maintenance"));
+        assert_eq!(payload.body, "Lot B will be closed tomorrow");
+        assert_eq!(payload.event_type, PushEventType::NewAnnouncement);
+        assert!(payload.reference_id.is_none());
+    }
+
+    #[test]
+    fn test_push_payload_serialize() {
+        let payload = PushPayload::booking_confirmed("b-1", "Test Lot");
+        let json = serde_json::to_string(&payload).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["title"], "Booking Confirmed");
+        assert_eq!(value["event_type"], "booking_confirmed");
+        assert_eq!(value["reference_id"], "b-1");
+        // url should be present
+        assert!(value["url"].is_string());
+    }
+
+    #[test]
+    fn test_push_payload_general_no_optional_fields() {
+        let payload = PushPayload {
+            title: "Test".to_string(),
+            body: "Body".to_string(),
+            event_type: PushEventType::General,
+            url: None,
+            reference_id: None,
+        };
+        let json = serde_json::to_string(&payload).unwrap();
+        // url and reference_id should be skipped
+        assert!(!json.contains("url"));
+        assert!(!json.contains("reference_id"));
     }
 
     #[test]
