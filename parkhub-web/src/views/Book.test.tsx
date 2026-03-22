@@ -88,6 +88,8 @@ vi.mock('@phosphor-icons/react', () => ({
   Wheelchair: (props: any) => <span data-testid="icon-wheelchair" {...props} />,
   Motorcycle: (props: any) => <span data-testid="icon-motorcycle" {...props} />,
   Star: (props: any) => <span data-testid="icon-star" {...props} />,
+  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  TrendDown: (props: any) => <span data-testid="icon-trend-down" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({
