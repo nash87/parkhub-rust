@@ -73,7 +73,7 @@ describe('ThemeSwitcher', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders all 6 theme cards when open', () => {
+  it('renders all 12 theme cards when open', () => {
     render(
       <ThemeProvider>
         <ThemeSwitcher open={true} onClose={() => {}} />
@@ -83,9 +83,9 @@ describe('ThemeSwitcher', () => {
     // Each theme card has an aria-label with theme name
     expect(screen.getByRole('dialog')).toBeTruthy();
     const buttons = screen.getAllByRole('button', { pressed: undefined });
-    // 6 theme cards + close button = 7 buttons
+    // 12 theme cards + close button = 13 buttons
     const themeButtons = buttons.filter(b => b.getAttribute('aria-pressed') !== null);
-    expect(themeButtons).toHaveLength(6);
+    expect(themeButtons).toHaveLength(12);
   });
 
   it('does not render when closed', () => {
