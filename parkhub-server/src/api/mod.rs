@@ -1069,15 +1069,16 @@ async fn security_headers_middleware(request: Request<Body>, next: Next) -> Resp
     headers.insert(
         HeaderName::from_static("content-security-policy"),
         HeaderValue::from_static(
-            // 'unsafe-inline' removed from script-src — use nonces or hashes for
-            // any inline scripts.  style-src retains 'unsafe-inline' because React
-            // and similar frameworks inject critical CSS at runtime.
+            // 'unsafe-inline' removed from both script-src and style-src (issue #106).
+            // Inline styles should use external stylesheets or CSS-in-JS that injects
+            // <link> elements. If a framework requires inline styles, add specific
+            // hashes via 'unsafe-hashes' rather than blanket 'unsafe-inline'.
             "default-src 'self'; \
              script-src 'self'; \
-             style-src 'self' 'unsafe-inline'; \
+             style-src 'self'; \
              img-src 'self' data:; \
              font-src 'self'; \
-             connect-src 'self'; \
+             connect-src 'self' ws: wss:; \
              frame-ancestors 'none'",
         ),
     );
