@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.7.0-brightgreen.svg?style=flat-square" alt="v2.7.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.8.0-brightgreen.svg?style=flat-square" alt="v2.8.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -67,8 +67,10 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ## Features
 
-### v2.7.0 Highlights
+### v2.8.0 Highlights
 
+- **WebSocket real-time updates** -- Live booking/occupancy events with token auth, heartbeat, and auto-reconnect
+- **API architecture overhaul** -- mod.rs reduced from 4500 to 1500 lines via Phase 3 handler extraction
 - **12 switchable themes** -- Classic, Glass, Bento, Brutalist, Neon, Warm, Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco
 - **httpOnly cookie auth** -- XSS-proof authentication with SameSite=Lax and CSRF protection
 - **OAuth/Social login** -- Self-service Google + GitHub OAuth (users configure their own apps)
