@@ -1220,6 +1220,21 @@ impl Database {
         Ok(vehicles)
     }
 
+    /// List all vehicles across all users.
+    pub async fn list_all_vehicles(&self) -> Result<Vec<Vehicle>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(VEHICLES)?;
+
+        let mut vehicles = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            vehicles.push(self.deserialize(value.value())?);
+        }
+        Ok(vehicles)
+    }
+
     /// Delete a vehicle by ID
     pub async fn delete_vehicle(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;

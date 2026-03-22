@@ -413,6 +413,7 @@ pub enum VehicleType {
     Car,
     Suv,
     Motorcycle,
+    Bicycle,
     Truck,
     Van,
     Electric,
