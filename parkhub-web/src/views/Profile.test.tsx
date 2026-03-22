@@ -312,4 +312,21 @@ describe('ProfilePage', () => {
     expect(screen.getByText('Daten exportieren')).toBeInTheDocument();
     expect(screen.getByText('Konto löschen')).toBeInTheDocument();
   });
+
+  it('renders accessibility needs section', () => {
+    render(<ProfilePage />);
+    expect(screen.getByTestId('accessibility-section')).toBeInTheDocument();
+    expect(screen.getByTestId('accessibility-selector')).toBeInTheDocument();
+  });
+
+  it('accessibility selector has correct options', () => {
+    render(<ProfilePage />);
+    const selector = screen.getByTestId('accessibility-selector') as HTMLSelectElement;
+    const options = Array.from(selector.options).map(o => o.value);
+    expect(options).toContain('none');
+    expect(options).toContain('wheelchair');
+    expect(options).toContain('reduced_mobility');
+    expect(options).toContain('visual');
+    expect(options).toContain('hearing');
+  });
 });

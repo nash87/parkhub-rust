@@ -339,6 +339,7 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
                 >
                   {slot.slot_number}
                   {Icon && <Icon weight="bold" className="absolute top-0.5 right-0.5 w-3 h-3 opacity-60" />}
+                  {slot.is_accessible && !Icon && <Wheelchair weight="bold" className="absolute top-0.5 right-0.5 w-3 h-3 opacity-60 text-blue-500" />}
                 </motion.button>
               );
             })}

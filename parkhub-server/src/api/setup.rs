@@ -166,6 +166,7 @@ pub async fn setup_init(
         updated_at: chrono::Utc::now(),
         last_login: None,
         tenant_id: None,
+        accessibility_needs: None,
     };
 
     if let Err(e) = state_guard.db.save_user(&admin).await {
