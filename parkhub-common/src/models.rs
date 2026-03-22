@@ -489,6 +489,7 @@ pub enum NotificationType {
     PaymentFailed,
     PromotionAvailable,
     SystemMessage,
+    WaitlistOffer,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -603,14 +604,37 @@ pub struct AbsencePattern {
     pub weekdays: Vec<u8>,
 }
 
+/// Waitlist entry status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WaitlistStatus {
+    Waiting,
+    Offered,
+    Accepted,
+    Declined,
+    Expired,
+}
+
 /// Waitlist entry for a parking lot
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct WaitlistEntry {
     pub id: Uuid,
     pub user_id: Uuid,
     pub lot_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub notified_at: Option<DateTime<Utc>>,
+    #[serde(default = "default_waitlist_status")]
+    pub status: WaitlistStatus,
+    /// When the offer expires (notified_at + 15 min)
+    #[serde(default)]
+    pub offer_expires_at: Option<DateTime<Utc>>,
+    /// Booking ID created when the offer is accepted
+    #[serde(default)]
+    pub accepted_booking_id: Option<Uuid>,
+}
+
+fn default_waitlist_status() -> WaitlistStatus {
+    WaitlistStatus::Waiting
 }
 
 /// Guest booking (visitor parking)

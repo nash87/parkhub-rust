@@ -156,6 +156,8 @@ pub mod vehicles;
 pub mod visitors;
 #[cfg(feature = "mod-waitlist")]
 pub mod waitlist;
+#[cfg(feature = "mod-waitlist-ext")]
+pub mod waitlist_ext;
 #[cfg(feature = "mod-webhooks")]
 pub mod webhooks;
 pub mod ws;
@@ -266,6 +268,11 @@ use visitors::{
 };
 #[cfg(feature = "mod-waitlist")]
 use waitlist::{join_waitlist, leave_waitlist, list_waitlist};
+#[cfg(feature = "mod-waitlist-ext")]
+use waitlist_ext::{
+    accept_waitlist_offer, decline_waitlist_offer, get_lot_waitlist, leave_lot_waitlist,
+    subscribe_waitlist,
+};
 #[cfg(feature = "mod-webhooks")]
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 #[cfg(feature = "mod-zones")]
@@ -429,6 +436,10 @@ async fn list_module_features() -> impl IntoResponse {
     );
     modules.insert("history".into(), cfg!(feature = "mod-history").into());
     modules.insert("geofence".into(), cfg!(feature = "mod-geofence").into());
+    modules.insert(
+        "waitlist-ext".into(),
+        cfg!(feature = "mod-waitlist-ext").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -869,6 +880,27 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         protected_routes = protected_routes
             .route("/api/v1/geofence/check-in", post(geofence_check_in))
             .route("/api/v1/lots/{id}/geofence", get(get_lot_geofence));
+    }
+
+    #[cfg(feature = "mod-waitlist-ext")]
+    {
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/lots/{id}/waitlist/subscribe",
+                post(subscribe_waitlist),
+            )
+            .route(
+                "/api/v1/lots/{id}/waitlist",
+                get(get_lot_waitlist).delete(leave_lot_waitlist),
+            )
+            .route(
+                "/api/v1/lots/{id}/waitlist/{entry_id}/accept",
+                post(accept_waitlist_offer),
+            )
+            .route(
+                "/api/v1/lots/{id}/waitlist/{entry_id}/decline",
+                post(decline_waitlist_offer),
+            );
     }
 
     #[cfg(feature = "mod-invoices")]
