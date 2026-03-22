@@ -168,6 +168,8 @@ pub mod waitlist;
 pub mod waitlist_ext;
 #[cfg(feature = "mod-webhooks")]
 pub mod webhooks;
+#[cfg(feature = "mod-widgets")]
+pub mod widgets;
 pub mod ws;
 #[cfg(feature = "mod-zones")]
 pub mod zones;
@@ -292,6 +294,8 @@ use waitlist_ext::{
 use parking_pass::{get_booking_pass, list_my_passes, verify_pass};
 #[cfg(feature = "mod-webhooks")]
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
+#[cfg(feature = "mod-widgets")]
+use widgets::{get_widget_data, get_widget_layout, save_widget_layout};
 #[cfg(feature = "mod-zones")]
 use zones::{create_zone, delete_zone, list_zones, update_zone};
 
@@ -472,6 +476,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "calendar-drag".into(),
         cfg!(feature = "mod-calendar-drag").into(),
+    );
+    modules.insert(
+        "widgets".into(),
+        cfg!(feature = "mod-widgets").into(),
     );
 
     Json(serde_json::json!({
@@ -893,6 +901,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     #[cfg(feature = "mod-geofence")]
     let admin_routes =
         admin_routes.route("/api/v1/admin/lots/{id}/geofence", put(admin_set_geofence));
+
+    #[cfg(feature = "mod-widgets")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/widgets",
+            get(get_widget_layout).put(save_widget_layout),
+        )
+        .route(
+            "/api/v1/admin/widgets/data/{widget_id}",
+            get(get_widget_data),
+        );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),

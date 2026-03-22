@@ -169,6 +169,7 @@ full = [
     "mod-api-docs",
     "mod-absence-approval",
     "mod-calendar-drag",
+    "mod-widgets",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -228,6 +229,7 @@ mod-parking-pass = []
 mod-api-docs = []
 mod-absence-approval = []
 mod-calendar-drag = []
+mod-widgets = []
 
 [dev-dependencies]
 tempfile = "3"
