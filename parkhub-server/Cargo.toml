@@ -148,6 +148,7 @@ full = [
     "mod-recommendations", "mod-translations", "mod-social",
     "mod-themes", "mod-oauth", "mod-invoices", "mod-dynamic-pricing",
     "mod-operating-hours", "mod-websocket", "mod-lobby-display",
+    "mod-setup-wizard",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -186,6 +187,7 @@ mod-dynamic-pricing = []
 mod-operating-hours = []
 mod-websocket = []
 mod-lobby-display = []
+mod-setup-wizard = []
 
 [dev-dependencies]
 tempfile = "3"
