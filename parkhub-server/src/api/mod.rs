@@ -70,6 +70,7 @@ type SharedState = Arc<RwLock<AppState>>;
 #[cfg(feature = "mod-absences")]
 pub mod absences;
 pub mod admin;
+pub mod admin_ext;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 pub mod auth;
@@ -393,6 +394,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/health", get(health_check))
         .route("/health/live", get(liveness_check))
         .route("/health/ready", get(readiness_check))
+        .route("/health/detailed", get(admin_ext::detailed_health_check))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
@@ -508,7 +510,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/auth/api-keys",
             get(security::list_api_keys).post(security::create_api_key),
         )
-        .route("/api/v1/auth/api-keys/{id}", delete(security::revoke_api_key));
+        .route("/api/v1/auth/api-keys/{id}", delete(security::revoke_api_key))
+        // ── Notification preferences ──
+        .route(
+            "/api/v1/preferences/notifications",
+            get(admin_ext::get_notification_preferences)
+                .put(admin_ext::update_notification_preferences),
+        );
 
     // ── Admin routes (guarded by admin_middleware) ────────────────────────
     // All /api/v1/admin/* routes are grouped under a shared admin_middleware
@@ -561,6 +569,34 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/users/{id}/login-history",
             get(security::admin_get_login_history),
+        )
+        // ── Bulk admin operations ──
+        .route(
+            "/api/v1/admin/users/bulk-update",
+            post(admin_ext::bulk_update_users),
+        )
+        .route(
+            "/api/v1/admin/users/bulk-delete",
+            post(admin_ext::bulk_delete_users),
+        )
+        // ── Advanced reports ──
+        .route(
+            "/api/v1/admin/reports/revenue",
+            get(admin_ext::revenue_report),
+        )
+        .route(
+            "/api/v1/admin/reports/occupancy",
+            get(admin_ext::occupancy_report),
+        )
+        .route(
+            "/api/v1/admin/reports/users",
+            get(admin_ext::user_report),
+        )
+        // ── Booking policies ──
+        .route(
+            "/api/v1/admin/settings/booking-policies",
+            get(admin_ext::get_booking_policies)
+                .put(admin_ext::update_booking_policies),
         )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
