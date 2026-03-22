@@ -482,3 +482,144 @@ async fn aggregate_occupancy_stats(state: &SharedState) -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests (issue #112)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::ServerConfig;
+    use crate::db::{Database, DatabaseConfig};
+
+    /// Create a minimal test state backed by a tempdir.
+    async fn job_test_state() -> (SharedState, tempfile::TempDir) {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_config = DatabaseConfig {
+            path: dir.path().to_path_buf(),
+            encryption_enabled: false,
+            passphrase: None,
+            create_if_missing: true,
+        };
+        let db = Database::open(&db_config).expect("open test db");
+        let config = ServerConfig::default();
+        let state = Arc::new(RwLock::new(AppState {
+            config,
+            db,
+            mdns: None,
+            scheduler: None,
+            ws_events: crate::api::ws::EventBroadcaster::new(),
+        }));
+        (state, dir)
+    }
+
+    #[tokio::test]
+    async fn auto_release_disabled_is_noop() {
+        let (state, _dir) = job_test_state().await;
+        // auto_release_enabled defaults to not set / false
+        let result = auto_release_no_shows(&state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn purge_expired_empty_db_is_noop() {
+        let (state, _dir) = job_test_state().await;
+        let result = purge_expired_bookings(&state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn aggregate_occupancy_empty_db_is_noop() {
+        let (state, _dir) = job_test_state().await;
+        let result = aggregate_occupancy_stats(&state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn expand_recurring_empty_db_is_noop() {
+        let (state, _dir) = job_test_state().await;
+        let result = expand_recurring_bookings(&state).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn auto_release_marks_no_show_bookings() {
+        let (state, _dir) = job_test_state().await;
+
+        // Enable auto-release with a 0-minute threshold
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            guard
+                .db
+                .set_setting("auto_release_minutes", "0")
+                .await
+                .unwrap();
+        }
+
+        // Create a booking that started in the past with no check-in
+        let lot_id = Uuid::new_v4();
+        let slot_id = Uuid::new_v4();
+        let user_id = Uuid::new_v4();
+        let booking = parkhub_common::Booking {
+            id: Uuid::new_v4(),
+            user_id,
+            lot_id,
+            slot_id,
+            slot_number: 1,
+            floor_name: "Level 1".to_string(),
+            vehicle: parkhub_common::Vehicle {
+                id: Uuid::new_v4(),
+                user_id,
+                license_plate: "TEST-001".to_string(),
+                make: None,
+                model: None,
+                color: None,
+                vehicle_type: parkhub_common::VehicleType::Car,
+                is_default: true,
+                created_at: Utc::now(),
+            },
+            start_time: Utc::now() - Duration::hours(2),
+            end_time: Utc::now() - Duration::hours(1),
+            status: parkhub_common::BookingStatus::Confirmed,
+            pricing: parkhub_common::BookingPricing {
+                base_price: 0.0,
+                discount: 0.0,
+                tax: 0.0,
+                total: 0.0,
+                currency: "EUR".to_string(),
+                payment_status: parkhub_common::PaymentStatus::Pending,
+                payment_method: None,
+            },
+            created_at: Utc::now() - Duration::hours(3),
+            updated_at: Utc::now() - Duration::hours(3),
+            check_in_time: None,
+            check_out_time: None,
+            qr_code: None,
+            notes: None,
+        };
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&booking).await.unwrap();
+        }
+
+        // Run auto-release
+        auto_release_no_shows(&state).await.unwrap();
+
+        // Verify the booking was marked as NoShow
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.status, parkhub_common::BookingStatus::NoShow);
+    }
+}
