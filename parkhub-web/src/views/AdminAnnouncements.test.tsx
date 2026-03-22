@@ -135,8 +135,8 @@ describe('AdminAnnouncementsPage', () => {
 
     await user.click(screen.getByText('New Announcement'));
 
-    expect(screen.getByPlaceholderText('Announcement title...')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Announcement message...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Title')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Message')).toBeInTheDocument();
     expect(screen.getByText('Severity')).toBeInTheDocument();
     expect(screen.getByText('Status')).toBeInTheDocument();
   });
