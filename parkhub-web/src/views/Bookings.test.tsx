@@ -112,6 +112,10 @@ vi.mock('../components/Skeleton', () => ({
   BookingsSkeleton: () => <div data-testid="bookings-skeleton">Loading...</div>,
 }));
 
+vi.mock('../hooks/useWebSocket', () => ({
+  useWebSocket: () => ({ connected: false, lastMessage: null, occupancy: {} }),
+}));
+
 vi.mock('../components/ParkingPass', () => ({
   ParkingPass: ({ booking, onClose }: any) => (
     <div data-testid="parking-pass-modal">
