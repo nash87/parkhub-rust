@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.2.0] - 2026-03-22
+
+### Added
+- **iCal Calendar Sync**: `GET /api/v1/calendar/ical` (authenticated feed), `GET /api/v1/calendar/ical/:token` (public subscription via personal token), `POST /api/v1/calendar/token` (generate/rotate subscription token). VEVENTs with DTSTART, DTEND, SUMMARY, LOCATION, DESCRIPTION, DTSTAMP. Subscribe button in Calendar view with copy-link modal and instructions for Google Calendar, Outlook, Apple Calendar. Feature flag: `mod-ical`. 8 backend + 3 frontend tests. (#214)
+- **API Rate Limiting Dashboard**: `GET /api/v1/admin/rate-limits` (stats per endpoint group: auth 5/min, api 100/min, public 30/min, webhook 50/min), `GET /api/v1/admin/rate-limits/history` (blocked requests over last 24h in hourly bins). Admin Rate Limits page at `/admin/rate-limits` with progress bars and 24h blocked-request bar chart. 4 backend + 5 frontend tests. (#215)
+- **Multi-Tenant Isolation**: `tenant_id: Option<String>` added to User, ParkingLot, Booking models. `GET /POST /api/v1/admin/tenants` (list/create), `PUT /api/v1/admin/tenants/:id` (update). Super-admin sees all tenants; regular admins scoped to their own. AdminTenants page at `/admin/tenants` with create/edit modal and branding support. Feature flag: `mod-multi-tenant`. 10 backend + 5 frontend tests. (#216)
+- **i18n**: Calendar subscribe, rate limits, tenants keys added to all 10 locales
+- **34 feature flags**: Added `mod-ical`, `mod-multi-tenant` (was 31)
+
+---
+
 ## [3.1.0] - 2026-03-22
 
 ### Added

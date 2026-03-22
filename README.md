@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.1.0-brightgreen.svg?style=flat-square" alt="v3.1.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.2.0-brightgreen.svg?style=flat-square" alt="v3.2.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -66,6 +66,12 @@ cargo build --release --package parkhub-server --no-default-features --features 
 ---
 
 ## Features
+
+### v3.2.0 Highlights
+
+- **iCal Calendar Sync** -- Subscribe to parking bookings from Google Calendar, Outlook, or Apple Calendar via personal token URL
+- **API Rate Limiting Dashboard** -- Admin view at `/admin/rate-limits` with per-group stats and 24h blocked-request chart
+- **Multi-Tenant Isolation** -- `tenant_id` on User/Lot/Booking, admin tenant CRUD, super-admin scoping, branding support
 
 ### v3.1.0 Highlights
 
