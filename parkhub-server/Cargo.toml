@@ -163,6 +163,7 @@ full = [
     "mod-visitors",
     "mod-ev-charging",
     "mod-history",
+    "mod-geofence",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -216,6 +217,7 @@ mod-cost-center = []
 mod-visitors = []
 mod-ev-charging = []
 mod-history = []
+mod-geofence = []
 
 [dev-dependencies]
 tempfile = "3"

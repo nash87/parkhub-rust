@@ -92,6 +92,8 @@ pub mod export;
 pub mod favorites;
 #[cfg(feature = "mod-fleet")]
 pub mod fleet;
+#[cfg(feature = "mod-geofence")]
+pub mod geofence;
 #[cfg(feature = "mod-guest")]
 pub mod guest;
 #[cfg(feature = "mod-history")]
@@ -193,6 +195,8 @@ use ev_charging::{
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
 #[cfg(feature = "mod-favorites")]
 use favorites::{add_favorite, list_favorites, remove_favorite};
+#[cfg(feature = "mod-geofence")]
+use geofence::{admin_set_geofence, geofence_check_in, get_lot_geofence};
 #[cfg(feature = "mod-guest")]
 use guest::{admin_cancel_guest_booking, admin_list_guest_bookings, create_guest_booking};
 #[cfg(feature = "mod-history")]
@@ -424,6 +428,7 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-ev-charging").into(),
     );
     modules.insert("history".into(), cfg!(feature = "mod-history").into());
+    modules.insert("geofence".into(), cfg!(feature = "mod-geofence").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -823,6 +828,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         .route("/api/v1/admin/tenants/{id}", put(tenants::update_tenant));
 
+    #[cfg(feature = "mod-geofence")]
+    let admin_routes =
+        admin_routes.route("/api/v1/admin/lots/{id}/geofence", put(admin_set_geofence));
+
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),
         admin_middleware,
@@ -853,6 +862,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         protected_routes = protected_routes
             .route("/api/v1/bookings/history", get(booking_history))
             .route("/api/v1/bookings/stats", get(booking_stats));
+    }
+
+    #[cfg(feature = "mod-geofence")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/geofence/check-in", post(geofence_check_in))
+            .route("/api/v1/lots/{id}/geofence", get(get_lot_geofence));
     }
 
     #[cfg(feature = "mod-invoices")]

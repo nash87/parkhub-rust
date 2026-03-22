@@ -18,7 +18,8 @@ export type FeatureModule =
   | 'rich_empty_states'
   | 'onboarding_hints'
   | 'themes'
-  | 'history';
+  | 'history'
+  | 'geofence';
 
 export type FeatureCategory = 'core' | 'collaboration' | 'billing' | 'admin' | 'experience';
 
@@ -51,13 +52,14 @@ export const FEATURE_REGISTRY: FeatureInfo[] = [
   { id: 'themes',            category: 'experience',    defaultEnabled: true },
   // Personal
   { id: 'history',           category: 'core',          defaultEnabled: true },
+  { id: 'geofence',          category: 'core',          defaultEnabled: true },
 ];
 
 /** Use-case presets — which features are enabled by default per use case */
 export const USE_CASE_PRESETS: Record<UseCase, FeatureModule[]> = {
-  business: ['credits', 'absences', 'vehicles', 'analytics', 'team_view', 'booking_types', 'invoices', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'rich_empty_states', 'onboarding_hints', 'themes', 'history'],
-  residential: ['vehicles', 'booking_types', 'self_registration', 'generative_bg', 'micro_animations', 'rich_empty_states', 'themes', 'history'],
-  personal: ['vehicles', 'booking_types', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'themes', 'history'],
+  business: ['credits', 'absences', 'vehicles', 'analytics', 'team_view', 'booking_types', 'invoices', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'rich_empty_states', 'onboarding_hints', 'themes', 'history', 'geofence'],
+  residential: ['vehicles', 'booking_types', 'self_registration', 'generative_bg', 'micro_animations', 'rich_empty_states', 'themes', 'history', 'geofence'],
+  personal: ['vehicles', 'booking_types', 'generative_bg', 'micro_animations', 'fab_quick_actions', 'themes', 'history', 'geofence'],
 };
 
 const STORAGE_KEY = 'parkhub_features';
