@@ -6,11 +6,11 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.2.0-brightgreen.svg?style=flat-square" alt="v2.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.5.0-brightgreen.svg?style=flat-square" alt="v2.5.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
-  <img src="https://img.shields.io/badge/Tests-1390%2B-success.svg?style=flat-square" alt="1390+ tests">
+  <img src="https://img.shields.io/badge/Tests-1620%2B-success.svg?style=flat-square" alt="1620+ tests">
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -67,11 +67,15 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ## Features
 
-### v2.2.0 Highlights
+### v2.5.0 Highlights
 
-- **Glass morphism UI** -- Bento grid dashboard with animated counters and frosted-glass cards
+- **6 switchable themes** -- Classic, Glass, Bento, Brutalist, Neon, Warm with instant CSS-variable switching
+- **httpOnly cookie auth** -- XSS-proof authentication with SameSite=Lax and CSRF protection
+- **OAuth/Social login** -- Self-service Google + GitHub OAuth (users configure their own apps)
+- **Glass morphism UI** -- Bento grid dashboard with animated counters, spring physics, frosted-glass cards
 - **2FA/TOTP authentication** -- QR code enrollment, backup codes, per-account enable/disable
-- **28 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **30 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
 - **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
 - **Community translations** -- 10 languages with proposal voting and admin review
 
@@ -89,11 +93,18 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ### Security
 
-- Argon2id password hashing
+- **httpOnly cookie auth** with SameSite=Lax (XSS-proof, Bearer fallback for APIs)
+- Argon2id password hashing (wrapped in spawn_blocking)
 - Optional AES-256-GCM database encryption at rest
 - Auto-generated TLS 1.3 certificates (rustls, no OpenSSL)
+- Constant-time token comparison (subtle crate)
 - IP-based rate limiting (5 login/min, 100 req/s global)
-- CSP + HSTS + security headers
+- Nonce-based CSP + HSTS + security headers
+- Input length validation on all endpoints
+- Password change invalidates other sessions
+- Login history tracking with IP/user-agent
+- Session management (list/revoke active tokens)
+- API key authentication support
 - 4 MiB request body limit
 - Complete audit log
 
@@ -117,7 +128,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
                     │     React 19 + Astro 6 SPA      │
                     │   TypeScript · Tailwind CSS 4    │
                     └───────────────┬─────────────────┘
-                                    │ Bearer Token (JWT-style)
+                                    │ httpOnly Cookie + Bearer Token
                     ┌───────────────▼─────────────────┐
                     │       Axum 0.8 HTTP Server       │
                     │   /api/v1/*  · /swagger-ui       │
@@ -169,6 +180,8 @@ ParkHub uses Cargo feature flags to let you build only the modules you need. The
 | `mod-recommendations` | Smart slot recommendation engine |
 | `mod-translations` | Community translation management |
 | `mod-social` | Social features |
+| `mod-themes` | 6 switchable design themes |
+| `mod-oauth` | OAuth/Social login (Google, GitHub) |
 | `gui` | Slint desktop GUI with system tray |
 | `headless` | Server-only mode (no GUI dependencies) |
 
@@ -196,7 +209,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## Testing
 
-**1,390+ tests** across Rust backend (505), React frontend (401), and PHP sibling edition (484), plus Playwright E2E and Maestro mobile flows. Clippy runs in pedantic + nursery mode with zero warnings.
+**1,620+ tests** across Rust backend (740+), React frontend (430+), and headless integration tests (460+). Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility >= 95, performance >= 90.
 
 ```bash
 cargo test --workspace           # Rust backend
@@ -216,6 +229,10 @@ All configuration via environment variables or `config.toml`. Key settings:
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Email notifications |
 | `PARKHUB_ADMIN_PASSWORD` | Set admin password (auto-generated if omitted) |
 | `DEMO_MODE=true` | Enable demo overlay with 6-hour auto-reset |
+| `OAUTH_GOOGLE_CLIENT_ID` | Google OAuth client ID (free at console.cloud.google.com) |
+| `OAUTH_GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `OAUTH_GITHUB_CLIENT_ID` | GitHub OAuth client ID (free at github.com/settings/developers) |
+| `OAUTH_GITHUB_CLIENT_SECRET` | GitHub OAuth client secret |
 | `RUST_LOG=info` | Log level |
 
 Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
