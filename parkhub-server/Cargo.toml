@@ -44,7 +44,6 @@ uuid.workspace = true
 # Security - TLS certificates
 rcgen.workspace = true
 rustls.workspace = true
-rustls-pemfile.workspace = true
 argon2 = { version = "0.5", features = ["std", "rand"] }
 rand_core = { version = "0.9", features = ["os_rng"] }  # updated from 0.6; getrandom renamed to os_rng in 0.9
 axum-server = { version = "0.8", features = ["tls-rustls"] }  # updated from 0.7 (matches axum 0.8)
