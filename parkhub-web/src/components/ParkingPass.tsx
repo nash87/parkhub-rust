@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, DownloadSimple, Printer } from '@phosphor-icons/react';
 import type { Booking } from '../api/client';
+import { getInMemoryToken } from '../api/client';
 import { format } from 'date-fns';
 
 interface ParkingPassProps {
@@ -15,10 +16,14 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('parkhub_token');
+    const token = getInMemoryToken();
     const BASE_URL = import.meta.env?.VITE_API_URL || '';
     fetch(`${BASE_URL}/api/v1/bookings/${booking.id}/qr`, {
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to load pass');

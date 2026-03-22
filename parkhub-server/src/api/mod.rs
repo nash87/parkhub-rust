@@ -139,7 +139,7 @@ use announcements::{
     admin_create_announcement, admin_delete_announcement, admin_list_announcements,
     admin_update_announcement, get_active_announcements,
 };
-use auth::{forgot_password, login, refresh_token, register, reset_password};
+use auth::{forgot_password, login, logout, refresh_token, register, reset_password};
 #[cfg(feature = "mod-calendar")]
 use calendar::{calendar_events, user_calendar_ics};
 #[cfg(feature = "mod-credits")]
@@ -374,6 +374,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(reset_pw_limiter.clone(), req, next)
         }));
+
+    // POST /api/v1/auth/logout — clears httpOnly cookie, invalidates session
+    let logout_route = Router::new()
+        .route("/api/v1/auth/logout", post(logout));
 
     // GET /api/v1/bookings/:id/qr — 10 requests per minute per IP (QR pass generation)
     #[cfg(feature = "mod-qr")]
@@ -989,6 +993,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .merge(forgot_route)
         .merge(refresh_route)
         .merge(reset_password_route)
+        .merge(logout_route)
         .merge(demo_routes)
         .merge(protected_routes);
 
@@ -1090,9 +1095,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                     header::ACCEPT,
                     HeaderName::from_static("x-request-id"),
                     HeaderName::from_static("x-api-key"),
+                    HeaderName::from_static("x-requested-with"),
                 ])
                 .expose_headers([HeaderName::from_static("x-request-id")])
-                .allow_credentials(false),
+                .allow_credentials(true),
         )
         // Assign a unique x-request-id to every inbound request (UUID v4)
         .layer(SetRequestIdLayer::new(x_request_id, MakeRequestUuid))
@@ -1292,14 +1298,31 @@ async fn auth_middleware(
         ));
     }
 
-    // Extract bearer token
-    let auth_header = request
+    // Extract token: prefer Authorization header, fall back to httpOnly cookie.
+    // This allows both API clients (Bearer header) and browser SPAs (cookie) to
+    // authenticate. Header takes precedence when both are present.
+    let bearer_token: Option<String> = request
         .headers()
         .get(header::AUTHORIZATION)
-        .and_then(|h| h.to_str().ok());
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(String::from);
 
-    let token = match auth_header {
-        Some(h) if h.starts_with("Bearer ") => &h[7..],
+    let cookie_token: Option<String> = request
+        .headers()
+        .get(header::COOKIE)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|cookies| {
+            cookies.split(';').find_map(|c| {
+                let c = c.trim();
+                c.strip_prefix(&format!("{}=", auth::AUTH_COOKIE_NAME))
+                    .map(std::string::ToString::to_string)
+            })
+        });
+
+    let is_cookie_auth = bearer_token.is_none() && cookie_token.is_some();
+    let token_owned = match bearer_token.or(cookie_token) {
+        Some(t) if !t.is_empty() => t,
         _ => {
             return Err((
                 StatusCode::UNAUTHORIZED,
@@ -1310,6 +1333,28 @@ async fn auth_middleware(
             ));
         }
     };
+    let token = token_owned.as_str();
+
+    // CSRF protection: when authenticating via cookie, require the
+    // X-Requested-With header. This ensures the request was made via
+    // JavaScript (which triggers CORS preflight) rather than a plain
+    // form submission from a malicious site.
+    if is_cookie_auth {
+        let has_csrf_header = request
+            .headers()
+            .get("x-requested-with")
+            .and_then(|v| v.to_str().ok())
+            .is_some();
+        if !has_csrf_header {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ApiResponse::error(
+                    "CSRF_VALIDATION_FAILED",
+                    "X-Requested-With header required for cookie authentication",
+                )),
+            ));
+        }
+    }
 
     // Validate session
     let state_guard = state.read().await;
