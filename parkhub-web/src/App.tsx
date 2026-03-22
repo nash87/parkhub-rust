@@ -48,6 +48,7 @@ const AdminUsersPage = lazy(() => import('./views/AdminUsers'), 'AdminUsersPage'
 const AdminAnnouncementsPage = lazy(() => import('./views/AdminAnnouncements'), 'AdminAnnouncementsPage');
 const AdminLotsPage = lazy(() => import('./views/AdminLots'), 'AdminLotsPage');
 const AdminReportsPage = lazy(() => import('./views/AdminReports'), 'AdminReportsPage');
+const AdminAnalyticsPage = lazy(() => import('./views/AdminAnalytics'), 'AdminAnalyticsPage');
 const FavoritesPage = lazy(() => import('./views/Favorites'), 'FavoritesPage');
 const TranslationsPage = lazy(() => import('./views/Translations'), 'TranslationsPage');
 const AdminTranslationsPage = lazy(() => import('./views/AdminTranslations'), 'AdminTranslationsPage');
@@ -131,6 +132,7 @@ function AnimatedRoutes() {
             <Route path="lots" element={<SuspenseRoute><AdminLotsPage /></SuspenseRoute>} />
             <Route path="announcements" element={<SuspenseRoute><AdminAnnouncementsPage /></SuspenseRoute>} />
             <Route path="reports" element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
+            <Route path="analytics" element={<SuspenseRoute><AdminAnalyticsPage /></SuspenseRoute>} />
             <Route path="translations" element={<SuspenseRoute><AdminTranslationsPage /></SuspenseRoute>} />
           </Route>
         </Route>

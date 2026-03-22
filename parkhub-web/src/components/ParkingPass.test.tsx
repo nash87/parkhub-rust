@@ -6,7 +6,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallback?: string) => {
       const map: Record<string, string> = {
         'pass.title': 'Parking Pass',
         'pass.lot': 'Parking Lot',
@@ -16,9 +16,22 @@ vi.mock('react-i18next', () => ({
         'pass.download': 'Download QR Pass',
         'pass.qrAlt': 'QR code parking pass',
         'pass.loadError': 'Could not load parking pass',
+        'pass.activeSession': 'Active Session',
+        'pass.assignedSlot': 'Assigned Slot',
+        'pass.location': 'Location',
+        'pass.validFrom': 'Valid From',
+        'pass.expires': 'Expires',
+        'pass.navigateToSlot': 'Navigate to Slot',
+        'pass.extend': 'Extend',
+        'pass.cancel': 'Cancel',
+        'pass.tabPasses': 'Passes',
+        'pass.tabMap': 'Map',
+        'pass.tabHistory': 'History',
+        'pass.tabProfile': 'Profile',
+        'pass.print': 'Print Pass',
         'common.close': 'Close',
       };
-      return map[key] || key;
+      return map[key] || (typeof fallback === 'string' ? fallback : key);
     },
     i18n: { language: 'en' },
   }),
@@ -28,6 +41,13 @@ vi.mock('@phosphor-icons/react', () => ({
   X: (props: any) => <span data-testid="icon-x" {...props} />,
   DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
   Printer: (props: any) => <span data-testid="icon-printer" {...props} />,
+  NavigationArrow: (props: any) => <span data-testid="icon-nav" {...props} />,
+  ClockCounterClockwise: (props: any) => <span data-testid="icon-extend" {...props} />,
+  XCircle: (props: any) => <span data-testid="icon-xcircle" {...props} />,
+  Ticket: (props: any) => <span data-testid="icon-ticket" {...props} />,
+  MapTrifold: (props: any) => <span data-testid="icon-map" {...props} />,
+  ClockClockwise: (props: any) => <span data-testid="icon-history" {...props} />,
+  UserCircle: (props: any) => <span data-testid="icon-user" {...props} />,
 }));
 
 vi.mock('date-fns', () => ({
@@ -77,7 +97,7 @@ describe('ParkingPass', () => {
 
   it('renders download button', () => {
     render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
-    expect(screen.getByText('Download QR Pass')).toBeInTheDocument();
+    expect(screen.getByLabelText('Download QR Pass')).toBeInTheDocument();
   });
 
   it('calls onClose when backdrop is clicked', () => {

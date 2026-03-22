@@ -12,7 +12,7 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallback?: string) => {
       const map: Record<string, string> = {
         'admin.title': 'Administration',
         'admin.subtitle': 'Manage your ParkHub instance',
@@ -23,8 +23,9 @@ vi.mock('react-i18next', () => ({
         'admin.announcements': 'Announcements',
         'admin.reports': 'Reports',
         'admin.translations': 'Translations',
+        'analytics.title': 'Analytics',
       };
-      return map[key] || key;
+      return map[key] || (typeof fallback === 'string' ? fallback : key);
     },
   }),
 }));
@@ -43,6 +44,7 @@ vi.mock('@phosphor-icons/react', () => ({
   Users: (props: any) => <span data-testid="icon-users" {...props} />,
   Megaphone: (props: any) => <span data-testid="icon-megaphone" {...props} />,
   ChartLine: (props: any) => <span data-testid="icon-chart-line" {...props} />,
+  ChartPieSlice: (props: any) => <span data-testid="icon-chart-pie" {...props} />,
   MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
   Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
 }));
@@ -68,6 +70,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Parking Lots')).toBeInTheDocument();
     expect(screen.getByText('Announcements')).toBeInTheDocument();
     expect(screen.getByText('Reports')).toBeInTheDocument();
+    expect(screen.getByText('Analytics')).toBeInTheDocument();
     expect(screen.getByText('Translations')).toBeInTheDocument();
   });
 
@@ -79,6 +82,7 @@ describe('AdminPage', () => {
     expect(screen.getByText('Parking Lots').closest('a')).toHaveAttribute('href', '/admin/lots');
     expect(screen.getByText('Announcements').closest('a')).toHaveAttribute('href', '/admin/announcements');
     expect(screen.getByText('Reports').closest('a')).toHaveAttribute('href', '/admin/reports');
+    expect(screen.getByText('Analytics').closest('a')).toHaveAttribute('href', '/admin/analytics');
     expect(screen.getByText('Translations').closest('a')).toHaveAttribute('href', '/admin/translations');
   });
 

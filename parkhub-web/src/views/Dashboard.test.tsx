@@ -11,6 +11,14 @@ vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: any) => <a href={to} {...props}>{children}</a>,
 }));
 
+vi.mock('react-hot-toast', () => {
+  const toast = Object.assign(
+    (msg: string) => msg,
+    { success: (msg: string) => msg, error: (msg: string) => msg },
+  );
+  return { default: toast };
+});
+
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
     user: {
@@ -77,6 +85,11 @@ vi.mock('@phosphor-icons/react', () => ({
   ArrowRight: (props: any) => <span data-testid="icon-arrow-right" {...props} />,
   TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
   MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  Export: (props: any) => <span data-testid="icon-export" {...props} />,
+  Sliders: (props: any) => <span data-testid="icon-sliders" {...props} />,
+  Broadcast: (props: any) => <span data-testid="icon-broadcast" {...props} />,
+  ArrowUp: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
+  ArrowDown: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({
@@ -186,14 +199,15 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Garage Alpha')).toBeInTheDocument();
+      // Garage Alpha appears in both active bookings list and recent activity table
+      expect(screen.getAllByText('Garage Alpha').length).toBeGreaterThanOrEqual(1);
     });
-    // Slot number appears in both the badge and inline
+    // Slot number appears in multiple places (badge, inline, table)
     expect(screen.getAllByText('A1').length).toBeGreaterThanOrEqual(1);
     // Vehicle plate is inside a div with other text, use regex
-    expect(screen.getByText(/M-AB 123/)).toBeInTheDocument();
-    // Active status badge
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/M-AB 123/).length).toBeGreaterThanOrEqual(1);
+    // Active status badge or "In Progress" status
+    expect(screen.getAllByText(/Active|In Progress/).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders quick actions with links', async () => {
