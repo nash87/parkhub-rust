@@ -5,14 +5,15 @@
 <h1 align="center">ParkHub — Self-Hosted Parking Management</h1>
 
 <p align="center">
-  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.84%2B-orange.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust 1.84+"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v1.9.0-brightgreen.svg?style=for-the-badge" alt="v1.9.0"></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=for-the-badge&logo=react&logoColor=black" alt="React 19"></a>
-  <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=for-the-badge" alt="GDPR Compliant"></a>
-  <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=for-the-badge" alt="Compliance Audited"></a>
-  <a href="docs/SECURITY.md"><img src="https://img.shields.io/badge/OWASP-Audited-green.svg?style=for-the-badge" alt="OWASP Audited"></a>
-  <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white" alt="Docker Ready"></a>
+  <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.2.0-brightgreen.svg?style=flat-square" alt="v2.2.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
+  <img src="https://img.shields.io/badge/Tests-1390%2B-success.svg?style=flat-square" alt="1390+ tests">
+  <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
+  <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
+  <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
 </p>
 
 <p align="center">
@@ -27,20 +28,23 @@
   <a href="docs/INSTALLATION.md">Installation</a> &nbsp;·&nbsp;
   <a href="docs/API.md">API Docs</a> &nbsp;·&nbsp;
   <a href="docs/GDPR.md">GDPR Guide</a> &nbsp;·&nbsp;
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="CHANGELOG.md">Changelog</a> &nbsp;·&nbsp;
+  <a href="SECURITY.md">Security</a>
 </p>
 
 ---
 
 ## Why Self-Hosted?
 
-Most parking management SaaS costs €200–2,000/month, stores your data on US cloud infrastructure, and requires a data processing agreement just to get started.
+Most parking management SaaS costs 200--2,000 EUR/month, stores your data on US cloud infrastructure, and requires a data processing agreement just to get started.
 
-ParkHub is different. It runs on your server — a Raspberry Pi, a VPS, or your company network. Your data never leaves your premises, which means **no GDPR processor agreement needed**, no CLOUD Act exposure, and no monthly fees. The entire source code is MIT-licensed and auditable.
+ParkHub is different. It runs on your server -- a Raspberry Pi, a VPS, or your company network. Your data never leaves your premises, which means **no GDPR processor agreement needed**, no CLOUD Act exposure, and no monthly fees. The entire source code is MIT-licensed and auditable.
 
 ---
 
 ## Quick Start
+
+### Docker (recommended)
 
 ```bash
 git clone https://github.com/nash87/parkhub-rust.git && cd parkhub-rust
@@ -48,38 +52,50 @@ docker compose up -d
 # Open http://localhost:8080 — admin password is in the logs
 ```
 
-The first build takes 5–10 minutes (compiles Rust + React from source). After that, starts are instant.
+The first build takes 5--10 minutes (compiles Rust + React from source). After that, starts are instant.
 
-For a **single binary** without Docker:
+### Native binary
 
 ```bash
 cargo build --release --package parkhub-server --no-default-features --features headless
 ./target/release/parkhub-server --headless --unattended --port 8080
 ```
 
-**[Live Demo →](https://parkhub-rust-demo.onrender.com)** &nbsp; Login: `admin@parkhub.test` / `demo` &nbsp; (auto-resets every 6 hours)
+**[Live Demo](https://parkhub-rust-demo.onrender.com)** | Login: `admin@parkhub.test` / `demo` | (auto-resets every 6 hours)
 
 ---
 
-## What You Get
+## Features
 
-**Booking System** — Full booking lifecycle from lot selection to QR code parking pass. One-tap quick booking, recurring reservations, guest bookings without accounts, swap requests between users, waitlists for full lots, and automatic no-show release. Every booking sends email confirmations and cancellation notices via SMTP.
+### v2.2.0 Highlights
 
-**Smart Recommendations** — A heuristic scoring engine learns from usage patterns (slot frequency, lot proximity, feature preferences) and suggests the best available slots. Users can pin favorites for one-tap access.
+- **Glass morphism UI** -- Bento grid dashboard with animated counters and frosted-glass cards
+- **2FA/TOTP authentication** -- QR code enrollment, backup codes, per-account enable/disable
+- **28 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
+- **Community translations** -- 10 languages with proposal voting and admin review
 
-**Parking Lot Management** — Create multiple lots with per-floor visual slot layouts. The interactive grid editor lets admins design layouts with drag-and-drop, while users see real-time occupancy with color-coded availability.
+### Core
 
-**User & Access Control** — Four-tier RBAC (user, premium, admin, superadmin) with JWT session auth, token refresh, and self-service password reset. A credits system supports monthly quotas with per-booking deduction. Absence tracking covers homeoffice, vacation, sick leave, and team overview.
+- **Full booking lifecycle** -- One-tap quick booking, recurring reservations, guest bookings, swap requests, waitlists, automatic no-show release
+- **Visual lot editor** -- Per-floor interactive grid layouts with drag-and-drop, real-time occupancy, color-coded availability
+- **4-tier RBAC** -- User, premium, admin, superadmin with JWT session auth and token refresh
+- **Credits system** -- Monthly quotas with per-booking deduction
+- **Absence tracking** -- Homeoffice, vacation, sick leave with team overview and iCal import
+- **Admin dashboard** -- Occupancy stats, 7-day booking charts, weekday/hour heatmaps, CSV export, announcements
+- **10 languages** -- EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH with runtime hot-loading
+- **GDPR & German legal compliance** -- Art. 15/17, DDG SS5, 7 legal templates, audited for DSGVO/TTDSG/UK GDPR/CCPA/nDSG
+- **Observability** -- Prometheus metrics, OpenAPI 3.0 with 125+ endpoints at `/swagger-ui`, K8s health probes, structured tracing
 
-**Admin Dashboard** — Occupancy statistics, 7-day booking activity charts, heatmaps by weekday and hour, CSV export for bookings/users/revenue, announcements, and a full settings panel for branding, booking rules, and use-case theming (company, residential, shared parking, rental).
+### Security
 
-**Internationalization** — Ships with 10 languages (EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH). Community translation proposals with up/down voting and admin review. Approved translations are hot-loaded at runtime without restarts.
-
-**GDPR & German Legal Compliance** — Art. 15 data export, Art. 17 erasure (PII anonymized, bookings retained per §147 AO), DDG §5 Impressum, and 7 ready-to-use legal templates (Impressum, Datenschutzerklärung, AGB, AVV, Widerrufsbelehrung, Cookie-Policy, VVt). Audited for DSGVO, TTDSG, UK GDPR, CCPA, and nDSG. [Full Compliance Report →](COMPLIANCE-REPORT.md)
-
-**Security** — Argon2id password hashing, optional AES-256-GCM database encryption at rest, auto-generated TLS 1.3 certificates, IP-based rate limiting (5 login/min, 100 req/s global), CSP + security headers, 4 MiB request size limit, and a complete audit log. [Security Audit →](SECURITY-AUDIT.md)
-
-**Observability** — Prometheus metrics at `/metrics`, OpenAPI 3.0 docs at `/swagger-ui` with 125+ annotated endpoints, Kubernetes health probes (`/health/live`, `/health/ready`), and structured logging via `tracing`.
+- Argon2id password hashing
+- Optional AES-256-GCM database encryption at rest
+- Auto-generated TLS 1.3 certificates (rustls, no OpenSSL)
+- IP-based rate limiting (5 login/min, 100 req/s global)
+- CSP + HSTS + security headers
+- 4 MiB request body limit
+- Complete audit log
 
 ---
 
@@ -113,23 +129,66 @@ cargo build --release --package parkhub-server --no-default-features --features 
                           Single Rust binary (~15 MB)
 ```
 
-The entire stack — API server, database, and frontend — compiles into a **single binary**. No PostgreSQL, no Redis, no nginx. Just download and run. The React frontend is embedded via `rust-embed` and served as static files.
+The entire stack -- API server, database, and frontend -- compiles into a **single binary**. No PostgreSQL, no Redis, no nginx. Just download and run. The React frontend is embedded via `rust-embed` and served as static files.
 
 For LAN deployments, mDNS autodiscovery lets clients find the server without any DNS configuration. A desktop client (Slint UI) with system tray integration is available for Windows and macOS.
 
 ---
 
+## Module System
+
+ParkHub uses Cargo feature flags to let you build only the modules you need. The `full` feature enables everything. Use `--no-default-features --features headless` for a minimal server build, then add individual modules as needed.
+
+| Flag | Description |
+|------|-------------|
+| `mod-bookings` | Core booking lifecycle (create, cancel, check-in) |
+| `mod-vehicles` | Vehicle registry with licence plate management |
+| `mod-absences` | Homeoffice, vacation, sick leave tracking |
+| `mod-branding` | Custom logo, colors, company name |
+| `mod-import` | Bulk user import (CSV, up to 500 users) |
+| `mod-qr` | QR code generation for bookings and slots |
+| `mod-pwa` | Progressive Web App (service worker, manifest) |
+| `mod-payments` | Credits and payment processing |
+| `mod-webhooks` | Outbound webhooks with HMAC signing |
+| `mod-notifications` | In-app notification system |
+| `mod-announcements` | Admin announcements with expiry |
+| `mod-recurring` | Recurring booking patterns |
+| `mod-guest` | Guest bookings without user accounts |
+| `mod-calendar` | Calendar view and iCal export |
+| `mod-team` | Team overview and today's status |
+| `mod-settings` | Application settings management |
+| `mod-jobs` | Background job processing |
+| `mod-swap` | Booking swap requests between users |
+| `mod-waitlist` | Waitlist for fully occupied lots |
+| `mod-zones` | Per-lot zone management |
+| `mod-credits` | Monthly credit quotas |
+| `mod-email` | SMTP email notifications |
+| `mod-export` | CSV data export |
+| `mod-favorites` | Favourite slot pinning |
+| `mod-push` | Web Push notifications (VAPID) |
+| `mod-recommendations` | Smart slot recommendation engine |
+| `mod-translations` | Community translation management |
+| `mod-social` | Social features |
+| `gui` | Slint desktop GUI with system tray |
+| `headless` | Server-only mode (no GUI dependencies) |
+
+Example: build a minimal server with just bookings and email:
+
+```bash
+cargo build --release -p parkhub-server --no-default-features \
+  --features "headless,mod-bookings,mod-email"
+```
+
+---
+
 ## Deployment
 
-ParkHub runs anywhere — from a Raspberry Pi to Kubernetes.
+ParkHub runs anywhere -- from a Raspberry Pi to Kubernetes.
 
-**Docker Compose** (recommended) — `docker compose up -d` and you're done. Works on any Linux, macOS, or Windows machine with Docker installed.
-
-**Kubernetes** — Health probes, Prometheus metrics, and a Helm-ready manifest. Designed for GitOps with Flux CD.
-
-**Bare Metal** — Download the single binary, run it. No runtime dependencies. Works on x86_64 and ARM64.
-
-**Windows** — GUI installer with system tray icon and setup wizard.
+- **Docker Compose** (recommended) -- `docker compose up -d` and you're done
+- **Kubernetes** -- Health probes, Prometheus metrics, Helm-ready manifests, designed for GitOps with Flux CD
+- **Bare Metal** -- Download the single binary, run it. No runtime dependencies. x86_64 and ARM64
+- **Windows** -- GUI installer with system tray icon and setup wizard
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
@@ -137,7 +196,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## Testing
 
-**1,390 tests** across Rust backend (505), React frontend (401), and PHP sibling edition (484), plus Playwright E2E and Maestro mobile flows. Clippy runs in pedantic + nursery mode with zero warnings.
+**1,390+ tests** across Rust backend (505), React frontend (401), and PHP sibling edition (484), plus Playwright E2E and Maestro mobile flows. Clippy runs in pedantic + nursery mode with zero warnings.
 
 ```bash
 cargo test --workspace           # Rust backend
@@ -151,13 +210,23 @@ npx playwright test              # E2E
 
 All configuration via environment variables or `config.toml`. Key settings:
 
-- `PARKHUB_DB_PASSPHRASE` — Enable AES-256-GCM database encryption
-- `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` — Email notifications
-- `PARKHUB_ADMIN_PASSWORD` — Set admin password (auto-generated if omitted)
-- `DEMO_MODE=true` — Enable demo overlay with 6-hour auto-reset
-- `RUST_LOG=info` — Log level
+| Variable | Purpose |
+|----------|---------|
+| `PARKHUB_DB_PASSPHRASE` | Enable AES-256-GCM database encryption |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Email notifications |
+| `PARKHUB_ADMIN_PASSWORD` | Set admin password (auto-generated if omitted) |
+| `DEMO_MODE=true` | Enable demo overlay with 6-hour auto-reset |
+| `RUST_LOG=info` | Log level |
 
 Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+
+---
+
+## API Documentation
+
+Interactive API docs are available at `/swagger-ui` when the server is running. The OpenAPI 3.0 spec covers 125+ annotated endpoints across auth, bookings, lots, vehicles, admin, GDPR, and more.
+
+**[Live API Docs](https://parkhub-rust-demo.onrender.com/swagger-ui)**
 
 ---
 
@@ -165,20 +234,20 @@ Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 A feature-equivalent **PHP edition** (Laravel 12 + MySQL/SQLite/PostgreSQL) exists for environments where shared hosting compatibility matters. Both editions share the same React frontend and REST API surface, so they're fully interchangeable.
 
-**[nash87/parkhub-php →](https://github.com/nash87/parkhub-php)**
-
----
-
-## License
-
-MIT — see [LICENSE](LICENSE).
-
-The default build includes [Slint](https://slint.dev/) for the desktop GUI (GPL-3.0 community edition). Server/Docker builds use `--features headless` and are purely MIT. See [LICENSES.md](LICENSES.md) for the full dependency license inventory.
+**[nash87/parkhub-php](https://github.com/nash87/parkhub-php)**
 
 ---
 
 ## Contributing
 
-Contributions welcome — see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for setup and PR process.
+Contributions welcome -- see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for setup and PR process.
 
 Bug reports and feature requests: [GitHub Issues](https://github.com/nash87/parkhub-rust/issues)
+
+---
+
+## License
+
+MIT -- see [LICENSE](LICENSE).
+
+The default build includes [Slint](https://slint.dev/) for the desktop GUI (GPL-3.0 community edition). Server/Docker builds use `--features headless` and are purely MIT. See [LICENSES.md](LICENSES.md) for the full dependency license inventory.
