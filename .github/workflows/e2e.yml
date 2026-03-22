@@ -1,0 +1,79 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Informational — don't block CI on E2E failures
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Create placeholder web dist
+        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
+      - name: Build server (headless)
+        run: cargo build --release -p parkhub-server --no-default-features --features "full,headless"
+
+      - name: Start server in background
+        run: |
+          ./target/release/parkhub-server --headless --unattended --port 8081 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          # Wait for server to be ready
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+        env:
+          DEMO_MODE: "true"
+          PARKHUB_ADMIN_PASSWORD: "demo"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test --project=chromium
+        env:
+          E2E_BASE_URL: http://localhost:8081
+          CI: true
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

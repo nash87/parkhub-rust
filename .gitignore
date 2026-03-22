@@ -65,3 +65,8 @@ parkhub-web/dist/
 *.tar.gz
 parkhub-web-old/
 .gstack/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
