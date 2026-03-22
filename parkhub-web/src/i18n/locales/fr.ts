@@ -420,6 +420,7 @@ export default {
       useCaseRental: 'Location',
       useCasePersonal: 'Personnel',
       translations: 'Traductions',
+      rateLimits: 'Rate Limits',
       bulkAction: 'Action groupée',
       bulkActionConfirm: 'Êtes-vous sûr(e) de vouloir {{action}} {{count}} utilisateur(s) ?',
       bulkDeleted: '{{succeeded}}/{{total}} utilisateurs supprimés',
@@ -580,6 +581,15 @@ export default {
       instructionGoogle: 'Parametres > Ajouter un calendrier > A partir de l\'URL > coller le lien',
       instructionOutlook: 'Ajouter un calendrier > S\'abonner depuis le web > coller le lien',
       instructionApple: 'Fichier > Nouvel abonnement > coller le lien',
+    },
+    rateLimits: {
+      title: 'Rate Limits',
+      allClear: 'Aucune requete bloquee',
+      blockedTotal: '{{count}} bloquees (derniere heure)',
+      blockedHistory: 'Requetes bloquees (24h)',
+      perMinute: 'min',
+      blocked: 'bloquees',
+      now: 'maintenant',
     },
     map: {
       title: 'Carte des parkings',

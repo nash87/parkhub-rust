@@ -431,6 +431,7 @@ export default {
       useCaseRental: 'Rental',
       useCasePersonal: 'Personal',
       translations: 'Translations',
+      rateLimits: 'Rate Limits',
       bulkAction: 'Bulk Action',
       bulkActionConfirm: 'Are you sure you want to {{action}} {{count}} user(s)?',
       bulkDeleted: 'Deleted {{succeeded}}/{{total}} users',
@@ -591,6 +592,15 @@ export default {
       instructionGoogle: 'Settings > Add calendar > From URL > paste the link',
       instructionOutlook: 'Add calendar > Subscribe from web > paste the link',
       instructionApple: 'File > New Calendar Subscription > paste the link',
+    },
+    rateLimits: {
+      title: 'Rate Limits',
+      allClear: 'No blocked requests',
+      blockedTotal: '{{count}} blocked (last hour)',
+      blockedHistory: 'Blocked Requests (24h)',
+      perMinute: 'min',
+      blocked: 'blocked',
+      now: 'now',
     },
     map: {
       title: 'Parking Map',

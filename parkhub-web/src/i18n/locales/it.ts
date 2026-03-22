@@ -420,6 +420,7 @@ export default {
       useCaseRental: 'Noleggio',
       useCasePersonal: 'Personale',
       translations: 'Traduzioni',
+      rateLimits: 'Rate Limits',
       bulkAction: 'Azione di massa',
       bulkActionConfirm: 'Sei sicuro di voler {{action}} {{count}} utente/i?',
       bulkDeleted: '{{succeeded}}/{{total}} utenti eliminati',
@@ -580,6 +581,15 @@ export default {
       instructionGoogle: 'Impostazioni > Aggiungi calendario > Da URL > incolla il link',
       instructionOutlook: 'Aggiungi calendario > Iscriviti dal web > incolla il link',
       instructionApple: 'File > Nuovo abbonamento calendario > incolla il link',
+    },
+    rateLimits: {
+      title: 'Rate Limits',
+      allClear: 'Nessuna richiesta bloccata',
+      blockedTotal: '{{count}} bloccate (ultima ora)',
+      blockedHistory: 'Richieste bloccate (24h)',
+      perMinute: 'min',
+      blocked: 'bloccate',
+      now: 'adesso',
     },
     map: {
       title: 'Mappa parcheggi',
