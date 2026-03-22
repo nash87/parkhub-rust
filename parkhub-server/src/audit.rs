@@ -50,7 +50,14 @@ pub enum AuditEventType {
     // Settings
     SettingsChanged,
 
+    // Payments
+    PaymentCompleted,
+
     // Security
+    TwoFactorEnabled,
+    TwoFactorDisabled,
+    ApiKeyCreated,
+    ApiKeyRevoked,
     RateLimitExceeded,
     InvalidTokenUsed,
     UnauthorizedAccess,
@@ -219,6 +226,9 @@ impl AuditEntry {
             user_id: self.user_id,
             username: self.username.clone(),
             details: self.details.as_ref().map(std::string::ToString::to_string),
+            target_type: self.resource_type.clone(),
+            target_id: self.resource_id.clone(),
+            ip_address: self.ip_address.map(|ip| ip.to_string()),
         };
         if let Err(e) = db.save_audit_log(&log_entry).await {
             tracing::warn!("Failed to persist audit entry: {e}");
@@ -409,6 +419,12 @@ mod tests {
             AuditEventType::LotDeleted,
             AuditEventType::SlotStatusChanged,
             AuditEventType::ConfigChanged,
+            AuditEventType::SettingsChanged,
+            AuditEventType::PaymentCompleted,
+            AuditEventType::TwoFactorEnabled,
+            AuditEventType::TwoFactorDisabled,
+            AuditEventType::ApiKeyCreated,
+            AuditEventType::ApiKeyRevoked,
             AuditEventType::RateLimitExceeded,
             AuditEventType::InvalidTokenUsed,
             AuditEventType::UnauthorizedAccess,

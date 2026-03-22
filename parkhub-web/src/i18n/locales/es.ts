@@ -422,6 +422,7 @@ export default {
       translations: 'Traducciones',
       rateLimits: 'Rate Limits',
       tenants: 'Inquilinos',
+      auditLog: 'Registro de auditoria',
       bulkAction: 'Acción masiva',
       bulkActionConfirm: '¿Seguro que quieres {{action}} {{count}} usuario(s)?',
       bulkDeleted: '{{succeeded}}/{{total}} usuarios eliminados',
@@ -592,6 +593,7 @@ export default {
       blocked: 'bloqueadas',
       now: 'ahora',
     },
+    auditLog: { title: 'Registro de auditoria', totalEntries: '{{count}} entradas', exportCsv: 'Exportar CSV', filters: 'Filtros', allActions: 'Todas las acciones', searchUser: 'Buscar usuario...', filterAction: 'Filtrar por accion', dateFrom: 'Desde', dateTo: 'Hasta', colTime: 'Hora', colAction: 'Accion', colUser: 'Usuario', colTarget: 'Objetivo', colIp: 'IP', colDetails: 'Detalles', empty: 'No se encontraron entradas de auditoria', pageInfo: 'Pagina {{page}} de {{total}}' },
     tenants: { title: 'Inquilinos', create: 'Crear inquilino', name: 'Nombre', domain: 'Dominio', switch: 'Cambiar inquilino', empty: 'No hay inquilinos configurados.', editTitle: 'Editar inquilino', created: 'Inquilino creado', updated: 'Inquilino actualizado', users: 'usuarios', lots: 'parkings', brandColor: 'Color de marca' },
     map: {
       title: 'Mapa de aparcamientos',

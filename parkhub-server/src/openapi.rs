@@ -294,6 +294,7 @@ use crate::{
         crate::api::admin_heatmap,
         crate::api::admin_dashboard_charts,
         crate::api::admin_audit_log,
+        crate::api::admin_audit_log_export,
         crate::api::admin_reset,
         crate::api::get_impressum_admin,
         crate::api::update_impressum,

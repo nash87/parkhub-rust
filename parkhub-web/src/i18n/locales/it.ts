@@ -422,6 +422,7 @@ export default {
       translations: 'Traduzioni',
       rateLimits: 'Rate Limits',
       tenants: 'Tenant',
+      auditLog: 'Registro di audit',
       bulkAction: 'Azione di massa',
       bulkActionConfirm: 'Sei sicuro di voler {{action}} {{count}} utente/i?',
       bulkDeleted: '{{succeeded}}/{{total}} utenti eliminati',
@@ -592,6 +593,7 @@ export default {
       blocked: 'bloccate',
       now: 'adesso',
     },
+    auditLog: { title: 'Registro di audit', totalEntries: '{{count}} voci', exportCsv: 'Esporta CSV', filters: 'Filtri', allActions: 'Tutte le azioni', searchUser: 'Cerca utente...', filterAction: 'Filtra per azione', dateFrom: 'Da', dateTo: 'A', colTime: 'Ora', colAction: 'Azione', colUser: 'Utente', colTarget: 'Obiettivo', colIp: 'IP', colDetails: 'Dettagli', empty: 'Nessuna voce di audit trovata', pageInfo: 'Pagina {{page}} di {{total}}' },
     tenants: { title: 'Tenant', create: 'Crea tenant', name: 'Nome', domain: 'Dominio', switch: 'Cambia tenant', empty: 'Nessun tenant configurato.', editTitle: 'Modifica tenant', created: 'Tenant creato', updated: 'Tenant aggiornato', users: 'utenti', lots: 'parcheggi', brandColor: 'Colore del marchio' },
     map: {
       title: 'Mappa parcheggi',

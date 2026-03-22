@@ -422,6 +422,7 @@ export default {
       translations: 'Traductions',
       rateLimits: 'Rate Limits',
       tenants: 'Locataires',
+      auditLog: 'Journal d\'audit',
       bulkAction: 'Action groupée',
       bulkActionConfirm: 'Êtes-vous sûr(e) de vouloir {{action}} {{count}} utilisateur(s) ?',
       bulkDeleted: '{{succeeded}}/{{total}} utilisateurs supprimés',
@@ -592,6 +593,7 @@ export default {
       blocked: 'bloquees',
       now: 'maintenant',
     },
+    auditLog: { title: 'Journal d\'audit', totalEntries: '{{count}} entrees', exportCsv: 'Exporter CSV', filters: 'Filtres', allActions: 'Toutes les actions', searchUser: 'Rechercher utilisateur...', filterAction: 'Filtrer par action', dateFrom: 'Du', dateTo: 'Au', colTime: 'Heure', colAction: 'Action', colUser: 'Utilisateur', colTarget: 'Cible', colIp: 'IP', colDetails: 'Details', empty: 'Aucune entree d\'audit trouvee', pageInfo: 'Page {{page}} sur {{total}}' },
     tenants: { title: 'Locataires', create: 'Creer un locataire', name: 'Nom', domain: 'Domaine', switch: 'Changer de locataire', empty: 'Aucun locataire configure.', editTitle: 'Modifier le locataire', created: 'Locataire cree', updated: 'Locataire mis a jour', users: 'utilisateurs', lots: 'parkings', brandColor: 'Couleur de marque' },
     map: {
       title: 'Carte des parkings',
