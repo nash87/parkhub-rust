@@ -60,6 +60,7 @@ export default {
       credits: 'Créditos',
       team: 'Equipa',
       calendar: 'Calendário',
+      map: 'Mapa',
       notifications: 'Notificações',
       translations: 'Traduções',
       profile: 'Perfil',
@@ -505,6 +506,7 @@ export default {
       bookingConfirm: 'Confirmações de reserva', bookingReminder: 'Lembretes de reserva', bookingCancelled: 'Cancelamentos de reserva', stub: 'Em breve', prefsSaved: 'Preferências de notificação guardadas', prefsSaveFailed: 'Falha ao guardar preferências',
     },
     calendar: { title: 'Calendário', noBookings: 'Sem reservas neste dia', selectDay: 'Clique num dia para ver as reservas', events: 'eventos', previousMonth: 'Mês anterior', nextMonth: 'Mês seguinte' },
+    map: { title: 'Mapa de estacionamentos', subtitle: 'Encontre estacionamentos disponiveis perto de si', bookNow: 'Reservar agora', available: 'Disponivel', noLots: 'Nenhum estacionamento com dados de localizacao disponivel', closed: 'Fechado' },
     team: { title: 'Equipa', subtitle: 'Ver quem está no escritório hoje', inOffice: 'No escritório', homeOffice: 'Teletrabalho', vacation: 'De férias', noMembers: 'Nenhum membro da equipa encontrado', today: 'Ausente hoje', noAbsencesToday: 'Sem ausências hoje', upcoming: 'Ausências próximas', noUpcoming: 'Sem ausências próximas' },
     profile: {
       title: 'Perfil', subtitle: 'Gerencie as definições da sua conta', saved: 'Perfil guardado', updated: 'Perfil atualizado', name: 'Nome', email: 'E-mail',

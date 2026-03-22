@@ -44,6 +44,7 @@ const DemoOverlay = lazy(() => import('./components/DemoOverlay'), 'DemoOverlay'
 const InstallPrompt = lazy(() => import('./components/InstallPrompt'), 'InstallPrompt');
 
 // Admin pages
+const MapViewPage = lazy(() => import('./views/MapView'), 'MapViewPage');
 const AdminPage = lazy(() => import('./views/Admin'), 'AdminPage');
 const AdminSettingsPage = lazy(() => import('./views/AdminSettings'), 'AdminSettingsPage');
 const AdminUsersPage = lazy(() => import('./views/AdminUsers'), 'AdminUsersPage');
@@ -128,6 +129,7 @@ function AnimatedRoutes() {
           <Route path="team" element={<SuspenseRoute><TeamPage /></SuspenseRoute>} />
           <Route path="notifications" element={<SuspenseRoute><NotificationsPage /></SuspenseRoute>} />
           <Route path="calendar" element={<SuspenseRoute><CalendarPage /></SuspenseRoute>} />
+          <Route path="map" element={<SuspenseRoute><MapViewPage /></SuspenseRoute>} />
           <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
           <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
             <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
