@@ -420,6 +420,7 @@ export default {
       useCaseRental: 'Alquiler',
       useCasePersonal: 'Personal',
       translations: 'Traducciones',
+      rateLimits: 'Rate Limits',
       bulkAction: 'Acción masiva',
       bulkActionConfirm: '¿Seguro que quieres {{action}} {{count}} usuario(s)?',
       bulkDeleted: '{{succeeded}}/{{total}} usuarios eliminados',
@@ -580,6 +581,15 @@ export default {
       instructionGoogle: 'Ajustes > Anadir calendario > Desde URL > pegar el enlace',
       instructionOutlook: 'Anadir calendario > Suscribirse desde web > pegar el enlace',
       instructionApple: 'Archivo > Nueva suscripcion al calendario > pegar el enlace',
+    },
+    rateLimits: {
+      title: 'Rate Limits',
+      allClear: 'Sin solicitudes bloqueadas',
+      blockedTotal: '{{count}} bloqueadas (ultima hora)',
+      blockedHistory: 'Solicitudes bloqueadas (24h)',
+      perMinute: 'min',
+      blocked: 'bloqueadas',
+      now: 'ahora',
     },
     map: {
       title: 'Mapa de aparcamientos',
