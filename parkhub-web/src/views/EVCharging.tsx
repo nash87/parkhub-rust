@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Lightning, Play, Stop, Question, Clock, Battery } from '@phosphor-icons/react';
+import { Lightning, Play, Stop, Question, Clock, BatteryCharging } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -156,7 +156,7 @@ export function EVChargingPage() {
                   </span>
                 </div>
                 <div className="space-y-1 text-sm text-surface-500 mb-3">
-                  <div className="flex items-center gap-1"><Battery className="w-4 h-4" />{connectorLabels[ch.connector_type]} - {ch.power_kw} kW</div>
+                  <div className="flex items-center gap-1"><BatteryCharging className="w-4 h-4" />{connectorLabels[ch.connector_type]} - {ch.power_kw} kW</div>
                   {ch.location_hint && <div>{ch.location_hint}</div>}
                 </div>
                 {ch.status === 'available' && (
