@@ -47,6 +47,9 @@ pub enum AuditEventType {
     SlotStatusChanged,
     ConfigChanged,
 
+    // Settings
+    SettingsChanged,
+
     // Security
     RateLimitExceeded,
     InvalidTokenUsed,
@@ -142,6 +145,11 @@ impl AuditEntryBuilder {
     pub fn details(mut self, details: serde_json::Value) -> Self {
         self.details = Some(details);
         self
+    }
+
+    /// Convenience: set a simple string detail.
+    pub fn detail(self, message: &str) -> Self {
+        self.details(serde_json::json!({"message": message}))
     }
 
     pub const fn success(mut self, success: bool) -> Self {

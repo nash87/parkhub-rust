@@ -73,6 +73,7 @@ pub mod admin;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 pub mod auth;
+pub mod security;
 #[cfg(feature = "mod-bookings")]
 mod bookings;
 #[cfg(feature = "mod-branding")]
@@ -491,7 +492,23 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(get_user_preferences).put(update_user_preferences),
         )
         // Booking checkin
-        .route("/api/v1/bookings/{id}/checkin", post(booking_checkin));
+        .route("/api/v1/bookings/{id}/checkin", post(booking_checkin))
+        // ── Security: 2FA ──
+        .route("/api/v1/auth/2fa/setup", post(security::two_factor_setup))
+        .route("/api/v1/auth/2fa/verify", post(security::two_factor_verify))
+        .route("/api/v1/auth/2fa/disable", post(security::two_factor_disable))
+        .route("/api/v1/auth/2fa/status", get(security::two_factor_status))
+        // ── Security: Login history ──
+        .route("/api/v1/auth/login-history", get(security::get_login_history))
+        // ── Security: Session management ──
+        .route("/api/v1/auth/sessions", get(security::list_sessions))
+        .route("/api/v1/auth/sessions/{id}", delete(security::revoke_session))
+        // ── Security: API keys ──
+        .route(
+            "/api/v1/auth/api-keys",
+            get(security::list_api_keys).post(security::create_api_key),
+        )
+        .route("/api/v1/auth/api-keys/{id}", delete(security::revoke_api_key));
 
     // ── Admin routes (guarded by admin_middleware) ────────────────────────
     // All /api/v1/admin/* routes are grouped under a shared admin_middleware
@@ -535,6 +552,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(admin_get_privacy).put(admin_update_privacy),
         )
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        // ── Security: Admin password policy ──
+        .route(
+            "/api/v1/admin/settings/password-policy",
+            get(security::get_password_policy).put(security::update_password_policy),
+        )
+        // ── Security: Admin login history ──
+        .route(
+            "/api/v1/admin/users/{id}/login-history",
+            get(security::admin_get_login_history),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             admin_middleware,
@@ -1019,6 +1046,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                     header::CONTENT_TYPE,
                     header::ACCEPT,
                     HeaderName::from_static("x-request-id"),
+                    HeaderName::from_static("x-api-key"),
                 ])
                 .expose_headers([HeaderName::from_static("x-request-id")])
                 .allow_credentials(false),
@@ -1192,6 +1220,35 @@ async fn auth_middleware(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    // Check for X-API-Key header first (alternative to Bearer token)
+    if let Some(api_key) = request
+        .headers()
+        .get("x-api-key")
+        .and_then(|h| h.to_str().ok())
+    {
+        let state_guard = state.read().await;
+        if let Some(user_id) = security::validate_api_key(&state_guard.db, api_key).await {
+            // Verify user is still active
+            match state_guard.db.get_user(&user_id.to_string()).await {
+                Ok(Some(u)) if u.is_active => {
+                    drop(state_guard);
+                    request.extensions_mut().insert(AuthUser { user_id });
+                    return Ok(next.run(request).await);
+                }
+                _ => {
+                    return Err((
+                        StatusCode::UNAUTHORIZED,
+                        Json(ApiResponse::error("UNAUTHORIZED", "Invalid API key")),
+                    ));
+                }
+            }
+        }
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::error("UNAUTHORIZED", "Invalid API key")),
+        ));
+    }
+
     // Extract bearer token
     let auth_header = request
         .headers()
