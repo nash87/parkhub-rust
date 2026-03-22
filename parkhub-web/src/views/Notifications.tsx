@@ -41,8 +41,9 @@ export function NotificationsPage() {
     try {
       const res = await api.getNotifications();
       if (res.success && res.data) setNotifications(res.data);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+    } catch {
+      toast.error(t('common.error'));
+    } finally { setLoading(false); }
   }
 
   async function markAsRead(id: string) {

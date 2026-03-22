@@ -134,7 +134,7 @@ export function AdminSettingsPage() {
                 value={settings.company_name}
                 onChange={e => update('company_name', e.target.value)}
                 className="input"
-                placeholder="ParkHub"
+                placeholder={t('admin.companyName')}
               />
             </div>
 

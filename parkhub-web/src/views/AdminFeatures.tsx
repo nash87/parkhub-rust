@@ -125,7 +125,7 @@ export function AdminFeaturesPage() {
                     <button
                       onClick={() => toggle(mod.id)}
                       className="flex-shrink-0 cursor-pointer"
-                      aria-label={`Toggle ${mod.id}`}
+                      aria-label={t(`features.modules.${mod.id}.name`)}
                     >
                       {enabled ? (
                         <ToggleRight weight="fill" className="w-8 h-8 text-accent-500 transition-colors" />
@@ -155,7 +155,7 @@ export function AdminFeaturesPage() {
                       className={`flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-md transition-colors cursor-pointer ${
                         helpOpen ? 'bg-accent-100 dark:bg-accent-900/20 text-accent-600' : 'text-surface-400 hover:text-surface-600 dark:hover:text-surface-300'
                       }`}
-                      aria-label="More info"
+                      aria-label={t('common.info', 'More info')}
                     >
                       <Info weight={helpOpen ? 'fill' : 'regular'} className="w-4.5 h-4.5" />
                     </button>

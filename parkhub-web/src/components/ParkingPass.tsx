@@ -16,7 +16,7 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
 
   useEffect(() => {
     const token = localStorage.getItem('parkhub_token');
-    const BASE_URL = (import.meta as any).env?.VITE_API_URL || '';
+    const BASE_URL = import.meta.env?.VITE_API_URL || '';
     fetch(`${BASE_URL}/api/v1/bookings/${booking.id}/qr`, {
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     })
