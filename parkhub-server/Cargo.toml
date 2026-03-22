@@ -164,6 +164,7 @@ full = [
     "mod-ev-charging",
     "mod-history",
     "mod-geofence",
+    "mod-waitlist-ext",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -218,6 +219,7 @@ mod-visitors = []
 mod-ev-charging = []
 mod-history = []
 mod-geofence = []
+mod-waitlist-ext = []
 
 [dev-dependencies]
 tempfile = "3"
