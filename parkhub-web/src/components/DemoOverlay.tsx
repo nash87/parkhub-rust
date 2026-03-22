@@ -106,7 +106,6 @@ export function DemoOverlay() {
         <button
           onClick={() => setCollapsed(!collapsed)}
           aria-expanded={!collapsed}
-          aria-label={t('demo.badge', 'Demo mode overlay')}
           className="flex items-center gap-3 px-4 py-3 min-w-[200px]"
         >
           {/* Demo badge */}
@@ -122,7 +121,7 @@ export function DemoOverlay() {
           </span>
 
           {/* Viewers */}
-          <span className="flex items-center gap-1 text-xs text-surface-500">
+          <span className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-400">
             <Eye weight="regular" className="w-3.5 h-3.5" />
             {demo.viewers}
           </span>
@@ -155,7 +154,7 @@ export function DemoOverlay() {
                       transition={{ type: 'spring', stiffness: 100 }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-surface-500">
+                  <span className="text-xs font-medium text-surface-600 dark:text-surface-400">
                     {t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold })}
                   </span>
                 </div>
@@ -175,7 +174,7 @@ export function DemoOverlay() {
 
                 {/* Auto-reset info */}
                 {(lastReset || nextReset) && (
-                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-500 dark:text-surface-400 space-y-0.5">
+                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-600 dark:text-surface-400 space-y-0.5">
                     {lastReset && (
                       <div className="flex justify-between">
                         <span>{t('demo.lastReset', 'Last reset')}</span>

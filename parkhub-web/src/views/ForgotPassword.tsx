@@ -21,7 +21,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6 py-12">
+    <main className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6 py-12">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -96,6 +96,6 @@ export function ForgotPasswordPage() {
           </>
         )}
       </motion.div>
-    </div>
+    </main>
   );
 }
