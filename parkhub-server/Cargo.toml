@@ -153,6 +153,7 @@ full = [
     "mod-email-templates",
     "mod-map",
     "mod-stripe",
+    "mod-ical",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -196,6 +197,7 @@ mod-analytics = []
 mod-email-templates = []
 mod-map = []
 mod-stripe = []
+mod-ical = []
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,7 +1,8 @@
-//! Calendar event handlers: combined bookings + absences view, iCal export.
+//! Calendar event handlers: combined bookings + absences view, iCal export,
+//! and iCal subscription via personal tokens.
 
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Extension, Json,
 };
@@ -11,7 +12,7 @@ use std::fmt::Write as _;
 
 use parkhub_common::ApiResponse;
 
-use super::{AuthUser, SharedState};
+use super::{generate_access_token, AuthUser, SharedState};
 
 /// Query params for calendar events
 #[derive(Debug, Deserialize)]
@@ -35,6 +36,13 @@ pub struct CalendarEvent {
     pub slot_number: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
+}
+
+/// Response for calendar subscription token generation
+#[derive(Debug, Serialize)]
+pub struct CalendarTokenResponse {
+    pub token: String,
+    pub url: String,
 }
 
 /// `GET /api/v1/calendar/events` — return user's bookings + absences as calendar events
@@ -142,7 +150,67 @@ pub async fn calendar_events(
     Json(ApiResponse::success(events))
 }
 
-/// `GET /api/v1/user/calendar.ics` — iCal export of user's bookings
+// ---------------------------------------------------------------------------
+// iCal helpers
+// ---------------------------------------------------------------------------
+
+/// Build an iCalendar feed string from the given user's bookings.
+async fn build_ical_feed(state: &crate::AppState, user_id: &str) -> String {
+    let bookings = state
+        .db
+        .list_bookings_by_user(user_id)
+        .await
+        .unwrap_or_default();
+
+    let mut ical = String::from(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ParkHub//EN\r\n\
+         X-WR-CALNAME:ParkHub Bookings\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n",
+    );
+
+    for b in &bookings {
+        // Resolve lot name for LOCATION
+        let lot_name = state
+            .db
+            .get_parking_lot(&b.lot_id.to_string())
+            .await
+            .ok()
+            .flatten()
+            .map_or_else(|| b.floor_name.clone(), |lot| lot.name);
+
+        let _ = write!(ical, "BEGIN:VEVENT\r\n");
+        let _ = write!(ical, "UID:{}@parkhub\r\n", b.id);
+        let _ = write!(
+            ical,
+            "DTSTART:{}\r\n",
+            b.start_time.format("%Y%m%dT%H%M%SZ")
+        );
+        let _ = write!(ical, "DTEND:{}\r\n", b.end_time.format("%Y%m%dT%H%M%SZ"));
+        let _ = write!(ical, "SUMMARY:{} - Slot {}\r\n", lot_name, b.slot_number);
+        let _ = write!(ical, "LOCATION:{lot_name}\r\n");
+        let _ = write!(
+            ical,
+            "DESCRIPTION:Floor: {}\\nSlot: {}\\nStatus: {}\r\n",
+            b.floor_name,
+            b.slot_number,
+            format!("{:?}", b.status).to_lowercase()
+        );
+        let _ = write!(
+            ical,
+            "DTSTAMP:{}\r\n",
+            b.created_at.format("%Y%m%dT%H%M%SZ")
+        );
+        let _ = write!(ical, "END:VEVENT\r\n");
+    }
+
+    ical.push_str("END:VCALENDAR\r\n");
+    ical
+}
+
+// ---------------------------------------------------------------------------
+// iCal endpoints
+// ---------------------------------------------------------------------------
+
+/// `GET /api/v1/user/calendar.ics` — iCal export of user's bookings (auth required)
 #[utoipa::path(get, path = "/api/v1/user/calendar.ics", tag = "Calendar",
     summary = "Export bookings as iCal",
     description = "Returns the user's bookings in iCalendar format.",
@@ -154,30 +222,7 @@ pub async fn user_calendar_ics(
     Extension(auth_user): Extension<AuthUser>,
 ) -> impl axum::response::IntoResponse {
     let state_guard = state.read().await;
-    let bookings = state_guard
-        .db
-        .list_bookings_by_user(&auth_user.user_id.to_string())
-        .await
-        .unwrap_or_default();
-
-    let mut ical = String::from("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ParkHub//EN\r\n");
-
-    for b in &bookings {
-        let _ = writeln!(ical, "BEGIN:VEVENT");
-        let _ = writeln!(ical, "UID:{}", b.id);
-        let _ = writeln!(ical, "DTSTART:{}", b.start_time.format("%Y%m%dT%H%M%SZ"));
-        let _ = writeln!(ical, "DTEND:{}", b.end_time.format("%Y%m%dT%H%M%SZ"));
-        let _ = writeln!(
-            ical,
-            "SUMMARY:Parking Slot {} ({})",
-            b.slot_number,
-            format!("{:?}", b.status).to_lowercase()
-        );
-        let _ = writeln!(ical, "DESCRIPTION:Floor: {}", b.floor_name);
-        let _ = writeln!(ical, "END:VEVENT");
-    }
-
-    ical.push_str("END:VCALENDAR\r\n");
+    let ical = build_ical_feed(&state_guard, &auth_user.user_id.to_string()).await;
 
     (
         StatusCode::OK,
@@ -195,10 +240,111 @@ pub async fn user_calendar_ics(
     )
 }
 
+/// `GET /api/v1/calendar/ical` — iCal feed of user's bookings (auth required, inline)
+#[utoipa::path(get, path = "/api/v1/calendar/ical", tag = "Calendar",
+    summary = "iCal feed (authenticated)",
+    description = "Returns the user's bookings as an iCal feed for direct subscription.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "iCalendar feed"))
+)]
+pub async fn calendar_ical_authenticated(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> impl axum::response::IntoResponse {
+    let state_guard = state.read().await;
+    let ical = build_ical_feed(&state_guard, &auth_user.user_id.to_string()).await;
+
+    (
+        StatusCode::OK,
+        [(
+            axum::http::header::CONTENT_TYPE,
+            "text/calendar; charset=utf-8",
+        )],
+        ical,
+    )
+}
+
+/// `GET /api/v1/calendar/ical/:token` — public iCal feed via personal subscription token
+#[utoipa::path(get, path = "/api/v1/calendar/ical/{token}", tag = "Calendar",
+    summary = "iCal feed (public via token)",
+    description = "Returns a user's bookings as an iCal feed via a personal subscription token.",
+    responses(
+        (status = 200, description = "iCalendar feed"),
+        (status = 404, description = "Invalid or expired token")
+    )
+)]
+pub async fn calendar_ical_by_token(
+    State(state): State<SharedState>,
+    Path(token): Path<String>,
+) -> impl axum::response::IntoResponse {
+    let state_guard = state.read().await;
+
+    // Look up token -> user_id in settings
+    let setting_key = format!("ical_token:{token}");
+    match state_guard.db.get_setting(&setting_key).await {
+        Ok(Some(user_id)) if !user_id.is_empty() => {
+            let ical = build_ical_feed(&state_guard, &user_id).await;
+            (
+                StatusCode::OK,
+                [(
+                    axum::http::header::CONTENT_TYPE,
+                    "text/calendar; charset=utf-8",
+                )],
+                ical,
+            )
+        }
+        _ => (
+            StatusCode::NOT_FOUND,
+            [(
+                axum::http::header::CONTENT_TYPE,
+                "text/plain; charset=utf-8",
+            )],
+            "Invalid or expired calendar token".to_string(),
+        ),
+    }
+}
+
+/// `POST /api/v1/calendar/token` — generate a personal calendar subscription token
+#[utoipa::path(post, path = "/api/v1/calendar/token", tag = "Calendar",
+    summary = "Generate calendar subscription token",
+    description = "Creates a personal token for subscribing to the iCal feed from external apps.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Token generated"))
+)]
+pub async fn generate_calendar_token(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> Json<ApiResponse<CalendarTokenResponse>> {
+    let state_guard = state.read().await;
+    let user_id = auth_user.user_id.to_string();
+
+    // Revoke any existing token for this user
+    let user_token_key = format!("ical_user_token:{user_id}");
+    if let Ok(Some(old_token)) = state_guard.db.get_setting(&user_token_key).await {
+        let old_key = format!("ical_token:{old_token}");
+        let _ = state_guard.db.set_setting(&old_key, "").await;
+    }
+
+    // Generate new token
+    let token = generate_access_token();
+
+    // Store bidirectional mapping: token -> user_id, user_id -> token
+    let token_key = format!("ical_token:{token}");
+    let _ = state_guard.db.set_setting(&token_key, &user_id).await;
+    let _ = state_guard.db.set_setting(&user_token_key, &token).await;
+
+    // Build the subscription URL
+    let base_url = std::env::var("APP_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let url = format!("{base_url}/api/v1/calendar/ical/{token}");
+
+    Json(ApiResponse::success(CalendarTokenResponse { token, url }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::TimeDelta;
+    use uuid::Uuid;
 
     #[test]
     fn test_calendar_query_deserialize() {
@@ -244,5 +390,81 @@ mod tests {
         assert!(json.contains("confirmed"));
         // Check rename
         assert!(json.contains(r#""type":"booking"#));
+    }
+
+    #[test]
+    fn test_calendar_token_response_serialize() {
+        let resp = CalendarTokenResponse {
+            token: "abc123def456".to_string(),
+            url: "http://localhost:3000/api/v1/calendar/ical/abc123def456".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("abc123def456"));
+        assert!(json.contains("/api/v1/calendar/ical/"));
+    }
+
+    #[test]
+    fn test_ical_format_vcalendar_header() {
+        let ical = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//ParkHub//EN\r\n\
+                     X-WR-CALNAME:ParkHub Bookings\r\nCALSCALE:GREGORIAN\r\n\
+                     METHOD:PUBLISH\r\nEND:VCALENDAR\r\n";
+        assert!(ical.starts_with("BEGIN:VCALENDAR"));
+        assert!(ical.contains("VERSION:2.0"));
+        assert!(ical.contains("PRODID:-//ParkHub//EN"));
+        assert!(ical.contains("X-WR-CALNAME:ParkHub Bookings"));
+        assert!(ical.contains("CALSCALE:GREGORIAN"));
+        assert!(ical.contains("METHOD:PUBLISH"));
+        assert!(ical.ends_with("END:VCALENDAR\r\n"));
+    }
+
+    #[test]
+    fn test_ical_vevent_format() {
+        let uid = Uuid::new_v4();
+        let now = Utc::now();
+        let end = now + TimeDelta::hours(2);
+
+        let mut ical = String::new();
+        let _ = write!(ical, "BEGIN:VEVENT\r\n");
+        let _ = write!(ical, "UID:{uid}@parkhub\r\n");
+        let _ = write!(ical, "DTSTART:{}\r\n", now.format("%Y%m%dT%H%M%SZ"));
+        let _ = write!(ical, "DTEND:{}\r\n", end.format("%Y%m%dT%H%M%SZ"));
+        let _ = write!(ical, "SUMMARY:Garage A - Slot 5\r\n");
+        let _ = write!(ical, "LOCATION:Garage A\r\n");
+        let _ = write!(
+            ical,
+            "DESCRIPTION:Floor: Level 2\\nSlot: 5\\nStatus: confirmed\r\n"
+        );
+        let _ = write!(ical, "DTSTAMP:{}\r\n", now.format("%Y%m%dT%H%M%SZ"));
+        let _ = write!(ical, "END:VEVENT\r\n");
+
+        assert!(ical.contains("BEGIN:VEVENT"));
+        assert!(ical.contains("END:VEVENT"));
+        assert!(ical.contains("UID:"));
+        assert!(ical.contains("@parkhub"));
+        assert!(ical.contains("DTSTART:"));
+        assert!(ical.contains("DTEND:"));
+        assert!(ical.contains("SUMMARY:Garage A - Slot 5"));
+        assert!(ical.contains("LOCATION:Garage A"));
+        assert!(ical.contains("DESCRIPTION:Floor: Level 2"));
+        assert!(ical.contains("DTSTAMP:"));
+    }
+
+    #[test]
+    fn test_ical_line_endings_crlf() {
+        let ical = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n";
+        // Every line should end with CRLF per RFC 5545
+        for line in ical.split("\r\n") {
+            assert!(
+                !line.contains('\n'),
+                "Line should not contain bare LF: {line:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_ical_dtstart_format() {
+        let dt = chrono::DateTime::parse_from_rfc3339("2026-04-15T09:30:00Z").unwrap();
+        let formatted = dt.format("%Y%m%dT%H%M%SZ").to_string();
+        assert_eq!(formatted, "20260415T093000Z");
     }
 }
