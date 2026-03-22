@@ -522,16 +522,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
-        // Quick book
-        .route("/api/v1/bookings/quick", post(quick_book))
         // User stats & preferences
         .route("/api/v1/user/stats", get(user_stats))
         .route(
             "/api/v1/user/preferences",
             get(get_user_preferences).put(update_user_preferences),
         )
-        // Booking checkin
-        .route("/api/v1/bookings/{id}/checkin", post(booking_checkin))
         // ── Security: 2FA ──
         .route("/api/v1/auth/2fa/setup", post(security::two_factor_setup))
         .route("/api/v1/auth/2fa/verify", post(security::two_factor_verify))
@@ -661,7 +657,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                     .delete(cancel_booking)
                     .patch(update_booking),
             )
-            .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice));
+            .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
+            .route("/api/v1/bookings/quick", post(quick_book))
+            .route("/api/v1/bookings/{id}/checkin", post(booking_checkin));
     }
 
     #[cfg(feature = "mod-invoices")]
