@@ -70,6 +70,8 @@ pub mod analytics;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 pub mod auth;
+#[cfg(feature = "mod-cost-center")]
+pub mod billing;
 #[cfg(feature = "mod-bookings")]
 pub mod bookings;
 #[cfg(feature = "mod-branding")]
@@ -394,6 +396,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "maintenance".into(),
         cfg!(feature = "mod-maintenance").into(),
+    );
+    modules.insert(
+        "cost-center".into(),
+        cfg!(feature = "mod-cost-center").into(),
     );
 
     Json(serde_json::json!({
@@ -1037,6 +1043,27 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/maintenance/active",
                 get(maintenance::active_maintenance),
+            );
+    }
+
+    #[cfg(feature = "mod-cost-center")]
+    {
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/admin/billing/by-cost-center",
+                get(billing::billing_by_cost_center),
+            )
+            .route(
+                "/api/v1/admin/billing/by-department",
+                get(billing::billing_by_department),
+            )
+            .route(
+                "/api/v1/admin/billing/export",
+                get(billing::billing_export_csv),
+            )
+            .route(
+                "/api/v1/admin/billing/allocate",
+                post(billing::billing_allocate),
             );
     }
 

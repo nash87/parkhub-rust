@@ -38,6 +38,12 @@ pub struct User {
     /// Accessibility needs: wheelchair, reduced_mobility, visual, hearing, none
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accessibility_needs: Option<String>,
+    /// Cost center for billing allocation
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_center: Option<String>,
+    /// Department for billing allocation
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub department: Option<String>,
 }
 
 const fn default_credits_quota() -> i32 {

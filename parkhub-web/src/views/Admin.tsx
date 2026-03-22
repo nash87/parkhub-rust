@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge, Buildings, ClockCounterClockwise, Database, Car, Wheelchair, Wrench,
+  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge, Buildings, ClockCounterClockwise, Database, Car, Wheelchair, Wrench, CurrencyDollar,
 } from '@phosphor-icons/react';
 
 function AdminNav() {
@@ -25,6 +25,7 @@ function AdminNav() {
     { name: t('admin.fleet', 'Fleet'), path: '/admin/fleet', icon: Car },
     { name: t('admin.accessible', 'Accessible'), path: '/admin/accessible', icon: Wheelchair },
     { name: t('admin.maintenance', 'Maintenance'), path: '/admin/maintenance', icon: Wrench },
+    { name: t('admin.billing', 'Billing'), path: '/admin/billing', icon: CurrencyDollar },
   ];
 
   function isActive(path: string) {

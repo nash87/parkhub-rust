@@ -96,6 +96,8 @@ mod tests {
             last_login: None,
             tenant_id: None,
             accessibility_needs: None,
+            cost_center: None,
+            department: None,
         }
     }
 

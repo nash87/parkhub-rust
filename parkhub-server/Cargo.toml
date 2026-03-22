@@ -159,6 +159,7 @@ full = [
     "mod-fleet",
     "mod-accessible",
     "mod-maintenance",
+    "mod-cost-center",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -208,6 +209,7 @@ mod-ical = []
 mod-multi-tenant = []
 mod-accessible = []
 mod-maintenance = []
+mod-cost-center = []
 
 [dev-dependencies]
 tempfile = "3"
