@@ -127,6 +127,8 @@ pub mod webhooks;
 pub mod ws;
 #[cfg(feature = "mod-zones")]
 pub mod zones;
+#[cfg(feature = "mod-invoices")]
+pub mod invoices;
 #[cfg(feature = "mod-oauth")]
 pub mod oauth;
 
@@ -317,6 +319,7 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert("social".into(), cfg!(feature = "mod-social").into());
     modules.insert("themes".into(), cfg!(feature = "mod-themes").into());
     modules.insert("oauth".into(), cfg!(feature = "mod-oauth").into());
+    modules.insert("invoices".into(), cfg!(feature = "mod-invoices").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -643,6 +646,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                     .patch(update_booking),
             )
             .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice));
+    }
+
+    #[cfg(feature = "mod-invoices")]
+    {
+        // PDF invoice download
+        protected_routes = protected_routes.route(
+            "/api/v1/bookings/{id}/invoice/pdf",
+            get(invoices::get_booking_invoice_pdf),
+        );
     }
 
     #[cfg(feature = "mod-qr")]

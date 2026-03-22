@@ -106,6 +106,7 @@ export default {
       cancelBtn: 'Cancel',
       cancelled: 'Booking cancelled',
       cancelFailed: 'Could not cancel booking',
+      downloadInvoice: 'Invoice',
       statusActive: 'Active',
       statusCompleted: 'Completed',
       statusCancelled: 'Cancelled',
