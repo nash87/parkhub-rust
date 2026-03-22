@@ -21,12 +21,9 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 use parkhub_common::models::{
-    Absence, Absence, Announcement, Announcement, Booking, Booking, ChargingSession, EvCharger,
-    GuestBooking, GuestBooking, Notification, Notification, ParkingLot, ParkingLot, ParkingSlot,
-    ParkingSlot, ProposalStatus, ProposalStatus, RecurringBooking, RecurringBooking, SwapRequest,
-    SwapRequest, TranslationOverride, TranslationOverride, TranslationProposal,
-    TranslationProposal, TranslationVote, TranslationVote, User, User, Vehicle, Vehicle, Visitor,
-    Visitor, WaitlistEntry, WaitlistEntry,
+    Absence, Announcement, Booking, ChargingSession, EvCharger, GuestBooking, Notification,
+    ParkingLot, ParkingSlot, ProposalStatus, RecurringBooking, SwapRequest, TranslationOverride,
+    TranslationProposal, TranslationVote, User, Vehicle, Visitor, WaitlistEntry,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2430,7 +2427,7 @@ impl Database {
                 visitors.push(visitor);
             }
         }
-        visitors.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        visitors.sort_by(|a: &Visitor, b: &Visitor| b.created_at.cmp(&a.created_at));
         Ok(visitors)
     }
 
@@ -2446,7 +2443,7 @@ impl Database {
             let (_, value) = entry?;
             visitors.push(self.deserialize(value.value())?);
         }
-        visitors.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        visitors.sort_by(|a: &Visitor, b: &Visitor| b.created_at.cmp(&a.created_at));
         Ok(visitors)
     }
 
@@ -2454,13 +2451,13 @@ impl Database {
     pub async fn delete_visitor(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;
-        drop(db);
-        let removed = {
+        {
             let mut table = write_txn.open_table(VISITORS)?;
-            table.remove(id)?.is_some()
-        };
-        write_txn.commit()?;
-        Ok(removed)
+            table.remove(id)?;
+        }
+        let committed = write_txn.commit().is_ok();
+        drop(db);
+        Ok(committed)
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
