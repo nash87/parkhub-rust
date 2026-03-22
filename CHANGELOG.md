@@ -7,6 +7,56 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.2.0] - 2026-03-22
+
+### Added
+- **Glass morphism UI**: Bento grid dashboard with frosted-glass cards, animated counters, and modern gradients
+- **2FA/TOTP authentication**: QR code enrollment via `totp-rs`, backup codes, per-account enable/disable
+- **Accessibility score 100**: Full ARIA compliance, contrast fixes, confirm dialogs replacing `window.confirm`
+- **CI badges and GitOps polish**: README overhaul, SECURITY.md, issue/PR templates, CHANGELOG in Keep a Changelog format
+
+### Changed
+- Bumped version to 2.2.0
+- README badges switched from for-the-badge to flat-square style with CI status badge
+- Added Security link to README navigation
+
+---
+
+## [2.1.0] - 2026-03-22
+
+### Added
+- **28 Cargo feature flags**: Full modularity system — build only the modules you need (`mod-bookings`, `mod-vehicles`, `mod-absences`, etc.)
+- **Headless mode**: `--no-default-features --features headless` for pure MIT server builds without GUI dependencies
+- **Module documentation**: Feature flag table in README with build examples
+
+### Changed
+- Workspace Rust version updated to 1.85
+- Axum upgraded from 0.7 to 0.8
+- `rand` upgraded from 0.8 to 0.9
+
+---
+
+## [2.0.0] - 2026-03-22
+
+### Added
+- **Full modularity system**: 28 feature-gated modules for compile-time customization
+- **Smart slot recommendations**: Heuristic scoring engine (slot frequency, lot frequency, features, proximity) — top 5 returned
+- **Community translation management**: Proposal submission, up/down voting, admin review with comments
+- **Runtime translation overrides**: Approved translations hot-loaded into i18n at app startup
+- **Favorites UI**: Full view for managing pinned parking slots with live availability status
+- **Dashboard analytics**: 7-day booking activity bar chart with real booking data
+- **DataTable CSV export**: Download any data table as CSV with proper cell escaping
+- **Demo reset tracking**: `last_reset_at`, `next_scheduled_reset`, `reset_in_progress` in status API
+
+### Changed
+- Major version bump to reflect the modularity system and feature flag architecture
+- Clippy pedantic and nursery lints enforced with zero warnings
+
+### Tests
+- **505 Rust + 401 Frontend + 484 PHP** = 1,390 total tests
+
+---
+
 ## [1.9.0] - 2026-03-21
 
 ### Added
