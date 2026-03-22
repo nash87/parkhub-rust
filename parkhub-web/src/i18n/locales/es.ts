@@ -938,5 +938,6 @@ export default {
       networkError: 'Error de red',
     },
     accessible: { title: 'Estacionamiento Accesible', subtitle: 'Estacionamiento Accesible', slots: 'Estacionamiento Accesible', totalSlots: 'Estacionamiento Accesible', utilization: 'Utilization', totalBookings: 'Active Bookings', usersWithNeeds: 'Users', priority: 'Priority: {{minutes}} min head start.', needs: 'Necesidades de accesibilidad', needsDesc: 'Necesidades de accesibilidad', wheelchair: 'Silla de ruedas', reducedMobility: 'Movilidad reducida', visual: 'Discapacidad visual', hearing: 'Discapacidad auditiva', none: 'Sin necesidades', stats: 'Estacionamiento Accesible', manageSlots: 'Estacionamiento Accesible', selectLot: '...', slotLabel: 'Slot', noSlots: '-', toggleSuccess: 'OK', updated: 'OK', help: 'Estacionamiento Accesible' },
+    maintenance: { title: 'Programacion de Mantenimiento', subtitle: 'Programacion de Mantenimiento', create: 'New', createTitle: 'New', editTitle: 'Edit', lot: 'Lot', reason: 'Reason', start: 'Start', end: 'End', allSlots: 'All', specificSlots: 'Slot IDs', selectLot: '...', empty: '-', created: 'OK', updated: 'OK', deleted: 'OK', requiredFields: 'Required', activeBanner: '{{count}} active', help: 'Programacion de Mantenimiento' },
   },
 };
