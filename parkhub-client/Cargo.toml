@@ -52,7 +52,6 @@ mdns-sd.workspace = true
 
 # TLS certificate handling
 rustls.workspace = true
-rustls-pemfile.workspace = true
 
 # Random for mock data (temporary)
 rand = "0.9"  # updated from 0.8
