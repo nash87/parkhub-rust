@@ -1172,6 +1172,7 @@ export default {
       monday: 'Montag', tuesday: 'Dienstag', wednesday: 'Mittwoch', thursday: 'Donnerstag', friday: 'Freitag', saturday: 'Samstag', sunday: 'Sonntag',
       status: { completed: 'Abgeschlossen', cancelled: 'Storniert', expired: 'Abgelaufen', no_show: 'Nicht erschienen' },
     },
+    geofence: { autoCheckIn: 'Auto-Einchecken', autoCheckInDesc: 'Automatisch einchecken bei Ankunft am Parkplatz', help: 'Bei Aktivierung wird Ihr Standort genutzt, um automatisch einzuchecken.', enabled: 'Auto-Einchecken aktiviert', disabled: 'Auto-Einchecken deaktiviert', nearby: 'Sie sind in der Naehe!', nearbyDesc: 'Sie befinden sich in Reichweite von {{lot}}', radiusLabel: 'Geofence-Radius', radiusUnit: 'Meter', setGeofence: 'Geofence setzen', geofenceUpdated: 'Geofence aktualisiert' },
     recommendations: { title: 'Smart Recommendations', subtitle: 'Personalized suggestions', recommendedForYou: 'Recommended for you', yourUsualSpot: 'Your usual spot', bestPrice: 'Best price', closest: 'Closest', availableNow: 'Available now', preferredLot: 'Preferred lot', accessible: 'Accessible', help: 'Smart recommendations based on booking history, availability, pricing, and distance.' },
   },
 };

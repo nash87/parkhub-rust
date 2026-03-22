@@ -967,6 +967,7 @@ export default {
       monday: 'Lunes', tuesday: 'Martes', wednesday: 'Miercoles', thursday: 'Jueves', friday: 'Viernes', saturday: 'Sabado', sunday: 'Domingo',
       status: { completed: 'Completada', cancelled: 'Cancelada', expired: 'Expirada', no_show: 'No se presento' },
     },
+    geofence: { autoCheckIn: 'Check-in Automatico', autoCheckInDesc: 'Registrarse automaticamente al llegar al estacionamiento', help: 'Cuando esta activado, su ubicacion se usa para registrarse automaticamente.', enabled: 'Check-in automatico activado', disabled: 'Check-in automatico desactivado', nearby: 'Estas cerca!', nearbyDesc: 'Estas dentro del rango de {{lot}}', radiusLabel: 'Radio de Geofence', radiusUnit: 'metros', setGeofence: 'Establecer Geofence', geofenceUpdated: 'Geofence actualizado' },
     recommendations: { title: 'Smart Recommendations', subtitle: 'Personalized suggestions', recommendedForYou: 'Recommended for you', yourUsualSpot: 'Your usual spot', bestPrice: 'Best price', closest: 'Closest', availableNow: 'Available now', preferredLot: 'Preferred lot', accessible: 'Accessible', help: 'Smart recommendations based on booking history, availability, pricing, and distance.' },
   },
 };

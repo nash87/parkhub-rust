@@ -346,6 +346,18 @@ export const api = {
     return request<BookingHistoryResponse>(`/api/v1/bookings/history${q ? `?${q}` : ''}`);
   },
   getBookingStats: () => request<PersonalParkingStats>('/api/v1/bookings/stats'),
+
+  // ── Geofencing ──
+  geofenceCheckIn: (latitude: number, longitude: number) =>
+    request<GeofenceCheckInResponse>('/api/v1/geofence/check-in', {
+      method: 'POST', body: JSON.stringify({ latitude, longitude }),
+    }),
+  getLotGeofence: (lotId: string) =>
+    request<GeofenceConfig>(`/api/v1/lots/${lotId}/geofence`),
+  adminSetGeofence: (lotId: string, data: { center_lat: number; center_lng: number; radius_meters: number; enabled?: boolean }) =>
+    request<GeofenceConfig>(`/api/v1/admin/lots/${lotId}/geofence`, {
+      method: 'PUT', body: JSON.stringify(data),
+    }),
 };
 
 // ── Types ──
@@ -880,4 +892,20 @@ export interface PersonalParkingStats {
   busiest_day: string | null;
   credits_spent: number;
   monthly_trend: MonthlyTrend[];
+}
+
+// ── Geofencing ──
+export interface GeofenceCheckInResponse {
+  checked_in: boolean;
+  booking_id: string | null;
+  lot_name: string | null;
+  message: string;
+}
+
+export interface GeofenceConfig {
+  lot_id: string;
+  center_lat: number;
+  center_lng: number;
+  radius_meters: number;
+  enabled: boolean;
 }
