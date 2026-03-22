@@ -115,6 +115,8 @@ pub struct ParkingSlot {
     pub current_booking: Option<SlotBookingInfo>,
     pub features: Vec<SlotFeature>,
     pub position: SlotPosition,
+    #[serde(default)]
+    pub is_accessible: bool,
 }
 
 /// Slot type classification

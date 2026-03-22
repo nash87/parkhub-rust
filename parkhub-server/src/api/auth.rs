@@ -403,6 +403,7 @@ pub async fn register(
         credits_monthly_quota: 40,
         credits_last_refilled: Some(now),
         tenant_id: None,
+        accessibility_needs: None,
     };
 
     if let Err(e) = state_guard.db.save_user(&user).await {

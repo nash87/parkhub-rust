@@ -95,6 +95,7 @@ mod tests {
             updated_at: Utc::now(),
             last_login: None,
             tenant_id: None,
+            accessibility_needs: None,
         }
     }
 

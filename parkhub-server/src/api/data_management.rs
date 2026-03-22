@@ -294,6 +294,7 @@ pub async fn import_users(
             updated_at: Utc::now(),
             last_login: None,
             tenant_id: None,
+            accessibility_needs: None,
         };
 
         match state_guard.db.save_user(&user).await {
@@ -423,18 +424,26 @@ pub async fn import_lots(
             Ok(_) => {
                 // Create slots for the lot
                 for slot_num in 1..=total_slots {
+                    #[allow(clippy::cast_possible_truncation)]
                     let slot = parkhub_common::ParkingSlot {
                         id: uuid::Uuid::new_v4(),
                         lot_id: lot.id,
-                        slot_number: format!(
-                            "{}-{}",
-                            lot.name.chars().next().unwrap_or('A'),
-                            slot_num
-                        ),
-                        status: parkhub_common::SlotStatus::Available,
+                        floor_id: lot.floors.first().map_or_else(uuid::Uuid::new_v4, |f| f.id),
+                        slot_number: slot_num as i32,
+                        row: ((slot_num - 1) / 10 + 1) as i32,
+                        column: ((slot_num - 1) % 10 + 1) as i32,
                         slot_type: parkhub_common::SlotType::Standard,
+                        status: parkhub_common::SlotStatus::Available,
+                        current_booking: None,
                         features: Vec::new(),
-                        zone_id: None,
+                        position: parkhub_common::SlotPosition {
+                            x: (((slot_num - 1) % 10) as f32) * 3.0,
+                            y: (((slot_num - 1) / 10) as f32) * 5.0,
+                            width: 2.5,
+                            height: 5.0,
+                            rotation: 0.0,
+                        },
+                        is_accessible: false,
                     };
                     let _ = state_guard.db.save_parking_slot(&slot).await;
                 }

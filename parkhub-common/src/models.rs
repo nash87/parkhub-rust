@@ -35,6 +35,9 @@ pub struct User {
     /// Multi-tenant isolation: tenant ID (None = super-admin / global scope)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tenant_id: Option<String>,
+    /// Accessibility needs: wheelchair, reduced_mobility, visual, hearing, none
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accessibility_needs: Option<String>,
 }
 
 const fn default_credits_quota() -> i32 {
@@ -125,6 +128,9 @@ pub struct ParkingSlot {
     pub current_booking: Option<SlotBookingInfo>,
     pub features: Vec<SlotFeature>,
     pub position: SlotPosition,
+    /// Whether this slot is designated as accessible (wheelchair, reduced mobility)
+    #[serde(default)]
+    pub is_accessible: bool,
 }
 
 /// Slot type classification

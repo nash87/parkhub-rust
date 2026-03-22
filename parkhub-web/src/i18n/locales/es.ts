@@ -937,5 +937,6 @@ export default {
       complete: 'Completar configuración',
       networkError: 'Error de red',
     },
+    accessible: { title: 'Estacionamiento Accesible', subtitle: 'Estacionamiento Accesible', slots: 'Estacionamiento Accesible', totalSlots: 'Estacionamiento Accesible', utilization: 'Utilization', totalBookings: 'Active Bookings', usersWithNeeds: 'Users', priority: 'Priority: {{minutes}} min head start.', needs: 'Necesidades de accesibilidad', needsDesc: 'Necesidades de accesibilidad', wheelchair: 'Silla de ruedas', reducedMobility: 'Movilidad reducida', visual: 'Discapacidad visual', hearing: 'Discapacidad auditiva', none: 'Sin necesidades', stats: 'Estacionamiento Accesible', manageSlots: 'Estacionamiento Accesible', selectLot: '...', slotLabel: 'Slot', noSlots: '-', toggleSuccess: 'OK', updated: 'OK', help: 'Estacionamiento Accesible' },
   },
 };

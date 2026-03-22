@@ -57,7 +57,7 @@ pub struct FleetStats {
 }
 
 /// Request to flag a vehicle
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct FlagVehicleRequest {
     pub flagged: bool,
     pub reason: Option<String>,

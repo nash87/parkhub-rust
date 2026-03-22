@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge, Buildings, ClockCounterClockwise, Database, Car,
+  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge, Buildings, ClockCounterClockwise, Database, Car, Wheelchair,
 } from '@phosphor-icons/react';
 
 function AdminNav() {
@@ -23,6 +23,7 @@ function AdminNav() {
     { name: t('admin.auditLog', 'Audit Log'), path: '/admin/audit-log', icon: ClockCounterClockwise },
     { name: t('admin.dataManagement', 'Data'), path: '/admin/data', icon: Database },
     { name: t('admin.fleet', 'Fleet'), path: '/admin/fleet', icon: Car },
+    { name: t('admin.accessible', 'Accessible'), path: '/admin/accessible', icon: Wheelchair },
   ];
 
   function isActive(path: string) {

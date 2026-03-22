@@ -438,6 +438,7 @@ export interface ParkingSlot {
   slot_type?: SlotType;
   features?: SlotFeature[];
   zone_id?: string;
+  is_accessible?: boolean;
 }
 
 export interface Favorite {

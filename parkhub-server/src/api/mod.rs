@@ -60,6 +60,8 @@ type SharedState = Arc<RwLock<AppState>>;
 
 #[cfg(feature = "mod-absences")]
 pub mod absences;
+#[cfg(feature = "mod-accessible")]
+pub mod accessible;
 pub mod admin;
 pub mod admin_ext;
 pub mod admin_handlers;
@@ -386,6 +388,7 @@ async fn list_module_features() -> impl IntoResponse {
         "multi-tenant".into(),
         cfg!(feature = "mod-multi-tenant").into(),
     );
+    modules.insert("accessible".into(), cfg!(feature = "mod-accessible").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -990,6 +993,27 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/admin/fleet/{id}/flag",
                 put(fleet::admin_fleet_flag),
+            );
+    }
+
+    #[cfg(feature = "mod-accessible")]
+    {
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/lots/{id}/slots/accessible",
+                get(accessible::list_accessible_slots),
+            )
+            .route(
+                "/api/v1/admin/lots/{id}/slots/{slot_id}/accessible",
+                put(accessible::admin_set_slot_accessible),
+            )
+            .route(
+                "/api/v1/bookings/accessible-stats",
+                get(accessible::accessible_stats),
+            )
+            .route(
+                "/api/v1/users/me/accessibility-needs",
+                put(accessible::update_accessibility_needs),
             );
     }
 

@@ -58,5 +58,6 @@ export default {
     payment: { title: '支付', amount: '应付金额', cardNumber: '卡号', expiry: '有效期', cvc: 'CVC', cardholderName: '持卡人姓名', cardholderNamePlaceholder: '卡上姓名', pay: '支付 {{amount}}', secureNote: '端到端加密保护', processing: '正在处理支付...', success: '支付成功', successDesc: '您的预订已确认。', errorTitle: '支付失败', genericError: '出现问题。请重试。', retry: '重试' },
     lobby: { available: '可用', total: '总计', floor: '楼层', lastUpdated: '最后更新', occupancy: '占用率', error: '停车场未找到', networkError: '网络错误' },
     setup: { title: '设置向导', step1: '公司信息', step2: '创建停车场', step3: '用户设置', step4: '选择主题', companyName: '公司名称', companyNameRequired: '公司名称为必填项', timezone: '时区', lotName: '停车场名称', lotNameRequired: '停车场名称为必填项', floors: '楼层', slotsPerFloor: '每层车位数', inviteUsers: '邀请用户（逗号分隔的电子邮件）', inviteDesc: '您的管理员账户已设置完成。可选择邀请更多用户。', chooseTheme: '选择主题', complete: '完成设置', networkError: '网络错误' },
+    accessible: { title: '无障碍停车', subtitle: '无障碍停车', slots: '无障碍停车', totalSlots: '无障碍停车', utilization: 'Utilization', totalBookings: 'Active Bookings', usersWithNeeds: 'Users', priority: 'Priority: {{minutes}} min head start.', needs: '无障碍需求', needsDesc: '无障碍需求', wheelchair: '轮椅', reducedMobility: '行动不便', visual: '视觉障碍', hearing: '听觉障碍', none: '无需求', stats: '无障碍停车', manageSlots: '无障碍停车', selectLot: '...', slotLabel: 'Slot', noSlots: '-', toggleSuccess: 'OK', updated: 'OK', help: '无障碍停车' },
   },
 };
