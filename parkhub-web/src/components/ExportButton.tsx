@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getInMemoryToken } from '../api/client';
 
 export type ExportType = 'bookings' | 'users' | 'revenue';
 export interface ExportButtonProps { baseUrl?: string; }
@@ -27,9 +28,15 @@ export function ExportButton({ baseUrl = '' }: ExportButtonProps) {
   const handleExport = useCallback(async (type: ExportType) => {
     setLoading(type);
     try {
-      const token = localStorage.getItem('parkhub_token');
+      const token = getInMemoryToken();
       const url = buildExportUrl(baseUrl, type, from, to);
-      const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const res = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       if (!res.ok) { const text = await res.text(); throw new Error(text || `HTTP ${res.status}`); }
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);

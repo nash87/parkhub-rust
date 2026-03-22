@@ -2,26 +2,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // We can't directly import `request` since it's not exported — but we can test
 // the behaviour through the public `api` object which calls `request` internally.
-// We need to mock fetch and localStorage.
-
-// Mock import.meta.env before importing the module
-vi.stubGlobal('localStorage', {
-  store: {} as Record<string, string>,
-  getItem(key: string) { return this.store[key] ?? null; },
-  setItem(key: string, val: string) { this.store[key] = val; },
-  removeItem(key: string) { delete this.store[key]; },
-  clear() { this.store = {}; },
-});
+// We need to mock fetch.
 
 // We need to import after mocks are set up
-const { api } = await import('./client');
+const { api, setInMemoryToken, getInMemoryToken } = await import('./client');
 
 describe('API client', () => {
   const originalFetch = globalThis.fetch;
   const originalLocation = window.location;
 
   beforeEach(() => {
-    localStorage.clear();
+    setInMemoryToken(null);
     // Mock window.location
     Object.defineProperty(window, 'location', {
       writable: true,
@@ -38,7 +29,7 @@ describe('API client', () => {
     vi.restoreAllMocks();
   });
 
-  it('sends JSON headers by default', async () => {
+  it('sends JSON headers and credentials by default', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -52,10 +43,12 @@ describe('API client', () => {
     expect(url).toBe('/api/v1/lots');
     expect(opts.headers['Content-Type']).toBe('application/json');
     expect(opts.headers['Accept']).toBe('application/json');
+    expect(opts.headers['X-Requested-With']).toBe('XMLHttpRequest');
+    expect(opts.credentials).toBe('include');
   });
 
-  it('includes Authorization header when token is present', async () => {
-    localStorage.setItem('parkhub_token', 'test-jwt-token');
+  it('includes Authorization header when in-memory token is present', async () => {
+    setInMemoryToken('test-jwt-token');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -69,7 +62,7 @@ describe('API client', () => {
     expect(opts.headers['Authorization']).toBe('Bearer test-jwt-token');
   });
 
-  it('omits Authorization header when no token', async () => {
+  it('omits Authorization header when no in-memory token', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -97,8 +90,8 @@ describe('API client', () => {
     expect(JSON.parse(opts.body)).toEqual({ username: 'admin', password: 'demo' });
   });
 
-  it('handles 401 by clearing token and redirecting to /login', async () => {
-    localStorage.setItem('parkhub_token', 'expired-token');
+  it('handles 401 by clearing in-memory token and redirecting to /login', async () => {
+    setInMemoryToken('expired-token');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -110,7 +103,7 @@ describe('API client', () => {
 
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('UNAUTHORIZED');
-    expect(localStorage.getItem('parkhub_token')).toBeNull();
+    expect(getInMemoryToken()).toBeNull();
     expect(window.location.href).toBe('/login');
   });
 
@@ -319,5 +312,30 @@ describe('API client', () => {
     expect(result.success).toBe(true);
     const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(JSON.parse(opts.body).user_ids).toEqual(['id1']);
+  });
+
+  // ── Logout ──
+
+  it('calls logout endpoint', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200,
+      json: () => Promise.resolve({ success: true, data: null }),
+    });
+    const result = await api.logout();
+    expect(result.success).toBe(true);
+    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(url).toBe('/api/v1/auth/logout');
+    expect(opts.method).toBe('POST');
+    expect(opts.credentials).toBe('include');
+  });
+
+  // ── In-memory token management ──
+
+  it('setInMemoryToken/getInMemoryToken roundtrip', () => {
+    expect(getInMemoryToken()).toBeNull();
+    setInMemoryToken('test-123');
+    expect(getInMemoryToken()).toBe('test-123');
+    setInMemoryToken(null);
+    expect(getInMemoryToken()).toBeNull();
   });
 });

@@ -1,6 +1,11 @@
 //! Authentication handlers: login, register, token refresh, password management.
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::State,
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
+    Json,
+};
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -19,6 +24,51 @@ use crate::metrics;
 use super::{
     generate_access_token, hash_password, hash_password_simple, verify_password, SharedState,
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cookie helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Cookie name for the auth token.
+pub const AUTH_COOKIE_NAME: &str = "parkhub_token";
+
+/// Build a `Set-Cookie` header value for the auth token.
+///
+/// The cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` unless
+/// running on localhost (detected via `APP_URL` env var).
+fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
+    let secure_flag = std::env::var("APP_URL")
+        .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
+        .unwrap_or(false);
+
+    let mut cookie = format!(
+        "{AUTH_COOKIE_NAME}={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={max_age_secs}"
+    );
+    if secure_flag {
+        cookie.push_str("; Secure");
+    }
+    cookie
+}
+
+/// Build a `Set-Cookie` header value that clears (expires) the auth cookie.
+fn build_clear_auth_cookie() -> String {
+    format!(
+        "{AUTH_COOKIE_NAME}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
+    )
+}
+
+/// Attach a `Set-Cookie` header to an existing `(StatusCode, Json<...>)` response.
+fn with_auth_cookie<T: serde::Serialize>(
+    status: StatusCode,
+    body: Json<T>,
+    cookie_value: &str,
+) -> Response {
+    let mut resp = (status, body).into_response();
+    if let Ok(hv) = header::HeaderValue::from_str(cookie_value) {
+        resp.headers_mut().insert(header::SET_COOKIE, hv);
+    }
+    resp
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Request types
@@ -65,16 +115,17 @@ struct PasswordResetToken {
 pub async fn login(
     State(state): State<SharedState>,
     Json(request): Json<LoginRequest>,
-) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
+) -> Response {
     // ── Input length validation (issue #115) ────────────────────────────────
     if request.username.len() > 254 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "INVALID_INPUT",
                 "Username/email must be at most 254 characters",
             )),
-        );
+        )
+            .into_response();
     }
 
     let state_guard = state.read().await;
@@ -93,19 +144,24 @@ pub async fn login(
                 metrics::record_auth_event("login", false);
                 return (
                     StatusCode::UNAUTHORIZED,
-                    Json(ApiResponse::error(
+                    Json(ApiResponse::<LoginResponse>::error(
                         "INVALID_CREDENTIALS",
                         "Invalid username or password",
                     )),
-                );
+                )
+                    .into_response();
             }
         }
         Err(e) => {
             tracing::error!("Database error during login: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
-            );
+                Json(ApiResponse::<LoginResponse>::error(
+                    "SERVER_ERROR",
+                    "Internal server error",
+                )),
+            )
+                .into_response();
         }
     };
 
@@ -113,11 +169,12 @@ pub async fn login(
     if request.password.len() > 256 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "INVALID_INPUT",
                 "Password must not exceed 256 characters",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Verify password
@@ -129,22 +186,24 @@ pub async fn login(
         metrics::record_auth_event("login", false);
         return (
             StatusCode::UNAUTHORIZED,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "INVALID_CREDENTIALS",
                 "Invalid username or password",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Check if user is active
     if !user.is_active {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "ACCOUNT_DISABLED",
                 "This account has been disabled",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Create session using configured timeout (converted from minutes to hours, minimum 1h)
@@ -157,11 +216,12 @@ pub async fn login(
         tracing::error!("Failed to save session: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "SERVER_ERROR",
                 "Failed to create session",
             )),
-        );
+        )
+            .into_response();
     }
 
     let audit = AuditEntry::new(AuditEventType::LoginSuccess)
@@ -175,7 +235,11 @@ pub async fn login(
     let mut response_user = user;
     response_user.password_hash = String::new();
 
-    (
+    // Cookie max-age: session_hours converted to seconds
+    let cookie_max_age = session_hours * 3600;
+    let cookie = build_auth_cookie(&access_token, cookie_max_age);
+
+    with_auth_cookie(
         StatusCode::OK,
         Json(ApiResponse::success(LoginResponse {
             user: response_user,
@@ -186,6 +250,7 @@ pub async fn login(
                 token_type: "Bearer".to_string(),
             },
         })),
+        &cookie,
     )
 }
 
@@ -208,25 +273,27 @@ pub async fn login(
 pub async fn register(
     State(state): State<SharedState>,
     Json(request): Json<RegisterRequest>,
-) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
+) -> Response {
     // ── Input length validation (issue #115) ────────────────────────────────
     if request.email.len() > 254 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "INVALID_INPUT",
                 "Email must be at most 254 characters",
             )),
-        );
+        )
+            .into_response();
     }
     if request.name.len() > 100 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "INVALID_INPUT",
                 "Name must be at most 100 characters",
             )),
-        );
+        )
+            .into_response();
     }
 
     let state_guard = state.read().await;
@@ -235,22 +302,24 @@ pub async fn register(
     if !state_guard.config.allow_self_registration {
         return (
             StatusCode::FORBIDDEN,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "REGISTRATION_DISABLED",
                 "Self-registration is disabled. Contact an administrator.",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Password confirmation must match
     if request.password != request.password_confirmation {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "PASSWORD_MISMATCH",
                 "Password and confirmation do not match",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Password complexity: min 8 chars, at least one lowercase, uppercase, digit
@@ -262,22 +331,24 @@ pub async fn register(
     {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "WEAK_PASSWORD",
                 "Password must be at least 8 characters with uppercase, lowercase, and a digit",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Check if email already exists
     if let Ok(Some(_)) = state_guard.db.get_user_by_email(&request.email).await {
         return (
             StatusCode::CONFLICT,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "EMAIL_EXISTS",
                 "An account with this email already exists",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Generate username from email
@@ -300,17 +371,18 @@ pub async fn register(
     if request.password.len() > 256 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "INVALID_INPUT",
                 "Password must not exceed 256 characters",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Hash password
     let password_hash = match hash_password(&request.password).await {
         Ok(h) => h,
-        Err(e) => return e,
+        Err(e) => return e.into_response(),
     };
 
     // Create user
@@ -338,11 +410,12 @@ pub async fn register(
         tracing::error!("Failed to save user: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "SERVER_ERROR",
                 "Failed to create account",
             )),
-        );
+        )
+            .into_response();
     }
 
     let audit = AuditEntry::new(AuditEventType::UserCreated)
@@ -395,11 +468,12 @@ pub async fn register(
         tracing::error!("Failed to save session: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<LoginResponse>::error(
                 "SERVER_ERROR",
                 "Failed to create session",
             )),
-        );
+        )
+            .into_response();
     }
     drop(state_guard);
 
@@ -407,7 +481,11 @@ pub async fn register(
     let mut response_user = user;
     response_user.password_hash = String::new();
 
-    (
+    // Cookie max-age: session_hours converted to seconds
+    let cookie_max_age = session_hours * 3600;
+    let cookie = build_auth_cookie(&access_token, cookie_max_age);
+
+    with_auth_cookie(
         StatusCode::CREATED,
         Json(ApiResponse::success(LoginResponse {
             user: response_user,
@@ -418,6 +496,7 @@ pub async fn register(
                 token_type: "Bearer".to_string(),
             },
         })),
+        &cookie,
     )
 }
 
@@ -437,7 +516,7 @@ pub async fn register(
 pub async fn refresh_token(
     State(state): State<SharedState>,
     Json(request): Json<RefreshTokenRequest>,
-) -> (StatusCode, Json<ApiResponse<AuthTokens>>) {
+) -> Response {
     let state_guard = state.read().await;
 
     // Look up the session that holds this refresh token
@@ -450,18 +529,23 @@ pub async fn refresh_token(
         Ok(None) => {
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(ApiResponse::error(
+                Json(ApiResponse::<AuthTokens>::error(
                     "INVALID_REFRESH_TOKEN",
                     "Refresh token is invalid or expired",
                 )),
-            );
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error during token refresh: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
-            );
+                Json(ApiResponse::<AuthTokens>::error(
+                    "SERVER_ERROR",
+                    "Internal server error",
+                )),
+            )
+                .into_response();
         }
     };
 
@@ -473,29 +557,35 @@ pub async fn refresh_token(
         Ok(None) => {
             return (
                 StatusCode::UNAUTHORIZED,
-                Json(ApiResponse::error(
+                Json(ApiResponse::<AuthTokens>::error(
                     "INVALID_REFRESH_TOKEN",
                     "User account no longer exists",
                 )),
-            );
+            )
+                .into_response();
         }
         Err(e) => {
             tracing::error!("Database error during role re-validation: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
-            );
+                Json(ApiResponse::<AuthTokens>::error(
+                    "SERVER_ERROR",
+                    "Internal server error",
+                )),
+            )
+                .into_response();
         }
     };
 
     if !current_user.is_active {
         return (
             StatusCode::UNAUTHORIZED,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<AuthTokens>::error(
                 "ACCOUNT_DISABLED",
                 "This account has been disabled",
             )),
-        );
+        )
+            .into_response();
     }
 
     let current_role = format!("{:?}", current_user.role).to_lowercase();
@@ -519,11 +609,12 @@ pub async fn refresh_token(
         tracing::error!("Failed to save refreshed session: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
+            Json(ApiResponse::<AuthTokens>::error(
                 "SERVER_ERROR",
                 "Failed to refresh token",
             )),
-        );
+        )
+            .into_response();
     }
 
     // Invalidate old session
@@ -541,7 +632,11 @@ pub async fn refresh_token(
         "Token refreshed successfully"
     );
 
-    (
+    // Cookie max-age: session_hours converted to seconds
+    let cookie_max_age = session_hours * 3600;
+    let cookie = build_auth_cookie(&new_access_token, cookie_max_age);
+
+    with_auth_cookie(
         StatusCode::OK,
         Json(ApiResponse::success(AuthTokens {
             access_token: new_access_token,
@@ -549,6 +644,7 @@ pub async fn refresh_token(
             expires_at: new_session.expires_at,
             token_type: "Bearer".to_string(),
         })),
+        &cookie,
     )
 }
 
@@ -798,6 +894,68 @@ pub async fn reset_password(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Logout
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// `POST /api/v1/auth/logout`
+///
+/// Clears the httpOnly auth cookie. If a Bearer token is present in the
+/// Authorization header, the corresponding session is also invalidated
+/// server-side.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout",
+    tag = "Authentication",
+    summary = "Log out",
+    description = "Clear the auth cookie and optionally invalidate the server session.",
+    responses(
+        (status = 200, description = "Logged out successfully"),
+    )
+)]
+pub async fn logout(
+    State(state): State<SharedState>,
+    request: axum::http::Request<axum::body::Body>,
+) -> Response {
+    // Try to extract the token from the Authorization header or cookie,
+    // then delete the session server-side (best-effort).
+    let token = request
+        .headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(String::from)
+        .or_else(|| extract_cookie_token(request.headers()));
+
+    if let Some(tok) = token {
+        let state_guard = state.read().await;
+        if let Err(e) = state_guard.db.delete_session(&tok).await {
+            tracing::warn!("Failed to delete session during logout: {}", e);
+        }
+    }
+
+    let cookie = build_clear_auth_cookie();
+    with_auth_cookie(
+        StatusCode::OK,
+        Json(ApiResponse::<()>::success(())),
+        &cookie,
+    )
+}
+
+/// Extract the auth token from the `Cookie` header.
+fn extract_cookie_token(headers: &axum::http::HeaderMap) -> Option<String> {
+    headers
+        .get(header::COOKIE)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|cookies| {
+            cookies.split(';').find_map(|c| {
+                let c = c.trim();
+                c.strip_prefix(&format!("{AUTH_COOKIE_NAME}="))
+                    .map(std::string::ToString::to_string)
+            })
+        })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -892,5 +1050,78 @@ mod tests {
         let req: ResetPasswordRequest = serde_json::from_str(json).unwrap();
         assert_eq!(req.token, "t");
         assert_eq!(req.password, "p");
+    }
+
+    // ── Cookie helpers ──
+
+    #[test]
+    fn test_build_auth_cookie_contains_httponly() {
+        let cookie = build_auth_cookie("test-token-123", 3600);
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Lax"));
+        assert!(cookie.contains("Path=/"));
+        assert!(cookie.contains("Max-Age=3600"));
+        assert!(cookie.contains("parkhub_token=test-token-123"));
+    }
+
+    #[test]
+    fn test_build_auth_cookie_no_secure_on_localhost() {
+        // APP_URL not set defaults to localhost
+        std::env::remove_var("APP_URL");
+        let cookie = build_auth_cookie("tok", 7200);
+        assert!(!cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn test_build_clear_auth_cookie_expires_immediately() {
+        let cookie = build_clear_auth_cookie();
+        assert!(cookie.contains("Max-Age=0"));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("parkhub_token="));
+    }
+
+    #[test]
+    fn test_extract_cookie_token_found() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            header::COOKIE,
+            header::HeaderValue::from_static("other=x; parkhub_token=abc123; session=y"),
+        );
+        let result = extract_cookie_token(&headers);
+        assert_eq!(result, Some("abc123".to_string()));
+    }
+
+    #[test]
+    fn test_extract_cookie_token_not_found() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            header::COOKIE,
+            header::HeaderValue::from_static("other=x; session=y"),
+        );
+        let result = extract_cookie_token(&headers);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_extract_cookie_token_no_cookie_header() {
+        let headers = axum::http::HeaderMap::new();
+        let result = extract_cookie_token(&headers);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_extract_cookie_token_single_cookie() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            header::COOKIE,
+            header::HeaderValue::from_static("parkhub_token=single-value"),
+        );
+        let result = extract_cookie_token(&headers);
+        assert_eq!(result, Some("single-value".to_string()));
+    }
+
+    #[test]
+    fn test_auth_cookie_name_constant() {
+        assert_eq!(AUTH_COOKIE_NAME, "parkhub_token");
     }
 }

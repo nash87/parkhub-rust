@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import { api, type User } from '../api/client';
+import { api, type User, setInMemoryToken } from '../api/client';
 
 interface AuthState {
   user: User | null;
@@ -16,21 +16,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('parkhub_token');
-    if (token) {
-      api.me().then(res => {
-        if (res.success && res.data) setUser(res.data);
-        else localStorage.removeItem('parkhub_token');
-      }).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // On page load, try to authenticate via the httpOnly cookie.
+    // The cookie is sent automatically with credentials: 'include',
+    // so we just call /api/v1/users/me and see if it works.
+    api.me().then(res => {
+      if (res.success && res.data) setUser(res.data);
+    }).finally(() => setLoading(false));
   }, []);
 
   async function login(username: string, password: string) {
     const res = await api.login(username, password);
     if (res.success && res.data?.tokens?.access_token) {
-      localStorage.setItem('parkhub_token', res.data.tokens.access_token);
+      // Store token in memory as fallback (not localStorage -- XSS safe).
+      // The httpOnly cookie is the primary auth mechanism for the browser.
+      setInMemoryToken(res.data.tokens.access_token);
       const me = await api.me();
       if (me.success && me.data) {
         setUser(me.data);
@@ -40,8 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: false, error: res.error?.message || 'Login failed' };
   }
 
-  function logout() {
-    localStorage.removeItem('parkhub_token');
+  async function logout() {
+    // Call the server to clear the cookie and invalidate the session
+    await api.logout();
+    setInMemoryToken(null);
     setUser(null);
   }
 

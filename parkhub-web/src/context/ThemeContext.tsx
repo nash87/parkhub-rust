@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, useSyncExternalStore, type ReactNode } from 'react';
+import { getInMemoryToken } from '../api/client';
 
 // ── Light/Dark Mode ──
 
@@ -177,18 +178,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     if (!DESIGN_THEMES.some(t => t.id === id)) return;
     setDesignThemeState(id);
     localStorage.setItem('parkhub_design_theme', id);
-    // Sync to server if user is logged in
-    const token = localStorage.getItem('parkhub_token');
-    if (token) {
-      fetch('/api/v1/preferences/theme', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ design_theme: id }),
-      }).catch(() => {});
-    }
+    // Sync to server if user is logged in (uses cookie or in-memory token)
+    const token = getInMemoryToken();
+    fetch('/api/v1/preferences/theme', {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ design_theme: id }),
+    }).catch(() => {});
   }, []);
 
   const currentDesignTheme = DESIGN_THEMES.find(t => t.id === designTheme) || DESIGN_THEMES[0];
