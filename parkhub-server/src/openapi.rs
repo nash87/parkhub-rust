@@ -260,14 +260,14 @@ use crate::{
         crate::api::admin_ext::get_design_theme_preference,
         crate::api::admin_ext::update_design_theme_preference,
 
-        // Bookings (mod.rs)
-        crate::api::list_bookings,
-        crate::api::create_booking,
-        crate::api::get_booking,
-        crate::api::cancel_booking,
-        crate::api::get_booking_invoice,
-        crate::api::quick_book,
-        crate::api::booking_checkin,
+        // Bookings (bookings.rs)
+        crate::api::bookings::list_bookings,
+        crate::api::bookings::create_booking,
+        crate::api::bookings::get_booking,
+        crate::api::bookings::cancel_booking,
+        crate::api::bookings::get_booking_invoice,
+        crate::api::bookings::quick_book,
+        crate::api::bookings::booking_checkin,
 
         // Vehicles
         crate::api::vehicles::list_vehicles,
