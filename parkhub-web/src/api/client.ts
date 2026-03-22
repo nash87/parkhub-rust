@@ -358,6 +358,20 @@ export const api = {
     request<GeofenceConfig>(`/api/v1/admin/lots/${lotId}/geofence`, {
       method: 'PUT', body: JSON.stringify(data),
     }),
+
+  // ── Absence Approval ──
+  submitAbsenceRequest: (data: { absence_type: string; start_date: string; end_date: string; reason: string }) =>
+    request<AbsenceApprovalRequest>('/api/v1/absences/requests', { method: 'POST', body: JSON.stringify(data) }),
+  myAbsenceRequests: () => request<AbsenceApprovalRequest[]>('/api/v1/absences/my'),
+  pendingAbsenceRequests: () => request<AbsenceApprovalRequest[]>('/api/v1/admin/absences/pending'),
+  approveAbsenceRequest: (id: string, comment?: string) =>
+    request<AbsenceApprovalRequest>(`/api/v1/admin/absences/${id}/approve`, {
+      method: 'PUT', body: JSON.stringify({ comment }),
+    }),
+  rejectAbsenceRequest: (id: string, reason: string) =>
+    request<AbsenceApprovalRequest>(`/api/v1/admin/absences/${id}/reject`, {
+      method: 'PUT', body: JSON.stringify({ reason }),
+    }),
 };
 
 // ── Types ──
@@ -908,4 +922,20 @@ export interface GeofenceConfig {
   center_lng: number;
   radius_meters: number;
   enabled: boolean;
+}
+
+// ── Absence Approval ──
+export interface AbsenceApprovalRequest {
+  id: string;
+  user_id: string;
+  user_name: string;
+  absence_type: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewer_id?: string;
+  reviewer_comment?: string;
+  created_at: string;
+  reviewed_at?: string;
 }
