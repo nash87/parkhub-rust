@@ -84,6 +84,8 @@ pub mod dynamic_pricing;
 pub mod export;
 #[cfg(feature = "mod-favorites")]
 pub mod favorites;
+#[cfg(feature = "mod-fleet")]
+pub mod fleet;
 #[cfg(feature = "mod-guest")]
 pub mod guest;
 #[cfg(feature = "mod-import")]
@@ -322,6 +324,7 @@ async fn list_module_features() -> impl IntoResponse {
         "data-import".into(),
         cfg!(feature = "mod-data-import").into(),
     );
+    modules.insert("fleet".into(), cfg!(feature = "mod-fleet").into());
     modules.insert("qr".into(), cfg!(feature = "mod-qr").into());
     modules.insert("pwa".into(), cfg!(feature = "mod-pwa").into());
     modules.insert("payments".into(), cfg!(feature = "mod-payments").into());
@@ -976,6 +979,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/admin/data/export/bookings",
                 get(data_management::export_bookings_csv),
+            );
+    }
+
+    #[cfg(feature = "mod-fleet")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/admin/fleet", get(fleet::admin_fleet_list))
+            .route("/api/v1/admin/fleet/stats", get(fleet::admin_fleet_stats))
+            .route(
+                "/api/v1/admin/fleet/{id}/flag",
+                put(fleet::admin_fleet_flag),
             );
     }
 
