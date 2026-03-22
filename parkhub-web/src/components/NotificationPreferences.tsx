@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, SpinnerGap, FloppyDisk, EnvelopeSimple, DeviceMobile } from '@phosphor-icons/react';
+import { Bell, SpinnerGap, FloppyDisk, EnvelopeSimple, DeviceMobile, ChatCircleDots, Phone } from '@phosphor-icons/react';
 import { api, type NotificationPreferences } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -29,6 +29,13 @@ export function NotificationPreferencesComponent() {
     email_booking_reminder: true,
     email_swap_request: true,
     push_enabled: true,
+    sms_booking_confirm: false,
+    sms_booking_reminder: false,
+    sms_booking_cancelled: false,
+    whatsapp_booking_confirm: false,
+    whatsapp_booking_reminder: false,
+    whatsapp_booking_cancelled: false,
+    phone_number: undefined,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,7 +48,7 @@ export function NotificationPreferencesComponent() {
     }).catch(() => setLoading(false));
   }, []);
 
-  function update(key: keyof NotificationPreferences, value: boolean) {
+  function update(key: keyof NotificationPreferences, value: boolean | string) {
     setPrefs(prev => ({ ...prev, [key]: value }));
     setDirty(true);
   }
@@ -101,13 +108,84 @@ export function NotificationPreferencesComponent() {
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
           <DeviceMobile size={16} />
-          <span>Push Notifications</span>
+          <span>{t('notifications.pushTitle', 'Push Notifications')}</span>
         </div>
         <div className="pl-6">
           <Toggle
             checked={prefs.push_enabled}
             onChange={v => update('push_enabled', v)}
-            label="Enable push notifications"
+            label={t('notifications.pushEnabled', 'Enable push notifications')}
+          />
+        </div>
+      </div>
+
+      {/* Phone number for SMS/WhatsApp */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
+          <Phone size={16} />
+          <span>{t('notifications.phoneNumber', 'Phone Number')}</span>
+        </div>
+        <div className="pl-6">
+          <input
+            type="tel"
+            value={prefs.phone_number || ''}
+            onChange={e => update('phone_number', e.target.value || '')}
+            placeholder="+49 123 4567890"
+            className="input text-sm w-full max-w-xs"
+            aria-label={t('notifications.phoneNumber', 'Phone Number')}
+          />
+          <p className="text-xs text-gray-400 mt-1">{t('notifications.phoneHint', 'Required for SMS and WhatsApp notifications')}</p>
+        </div>
+      </div>
+
+      {/* SMS Channel */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
+          <DeviceMobile size={16} />
+          <span>{t('notifications.smsTitle', 'SMS Notifications')}</span>
+          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Coming soon')}</span>
+        </div>
+        <div className="space-y-3 pl-6">
+          <Toggle
+            checked={prefs.sms_booking_confirm}
+            onChange={v => update('sms_booking_confirm', v)}
+            label={t('notifications.bookingConfirm', 'Booking confirmations')}
+          />
+          <Toggle
+            checked={prefs.sms_booking_reminder}
+            onChange={v => update('sms_booking_reminder', v)}
+            label={t('notifications.bookingReminder', 'Booking reminders')}
+          />
+          <Toggle
+            checked={prefs.sms_booking_cancelled}
+            onChange={v => update('sms_booking_cancelled', v)}
+            label={t('notifications.bookingCancelled', 'Booking cancellations')}
+          />
+        </div>
+      </div>
+
+      {/* WhatsApp Channel */}
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
+          <ChatCircleDots size={16} />
+          <span>{t('notifications.whatsappTitle', 'WhatsApp Notifications')}</span>
+          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Coming soon')}</span>
+        </div>
+        <div className="space-y-3 pl-6">
+          <Toggle
+            checked={prefs.whatsapp_booking_confirm}
+            onChange={v => update('whatsapp_booking_confirm', v)}
+            label={t('notifications.bookingConfirm', 'Booking confirmations')}
+          />
+          <Toggle
+            checked={prefs.whatsapp_booking_reminder}
+            onChange={v => update('whatsapp_booking_reminder', v)}
+            label={t('notifications.bookingReminder', 'Booking reminders')}
+          />
+          <Toggle
+            checked={prefs.whatsapp_booking_cancelled}
+            onChange={v => update('whatsapp_booking_cancelled', v)}
+            label={t('notifications.bookingCancelled', 'Booking cancellations')}
           />
         </div>
       </div>

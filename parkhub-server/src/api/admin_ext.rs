@@ -539,6 +539,27 @@ pub struct NotificationPreferences {
     pub email_booking_reminder: bool,
     pub email_swap_request: bool,
     pub push_enabled: bool,
+    /// SMS channel: booking confirmations
+    #[serde(default)]
+    pub sms_booking_confirm: bool,
+    /// SMS channel: booking reminders
+    #[serde(default)]
+    pub sms_booking_reminder: bool,
+    /// SMS channel: booking cancelled
+    #[serde(default)]
+    pub sms_booking_cancelled: bool,
+    /// WhatsApp channel: booking confirmations
+    #[serde(default)]
+    pub whatsapp_booking_confirm: bool,
+    /// WhatsApp channel: booking reminders
+    #[serde(default)]
+    pub whatsapp_booking_reminder: bool,
+    /// WhatsApp channel: booking cancelled
+    #[serde(default)]
+    pub whatsapp_booking_cancelled: bool,
+    /// Phone number for SMS/WhatsApp (E.164 format, e.g. "+491234567890")
+    #[serde(default)]
+    pub phone_number: Option<String>,
 }
 
 impl Default for NotificationPreferences {
@@ -548,6 +569,13 @@ impl Default for NotificationPreferences {
             email_booking_reminder: true,
             email_swap_request: true,
             push_enabled: true,
+            sms_booking_confirm: false,
+            sms_booking_reminder: false,
+            sms_booking_cancelled: false,
+            whatsapp_booking_confirm: false,
+            whatsapp_booking_reminder: false,
+            whatsapp_booking_cancelled: false,
+            phone_number: None,
         }
     }
 }
@@ -1083,6 +1111,7 @@ mod tests {
             email_booking_reminder: true,
             email_swap_request: false,
             push_enabled: true,
+            ..Default::default()
         };
         let json = serde_json::to_string(&prefs).unwrap();
         let back: NotificationPreferences = serde_json::from_str(&json).unwrap();
