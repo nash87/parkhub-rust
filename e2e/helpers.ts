@@ -2,6 +2,7 @@ import { type Page, type APIRequestContext } from '@playwright/test';
 
 /** Demo credentials used across all E2E tests. */
 export const DEMO_ADMIN = {
+  username: 'admin',
   email: 'admin@parkhub.test',
   password: 'demo',
 };
@@ -9,17 +10,19 @@ export const DEMO_ADMIN = {
 /** Authenticate via API and return the JWT token. */
 export async function loginViaApi(request: APIRequestContext): Promise<string> {
   const res = await request.post('/api/v1/auth/login', {
-    data: DEMO_ADMIN,
+    data: { username: DEMO_ADMIN.username, password: DEMO_ADMIN.password },
   });
   const body = await res.json();
-  return body.data?.token ?? body.token ?? '';
+  return body.data?.tokens?.access_token ?? body.data?.token ?? body.token ?? '';
 }
 
 /** Log in through the UI login form. */
 export async function loginViaUi(page: Page): Promise<void> {
   await page.goto('/login');
-  await page.getByLabel(/email/i).fill(DEMO_ADMIN.email);
-  await page.getByLabel(/password/i).fill(DEMO_ADMIN.password);
+  // Try username field first (Rust), then email field (PHP)
+  const usernameField = page.locator('input[name="username"], input[type="email"], input[name="email"]').first();
+  await usernameField.fill(DEMO_ADMIN.username);
+  await page.locator('input[type="password"], input[name="password"]').first().fill(DEMO_ADMIN.password);
   await page.getByRole('button', { name: /sign in|log in|login/i }).click();
   // Wait for redirect away from login page
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10_000 });
