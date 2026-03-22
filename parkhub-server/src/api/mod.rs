@@ -117,6 +117,8 @@ pub mod notification_channels;
 pub mod notifications;
 #[cfg(feature = "mod-oauth")]
 pub mod oauth;
+#[cfg(feature = "mod-parking-pass")]
+pub mod parking_pass;
 #[cfg(feature = "mod-operating-hours")]
 pub mod operating_hours;
 #[cfg(feature = "mod-payments")]
@@ -273,6 +275,8 @@ use waitlist_ext::{
     accept_waitlist_offer, decline_waitlist_offer, get_lot_waitlist, leave_lot_waitlist,
     subscribe_waitlist,
 };
+#[cfg(feature = "mod-parking-pass")]
+use parking_pass::{get_booking_pass, list_my_passes, verify_pass};
 #[cfg(feature = "mod-webhooks")]
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 #[cfg(feature = "mod-zones")]
@@ -440,6 +444,10 @@ async fn list_module_features() -> impl IntoResponse {
         "waitlist-ext".into(),
         cfg!(feature = "mod-waitlist-ext").into(),
     );
+    modules.insert(
+        "parking-pass".into(),
+        cfg!(feature = "mod-parking-pass").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -562,6 +570,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             }))
             .with_state(state.clone());
         public_routes = public_routes.merge(lobby_route);
+    }
+
+    // Public pass verification (no auth needed — used by QR scan)
+    #[cfg(feature = "mod-parking-pass")]
+    {
+        public_routes =
+            public_routes.route("/api/v1/pass/verify/{code}", get(verify_pass));
     }
 
     // Feature-gated public routes
@@ -901,6 +916,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 "/api/v1/lots/{id}/waitlist/{entry_id}/decline",
                 post(decline_waitlist_offer),
             );
+    }
+
+    #[cfg(feature = "mod-parking-pass")]
+    {
+        protected_routes = protected_routes
+            .route("/api/v1/bookings/{id}/pass", get(get_booking_pass))
+            .route("/api/v1/me/passes", get(list_my_passes));
     }
 
     #[cfg(feature = "mod-invoices")]

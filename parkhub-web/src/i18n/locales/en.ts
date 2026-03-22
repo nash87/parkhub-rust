@@ -1200,6 +1200,22 @@ export default {
         no_show: 'No Show',
       },
     },
+    parkingPass: {
+      title: 'Parking Passes',
+      subtitle: 'Your digital parking passes',
+      help: 'Show this pass at the parking entrance for quick access. The QR code can be scanned to verify your booking.',
+      helpLabel: 'Help',
+      digitalPass: 'Digital Parking Pass',
+      slot: 'Slot',
+      validUntil: 'Valid until',
+      empty: 'No active parking passes',
+      status: {
+        active: 'Active',
+        expired: 'Expired',
+        revoked: 'Revoked',
+        used: 'Used',
+      },
+    },
     waitlistExt: {
       title: 'Waitlist',
       subtitle: 'Get notified when a spot becomes available',
