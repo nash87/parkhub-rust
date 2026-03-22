@@ -338,6 +338,7 @@ async fn list_module_features() -> impl IntoResponse {
         "operating-hours".into(),
         cfg!(feature = "mod-operating-hours").into(),
     );
+    modules.insert("websocket".into(), cfg!(feature = "mod-websocket").into());
 
     Json(serde_json::json!({
         "modules": modules,

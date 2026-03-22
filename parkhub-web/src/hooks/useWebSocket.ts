@@ -1,6 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-export type WsEventType = 'booking_created' | 'booking_cancelled' | 'occupancy_changed';
+export type WsEventType =
+  | 'booking_created'
+  | 'booking_cancelled'
+  | 'occupancy_changed'
+  | 'announcement_published'
+  | 'slot_status_change';
 
 export interface WsEvent {
   event: WsEventType;
@@ -10,22 +15,33 @@ export interface WsEvent {
 
 export type WsEventHandler = (event: WsEvent) => void;
 
+/** Per-lot occupancy snapshot, kept up-to-date by WebSocket events. */
+export interface OccupancyMap {
+  [lotId: string]: { available: number; total: number };
+}
+
 interface UseWebSocketOptions {
   url?: string;
   autoReconnect?: boolean;
   reconnectDelay?: number;
+  maxReconnectDelay?: number;
   onEvent?: WsEventHandler;
+  /** Auth token appended as `?token=...` query parameter. */
+  token?: string;
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const {
     autoReconnect = true,
     reconnectDelay = 1000,
+    maxReconnectDelay = 30_000,
     onEvent,
+    token,
   } = options;
 
   const [connected, setConnected] = useState(false);
-  const [lastEvent, setLastEvent] = useState<WsEvent | null>(null);
+  const [lastMessage, setLastMessage] = useState<WsEvent | null>(null);
+  const [occupancy, setOccupancy] = useState<OccupancyMap>({});
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,8 +54,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const getWsUrl = useCallback(() => {
     if (options.url) return options.url;
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${proto}//${window.location.host}/api/v1/ws`;
-  }, [options.url]);
+    let url = `${proto}//${window.location.host}/api/v1/ws`;
+    if (token) {
+      url += `?token=${encodeURIComponent(token)}`;
+    }
+    return url;
+  }, [options.url, token]);
 
   const connect = useCallback(() => {
     if (unmountedRef.current) return;
@@ -59,10 +79,21 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     ws.onmessage = (msg) => {
       try {
         const event: WsEvent = JSON.parse(msg.data);
-        setLastEvent(event);
+        setLastMessage(event);
         onEventRef.current?.(event);
+
+        // Update occupancy map from occupancy_changed events
+        if (event.event === 'occupancy_changed' && event.data.lot_id) {
+          setOccupancy(prev => ({
+            ...prev,
+            [event.data.lot_id as string]: {
+              available: event.data.available as number,
+              total: event.data.total as number,
+            },
+          }));
+        }
       } catch {
-        // Ignore non-JSON messages
+        // Ignore non-JSON messages (e.g., pong frames)
       }
     };
 
@@ -70,14 +101,14 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       setConnected(false);
       wsRef.current = null;
       if (autoReconnect && !unmountedRef.current) {
-        const delay = Math.min(reconnectDelay * Math.pow(2, retryCount.current), 30_000);
+        const delay = Math.min(reconnectDelay * Math.pow(2, retryCount.current), maxReconnectDelay);
         retryCount.current += 1;
         reconnectTimer.current = setTimeout(connect, delay);
       }
     };
 
     ws.onerror = () => {};
-  }, [getWsUrl, autoReconnect, reconnectDelay]);
+  }, [getWsUrl, autoReconnect, reconnectDelay, maxReconnectDelay]);
 
   useEffect(() => {
     unmountedRef.current = false;
@@ -89,5 +120,5 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
   }, [connect]);
 
-  return { connected, lastEvent };
+  return { connected, lastMessage, occupancy };
 }

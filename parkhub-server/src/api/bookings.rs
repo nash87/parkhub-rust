@@ -535,6 +535,18 @@ pub async fn create_booking(
         user_info_opt
     };
 
+    // Broadcast WebSocket event for real-time updates
+    {
+        let state_r = state.read().await;
+        state_r
+            .ws_events
+            .broadcast(crate::api::ws::WsEvent::booking_created(
+                &booking.lot_id.to_string(),
+                &booking.slot_id.to_string(),
+                &auth_user.user_id.to_string(),
+            ));
+    }
+
     // Dispatch webhook event (non-blocking)
     #[cfg(feature = "mod-webhooks")]
     {
@@ -859,6 +871,14 @@ pub async fn cancel_booking(
             }
         });
     }
+
+    // Broadcast WebSocket event for real-time updates
+    state_guard
+        .ws_events
+        .broadcast(crate::api::ws::WsEvent::booking_cancelled(
+            &booking.lot_id.to_string(),
+            &booking.slot_id.to_string(),
+        ));
 
     // Dispatch webhook event
     #[cfg(feature = "mod-webhooks")]
