@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { CaretLeft, CaretRight, CalendarBlank } from '@phosphor-icons/react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, X, Copy, Check } from '@phosphor-icons/react';
 import { api, type CalendarEvent } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -35,6 +35,10 @@ export function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [subscriptionUrl, setSubscriptionUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [generatingToken, setGeneratingToken] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -61,6 +65,34 @@ export function CalendarPage() {
       if (!controller.signal.aborted) setLoading(false);
     }
   }
+
+  const handleSubscribe = useCallback(async () => {
+    setGeneratingToken(true);
+    try {
+      const res = await api.generateCalendarToken();
+      if (res.success && res.data) {
+        setSubscriptionUrl(res.data.url);
+        setShowSubscribeModal(true);
+      } else {
+        toast.error(t('common.error'));
+      }
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setGeneratingToken(false);
+    }
+  }, [t]);
+
+  const handleCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(subscriptionUrl);
+      setCopied(true);
+      toast.success(t('calendar.linkCopied', 'Link copied'));
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error(t('common.error'));
+    }
+  }, [subscriptionUrl, t]);
 
   // Build calendar grid (Monday start)
   const days = useMemo(() => {
@@ -133,6 +165,15 @@ export function CalendarPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('calendar.title', 'Kalender')}</h1>
         <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleSubscribe}
+            disabled={generatingToken}
+            aria-label={t('calendar.subscribe', 'Subscribe to Calendar')}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            <LinkSimple weight="bold" className="w-4 h-4" aria-hidden="true" />
+            {t('calendar.subscribe', 'Subscribe')}
+          </button>
           <button onClick={prevMonth} aria-label={t('calendar.previousMonth', 'Previous month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
             <CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
           </button>
@@ -214,6 +255,78 @@ export function CalendarPage() {
           <p className="text-sm text-surface-500 dark:text-surface-400">{t('calendar.selectDay', 'Klicke auf einen Tag, um Eintr\u00e4ge zu sehen')}</p>
         </div>
       )}
+
+      {/* Subscribe modal */}
+      <AnimatePresence>
+        {showSubscribeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowSubscribeModal(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6 max-w-lg w-full mx-4 shadow-xl"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-surface-900 dark:text-white">
+                  {t('calendar.subscribeTitle', 'Subscribe to Calendar')}
+                </h3>
+                <button
+                  onClick={() => setShowSubscribeModal(false)}
+                  aria-label={t('common.close', 'Close')}
+                  className="p-1 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
+                >
+                  <X weight="bold" className="w-5 h-5 text-surface-500" />
+                </button>
+              </div>
+
+              <p className="text-sm text-surface-600 dark:text-surface-400 mb-4">
+                {t('calendar.subscribeDesc', 'Use this URL to subscribe to your parking calendar from any calendar app.')}
+              </p>
+
+              {/* URL field with copy button */}
+              <div className="flex items-center gap-2 mb-6">
+                <input
+                  type="text"
+                  readOnly
+                  value={subscriptionUrl}
+                  className="flex-1 px-3 py-2 text-sm rounded-xl border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 text-surface-900 dark:text-white font-mono truncate"
+                  data-testid="subscription-url"
+                />
+                <button
+                  onClick={handleCopyLink}
+                  aria-label={t('calendar.copyLink', 'Copy link')}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors min-h-[40px]"
+                >
+                  {copied ? <Check weight="bold" className="w-4 h-4" /> : <Copy weight="bold" className="w-4 h-4" />}
+                  {t('calendar.copyLink', 'Copy')}
+                </button>
+              </div>
+
+              {/* Instructions */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-surface-900 dark:text-white">
+                  {t('calendar.instructions', 'How to subscribe')}
+                </h4>
+                <div className="space-y-2 text-xs text-surface-600 dark:text-surface-400">
+                  <div className="flex gap-2">
+                    <span className="font-semibold text-surface-700 dark:text-surface-300 shrink-0">Google Calendar:</span>
+                    <span>{t('calendar.instructionGoogle', 'Settings > Add calendar > From URL > paste the link')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-semibold text-surface-700 dark:text-surface-300 shrink-0">Outlook:</span>
+                    <span>{t('calendar.instructionOutlook', 'Add calendar > Subscribe from web > paste the link')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="font-semibold text-surface-700 dark:text-surface-300 shrink-0">Apple Calendar:</span>
+                    <span>{t('calendar.instructionApple', 'File > New Calendar Subscription > paste the link')}</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
