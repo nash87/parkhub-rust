@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.8.0] - 2026-03-23
+
+### Added
+- **Absence Approval Workflows**: Submit absence requests that require admin approval. `POST /api/v1/absences/requests`, `GET /api/v1/admin/absences/pending`, `PUT /api/v1/admin/absences/{id}/approve`, `PUT /api/v1/admin/absences/{id}/reject`, `GET /api/v1/absences/my`. Auto-notification on status change. Frontend: submit form with date range + type + reason, admin pending queue with approve/reject + comment, status badges. Feature flag: `mod-absence-approval`. 14 backend + 8 frontend tests. (#245)
+- **Calendar Drag-to-Reschedule**: Drag booking events to new dates on the calendar. `PUT /api/v1/bookings/{id}/reschedule` with slot availability validation and conflict detection. Visual drop target feedback, confirmation dialog. Feature flag: `mod-calendar-drag`. 10 backend + 5 frontend tests. (#246)
+- **Customizable Admin Dashboard Widgets**: Per-user dashboard widget system. `GET/PUT /api/v1/admin/widgets` for layout persistence, `GET /api/v1/admin/widgets/data/{widget_id}` for data. 8 widget types: occupancy_chart, revenue_summary, recent_bookings, user_growth, booking_heatmap, active_alerts, maintenance_status, ev_charging_status. Grid layout with widget catalog sidebar. Feature flag: `mod-widgets`. 13 backend + 8 frontend tests. (#247)
+- **i18n**: absenceApproval, calendarDrag, widgets keys added to all 10 locales
+- **51 feature flags**: Added `mod-absence-approval`, `mod-calendar-drag`, `mod-widgets` (was 48)
+
+---
+
 ## [3.7.0] - 2026-03-22
 
 ### Added
