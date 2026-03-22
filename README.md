@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.4.0-brightgreen.svg?style=flat-square" alt="v3.4.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.5.0-brightgreen.svg?style=flat-square" alt="v3.5.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -67,6 +67,12 @@ cargo build --release --package parkhub-server --no-default-features --features 
 ---
 
 ## Features
+
+### v3.5.0 Highlights
+
+- **Visitor Pre-Registration** -- Pre-register visitors with QR code passes, check-in tracking, admin overview with search/filter
+- **EV Charging Stations** -- Manage EV chargers (Type2/CCS/CHAdeMO/Tesla), start/stop sessions, kWh tracking, admin utilization stats
+- **Smart Recommendations** -- Weighted scoring algorithm (frequency 40%, availability 30%, price 20%, distance 10%), recommendation badges, star ratings in booking flow
 
 ### v3.4.0 Highlights
 

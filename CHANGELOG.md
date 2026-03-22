@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.5.0] - 2026-03-22
+
+### Added
+- **Visitor Pre-Registration**: Pre-register visitors with name, email, vehicle plate, and visit date. Auto-generated QR code passes with visitor pass URL. `POST /api/v1/visitors/register`, `GET /api/v1/visitors`, `GET /api/v1/admin/visitors`, `PUT /api/v1/visitors/:id/check-in`, `DELETE /api/v1/visitors/:id`. Admin view with search/filter and stats. Feature flag: `mod-visitors`. 8 backend + 6 frontend tests. (#230)
+- **EV Charging Station Management**: Manage EV chargers per lot with Type2, CCS, CHAdeMO, Tesla connector types. Start/stop charging sessions with kWh tracking. `GET /api/v1/lots/:id/chargers`, `POST /api/v1/chargers/:id/start`, `POST /api/v1/chargers/:id/stop`, `GET /api/v1/chargers/sessions`, `GET /api/v1/admin/chargers`, `POST /api/v1/admin/chargers`. Admin utilization stats. Feature flag: `mod-ev-charging`. 10 backend + 5 frontend tests. (#231)
+- **Smart Slot Recommendations**: Enhanced recommendation engine with weighted scoring algorithm: frequency (40%), availability (30%), price (20%), distance (10%). Recommendation badges (Your usual spot, Best price, Closest, Available now, Preferred lot, Accessible). Star rating visualization. "Recommended for you" section in booking flow. `GET /api/v1/recommendations/stats` for admin analytics. 8 backend + 4 frontend tests. (#232)
+- **i18n**: Visitors, EV charging, recommendations keys added to all 10 locales
+- **41 feature flags**: Added `mod-visitors`, `mod-ev-charging` (was 39)
+
+---
+
 ## [3.4.0] - 2026-03-22
 
 ### Added
