@@ -70,7 +70,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6 py-12">
+    <main className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6 py-12">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -143,6 +143,6 @@ export function RegisterPage() {
           <Link to="/login" className="text-primary-600 dark:text-primary-400 font-medium hover:underline">{t('auth.signIn')}</Link>
         </p>
       </motion.div>
-    </div>
+    </main>
   );
 }
