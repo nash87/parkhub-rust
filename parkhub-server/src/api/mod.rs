@@ -1461,6 +1461,30 @@ pub async fn update_current_user(
         }
     };
 
+    // ── Input length validation (issue #115) ────────────────────────────────
+    if let Some(ref name) = req.name {
+        if name.len() > 100 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "Name must be at most 100 characters",
+                )),
+            );
+        }
+    }
+    if let Some(ref phone) = req.phone {
+        if phone.len() > 20 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "Phone number must be at most 20 characters",
+                )),
+            );
+        }
+    }
+
     // Apply only the fields provided in the request
     if let Some(name) = req.name {
         user.name = name;
@@ -1620,6 +1644,27 @@ pub async fn create_booking(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateBookingRequest>,
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
+    // ── Input length validation (issue #115) ────────────────────────────────
+    if req.license_plate.len() > 20 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "License plate must be at most 20 characters",
+            )),
+        );
+    }
+    if let Some(ref notes) = req.notes {
+        if notes.len() > 500 {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_INPUT",
+                    "Notes must be at most 500 characters",
+                )),
+            );
+        }
+    }
     // ── Phase 1: reads under a read lock ──────────────────────────────────────
     // Collect all data needed to validate and price the booking.  A read lock
     // allows concurrent readers; we release it before any mutation.

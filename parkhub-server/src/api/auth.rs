@@ -66,6 +66,17 @@ pub async fn login(
     State(state): State<SharedState>,
     Json(request): Json<LoginRequest>,
 ) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
+    // ── Input length validation (issue #115) ────────────────────────────────
+    if request.username.len() > 254 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Username/email must be at most 254 characters",
+            )),
+        );
+    }
+
     let state_guard = state.read().await;
 
     // Find user by username
@@ -198,6 +209,26 @@ pub async fn register(
     State(state): State<SharedState>,
     Json(request): Json<RegisterRequest>,
 ) -> (StatusCode, Json<ApiResponse<LoginResponse>>) {
+    // ── Input length validation (issue #115) ────────────────────────────────
+    if request.email.len() > 254 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Email must be at most 254 characters",
+            )),
+        );
+    }
+    if request.name.len() > 100 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Name must be at most 100 characters",
+            )),
+        );
+    }
+
     let state_guard = state.read().await;
 
     // Enforce allow_self_registration setting
