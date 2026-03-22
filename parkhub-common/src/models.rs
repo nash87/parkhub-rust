@@ -233,6 +233,8 @@ pub struct OperatingHours {
 pub struct DayHours {
     pub open: String,
     pub close: String,
+    #[serde(default)]
+    pub closed: bool,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

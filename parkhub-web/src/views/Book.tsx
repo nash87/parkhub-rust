@@ -8,7 +8,7 @@ import {
   Lightning, Wheelchair, Motorcycle, Star,
   TrendUp, TrendDown,
 } from '@phosphor-icons/react';
-import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult } from '../api/client';
+import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult, type OperatingHoursData } from '../api/client';
 import { SkeletonCard } from '../components/Skeleton';
 import toast from 'react-hot-toast';
 
@@ -203,6 +203,23 @@ export function BookPage() {
   );
 }
 
+/** Check if a lot is currently open based on operating_hours. */
+function isLotOpenNow(hours?: OperatingHoursData): boolean {
+  if (!hours || hours.is_24h) return true;
+  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+  const now = new Date();
+  const dayKey = days[now.getDay()];
+  const dayHours = hours[dayKey as keyof OperatingHoursData] as { open: string; close: string; closed: boolean } | undefined;
+  if (!dayHours || dayHours.closed) return false;
+  const [oh, om] = dayHours.open.split(':').map(Number);
+  const [ch, cm] = dayHours.close.split(':').map(Number);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const openMin = oh * 60 + om;
+  const closeMin = ch * 60 + cm;
+  if (closeMin > openMin) return nowMin >= openMin && nowMin < closeMin;
+  return nowMin >= openMin || nowMin < closeMin; // overnight
+}
+
 function StepSelectLot({ lots, loading, onSelect, t }: {
   lots: ParkingLot[]; loading: boolean; onSelect: (lot: ParkingLot) => void; t: TFunction;
 }) {
@@ -224,7 +241,18 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
           onClick={() => onSelect(lot)}
           className="text-left glass-card p-5 group transition-all hover:shadow-md hover:border-primary-400/50 dark:hover:border-primary-600/50"
         >
-          <p className="font-semibold text-surface-900 dark:text-white">{lot.name}</p>
+          <div className="flex items-center justify-between">
+            <p className="font-semibold text-surface-900 dark:text-white">{lot.name}</p>
+            {lot.operating_hours && !lot.operating_hours.is_24h && (
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                isLotOpenNow(lot.operating_hours)
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+              }`}>
+                {isLotOpenNow(lot.operating_hours) ? t('book.openNow') : t('book.closedNow')}
+              </span>
+            )}
+          </div>
           {lot.address && (
             <p className="text-sm text-surface-500 dark:text-surface-400 mt-1 flex items-center gap-1">
               <MapPin weight="regular" className="w-3.5 h-3.5 shrink-0" />{lot.address}
