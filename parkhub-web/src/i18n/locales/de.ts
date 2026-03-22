@@ -106,6 +106,7 @@ export default {
       cancelBtn: 'Stornieren',
       cancelled: 'Buchung storniert',
       cancelFailed: 'Buchung konnte nicht storniert werden',
+      downloadInvoice: 'Rechnung',
       statusActive: 'Aktiv',
       statusCompleted: 'Abgeschlossen',
       statusCancelled: 'Storniert',
