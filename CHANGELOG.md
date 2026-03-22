@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.4.0] - 2026-03-22
+
+### Added
+- **Accessible Parking System**: `is_accessible` field on ParkingSlot, `accessibility_needs` on User (wheelchair, reduced_mobility, visual, hearing, none). `GET /api/v1/lots/:id/slots/accessible`, `PUT /api/v1/admin/lots/:id/slots/:slot_id/accessible`, `GET /api/v1/bookings/accessible-stats`, `PUT /api/v1/users/me/accessibility-needs`. 30-min priority booking for accessible users. Admin page with stats and slot toggles. Wheelchair icon in booking flow. Feature flag: `mod-accessible`. 9 backend + 8 frontend tests. (#226)
+- **Maintenance Scheduling**: Full CRUD for maintenance windows (`POST/GET/PUT/DELETE /api/v1/admin/maintenance`), `GET /api/v1/maintenance/active` (public). Auto-block affected slots (all or specific). Booking overlap validation. Admin page with calendar list, create/edit form, active banner. Feature flag: `mod-maintenance`. 9 backend + 6 frontend tests. (#227)
+- **Cost Center Billing**: `cost_center` and `department` fields on User. `GET /api/v1/admin/billing/by-cost-center`, `GET /api/v1/admin/billing/by-department`, `GET /api/v1/admin/billing/export` (CSV), `POST /api/v1/admin/billing/allocate`. Admin page with summary cards, tab switcher, data table, CSV export. Feature flag: `mod-cost-center`. 6 backend + 6 frontend tests. (#228)
+- **i18n**: Accessible, maintenance, billing keys in all 10 locales
+- **39 feature flags**: Added `mod-accessible`, `mod-maintenance`, `mod-cost-center` (was 36)
+
+---
+
 ## [3.3.0] - 2026-03-22
 
 ### Added
