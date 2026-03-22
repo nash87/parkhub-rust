@@ -167,6 +167,7 @@ full = [
     "mod-waitlist-ext",
     "mod-parking-pass",
     "mod-api-docs",
+    "mod-absence-approval",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -224,6 +225,7 @@ mod-geofence = []
 mod-waitlist-ext = []
 mod-parking-pass = []
 mod-api-docs = []
+mod-absence-approval = []
 
 [dev-dependencies]
 tempfile = "3"
