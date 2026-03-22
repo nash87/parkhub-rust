@@ -211,6 +211,8 @@ export const api = {
   // ── Calendar ──
   calendarEvents: (start: string, end: string) =>
     request<CalendarEvent[]>(`/api/v1/calendar/events?start=${start}&end=${end}`),
+  generateCalendarToken: () =>
+    request<{ token: string; url: string }>('/api/v1/calendar/token', { method: 'POST' }),
 
   // ── Demo ──
   getDemoConfig: () => request<{ demo_mode: boolean }>('/api/v1/demo/config'),
