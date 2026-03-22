@@ -149,6 +149,18 @@ export default {
       noTransactions: 'No transactions yet',
       creditsPerBooking: '{{count}} credit per booking',
     },
+    payments: {
+      buyCredits: 'Buy Credits',
+      history: 'Payment History',
+      success: 'Payment successful! Credits have been added.',
+      configureStripe: 'Configure Stripe',
+      amount: 'Amount',
+      status: 'Status',
+      date: 'Date',
+      noPayments: 'No payment history',
+      processing: 'Processing...',
+      selectCredits: 'Select credit amount',
+    },
     absences: {
       title: 'Absences',
       subtitle: 'Manage your availability and home office days',

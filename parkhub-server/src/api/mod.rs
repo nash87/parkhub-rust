@@ -121,6 +121,8 @@ pub mod settings;
 pub mod setup;
 #[cfg(feature = "mod-social")]
 mod social;
+#[cfg(feature = "mod-stripe")]
+pub mod stripe;
 #[cfg(feature = "mod-swap")]
 pub mod swap;
 pub mod system;
@@ -366,6 +368,7 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-setup-wizard").into(),
     );
     modules.insert("map".into(), cfg!(feature = "mod-map").into());
+    modules.insert("stripe".into(), cfg!(feature = "mod-stripe").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -516,6 +519,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     {
         // Map markers — public (frontend shows map without auth)
         public_routes = public_routes.route("/api/v1/lots/map", get(map::list_lot_markers));
+    }
+    #[cfg(feature = "mod-stripe")]
+    {
+        // Stripe webhook (no auth — Stripe calls this endpoint directly)
+        // Stripe config (public — frontend needs to know if Stripe is available)
+        public_routes = public_routes
+            .route(
+                "/api/v1/payments/webhook",
+                post(stripe::stripe_webhook).layer(Extension(stripe::new_checkout_store())),
+            )
+            .route("/api/v1/payments/config", get(stripe::stripe_config));
     }
     #[cfg(feature = "mod-pwa")]
     {
@@ -1101,6 +1115,19 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 get(payments::payment_status),
             )
             .layer(Extension(payments::new_payment_store()));
+    }
+
+    #[cfg(feature = "mod-stripe")]
+    {
+        // Stripe checkout (authenticated routes)
+        let stripe_store = stripe::new_checkout_store();
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/payments/create-checkout",
+                post(stripe::create_checkout),
+            )
+            .route("/api/v1/payments/history", get(stripe::payment_history))
+            .layer(Extension(stripe_store));
     }
 
     // Apply auth middleware to all protected routes

@@ -149,6 +149,7 @@ export default {
       noTransactions: 'Aún no hay transacciones',
       creditsPerBooking: '{{count}} crédito por reserva',
     },
+    payments: { buyCredits: 'Comprar creditos', history: 'Historial de pagos', success: 'Pago exitoso! Los creditos han sido agregados.', configureStripe: 'Configurar Stripe', amount: 'Monto', status: 'Estado', date: 'Fecha', noPayments: 'Sin historial de pagos', processing: 'Procesando...', selectCredits: 'Seleccionar cantidad de creditos' },
     absences: {
       title: 'Ausencias',
       subtitle: 'Gestiona tu disponibilidad y días de teletrabajo',
