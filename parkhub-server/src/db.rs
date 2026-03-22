@@ -2993,6 +2993,8 @@ mod tests {
             credits_last_refilled: None,
             tenant_id: None,
             accessibility_needs: None,
+            cost_center: None,
+            department: None,
         }
     }
 

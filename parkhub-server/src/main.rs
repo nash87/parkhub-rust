@@ -1580,6 +1580,8 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
         credits_last_refilled: None,
         tenant_id: None,
         accessibility_needs: None,
+        cost_center: None,
+        department: None,
     };
 
     db.save_user(&admin_user).await?;
@@ -1773,6 +1775,8 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
                     credits_last_refilled: Some(Utc::now()),
                     tenant_id: None,
                     accessibility_needs: None,
+                    cost_center: None,
+                    department: None,
                 }
             })
             .collect()
