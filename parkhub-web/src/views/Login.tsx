@@ -57,23 +57,45 @@ export function LoginPage() {
 
   return (
     <div className="min-h-dvh bg-white dark:bg-surface-950 flex">
-      {/* Left panel — clean branding */}
+      {/* Left panel — premium branding with animated gradient */}
       <div className="hidden lg:flex lg:w-[45%] bg-surface-950 dark:bg-surface-900 relative items-end p-12 overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 via-primary-400 to-emerald-400" />
-        <div className="relative z-10">
+        {/* Animated gradient strip at top */}
+        <motion.div
+          className="absolute top-0 left-0 w-full h-1"
+          style={{ background: 'linear-gradient(90deg, var(--color-primary-500), var(--color-primary-400), var(--color-accent-400), var(--color-primary-500))', backgroundSize: '200% 100%' }}
+          animate={{ backgroundPosition: ['0% 0%', '200% 0%'] }}
+          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+        />
+
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-[20%] right-[10%] w-64 h-64 rounded-full bg-gradient-to-br from-primary-500/15 to-accent-500/10 blur-3xl" />
+        <div className="absolute bottom-[30%] left-[5%] w-48 h-48 rounded-full bg-gradient-to-tr from-primary-400/10 to-cyan-400/8 blur-3xl" />
+
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }} />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="relative z-10"
+        >
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
               <CarSimple weight="fill" className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">ParkHub</span>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4 leading-tight whitespace-pre-line">
+          <h2 className="text-3xl font-bold text-white mb-4 leading-tight whitespace-pre-line" style={{ letterSpacing: '-0.02em' }}>
             {t('auth.heroTitle')}
           </h2>
           <p className="text-surface-400 text-sm leading-relaxed max-w-sm">
             {t('auth.heroSubtitle')}
           </p>
-        </div>
+        </motion.div>
       </div>
 
       {/* Right panel — form */}
@@ -101,14 +123,14 @@ export function LoginPage() {
             <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
           </div>
 
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1">
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '-0.02em' }}>
             {t('auth.login')}
           </h1>
           <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">
             {t('auth.loginSubtitle')}
           </p>
 
-          {/* Demo hint — click to auto-fill credentials */}
+          {/* Demo hint */}
           <button
             type="button"
             id="demo-autofill"
@@ -153,7 +175,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
                   {showPassword ? <EyeSlash weight="bold" className="w-4 h-4" /> : <Eye weight="bold" className="w-4 h-4" />}
@@ -176,7 +198,7 @@ export function LoginPage() {
               id="login-submit"
               type="submit"
               disabled={isSubmitting}
-              className="btn btn-primary w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`btn btn-primary w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/15 ${isSubmitting ? 'btn-shimmer' : ''}`}
             >
               {isSubmitting ? (
                 <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.loggingIn')}</>
