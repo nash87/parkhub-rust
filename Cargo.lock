@@ -4929,7 +4929,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-client"
-version = "1.9.0"
+version = "2.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4956,7 +4956,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-common"
-version = "1.9.0"
+version = "2.2.0"
 dependencies = [
  "chrono",
  "serde",
@@ -4968,7 +4968,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-server"
-version = "1.9.0"
+version = "2.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
