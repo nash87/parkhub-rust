@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
-  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star,
+  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star, Globe, CaretDown,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -13,6 +13,7 @@ import { CommandPalette } from './CommandPalette';
 import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
+import { languages } from '../i18n/index';
 
 const NAV_ITEMS = [
   { to: '/', icon: House, key: 'dashboard', end: true },
@@ -27,6 +28,55 @@ const NAV_ITEMS = [
   { to: '/translations', icon: Translate, key: 'translations' },
   { to: '/profile', icon: UserCircle, key: 'profile' },
 ] as const;
+
+function LanguageSelector() {
+  const { i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
+  const current = languages.find(l => l.code === i18n?.language) ?? languages[0];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-all w-full"
+        aria-label="Change language"
+        aria-expanded={open}
+      >
+        <Globe weight="fill" className="w-5 h-5" />
+        <span className="flex-1 text-left">{current.flag} {current.native}</span>
+        <CaretDown weight="bold" className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg shadow-lg py-1 z-50 max-h-64 overflow-y-auto">
+          {languages.map(lang => (
+            <button
+              key={lang.code}
+              onClick={() => { i18n?.changeLanguage(lang.code); setOpen(false); }}
+              className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
+                lang.code === i18n?.language
+                  ? 'bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 font-medium'
+                  : 'text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700/50'
+              }`}
+            >
+              <span>{lang.flag}</span>
+              <span>{lang.native}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Layout() {
   const { t } = useTranslation();
@@ -121,6 +171,8 @@ export function Layout() {
             </NavLink>
           )}
         </nav>
+
+        <LanguageSelector />
 
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
