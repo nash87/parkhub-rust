@@ -1,262 +1,347 @@
 # Security Model — ParkHub Rust
 
-Security architecture, controls, and responsible disclosure process for ParkHub Rust.
+> **Version:** 3.3.0 | **Last updated:** 2026-03-22
+
+Security architecture, controls, OWASP compliance, and responsible disclosure for
+ParkHub Rust (Axum + React 19).
 
 ---
 
-## Architecture Overview
+## Table of Contents
 
-ParkHub is a single-process server with an intentionally minimal attack surface:
+1. [Security Architecture Overview](#security-architecture-overview)
+2. [Authentication](#authentication)
+3. [Password Security](#password-security)
+4. [Two-Factor Authentication (2FA/TOTP)](#two-factor-authentication-2fatotp)
+5. [API Key Authentication](#api-key-authentication)
+6. [Authorization](#authorization)
+7. [Encryption](#encryption)
+8. [Rate Limiting](#rate-limiting)
+9. [Input Validation](#input-validation)
+10. [OWASP Top 10 Compliance](#owasp-top-10-compliance-matrix)
+11. [Security Headers](#security-headers)
+12. [File Upload Security](#file-upload-security)
+13. [CSRF / XSS Prevention](#csrf--xss-prevention)
+14. [Audit Log](#audit-log)
+15. [Known Limitations](#known-limitations)
+16. [Vulnerability Disclosure Process](#vulnerability-disclosure-process)
+17. [Security Contact](#security-contact)
 
-- No external database daemon (redb is embedded in the process)
-- No external cache service
-- No background job runner process
-- No third-party JavaScript loaded at runtime (all frontend assets are embedded in the binary)
-- No CDN, analytics, or tracking integrations
-- No cloud dependencies at runtime
+---
+
+## Security Architecture Overview
+
+```
+              Optional Reverse Proxy (Nginx/Caddy)
+                              |
+              Axum Application Layer (single binary)
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+  │ Rate Limiter  │  │ SecurityHdrs │  │ RequireAdmin MW  │
+  │ (Tower layer) │  │ (Tower)      │  │ (role gate)      │
+  └──────┬───────┘  └──────┬───────┘  └──────┬───────────┘
+         │                 │                  │
+  ┌──────▼─────────────────▼──────────────────▼───────────┐
+  │              Session Auth Layer                        │
+  │   Bearer Token (SPA) + 2FA/TOTP + Session Expiry      │
+  └──────┬────────────────────────────────────────────────┘
+         │
+  ┌──────▼────────────────────────────────────────────────┐
+  │              Typed Rust Input Validation               │
+  │   serde deserialization · type-safe extractors         │
+  └──────┬────────────────────────────────────────────────┘
+         │
+  ┌──────▼────────────────────────────────────────────────┐
+  │              Audit Log (all write operations)         │
+  │   User · Action · Details · IP · Timestamp            │
+  └───────────────────────────────────────────────────────┘
+                              |
+    Database: redb (embedded, no SQL)
+    Argon2id passwords · AES-256-GCM encryption at rest
+    Memory-safe Rust · no buffer overflows
+```
+
+**Key principles:**
+- Defense in depth — multiple layers of security controls
+- Principle of least privilege — users access only their own data
+- Secure by default — security features enabled without configuration
+- Self-hosted — no third-party data exposure by default
+- Memory safety — Rust eliminates entire classes of vulnerabilities
 
 ---
 
 ## Authentication
 
-### Session Tokens
+ParkHub Rust uses session-based authentication:
+
+### Bearer Token Authentication
+
+Used by the React frontend and external API consumers.
 
 | Property | Value |
 |----------|-------|
-| Token type | Opaque UUID Bearer token |
-| Default expiry | 24 hours (configurable via `session_timeout_minutes`) |
-| Storage | In the redb database, alongside expiry timestamp |
-| Transport | `Authorization: Bearer <token>` header only — never in URLs or cookies |
-| Refresh | Planned (v1.0.0 returns 501) |
-| Revocation | On account deletion or password change |
-
-### Password Security
-
-| Control | Implementation |
-|---------|---------------|
-| Hashing algorithm | **Argon2id** (via the `argon2` crate) |
-| Salt | Cryptographically random (OsRng) per password |
-| Output | Never returned in API responses (explicitly excluded from all serialization) |
-| Export | Excluded from GDPR data exports |
-
-### Role-Based Access Control (RBAC)
-
-Three roles are enforced at the HTTP handler level:
-
-| Role | Capabilities |
-|------|-------------|
-| `user` | Own bookings (create, view, cancel), own vehicles (CRUD), own profile, GDPR export, GDPR deletion |
-| `admin` | All user capabilities + create/manage lots, manage Impressum, view any user, list all bookings, admin user management |
-| `superadmin` | Same as `admin` in v1.0.0 (reserved for future delegation) |
-
-Ownership is verified on every request touching user-specific resources:
-- Users can only cancel their own bookings
-- Users can only delete their own vehicles
-- The vehicle ownership check in `create_booking` prevents booking with another user's vehicle
+| Token type | Opaque Bearer token (UUID-based) |
+| Token expiry | Configurable via `session_timeout_minutes` (default: 60) |
+| Storage | Token stored in redb; plaintext shown only once on login |
+| Revocation on password change | Yes — all sessions invalidated |
+| Revocation on deletion | Yes — all sessions invalidated |
 
 ---
 
-## Transport Security
+## Password Security
 
-### TLS 1.3
-
-When `enable_tls = true`, the server:
-
-1. Looks for `data/cert.pem` and `data/key.pem`
-2. If not found, auto-generates a self-signed certificate using the `rcgen` crate
-3. Serves all traffic over TLS 1.3 via `axum-server` with `rustls` (no OpenSSL dependency)
-
-For production deployments:
-- Bring your own certificate (place cert and key in the data directory)
-- Terminate TLS at a reverse proxy (nginx, Caddy, Traefik) and run ParkHub over plain HTTP internally
-
-### Security Headers
-
-Applied to every HTTP response by a global Axum middleware layer:
-
-| Header | Value |
-|--------|-------|
-| `X-Content-Type-Options` | `nosniff` |
-| `X-Frame-Options` | `DENY` |
-| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'` |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` |
-| `Permissions-Policy` | `geolocation=(), camera=(), microphone=()` |
-
-For deployments behind a reverse proxy, add at the proxy level:
-
-```
-Strict-Transport-Security: max-age=31536000; includeSubDomains
-```
-
-### CORS
-
-Same-origin requests only in production. Localhost origins (`http://localhost:*`,
-`https://localhost:*`, `http://127.0.0.1:*`) are allowed for development.
-No wildcard `*` origin is permitted.
+| Control | Value |
+|---------|-------|
+| Hashing algorithm | Argon2id |
+| Parameters | Memory: 19456 KiB, iterations: 2, parallelism: 1 (OWASP recommended) |
+| Minimum length | 8 characters (enforced in registration and change endpoints) |
+| Maximum length | 128 characters (prevents DoS on very long inputs) |
+| Configurable policies | Minimum length, require uppercase, require numbers, require special characters |
+| Password change | Requires current password |
+| Account deletion | Requires current password |
+| GDPR anonymization | Requires current password |
 
 ---
 
-## Database Security
+## Two-Factor Authentication (2FA/TOTP)
 
-### At-Rest Encryption (AES-256-GCM)
+| Feature | Details |
+|---------|---------|
+| Standard | TOTP (RFC 6238) — compatible with Google Authenticator, Authy, 1Password, etc. |
+| Enrollment | `POST /api/v1/2fa/enable` — returns QR code and secret |
+| Verification | `POST /api/v1/2fa/verify` — validates 6-digit TOTP code |
+| Backup codes | 8 single-use recovery codes generated on enrollment |
+| Disable | `POST /api/v1/2fa/disable` — requires current password |
+| Login flow | After password verification, 2FA code is required as a second step |
+| Per-account | Each user independently enables/disables 2FA |
 
-When `encryption_enabled = true`:
+---
 
-| Step | Detail |
-|------|--------|
-| Key derivation | PBKDF2-SHA256 derives a 256-bit key from the passphrase |
-| Encryption | AES-256-GCM applied to the redb database file |
-| Passphrase storage | Never written to disk (`#[serde(skip)]`). Supply via `PARKHUB_DB_PASSPHRASE` environment variable or GUI prompt |
-| Memory safety | `zeroize` crate zeroes key material in memory on drop |
+## API Key Authentication
 
-Supply the passphrase via environment variable:
+See [Authentication](#3-api-key-authentication) above.
 
-```bash
-PARKHUB_DB_PASSPHRASE="your-strong-passphrase" ./parkhub-server --headless
-```
+---
 
-> Without the passphrase, the database cannot be read. Store the passphrase in a
-> password manager or secret vault.
+## Authorization
+
+### Role Hierarchy
+
+Three roles with ascending privilege levels:
+
+| Role | Level | Capabilities |
+|------|-------|-------------|
+| `user` | 1 | Own bookings, vehicles, absences, preferences |
+| `admin` | 2 | All user data, reports, settings, user management |
+| `superadmin` | 3 | Admin + system configuration, database operations |
+
+### Role Checks
+
+Admin-only endpoints use a `require_admin` extractor that validates the user's role.
+This is an application-level check applied per handler — it prevents privilege escalation
+if a route is accidentally exposed.
+
+### Resource Ownership
+
+All user resources (vehicles, bookings, absences, favourites, notifications) are scoped
+to `WHERE user_id = $request->user()->id`. A user cannot access another user's data
+even by guessing a UUID.
+
+---
+
+## Encryption
+
+| Layer | Method | Details |
+|-------|--------|---------|
+| **Passwords** | Argon2id | Memory-hard, OWASP recommended parameters |
+| **In transit** | TLS 1.3 | Built-in TLS or reverse proxy |
+| **At rest** | AES-256-GCM | Optional redb encryption with PBKDF2-SHA256 key derivation |
+| **API tokens** | UUID-based | Stored in encrypted redb |
+| **2FA secrets** | Database encrypted | Stored in redb with AES-256-GCM |
 
 ---
 
 ## Rate Limiting
 
-Rate limiting is implemented using the `governor` crate (token bucket algorithm):
+| Endpoint | Limit | Window | Key |
+|----------|-------|--------|-----|
+| `POST /api/v1/auth/login` | 10 requests | 1 minute | Per IP |
+| `POST /api/v1/auth/register` | 10 requests | 1 minute | Per IP |
+| `POST /api/v1/auth/forgot-password` | 5 requests | 15 minutes | Per IP |
+| `POST /api/v1/payments/*` | 10 requests | 1 minute | Per user |
+| `POST /api/v1/webhooks/*` | 60 requests | 1 minute | Per IP |
+| General API | 60 requests | 1 minute | Per user |
 
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `POST /api/v1/auth/login` | 5 requests | per minute per IP |
-| `POST /api/v1/auth/register` | 3 requests | per minute per IP |
-| All other routes | 100 requests/second global | burst: 200 |
+Failed login attempts are recorded in the audit log with action `login_failed`,
+including the attempted username and the IP address.
 
-Returns HTTP 429 (`AppError::RateLimited`) when exceeded.
+The Rate Limit Dashboard (`GET /api/v1/admin/rate-limits`) provides real-time monitoring
+of rate limit groups and a 24-hour history of blocked requests.
 
 ---
 
 ## Input Validation
 
-| Control | Implementation |
-|---------|---------------|
-| Body size limit | 1 MiB maximum via `RequestBodyLimitLayer`. Returns HTTP 413 |
-| JSON deserialization | Rejects unknown fields via `serde` deny_unknown_fields |
-| UUID validation | At the type level via the `uuid` crate |
-| Booking duration | Must be positive (validated before arithmetic) |
-| Licence plates | Auto-uppercased server-side before storage |
+Every API endpoint uses Axum extractors with serde deserialization and explicit type
+validation. There is no SQL — redb is an embedded key-value store with typed Rust APIs.
+
+Key validation patterns:
+- **Email**: validated via regex at deserialization
+- **Password**: minimum 8, maximum 128 characters
+- **Plate numbers**: string with length validation
+- **Dates**: chrono types with automatic parsing
+- **IDs**: UUID with type-safe extraction
+- **JSON payloads**: serde struct deserialization — only declared fields accepted
 
 ---
 
-## Concurrency Safety
+## OWASP Top 10 Compliance Matrix
 
-Booking creation and cancellation acquire an async `RwLock` write lock on the application
-state. This ensures that the slot availability check and slot status update are atomic —
-two concurrent requests cannot both read `SlotStatus::Available` and both succeed,
-preventing double-bookings without requiring a separate database-level transaction.
-
----
-
-## SQL Injection Prevention
-
-ParkHub uses the `redb` embedded key-value database, not SQL. There is no SQL query
-layer, no ORM, and therefore no SQL injection attack surface.
-
----
-
-## XSS Prevention
-
-- All user-supplied content is rendered through React's JSX, which escapes values by default
-- The Content-Security-Policy header restricts script execution to `'self'`
-- No user-supplied content is set as `innerHTML` or `dangerouslySetInnerHTML`
+| OWASP Category | Status | ParkHub Implementation |
+|----------------|--------|----------------------|
+| **A01: Broken Access Control** | Mitigated | RBAC (user/admin/superadmin), resource ownership scoping, admin middleware |
+| **A02: Cryptographic Failures** | Mitigated | Argon2id passwords, AES-256-GCM at rest, TLS 1.3 in transit |
+| **A03: Injection** | Mitigated | No SQL (embedded redb); typed Rust API prevents injection by design |
+| **A04: Insecure Design** | Mitigated | Privacy by design (self-hosted), defense in depth, memory-safe Rust |
+| **A05: Security Misconfiguration** | Mitigated | Secure defaults; single binary with no separate config files to misconfigure |
+| **A06: Vulnerable Components** | Monitored | All dependencies MIT/Apache-2.0; Cargo.lock pinned, `cargo audit` recommended |
+| **A07: Authentication Failures** | Mitigated | Rate limiting, 2FA/TOTP, session expiry, Argon2id, configurable password policies |
+| **A08: Software and Data Integrity** | Mitigated | Cargo.lock + npm lock files, static binary compilation |
+| **A09: Security Logging** | Implemented | Full audit log — login, registration, deletion, password changes, admin actions |
+| **A10: Server-Side Request Forgery** | Not applicable | No server-side URL fetching from user input |
 
 ---
 
-## CSRF
+## Security Headers
 
-ParkHub is a stateless token-based API. All state-changing requests require a valid Bearer
-token in the `Authorization` header. CSRF attacks via cookie-based session forgery are not
-applicable. CORS prevents cross-origin JavaScript from reading the token.
+Security headers are applied via Tower middleware layers:
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| `X-Content-Type-Options` | `nosniff` | Prevent MIME type sniffing |
+| `X-Frame-Options` | `SAMEORIGIN` | Prevent clickjacking |
+| `X-XSS-Protection` | `0` | Disabled (CSP is preferred) |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Limit referrer information |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Restrict browser APIs |
+
+Additional headers recommended at the reverse proxy level:
+
+```nginx
+add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'" always;
+```
+
+Set `APP_URL=https://...` in `.env` to ensure all generated URLs use HTTPS.
 
 ---
 
 ## File Upload Security
 
-In v1.0.0, ParkHub Rust does not accept file uploads. The 1 MiB request body limit
-applies to all endpoints.
+File uploads are processed through security controls:
+
+1. **MIME type validation**: Content-Type header checked against allowed types
+2. **File size limit**: Configurable per endpoint via Tower body limit layer
+3. **No file system access**: ParkHub Rust stores all data in redb — no file system upload directory
+
+---
+
+## CSRF / XSS Prevention
+
+### CSRF
+
+ParkHub Rust is a pure SPA communicating via JSON API with Bearer token authentication.
+CSRF protection via cookies is not applicable. All state-changing requests require a
+valid Bearer token in the `Authorization` header.
+
+### XSS
+
+- All user-supplied content is rendered through React's JSX, which escapes values by default
+- No user-supplied content is rendered as raw HTML without sanitization
+- All frontend assets are embedded in the binary and served with correct Content-Type headers
+- Content Security Policy headers prevent inline script injection
 
 ---
 
 ## Audit Log
 
-When `audit_logging_enabled = true`, ParkHub writes entries for security-relevant events:
+All write operations create an entry in the `audit_log` table.
+The table has no delete endpoint — deletion requires direct database access.
 
-| Event | Logged |
-|-------|--------|
-| Login (success) | User ID, timestamp |
-| Login (failure) | Attempted username, timestamp |
-| Registration | User ID, timestamp |
-| Booking created | User ID, booking ID, slot ID, timestamp |
-| Booking cancelled | User ID, booking ID, timestamp |
-| Account deleted (GDPR) | User ID, timestamp |
-| Impressum updated | Admin user ID, timestamp |
+| Action | Triggered by |
+|--------|-------------|
+| `login` | Successful login |
+| `login_failed` | Failed login attempt |
+| `register` | New user registration |
+| `account_deleted` | User deletes own account |
+| `gdpr_erasure` | GDPR Art. 17 anonymization |
+| `forgot_password` | Password reset request |
+| `password_changed` | Password change |
+| `2fa_enabled` | User enables two-factor authentication |
+| `2fa_disabled` | User disables two-factor authentication |
+| `impressum_updated` | Admin edits Impressum |
+| `settings_updated` | Admin changes system settings |
+| `database_reset` | Admin resets the database |
+| `user_role_changed` | Admin changes a user's role |
 
-Log format: structured JSON via `tracing` to stdout.
-
----
-
-## Supply Chain
-
-| Component | Security Properties |
-|-----------|---------------------|
-| Binary | Compiled as a static musl binary — no shared library vulnerabilities |
-| Docker image | Minimal Alpine runtime image. The container runs as root by default — use `user: "1000:1000"` in `docker-compose.yml` and ensure `/data` is owned by that UID for production deployments |
-| TLS | `rustls` (pure Rust) — no OpenSSL dependency |
-| Cryptography | Well-audited Rust crates: `argon2`, `aes-gcm`, `pbkdf2`, `rand`, `zeroize` |
-
-Key security dependencies:
-
-| Crate | Purpose |
-|-------|---------|
-| `argon2` | Argon2id password hashing |
-| `aes-gcm` | AES-256-GCM database encryption |
-| `pbkdf2` / `sha2` | Key derivation from encryption passphrase |
-| `zeroize` | Zeroing sensitive key material in memory on drop |
-| `rcgen` | Self-signed TLS certificate generation |
-| `rustls` | TLS 1.3 implementation (no OpenSSL) |
-| `rand` | Cryptographically secure random number generation (OsRng) |
-| `governor` | Rate limiting (token bucket) |
+Each entry stores: `user_id` (nullable), `username`, `action`, `details` (JSON),
+`ip_address`, `created_at`.
 
 ---
 
 ## Known Limitations
 
-| Limitation | Mitigation / Roadmap |
-|-----------|---------------------|
-| Token refresh not implemented | Clients must re-authenticate after 24 hours. Token refresh is planned |
-| No account lockout beyond rate limiting | 5 login attempts/minute per IP. Manual deactivation via admin API |
-| Self-signed certificates trigger browser warnings | Use a reverse proxy with Let's Encrypt, or add cert to trust store |
-| Docker container runs as root | Add `user: "1000:1000"` in `docker-compose.yml` and `chown -R 1000:1000 /data` on the host volume for production |
-| Auth-endpoint rate limiter not wired | Deploy behind a reverse proxy (nginx, Caddy) with per-IP rate limiting. See `SECURITY-AUDIT.md` section 8 |
+| Limitation | Mitigation |
+|-----------|-----------|
+| redb is single-writer | Horizontal scaling requires a reverse proxy with sticky sessions |
+| No built-in WAF | Deploy behind Cloudflare, AWS WAF, or ModSecurity |
+| No automatic dependency vulnerability scanning | Configure Dependabot or `cargo audit` in CI |
 
 ---
 
-## Responsible Disclosure
+## Vulnerability Disclosure Process
 
-If you discover a security vulnerability in ParkHub:
+ParkHub follows a responsible disclosure process:
 
-1. **Do not open a public GitHub issue** for security vulnerabilities
-2. For vulnerabilities in a deployed instance, email the instance operator
-3. For vulnerabilities in the open-source code, open a GitHub Security Advisory:
-   `https://github.com/nash87/parkhub-rust/security/advisories/new`
+### Reporting
 
-Please include in your report:
+1. **Do NOT** open a public GitHub issue for security vulnerabilities
+2. **Preferred**: Create a [GitHub Security Advisory](https://github.com/nash87/parkhub-rust/security/advisories/new) (private)
+3. **Alternative**: Email the security contact below
+
+### What to Include
+
 - Description of the vulnerability
-- Steps to reproduce
+- Steps to reproduce (proof of concept if possible)
 - Potential impact assessment
-- Suggested fix (if you have one)
+- Affected versions
+- Suggested fix (if available)
 
-**Response times:**
-- Acknowledgement: within 48 hours
-- Fix timeline for critical issues: within 14 days
-- Researchers credited in release notes (unless anonymity is requested)
+### Response Timeline
 
-**CVE history**: No CVEs at initial public release (v1.0.0).
+| Severity | Acknowledgement | Fix Timeline |
+|----------|----------------|--------------|
+| Critical (RCE, auth bypass, data leak) | Within 24 hours | Within 7 days |
+| High (privilege escalation, XSS) | Within 48 hours | Within 14 days |
+| Medium (information disclosure) | Within 72 hours | Within 30 days |
+| Low (best practice) | Within 1 week | Next release |
+
+### Recognition
+
+- Security researchers are credited in release notes (unless anonymity is requested)
+- Significant findings may be assigned a CVE
+
+### CVE History
+
+No CVEs have been reported against ParkHub Rust.
+
+---
+
+## Security Contact
+
+- **GitHub Security Advisory**: [Create advisory](https://github.com/nash87/parkhub-rust/security/advisories/new)
+- **Repository**: [github.com/nash87/parkhub-rust](https://github.com/nash87/parkhub-rust)
+- **Supported versions**: See [SECURITY.md](/SECURITY.md) (root) for version support matrix
+
+---
+
+*This security documentation covers ParkHub Rust v3.3.0. For GDPR compliance, see
+[GDPR.md](GDPR.md). For the full compliance matrix, see [COMPLIANCE.md](COMPLIANCE.md).*
