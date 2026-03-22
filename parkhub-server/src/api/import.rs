@@ -311,6 +311,8 @@ pub async fn import_users_csv(
             credits_last_refilled: Some(now),
             tenant_id: None,
             accessibility_needs: None,
+            cost_center: None,
+            department: None,
         };
 
         // Persist
