@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   CalendarBlank, Clock, Car, X, SpinnerGap,
   ArrowClockwise, Warning, MapPin, CalendarPlus, Timer,
-  MagnifyingGlass, Funnel, QrCode,
+  MagnifyingGlass, Funnel, QrCode, FilePdf,
 } from '@phosphor-icons/react';
 import type { TFunction } from 'react-i18next';
 import { api, type Booking, type Vehicle } from '../api/client';
@@ -269,6 +269,16 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
               <QrCode weight="bold" className="w-4 h-4" /> {t('pass.showPass')}
             </button>
           )}
+          <a
+            href={`${(import.meta as Record<string, any>).env?.VITE_API_URL || ''}/api/v1/bookings/${booking.id}/invoice/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-sm btn-ghost text-surface-600 hover:bg-surface-50 dark:hover:bg-surface-800"
+            aria-label={`${t('bookings.downloadInvoice')} ${booking.lot_name}`}
+            data-testid={`invoice-${booking.id}`}
+          >
+            <FilePdf weight="bold" className="w-4 h-4" /> {t('bookings.downloadInvoice')}
+          </a>
           {isActiveOrConfirmed && (
             <button
               onClick={() => onCancel(booking.id)}

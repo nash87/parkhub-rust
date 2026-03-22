@@ -119,6 +119,9 @@ qrcode = "0.14"
 image = { version = "0.25", default-features = false, features = ["png"] }
 subtle = "2.6.1"
 
+# PDF generation (invoices)
+printpdf = "0.8"
+
 [build-dependencies]
 slint-build = { version = "1.15", optional = true }  # updated from 1.14
 
@@ -143,7 +146,7 @@ full = [
     "mod-jobs", "mod-swap", "mod-waitlist", "mod-zones", "mod-credits",
     "mod-email", "mod-export", "mod-favorites", "mod-push",
     "mod-recommendations", "mod-translations", "mod-social",
-    "mod-themes", "mod-oauth",
+    "mod-themes", "mod-oauth", "mod-invoices",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -177,6 +180,7 @@ mod-translations = []
 mod-social = []
 mod-themes = []
 mod-oauth = []
+mod-invoices = []
 
 [dev-dependencies]
 tempfile = "3"
