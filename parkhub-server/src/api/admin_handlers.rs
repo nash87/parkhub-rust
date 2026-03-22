@@ -719,6 +719,7 @@ pub async fn admin_reset(
         created_at: Utc::now(),
         updated_at: Utc::now(),
         last_login: None,
+        tenant_id: admin.tenant_id,
     };
 
     if let Err(e) = state_guard.db.save_user(&admin_user).await {
