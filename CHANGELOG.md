@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.1.0] - 2026-03-22
+
+### Added
+- **Interactive Map View**: `GET /api/v1/lots/map` returns lots with coordinates, live availability, and color-coded markers (green/yellow/red/gray). `PUT /api/v1/admin/lots/{id}/location` for setting lot coordinates. Leaflet.js + OpenStreetMap frontend at `/map` with click-to-book popups. Feature flag: `mod-map`. 12 backend + 6 frontend tests. (#211)
+- **Web Push Notifications**: Structured `PushPayload` with event types (booking confirmed/reminder/cancelled, new announcement). Service worker push handler with action buttons and notification click routing. `useNotifications` hook for subscribe/unsubscribe flow. 7 new backend + 4 frontend tests. (#212)
+- **Stripe Payment Integration**: `POST /api/v1/payments/create-checkout` for credit purchase, `POST /api/v1/payments/webhook` for Stripe webhook events, `GET /api/v1/payments/history` for payment history, `GET /api/v1/payments/config` for Stripe status. Feature flag: `mod-stripe`. 14 backend tests. (#213)
+- **i18n**: Map, payments keys added to all 10 locales
+- **31 feature flags**: Added `mod-map`, `mod-stripe` (was 29)
+
+---
+
 ## [3.0.0] - 2026-03-22
 
 ### Added
