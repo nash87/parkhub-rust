@@ -221,11 +221,7 @@ async fn test_2fa_setup_twice_returns_conflict_after_enable() {
         let users = guard.db.list_users().await.unwrap();
         let admin = users.iter().find(|u| u.username == "admin").unwrap();
         let enabled_key = format!("totp_enabled:{}", admin.id);
-        guard
-            .db
-            .set_setting(&enabled_key, "true")
-            .await
-            .unwrap();
+        guard.db.set_setting(&enabled_key, "true").await.unwrap();
     }
 
     // Second setup should conflict
@@ -559,12 +555,10 @@ async fn test_admin_get_user_login_history() {
 
     let resp = app
         .oneshot(
-            Request::get(format!(
-                "/api/v1/admin/users/{user_id}/login-history"
-            ))
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::get(format!("/api/v1/admin/users/{user_id}/login-history"))
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -690,7 +684,10 @@ async fn test_create_api_key_success() {
 
     assert_eq!(resp.status(), StatusCode::CREATED);
     let json = body_json(resp).await;
-    assert!(json["data"]["api_key"].as_str().unwrap().starts_with("phk_"));
+    assert!(json["data"]["api_key"]
+        .as_str()
+        .unwrap()
+        .starts_with("phk_"));
     assert_eq!(json["data"]["name"], "Test Key");
     assert!(json["data"]["expires_at"].is_string());
 }
@@ -886,13 +883,10 @@ async fn test_revoke_api_key_not_found() {
 
     let resp = app
         .oneshot(
-            Request::delete(format!(
-                "/api/v1/auth/api-keys/{}",
-                Uuid::new_v4()
-            ))
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::delete(format!("/api/v1/auth/api-keys/{}", Uuid::new_v4()))
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -908,8 +902,7 @@ async fn test_revoke_api_key_not_found() {
 async fn test_bulk_update_users_activate() {
     let state = test_state().await;
     let admin_tok = admin_token(state.clone()).await;
-    let (_, user_id) =
-        register_user_token(state.clone(), "bulk@example.com", "SecurePass1!").await;
+    let (_, user_id) = register_user_token(state.clone(), "bulk@example.com", "SecurePass1!").await;
 
     let app = router(state);
     let body = serde_json::json!({
@@ -1530,11 +1523,7 @@ async fn test_modules_endpoint() {
     let app = router(state);
 
     let resp = app
-        .oneshot(
-            Request::get("/api/v1/modules")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::get("/api/v1/modules").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -2381,8 +2370,7 @@ async fn test_wrong_http_method() {
 async fn test_admin_get_user_by_id() {
     let state = test_state().await;
     let admin_tok = admin_token(state.clone()).await;
-    let (_, user_id) =
-        register_user_token(state.clone(), "byid@example.com", "SecurePass1!").await;
+    let (_, user_id) = register_user_token(state.clone(), "byid@example.com", "SecurePass1!").await;
 
     let app = router(state);
     let resp = app
