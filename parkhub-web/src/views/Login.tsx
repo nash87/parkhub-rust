@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { CarSimple, Eye, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { FormField, FormInput } from '../components/ui/FormField';
+import { OAuthButtons } from '../components/OAuthButtons';
 // @ts-ignore — Vite resolves JSON imports at build time
 import { version as APP_VERSION } from '../../package.json';
 
@@ -129,6 +130,9 @@ export function LoginPage() {
           <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">
             {t('auth.loginSubtitle')}
           </p>
+
+          {/* OAuth social login buttons */}
+          <OAuthButtons />
 
           {/* Demo hint */}
           <button

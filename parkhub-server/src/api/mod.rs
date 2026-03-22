@@ -127,6 +127,8 @@ pub mod webhooks;
 pub mod ws;
 #[cfg(feature = "mod-zones")]
 pub mod zones;
+#[cfg(feature = "mod-oauth")]
+pub mod oauth;
 
 // Re-import handler functions so the router can reference them unqualified.
 #[cfg(feature = "mod-absences")]
@@ -314,6 +316,7 @@ async fn list_module_features() -> impl IntoResponse {
     );
     modules.insert("social".into(), cfg!(feature = "mod-social").into());
     modules.insert("themes".into(), cfg!(feature = "mod-themes").into());
+    modules.insert("oauth".into(), cfg!(feature = "mod-oauth").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -452,6 +455,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Branding logo (public, cached)
         public_routes =
             public_routes.route("/api/v1/branding/logo", get(branding::get_branding_logo));
+    }
+    #[cfg(feature = "mod-oauth")]
+    {
+        // OAuth: providers list (public, no auth) + redirect + callback
+        public_routes = public_routes
+            .route("/api/v1/auth/oauth/providers", get(oauth::oauth_providers))
+            .route("/api/v1/auth/oauth/google", get(oauth::oauth_google_redirect))
+            .route("/api/v1/auth/oauth/google/callback", get(oauth::oauth_google_callback))
+            .route("/api/v1/auth/oauth/github", get(oauth::oauth_github_redirect))
+            .route("/api/v1/auth/oauth/github/callback", get(oauth::oauth_github_callback));
     }
 
     // Protected routes (auth required) — core user + admin routes
