@@ -235,6 +235,35 @@ pub async fn check_admin(
     }
 }
 
+/// Middleware that enforces admin role for an entire route group (issue #109).
+///
+/// Expects `AuthUser` to be in request extensions (set by `auth_middleware`).
+/// Returns 403 FORBIDDEN if the user is not an admin or superadmin.
+async fn admin_middleware(
+    State(state): State<SharedState>,
+    request: Request<Body>,
+    next: Next,
+) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    let auth_user = request
+        .extensions()
+        .get::<AuthUser>()
+        .cloned()
+        .ok_or_else(|| {
+            (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse::error("UNAUTHORIZED", "Not authenticated")),
+            )
+        })?;
+
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return Err((status, Json(ApiResponse::error("FORBIDDEN", msg))));
+    }
+    drop(state_guard);
+
+    Ok(next.run(request).await)
+}
+
 /// `GET /api/v1/modules` — compile-time module feature introspection.
 ///
 /// Returns which optional modules are compiled into this binary.
@@ -453,12 +482,26 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
-        // Admin-only: update Impressum settings
+        // Quick book
+        .route("/api/v1/bookings/quick", post(quick_book))
+        // User stats & preferences
+        .route("/api/v1/user/stats", get(user_stats))
+        .route(
+            "/api/v1/user/preferences",
+            get(get_user_preferences).put(update_user_preferences),
+        )
+        // Booking checkin
+        .route("/api/v1/bookings/{id}/checkin", post(booking_checkin));
+
+    // ── Admin routes (guarded by admin_middleware) ────────────────────────
+    // All /api/v1/admin/* routes are grouped under a shared admin_middleware
+    // layer (issue #109) providing defense-in-depth: even if a handler forgets
+    // to call check_admin(), the middleware rejects non-admin users.
+    let admin_routes = Router::new()
         .route(
             "/api/v1/admin/impressum",
             get(get_impressum_admin).put(update_impressum),
         )
-        // Admin-only: user management
         .route("/api/v1/admin/users", get(admin_list_users))
         .route(
             "/api/v1/admin/users/{id}/role",
@@ -469,11 +512,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             axum::routing::patch(admin_update_user_status),
         )
         .route("/api/v1/admin/users/{id}", delete(admin_delete_user))
-        // Admin-only: all bookings
         .route("/api/v1/admin/bookings", get(admin_list_bookings))
-        // Quick book
-        .route("/api/v1/bookings/quick", post(quick_book))
-        // Admin reports & dashboard
         .route("/api/v1/admin/stats", get(admin_stats))
         .route("/api/v1/admin/reports", get(admin_reports))
         .route("/api/v1/admin/heatmap", get(admin_heatmap))
@@ -482,33 +521,27 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(admin_dashboard_charts),
         )
         .route("/api/v1/admin/audit-log", get(admin_audit_log))
-        // User stats & preferences
-        .route("/api/v1/user/stats", get(user_stats))
-        .route(
-            "/api/v1/user/preferences",
-            get(get_user_preferences).put(update_user_preferences),
-        )
-        // Booking checkin
-        .route("/api/v1/bookings/{id}/checkin", post(booking_checkin))
-        // Admin: database reset
         .route("/api/v1/admin/reset", post(admin_reset))
-        // Admin: auto-release settings
         .route(
             "/api/v1/admin/settings/auto-release",
             get(admin_get_auto_release).put(admin_update_auto_release),
         )
-        // Admin: email settings
         .route(
             "/api/v1/admin/settings/email",
             get(admin_get_email_settings).put(admin_update_email_settings),
         )
-        // Admin: privacy settings
         .route(
             "/api/v1/admin/privacy",
             get(admin_get_privacy).put(admin_update_privacy),
         )
-        // Admin: update user
-        .route("/api/v1/admin/users/{id}/update", put(admin_update_user));
+        .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            admin_middleware,
+        ));
+
+    // Merge admin routes into protected routes
+    protected_routes = protected_routes.merge(admin_routes);
 
     // ── Feature-gated protected routes ──────────────────────────────────────
 
