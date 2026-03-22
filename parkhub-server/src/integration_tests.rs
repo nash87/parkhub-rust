@@ -1312,7 +1312,6 @@ async fn test_get_booking_invoice_returns_correct_amounts() {
 }
 
 #[tokio::test]
-#[ignore = "max_bookings_per_day enforcement needs investigation — setting is applied but second booking still succeeds"]
 async fn test_booking_max_per_day_limit_enforced() {
     let state = test_state().await;
     let admin_tok = admin_token_it(state.clone()).await;
