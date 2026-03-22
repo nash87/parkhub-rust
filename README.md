@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.2.0-brightgreen.svg?style=flat-square" alt="v3.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.3.0-brightgreen.svg?style=flat-square" alt="v3.3.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -67,6 +67,12 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ## Features
 
+### v3.3.0 Highlights
+
+- **Audit Log UI + Export** -- Paginated audit log at `/admin/audit-log` with action/user/date filters, color-coded badges, CSV export
+- **Data Import/Export Suite** -- Bulk CSV/JSON import for users and lots with drag-and-drop UI, enhanced CSV exports with stats
+- **Fleet / Vehicle Management** -- Admin fleet overview at `/admin/fleet` with type distribution, electric ratio, vehicle flagging
+
 ### v3.2.0 Highlights
 
 - **iCal Calendar Sync** -- Subscribe to parking bookings from Google Calendar, Outlook, or Apple Calendar via personal token URL
@@ -97,7 +103,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Operating hours** -- Per-lot 7-day schedule with booking validation and "Open Now" badges
 - **SMS/WhatsApp stubs** -- Notification channel expansion with per-event toggles
 - **PDF invoices** -- Professional booking invoices with VAT breakdown
-- **31 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **36 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
 - **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
 - **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
 - **Community translations** -- 10 languages with proposal voting and admin review
