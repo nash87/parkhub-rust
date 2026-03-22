@@ -4220,6 +4220,24 @@ pub async fn change_password(
         );
     }
 
+    // Invalidate all existing sessions for this user — a password change must
+    // force re-authentication on every device (issue #116).
+    if let Err(e) = state_guard
+        .db
+        .delete_sessions_by_user(auth_user.user_id)
+        .await
+    {
+        tracing::warn!(
+            user_id = %auth_user.user_id,
+            error = %e,
+            "Failed to invalidate sessions after password change"
+        );
+    }
+
+    crate::audit::AuditEntry::new(crate::audit::AuditEventType::PasswordChanged)
+        .user(auth_user.user_id, &updated_user.username)
+        .log();
+
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
 
