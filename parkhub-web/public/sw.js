@@ -79,6 +79,72 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(networkFirstNavigation(request));
 });
 
+// ── Push Notifications ──────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = { title: 'ParkHub', body: 'New notification' };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data.body = event.data.text();
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-72.png',
+    tag: data.event_type || 'general',
+    renotify: true,
+    data: {
+      url: data.url || '/',
+      event_type: data.event_type,
+      reference_id: data.reference_id,
+    },
+    actions: [],
+  };
+
+  // Add context-specific actions
+  if (data.event_type === 'booking_confirmed' || data.event_type === 'booking_reminder') {
+    options.actions = [
+      { action: 'view', title: 'View Booking' },
+      { action: 'dismiss', title: 'Dismiss' },
+    ];
+  } else if (data.event_type === 'new_announcement') {
+    options.actions = [
+      { action: 'view', title: 'Read More' },
+    ];
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  const url = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // Focus existing window if available
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      // Open new window
+      return self.clients.openWindow(url);
+    })
+  );
+});
+
 // ── Background Sync ──────────────────────────────────────────────────────────
 self.addEventListener('sync', (event) => {
   if (event.tag === 'parkhub-mutation-sync') {
