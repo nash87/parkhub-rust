@@ -1321,6 +1321,122 @@ async fn test_update_notification_preferences() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 8b. DESIGN THEME PREFERENCES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[tokio::test]
+async fn test_get_design_theme_default() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/preferences/theme")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["design_theme"], "classic");
+}
+
+#[tokio::test]
+async fn test_update_design_theme() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+
+    let body = serde_json::json!({ "design_theme": "neon" });
+
+    let app = router(state.clone());
+    let resp = app
+        .oneshot(
+            Request::put("/api/v1/preferences/theme")
+                .header("content-type", "application/json")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["design_theme"], "neon");
+
+    // Verify persistence
+    let app = router(state);
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/preferences/theme")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let json = body_json(resp).await;
+    assert_eq!(json["data"]["design_theme"], "neon");
+}
+
+#[tokio::test]
+async fn test_update_design_theme_invalid() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+
+    let body = serde_json::json!({ "design_theme": "nonexistent_theme" });
+
+    let app = router(state);
+    let resp = app
+        .oneshot(
+            Request::put("/api/v1/preferences/theme")
+                .header("content-type", "application/json")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    let json = body_json(resp).await;
+    assert_eq!(json["error"]["code"], "INVALID_THEME");
+}
+
+#[tokio::test]
+async fn test_update_design_theme_all_valid_themes() {
+    let valid_themes = ["classic", "glass", "bento", "brutalist", "neon", "warm"];
+
+    for theme_name in valid_themes {
+        let state = test_state().await;
+        let admin_tok = admin_token(state.clone()).await;
+
+        let body = serde_json::json!({ "design_theme": theme_name });
+
+        let app = router(state);
+        let resp = app
+            .oneshot(
+                Request::put("/api/v1/preferences/theme")
+                    .header("content-type", "application/json")
+                    .header("authorization", format!("Bearer {admin_tok}"))
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK, "Theme '{}' should be valid", theme_name);
+        let json = body_json(resp).await;
+        assert_eq!(json["data"]["design_theme"], theme_name);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 9. ADMIN EXTENSIONS — BOOKING POLICIES
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -1,11 +1,107 @@
-import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useSyncExternalStore, type ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+// ── Light/Dark Mode ──
+
+type ColorMode = 'light' | 'dark' | 'system';
+
+// ── Design Themes ──
+
+export type DesignThemeId = 'classic' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm';
+
+export interface DesignThemeInfo {
+  id: DesignThemeId;
+  name: string;
+  description: string;
+  /** Preview palette colors [bg, card, accent, text, border] */
+  previewColors: {
+    light: [string, string, string, string, string];
+    dark: [string, string, string, string, string];
+  };
+  tags: string[];
+}
+
+export const DESIGN_THEMES: DesignThemeInfo[] = [
+  {
+    id: 'classic',
+    name: 'Classic',
+    description: 'Clean, professional. The original ParkHub look.',
+    previewColors: {
+      light: ['#fafaf9', '#ffffff', '#0d9488', '#1e293b', '#e2e8f0'],
+      dark: ['#0f172a', '#1e293b', '#14b8a6', '#f1f5f9', '#334155'],
+    },
+    tags: ['clean', 'professional', 'default'],
+  },
+  {
+    id: 'glass',
+    name: 'Glass',
+    description: 'Frosted glassmorphism with blur and translucency.',
+    previewColors: {
+      light: ['#f8fafc', 'rgba(255,255,255,0.6)', '#14b8a6', '#0f172a', 'rgba(255,255,255,0.3)'],
+      dark: ['#0c0a1a', 'rgba(255,255,255,0.05)', '#6366f1', '#e2e8f0', 'rgba(255,255,255,0.06)'],
+    },
+    tags: ['modern', 'glassmorphism', 'blur'],
+  },
+  {
+    id: 'bento',
+    name: 'Bento',
+    description: 'Grid-focused, minimal. Japanese-inspired clean lines.',
+    previewColors: {
+      light: ['#fafaf9', '#ffffff', '#0d9488', '#1c1917', '#e7e5e4'],
+      dark: ['#0c0a09', '#1c1917', '#14b8a6', '#fafaf9', '#292524'],
+    },
+    tags: ['minimal', 'grid', 'japanese'],
+  },
+  {
+    id: 'brutalist',
+    name: 'Brutalist',
+    description: 'Raw, bold, high-contrast. No rounded corners.',
+    previewColors: {
+      light: ['#ffffff', '#ffffff', '#000000', '#000000', '#000000'],
+      dark: ['#0a0a0a', '#171717', '#ffffff', '#ffffff', '#ffffff'],
+    },
+    tags: ['bold', 'raw', 'high-contrast'],
+  },
+  {
+    id: 'neon',
+    name: 'Neon',
+    description: 'Vibrant accents with cyberpunk-inspired glow.',
+    previewColors: {
+      light: ['#f8fafc', '#ffffff', '#6366f1', '#0f172a', '#e2e8f0'],
+      dark: ['#050510', '#0a0a1a', '#6366f1', '#e2e8f0', 'rgba(99,102,241,0.2)'],
+    },
+    tags: ['vibrant', 'cyberpunk', 'glow'],
+  },
+  {
+    id: 'warm',
+    name: 'Warm',
+    description: 'Earth tones, soft gradients, cozy feel.',
+    previewColors: {
+      light: ['#fef7ee', '#fffbf5', '#ea580c', '#431407', '#fed7aa'],
+      dark: ['#1a0e04', '#271505', '#ea580c', '#fed7aa', '#7c2d12'],
+    },
+    tags: ['cozy', 'earth', 'soft'],
+  },
+];
+
+const DEFAULT_DESIGN_THEME: DesignThemeId = 'classic';
+
+// ── Context ──
 
 interface ThemeState {
-  theme: Theme;
+  /** Light/dark/system selection */
+  theme: ColorMode;
+  /** Resolved light or dark */
   resolved: 'light' | 'dark';
-  setTheme: (t: Theme) => void;
+  /** Set light/dark mode */
+  setTheme: (t: ColorMode) => void;
+  /** Current design theme ID */
+  designTheme: DesignThemeId;
+  /** Set design theme */
+  setDesignTheme: (id: DesignThemeId) => void;
+  /** All available design themes */
+  designThemes: DesignThemeInfo[];
+  /** Get current design theme metadata */
+  currentDesignTheme: DesignThemeInfo;
 }
 
 const ThemeContext = createContext<ThemeState | null>(null);
@@ -30,9 +126,17 @@ function getServerSnapshot(): 'light' | 'dark' {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() =>
-    (localStorage.getItem('parkhub_theme') as Theme) || 'system'
+  const [theme, setThemeState] = useState<ColorMode>(() =>
+    (localStorage.getItem('parkhub_theme') as ColorMode) || 'system'
   );
+
+  const [designTheme, setDesignThemeState] = useState<DesignThemeId>(() => {
+    const stored = localStorage.getItem('parkhub_design_theme');
+    if (stored && DESIGN_THEMES.some(t => t.id === stored)) {
+      return stored as DesignThemeId;
+    }
+    return DEFAULT_DESIGN_THEME;
+  });
 
   // Reactively track OS preference so `resolved` updates on system change
   const systemTheme = useSyncExternalStore(
@@ -43,6 +147,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const resolved = theme === 'system' ? systemTheme : theme;
 
+  // Apply light/dark class
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', resolved === 'dark');
@@ -58,13 +163,46 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, [resolved]);
 
-  function setTheme(t: Theme) {
+  // Apply design theme data attribute
+  useEffect(() => {
+    document.documentElement.dataset.designTheme = designTheme;
+  }, [designTheme]);
+
+  const setTheme = useCallback((t: ColorMode) => {
     setThemeState(t);
     localStorage.setItem('parkhub_theme', t);
-  }
+  }, []);
+
+  const setDesignTheme = useCallback((id: DesignThemeId) => {
+    if (!DESIGN_THEMES.some(t => t.id === id)) return;
+    setDesignThemeState(id);
+    localStorage.setItem('parkhub_design_theme', id);
+    // Sync to server if user is logged in
+    const token = localStorage.getItem('parkhub_token');
+    if (token) {
+      fetch('/api/v1/preferences/theme', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ design_theme: id }),
+      }).catch(() => {});
+    }
+  }, []);
+
+  const currentDesignTheme = DESIGN_THEMES.find(t => t.id === designTheme) || DESIGN_THEMES[0];
 
   return (
-    <ThemeContext.Provider value={{ theme, resolved, setTheme }}>
+    <ThemeContext.Provider value={{
+      theme,
+      resolved,
+      setTheme,
+      designTheme,
+      setDesignTheme,
+      designThemes: DESIGN_THEMES,
+      currentDesignTheme,
+    }}>
       {children}
     </ThemeContext.Provider>
   );
