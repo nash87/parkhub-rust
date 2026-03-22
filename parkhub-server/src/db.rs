@@ -199,6 +199,15 @@ pub struct AuditLogEntry {
     pub user_id: Option<Uuid>,
     pub username: Option<String>,
     pub details: Option<String>,
+    /// Target resource type (e.g. "booking", "user", "lot")
+    #[serde(default)]
+    pub target_type: Option<String>,
+    /// Target resource ID
+    #[serde(default)]
+    pub target_id: Option<String>,
+    /// Client IP address
+    #[serde(default)]
+    pub ip_address: Option<String>,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2166,6 +2175,22 @@ impl Database {
         Ok(entries)
     }
 
+    /// List all audit log entries (no limit) for export and filtered queries.
+    pub async fn list_all_audit_log(&self) -> Result<Vec<AuditLogEntry>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(AUDIT_LOG)?;
+
+        let mut entries: Vec<AuditLogEntry> = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            entries.push(self.deserialize(value.value())?);
+        }
+        entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        Ok(entries)
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
     // TRANSLATION MANAGEMENT OPERATIONS
     // ═══════════════════════════════════════════════════════════════════════════
@@ -2662,6 +2687,9 @@ mod tests {
             user_id: Some(user_id),
             username: Some("alice".to_string()),
             details: Some("Login from 192.168.1.10".to_string()),
+            target_type: None,
+            target_id: None,
+            ip_address: Some("192.168.1.10".to_string()),
         };
         let e2 = AuditLogEntry {
             id: Uuid::new_v4(),
@@ -2670,6 +2698,9 @@ mod tests {
             user_id: Some(user_id),
             username: Some("alice".to_string()),
             details: Some("Booked slot A-12 for 2h".to_string()),
+            target_type: Some("booking".to_string()),
+            target_id: Some("A-12".to_string()),
+            ip_address: None,
         };
         let e3 = AuditLogEntry {
             id: Uuid::new_v4(),
@@ -2678,6 +2709,9 @@ mod tests {
             user_id: None,
             username: None,
             details: Some("Demo data reset triggered".to_string()),
+            target_type: None,
+            target_id: None,
+            ip_address: None,
         };
         let e4 = AuditLogEntry {
             id: Uuid::new_v4(),
@@ -2686,6 +2720,9 @@ mod tests {
             user_id: Some(user_id),
             username: Some("alice".to_string()),
             details: None,
+            target_type: None,
+            target_id: None,
+            ip_address: None,
         };
 
         db.save_audit_log(&e1).await.unwrap();
@@ -2767,6 +2804,9 @@ mod tests {
             user_id: None,
             username: None,
             details: None,
+            target_type: None,
+            target_id: None,
+            ip_address: None,
         };
         db.save_audit_log(&entry).await.unwrap();
 
