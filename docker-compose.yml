@@ -15,7 +15,7 @@ services:
       - parkhub-data:/data
     environment:
       - RUST_LOG=info
-      - PARKHUB_ADMIN_PASSWORD=ParkHub2026!
+      - PARKHUB_ADMIN_PASSWORD=${PARKHUB_ADMIN_PASSWORD:-changeme}
       # Enable database encryption at rest (strongly recommended for production)
       # - PARKHUB_DB_PASSPHRASE=change-me-to-a-strong-passphrase
       # SMTP email notifications (env var names without PARKHUB_ prefix in current version)
