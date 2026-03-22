@@ -1,10 +1,6 @@
 name: Security Scanning
 
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
   schedule:
     # Run weekly on Monday at 08:00 UTC to catch new CVEs
     - cron: '0 8 * * 1'
