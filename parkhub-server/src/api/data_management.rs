@@ -295,6 +295,8 @@ pub async fn import_users(
             last_login: None,
             tenant_id: None,
             accessibility_needs: None,
+            cost_center: None,
+            department: None,
         };
 
         match state_guard.db.save_user(&user).await {

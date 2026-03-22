@@ -910,6 +910,8 @@ pub async fn admin_reset(
         last_login: None,
         tenant_id: admin.tenant_id,
         accessibility_needs: None,
+        cost_center: None,
+        department: None,
     };
 
     if let Err(e) = state_guard.db.save_user(&admin_user).await {
