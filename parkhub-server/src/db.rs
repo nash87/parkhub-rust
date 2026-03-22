@@ -2934,6 +2934,7 @@ mod tests {
             credits_balance: 0,
             credits_monthly_quota: 40,
             credits_last_refilled: None,
+            tenant_id: None,
         }
     }
 
@@ -2979,6 +2980,7 @@ mod tests {
             check_out_time: None,
             qr_code: None,
             notes: None,
+            tenant_id: None,
         }
     }
 
@@ -3036,6 +3038,7 @@ mod tests {
             status: parkhub_common::models::LotStatus::Open,
             created_at: now,
             updated_at: now,
+            tenant_id: None,
         }
     }
 

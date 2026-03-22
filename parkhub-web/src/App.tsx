@@ -56,6 +56,7 @@ const TranslationsPage = lazy(() => import('./views/Translations'), 'Translation
 const AdminTranslationsPage = lazy(() => import('./views/AdminTranslations'), 'AdminTranslationsPage');
 const AdminAnalyticsPage = lazy(() => import('./views/AdminAnalytics'), 'AdminAnalyticsPage');
 const AdminRateLimitsPage = lazy(() => import('./views/AdminRateLimits'), 'AdminRateLimitsPage');
+const AdminTenantsPage = lazy(() => import('./views/AdminTenants'), 'AdminTenantsPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -142,6 +143,7 @@ function AnimatedRoutes() {
             <Route path="translations" element={<SuspenseRoute><AdminTranslationsPage /></SuspenseRoute>} />
             <Route path="analytics" element={<SuspenseRoute><AdminAnalyticsPage /></SuspenseRoute>} />
             <Route path="rate-limits" element={<SuspenseRoute><AdminRateLimitsPage /></SuspenseRoute>} />
+            <Route path="tenants" element={<SuspenseRoute><AdminTenantsPage /></SuspenseRoute>} />
           </Route>
         </Route>
         <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />

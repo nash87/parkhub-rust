@@ -421,6 +421,7 @@ export default {
       useCasePersonal: 'Pessoal',
       translations: 'Traduções',
       rateLimits: 'Rate Limits',
+      tenants: 'Inquilinos',
       bulkAction: 'Ação em massa',
       bulkActionConfirm: 'Tem a certeza que deseja {{action}} {{count}} utilizador(es)?',
       bulkDeleted: '{{succeeded}}/{{total}} utilizadores eliminados',
@@ -509,6 +510,7 @@ export default {
     },
     calendar: { title: 'Calendário', noBookings: 'Sem reservas neste dia', selectDay: 'Clique num dia para ver as reservas', events: 'eventos', previousMonth: 'Mês anterior', nextMonth: 'Mês seguinte', subscribe: 'Subscrever', subscribeTitle: 'Subscrever calendário', subscribeDesc: 'Use este URL para subscrever o seu calendário de estacionamento em qualquer app.', copyLink: 'Copiar', linkCopied: 'Link copiado', instructions: 'Como subscrever', instructionGoogle: 'Definições > Adicionar calendário > Por URL > colar o link', instructionOutlook: 'Adicionar calendário > Subscrever da web > colar o link', instructionApple: 'Ficheiro > Nova subscrição de calendário > colar o link' },
     rateLimits: { title: 'Rate Limits', allClear: 'Sem pedidos bloqueados', blockedTotal: '{{count}} bloqueados (ultima hora)', blockedHistory: 'Pedidos bloqueados (24h)', perMinute: 'min', blocked: 'bloqueados', now: 'agora' },
+    tenants: { title: 'Inquilinos', create: 'Criar inquilino', name: 'Nome', domain: 'Dominio', switch: 'Mudar inquilino', empty: 'Nenhum inquilino configurado.', editTitle: 'Editar inquilino', created: 'Inquilino criado', updated: 'Inquilino atualizado', users: 'utilizadores', lots: 'estacionamentos', brandColor: 'Cor da marca' },
     map: { title: 'Mapa de estacionamentos', subtitle: 'Encontre estacionamentos disponiveis perto de si', bookNow: 'Reservar agora', available: 'Disponivel', noLots: 'Nenhum estacionamento com dados de localizacao disponivel', closed: 'Fechado' },
     team: { title: 'Equipa', subtitle: 'Ver quem está no escritório hoje', inOffice: 'No escritório', homeOffice: 'Teletrabalho', vacation: 'De férias', noMembers: 'Nenhum membro da equipa encontrado', today: 'Ausente hoje', noAbsencesToday: 'Sem ausências hoje', upcoming: 'Ausências próximas', noUpcoming: 'Sem ausências próximas' },
     profile: {

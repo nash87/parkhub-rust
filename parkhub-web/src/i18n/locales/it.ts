@@ -421,6 +421,7 @@ export default {
       useCasePersonal: 'Personale',
       translations: 'Traduzioni',
       rateLimits: 'Rate Limits',
+      tenants: 'Tenant',
       bulkAction: 'Azione di massa',
       bulkActionConfirm: 'Sei sicuro di voler {{action}} {{count}} utente/i?',
       bulkDeleted: '{{succeeded}}/{{total}} utenti eliminati',
@@ -591,6 +592,7 @@ export default {
       blocked: 'bloccate',
       now: 'adesso',
     },
+    tenants: { title: 'Tenant', create: 'Crea tenant', name: 'Nome', domain: 'Dominio', switch: 'Cambia tenant', empty: 'Nessun tenant configurato.', editTitle: 'Modifica tenant', created: 'Tenant creato', updated: 'Tenant aggiornato', users: 'utenti', lots: 'parcheggi', brandColor: 'Colore del marchio' },
     map: {
       title: 'Mappa parcheggi',
       subtitle: 'Trova parcheggi disponibili vicino a te',

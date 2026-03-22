@@ -421,6 +421,7 @@ export default {
       useCasePersonal: 'Personal',
       translations: 'Traducciones',
       rateLimits: 'Rate Limits',
+      tenants: 'Inquilinos',
       bulkAction: 'Acción masiva',
       bulkActionConfirm: '¿Seguro que quieres {{action}} {{count}} usuario(s)?',
       bulkDeleted: '{{succeeded}}/{{total}} usuarios eliminados',
@@ -591,6 +592,7 @@ export default {
       blocked: 'bloqueadas',
       now: 'ahora',
     },
+    tenants: { title: 'Inquilinos', create: 'Crear inquilino', name: 'Nombre', domain: 'Dominio', switch: 'Cambiar inquilino', empty: 'No hay inquilinos configurados.', editTitle: 'Editar inquilino', created: 'Inquilino creado', updated: 'Inquilino actualizado', users: 'usuarios', lots: 'parkings', brandColor: 'Color de marca' },
     map: {
       title: 'Mapa de aparcamientos',
       subtitle: 'Encuentra aparcamientos disponibles cerca de ti',

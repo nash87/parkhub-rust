@@ -242,6 +242,7 @@ pub async fn create_lot(
             .unwrap_or(LotStatus::Open),
         created_at: now,
         updated_at: now,
+        tenant_id: None,
     };
 
     // Persist the lot
