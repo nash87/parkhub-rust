@@ -60,6 +60,7 @@ export default {
       credits: 'Credits',
       team: 'Team',
       calendar: 'Calendar',
+      map: 'Map',
       notifications: 'Notifications',
       translations: 'Translations',
       profile: 'Profile',
@@ -569,6 +570,14 @@ export default {
       events: 'events',
       previousMonth: 'Previous month',
       nextMonth: 'Next month',
+    },
+    map: {
+      title: 'Parking Map',
+      subtitle: 'Find available parking lots near you',
+      bookNow: 'Book Now',
+      available: 'Available',
+      noLots: 'No parking lots with location data available',
+      closed: 'Closed',
     },
     team: {
       title: 'Team',

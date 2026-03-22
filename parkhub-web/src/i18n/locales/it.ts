@@ -60,6 +60,7 @@ export default {
       credits: 'Crediti',
       team: 'Team',
       calendar: 'Calendario',
+      map: 'Mappa',
       notifications: 'Notifiche',
       translations: 'Traduzioni',
       profile: 'Profilo',
@@ -569,6 +570,14 @@ export default {
       events: 'eventi',
       previousMonth: 'Mese precedente',
       nextMonth: 'Mese successivo',
+    },
+    map: {
+      title: 'Mappa parcheggi',
+      subtitle: 'Trova parcheggi disponibili vicino a te',
+      bookNow: 'Prenota ora',
+      available: 'Disponibile',
+      noLots: 'Nessun parcheggio con dati di posizione disponibile',
+      closed: 'Chiuso',
     },
     team: {
       title: 'Team',

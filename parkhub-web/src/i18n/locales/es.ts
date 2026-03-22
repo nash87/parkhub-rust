@@ -60,6 +60,7 @@ export default {
       credits: 'Créditos',
       team: 'Equipo',
       calendar: 'Calendario',
+      map: 'Mapa',
       notifications: 'Notificaciones',
       translations: 'Traducciones',
       profile: 'Perfil',
@@ -569,6 +570,14 @@ export default {
       events: 'eventos',
       previousMonth: 'Mes anterior',
       nextMonth: 'Mes siguiente',
+    },
+    map: {
+      title: 'Mapa de aparcamientos',
+      subtitle: 'Encuentra aparcamientos disponibles cerca de ti',
+      bookNow: 'Reservar ahora',
+      available: 'Disponible',
+      noLots: 'No hay aparcamientos con datos de ubicacion disponibles',
+      closed: 'Cerrado',
     },
     team: {
       title: 'Equipo',

@@ -92,6 +92,8 @@ pub mod invoices;
 pub mod lobby;
 pub mod lots;
 pub mod lots_ext;
+#[cfg(feature = "mod-map")]
+pub mod map;
 pub mod misc;
 #[cfg(feature = "mod-notifications")]
 pub mod notification_channels;
@@ -363,6 +365,7 @@ async fn list_module_features() -> impl IntoResponse {
         "setup-wizard".into(),
         cfg!(feature = "mod-setup-wizard").into(),
     );
+    modules.insert("map".into(), cfg!(feature = "mod-map").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -508,6 +511,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     {
         // VAPID public key (no auth — frontend needs it before login)
         public_routes = public_routes.route("/api/v1/push/vapid-key", get(push::get_vapid_key));
+    }
+    #[cfg(feature = "mod-map")]
+    {
+        // Map markers — public (frontend shows map without auth)
+        public_routes = public_routes.route("/api/v1/lots/map", get(map::list_lot_markers));
     }
     #[cfg(feature = "mod-pwa")]
     {
@@ -1048,6 +1056,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 "/api/v1/admin/branding/logo",
                 post(branding::admin_upload_logo),
             );
+    }
+
+    #[cfg(feature = "mod-map")]
+    {
+        // Admin: set lot coordinates for map view
+        protected_routes = protected_routes.route(
+            "/api/v1/admin/lots/{id}/location",
+            put(map::set_lot_location),
+        );
     }
 
     #[cfg(feature = "mod-translations")]

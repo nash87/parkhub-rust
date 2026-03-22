@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
-  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star, Globe, CaretDown,
+  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star, Globe, CaretDown, MapPin,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { to: '/absences', icon: CalendarX, key: 'absences' },
   { to: '/team', icon: Users, key: 'team' },
   { to: '/calendar', icon: Calendar, key: 'calendar' },
+  { to: '/map', icon: MapPin, key: 'map' },
   { to: '/credits', icon: Coins, key: 'credits' },
   { to: '/notifications', icon: Bell, key: 'notifications' },
   { to: '/translations', icon: Translate, key: 'translations' },
