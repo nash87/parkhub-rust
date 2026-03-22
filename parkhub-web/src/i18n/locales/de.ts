@@ -149,6 +149,18 @@ export default {
       noTransactions: 'Noch keine Transaktionen',
       creditsPerBooking: '{{count}} Credit pro Buchung',
     },
+    payments: {
+      buyCredits: 'Credits kaufen',
+      history: 'Zahlungsverlauf',
+      success: 'Zahlung erfolgreich! Credits wurden hinzugefugt.',
+      configureStripe: 'Stripe konfigurieren',
+      amount: 'Betrag',
+      status: 'Status',
+      date: 'Datum',
+      noPayments: 'Kein Zahlungsverlauf',
+      processing: 'Wird verarbeitet...',
+      selectCredits: 'Creditanzahl wahlen',
+    },
     absences: {
       title: 'Abwesenheiten',
       subtitle: 'Verwalten Sie Ihre Verfugbarkeit und Home-Office-Tage',
