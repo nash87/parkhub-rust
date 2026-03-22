@@ -279,6 +279,7 @@ pub async fn create_lot(
                 height: 5.0,
                 rotation: 0.0,
             },
+            is_accessible: false,
         })
         .collect();
 
@@ -978,6 +979,7 @@ pub async fn create_slot(
             height: 5.0,
             rotation: 0.0,
         },
+        is_accessible: false,
     };
 
     if let Err(e) = state_guard.db.save_parking_slot(&slot).await {

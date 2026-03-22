@@ -567,6 +567,7 @@ pub async fn wizard_step(
                 status: parkhub_common::LotStatus::Open,
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
+                tenant_id: None,
             };
 
             if let Err(e) = guard.db.save_parking_lot(&lot).await {

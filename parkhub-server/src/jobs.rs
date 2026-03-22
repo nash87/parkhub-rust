@@ -353,6 +353,7 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
                         check_out_time: None,
                         qr_code: None,
                         notes: Some(format!("Auto-expanded from recurring booking {}", rec.id)),
+                        tenant_id: None,
                     };
 
                     let guard = state.write().await;
@@ -602,6 +603,7 @@ mod tests {
             check_out_time: None,
             qr_code: None,
             notes: None,
+            tenant_id: None,
         };
 
         {
