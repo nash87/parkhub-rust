@@ -5,7 +5,6 @@
 # Ignore unmaintained/vulnerable transitive dependencies from Slint GUI framework
 # These come from GTK3 bindings and are only used in the optional GUI feature
 ignore = [
-    "RUSTSEC-2025-0134", # rustls-pemfile unmaintained
     "RUSTSEC-2024-0412", # gtk-rs GTK3 unmaintained (atk)
     "RUSTSEC-2024-0413", # gtk-rs GTK3 unmaintained (gdk)
     "RUSTSEC-2024-0415", # gtk-rs GTK3 unmaintained (gdk-pixbuf)
