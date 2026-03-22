@@ -423,6 +423,7 @@ export default {
       rateLimits: 'Rate Limits',
       tenants: 'Tenant',
       auditLog: 'Registro di audit',
+      dataManagement: 'Dati',
       bulkAction: 'Azione di massa',
       bulkActionConfirm: 'Sei sicuro di voler {{action}} {{count}} utente/i?',
       bulkDeleted: '{{succeeded}}/{{total}} utenti eliminati',
@@ -593,6 +594,7 @@ export default {
       blocked: 'bloccate',
       now: 'adesso',
     },
+    dataManagement: { title: 'Gestione dati', subtitle: 'Importa ed esporta i dati ParkHub', import: 'Importa', export: 'Esporta', importUsers: 'Utenti', importLots: 'Parcheggi', dropHint: 'Trascina un file CSV o JSON qui', usersFormat: 'CSV: username, email, nome, ruolo, password', lotsFormat: 'CSV: nome, indirizzo, posti, tariffa oraria, max giorno, valuta', preview: 'Anteprima', rows: 'righe', importNow: 'Importa ora', importComplete: 'Importazione completata', importSuccess: '{{count}} record importati', imported: 'Importati', skipped: 'Saltati', errorsCount: 'Errori', exportUsers: 'Esporta utenti', exportLots: 'Esporta parcheggi', exportBookings: 'Esporta prenotazioni', exportUsersDesc: 'Tutti gli utenti con statistiche', exportLotsDesc: 'Tutti i parcheggi con statistiche', exportBookingsDesc: 'Prenotazioni con filtro data', dateFrom: 'Da', dateTo: 'A' },
     auditLog: { title: 'Registro di audit', totalEntries: '{{count}} voci', exportCsv: 'Esporta CSV', filters: 'Filtri', allActions: 'Tutte le azioni', searchUser: 'Cerca utente...', filterAction: 'Filtra per azione', dateFrom: 'Da', dateTo: 'A', colTime: 'Ora', colAction: 'Azione', colUser: 'Utente', colTarget: 'Obiettivo', colIp: 'IP', colDetails: 'Dettagli', empty: 'Nessuna voce di audit trovata', pageInfo: 'Pagina {{page}} di {{total}}' },
     tenants: { title: 'Tenant', create: 'Crea tenant', name: 'Nome', domain: 'Dominio', switch: 'Cambia tenant', empty: 'Nessun tenant configurato.', editTitle: 'Modifica tenant', created: 'Tenant creato', updated: 'Tenant aggiornato', users: 'utenti', lots: 'parcheggi', brandColor: 'Colore del marchio' },
     map: {
