@@ -619,6 +619,26 @@ impl Database {
         Ok(count)
     }
 
+    /// List all active (non-expired) sessions for a user.
+    /// Returns `(access_token, Session)` pairs.
+    pub async fn list_sessions_by_user(&self, user_id: Uuid) -> Result<Vec<(String, Session)>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(SESSIONS)?;
+        let now = Utc::now();
+
+        let mut sessions = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            let session: Session = self.deserialize(value.value())?;
+            if session.user_id == user_id && session.expires_at > now {
+                sessions.push((key.value().to_string(), session));
+            }
+        }
+        Ok(sessions)
+    }
+
     /// Delete a session
     pub async fn delete_session(&self, token: &str) -> Result<bool> {
         let db = self.inner.write().await;
