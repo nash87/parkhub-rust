@@ -175,6 +175,25 @@ pub mod paths {
 
     pub fn admin_visitors() -> String {
         format!("/api/{}/admin/visitors", API_VERSION)
+    // EV Charging endpoints
+    pub fn lot_chargers(lot_id: &str) -> String {
+        format!("/api/{}/lots/{}/chargers", API_VERSION, lot_id)
+    }
+
+    pub fn charger_start(id: &str) -> String {
+        format!("/api/{}/chargers/{}/start", API_VERSION, id)
+    }
+
+    pub fn charger_stop(id: &str) -> String {
+        format!("/api/{}/chargers/{}/stop", API_VERSION, id)
+    }
+
+    pub fn charging_sessions() -> String {
+        format!("/api/{}/chargers/sessions", API_VERSION)
+    }
+
+    pub fn admin_chargers() -> String {
+        format!("/api/{}/admin/chargers", API_VERSION)
     }
 }
 

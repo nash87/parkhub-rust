@@ -84,6 +84,8 @@ pub mod credits;
 pub mod data_management;
 #[cfg(feature = "mod-dynamic-pricing")]
 pub mod dynamic_pricing;
+#[cfg(feature = "mod-ev-charging")]
+pub mod ev_charging;
 #[cfg(feature = "mod-export")]
 pub mod export;
 #[cfg(feature = "mod-favorites")]
@@ -179,6 +181,11 @@ use calendar::{calendar_events, user_calendar_ics};
 use credits::{
     admin_grant_credits, admin_list_credit_transactions, admin_refill_all_credits,
     admin_update_user_quota, get_user_credits,
+};
+#[cfg(feature = "mod-ev-charging")]
+use ev_charging::{
+    admin_add_charger, admin_charger_overview, charging_history, list_lot_chargers, start_charging,
+    stop_charging,
 };
 #[cfg(feature = "mod-export")]
 use export::{admin_export_bookings_csv, admin_export_revenue_csv, admin_export_users_csv};
@@ -408,6 +415,10 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-cost-center").into(),
     );
     modules.insert("visitors".into(), cfg!(feature = "mod-visitors").into());
+    modules.insert(
+        "ev-charging".into(),
+        cfg!(feature = "mod-ev-charging").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -1071,6 +1082,20 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/admin/billing/allocate",
                 post(billing::billing_allocate),
+            );
+    }
+
+    #[cfg(feature = "mod-ev-charging")]
+    {
+        // EV Charging
+        protected_routes = protected_routes
+            .route("/api/v1/lots/{id}/chargers", get(list_lot_chargers))
+            .route("/api/v1/chargers/{id}/start", post(start_charging))
+            .route("/api/v1/chargers/{id}/stop", post(stop_charging))
+            .route("/api/v1/chargers/sessions", get(charging_history))
+            .route(
+                "/api/v1/admin/chargers",
+                get(admin_charger_overview).post(admin_add_charger),
             );
     }
 

@@ -778,6 +778,66 @@ pub struct Visitor {
     pub updated_at: DateTime<Utc>,
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// EV CHARGING MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// EV Charger connector type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ConnectorType {
+    Type2,
+    Ccs,
+    Chademo,
+    Tesla,
+}
+
+/// EV Charger status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EvChargerStatus {
+    Available,
+    InUse,
+    Offline,
+    Maintenance,
+}
+
+/// EV Charger in a parking lot
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct EvCharger {
+    pub id: Uuid,
+    pub lot_id: Uuid,
+    pub label: String,
+    pub connector_type: ConnectorType,
+    pub power_kw: f64,
+    pub status: EvChargerStatus,
+    pub location_hint: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Charging session status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ChargingSessionStatus {
+    Active,
+    Completed,
+    Cancelled,
+}
+
+/// EV Charging session
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct ChargingSession {
+    pub id: Uuid,
+    pub charger_id: Uuid,
+    pub user_id: Uuid,
+    pub booking_id: Option<Uuid>,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub kwh_consumed: f64,
+    pub status: ChargingSessionStatus,
+    pub created_at: DateTime<Utc>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
