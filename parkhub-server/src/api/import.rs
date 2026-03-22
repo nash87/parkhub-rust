@@ -266,7 +266,7 @@ pub async fn import_users_csv(
         };
 
         // Hash password
-        let password_hash = match hash_password_simple(&raw_password) {
+        let password_hash = match hash_password_simple(&raw_password).await {
             Ok(h) => h,
             Err(e) => {
                 tracing::error!("Failed to hash password for row {}: {}", row_num, e);
