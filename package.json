@@ -2,12 +2,11 @@
   "name": "parkhub",
   "version": "1.0.0",
   "description": "Open source parking lot management system with client-server architecture.",
-  "main": "parkhub-test.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:e2e:chromium": "npx playwright test --project=chromium",
+    "test:e2e:report": "npx playwright show-report"
   },
   "repository": {
     "type": "git",
@@ -16,8 +15,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "playwright": "^1.58.1"
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.1",
+    "@playwright/test": "^1.58.2"
   }
 }
