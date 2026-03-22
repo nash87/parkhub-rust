@@ -47,6 +47,9 @@ export default {
       ruleLower: 'Kleinbuchstabe',
       ruleUpper: 'Großbuchstabe',
       ruleDigit: 'Zahl',
+      continueWithGoogle: 'Weiter mit Google',
+      continueWithGitHub: 'Weiter mit GitHub',
+      orContinueWith: 'oder',
     },
     nav: {
       dashboard: 'Dashboard',

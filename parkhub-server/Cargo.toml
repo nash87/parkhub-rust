@@ -143,7 +143,7 @@ full = [
     "mod-jobs", "mod-swap", "mod-waitlist", "mod-zones", "mod-credits",
     "mod-email", "mod-export", "mod-favorites", "mod-push",
     "mod-recommendations", "mod-translations", "mod-social",
-    "mod-themes",
+    "mod-themes", "mod-oauth",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -176,6 +176,7 @@ mod-recommendations = []
 mod-translations = []
 mod-social = []
 mod-themes = []
+mod-oauth = []
 
 [dev-dependencies]
 tempfile = "3"
