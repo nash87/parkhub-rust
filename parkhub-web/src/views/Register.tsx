@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { CarSimple, SpinnerGap, ArrowLeft, Check, X } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { FormField, FormInput } from '../components/ui/FormField';
+import { OAuthButtons } from '../components/OAuthButtons';
 
 const registerSchema = z.object({
   name: z.string().min(1, 'Required'),
@@ -89,6 +90,9 @@ export function RegisterPage() {
 
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1">{t('auth.register')}</h1>
         <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">{t('auth.registerSubtitle')}</p>
+
+        {/* OAuth social login buttons */}
+        <OAuthButtons />
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
           <FormField label={t('auth.name')} htmlFor="reg-name" error={errors.name} required>
