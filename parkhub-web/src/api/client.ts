@@ -131,6 +131,14 @@ export const api = {
       method: 'PUT', body: JSON.stringify(data),
     }),
 
+  // ── Operating Hours ──
+  getLotHours: (lotId: string) =>
+    request<OperatingHoursResponse>(`/api/v1/lots/${lotId}/hours`),
+  updateAdminLotHours: (lotId: string, data: OperatingHoursData) =>
+    request<OperatingHoursResponse>(`/api/v1/admin/lots/${lotId}/hours`, {
+      method: 'PUT', body: JSON.stringify(data),
+    }),
+
   // ── Bookings ──
   getBookings: () => request<Booking[]>('/api/v1/bookings'),
   createBooking: (data: CreateBookingPayload) => request<Booking>('/api/v1/bookings', { method: 'POST', body: JSON.stringify(data) }),
@@ -312,6 +320,7 @@ export interface ParkingLot {
   daily_max?: number;
   monthly_pass?: number;
   currency?: string;
+  operating_hours?: OperatingHoursData;
 }
 
 export interface DynamicPricingRules {
@@ -331,6 +340,27 @@ export interface DynamicPriceResult {
   dynamic_pricing_active: boolean;
   tier: 'surge' | 'discount' | 'normal';
   currency: string;
+}
+
+export interface DayHoursData {
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export interface OperatingHoursData {
+  is_24h: boolean;
+  monday?: DayHoursData;
+  tuesday?: DayHoursData;
+  wednesday?: DayHoursData;
+  thursday?: DayHoursData;
+  friday?: DayHoursData;
+  saturday?: DayHoursData;
+  sunday?: DayHoursData;
+}
+
+export interface OperatingHoursResponse extends OperatingHoursData {
+  is_open_now: boolean;
 }
 
 export type SlotType = 'standard' | 'compact' | 'large' | 'handicap' | 'electric' | 'motorcycle' | 'reserved' | 'vip';

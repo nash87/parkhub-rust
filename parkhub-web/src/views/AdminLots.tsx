@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, PencilSimple, Trash, SpinnerGap, Check, X,
-  MagnifyingGlass, CurrencyEur, TrendUp, TrendDown,
+  MagnifyingGlass, CurrencyEur, TrendUp, TrendDown, Clock,
 } from '@phosphor-icons/react';
-import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus, type DynamicPricingRules } from '../api/client';
+import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus, type DynamicPricingRules, type OperatingHoursData, type DayHoursData } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -47,6 +47,15 @@ export function AdminLotsPage() {
     discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20,
   });
   const [savingDynamic, setSavingDynamic] = useState(false);
+  const defaultDayHours: DayHoursData = { open: '07:00', close: '22:00', closed: false };
+  const [opHours, setOpHours] = useState<OperatingHoursData>({
+    is_24h: true,
+    monday: { ...defaultDayHours }, tuesday: { ...defaultDayHours },
+    wednesday: { ...defaultDayHours }, thursday: { ...defaultDayHours },
+    friday: { ...defaultDayHours },
+    saturday: { open: '09:00', close: '18:00', closed: false },
+    sunday: { open: '09:00', close: '18:00', closed: true },
+  });
 
   const statusConfig = useMemo<Record<LotStatus, { label: string; color: string; bg: string }>>(() => ({
     open:        { label: t('admin.statusOpen'),        color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-100 dark:bg-green-900/30' },
@@ -90,8 +99,11 @@ export function AdminLotsPage() {
       status: (lot.status as LotStatus) || 'open',
     });
     setShowForm(true);
-    // Fetch dynamic pricing rules for this lot
-    const dpRes = await api.getAdminDynamicPricing(lot.id);
+    // Fetch dynamic pricing rules and operating hours
+    const [dpRes, ohRes] = await Promise.all([
+      api.getAdminDynamicPricing(lot.id),
+      api.getLotHours(lot.id),
+    ]);
     if (dpRes.success && dpRes.data) {
       setDynamicPricing(dpRes.data);
     } else {
@@ -99,6 +111,9 @@ export function AdminLotsPage() {
         enabled: false, base_price: 2.50, surge_multiplier: 1.5,
         discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20,
       });
+    }
+    if (ohRes.success && ohRes.data) {
+      setOpHours(ohRes.data);
     }
   }
 
@@ -151,11 +166,17 @@ export function AdminLotsPage() {
         : await api.createLot(payload);
 
       if (res.success) {
-        // Save dynamic pricing rules if editing
+        // Save dynamic pricing rules and operating hours if editing
         if (editingId) {
-          const dpRes = await api.updateAdminDynamicPricing(editingId, dynamicPricing);
+          const [dpRes, ohRes] = await Promise.all([
+            api.updateAdminDynamicPricing(editingId, dynamicPricing),
+            api.updateAdminLotHours(editingId, opHours),
+          ]);
           if (!dpRes.success) {
             toast.error(t('admin.dynamicPricingSaveFailed'));
+          }
+          if (!ohRes.success) {
+            toast.error(t('admin.operatingHoursSaveFailed'));
           }
         }
         toast.success(editingId ? t('admin.lotUpdated') : t('admin.lotCreated'));
@@ -435,6 +456,57 @@ export function AdminLotsPage() {
                           value={dynamicPricing.discount_threshold} onChange={e => setDynamicPricing(prev => ({ ...prev, discount_threshold: Number(e.target.value) }))}
                           className="input text-sm" />
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Row 5: Operating Hours (only when editing) */}
+              {editingId && (
+                <div className="border-t border-surface-200 dark:border-surface-700 pt-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-surface-900 dark:text-white flex items-center gap-2">
+                        <Clock weight="bold" className="w-4 h-4 text-primary-600" />
+                        {t('admin.operatingHours')}
+                      </h4>
+                      <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{t('admin.operatingHoursDesc')}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={opHours.is_24h}
+                        onChange={e => setOpHours(prev => ({ ...prev, is_24h: e.target.checked }))}
+                        className="sr-only peer" />
+                      <div className="w-10 h-5 bg-surface-300 dark:bg-surface-600 peer-checked:bg-primary-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5" />
+                      <span className="ml-2 text-xs text-surface-600 dark:text-surface-400">{t('admin.is24h')}</span>
+                    </label>
+                  </div>
+                  {!opHours.is_24h && (
+                    <div className="space-y-2">
+                      {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map(day => {
+                        const dh = (opHours[day] as DayHoursData | undefined) || { open: '07:00', close: '22:00', closed: false };
+                        return (
+                          <div key={day} className="flex items-center gap-3 text-sm">
+                            <span className="w-24 font-medium text-surface-700 dark:text-surface-300">{t(`admin.${day}`)}</span>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input type="checkbox" checked={dh.closed}
+                                onChange={e => setOpHours(prev => ({ ...prev, [day]: { ...dh, closed: e.target.checked } }))}
+                                className="w-4 h-4 rounded border-surface-300 text-red-600 focus:ring-red-500" />
+                              <span className="text-xs text-surface-500">{t('admin.closedDay')}</span>
+                            </label>
+                            {!dh.closed && (
+                              <>
+                                <input type="time" value={dh.open}
+                                  onChange={e => setOpHours(prev => ({ ...prev, [day]: { ...dh, open: e.target.value } }))}
+                                  className="input text-xs w-28 py-1" />
+                                <span className="text-surface-400">-</span>
+                                <input type="time" value={dh.close}
+                                  onChange={e => setOpHours(prev => ({ ...prev, [day]: { ...dh, close: e.target.value } }))}
+                                  className="input text-xs w-28 py-1" />
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
