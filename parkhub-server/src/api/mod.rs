@@ -82,6 +82,8 @@ pub mod branding;
 pub mod calendar;
 #[cfg(feature = "mod-credits")]
 pub mod credits;
+#[cfg(feature = "mod-dynamic-pricing")]
+pub mod dynamic_pricing;
 #[cfg(feature = "mod-export")]
 pub mod export;
 #[cfg(feature = "mod-favorites")]
@@ -325,6 +327,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert("themes".into(), cfg!(feature = "mod-themes").into());
     modules.insert("oauth".into(), cfg!(feature = "mod-oauth").into());
     modules.insert("invoices".into(), cfg!(feature = "mod-invoices").into());
+    modules.insert(
+        "dynamic-pricing".into(),
+        cfg!(feature = "mod-dynamic-pricing").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -519,7 +525,18 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/lots/{id}/pricing",
             get(get_lot_pricing).put(update_lot_pricing),
-        )
+        );
+
+    // Dynamic pricing (occupancy-based) — user-facing read endpoint
+    #[cfg(feature = "mod-dynamic-pricing")]
+    {
+        protected_routes = protected_routes.route(
+            "/api/v1/lots/{id}/pricing/dynamic",
+            get(dynamic_pricing::get_dynamic_pricing),
+        );
+    }
+
+    protected_routes = protected_routes
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
         // User stats & preferences
@@ -767,6 +784,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 get(admin_get_settings).put(admin_update_settings),
             )
             .route("/api/v1/admin/settings/use-case", get(admin_get_use_case));
+    }
+
+    #[cfg(feature = "mod-dynamic-pricing")]
+    {
+        // Admin-only: dynamic pricing rules management
+        protected_routes = protected_routes.route(
+            "/api/v1/admin/lots/{id}/pricing/dynamic",
+            get(dynamic_pricing::admin_get_dynamic_pricing_rules)
+                .put(dynamic_pricing::admin_update_dynamic_pricing_rules),
+        );
     }
 
     #[cfg(feature = "mod-import")]

@@ -236,6 +236,59 @@ pub struct DayHours {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DYNAMIC PRICING MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Dynamic pricing rules for occupancy-based surge/discount pricing per lot.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DynamicPricingRules {
+    /// Whether dynamic pricing is enabled for this lot
+    pub enabled: bool,
+    /// Base hourly rate (before any multiplier)
+    pub base_price: f64,
+    /// Multiplier when occupancy exceeds `surge_threshold` (e.g. 1.5 = +50%)
+    pub surge_multiplier: f64,
+    /// Multiplier when occupancy is below `discount_threshold` (e.g. 0.8 = -20%)
+    pub discount_multiplier: f64,
+    /// Occupancy percentage at which surge pricing activates (0-100)
+    pub surge_threshold: f64,
+    /// Occupancy percentage below which discount pricing activates (0-100)
+    pub discount_threshold: f64,
+}
+
+impl Default for DynamicPricingRules {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            base_price: 2.50,
+            surge_multiplier: 1.5,
+            discount_multiplier: 0.8,
+            surge_threshold: 80.0,
+            discount_threshold: 20.0,
+        }
+    }
+}
+
+/// Current dynamic price calculation result.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DynamicPriceResult {
+    /// The computed hourly price after applying any multiplier
+    pub current_price: f64,
+    /// The base price before any multiplier
+    pub base_price: f64,
+    /// The multiplier that was applied (1.0 = normal, >1.0 = surge, <1.0 = discount)
+    pub applied_multiplier: f64,
+    /// Current occupancy percentage
+    pub occupancy_percent: f64,
+    /// Whether dynamic pricing is active
+    pub dynamic_pricing_active: bool,
+    /// Human-readable pricing tier: "surge", "discount", or "normal"
+    pub tier: String,
+    /// Currency (e.g. "EUR")
+    pub currency: String,
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // CREDITS MODELS
 // ═══════════════════════════════════════════════════════════════════════════════
 

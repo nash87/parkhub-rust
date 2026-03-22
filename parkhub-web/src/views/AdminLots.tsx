@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, PencilSimple, Trash, SpinnerGap, Check, X,
-  MagnifyingGlass, CurrencyEur,
+  MagnifyingGlass, CurrencyEur, TrendUp, TrendDown,
 } from '@phosphor-icons/react';
-import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus } from '../api/client';
+import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus, type DynamicPricingRules } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -42,6 +42,11 @@ export function AdminLotsPage() {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<{open: boolean, action: () => void}>({open: false, action: () => {}});
+  const [dynamicPricing, setDynamicPricing] = useState<DynamicPricingRules>({
+    enabled: false, base_price: 2.50, surge_multiplier: 1.5,
+    discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20,
+  });
+  const [savingDynamic, setSavingDynamic] = useState(false);
 
   const statusConfig = useMemo<Record<LotStatus, { label: string; color: string; bg: string }>>(() => ({
     open:        { label: t('admin.statusOpen'),        color: 'text-green-600 dark:text-green-400',  bg: 'bg-green-100 dark:bg-green-900/30' },
@@ -72,7 +77,7 @@ export function AdminLotsPage() {
     setShowForm(true);
   }
 
-  function openEdit(lot: ParkingLot) {
+  async function openEdit(lot: ParkingLot) {
     setEditingId(lot.id);
     setForm({
       name: lot.name,
@@ -85,6 +90,16 @@ export function AdminLotsPage() {
       status: (lot.status as LotStatus) || 'open',
     });
     setShowForm(true);
+    // Fetch dynamic pricing rules for this lot
+    const dpRes = await api.getAdminDynamicPricing(lot.id);
+    if (dpRes.success && dpRes.data) {
+      setDynamicPricing(dpRes.data);
+    } else {
+      setDynamicPricing({
+        enabled: false, base_price: 2.50, surge_multiplier: 1.5,
+        discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20,
+      });
+    }
   }
 
   function closeForm() {
@@ -136,6 +151,13 @@ export function AdminLotsPage() {
         : await api.createLot(payload);
 
       if (res.success) {
+        // Save dynamic pricing rules if editing
+        if (editingId) {
+          const dpRes = await api.updateAdminDynamicPricing(editingId, dynamicPricing);
+          if (!dpRes.success) {
+            toast.error(t('admin.dynamicPricingSaveFailed'));
+          }
+        }
         toast.success(editingId ? t('admin.lotUpdated') : t('admin.lotCreated'));
         closeForm();
         await load();
@@ -352,6 +374,71 @@ export function AdminLotsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Row 4: Dynamic Pricing (only when editing) */}
+              {editingId && (
+                <div className="border-t border-surface-200 dark:border-surface-700 pt-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-surface-900 dark:text-white flex items-center gap-2">
+                        <TrendUp weight="bold" className="w-4 h-4 text-primary-600" />
+                        {t('admin.dynamicPricing')}
+                      </h4>
+                      <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{t('admin.dynamicPricingDesc')}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={dynamicPricing.enabled}
+                        onChange={e => setDynamicPricing(prev => ({ ...prev, enabled: e.target.checked }))}
+                        className="sr-only peer" />
+                      <div className="w-10 h-5 bg-surface-300 dark:bg-surface-600 peer-checked:bg-primary-600 rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5" />
+                    </label>
+                  </div>
+                  {dynamicPricing.enabled && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label htmlFor="dp-base-price" className="block text-xs font-medium text-surface-700 dark:text-surface-300 mb-1">{t('admin.basePrice')}</label>
+                        <input id="dp-base-price" type="number" min={0} step="0.01"
+                          value={dynamicPricing.base_price} onChange={e => setDynamicPricing(prev => ({ ...prev, base_price: Number(e.target.value) }))}
+                          className="input text-sm" />
+                      </div>
+                      <div>
+                        <label htmlFor="dp-surge-mult" className="block text-xs font-medium text-surface-700 dark:text-surface-300 mb-1">
+                          {t('admin.surgeMultiplier')}
+                          <span className="block text-[10px] text-surface-400 font-normal">{t('admin.surgeMultiplierDesc')}</span>
+                        </label>
+                        <input id="dp-surge-mult" type="number" min={1} step="0.1"
+                          value={dynamicPricing.surge_multiplier} onChange={e => setDynamicPricing(prev => ({ ...prev, surge_multiplier: Number(e.target.value) }))}
+                          className="input text-sm" />
+                      </div>
+                      <div>
+                        <label htmlFor="dp-discount-mult" className="block text-xs font-medium text-surface-700 dark:text-surface-300 mb-1">
+                          {t('admin.discountMultiplier')}
+                          <span className="block text-[10px] text-surface-400 font-normal">{t('admin.discountMultiplierDesc')}</span>
+                        </label>
+                        <input id="dp-discount-mult" type="number" min={0.01} max={1} step="0.05"
+                          value={dynamicPricing.discount_multiplier} onChange={e => setDynamicPricing(prev => ({ ...prev, discount_multiplier: Number(e.target.value) }))}
+                          className="input text-sm" />
+                      </div>
+                      <div>
+                        <label htmlFor="dp-surge-thresh" className="block text-xs font-medium text-surface-700 dark:text-surface-300 mb-1">
+                          {t('admin.surgeThreshold')}
+                        </label>
+                        <input id="dp-surge-thresh" type="number" min={0} max={100} step={5}
+                          value={dynamicPricing.surge_threshold} onChange={e => setDynamicPricing(prev => ({ ...prev, surge_threshold: Number(e.target.value) }))}
+                          className="input text-sm" />
+                      </div>
+                      <div>
+                        <label htmlFor="dp-discount-thresh" className="block text-xs font-medium text-surface-700 dark:text-surface-300 mb-1">
+                          {t('admin.discountThreshold')}
+                        </label>
+                        <input id="dp-discount-thresh" type="number" min={0} max={100} step={5}
+                          value={dynamicPricing.discount_threshold} onChange={e => setDynamicPricing(prev => ({ ...prev, discount_threshold: Number(e.target.value) }))}
+                          className="input text-sm" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 pt-2">
