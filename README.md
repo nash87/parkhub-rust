@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v2.9.0-brightgreen.svg?style=flat-square" alt="v2.9.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.0.0-brightgreen.svg?style=flat-square" alt="v3.0.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -67,8 +67,11 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ## Features
 
-### v2.9.0 Highlights
+### v3.0.0 Highlights
 
+- **10-Language Support** -- Complete translations for EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH with language selector dropdown
+- **Admin Analytics Dashboard** -- Comprehensive analytics at `/admin/analytics` with daily bookings/revenue charts, peak hours heatmap, top lots, user growth, CSV export
+- **Email Notification Templates** -- 6 professional HTML email templates with inline CSS (booking confirmation, reminder, cancellation, password reset, welcome, weekly summary)
 - **Lobby Display / Kiosk Mode** -- Full-screen public display at `/lobby/:lotId` for parking garage monitors (no auth, auto-refresh, per-floor breakdown)
 - **Interactive Onboarding Wizard** -- 4-step setup wizard at `/setup` (company info, create lot, invite users, pick theme)
 - **WebSocket real-time updates** -- Live booking/occupancy events with token auth, heartbeat, and auto-reconnect
