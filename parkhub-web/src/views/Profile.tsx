@@ -11,6 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { staggerSlow, fadeUp } from '../constants/animations';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { TwoFactorSetupComponent } from '../components/TwoFactorSetup';
+import { NotificationPreferencesComponent } from '../components/NotificationPreferences';
+import { LoginHistoryComponent } from '../components/LoginHistory';
 
 export function ProfilePage() {
   const { t } = useTranslation();
@@ -255,6 +258,21 @@ export function ProfilePage() {
           </button>
         </div>
       </motion.div>
+      {/* Security: 2FA */}
+      <motion.div variants={fadeUp} className="card p-6">
+        <TwoFactorSetupComponent />
+      </motion.div>
+
+      {/* Notification Preferences */}
+      <motion.div variants={fadeUp} className="card p-6">
+        <NotificationPreferencesComponent />
+      </motion.div>
+
+      {/* Login History & Sessions */}
+      <motion.div variants={fadeUp} className="card p-6">
+        <LoginHistoryComponent />
+      </motion.div>
+
       <ConfirmDialog
         open={confirmState.open}
         title={t('gdpr.deleteAccount')}

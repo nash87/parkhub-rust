@@ -47,6 +47,7 @@ pub struct TwoFactorStatusResponse {
 }
 
 /// Login response extension when 2FA is required.
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TwoFactorLoginRequest {
     /// Temporary token from initial login
@@ -369,6 +370,7 @@ pub async fn is_2fa_enabled(state: &crate::AppState, user_id: Uuid) -> bool {
 }
 
 /// Verify a TOTP code for a user during login.
+#[allow(dead_code)]
 pub async fn verify_2fa_code(state: &crate::AppState, user_id: Uuid, email: &str, code: &str) -> bool {
     let totp_key = format!("totp:{user_id}");
     let secret_b32 = match state.db.get_setting(&totp_key).await {
@@ -464,6 +466,7 @@ pub async fn load_password_policy(db: &crate::db::Database) -> PasswordPolicy {
 }
 
 /// Check a password against the stored password policy.
+#[allow(dead_code)]
 pub async fn check_password_policy(db: &crate::db::Database, password: &str) -> Result<(), String> {
     load_password_policy(db).await.check(password)
 }
@@ -575,6 +578,7 @@ impl LoginHistory {
 }
 
 /// Record a login attempt in history.
+#[allow(dead_code)]
 pub async fn record_login(
     db: &crate::db::Database,
     user_id: Uuid,

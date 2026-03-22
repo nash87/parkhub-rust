@@ -4,8 +4,10 @@ import { createColumnHelper } from '@tanstack/react-table';
 import {
   Users, SpinnerGap, MagnifyingGlass, Coins,
   PencilSimple, X, Check, Gauge, UserMinus, UserPlus,
+  CheckSquare, Square, Trash, Lightning,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { DataTable } from '../components/ui/DataTable';
@@ -29,6 +31,12 @@ export function AdminUsersPage() {
   const [editingQuotaId, setEditingQuotaId] = useState<string | null>(null);
   const [editQuota, setEditQuota] = useState('');
   const [savingQuota, setSavingQuota] = useState(false);
+  // Bulk actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState('');
+  const [bulkRole, setBulkRole] = useState('user');
+  const [bulkRunning, setBulkRunning] = useState(false);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -120,6 +128,56 @@ export function AdminUsersPage() {
       }
     } finally {
       setSavingQuota(false);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === users.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(users.map(u => u.id)));
+    }
+  }
+
+  async function handleBulkAction() {
+    if (selectedIds.size === 0 || !bulkAction) return;
+    setBulkRunning(true);
+    try {
+      if (bulkAction === 'delete') {
+        const res = await api.adminBulkDelete(Array.from(selectedIds));
+        if (res.success && res.data) {
+          toast.success(`Deleted ${res.data.succeeded}/${res.data.total} users`);
+          await loadUsers();
+          setSelectedIds(new Set());
+        } else {
+          toast.error(res.error?.message || 'Bulk delete failed');
+        }
+      } else {
+        const res = await api.adminBulkUpdate(
+          Array.from(selectedIds),
+          bulkAction,
+          bulkAction === 'set_role' ? bulkRole : undefined,
+        );
+        if (res.success && res.data) {
+          toast.success(`Updated ${res.data.succeeded}/${res.data.total} users`);
+          await loadUsers();
+          setSelectedIds(new Set());
+        } else {
+          toast.error(res.error?.message || 'Bulk update failed');
+        }
+      }
+    } finally {
+      setBulkRunning(false);
+      setBulkConfirm(false);
+      setBulkAction('');
     }
   }
 
@@ -299,6 +357,53 @@ export function AdminUsersPage() {
           )}
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800">
+          <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+            {selectedIds.size} selected
+          </span>
+          <select
+            value={bulkAction}
+            onChange={e => setBulkAction(e.target.value)}
+            className="input text-xs py-1 px-2"
+          >
+            <option value="">Select action...</option>
+            <option value="activate">Activate</option>
+            <option value="deactivate">Deactivate</option>
+            <option value="set_role">Change role</option>
+            <option value="delete">Delete</option>
+          </select>
+          {bulkAction === 'set_role' && (
+            <select value={bulkRole} onChange={e => setBulkRole(e.target.value)} className="input text-xs py-1 px-2">
+              <option value="user">user</option>
+              <option value="premium">premium</option>
+              <option value="admin">admin</option>
+            </select>
+          )}
+          <button
+            onClick={() => setBulkConfirm(true)}
+            disabled={!bulkAction || bulkRunning}
+            className="px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
+          >
+            {bulkRunning ? <SpinnerGap className="animate-spin" weight="bold" size={14} /> : <Lightning weight="bold" size={14} />}
+            Apply
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
+            Clear
+          </button>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={bulkConfirm}
+        title="Bulk Action"
+        message={`Are you sure you want to ${bulkAction} ${selectedIds.size} user(s)?`}
+        variant={bulkAction === 'delete' ? 'danger' : 'default'}
+        onConfirm={handleBulkAction}
+        onCancel={() => setBulkConfirm(false)}
+      />
 
       {/* Grant Credits Modal */}
       <AnimatePresence>

@@ -420,7 +420,7 @@ pub async fn occupancy_report(
                 .map_or(0, |l| l.total_slots);
             #[allow(clippy::cast_precision_loss)]
             let occupancy_percent = if total_slots > 0 {
-                (total as f64 / total_slots as f64) * 100.0
+                (total as f64 / f64::from(total_slots)) * 100.0
             } else {
                 0.0
             };
@@ -608,6 +608,7 @@ pub async fn update_notification_preferences(
 }
 
 /// Load notification preferences for a user (used by notification senders).
+#[allow(dead_code)]
 pub async fn load_notification_preferences(
     db: &crate::db::Database,
     user_id: uuid::Uuid,
@@ -624,7 +625,7 @@ pub async fn load_notification_preferences(
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Admin-configurable booking policies.
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BookingPolicies {
     /// Maximum days in advance a booking can be made (0 = unlimited)
     pub max_advance_booking_days: u32,
@@ -632,16 +633,6 @@ pub struct BookingPolicies {
     pub min_booking_duration_hours: u32,
     /// Maximum booking duration in hours (0 = no maximum)
     pub max_booking_duration_hours: u32,
-}
-
-impl Default for BookingPolicies {
-    fn default() -> Self {
-        Self {
-            max_advance_booking_days: 0,
-            min_booking_duration_hours: 0,
-            max_booking_duration_hours: 0,
-        }
-    }
 }
 
 impl BookingPolicies {
@@ -667,8 +658,9 @@ impl BookingPolicies {
 
         // Check duration
         let duration_hours = (end_time - start_time).num_hours();
+        let duration_u32 = u32::try_from(duration_hours).unwrap_or(0);
         if self.min_booking_duration_hours > 0
-            && (duration_hours as u32) < self.min_booking_duration_hours
+            && duration_u32 < self.min_booking_duration_hours
         {
             return Err(format!(
                 "Minimum booking duration is {} hours",
@@ -676,7 +668,7 @@ impl BookingPolicies {
             ));
         }
         if self.max_booking_duration_hours > 0
-            && (duration_hours as u32) > self.max_booking_duration_hours
+            && duration_u32 > self.max_booking_duration_hours
         {
             return Err(format!(
                 "Maximum booking duration is {} hours",
