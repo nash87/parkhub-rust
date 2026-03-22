@@ -283,6 +283,13 @@ export const api = {
     request<BulkResult>('/api/v1/admin/users/bulk-update', { method: 'POST', body: JSON.stringify({ user_ids, action, role }) }),
   adminBulkDelete: (user_ids: string[]) =>
     request<BulkResult>('/api/v1/admin/users/bulk-delete', { method: 'POST', body: JSON.stringify({ user_ids }) }),
+
+  // ── Map ──
+  getMapMarkers: () => request<LotMarker[]>('/api/v1/lots/map'),
+  setLotLocation: (lotId: string, latitude: number, longitude: number) =>
+    request<void>(`/api/v1/admin/lots/${lotId}/location`, {
+      method: 'PUT', body: JSON.stringify({ latitude, longitude }),
+    }),
 };
 
 // ── Types ──
@@ -321,6 +328,20 @@ export interface ParkingLot {
   monthly_pass?: number;
   currency?: string;
   operating_hours?: OperatingHoursData;
+}
+
+export type MarkerColor = 'green' | 'yellow' | 'red' | 'gray';
+
+export interface LotMarker {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  available_slots: number;
+  total_slots: number;
+  status: string;
+  color: MarkerColor;
 }
 
 export interface DynamicPricingRules {

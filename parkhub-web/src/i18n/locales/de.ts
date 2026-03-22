@@ -60,6 +60,7 @@ export default {
       credits: 'Credits',
       team: 'Team',
       calendar: 'Kalender',
+      map: 'Karte',
       notifications: 'Mitteilungen',
       translations: 'Übersetzungen',
       profile: 'Profil',
@@ -569,6 +570,14 @@ export default {
       events: 'Termine',
       previousMonth: 'Vorheriger Monat',
       nextMonth: 'Nachster Monat',
+    },
+    map: {
+      title: 'Parkplatzkarte',
+      subtitle: 'Finde verfugbare Parkplatze in deiner Nahe',
+      bookNow: 'Jetzt buchen',
+      available: 'Verfugbar',
+      noLots: 'Keine Parkplatze mit Standortdaten verfugbar',
+      closed: 'Geschlossen',
     },
     team: {
       title: 'Team',
