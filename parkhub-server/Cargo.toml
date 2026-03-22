@@ -166,6 +166,7 @@ full = [
     "mod-geofence",
     "mod-waitlist-ext",
     "mod-parking-pass",
+    "mod-api-docs",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -222,6 +223,7 @@ mod-history = []
 mod-geofence = []
 mod-waitlist-ext = []
 mod-parking-pass = []
+mod-api-docs = []
 
 [dev-dependencies]
 tempfile = "3"

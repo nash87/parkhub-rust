@@ -1200,6 +1200,11 @@ export default {
         no_show: 'No Show',
       },
     },
+    apiDocs: {
+      title: 'API Documentation',
+      help: "Explore and test ParkHub's REST API",
+      openDocs: 'Open API Docs',
+    },
     parkingPass: {
       title: 'Parking Passes',
       subtitle: 'Your digital parking passes',
