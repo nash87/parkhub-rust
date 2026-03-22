@@ -121,6 +121,16 @@ export const api = {
   deleteLot: (id: string) =>
     request<void>(`/api/v1/lots/${id}`, { method: 'DELETE' }),
 
+  // ── Dynamic Pricing ──
+  getDynamicPrice: (lotId: string) =>
+    request<DynamicPriceResult>(`/api/v1/lots/${lotId}/pricing/dynamic`),
+  getAdminDynamicPricing: (lotId: string) =>
+    request<DynamicPricingRules>(`/api/v1/admin/lots/${lotId}/pricing/dynamic`),
+  updateAdminDynamicPricing: (lotId: string, data: Partial<DynamicPricingRules>) =>
+    request<DynamicPricingRules>(`/api/v1/admin/lots/${lotId}/pricing/dynamic`, {
+      method: 'PUT', body: JSON.stringify(data),
+    }),
+
   // ── Bookings ──
   getBookings: () => request<Booking[]>('/api/v1/bookings'),
   createBooking: (data: CreateBookingPayload) => request<Booking>('/api/v1/bookings', { method: 'POST', body: JSON.stringify(data) }),
@@ -302,6 +312,25 @@ export interface ParkingLot {
   daily_max?: number;
   monthly_pass?: number;
   currency?: string;
+}
+
+export interface DynamicPricingRules {
+  enabled: boolean;
+  base_price: number;
+  surge_multiplier: number;
+  discount_multiplier: number;
+  surge_threshold: number;
+  discount_threshold: number;
+}
+
+export interface DynamicPriceResult {
+  current_price: number;
+  base_price: number;
+  applied_multiplier: number;
+  occupancy_percent: number;
+  dynamic_pricing_active: boolean;
+  tier: 'surge' | 'discount' | 'normal';
+  currency: string;
 }
 
 export type SlotType = 'standard' | 'compact' | 'large' | 'handicap' | 'electric' | 'motorcycle' | 'reserved' | 'vip';
