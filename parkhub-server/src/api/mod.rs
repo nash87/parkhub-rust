@@ -242,10 +242,11 @@ use zones::{create_zone, delete_zone, list_zones, update_zone};
 
 // Re-exports from extracted modules (Phase 3)
 use admin_handlers::{
-    admin_audit_log, admin_delete_user, admin_get_auto_release, admin_get_email_settings,
-    admin_get_privacy, admin_heatmap, admin_list_bookings, admin_list_users, admin_reports,
-    admin_reset, admin_stats, admin_update_auto_release, admin_update_email_settings,
-    admin_update_privacy, admin_update_user, admin_update_user_role, admin_update_user_status,
+    admin_audit_log, admin_audit_log_export, admin_delete_user, admin_get_auto_release,
+    admin_get_email_settings, admin_get_privacy, admin_heatmap, admin_list_bookings,
+    admin_list_users, admin_reports, admin_reset, admin_stats, admin_update_auto_release,
+    admin_update_email_settings, admin_update_privacy, admin_update_user, admin_update_user_role,
+    admin_update_user_status,
 };
 use lots_ext::{admin_dashboard_charts, lot_qr_code};
 use misc::{
@@ -692,7 +693,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/dashboard/charts",
             get(admin_dashboard_charts),
         )
-        .route("/api/v1/admin/audit-log", get(admin_audit_log));
+        .route("/api/v1/admin/audit-log", get(admin_audit_log))
+        .route(
+            "/api/v1/admin/audit-log/export",
+            get(admin_audit_log_export),
+        );
 
     #[cfg(feature = "mod-analytics")]
     let admin_routes = admin_routes.route(
