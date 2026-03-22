@@ -23,7 +23,7 @@ use uuid::Uuid;
 use parkhub_common::models::{
     Absence, Announcement, Booking, GuestBooking, Notification, ParkingLot, ParkingSlot,
     ProposalStatus, RecurringBooking, SwapRequest, TranslationOverride, TranslationProposal,
-    TranslationVote, User, Vehicle, WaitlistEntry,
+    TranslationVote, User, Vehicle, Visitor, WaitlistEntry,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -60,6 +60,7 @@ const TRANSLATION_PROPOSALS: TableDefinition<&str, &[u8]> =
 const TRANSLATION_VOTES: TableDefinition<&str, &[u8]> = TableDefinition::new("translation_votes");
 const TRANSLATION_OVERRIDES: TableDefinition<&str, &[u8]> =
     TableDefinition::new("translation_overrides");
+const VISITORS: TableDefinition<&str, &[u8]> = TableDefinition::new("visitors");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -342,6 +343,7 @@ impl Database {
             let _ = write_txn.open_table(TRANSLATION_PROPOSALS)?;
             let _ = write_txn.open_table(TRANSLATION_VOTES)?;
             let _ = write_txn.open_table(TRANSLATION_OVERRIDES)?;
+            let _ = write_txn.open_table(VISITORS)?;
         }
         write_txn.commit()?;
 
@@ -454,6 +456,7 @@ impl Database {
         drain_table!(write_txn, TRANSLATION_PROPOSALS);
         drain_table!(write_txn, TRANSLATION_VOTES);
         drain_table!(write_txn, TRANSLATION_OVERRIDES);
+        drain_table!(write_txn, VISITORS);
         // Preserve SETTINGS table (encryption salt, setup status, etc.)
         write_txn.commit()?;
         info!("All data tables cleared for demo reset");
@@ -2369,6 +2372,89 @@ impl Database {
             overrides.push(self.deserialize(value.value())?);
         }
         Ok(overrides)
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VISITOR OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Save a visitor registration
+    pub async fn save_visitor(&self, visitor: &Visitor) -> Result<()> {
+        let id = visitor.id.to_string();
+        let data = self.serialize(visitor)?;
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        drop(db);
+        {
+            let mut table = write_txn.open_table(VISITORS)?;
+            table.insert(id.as_str(), data.as_slice())?;
+        }
+        write_txn.commit()?;
+
+        debug!("Saved visitor: {}", visitor.id);
+        Ok(())
+    }
+
+    /// Get a visitor by ID
+    pub async fn get_visitor(&self, id: &str) -> Result<Option<Visitor>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(VISITORS)?;
+
+        match table.get(id)? {
+            Some(value) => Ok(Some(self.deserialize(value.value())?)),
+            None => Ok(None),
+        }
+    }
+
+    /// List visitors by host user ID
+    pub async fn list_visitors_by_host(&self, host_user_id: &str) -> Result<Vec<Visitor>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(VISITORS)?;
+
+        let mut visitors = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            let visitor: Visitor = self.deserialize(value.value())?;
+            if visitor.host_user_id.to_string() == host_user_id {
+                visitors.push(visitor);
+            }
+        }
+        visitors.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        Ok(visitors)
+    }
+
+    /// List all visitors (admin)
+    pub async fn list_all_visitors(&self) -> Result<Vec<Visitor>> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(VISITORS)?;
+
+        let mut visitors = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            visitors.push(self.deserialize(value.value())?);
+        }
+        visitors.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        Ok(visitors)
+    }
+
+    /// Delete a visitor by ID
+    pub async fn delete_visitor(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        drop(db);
+        let removed = {
+            let mut table = write_txn.open_table(VISITORS)?;
+            table.remove(id)?.is_some()
+        };
+        write_txn.commit()?;
+        Ok(removed)
     }
 }
 
