@@ -72,6 +72,7 @@ const AbsenceApprovalPage = lazy(() => import('./views/AbsenceApproval'), 'Absen
 const AdminDashboardPage = lazy(() => import('./views/AdminDashboard'), 'AdminDashboardPage');
 const AdminPluginsPage = lazy(() => import('./views/AdminPlugins'), 'AdminPluginsPage');
 const AdminCompliancePage = lazy(() => import('./views/AdminCompliance'), 'AdminCompliancePage');
+const AdminSSOPage = lazy(() => import('./views/AdminSSO'), 'AdminSSOPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -174,6 +175,7 @@ function AnimatedRoutes() {
             <Route path="widgets" element={<SuspenseRoute><AdminDashboardPage /></SuspenseRoute>} />
             <Route path="plugins" element={<SuspenseRoute><AdminPluginsPage /></SuspenseRoute>} />
             <Route path="compliance" element={<SuspenseRoute><AdminCompliancePage /></SuspenseRoute>} />
+            <Route path="sso" element={<SuspenseRoute><AdminSSOPage /></SuspenseRoute>} />
           </Route>
         </Route>
         <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />
