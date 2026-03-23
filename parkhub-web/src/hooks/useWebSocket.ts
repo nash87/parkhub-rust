@@ -85,16 +85,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         // Update occupancy map from occupancy_changed events
         if (event.event === 'occupancy_changed' && event.data.lot_id) {
           const lotId = String(event.data.lot_id);
-          // Prevent prototype pollution
-          if (lotId && !Object.prototype.hasOwnProperty.call({__proto__:1, constructor:1, prototype:1}, lotId)) {
-            setOccupancy(prev => {
-              const next: OccupancyMap = { ...prev };
-              next[lotId] = {
-                available: event.data.available as number,
-                total: event.data.total as number,
-              };
-              return next;
-            });
+          // Only accept valid lot IDs (UUID format) to prevent prototype pollution
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lotId)) {
+            const entry = { available: event.data.available as number, total: event.data.total as number };
+            setOccupancy(prev => ({ ...prev, [lotId]: entry }));
           }
         }
       } catch {

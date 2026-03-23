@@ -46,7 +46,6 @@ export function AdminLotsPage() {
     enabled: false, base_price: 2.50, surge_multiplier: 1.5,
     discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20,
   });
-  const [, setSavingDynamic] = useState(false);
   const defaultDayHours: DayHoursData = { open: '07:00', close: '22:00', closed: false };
   const [opHours, setOpHours] = useState<OperatingHoursData>({
     is_24h: true,
