@@ -62,8 +62,6 @@ type SharedState = Arc<RwLock<AppState>>;
 pub mod absence_approval;
 #[cfg(feature = "mod-absences")]
 pub mod absences;
-#[cfg(feature = "mod-api-docs")]
-pub mod api_docs;
 #[cfg(feature = "mod-accessible")]
 pub mod accessible;
 pub mod admin;
@@ -73,6 +71,8 @@ pub mod admin_handlers;
 pub mod analytics;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
+#[cfg(feature = "mod-api-docs")]
+pub mod api_docs;
 pub mod auth;
 #[cfg(feature = "mod-cost-center")]
 pub mod billing;
@@ -127,14 +127,14 @@ pub mod notification_channels;
 pub mod notifications;
 #[cfg(feature = "mod-oauth")]
 pub mod oauth;
-#[cfg(feature = "mod-parking-pass")]
-pub mod parking_pass;
-#[cfg(feature = "mod-plugins")]
-pub mod plugins;
 #[cfg(feature = "mod-operating-hours")]
 pub mod operating_hours;
+#[cfg(feature = "mod-parking-pass")]
+pub mod parking_pass;
 #[cfg(feature = "mod-payments")]
 pub mod payments;
+#[cfg(feature = "mod-plugins")]
+pub mod plugins;
 #[cfg(feature = "mod-push")]
 pub mod push;
 #[cfg(feature = "mod-pwa")]
@@ -271,6 +271,8 @@ async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
         .map(|(_, v)| (*v).to_string())
         .unwrap_or_default()
 }
+#[cfg(feature = "mod-parking-pass")]
+use parking_pass::{get_booking_pass, list_my_passes, verify_pass};
 #[cfg(feature = "mod-swap")]
 use swap::{create_swap_request, list_swap_requests, update_swap_request};
 #[cfg(feature = "mod-team")]
@@ -296,8 +298,6 @@ use waitlist_ext::{
     accept_waitlist_offer, decline_waitlist_offer, get_lot_waitlist, leave_lot_waitlist,
     subscribe_waitlist,
 };
-#[cfg(feature = "mod-parking-pass")]
-use parking_pass::{get_booking_pass, list_my_passes, verify_pass};
 #[cfg(feature = "mod-webhooks")]
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 #[cfg(feature = "mod-widgets")]
@@ -471,10 +471,7 @@ async fn list_module_features() -> impl IntoResponse {
         "parking-pass".into(),
         cfg!(feature = "mod-parking-pass").into(),
     );
-    modules.insert(
-        "api-docs".into(),
-        cfg!(feature = "mod-api-docs").into(),
-    );
+    modules.insert("api-docs".into(), cfg!(feature = "mod-api-docs").into());
     modules.insert(
         "absence-approval".into(),
         cfg!(feature = "mod-absence-approval").into(),
@@ -483,22 +480,10 @@ async fn list_module_features() -> impl IntoResponse {
         "calendar-drag".into(),
         cfg!(feature = "mod-calendar-drag").into(),
     );
-    modules.insert(
-        "widgets".into(),
-        cfg!(feature = "mod-widgets").into(),
-    );
-    modules.insert(
-        "plugins".into(),
-        cfg!(feature = "mod-plugins").into(),
-    );
-    modules.insert(
-        "graphql".into(),
-        cfg!(feature = "mod-graphql").into(),
-    );
-    modules.insert(
-        "compliance".into(),
-        cfg!(feature = "mod-compliance").into(),
-    );
+    modules.insert("widgets".into(), cfg!(feature = "mod-widgets").into());
+    modules.insert("plugins".into(), cfg!(feature = "mod-plugins").into());
+    modules.insert("graphql".into(), cfg!(feature = "mod-graphql").into());
+    modules.insert("compliance".into(), cfg!(feature = "mod-compliance").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -642,15 +627,17 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     #[cfg(feature = "mod-graphql")]
     {
         public_routes = public_routes
-            .route("/api/v1/graphql/playground", get(graphql::graphql_playground))
+            .route(
+                "/api/v1/graphql/playground",
+                get(graphql::graphql_playground),
+            )
             .route("/api/v1/graphql/schema", get(graphql::graphql_schema));
     }
 
     // Public pass verification (no auth needed — used by QR scan)
     #[cfg(feature = "mod-parking-pass")]
     {
-        public_routes =
-            public_routes.route("/api/v1/pass/verify/{code}", get(verify_pass));
+        public_routes = public_routes.route("/api/v1/pass/verify/{code}", get(verify_pass));
     }
 
     // Feature-gated public routes
@@ -1044,19 +1031,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     #[cfg(feature = "mod-calendar-drag")]
     {
         // Calendar drag-to-reschedule
-        protected_routes = protected_routes.route(
-            "/api/v1/bookings/{id}/reschedule",
-            put(reschedule_booking),
-        );
+        protected_routes =
+            protected_routes.route("/api/v1/bookings/{id}/reschedule", put(reschedule_booking));
     }
 
     #[cfg(feature = "mod-graphql")]
     {
         // GraphQL query/mutation endpoint (auth required)
-        protected_routes = protected_routes.route(
-            "/api/v1/graphql",
-            post(graphql::graphql_execute),
-        );
+        protected_routes =
+            protected_routes.route("/api/v1/graphql", post(graphql::graphql_execute));
     }
 
     #[cfg(feature = "mod-invoices")]
@@ -1339,23 +1322,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     {
         // Absence approval workflow (user submits, admin approves/rejects)
         protected_routes = protected_routes
-            .route(
-                "/api/v1/absences/requests",
-                post(submit_absence_request),
-            )
+            .route("/api/v1/absences/requests", post(submit_absence_request))
             .route("/api/v1/absences/my", get(my_absence_requests))
-            .route(
-                "/api/v1/admin/absences/pending",
-                get(list_pending_absences),
-            )
-            .route(
-                "/api/v1/admin/absences/{id}/approve",
-                put(approve_absence),
-            )
-            .route(
-                "/api/v1/admin/absences/{id}/reject",
-                put(reject_absence),
-            );
+            .route("/api/v1/admin/absences/pending", get(list_pending_absences))
+            .route("/api/v1/admin/absences/{id}/approve", put(approve_absence))
+            .route("/api/v1/admin/absences/{id}/reject", put(reject_absence));
     }
 
     // Absence iCal import needs both absences + import modules

@@ -122,11 +122,7 @@ pub async fn reschedule_booking(
     let state_guard = state.read().await;
 
     // Get the booking
-    let booking = match state_guard
-        .db
-        .get_booking(&booking_id.to_string())
-        .await
-    {
+    let booking = match state_guard.db.get_booking(&booking_id.to_string()).await {
         Ok(Some(b)) => b,
         _ => {
             return (
@@ -187,10 +183,7 @@ pub async fn reschedule_booking(
                 conflicts.len()
             ),
         };
-        return (
-            StatusCode::CONFLICT,
-            Json(ApiResponse::success(response)),
-        );
+        return (StatusCode::CONFLICT, Json(ApiResponse::success(response)));
     }
 
     // Persist the reschedule by saving updated booking

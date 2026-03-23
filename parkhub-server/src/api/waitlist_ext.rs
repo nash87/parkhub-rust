@@ -349,10 +349,7 @@ pub async fn accept_waitlist_offer(
         tracing::error!("Failed to accept waitlist offer: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to accept offer",
-            )),
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to accept offer")),
         );
     }
 
@@ -460,18 +457,13 @@ async fn notify_next_in_line(state: &crate::AppState, lot_id: &Uuid) {
         .await
         .unwrap_or_default();
 
-    let next = entries
-        .iter()
-        .find(|e| e.status == WaitlistStatus::Waiting);
+    let next = entries.iter().find(|e| e.status == WaitlistStatus::Waiting);
 
     if let Some(entry) = next {
         let mut offered = entry.clone();
         offered.status = WaitlistStatus::Offered;
         offered.notified_at = Some(Utc::now());
-        offered.offer_expires_at = Some(
-            Utc::now()
-                + Duration::minutes(OFFER_EXPIRY_MINUTES),
-        );
+        offered.offer_expires_at = Some(Utc::now() + Duration::minutes(OFFER_EXPIRY_MINUTES));
 
         if state.db.save_waitlist_entry(&offered).await.is_ok() {
             // Create notification

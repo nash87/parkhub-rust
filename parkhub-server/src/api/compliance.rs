@@ -321,7 +321,11 @@ fn generate_data_categories() -> Vec<DataCategory> {
     vec![
         DataCategory {
             category: "User Identity".to_string(),
-            data_types: vec!["Name".to_string(), "Email".to_string(), "Username".to_string()],
+            data_types: vec![
+                "Name".to_string(),
+                "Email".to_string(),
+                "Username".to_string(),
+            ],
             purpose: "Account management and authentication".to_string(),
             legal_basis: "Art. 6(1)(b) GDPR — Contract performance".to_string(),
             retention_days: None,
@@ -329,7 +333,12 @@ fn generate_data_categories() -> Vec<DataCategory> {
         },
         DataCategory {
             category: "Vehicle Data".to_string(),
-            data_types: vec!["License plate".to_string(), "Make".to_string(), "Model".to_string(), "Color".to_string()],
+            data_types: vec![
+                "License plate".to_string(),
+                "Make".to_string(),
+                "Model".to_string(),
+                "Color".to_string(),
+            ],
             purpose: "Parking spot assignment and identification".to_string(),
             legal_basis: "Art. 6(1)(b) GDPR — Contract performance".to_string(),
             retention_days: Some(365),
@@ -337,7 +346,12 @@ fn generate_data_categories() -> Vec<DataCategory> {
         },
         DataCategory {
             category: "Booking Records".to_string(),
-            data_types: vec!["Date".to_string(), "Time".to_string(), "Lot".to_string(), "Slot".to_string()],
+            data_types: vec![
+                "Date".to_string(),
+                "Time".to_string(),
+                "Lot".to_string(),
+                "Slot".to_string(),
+            ],
             purpose: "Parking reservation management".to_string(),
             legal_basis: "Art. 6(1)(b) GDPR — Contract performance".to_string(),
             retention_days: Some(730),
@@ -345,7 +359,11 @@ fn generate_data_categories() -> Vec<DataCategory> {
         },
         DataCategory {
             category: "Login History".to_string(),
-            data_types: vec!["Timestamp".to_string(), "IP address".to_string(), "User agent".to_string()],
+            data_types: vec![
+                "Timestamp".to_string(),
+                "IP address".to_string(),
+                "User agent".to_string(),
+            ],
             purpose: "Security monitoring and fraud prevention".to_string(),
             legal_basis: "Art. 6(1)(f) GDPR — Legitimate interest".to_string(),
             retention_days: Some(90),
@@ -361,7 +379,9 @@ fn generate_legal_basis() -> Vec<LegalBasis> {
             processing_activity: "User registration and authentication".to_string(),
             basis: "Contract performance".to_string(),
             gdpr_article: "Art. 6(1)(b)".to_string(),
-            description: "Processing necessary for the performance of the parking management contract".to_string(),
+            description:
+                "Processing necessary for the performance of the parking management contract"
+                    .to_string(),
         },
         LegalBasis {
             processing_activity: "Booking management".to_string(),
@@ -379,7 +399,8 @@ fn generate_legal_basis() -> Vec<LegalBasis> {
             processing_activity: "Usage analytics".to_string(),
             basis: "Legitimate interest".to_string(),
             gdpr_article: "Art. 6(1)(f)".to_string(),
-            description: "Aggregated, anonymized usage statistics for service improvement".to_string(),
+            description: "Aggregated, anonymized usage statistics for service improvement"
+                .to_string(),
         },
     ]
 }
@@ -433,58 +454,85 @@ fn generate_data_map() -> Vec<DataMapEntry> {
             controller: "Organization (self-hosted operator)".to_string(),
             purpose: "Manage user identities for parking system access".to_string(),
             data_subjects: vec!["Employees".to_string(), "Visitors".to_string()],
-            data_categories: vec!["Name".to_string(), "Email".to_string(), "Password hash".to_string()],
+            data_categories: vec![
+                "Name".to_string(),
+                "Email".to_string(),
+                "Password hash".to_string(),
+            ],
             legal_basis: "Art. 6(1)(b) GDPR".to_string(),
             retention_period: "Until account deletion".to_string(),
             recipients: vec!["System administrators".to_string()],
             transfers_to_third_countries: false,
-            technical_measures: vec!["AES-256-GCM encryption".to_string(), "Argon2 password hashing".to_string(), "TLS 1.2+".to_string()],
+            technical_measures: vec![
+                "AES-256-GCM encryption".to_string(),
+                "Argon2 password hashing".to_string(),
+                "TLS 1.2+".to_string(),
+            ],
         },
         DataMapEntry {
             processing_activity: "Parking Reservation Management".to_string(),
             controller: "Organization (self-hosted operator)".to_string(),
             purpose: "Process and manage parking spot reservations".to_string(),
             data_subjects: vec!["Employees".to_string()],
-            data_categories: vec!["Booking details".to_string(), "Vehicle info".to_string(), "Time slots".to_string()],
+            data_categories: vec![
+                "Booking details".to_string(),
+                "Vehicle info".to_string(),
+                "Time slots".to_string(),
+            ],
             legal_basis: "Art. 6(1)(b) GDPR".to_string(),
             retention_period: "24 months after booking completion".to_string(),
-            recipients: vec!["Parking lot operators".to_string(), "System administrators".to_string()],
+            recipients: vec![
+                "Parking lot operators".to_string(),
+                "System administrators".to_string(),
+            ],
             transfers_to_third_countries: false,
-            technical_measures: vec!["Role-based access control".to_string(), "Audit logging".to_string()],
+            technical_measures: vec![
+                "Role-based access control".to_string(),
+                "Audit logging".to_string(),
+            ],
         },
         DataMapEntry {
             processing_activity: "Security Monitoring".to_string(),
             controller: "Organization (self-hosted operator)".to_string(),
             purpose: "Detect and prevent unauthorized access".to_string(),
             data_subjects: vec!["All users".to_string()],
-            data_categories: vec!["IP addresses".to_string(), "Login timestamps".to_string(), "User agents".to_string()],
+            data_categories: vec![
+                "IP addresses".to_string(),
+                "Login timestamps".to_string(),
+                "User agents".to_string(),
+            ],
             legal_basis: "Art. 6(1)(f) GDPR".to_string(),
             retention_period: "90 days".to_string(),
             recipients: vec!["Security team".to_string()],
             transfers_to_third_countries: false,
-            technical_measures: vec!["Rate limiting".to_string(), "2FA support".to_string(), "Session management".to_string()],
+            technical_measures: vec![
+                "Rate limiting".to_string(),
+                "2FA support".to_string(),
+                "Session management".to_string(),
+            ],
         },
     ]
 }
 
 /// Generate sample audit trail for export
 fn generate_sample_audit_trail() -> Vec<AuditExportEntry> {
-    vec![
-        AuditExportEntry {
-            timestamp: "2026-03-23T10:00:00Z".to_string(),
-            user_id: "system".to_string(),
-            action: "compliance_report_generated".to_string(),
-            resource_type: "compliance".to_string(),
-            resource_id: "report".to_string(),
-            ip_address: "127.0.0.1".to_string(),
-            details: "Compliance report generated by admin".to_string(),
-        },
-    ]
+    vec![AuditExportEntry {
+        timestamp: "2026-03-23T10:00:00Z".to_string(),
+        user_id: "system".to_string(),
+        action: "compliance_report_generated".to_string(),
+        resource_type: "compliance".to_string(),
+        resource_id: "report".to_string(),
+        ip_address: "127.0.0.1".to_string(),
+        details: "Compliance report generated by admin".to_string(),
+    }]
 }
 
 /// Determine overall compliance status from checks
 fn overall_status(checks: &[ComplianceCheck]) -> ComplianceLevel {
-    if checks.iter().any(|c| c.status == ComplianceLevel::NonCompliant) {
+    if checks
+        .iter()
+        .any(|c| c.status == ComplianceLevel::NonCompliant)
+    {
         ComplianceLevel::NonCompliant
     } else if checks.iter().any(|c| c.status == ComplianceLevel::Warning) {
         ComplianceLevel::Warning
@@ -495,13 +543,18 @@ fn overall_status(checks: &[ComplianceCheck]) -> ComplianceLevel {
 
 /// Convert audit entries to CSV string
 fn audit_to_csv(entries: &[AuditExportEntry]) -> String {
-    let mut csv = String::from("timestamp,user_id,action,resource_type,resource_id,ip_address,details\n");
+    let mut csv =
+        String::from("timestamp,user_id,action,resource_type,resource_id,ip_address,details\n");
     for entry in entries {
         csv.push_str(&format!(
             "{},{},{},{},{},{},{}\n",
-            entry.timestamp, entry.user_id, entry.action,
-            entry.resource_type, entry.resource_id,
-            entry.ip_address, entry.details,
+            entry.timestamp,
+            entry.user_id,
+            entry.action,
+            entry.resource_type,
+            entry.resource_id,
+            entry.ip_address,
+            entry.details,
         ));
     }
     csv
@@ -533,13 +586,12 @@ pub async fn compliance_report(
 }
 
 /// `GET /api/v1/admin/compliance/report/pdf` — generate PDF compliance report.
-pub async fn compliance_report_pdf(
-    State(_state): State<SharedState>,
-) -> impl IntoResponse {
+pub async fn compliance_report_pdf(State(_state): State<SharedState>) -> impl IntoResponse {
     // Generate a simple text-based PDF placeholder
     // In production, this would use printpdf to generate a proper PDF
     let content = "ParkHub GDPR Compliance Report\n\
-        Generated: ".to_string()
+        Generated: "
+        .to_string()
         + &chrono::Utc::now().to_rfc3339()
         + "\n\nThis is a compliance report placeholder.\n\
            For the full JSON report, use GET /api/v1/admin/compliance/report";
@@ -589,7 +641,10 @@ pub async fn compliance_audit_export(
             (
                 StatusCode::OK,
                 [
-                    (header::CONTENT_TYPE.as_str(), "application/json; charset=utf-8"),
+                    (
+                        header::CONTENT_TYPE.as_str(),
+                        "application/json; charset=utf-8",
+                    ),
                     (
                         header::CONTENT_DISPOSITION.as_str(),
                         "attachment; filename=\"parkhub-audit-trail.json\"",
@@ -757,7 +812,9 @@ mod tests {
     fn test_generate_legal_basis() {
         let basis = generate_legal_basis();
         assert!(basis.len() >= 4);
-        assert!(basis.iter().any(|b| b.gdpr_article.contains("Art. 6(1)(b)")));
+        assert!(basis
+            .iter()
+            .any(|b| b.gdpr_article.contains("Art. 6(1)(b)")));
     }
 
     #[test]
@@ -779,7 +836,9 @@ mod tests {
     fn test_generate_data_map() {
         let map = generate_data_map();
         assert!(map.len() >= 3);
-        assert!(map.iter().any(|e| e.processing_activity.contains("User Account")));
+        assert!(map
+            .iter()
+            .any(|e| e.processing_activity.contains("User Account")));
         assert!(map.iter().all(|e| !e.transfers_to_third_countries));
     }
 
