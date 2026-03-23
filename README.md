@@ -10,7 +10,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
-  <img src="https://img.shields.io/badge/Tests-1423%2B-success.svg?style=flat-square" alt="1382+ tests">
+  <img src="https://img.shields.io/badge/Tests-1400%2B-success.svg?style=flat-square" alt="1400+ tests">
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -68,6 +68,31 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ## Features
 
+### v4.1.0 Highlights
+
+- **Booking Sharing & Guest Invites** -- Share bookings via secure links with optional expiry, invite guests by email
+- **Scheduled Reports (Email Digest)** -- Automated daily/weekly/monthly report delivery via email (occupancy, revenue, activity, trends)
+- **API Versioning & Deprecation** -- `X-API-Version` header, deprecation notices, `Sunset` header on deprecated endpoints, version changelog
+
+### v4.0.0 Highlights
+
+- **Plugin/Extension System** -- Trait-based plugin architecture with event hooks, marketplace-style admin UI, 2 built-in plugins (Slack Notifier, Auto-Assign Preferred Spot)
+- **GraphQL API** -- Full GraphQL schema alongside REST with interactive GraphiQL playground
+- **Compliance Reports & Audit Trail** -- GDPR/DSGVO compliance dashboard with 10 automated checks, Art. 30 data map, audit trail export, PDF compliance report
+
+### v3.6--v3.9 Highlights
+
+- **Parking History & Stats** -- Personal booking timeline with stats (favourite lot, avg duration, monthly trends)
+- **Geofencing & Auto Check-in** -- GPS proximity-based auto check-in using haversine distance
+- **Enhanced Waitlist** -- Priority-based with accept/decline offers and 15-minute expiry
+- **Digital Parking Pass** -- QR badge generation with public verification endpoint
+- **Absence Approval Workflows** -- Submit/approve/reject absence requests with admin queue
+- **Calendar Drag-to-Reschedule** -- Drag booking events to new dates with conflict detection
+- **Customizable Admin Widgets** -- 8 configurable dashboard widget types with per-user layout
+- **Kubernetes Helm Chart** -- Production-ready chart with HPA, PVC, all module flags, ingress + TLS
+- **k6 Load Testing Suite** -- Smoke, load, stress, and spike test scripts
+- **Postman Collection** -- Auto-generated from OpenAPI spec, 100+ requests in 17 folders
+
 ### v3.5.0 Highlights
 
 - **Visitor Pre-Registration** -- Pre-register visitors with QR code passes, check-in tracking, admin overview with search/filter
@@ -119,7 +144,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Plugin/extension system** -- Trait-based plugin architecture with event hooks, built-in Slack Notifier and Auto-Assign Preferred Spot plugins
 - **GraphQL API** -- Full GraphQL schema alongside REST with interactive playground
 - **GDPR compliance reports** -- Art. 30 data map, audit trail export, TOM summary, PDF reports
-- **54 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **57 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
 - **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
 - **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
 - **Community translations** -- 10 languages with proposal voting and admin review
@@ -230,6 +255,35 @@ ParkHub uses Cargo feature flags to let you build only the modules you need. The
 | `mod-dynamic-pricing` | Occupancy-based surge/discount pricing |
 | `mod-operating-hours` | Per-lot 7-day schedule |
 | `mod-oauth` | OAuth/Social login (Google, GitHub) |
+| `mod-analytics` | Admin analytics dashboard with charts |
+| `mod-email-templates` | Professional HTML email templates |
+| `mod-lobby-display` | Public kiosk/lobby display mode |
+| `mod-setup-wizard` | Interactive onboarding wizard |
+| `mod-map` | Interactive Leaflet map view |
+| `mod-stripe` | Stripe payment integration |
+| `mod-ical` | iCal calendar subscription feeds |
+| `mod-multi-tenant` | Multi-tenant isolation |
+| `mod-data-import` | Bulk CSV/JSON data import |
+| `mod-fleet` | Fleet/vehicle management overview |
+| `mod-accessible` | Accessible parking management |
+| `mod-maintenance` | Maintenance scheduling system |
+| `mod-cost-center` | Cost center billing analytics |
+| `mod-visitors` | Visitor pre-registration with QR passes |
+| `mod-ev-charging` | EV charging station management |
+| `mod-history` | Personal parking history and stats |
+| `mod-geofence` | Geofencing with auto check-in |
+| `mod-waitlist-ext` | Enhanced waitlist with notifications |
+| `mod-parking-pass` | Digital parking pass / QR badge |
+| `mod-api-docs` | Interactive Swagger UI documentation |
+| `mod-absence-approval` | Absence approval workflows |
+| `mod-calendar-drag` | Calendar drag-to-reschedule |
+| `mod-widgets` | Customizable admin dashboard widgets |
+| `mod-plugins` | Plugin/extension system |
+| `mod-graphql` | GraphQL API with playground |
+| `mod-compliance` | GDPR compliance reports and audit trail |
+| `mod-sharing` | Booking sharing and guest invites |
+| `mod-scheduled-reports` | Scheduled email report delivery |
+| `mod-api-versioning` | API versioning and deprecation |
 | `gui` | Slint desktop GUI with system tray |
 | `headless` | Server-only mode (no GUI dependencies) |
 
@@ -246,10 +300,16 @@ cargo build --release -p parkhub-server --no-default-features \
 
 ParkHub runs anywhere -- from a Raspberry Pi to Kubernetes.
 
-- **Docker Compose** (recommended) -- `docker compose up -d` and you're done
-- **Kubernetes / Helm** -- Full Helm chart in `helm/parkhub/` with health probes, HPA, PVC, all 51 module flags, ingress with TLS. See [helm/README.md](helm/README.md)
-- **Bare Metal** -- Download the single binary, run it. No runtime dependencies. x86_64 and ARM64
-- **Windows** -- GUI installer with system tray icon and setup wizard
+| Method | Complexity | Best For |
+|--------|------------|----------|
+| **Docker Compose** | Low | Standard deployment -- `docker compose up -d` |
+| **Kubernetes / Helm** | Medium | Enterprise -- full chart with HPA, PVC, all 57 module flags, TLS ingress |
+| **Bare Metal** | Low | Single binary, zero dependencies, x86_64 + ARM64 |
+| **Windows** | Low | Desktop GUI with system tray and setup wizard |
+| **PaaS** (Render) | Low | Quick demos -- [Live Demo](https://parkhub-rust-demo.onrender.com) |
+
+- **Container images**: `ghcr.io/nash87/parkhub-rust:latest` (multi-arch)
+- **Helm chart**: `helm/parkhub/` -- see [helm/README.md](helm/README.md)
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
@@ -257,7 +317,15 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## Testing
 
-**1,339+ tests** across Rust backend (813), React frontend (461), and E2E Playwright (65). Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility >= 95, performance >= 90.
+**1,400+ tests** across Rust backend and React frontend, plus E2E Playwright suites. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility >= 95, performance >= 90.
+
+### CI & Security Scanning
+
+- **GitHub Actions** CI on every push (Rust tests, frontend tests, clippy, format)
+- **CodeQL** -- automated code scanning, 0 open alerts
+- **Trivy** -- container image vulnerability scanning
+- **Dependabot** -- automated dependency updates with auto-merge for patch/minor
+- **cargo-deny** -- license audit and advisory database checks
 
 ```bash
 cargo test --workspace           # Rust backend
@@ -335,12 +403,15 @@ A feature-equivalent **PHP edition** (Laravel 12 + MySQL/SQLite/PostgreSQL) exis
 
 ## Legal Compliance
 
-ParkHub is built for GDPR/DSGVO compliance by design. Full documentation:
+ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regulatory frameworks**:
+
+**GDPR** (EU) | **DSGVO** (DE) | **TTDSG** (DE) | **DDG** (DE) | **BDSG** (DE) | **NIS2** (EU) | **CCPA** (US) | **UK GDPR** | **nDSG** (CH)
 
 | Document | Scope |
 |----------|-------|
 | [GDPR Guide](docs/GDPR.md) | Data inventory, user rights (Art. 15--22), retention, TOMs |
-| [Compliance Matrix](docs/COMPLIANCE.md) | German (DSGVO, TTDSG, DDG, BDSG, GoBD), EU, UK, US (CCPA), Swiss (nDSG), Brazilian (LGPD) |
+| [Compliance Matrix](docs/COMPLIANCE.md) | German (DSGVO, TTDSG, DDG, BDSG, GoBD), EU (NIS2), UK, US (CCPA), Swiss (nDSG), Brazilian (LGPD) |
+| [Compliance Report](COMPLIANCE-REPORT.md) | Automated compliance checks with scoring |
 | [Security Model](docs/SECURITY.md) | Auth, encryption, OWASP Top 10, vulnerability disclosure |
 | [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Ready-to-use Datenschutzerklarung (German) |
 | [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG SS5 provider identification (German) |
@@ -348,7 +419,7 @@ ParkHub is built for GDPR/DSGVO compliance by design. Full documentation:
 
 **Key compliance features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3,
 audit logging, data export (Art. 15/20), account erasure (Art. 17), no cookies, no tracking,
-no third-party data processors by default.
+no third-party data processors by default. Built-in compliance dashboard with 10 automated checks.
 
 ---
 
