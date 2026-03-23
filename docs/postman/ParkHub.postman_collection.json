@@ -1,0 +1,1161 @@
+{
+  "info": {
+    "name": "ParkHub API",
+    "description": "Complete API collection for ParkHub — self-hosted parking management.\n\nSet the `base_url` and `token` environment variables before use.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "parkhub-collection-v1"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Liveness Probe",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/live",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Readiness Probe",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/ready",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Detailed Health",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health/detailed",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Server Status",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/status",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Module Features",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/modules",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  var json = pm.response.json();",
+                  "  var token = json.token || json.access_token;",
+                  "  if (token) pm.environment.set('token', token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/login",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/register",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"securePassword123\",\n  \"name\": \"New User\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/logout"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/refresh"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/forgot-password",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/auth/reset-password",
+            "auth": { "type": "noauth" },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-here\",\n  \"new_password\": \"newSecurePassword\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/me"
+          }
+        },
+        {
+          "name": "Update Current User",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/me",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"department\": \"Engineering\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/me/password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"oldPassword\",\n  \"new_password\": \"newPassword123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "User Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/me/stats"
+          }
+        },
+        {
+          "name": "Get Preferences",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/me/preferences"
+          }
+        },
+        {
+          "name": "Update Preferences",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/me/preferences",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"de\",\n  \"theme\": \"dark\",\n  \"notifications_enabled\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "GDPR Export Data",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/me/gdpr/export"
+          }
+        },
+        {
+          "name": "GDPR Delete Account",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/me/gdpr/delete"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "List Bookings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings"
+          }
+        },
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/bookings",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lot_id\": \"{{lot_id}}\",\n  \"date\": \"2026-04-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Booking",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}"
+          }
+        },
+        {
+          "name": "Update Booking",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-04-02\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}"
+          }
+        },
+        {
+          "name": "Check In",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}/checkin"
+          }
+        },
+        {
+          "name": "Quick Book",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/bookings/quick"
+          }
+        },
+        {
+          "name": "Reschedule (Drag)",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}/reschedule",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_date\": \"2026-04-05\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Booking History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings/history"
+          }
+        },
+        {
+          "name": "Booking Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings/stats"
+          }
+        },
+        {
+          "name": "Booking Invoice",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}/invoice"
+          }
+        },
+        {
+          "name": "Booking QR Code",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}/qr"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lots",
+      "item": [
+        {
+          "name": "List Lots",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots"
+          }
+        },
+        {
+          "name": "Get Lot",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}"
+          }
+        },
+        {
+          "name": "Get Lot Slots",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/slots"
+          }
+        },
+        {
+          "name": "Get Lot Pricing",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/pricing"
+          }
+        },
+        {
+          "name": "Public Occupancy",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/public/occupancy",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vehicles",
+      "item": [
+        {
+          "name": "List Vehicles",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/vehicles"
+          }
+        },
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/vehicles",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"M-AB 1234\",\n  \"make\": \"BMW\",\n  \"model\": \"i4\",\n  \"color\": \"blue\",\n  \"is_electric\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Vehicle",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/vehicles/{{vehicle_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"M-CD 5678\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Vehicle",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/vehicles/{{vehicle_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Credits",
+      "item": [
+        {
+          "name": "Get Credits",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/credits"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "List Favorites",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/favorites"
+          }
+        },
+        {
+          "name": "Add Favorite",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/favorites",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slot_id\": \"slot-uuid-here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Remove Favorite",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/favorites/{{slot_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/notifications"
+          }
+        },
+        {
+          "name": "Mark Read",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/notifications/{{notification_id}}/read"
+          }
+        },
+        {
+          "name": "Mark All Read",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/notifications/read-all"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Absences",
+      "item": [
+        {
+          "name": "List Absences",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/absences"
+          }
+        },
+        {
+          "name": "Create Absence",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/absences",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-04-01\",\n  \"type\": \"homeoffice\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Absence",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/absences/{{absence_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"vacation\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Absence",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/absences/{{absence_id}}"
+          }
+        },
+        {
+          "name": "Submit Absence Request",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/absences/requests",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2026-04-01\",\n  \"end_date\": \"2026-04-05\",\n  \"type\": \"vacation\",\n  \"reason\": \"Family holiday\"\n}"
+            }
+          }
+        },
+        {
+          "name": "My Absence Requests",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/absences/my"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "item": [
+        {
+          "name": "Calendar Events",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/calendar/events"
+          }
+        },
+        {
+          "name": "iCal Export",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/calendar/ical"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Waitlist",
+      "item": [
+        {
+          "name": "Join Waitlist",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/waitlist/subscribe",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-04-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Waitlist",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/waitlist"
+          }
+        },
+        {
+          "name": "Leave Waitlist",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/waitlist"
+          }
+        },
+        {
+          "name": "Accept Offer",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/waitlist/accept"
+          }
+        },
+        {
+          "name": "Decline Offer",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/waitlist/decline"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parking Pass",
+      "item": [
+        {
+          "name": "Get Booking Pass",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/bookings/{{booking_id}}/pass"
+          }
+        },
+        {
+          "name": "My Passes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/me/passes"
+          }
+        },
+        {
+          "name": "Verify Pass (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/pass/verify/{{pass_code}}",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EV Charging",
+      "item": [
+        {
+          "name": "List Lot Chargers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/chargers"
+          }
+        },
+        {
+          "name": "Start Charging",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/chargers/{{charger_id}}/start"
+          }
+        },
+        {
+          "name": "Stop Charging",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/chargers/{{charger_id}}/stop"
+          }
+        },
+        {
+          "name": "Charging History",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/chargers/sessions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Geofence",
+      "item": [
+        {
+          "name": "Check In (GPS)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/geofence/check-in",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 48.1351,\n  \"longitude\": 11.5820\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Lot Geofence",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/lots/{{lot_id}}/geofence"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/recommendations"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Visitors",
+      "item": [
+        {
+          "name": "Register Visitor",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/visitors/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"vehicle_plate\": \"M-AB 1234\",\n  \"visit_date\": \"2026-04-01\"\n}"
+            }
+          }
+        },
+        {
+          "name": "My Visitors",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/visitors"
+          }
+        },
+        {
+          "name": "Check In Visitor",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/visitors/{{visitor_id}}/check-in"
+          }
+        },
+        {
+          "name": "Cancel Visitor",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/visitors/{{visitor_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        {
+          "name": "List Webhooks",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/webhooks"
+          }
+        },
+        {
+          "name": "Create Webhook",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/webhooks",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/webhook\",\n  \"events\": [\"booking.created\", \"booking.cancelled\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Webhook",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/webhooks/{{webhook_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://example.com/webhook-v2\",\n  \"events\": [\"booking.created\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Webhook",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/webhooks/{{webhook_id}}"
+          }
+        },
+        {
+          "name": "Test Webhook",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/webhooks/{{webhook_id}}/test"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/users"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated User\",\n  \"role\": \"premium\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/admin/users/{{user_id}}"
+          }
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/users/{{user_id}}/role",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Admin Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/stats"
+          }
+        },
+        {
+          "name": "Admin Bookings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/bookings"
+          }
+        },
+        {
+          "name": "Admin Reports",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/reports"
+          }
+        },
+        {
+          "name": "Admin Heatmap",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/heatmap"
+          }
+        },
+        {
+          "name": "Admin Analytics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/analytics"
+          }
+        },
+        {
+          "name": "Audit Log",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/audit-log"
+          }
+        },
+        {
+          "name": "Audit Log Export",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/audit-log/export"
+          }
+        },
+        {
+          "name": "Pending Absences",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/absences/pending"
+          }
+        },
+        {
+          "name": "Approve Absence",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/absences/{{absence_id}}/approve"
+          }
+        },
+        {
+          "name": "Reject Absence",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/absences/{{absence_id}}/reject"
+          }
+        },
+        {
+          "name": "Create Lot",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/lots",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tiefgarage A\",\n  \"address\": \"Musterstr. 1\",\n  \"total_slots\": 50\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Lot",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/lots/{{lot_id}}",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tiefgarage B\",\n  \"total_slots\": 60\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Lot",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/v1/admin/lots/{{lot_id}}"
+          }
+        },
+        {
+          "name": "Admin Visitors",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/visitors"
+          }
+        },
+        {
+          "name": "Admin Chargers",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/chargers"
+          }
+        },
+        {
+          "name": "Add Charger",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/chargers",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lot_id\": \"{{lot_id}}\",\n  \"connector_type\": \"Type2\",\n  \"max_power_kw\": 22.0\n}"
+            }
+          }
+        },
+        {
+          "name": "Grant Credits",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/v1/admin/credits/grant",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{user_id}}\",\n  \"amount\": 10,\n  \"reason\": \"Monthly allocation\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Export Users CSV",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/export/users"
+          }
+        },
+        {
+          "name": "Export Bookings CSV",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/export/bookings"
+          }
+        },
+        {
+          "name": "Export Revenue CSV",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/export/revenue"
+          }
+        },
+        {
+          "name": "Widget Layout",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/widgets"
+          }
+        },
+        {
+          "name": "Save Widget Layout",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/widgets",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"widgets\": [\"occupancy_chart\", \"revenue_summary\", \"recent_bookings\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Widget Data",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/widgets/data/occupancy_chart"
+          }
+        },
+        {
+          "name": "Settings",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/settings"
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/settings",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auto_release_enabled\": true,\n  \"auto_release_minutes\": 30\n}"
+            }
+          }
+        },
+        {
+          "name": "Features",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/admin/features"
+          }
+        },
+        {
+          "name": "Update Features",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/v1/admin/features",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mod-ev-charging\": true,\n  \"mod-visitors\": false\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documentation",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/docs",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "OpenAPI Spec",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/docs/openapi.json",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Postman Collection",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/v1/docs/postman.json",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    }
+  ]
+}
