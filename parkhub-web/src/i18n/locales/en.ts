@@ -1489,5 +1489,16 @@ export default {
       empty: 'No webhooks configured',
       requiredFields: 'URL and at least one event required',
     },
+    pwa: {
+      offlineMessage: 'You are offline. Some features may be unavailable.',
+      nextBooking: 'Your Next Booking',
+      mobileNav: 'Mobile navigation',
+      pullToRefresh: 'Pull to refresh',
+      releaseToRefresh: 'Release to refresh',
+      installTitle: 'Install ParkHub',
+      installDescription: 'Add ParkHub to your home screen for quick access',
+      installButton: 'Install',
+      installDismiss: 'Not now',
+    },
   },
 };

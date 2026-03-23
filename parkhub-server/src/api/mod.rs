@@ -92,6 +92,8 @@ pub mod credits;
 pub mod data_management;
 #[cfg(feature = "mod-dynamic-pricing")]
 pub mod dynamic_pricing;
+#[cfg(feature = "mod-enhanced-pwa")]
+pub mod enhanced_pwa;
 #[cfg(feature = "mod-ev-charging")]
 pub mod ev_charging;
 #[cfg(feature = "mod-export")]
@@ -509,6 +511,10 @@ async fn list_module_features() -> impl IntoResponse {
     );
     modules.insert("sso".into(), cfg!(feature = "mod-sso").into());
     modules.insert(
+        "enhanced-pwa".into(),
+        cfg!(feature = "mod-enhanced-pwa").into(),
+    );
+    modules.insert(
         "webhooks-v2".into(),
         cfg!(feature = "mod-webhooks-v2").into(),
     );
@@ -727,6 +733,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         public_routes = public_routes
             .route("/manifest.json", get(pwa::pwa_manifest))
             .route("/sw.js", get(pwa::service_worker));
+    }
+    #[cfg(feature = "mod-enhanced-pwa")]
+    {
+        // Enhanced PWA: dynamic manifest and enhanced service worker
+        public_routes = public_routes
+            .route(
+                "/api/v1/pwa/manifest",
+                get(enhanced_pwa::pwa_dynamic_manifest),
+            )
+            .route("/sw-v2.js", get(enhanced_pwa::enhanced_service_worker));
     }
     #[cfg(feature = "mod-branding")]
     {
@@ -1635,6 +1651,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             )
             .route("/api/v1/payments/history", get(stripe::payment_history))
             .layer(Extension(stripe_store));
+    }
+
+    #[cfg(feature = "mod-enhanced-pwa")]
+    {
+        // Enhanced PWA: offline data (auth required)
+        protected_routes = protected_routes.route(
+            "/api/v1/pwa/offline-data",
+            get(enhanced_pwa::pwa_offline_data),
+        );
     }
 
     // Apply auth middleware to all protected routes
