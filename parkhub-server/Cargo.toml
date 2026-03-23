@@ -177,6 +177,7 @@ full = [
     "mod-scheduled-reports",
     "mod-api-versioning",
     "mod-sso",
+    "mod-webhooks-v2",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -244,6 +245,7 @@ mod-sharing = []
 mod-scheduled-reports = []
 mod-api-versioning = []
 mod-sso = []
+mod-webhooks-v2 = []
 
 [dev-dependencies]
 tempfile = "3"

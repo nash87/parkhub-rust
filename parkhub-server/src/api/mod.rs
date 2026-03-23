@@ -182,6 +182,8 @@ pub mod waitlist;
 pub mod waitlist_ext;
 #[cfg(feature = "mod-webhooks")]
 pub mod webhooks;
+#[cfg(feature = "mod-webhooks-v2")]
+pub mod webhooks_v2;
 #[cfg(feature = "mod-widgets")]
 pub mod widgets;
 pub mod ws;
@@ -506,6 +508,10 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-api-versioning").into(),
     );
     modules.insert("sso".into(), cfg!(feature = "mod-sso").into());
+    modules.insert(
+        "webhooks-v2".into(),
+        cfg!(feature = "mod-webhooks-v2").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -1026,6 +1032,25 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         "/api/v1/admin/sso/{provider}",
         put(sso_configure_provider).delete(sso_delete_provider),
     );
+
+    #[cfg(feature = "mod-webhooks-v2")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/webhooks-v2",
+            get(webhooks_v2::list_webhooks_v2).post(webhooks_v2::create_webhook_v2),
+        )
+        .route(
+            "/api/v1/admin/webhooks-v2/{id}",
+            put(webhooks_v2::update_webhook_v2).delete(webhooks_v2::delete_webhook_v2),
+        )
+        .route(
+            "/api/v1/admin/webhooks-v2/{id}/test",
+            post(webhooks_v2::test_webhook_v2),
+        )
+        .route(
+            "/api/v1/admin/webhooks-v2/{id}/deliveries",
+            get(webhooks_v2::list_deliveries_v2),
+        );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),
