@@ -18,6 +18,16 @@ import '../styles/global.css';
     <meta name="apple-mobile-web-app-title" content="ParkHub" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <title>ParkHub</title>
+    <script is:inline>
+      // Prevent FOUC: apply theme before React hydrates
+      (function() {
+        var t = localStorage.getItem('parkhub_theme') || 'system';
+        var d = localStorage.getItem('parkhub_design_theme') || 'classic';
+        var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-design-theme', d);
+      })();
+    </script>
   </head>
   <body class="min-h-dvh">
     <div id="root"></div>
