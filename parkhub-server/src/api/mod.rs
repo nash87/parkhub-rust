@@ -125,6 +125,8 @@ pub mod notifications;
 pub mod oauth;
 #[cfg(feature = "mod-parking-pass")]
 pub mod parking_pass;
+#[cfg(feature = "mod-plugins")]
+pub mod plugins;
 #[cfg(feature = "mod-operating-hours")]
 pub mod operating_hours;
 #[cfg(feature = "mod-payments")]
@@ -480,6 +482,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "widgets".into(),
         cfg!(feature = "mod-widgets").into(),
+    );
+    modules.insert(
+        "plugins".into(),
+        cfg!(feature = "mod-plugins").into(),
     );
 
     Json(serde_json::json!({
@@ -915,6 +921,18 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/widgets/data/{widget_id}",
             get(get_widget_data),
+        );
+
+    #[cfg(feature = "mod-plugins")]
+    let admin_routes = admin_routes
+        .route("/api/v1/admin/plugins", get(plugins::list_plugins))
+        .route(
+            "/api/v1/admin/plugins/{id}/toggle",
+            put(plugins::toggle_plugin),
+        )
+        .route(
+            "/api/v1/admin/plugins/{id}/config",
+            get(plugins::get_plugin_config).put(plugins::update_plugin_config),
         );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
