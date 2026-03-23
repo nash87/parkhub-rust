@@ -170,6 +170,8 @@ pub mod translations;
 mod users;
 #[cfg(feature = "mod-vehicles")]
 pub mod vehicles;
+#[cfg(feature = "mod-api-versioning")]
+pub mod versioning;
 #[cfg(feature = "mod-visitors")]
 pub mod visitors;
 #[cfg(feature = "mod-waitlist")]
@@ -493,6 +495,10 @@ async fn list_module_features() -> impl IntoResponse {
         "scheduled-reports".into(),
         cfg!(feature = "mod-scheduled-reports").into(),
     );
+    modules.insert(
+        "api-versioning".into(),
+        cfg!(feature = "mod-api-versioning").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -654,6 +660,14 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     {
         public_routes =
             public_routes.route("/api/v1/shared/{code}", get(sharing::get_shared_booking));
+    }
+
+    // API versioning (public, no auth — version and changelog info)
+    #[cfg(feature = "mod-api-versioning")]
+    {
+        public_routes = public_routes
+            .route("/api/v1/version", get(versioning::api_version))
+            .route("/api/v1/changelog", get(versioning::api_changelog));
     }
 
     // Feature-gated public routes
@@ -1696,7 +1710,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             crate::rate_limit::rate_limit_middleware(global_limiter.clone(), req, next)
         }))
         // Security headers applied to every response
-        .layer(axum::middleware::from_fn(security_headers_middleware))
+        .layer(axum::middleware::from_fn(security_headers_middleware));
+
+    // API version header on all responses (X-API-Version, optional Sunset)
+    #[cfg(feature = "mod-api-versioning")]
+    let router = router.layer(axum::middleware::from_fn(
+        versioning::api_version_middleware,
+    ));
+
+    let router = router
         // Restrict request body size to prevent DoS via large payloads
         .layer(RequestBodyLimitLayer::new(MAX_REQUEST_BODY_BYTES))
         // CORS: same-origin by default; no wildcard.
