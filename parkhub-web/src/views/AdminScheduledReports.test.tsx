@@ -135,7 +135,9 @@ describe('AdminScheduledReportsPage', () => {
       expect(screen.getByTestId('reports-help-btn')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByTestId('reports-help-btn'));
-    expect(screen.getByTestId('reports-help')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('reports-help')).toBeInTheDocument();
+    });
   });
 
   it('shows create form when create button clicked', async () => {
@@ -144,11 +146,13 @@ describe('AdminScheduledReportsPage', () => {
       expect(screen.getByTestId('create-schedule-btn')).toBeInTheDocument();
     });
     fireEvent.click(screen.getByTestId('create-schedule-btn'));
-    expect(screen.getByTestId('schedule-form')).toBeInTheDocument();
-    expect(screen.getByTestId('form-name')).toBeInTheDocument();
-    expect(screen.getByTestId('form-type')).toBeInTheDocument();
-    expect(screen.getByTestId('form-frequency')).toBeInTheDocument();
-    expect(screen.getByTestId('form-recipients')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-form')).toBeInTheDocument();
+      expect(screen.getByTestId('form-name')).toBeInTheDocument();
+      expect(screen.getByTestId('form-type')).toBeInTheDocument();
+      expect(screen.getByTestId('form-frequency')).toBeInTheDocument();
+      expect(screen.getByTestId('form-recipients')).toBeInTheDocument();
+    });
   });
 
   it('shows cron expressions for frequencies', async () => {

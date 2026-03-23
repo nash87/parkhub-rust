@@ -48,6 +48,7 @@ assets/
 fonts/
 screenshots/
 scripts/
+!scripts/seed_demo.sh
 !scripts/seed_demo.py
 !scripts/docker-entrypoint.sh
 portable/

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Webhooks, Plus, Trash, Pencil, Question, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react';
+import { WebhooksLogo, Plus, Trash, Pencil, Question, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -148,7 +148,7 @@ export function AdminWebhooksPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-100 flex items-center gap-2">
-            <Webhooks size={24} weight="bold" className="text-primary-500" />
+            <WebhooksLogo size={24} weight="bold" className="text-primary-500" />
             {t('webhooksV2.title')}
           </h2>
           <p className="text-sm text-surface-500 mt-1">{t('webhooksV2.subtitle')}</p>
@@ -214,7 +214,7 @@ export function AdminWebhooksPage() {
         <div className="text-center py-8 text-surface-400">{t('common.loading')}</div>
       ) : webhooks.length === 0 ? (
         <div className="text-center py-12 text-surface-400">
-          <Webhooks size={48} className="mx-auto mb-3 opacity-30" />
+          <WebhooksLogo size={48} className="mx-auto mb-3 opacity-30" />
           <p>{t('webhooksV2.empty')}</p>
         </div>
       ) : (
