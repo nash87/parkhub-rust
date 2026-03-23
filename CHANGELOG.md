@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.1.0] - 2026-03-23
+
+### Added
+- **Booking Sharing & Guest Invites**: Share booking details via secure links with optional expiry. Invite guests by email. `POST /api/v1/bookings/{id}/share`, `GET /api/v1/shared/{code}` (public, no auth), `POST /api/v1/bookings/{id}/invite`, `DELETE /api/v1/bookings/{id}/share`. Frontend: BookingSharingModal with share link + invite tabs, copy-to-clipboard, expiry selector. Feature flag: `mod-sharing`. 15 backend + 8 frontend tests. (#262)
+- **Scheduled Reports (Email Digest)**: Configure automated report delivery via email on daily, weekly, or monthly schedules. Report types: occupancy_summary, revenue_report, user_activity, booking_trends. `GET/POST /api/v1/admin/reports/schedules`, `PUT/DELETE /api/v1/admin/reports/schedules/{id}`, `POST .../send-now`. Frontend: AdminScheduledReportsPage with CRUD form and cron visualization. Feature flag: `mod-scheduled-reports`. 16 backend + 7 frontend tests. (#263)
+- **API Versioning & Deprecation**: `GET /api/v1/version` with deprecation notices, `GET /api/v1/changelog` with breaking changes per version. `X-API-Version` response header on all API responses. `Sunset` header on deprecated endpoints. Frontend: ApiVersionBadge + ApiVersionAdmin components. Feature flag: `mod-api-versioning`. 10 backend + 3 frontend tests. (#264)
+- **i18n**: sharing, scheduledReports, apiVersion keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
+- **57 feature flags**: Added `mod-sharing`, `mod-scheduled-reports`, `mod-api-versioning` (was 54)
+
+---
+
 ## [4.0.0] - 2026-03-23
 
 ### Added
