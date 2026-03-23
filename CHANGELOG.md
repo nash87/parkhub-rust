@@ -7,6 +7,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.9.0] - 2026-03-23
+
+### Added
+- **Kubernetes Helm Chart**: Full Helm chart in `helm/parkhub/` for K8s deployment. Deployment with health/readiness/startup probes, resource limits, PVC persistence. ConfigMap with all 51 module feature flags, Secret for credentials (SMTP, Stripe, OAuth, DB encryption). Optional ingress with TLS, HPA for autoscaling. `helm/README.md` with install/upgrade/config docs. (#249)
+- **k6 Load Testing Suite**: Performance testing scripts in `tests/load/`. Smoke test (1 VU, 30s), load test (50 VUs, 5min ramp), stress test (100 VUs, 10min, all endpoints), spike test (1-200-1 VUs). Shared config with environment variable overrides. `tests/load/README.md` with install, run, and interpretation guides. (#250)
+- **Postman Collection & Auto-Generation**: `GET /api/v1/docs/postman.json` endpoint that auto-generates a Postman v2.1 collection from the OpenAPI spec. Static collection in `docs/postman/` with 100+ requests in 17 folders (Auth, Bookings, Lots, Admin, etc.), environment template, login auto-sets token. Feature flag: `mod-api-docs`. 4 backend tests. (#251)
+
+---
+
 ## [3.8.0] - 2026-03-23
 
 ### Added
