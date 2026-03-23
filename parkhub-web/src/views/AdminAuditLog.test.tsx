@@ -20,6 +20,11 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'auditLog.title': 'Audit Log',
         'auditLog.exportCsv': 'Export CSV',
+        'auditLog.advancedExport': 'Advanced Export',
+        'auditLog.exportHelp': 'Export audit log in your preferred format.',
+        'auditLog.exportStarted': 'Export started',
+        'auditLog.exporting': 'Exporting...',
+        'auditLog.download': 'Download',
         'auditLog.filters': 'Filters',
         'auditLog.allActions': 'All Actions',
         'auditLog.searchUser': 'Search user...',
@@ -63,6 +68,11 @@ vi.mock('@phosphor-icons/react', () => ({
   DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
   FunnelSimple: (props: any) => <span data-testid="icon-funnel" {...props} />,
   MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
+  FileCsv: (props: any) => <span data-testid="icon-csv" {...props} />,
+  FileDoc: (props: any) => <span data-testid="icon-doc" {...props} />,
+  FileJs: (props: any) => <span data-testid="icon-js" {...props} />,
+  Question: (props: any) => <span data-testid="icon-question" {...props} />,
+  CircleNotch: (props: any) => <span data-testid="icon-spinner" {...props} />,
 }));
 
 import { AdminAuditLogPage } from './AdminAuditLog';
