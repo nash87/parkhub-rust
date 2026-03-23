@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Puzzle, ToggleLeft, ToggleRight, Gear, Question, Lightning } from '@phosphor-icons/react';
+import { PuzzlePiece, ToggleLeft, ToggleRight, Gear, Question, Lightning } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -159,7 +159,7 @@ export function AdminPluginsPage() {
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
-              <Puzzle size={20} className="text-primary-600 dark:text-primary-400" />
+              <PuzzlePiece size={20} className="text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('plugins.totalPlugins')}</p>

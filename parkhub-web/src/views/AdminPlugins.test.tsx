@@ -42,7 +42,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Puzzle: (props: any) => <span data-testid="icon-puzzle" {...props} />,
+  PuzzlePiece: (props: any) => <span data-testid="icon-puzzle" {...props} />,
   ToggleLeft: (props: any) => <span data-testid="icon-toggle-left" {...props} />,
   ToggleRight: (props: any) => <span data-testid="icon-toggle-right" {...props} />,
   Gear: (props: any) => <span data-testid="icon-gear" {...props} />,
