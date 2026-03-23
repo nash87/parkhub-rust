@@ -52,7 +52,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Webhooks: (props: any) => <span data-testid="icon-webhooks" {...props} />,
+  WebhooksLogo: (props: any) => <span data-testid="icon-webhooks" {...props} />,
   Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
   Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
   Pencil: (props: any) => <span data-testid="icon-pencil" {...props} />,
