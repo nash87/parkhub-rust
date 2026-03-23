@@ -150,6 +150,8 @@ pub mod security;
 #[cfg(feature = "mod-settings")]
 pub mod settings;
 pub mod setup;
+#[cfg(feature = "mod-sharing")]
+pub mod sharing;
 #[cfg(feature = "mod-social")]
 mod social;
 #[cfg(feature = "mod-stripe")]
@@ -484,6 +486,7 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert("plugins".into(), cfg!(feature = "mod-plugins").into());
     modules.insert("graphql".into(), cfg!(feature = "mod-graphql").into());
     modules.insert("compliance".into(), cfg!(feature = "mod-compliance").into());
+    modules.insert("sharing".into(), cfg!(feature = "mod-sharing").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -638,6 +641,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     #[cfg(feature = "mod-parking-pass")]
     {
         public_routes = public_routes.route("/api/v1/pass/verify/{code}", get(verify_pass));
+    }
+
+    // Shared booking view (public, no auth — accessed via share link)
+    #[cfg(feature = "mod-sharing")]
+    {
+        public_routes =
+            public_routes.route("/api/v1/shared/{code}", get(sharing::get_shared_booking));
     }
 
     // Feature-gated public routes
@@ -984,6 +994,16 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
             .route("/api/v1/bookings/quick", post(quick_book))
             .route("/api/v1/bookings/{id}/checkin", post(booking_checkin));
+    }
+
+    #[cfg(feature = "mod-sharing")]
+    {
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/bookings/{id}/share",
+                post(sharing::create_share_link).delete(sharing::revoke_share_link),
+            )
+            .route("/api/v1/bookings/{id}/invite", post(sharing::invite_guest));
     }
 
     #[cfg(feature = "mod-history")]
