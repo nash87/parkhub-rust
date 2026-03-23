@@ -64,13 +64,14 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
     strip /app/target/release/parkhub-server || true
 
 # ---------------------------------------------------------------------------
-# Stage 6: Runtime — minimal Debian slim (python3 needed for seed script)
+# Stage 6: Runtime — minimal Debian slim, patched + no python3
+# Upgrade all packages to eliminate known CVEs. Python3 replaced with shell seeder.
 # ---------------------------------------------------------------------------
 FROM debian:bookworm-slim AS runtime
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates tzdata python3 wget \
-    && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+        ca-certificates tzdata wget \
+    && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* \
     && groupadd -r parkhub && useradd -r -g parkhub -s /sbin/nologin parkhub
 
 WORKDIR /app
@@ -78,8 +79,8 @@ WORKDIR /app
 # Copy binary
 COPY --from=builder --chown=parkhub:parkhub /app/target/release/parkhub-server /app/parkhub-server
 
-# Copy seed script and entrypoint
-COPY --chown=parkhub:parkhub scripts/seed_demo.py /app/seed_demo.py
+# Copy shell-based seed script and entrypoint (no python3 dependency)
+COPY --chown=parkhub:parkhub scripts/seed_demo.sh /app/seed_demo.sh
 COPY --chown=parkhub:parkhub scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Create data directory owned by the non-root user
