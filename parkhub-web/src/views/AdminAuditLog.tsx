@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ClockCounterClockwise, DownloadSimple, FunnelSimple, MagnifyingGlass } from '@phosphor-icons/react';
+import { ClockCounterClockwise, DownloadSimple, FunnelSimple, MagnifyingGlass, FileCsv, FileDoc, FileJs, Question, CircleNotch } from '@phosphor-icons/react';
 import { api, type AuditLogEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -76,6 +76,10 @@ export function AdminAuditLogPage() {
     loadData();
   }, [loadData]);
 
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'pdf'>('csv');
+  const [exporting, setExporting] = useState(false);
+
   function handleExport() {
     const url = api.exportAuditLog({
       action: actionFilter || undefined,
@@ -84,6 +88,31 @@ export function AdminAuditLogPage() {
       to: dateTo || undefined,
     });
     window.open(url, '_blank');
+  }
+
+  async function handleEnhancedExport() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('format', exportFormat);
+      if (actionFilter) params.set('action', actionFilter);
+      if (userFilter) params.set('user_id', userFilter);
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', dateTo);
+
+      const res = await fetch(`/api/v1/admin/audit-log/export/enhanced?${params}`).then(r => r.json());
+      if (res.success && res.data?.download_url) {
+        window.open(res.data.download_url, '_blank');
+        toast.success(t('auditLog.exportStarted', 'Export started'));
+        setShowExportDialog(false);
+      } else {
+        toast.error(res.error?.message || t('common.error'));
+      }
+    } catch {
+      toast.error(t('common.error'));
+    } finally {
+      setExporting(false);
+    }
   }
 
   function handleFilterApply() {
@@ -112,15 +141,74 @@ export function AdminAuditLogPage() {
             <p className="text-sm text-surface-500">{t('auditLog.totalEntries', '{{count}} entries', { count: total })}</p>
           </div>
         </div>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors"
-          data-testid="export-csv-btn"
-        >
-          <DownloadSimple weight="bold" className="w-4 h-4" />
-          {t('auditLog.exportCsv', 'Export CSV')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 rounded-xl text-sm font-medium hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors"
+            data-testid="export-csv-btn"
+          >
+            <FileCsv weight="bold" className="w-4 h-4" />
+            {t('auditLog.exportCsv', 'CSV')}
+          </button>
+          <button
+            onClick={() => setShowExportDialog(d => !d)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors"
+            data-testid="export-enhanced-btn"
+          >
+            <DownloadSimple weight="bold" className="w-4 h-4" />
+            {t('auditLog.advancedExport', 'Advanced Export')}
+          </button>
+        </div>
       </div>
+
+      {/* Enhanced Export Dialog */}
+      {showExportDialog && (
+        <div className="bg-white dark:bg-surface-800 rounded-2xl border border-surface-200 dark:border-surface-700 p-5 space-y-4" data-testid="export-dialog">
+          <h3 className="font-semibold text-surface-900 dark:text-white flex items-center gap-2">
+            <DownloadSimple className="w-5 h-5 text-primary-500" />
+            {t('auditLog.advancedExport', 'Advanced Export')}
+          </h3>
+          <p className="text-sm text-surface-500 dark:text-surface-400">
+            {t('auditLog.exportHelp', 'Export audit log in your preferred format. Current filters will be applied. Download link expires in 5 minutes.')}
+          </p>
+          <div className="flex gap-3">
+            {(['csv', 'json', 'pdf'] as const).map(fmt => (
+              <button
+                key={fmt}
+                onClick={() => setExportFormat(fmt)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-colors ${
+                  exportFormat === fmt
+                    ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300'
+                    : 'bg-surface-50 dark:bg-surface-900 border-surface-200 dark:border-surface-700 text-surface-600 dark:text-surface-400'
+                }`}
+                data-testid={`format-${fmt}`}
+              >
+                {fmt === 'csv' && <FileCsv className="w-5 h-5" />}
+                {fmt === 'json' && <FileJs className="w-5 h-5" />}
+                {fmt === 'pdf' && <FileDoc className="w-5 h-5" />}
+                <span className="font-medium uppercase">{fmt}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={handleEnhancedExport}
+              disabled={exporting}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+              data-testid="export-download-btn"
+            >
+              {exporting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <DownloadSimple className="w-4 h-4" />}
+              {exporting ? t('auditLog.exporting', 'Exporting...') : t('auditLog.download', 'Download')}
+            </button>
+            <button
+              onClick={() => setShowExportDialog(false)}
+              className="px-4 py-2 bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 rounded-xl text-sm font-medium hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors"
+            >
+              {t('common.cancel', 'Cancel')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="glass-card p-4 rounded-2xl space-y-3" data-testid="audit-filters">
