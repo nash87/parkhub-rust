@@ -84,11 +84,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
         // Update occupancy map from occupancy_changed events
         if (event.event === 'occupancy_changed' && event.data.lot_id) {
-          const lotId = String(event.data.lot_id);
-          // Only accept valid lot IDs (UUID format) to prevent prototype pollution
-          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(lotId)) {
+          const rawId = event.data.lot_id;
+          // Validate lot_id is a safe string (alphanumeric, hyphens, underscores)
+          if (typeof rawId === 'string' && /^[a-zA-Z0-9_-]+$/.test(rawId)) {
             const entry = { available: event.data.available as number, total: event.data.total as number };
-            setOccupancy(prev => ({ ...prev, [lotId]: entry }));
+            setOccupancy(prev => ({ ...prev, [rawId]: entry }));
           }
         }
       } catch {
