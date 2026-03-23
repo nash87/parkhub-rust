@@ -314,4 +314,85 @@ mod tests {
         assert!(req.active.is_none());
         assert!(req.expires_at.is_none());
     }
+
+    // ── NullableField deserialization ────────────────────────────────────────
+
+    #[test]
+    fn nullable_field_absent_when_key_missing() {
+        let json = r#"{"title":"T","message":"M"}"#;
+        let req: UpdateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert!(matches!(req.expires_at, NullableField::Absent));
+    }
+
+    #[test]
+    fn nullable_field_null_when_explicit_null() {
+        let json = r#"{"title":"T","message":"M","expires_at":null}"#;
+        let req: UpdateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert!(matches!(req.expires_at, NullableField::Null));
+    }
+
+    #[test]
+    fn nullable_field_value_when_present() {
+        let json = r#"{"title":"T","message":"M","expires_at":"2026-05-01T12:00:00Z"}"#;
+        let req: UpdateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert!(matches!(req.expires_at, NullableField::Value(_)));
+    }
+
+    // ── Severity serde ──────────────────────────────────────────────────────
+
+    #[test]
+    fn all_severities_deserialize() {
+        for sev in ["info", "warning", "error", "success"] {
+            let json = format!(r#"{{"title":"T","message":"M","severity":"{sev}"}}"#);
+            let req: CreateAnnouncementRequest = serde_json::from_str(&json).unwrap();
+            match sev {
+                "info" => assert_eq!(req.severity, AnnouncementSeverity::Info),
+                "warning" => assert_eq!(req.severity, AnnouncementSeverity::Warning),
+                "error" => assert_eq!(req.severity, AnnouncementSeverity::Error),
+                "success" => assert_eq!(req.severity, AnnouncementSeverity::Success),
+                _ => unreachable!(),
+            }
+        }
+    }
+
+    #[test]
+    fn invalid_severity_rejected() {
+        let json = r#"{"title":"T","message":"M","severity":"critical"}"#;
+        assert!(serde_json::from_str::<CreateAnnouncementRequest>(json).is_err());
+    }
+
+    // ── UpdateAnnouncementRequest partial updates ───────────────────────────
+
+    #[test]
+    fn update_request_all_fields() {
+        let json = r#"{
+            "title":"New Title",
+            "message":"New Message",
+            "severity":"error",
+            "active":false,
+            "expires_at":"2026-06-01T00:00:00Z"
+        }"#;
+        let req: UpdateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.title.unwrap(), "New Title");
+        assert_eq!(req.message.unwrap(), "New Message");
+        assert_eq!(req.severity.unwrap(), AnnouncementSeverity::Error);
+        assert_eq!(req.active, Some(false));
+    }
+
+    #[test]
+    fn update_request_empty_body() {
+        let json = r#"{}"#;
+        let req: UpdateAnnouncementRequest = serde_json::from_str(json).unwrap();
+        assert!(req.title.is_none());
+        assert!(req.message.is_none());
+        assert!(req.severity.is_none());
+        assert!(req.active.is_none());
+        assert!(matches!(req.expires_at, NullableField::Absent));
+    }
+
+    #[test]
+    fn nullable_field_default_is_absent() {
+        let field: NullableField<String> = NullableField::default();
+        assert!(matches!(field, NullableField::Absent));
+    }
 }

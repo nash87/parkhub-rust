@@ -523,4 +523,198 @@ mod tests {
         let req: UpdateFeaturesRequest = serde_json::from_str(json).unwrap();
         assert!(req.enabled.is_empty());
     }
+
+    // ── validate_setting_value ──────────────────────────────────────────────
+
+    #[test]
+    fn validate_use_case_all_valid_values() {
+        for val in ["company", "residential", "shared", "rental", "personal"] {
+            assert!(
+                validate_setting_value("use_case", val).is_ok(),
+                "use_case={val} should be valid"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_use_case_rejects_unknown() {
+        assert!(validate_setting_value("use_case", "industrial").is_err());
+    }
+
+    #[test]
+    fn validate_boolean_settings_accept_true_false() {
+        let boolean_keys = [
+            "self_registration",
+            "allow_guest_bookings",
+            "require_vehicle",
+            "waitlist_enabled",
+            "credits_enabled",
+            "auto_release_enabled",
+        ];
+        for key in boolean_keys {
+            assert!(validate_setting_value(key, "true").is_ok(), "{key}=true");
+            assert!(validate_setting_value(key, "false").is_ok(), "{key}=false");
+        }
+    }
+
+    #[test]
+    fn validate_boolean_settings_reject_non_boolean() {
+        assert!(validate_setting_value("self_registration", "yes").is_err());
+        assert!(validate_setting_value("waitlist_enabled", "1").is_err());
+        assert!(validate_setting_value("credits_enabled", "").is_err());
+    }
+
+    #[test]
+    fn validate_license_plate_mode_valid() {
+        for val in ["required", "optional", "disabled"] {
+            assert!(validate_setting_value("license_plate_mode", val).is_ok());
+        }
+    }
+
+    #[test]
+    fn validate_license_plate_mode_invalid() {
+        assert!(validate_setting_value("license_plate_mode", "mandatory").is_err());
+    }
+
+    #[test]
+    fn validate_display_name_format_valid() {
+        for val in ["first_name", "full_name", "username"] {
+            assert!(validate_setting_value("display_name_format", val).is_ok());
+        }
+    }
+
+    #[test]
+    fn validate_display_name_format_invalid() {
+        assert!(validate_setting_value("display_name_format", "email").is_err());
+    }
+
+    #[test]
+    fn validate_integer_settings() {
+        for key in ["max_bookings_per_day", "auto_release_minutes", "credits_per_booking"] {
+            assert!(validate_setting_value(key, "0").is_ok());
+            assert!(validate_setting_value(key, "42").is_ok());
+            assert!(validate_setting_value(key, "-1").is_ok());
+            assert!(validate_setting_value(key, "abc").is_err());
+            assert!(validate_setting_value(key, "3.14").is_err());
+        }
+    }
+
+    #[test]
+    fn validate_float_settings() {
+        for key in ["min_booking_duration_hours", "max_booking_duration_hours"] {
+            assert!(validate_setting_value(key, "0").is_ok());
+            assert!(validate_setting_value(key, "1.5").is_ok());
+            assert!(validate_setting_value(key, "24.0").is_ok());
+            assert!(validate_setting_value(key, "not_a_number").is_err());
+        }
+    }
+
+    #[test]
+    fn validate_company_name_accepts_any_string() {
+        assert!(validate_setting_value("company_name", "Acme Corp").is_ok());
+        assert!(validate_setting_value("company_name", "").is_ok());
+        assert!(validate_setting_value("company_name", "日本語").is_ok());
+    }
+
+    #[test]
+    fn validate_unknown_key_rejected() {
+        assert!(validate_setting_value("nonexistent_key", "any").is_err());
+    }
+
+    // ── use_case_theme ──────────────────────────────────────────────────────
+
+    #[test]
+    fn use_case_theme_company_has_correct_key() {
+        let theme = use_case_theme("company");
+        assert_eq!(theme["key"], "company");
+        assert!(theme["terminology"]["user"].as_str().unwrap().contains("Employee"));
+    }
+
+    #[test]
+    fn use_case_theme_residential() {
+        let theme = use_case_theme("residential");
+        assert_eq!(theme["key"], "residential");
+        assert!(theme["primary_color"].as_str().is_some());
+    }
+
+    #[test]
+    fn use_case_theme_shared() {
+        let theme = use_case_theme("shared");
+        assert_eq!(theme["key"], "shared");
+    }
+
+    #[test]
+    fn use_case_theme_rental() {
+        let theme = use_case_theme("rental");
+        assert_eq!(theme["key"], "rental");
+    }
+
+    #[test]
+    fn use_case_theme_unknown_returns_personal() {
+        let theme = use_case_theme("unknown_use_case");
+        assert_eq!(theme["key"], "personal");
+    }
+
+    #[test]
+    fn all_themes_have_required_fields() {
+        for key in ["company", "residential", "shared", "rental", "personal"] {
+            let theme = use_case_theme(key);
+            assert!(theme["name"].is_string(), "{key}: name");
+            assert!(theme["description"].is_string(), "{key}: description");
+            assert!(theme["icon"].is_string(), "{key}: icon");
+            assert!(theme["primary_color"].is_string(), "{key}: primary_color");
+            assert!(theme["accent_color"].is_string(), "{key}: accent_color");
+            assert!(theme["terminology"].is_object(), "{key}: terminology");
+            assert!(theme["features_emphasis"].is_array(), "{key}: features_emphasis");
+        }
+    }
+
+    // ── ADMIN_SETTINGS defaults ─────────────────────────────────────────────
+
+    #[test]
+    fn admin_settings_all_have_defaults() {
+        assert!(!ADMIN_SETTINGS.is_empty());
+        for (key, default) in ADMIN_SETTINGS {
+            assert!(!key.is_empty(), "Setting key must not be empty");
+            assert!(!default.is_empty(), "Default for {key} must not be empty");
+        }
+    }
+
+    #[test]
+    fn admin_settings_keys_are_unique() {
+        let mut seen = std::collections::HashSet::new();
+        for (key, _) in ADMIN_SETTINGS {
+            assert!(seen.insert(*key), "Duplicate setting key: {key}");
+        }
+    }
+
+    #[test]
+    fn admin_settings_defaults_pass_validation() {
+        for (key, default) in ADMIN_SETTINGS {
+            assert!(
+                validate_setting_value(key, default).is_ok(),
+                "Default for {key}={default} should pass validation"
+            );
+        }
+    }
+
+    // ── Feature modules ─────────────────────────────────────────────────────
+
+    #[test]
+    fn feature_modules_are_unique() {
+        let mut seen = std::collections::HashSet::new();
+        for id in FEATURE_MODULES {
+            assert!(seen.insert(*id), "Duplicate feature module: {id}");
+        }
+    }
+
+    #[test]
+    fn default_features_are_subset_of_modules() {
+        for feat in DEFAULT_FEATURES {
+            assert!(
+                FEATURE_MODULES.contains(feat),
+                "Default feature {feat} not in FEATURE_MODULES"
+            );
+        }
+    }
 }
