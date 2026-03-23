@@ -173,6 +173,7 @@ full = [
     "mod-plugins",
     "mod-graphql",
     "mod-compliance",
+    "mod-sharing",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -236,6 +237,7 @@ mod-widgets = []
 mod-plugins = []
 mod-graphql = []
 mod-compliance = []
+mod-sharing = []
 
 [dev-dependencies]
 tempfile = "3"
