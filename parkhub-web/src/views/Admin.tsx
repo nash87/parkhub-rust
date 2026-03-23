@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge,
   Buildings, ClockCounterClockwise, Database, Car, Wheelchair, Wrench, CurrencyDollar, UserPlus, Lightning,
-  PuzzlePiece, GraphicsCard, ShieldCheck,
+  PuzzlePiece, GraphicsCard, ShieldCheck, LockKey,
 } from '@phosphor-icons/react';
 
 function AdminNav() {
@@ -32,6 +32,7 @@ function AdminNav() {
     { name: t('admin.chargers', 'EV Chargers'), path: '/admin/chargers', icon: Lightning },
     { name: t('admin.plugins', 'Plugins'), path: '/admin/plugins', icon: PuzzlePiece },
     { name: t('compliance.title', 'Compliance'), path: '/admin/compliance', icon: ShieldCheck },
+    { name: t('rbac.title', 'Roles'), path: '/admin/roles', icon: LockKey },
     { name: 'GraphQL', path: '/api/v1/graphql/playground', icon: GraphicsCard },
   ];
 
