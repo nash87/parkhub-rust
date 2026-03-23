@@ -135,6 +135,8 @@ pub mod oauth;
 pub mod operating_hours;
 #[cfg(feature = "mod-parking-pass")]
 pub mod parking_pass;
+#[cfg(feature = "mod-parking-zones")]
+pub mod parking_zones;
 #[cfg(feature = "mod-payments")]
 pub mod payments;
 #[cfg(feature = "mod-plugins")]
@@ -520,6 +522,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "audit-export".into(),
         cfg!(feature = "mod-audit-export").into(),
+    );
+    modules.insert(
+        "parking-zones".into(),
+        cfg!(feature = "mod-parking-zones").into(),
     );
     modules.insert(
         "enhanced-pwa".into(),
@@ -1229,6 +1235,24 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/lots/{lot_id}/zones/{zone_id}",
                 put(update_zone).delete(delete_zone),
+            );
+    }
+
+    #[cfg(feature = "mod-parking-zones")]
+    {
+        // Zone pricing tiers
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/lots/{id}/zones/pricing",
+                get(parking_zones::list_zones_pricing),
+            )
+            .route(
+                "/api/v1/zones/{id}/price",
+                get(parking_zones::get_zone_price),
+            )
+            .route(
+                "/api/v1/admin/zones/{id}/pricing",
+                put(parking_zones::set_zone_pricing),
             );
     }
 
