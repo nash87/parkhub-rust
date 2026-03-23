@@ -1,0 +1,18 @@
+apiVersion: v2
+name: parkhub
+description: Self-hosted parking management platform — single binary, zero dependencies
+type: application
+version: 1.0.0
+appVersion: "3.9.0"
+home: https://github.com/nash87/parkhub-rust
+sources:
+  - https://github.com/nash87/parkhub-rust
+maintainers:
+  - name: nash87
+    url: https://github.com/nash87
+keywords:
+  - parking
+  - management
+  - self-hosted
+  - gdpr
+icon: https://raw.githubusercontent.com/nash87/parkhub-rust/main/assets/app.png
