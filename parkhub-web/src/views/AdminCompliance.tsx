@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Download, Question, FileText, Table, Warning, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { Download, Question, FileText, Table, Warning, CheckCircle, XCircle } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 

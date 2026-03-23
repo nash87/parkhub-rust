@@ -87,6 +87,6 @@ describe('ExportButton download', () => {
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });
     vi.stubGlobal('fetch', fm); vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('b:x'), revokeObjectURL: vi.fn() });
     render(<ExportButton baseUrl="https://api.test.com" />); fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId('export-bookings'));
-    await waitFor(() => expect(fm).toHaveBeenCalledTimes(1)); expect(fm.mock.calls[0][0]).toMatch(/^https:\/\/api\.test\.com/);
+    await waitFor(() => expect(fm).toHaveBeenCalledTimes(1)); expect(fm.mock.calls[0][0]).toMatch(/^https:\/\/api\.test\.com\//);
   });
 });

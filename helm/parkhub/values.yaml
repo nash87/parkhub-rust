@@ -95,7 +95,7 @@ config:
     host: ""
     port: 587
     user: ""
-    password: ""
+    password: "CHANGEME"  # override at deploy time
     from: "noreply@parkhub.local"
 
   # Stripe

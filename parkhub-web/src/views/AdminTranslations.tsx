@@ -29,7 +29,7 @@ const STATUS_ICONS: Record<ProposalStatus, React.ReactNode> = {
 export function AdminTranslationsPage() {
   const { t } = useTranslation();
   const [proposals, setProposals] = useState<TranslationProposal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [filter, setFilter] = useState<ProposalStatus | 'all'>('pending');
   const [search, setSearch] = useState('');
   const [reviewingId, setReviewingId] = useState<string | null>(null);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaUi, loginViaApi, DEMO_ADMIN } from './helpers';
+import { loginViaUi, loginViaApi } from './helpers';
 
 test.describe('Parking — Booking Flow', () => {
   test('login with demo credentials', async ({ page }) => {

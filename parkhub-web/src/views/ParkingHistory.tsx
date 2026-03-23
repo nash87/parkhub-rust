@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClockCounterClockwise, Star, Clock, TrendUp, CalendarBlank,
-  FunnelSimple, CaretLeft, CaretRight, Question, SpinnerGap, Coins,
+  FunnelSimple, CaretLeft, CaretRight, SpinnerGap, Coins,
 } from '@phosphor-icons/react';
 import { api, type Booking, type ParkingLot, type PersonalParkingStats } from '../api/client';
 import { useTranslation } from 'react-i18next';

@@ -154,6 +154,8 @@ self.addEventListener('sync', (event) => {
 
 // Listen for manual sync trigger from client
 self.addEventListener('message', (event) => {
+  // Origin check: only accept messages from same-origin clients
+  if (event.origin && event.origin !== self.location.origin) return;
   if (event.data?.type === 'REPLAY_SYNC_QUEUE') {
     replayMutationQueue().then(() => {
       event.source?.postMessage({ type: 'SYNC_COMPLETE' });

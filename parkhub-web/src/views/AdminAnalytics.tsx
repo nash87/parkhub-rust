@@ -93,7 +93,7 @@ function HeatmapChart({ peak_hours }: { peak_hours: HourBin[] }) {
 }
 
 export function AdminAnalyticsPage() {
-  const { t } = useTranslation();
+  useTranslation(); // initialized for future i18n
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<DateRange>('30');

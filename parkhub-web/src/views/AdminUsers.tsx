@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createColumnHelper } from '@tanstack/react-table';
 import {
-  Users, SpinnerGap, MagnifyingGlass, Coins,
-  PencilSimple, X, Check, Gauge, UserMinus, UserPlus,
-  CheckSquare, Square, Trash, Lightning,
+  SpinnerGap, MagnifyingGlass, Coins,
+  PencilSimple, X, Check, UserMinus, UserPlus,
+  Lightning,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -128,22 +128,6 @@ export function AdminUsersPage() {
       }
     } finally {
       setSavingQuota(false);
-    }
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    if (selectedIds.size === users.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(users.map(u => u.id)));
     }
   }
 

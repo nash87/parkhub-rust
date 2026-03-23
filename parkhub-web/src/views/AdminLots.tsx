@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, PencilSimple, Trash, SpinnerGap, Check, X,
-  MagnifyingGlass, CurrencyEur, TrendUp, TrendDown, Clock,
+  MagnifyingGlass, CurrencyEur, TrendUp, Clock,
 } from '@phosphor-icons/react';
 import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus, type DynamicPricingRules, type OperatingHoursData, type DayHoursData } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -46,7 +46,7 @@ export function AdminLotsPage() {
     enabled: false, base_price: 2.50, surge_multiplier: 1.5,
     discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20,
   });
-  const [savingDynamic, setSavingDynamic] = useState(false);
+  const [, setSavingDynamic] = useState(false);
   const defaultDayHours: DayHoursData = { open: '07:00', close: '22:00', closed: false };
   const [opHours, setOpHours] = useState<OperatingHoursData>({
     is_24h: true,
