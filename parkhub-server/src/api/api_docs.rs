@@ -135,8 +135,7 @@ fn generate_postman_collection() -> String {
                         .unwrap_or(path.as_str())
                         .to_string();
 
-                    let url_parts: Vec<&str> =
-                        path.trim_start_matches('/').split('/').collect();
+                    let url_parts: Vec<&str> = path.trim_start_matches('/').split('/').collect();
                     let host = vec!["{{base_url}}".to_string()];
 
                     // Convert {param} to :param for Postman
@@ -319,17 +318,17 @@ mod tests {
         let spec = generate_openapi_spec();
         let parsed: serde_json::Value = serde_json::from_str(&spec).unwrap();
         assert_eq!(parsed["openapi"], "3.0.3");
-        assert!(parsed["info"]["title"].as_str().unwrap().contains("ParkHub"));
+        assert!(parsed["info"]["title"]
+            .as_str()
+            .unwrap()
+            .contains("ParkHub"));
     }
 
     #[test]
     fn test_postman_collection_is_valid_json() {
         let collection = generate_postman_collection();
         let parsed: serde_json::Value = serde_json::from_str(&collection).unwrap();
-        assert!(parsed["info"]["name"]
-            .as_str()
-            .unwrap()
-            .contains("ParkHub"));
+        assert!(parsed["info"]["name"].as_str().unwrap().contains("ParkHub"));
         assert_eq!(
             parsed["info"]["schema"],
             "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -365,10 +364,7 @@ mod tests {
         let collection = generate_postman_collection();
         let parsed: serde_json::Value = serde_json::from_str(&collection).unwrap();
         let vars = parsed["variable"].as_array().unwrap();
-        let keys: Vec<&str> = vars
-            .iter()
-            .filter_map(|v| v["key"].as_str())
-            .collect();
+        let keys: Vec<&str> = vars.iter().filter_map(|v| v["key"].as_str()).collect();
         assert!(keys.contains(&"base_url"), "Should have base_url variable");
         assert!(keys.contains(&"token"), "Should have token variable");
     }

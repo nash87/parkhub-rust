@@ -134,11 +134,7 @@ pub async fn get_booking_pass(
     let state_guard = state.read().await;
 
     // Get booking
-    let booking = match state_guard
-        .db
-        .get_booking(&booking_id.to_string())
-        .await
-    {
+    let booking = match state_guard.db.get_booking(&booking_id.to_string()).await {
         Ok(Some(b)) => b,
         _ => {
             return (
@@ -265,10 +261,8 @@ pub async fn verify_pass(
                 "?".to_string()
             };
 
-            let user_name = if let Ok(Some(user)) = state_guard
-                .db
-                .get_user(&booking.user_id.to_string())
-                .await
+            let user_name = if let Ok(Some(user)) =
+                state_guard.db.get_user(&booking.user_id.to_string()).await
             {
                 user.name
             } else {

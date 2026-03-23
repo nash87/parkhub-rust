@@ -184,20 +184,14 @@ pub async fn submit_absence_request(
     if !is_valid_absence_type(&req.absence_type) {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
-                "INVALID_INPUT",
-                "Invalid absence type",
-            )),
+            Json(ApiResponse::error("INVALID_INPUT", "Invalid absence type")),
         );
     }
 
     if req.reason.trim().is_empty() {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error(
-                "INVALID_INPUT",
-                "Reason is required",
-            )),
+            Json(ApiResponse::error("INVALID_INPUT", "Reason is required")),
         );
     }
 

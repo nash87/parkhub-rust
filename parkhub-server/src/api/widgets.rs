@@ -259,10 +259,8 @@ pub async fn get_widget_layout(
 
     let key = format!("widget_layout:{}", auth_user.user_id);
     let layout = match state_guard.db.get_setting(&key).await {
-        Ok(Some(json_str)) => {
-            serde_json::from_str::<WidgetLayout>(&json_str)
-                .unwrap_or_else(|_| default_layout(auth_user.user_id))
-        }
+        Ok(Some(json_str)) => serde_json::from_str::<WidgetLayout>(&json_str)
+            .unwrap_or_else(|_| default_layout(auth_user.user_id)),
         _ => default_layout(auth_user.user_id),
     };
 
@@ -314,10 +312,7 @@ pub async fn save_widget_layout(
         tracing::error!("Failed to save widget layout: {e}");
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to save layout",
-            )),
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to save layout")),
         );
     }
 
@@ -424,12 +419,20 @@ mod tests {
     #[test]
     fn test_widget_type_display_name() {
         assert_eq!(WidgetType::OccupancyChart.display_name(), "Occupancy Chart");
-        assert_eq!(WidgetType::EvChargingStatus.display_name(), "EV Charging Status");
+        assert_eq!(
+            WidgetType::EvChargingStatus.display_name(),
+            "EV Charging Status"
+        );
     }
 
     #[test]
     fn test_widget_position_serialize() {
-        let pos = WidgetPosition { x: 0, y: 0, w: 6, h: 4 };
+        let pos = WidgetPosition {
+            x: 0,
+            y: 0,
+            w: 6,
+            h: 4,
+        };
         let json = serde_json::to_string(&pos).unwrap();
         assert!(json.contains("\"x\":0"));
         assert!(json.contains("\"w\":6"));
@@ -440,7 +443,12 @@ mod tests {
         let entry = WidgetEntry {
             id: "w1".to_string(),
             widget_type: WidgetType::OccupancyChart,
-            position: WidgetPosition { x: 0, y: 0, w: 6, h: 4 },
+            position: WidgetPosition {
+                x: 0,
+                y: 0,
+                w: 6,
+                h: 4,
+            },
             visible: true,
         };
         let json = serde_json::to_string(&entry).unwrap();
@@ -494,7 +502,11 @@ mod tests {
     fn test_generate_widget_data_all_types() {
         for widget_type in WidgetType::ALL {
             let data = generate_widget_data(widget_type);
-            assert!(data.is_object(), "Widget data for {:?} should be an object", widget_type);
+            assert!(
+                data.is_object(),
+                "Widget data for {:?} should be an object",
+                widget_type
+            );
         }
     }
 

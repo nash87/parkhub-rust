@@ -124,13 +124,21 @@ pub struct PluginInfo {
 pub struct SlackNotifierPlugin;
 
 impl Plugin for SlackNotifierPlugin {
-    fn id(&self) -> &str { "slack-notifier" }
-    fn name(&self) -> &str { "Slack Notifier" }
-    fn version(&self) -> &str { "1.0.0" }
+    fn id(&self) -> &str {
+        "slack-notifier"
+    }
+    fn name(&self) -> &str {
+        "Slack Notifier"
+    }
+    fn version(&self) -> &str {
+        "1.0.0"
+    }
     fn description(&self) -> &str {
         "Sends notifications to a Slack channel when bookings are created or cancelled"
     }
-    fn author(&self) -> &str { "ParkHub" }
+    fn author(&self) -> &str {
+        "ParkHub"
+    }
 
     fn subscribed_events(&self) -> Vec<PluginEvent> {
         vec![
@@ -176,13 +184,21 @@ impl Plugin for SlackNotifierPlugin {
 pub struct AutoAssignPreferredSpotPlugin;
 
 impl Plugin for AutoAssignPreferredSpotPlugin {
-    fn id(&self) -> &str { "auto-assign-preferred" }
-    fn name(&self) -> &str { "Auto-Assign Preferred Spot" }
-    fn version(&self) -> &str { "1.0.0" }
+    fn id(&self) -> &str {
+        "auto-assign-preferred"
+    }
+    fn name(&self) -> &str {
+        "Auto-Assign Preferred Spot"
+    }
+    fn version(&self) -> &str {
+        "1.0.0"
+    }
     fn description(&self) -> &str {
         "Automatically assigns a user's preferred/favorite parking spot when creating a booking"
     }
-    fn author(&self) -> &str { "ParkHub" }
+    fn author(&self) -> &str {
+        "ParkHub"
+    }
 
     fn subscribed_events(&self) -> Vec<PluginEvent> {
         vec![PluginEvent::BookingCreated]
@@ -208,7 +224,10 @@ impl Plugin for AutoAssignPreferredSpotPlugin {
     fn default_config(&self) -> HashMap<String, serde_json::Value> {
         let mut cfg = HashMap::new();
         cfg.insert("fallback_to_any".to_string(), serde_json::json!(true));
-        cfg.insert("respect_zone_preference".to_string(), serde_json::json!(true));
+        cfg.insert(
+            "respect_zone_preference".to_string(),
+            serde_json::json!(true),
+        );
         cfg
     }
 }
@@ -263,11 +282,7 @@ impl PluginRegistry {
                     .unwrap_or(PluginStatus::Disabled),
                 subscribed_events: p.subscribed_events(),
                 routes: p.routes(),
-                config: self
-                    .configs
-                    .get(p.id())
-                    .cloned()
-                    .unwrap_or_default(),
+                config: self.configs.get(p.id()).cloned().unwrap_or_default(),
             })
             .collect()
     }
@@ -409,7 +424,10 @@ pub async fn list_plugins(
     let registry = PluginRegistry::new();
     let plugins = registry.list();
     let total = plugins.len();
-    let enabled = plugins.iter().filter(|p| p.status == PluginStatus::Enabled).count();
+    let enabled = plugins
+        .iter()
+        .filter(|p| p.status == PluginStatus::Enabled)
+        .count();
 
     (
         StatusCode::OK,
@@ -447,7 +465,10 @@ pub async fn toggle_plugin(
 pub async fn get_plugin_config(
     State(_state): State<SharedState>,
     Path(id): Path<String>,
-) -> (StatusCode, Json<ApiResponse<HashMap<String, serde_json::Value>>>) {
+) -> (
+    StatusCode,
+    Json<ApiResponse<HashMap<String, serde_json::Value>>>,
+) {
     let registry = PluginRegistry::new();
 
     match registry.get_config(&id) {
@@ -464,7 +485,10 @@ pub async fn update_plugin_config(
     State(_state): State<SharedState>,
     Path(id): Path<String>,
     Json(body): Json<UpdatePluginConfigRequest>,
-) -> (StatusCode, Json<ApiResponse<HashMap<String, serde_json::Value>>>) {
+) -> (
+    StatusCode,
+    Json<ApiResponse<HashMap<String, serde_json::Value>>>,
+) {
     let mut registry = PluginRegistry::new();
 
     match registry.update_config(&id, body.config) {
@@ -504,7 +528,10 @@ mod tests {
         assert_eq!(slack.subscribed_events.len(), 3);
         assert_eq!(slack.routes.len(), 1);
 
-        let auto = plugins.iter().find(|p| p.id == "auto-assign-preferred").unwrap();
+        let auto = plugins
+            .iter()
+            .find(|p| p.id == "auto-assign-preferred")
+            .unwrap();
         assert_eq!(auto.name, "Auto-Assign Preferred Spot");
         assert_eq!(auto.subscribed_events.len(), 1);
         assert!(auto.routes.is_empty());
@@ -568,20 +595,22 @@ mod tests {
             "webhook_url".to_string(),
             serde_json::json!("https://hooks.slack.com/test"),
         );
-        updates.insert(
-            "channel".to_string(),
-            serde_json::json!("#parking-alerts"),
-        );
+        updates.insert("channel".to_string(), serde_json::json!("#parking-alerts"));
 
         let config = registry.update_config("slack-notifier", updates).unwrap();
-        assert_eq!(config["webhook_url"], serde_json::json!("https://hooks.slack.com/test"));
+        assert_eq!(
+            config["webhook_url"],
+            serde_json::json!("https://hooks.slack.com/test")
+        );
         assert_eq!(config["channel"], serde_json::json!("#parking-alerts"));
     }
 
     #[test]
     fn test_plugin_config_update_nonexistent() {
         let mut registry = PluginRegistry::new();
-        assert!(registry.update_config("nonexistent", HashMap::new()).is_none());
+        assert!(registry
+            .update_config("nonexistent", HashMap::new())
+            .is_none());
     }
 
     #[test]
@@ -613,18 +642,25 @@ mod tests {
         registry.enable("auto-assign-preferred");
 
         // auto-assign only subscribes to BookingCreated, not LotFull
-        let errors = registry.fire_event(
-            &PluginEvent::LotFull,
-            &serde_json::json!({"lot_id": "l1"}),
-        );
+        let errors =
+            registry.fire_event(&PluginEvent::LotFull, &serde_json::json!({"lot_id": "l1"}));
         assert!(errors.is_empty());
     }
 
     #[test]
     fn test_plugin_event_display_names() {
-        assert_eq!(PluginEvent::BookingCreated.display_name(), "Booking Created");
-        assert_eq!(PluginEvent::BookingCancelled.display_name(), "Booking Cancelled");
-        assert_eq!(PluginEvent::UserRegistered.display_name(), "User Registered");
+        assert_eq!(
+            PluginEvent::BookingCreated.display_name(),
+            "Booking Created"
+        );
+        assert_eq!(
+            PluginEvent::BookingCancelled.display_name(),
+            "Booking Cancelled"
+        );
+        assert_eq!(
+            PluginEvent::UserRegistered.display_name(),
+            "User Registered"
+        );
         assert_eq!(PluginEvent::LotFull.display_name(), "Lot Full");
     }
 
@@ -712,7 +748,10 @@ mod tests {
     #[test]
     fn test_http_method_serialize() {
         assert_eq!(serde_json::to_string(&HttpMethod::Get).unwrap(), "\"GET\"");
-        assert_eq!(serde_json::to_string(&HttpMethod::Post).unwrap(), "\"POST\"");
+        assert_eq!(
+            serde_json::to_string(&HttpMethod::Post).unwrap(),
+            "\"POST\""
+        );
     }
 
     #[test]

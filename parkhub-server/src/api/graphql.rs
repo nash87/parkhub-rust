@@ -115,11 +115,7 @@ pub enum MutationType {
 
 impl MutationType {
     /// All supported mutation types
-    pub const ALL: &[MutationType] = &[
-        Self::CreateBooking,
-        Self::CancelBooking,
-        Self::AddVehicle,
-    ];
+    pub const ALL: &[MutationType] = &[Self::CreateBooking, Self::CancelBooking, Self::AddVehicle];
 
     /// Return type description
     pub fn return_type(&self) -> &'static str {
@@ -248,11 +244,26 @@ pub fn schema_info() -> SchemaInfo {
                 name: "createBooking".to_string(),
                 return_type: "Booking".to_string(),
                 args: vec![
-                    SchemaArg { name: "lotId".to_string(), arg_type: "ID!".to_string() },
-                    SchemaArg { name: "slotId".to_string(), arg_type: "ID".to_string() },
-                    SchemaArg { name: "date".to_string(), arg_type: "String!".to_string() },
-                    SchemaArg { name: "startTime".to_string(), arg_type: "String!".to_string() },
-                    SchemaArg { name: "endTime".to_string(), arg_type: "String!".to_string() },
+                    SchemaArg {
+                        name: "lotId".to_string(),
+                        arg_type: "ID!".to_string(),
+                    },
+                    SchemaArg {
+                        name: "slotId".to_string(),
+                        arg_type: "ID".to_string(),
+                    },
+                    SchemaArg {
+                        name: "date".to_string(),
+                        arg_type: "String!".to_string(),
+                    },
+                    SchemaArg {
+                        name: "startTime".to_string(),
+                        arg_type: "String!".to_string(),
+                    },
+                    SchemaArg {
+                        name: "endTime".to_string(),
+                        arg_type: "String!".to_string(),
+                    },
                 ],
                 description: "Create a new booking".to_string(),
             },
@@ -269,9 +280,18 @@ pub fn schema_info() -> SchemaInfo {
                 name: "addVehicle".to_string(),
                 return_type: "Vehicle".to_string(),
                 args: vec![
-                    SchemaArg { name: "licensePlate".to_string(), arg_type: "String!".to_string() },
-                    SchemaArg { name: "make".to_string(), arg_type: "String".to_string() },
-                    SchemaArg { name: "model".to_string(), arg_type: "String".to_string() },
+                    SchemaArg {
+                        name: "licensePlate".to_string(),
+                        arg_type: "String!".to_string(),
+                    },
+                    SchemaArg {
+                        name: "make".to_string(),
+                        arg_type: "String".to_string(),
+                    },
+                    SchemaArg {
+                        name: "model".to_string(),
+                        arg_type: "String".to_string(),
+                    },
                 ],
                 description: "Add a new vehicle".to_string(),
             },
@@ -289,13 +309,21 @@ pub fn parse_operation(query: &str) -> Result<(String, String, HashMap<String, S
 
     // Determine operation type
     let (op_type, body) = if trimmed.starts_with("mutation") {
-        ("mutation".to_string(), trimmed.trim_start_matches("mutation").trim())
+        (
+            "mutation".to_string(),
+            trimmed.trim_start_matches("mutation").trim(),
+        )
     } else if trimmed.starts_with("query") {
-        ("query".to_string(), trimmed.trim_start_matches("query").trim())
+        (
+            "query".to_string(),
+            trimmed.trim_start_matches("query").trim(),
+        )
     } else if trimmed.starts_with('{') {
         ("query".to_string(), trimmed)
     } else {
-        return Err("Invalid GraphQL query: must start with 'query', 'mutation', or '{'".to_string());
+        return Err(
+            "Invalid GraphQL query: must start with 'query', 'mutation', or '{'".to_string(),
+        );
     };
 
     // Extract the first field name from the body
@@ -303,7 +331,8 @@ pub fn parse_operation(query: &str) -> Result<(String, String, HashMap<String, S
     let body = body.trim_start_matches('{').trim();
 
     // Get the first word (field name)
-    let field_end = body.find(|c: char| !c.is_alphanumeric() && c != '_')
+    let field_end = body
+        .find(|c: char| !c.is_alphanumeric() && c != '_')
         .unwrap_or(body.len());
     let field_name = &body[..field_end];
 
@@ -320,7 +349,8 @@ pub fn parse_operation(query: &str) -> Result<(String, String, HashMap<String, S
                 let part = part.trim();
                 if let Some(colon) = part.find(':') {
                     let key = part[..colon].trim().to_string();
-                    let value = part[colon + 1..].trim()
+                    let value = part[colon + 1..]
+                        .trim()
                         .trim_matches('"')
                         .trim_matches('\'')
                         .to_string();
@@ -811,6 +841,10 @@ mod tests {
         let args = HashMap::new();
         let resp = execute_query("query", "booking", &args, "u1");
         assert!(!resp.errors.is_empty());
-        assert!(resp.errors[0].path.as_ref().unwrap().contains(&"booking".to_string()));
+        assert!(resp.errors[0]
+            .path
+            .as_ref()
+            .unwrap()
+            .contains(&"booking".to_string()));
     }
 }
