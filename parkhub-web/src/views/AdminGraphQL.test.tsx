@@ -47,7 +47,7 @@ vi.mock('@phosphor-icons/react', () => {
     ChartLine: icon, MapPin: icon, Translate: icon, PresentationChart: icon,
     Gauge: icon, Buildings: icon, ClockCounterClockwise: icon, Database: icon,
     Car: icon, Wheelchair: icon, Wrench: icon, CurrencyDollar: icon,
-    UserPlus: icon, Lightning: icon, Puzzle: icon, GraphicsCard: icon,
+    UserPlus: icon, Lightning: icon, PuzzlePiece: icon, GraphicsCard: icon,
   };
 });
 
