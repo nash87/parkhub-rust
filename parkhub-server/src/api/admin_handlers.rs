@@ -672,7 +672,7 @@ pub async fn admin_audit_log(
             let total_pages = if total == 0 {
                 1
             } else {
-                (total + per_page - 1) / per_page
+                total.div_ceil(per_page)
             };
             let start = (page - 1) * per_page;
             let page_entries = if start < total {
@@ -766,9 +766,9 @@ pub async fn admin_audit_log_export(
             );
             for e in &entries {
                 use std::fmt::Write;
-                let _ = write!(
+                let _ = writeln!(
                     csv,
-                    "{},{},{},{},{},{},{},{},{}\n",
+                    "{},{},{},{},{},{},{},{},{}",
                     e.id,
                     e.timestamp.to_rfc3339(),
                     csv_escape(&e.event_type),
