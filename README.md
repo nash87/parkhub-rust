@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.1.0-brightgreen.svg?style=flat-square" alt="v4.1.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.2.0-brightgreen.svg?style=flat-square" alt="v4.2.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -67,6 +67,12 @@ cargo build --release --package parkhub-server --no-default-features --features 
 ---
 
 ## Features
+
+### v4.2.0 Highlights
+
+- **SAML/SSO Enterprise Authentication** -- Full SAML 2.0 single sign-on with IdP configuration, login redirect, SAML response parsing
+- **Webhooks v2 (Outgoing Event Subscriptions)** -- HMAC-SHA256 signed event delivery with retry logic, delivery logs, 5 event types
+- **Enhanced PWA / Mobile Experience** -- Dynamic manifest, offline data caching, bottom navigation, pull-to-refresh, offline indicator
 
 ### v4.1.0 Highlights
 
@@ -144,7 +150,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Plugin/extension system** -- Trait-based plugin architecture with event hooks, built-in Slack Notifier and Auto-Assign Preferred Spot plugins
 - **GraphQL API** -- Full GraphQL schema alongside REST with interactive playground
 - **GDPR compliance reports** -- Art. 30 data map, audit trail export, TOM summary, PDF reports
-- **57 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **60 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
 - **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
 - **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
 - **Community translations** -- 10 languages with proposal voting and admin review
