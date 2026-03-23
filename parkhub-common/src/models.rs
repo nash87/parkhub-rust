@@ -633,7 +633,7 @@ pub struct WaitlistEntry {
     pub accepted_booking_id: Option<Uuid>,
 }
 
-fn default_waitlist_status() -> WaitlistStatus {
+const fn default_waitlist_status() -> WaitlistStatus {
     WaitlistStatus::Waiting
 }
 
