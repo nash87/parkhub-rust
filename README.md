@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.8.0-brightgreen.svg?style=flat-square" alt="v3.8.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v3.9.0-brightgreen.svg?style=flat-square" alt="v3.9.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -244,7 +244,7 @@ cargo build --release -p parkhub-server --no-default-features \
 ParkHub runs anywhere -- from a Raspberry Pi to Kubernetes.
 
 - **Docker Compose** (recommended) -- `docker compose up -d` and you're done
-- **Kubernetes** -- Health probes, Prometheus metrics, Helm-ready manifests, designed for GitOps with Flux CD
+- **Kubernetes / Helm** -- Full Helm chart in `helm/parkhub/` with health probes, HPA, PVC, all 51 module flags, ingress with TLS. See [helm/README.md](helm/README.md)
 - **Bare Metal** -- Download the single binary, run it. No runtime dependencies. x86_64 and ARM64
 - **Windows** -- GUI installer with system tray icon and setup wizard
 
@@ -260,6 +260,36 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 cargo test --workspace           # Rust backend
 cd parkhub-web && npx vitest run # Frontend
 npx playwright test              # E2E
+```
+
+### Load Testing (k6)
+
+Performance testing with [k6](https://grafana.com/docs/k6/) in `tests/load/`:
+
+```bash
+k6 run tests/load/smoke.js    # 1 VU, 30s — quick sanity
+k6 run tests/load/load.js     # 50 VUs, 5min — sustained load
+k6 run tests/load/stress.js   # 100 VUs, 10min — all endpoints
+k6 run tests/load/spike.js    # 1→200→1 VUs — sudden surge
+```
+
+See [tests/load/README.md](tests/load/README.md) for setup and interpretation.
+
+---
+
+## Postman Collection
+
+Import the ready-made Postman collection to explore the API interactively:
+
+1. Import `docs/postman/ParkHub.postman_collection.json` into Postman
+2. Import `docs/postman/ParkHub.postman_environment.json` as environment
+3. Set `base_url` to your ParkHub instance
+4. Run the **Login** request — it auto-sets the `{{token}}` variable
+
+Or fetch the auto-generated collection from a running server:
+
+```
+GET /api/v1/docs/postman.json
 ```
 
 ---
