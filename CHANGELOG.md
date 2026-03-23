@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.3.0] - 2026-03-23
+
+### Added
+- **Role-Based Access Control (RBAC)**: Fine-grained permission management with 5 built-in roles (super_admin, admin, manager, user, viewer) and 6 permissions (manage_users, manage_lots, manage_bookings, view_reports, manage_settings, manage_plugins). Custom roles with any permission combination. 6 admin API endpoints: `GET/POST /api/v1/admin/roles`, `PUT/DELETE /api/v1/admin/roles/{id}`, `GET/PUT /api/v1/admin/users/{id}/roles`. RBAC permission middleware for endpoint authorization. Frontend: AdminRoles page with permission checkboxes, built-in badges, help tooltip. Feature flag: `mod-rbac`. 15 backend + 8 frontend tests. (#269)
+- **Advanced Audit Log Export**: Multi-format audit log export supporting PDF, CSV, and JSON with signed download URLs (5-minute expiry). Full filtering: date range, action type, user ID. Token-based download endpoint (no auth header needed). `GET /api/v1/admin/audit-log/export/enhanced`, `GET /api/v1/admin/audit-log/export/download/{token}`. Frontend: enhanced export dialog with format selector cards, download progress indicator. Feature flag: `mod-audit-export`. 11 backend tests. (#270)
+- **Parking Zones with Pricing Tiers**: Zone-based pricing with 4 tiers: economy (0.8x green), standard (1.0x blue), premium (1.5x gold), VIP (2.5x purple). Configurable multipliers and max capacity per zone. `GET /api/v1/lots/{id}/zones/pricing`, `PUT /api/v1/admin/zones/{id}/pricing`, `GET /api/v1/zones/{id}/price`. Frontend: zone cards with color-coded tier badges, inline pricing editor, capacity progress bars. Feature flag: `mod-parking-zones`. 11 backend + 6 frontend tests. (#271)
+- **i18n**: rbac, parkingZones, auditLog.advancedExport keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
+- **63 feature flags**: Added `mod-rbac`, `mod-audit-export`, `mod-parking-zones` (was 60)
+
+---
+
 ## [4.2.0] - 2026-03-23
 
 ### Added

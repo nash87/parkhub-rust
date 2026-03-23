@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.2.0-brightgreen.svg?style=flat-square" alt="v4.2.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.3.0-brightgreen.svg?style=flat-square" alt="v4.3.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -67,6 +67,12 @@ cargo build --release --package parkhub-server --no-default-features --features 
 ---
 
 ## Features
+
+### v4.3.0 Highlights
+
+- **Role-Based Access Control (RBAC)** -- 5 built-in roles, 6 granular permissions, custom role creation, user role assignment
+- **Advanced Audit Export** -- Multi-format export (PDF, CSV, JSON) with signed download URLs and full filtering
+- **Parking Zones with Pricing Tiers** -- Economy/Standard/Premium/VIP tiers with pricing multipliers and capacity management
 
 ### v4.2.0 Highlights
 
