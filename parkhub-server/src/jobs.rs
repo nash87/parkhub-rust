@@ -624,4 +624,402 @@ mod tests {
             .unwrap();
         assert_eq!(updated.status, parkhub_common::BookingStatus::NoShow);
     }
+
+    /// Helper: build a minimal Booking value with sensible defaults.
+    fn make_booking(
+        user_id: Uuid,
+        lot_id: Uuid,
+        slot_id: Uuid,
+        status: parkhub_common::BookingStatus,
+        start_offset_hours: i64,
+        updated_offset_days: i64,
+    ) -> parkhub_common::Booking {
+        let now = Utc::now();
+        parkhub_common::Booking {
+            id: Uuid::new_v4(),
+            user_id,
+            lot_id,
+            slot_id,
+            slot_number: 1,
+            floor_name: "Level 1".to_string(),
+            vehicle: parkhub_common::Vehicle {
+                id: Uuid::new_v4(),
+                user_id,
+                license_plate: "TEST-001".to_string(),
+                make: None,
+                model: None,
+                color: None,
+                vehicle_type: parkhub_common::VehicleType::Car,
+                is_default: true,
+                created_at: now,
+            },
+            start_time: now + Duration::hours(start_offset_hours),
+            end_time: now + Duration::hours(start_offset_hours + 1),
+            status,
+            pricing: parkhub_common::BookingPricing {
+                base_price: 0.0,
+                discount: 0.0,
+                tax: 0.0,
+                total: 0.0,
+                currency: "EUR".to_string(),
+                payment_status: parkhub_common::PaymentStatus::Pending,
+                payment_method: None,
+            },
+            created_at: now - Duration::days(updated_offset_days),
+            updated_at: now - Duration::days(updated_offset_days),
+            check_in_time: None,
+            check_out_time: None,
+            qr_code: None,
+            notes: None,
+            tenant_id: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn auto_release_skips_checked_in_booking() {
+        let (state, _dir) = job_test_state().await;
+
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            guard
+                .db
+                .set_setting("auto_release_minutes", "0")
+                .await
+                .unwrap();
+        }
+
+        // Booking started in the past but already checked in — must NOT become NoShow.
+        let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let mut booking = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Active,
+            -2, // started 2 hours ago
+            1,
+        );
+        booking.check_in_time = Some(Utc::now() - Duration::hours(1));
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&booking).await.unwrap();
+        }
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            updated.status,
+            parkhub_common::BookingStatus::Active,
+            "checked-in booking must not become NoShow"
+        );
+    }
+
+    #[tokio::test]
+    async fn auto_release_skips_booking_within_threshold() {
+        let (state, _dir) = job_test_state().await;
+
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            // 60-minute threshold — booking only 5 minutes past start is still within it.
+            guard
+                .db
+                .set_setting("auto_release_minutes", "60")
+                .await
+                .unwrap();
+        }
+
+        let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let mut booking = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Confirmed,
+            0, // started "now" (will be a tiny bit in past by execution time)
+            1,
+        );
+        // Ensure start_time is clearly 5 minutes in the past (within 60-min threshold).
+        booking.start_time = Utc::now() - Duration::minutes(5);
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&booking).await.unwrap();
+        }
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            updated.status,
+            parkhub_common::BookingStatus::Confirmed,
+            "booking within threshold must not become NoShow"
+        );
+    }
+
+    #[tokio::test]
+    async fn auto_release_skips_non_releasable_status() {
+        let (state, _dir) = job_test_state().await;
+
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            guard
+                .db
+                .set_setting("auto_release_minutes", "0")
+                .await
+                .unwrap();
+        }
+
+        let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        // A Completed booking in the past should not be touched.
+        let booking = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Completed,
+            -3,
+            1,
+        );
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&booking).await.unwrap();
+        }
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking.id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            updated.status,
+            parkhub_common::BookingStatus::Completed,
+            "completed booking must not be changed by auto-release"
+        );
+    }
+
+    #[tokio::test]
+    async fn purge_expired_deletes_old_cancelled_bookings() {
+        let (state, _dir) = job_test_state().await;
+
+        // Set a short retention of 1 day so 2-day-old bookings are purged.
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("booking_retention_days", "1")
+                .await
+                .unwrap();
+        }
+
+        let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let old_cancelled = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Cancelled,
+            -10,
+            2, // updated_at 2 days ago — beyond 1-day retention
+        );
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&old_cancelled).await.unwrap();
+        }
+
+        purge_expired_bookings(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let result = guard
+            .db
+            .get_booking(&old_cancelled.id.to_string())
+            .await
+            .unwrap();
+        assert!(result.is_none(), "old cancelled booking must be purged");
+    }
+
+    #[tokio::test]
+    async fn purge_expired_keeps_recent_cancelled_bookings() {
+        let (state, _dir) = job_test_state().await;
+
+        // 90-day retention (default) — a booking updated today should survive.
+        let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let recent_cancelled = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Cancelled,
+            -1,
+            0, // updated_at = now — within retention window
+        );
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&recent_cancelled).await.unwrap();
+        }
+
+        purge_expired_bookings(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let result = guard
+            .db
+            .get_booking(&recent_cancelled.id.to_string())
+            .await
+            .unwrap();
+        assert!(
+            result.is_some(),
+            "recently cancelled booking must be kept within retention window"
+        );
+    }
+
+    #[tokio::test]
+    async fn purge_expired_skips_active_bookings() {
+        let (state, _dir) = job_test_state().await;
+
+        // Set retention to 1 day — even old *Active* bookings must not be purged.
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("booking_retention_days", "1")
+                .await
+                .unwrap();
+        }
+
+        let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let old_active = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Active,
+            -5,
+            5, // updated_at 5 days ago — but status is Active, must not purge
+        );
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&old_active).await.unwrap();
+        }
+
+        purge_expired_bookings(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let result = guard
+            .db
+            .get_booking(&old_active.id.to_string())
+            .await
+            .unwrap();
+        assert!(result.is_some(), "active booking must never be purged");
+    }
+
+    #[tokio::test]
+    async fn aggregate_occupancy_writes_stats_for_lot() {
+        let (state, _dir) = job_test_state().await;
+
+        // Create a parking lot with 10 total slots.
+        let lot = parkhub_common::ParkingLot {
+            id: Uuid::new_v4(),
+            name: "Agg Test Lot".to_string(),
+            address: "1 Test Ave".to_string(),
+            latitude: 0.0,
+            longitude: 0.0,
+            total_slots: 10,
+            available_slots: 10,
+            floors: vec![],
+            amenities: vec![],
+            pricing: parkhub_common::PricingInfo {
+                currency: "EUR".to_string(),
+                rates: vec![],
+                daily_max: None,
+                monthly_pass: None,
+            },
+            operating_hours: parkhub_common::OperatingHours {
+                is_24h: true,
+                monday: None,
+                tuesday: None,
+                wednesday: None,
+                thursday: None,
+                friday: None,
+                saturday: None,
+                sunday: None,
+            },
+            images: vec![],
+            status: parkhub_common::LotStatus::Open,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            tenant_id: None,
+        };
+
+        {
+            let guard = state.read().await;
+            guard.db.save_parking_lot(&lot).await.unwrap();
+        }
+
+        // Create one Active booking that covers "now".
+        let ids = (Uuid::new_v4(), lot.id, Uuid::new_v4());
+        let mut active_booking = make_booking(
+            ids.0,
+            ids.1,
+            ids.2,
+            parkhub_common::BookingStatus::Active,
+            -1, // start_time = 1 hour ago
+            0,
+        );
+        // end_time must be in the future so it overlaps with "now".
+        active_booking.end_time = Utc::now() + Duration::hours(1);
+
+        {
+            let guard = state.read().await;
+            guard.db.save_booking(&active_booking).await.unwrap();
+        }
+
+        aggregate_occupancy_stats(&state).await.unwrap();
+
+        let key = format!("occupancy_stats_{}", lot.id);
+        let guard = state.read().await;
+        let value = guard
+            .db
+            .get_setting(&key)
+            .await
+            .unwrap()
+            .expect("occupancy stats must be written");
+
+        // Value format is "<occupied>/<total>".
+        let parts: Vec<&str> = value.split('/').collect();
+        assert_eq!(parts.len(), 2, "stats value must be in '<occupied>/<total>' format");
+        let occupied: u64 = parts[0].parse().expect("occupied must be a number");
+        let total: u64 = parts[1].parse().expect("total must be a number");
+        assert_eq!(occupied, 1, "one active booking should be counted as occupied");
+        assert_eq!(total, 10, "total must match lot.total_slots");
+    }
 }
