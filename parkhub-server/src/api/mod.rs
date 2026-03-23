@@ -100,6 +100,8 @@ pub mod favorites;
 pub mod fleet;
 #[cfg(feature = "mod-geofence")]
 pub mod geofence;
+#[cfg(feature = "mod-graphql")]
+pub mod graphql;
 #[cfg(feature = "mod-guest")]
 pub mod guest;
 #[cfg(feature = "mod-history")]
@@ -487,6 +489,10 @@ async fn list_module_features() -> impl IntoResponse {
         "plugins".into(),
         cfg!(feature = "mod-plugins").into(),
     );
+    modules.insert(
+        "graphql".into(),
+        cfg!(feature = "mod-graphql").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -624,6 +630,14 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 "/api/v1/docs/postman.json",
                 get(api_docs::api_docs_postman_json),
             );
+    }
+
+    // GraphQL playground (public, no auth — playground UI)
+    #[cfg(feature = "mod-graphql")]
+    {
+        public_routes = public_routes
+            .route("/api/v1/graphql/playground", get(graphql::graphql_playground))
+            .route("/api/v1/graphql/schema", get(graphql::graphql_schema));
     }
 
     // Public pass verification (no auth needed — used by QR scan)
@@ -1008,6 +1022,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         protected_routes = protected_routes.route(
             "/api/v1/bookings/{id}/reschedule",
             put(reschedule_booking),
+        );
+    }
+
+    #[cfg(feature = "mod-graphql")]
+    {
+        // GraphQL query/mutation endpoint (auth required)
+        protected_routes = protected_routes.route(
+            "/api/v1/graphql",
+            post(graphql::graphql_execute),
         );
     }
 

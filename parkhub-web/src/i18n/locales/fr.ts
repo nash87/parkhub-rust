@@ -426,6 +426,8 @@ export default {
       auditLog: 'Journal d\'audit',
       dataManagement: 'Donnees',
       fleet: 'Flotte',
+      plugins: 'Plugins',
+      graphql: 'GraphQL',
       bulkAction: 'Action groupée',
       bulkActionConfirm: 'Êtes-vous sûr(e) de vouloir {{action}} {{count}} utilisateur(s) ?',
       bulkDeleted: '{{succeeded}}/{{total}} utilisateurs supprimés',

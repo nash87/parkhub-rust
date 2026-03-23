@@ -437,6 +437,8 @@ export default {
       auditLog: 'Audit Log',
       dataManagement: 'Data',
       fleet: 'Fleet',
+      plugins: 'Plugins',
+      graphql: 'GraphQL',
       bulkAction: 'Bulk Action',
       bulkActionConfirm: 'Are you sure you want to {{action}} {{count}} user(s)?',
       bulkDeleted: 'Deleted {{succeeded}}/{{total}} users',

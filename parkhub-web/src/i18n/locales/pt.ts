@@ -426,6 +426,8 @@ export default {
       auditLog: 'Registro de auditoria',
       dataManagement: 'Dados',
       fleet: 'Frota',
+      plugins: 'Plugins',
+      graphql: 'GraphQL',
       bulkAction: 'Ação em massa',
       bulkActionConfirm: 'Tem a certeza que deseja {{action}} {{count}} utilizador(es)?',
       bulkDeleted: '{{succeeded}}/{{total}} utilizadores eliminados',
