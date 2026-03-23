@@ -15,6 +15,9 @@ ignore = [
     "RUSTSEC-2024-0436", # paste unmaintained
     "RUSTSEC-2024-0370", # proc-macro-error unmaintained
     "RUSTSEC-2023-0071", # rsa Marvin Attack (transitive dep)
+    "RUSTSEC-2025-0057", # fxhash unmaintained (transitive via selectors)
+    "RUSTSEC-2023-0019", # kuchiki unmaintained (transitive via printpdf)
+    "RUSTSEC-2025-0141", # bincode unmaintained (transitive via typed-index-collections)
 ]
 
 [licenses]
