@@ -146,6 +146,8 @@ pub mod rate_dashboard;
 pub mod recommendations;
 #[cfg(feature = "mod-recurring")]
 pub mod recurring;
+#[cfg(feature = "mod-scheduled-reports")]
+pub mod scheduled_reports;
 pub mod security;
 #[cfg(feature = "mod-settings")]
 pub mod settings;
@@ -487,6 +489,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert("graphql".into(), cfg!(feature = "mod-graphql").into());
     modules.insert("compliance".into(), cfg!(feature = "mod-compliance").into());
     modules.insert("sharing".into(), cfg!(feature = "mod-sharing").into());
+    modules.insert(
+        "scheduled-reports".into(),
+        cfg!(feature = "mod-scheduled-reports").into(),
+    );
 
     Json(serde_json::json!({
         "modules": modules,
@@ -969,6 +975,21 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/compliance/audit-export",
             get(compliance::compliance_audit_export),
+        );
+
+    #[cfg(feature = "mod-scheduled-reports")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/reports/schedules",
+            get(scheduled_reports::list_schedules).post(scheduled_reports::create_schedule),
+        )
+        .route(
+            "/api/v1/admin/reports/schedules/{id}",
+            put(scheduled_reports::update_schedule).delete(scheduled_reports::delete_schedule),
+        )
+        .route(
+            "/api/v1/admin/reports/schedules/{id}/send-now",
+            post(scheduled_reports::send_now),
         );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
