@@ -1,0 +1,174 @@
+# ParkHub Helm Chart — default values
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/nash87/parkhub-rust
+  pullPolicy: IfNotPresent
+  tag: ""  # defaults to appVersion
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: parkhub.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: parkhub-tls
+  #    hosts:
+  #      - parkhub.local
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /data
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# -- Application configuration
+config:
+  # Server
+  port: 8080
+  logLevel: info
+  demoMode: false
+
+  # Admin
+  adminPassword: ""  # auto-generated if empty
+
+  # Database encryption
+  dbPassphrase: ""  # leave empty to disable AES-256-GCM at rest
+
+  # SMTP
+  smtp:
+    host: ""
+    port: 587
+    user: ""
+    password: ""
+    from: "noreply@parkhub.local"
+
+  # Stripe
+  stripe:
+    secretKey: ""
+    webhookSecret: ""
+
+  # OAuth
+  oauth:
+    google:
+      clientId: ""
+      clientSecret: ""
+    github:
+      clientId: ""
+      clientSecret: ""
+
+# -- Module feature flags (all enabled by default)
+modules:
+  bookings: true
+  vehicles: true
+  absences: true
+  branding: true
+  import: true
+  qr: true
+  pwa: true
+  payments: true
+  webhooks: true
+  notifications: true
+  announcements: true
+  recurring: true
+  guest: true
+  calendar: true
+  team: true
+  settings: true
+  jobs: true
+  swap: true
+  waitlist: true
+  zones: true
+  credits: true
+  email: true
+  export: true
+  favorites: true
+  push: true
+  recommendations: true
+  translations: true
+  social: true
+  themes: true
+  invoices: true
+  dynamicPricing: true
+  operatingHours: true
+  oauth: true
+  map: true
+  stripe: true
+  tenants: true
+  rateLimit: true
+  accessible: true
+  maintenance: true
+  costCenter: true
+  fleet: true
+  dataManagement: true
+  auditLogUi: true
+  history: true
+  geofence: true
+  visitors: true
+  evCharging: true
+  waitlistExt: true
+  parkingPass: true
+  apiDocs: true
+  absenceApproval: true
+  calendarDrag: true
+  widgets: true
+
+# -- Extra environment variables
+extraEnv: []
+#  - name: CUSTOM_VAR
+#    value: "custom-value"
