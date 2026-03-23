@@ -171,6 +171,7 @@ full = [
     "mod-calendar-drag",
     "mod-widgets",
     "mod-plugins",
+    "mod-graphql",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -232,6 +233,7 @@ mod-absence-approval = []
 mod-calendar-drag = []
 mod-widgets = []
 mod-plugins = []
+mod-graphql = []
 
 [dev-dependencies]
 tempfile = "3"
