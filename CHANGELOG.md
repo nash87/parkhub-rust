@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.2.0] - 2026-03-23
+
+### Added
+- **SAML/SSO Enterprise Authentication**: Full SAML 2.0 SSO integration with 5 API endpoints. `GET /api/v1/auth/sso/providers`, `GET /api/v1/auth/sso/{provider}/login`, `POST /api/v1/auth/sso/{provider}/callback`, `PUT /api/v1/admin/sso/{provider}`, `DELETE /api/v1/admin/sso/{provider}`. Lightweight XML parsing for SAML responses. SSO login buttons on login page + admin configuration panel. Feature flag: `mod-sso`. 12 backend + 13 frontend tests. (#266)
+- **Webhooks v2 (Outgoing Event Subscriptions)**: Enhanced webhook system with delivery tracking, retry logic, and HMAC-SHA256 signing. 6 admin API endpoints: list, create, update, delete, test, deliveries. Events: booking.created, booking.cancelled, user.registered, lot.full, payment.completed. `X-ParkHub-Signature` header. 3 retry attempts with exponential backoff. Feature flag: `mod-webhooks-v2`. 13 backend + 6 frontend tests. (#267)
+- **Enhanced PWA / Mobile Experience**: Dynamic PWA manifest based on branding, offline data caching, enhanced service worker (network-first API, cache-first static). Offline indicator, cached booking display, bottom navigation bar for mobile, pull-to-refresh gesture. Feature flag: `mod-enhanced-pwa`. 5 backend + 6 frontend tests. (#268)
+- **i18n**: sso, webhooksV2, pwa keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
+- **60 feature flags**: Added `mod-sso`, `mod-webhooks-v2`, `mod-enhanced-pwa` (was 57)
+
+---
+
 ## [4.1.0] - 2026-03-23
 
 ### Added
