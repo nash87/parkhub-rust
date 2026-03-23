@@ -88,7 +88,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
           // Validate lot_id is a safe string (alphanumeric, hyphens, underscores)
           if (typeof rawId === 'string' && /^[a-zA-Z0-9_-]+$/.test(rawId)) {
             const entry = { available: event.data.available as number, total: event.data.total as number };
-            setOccupancy(prev => ({ ...prev, [rawId]: entry }));
+            const sanitizedId: string = String(rawId);
+            setOccupancy(prev => {
+              const next = Object.create(null) as Record<string, { available: number; total: number }>;
+              Object.assign(next, prev);
+              next[sanitizedId] = entry;
+              return next;
+            });
           }
         }
       } catch {
