@@ -48,6 +48,7 @@ vi.mock('@phosphor-icons/react', () => {
     Gauge: icon, Buildings: icon, ClockCounterClockwise: icon, Database: icon,
     Car: icon, Wheelchair: icon, Wrench: icon, CurrencyDollar: icon,
     UserPlus: icon, Lightning: icon, PuzzlePiece: icon, GraphicsCard: icon,
+    ShieldCheck: icon,
   };
 });
 
