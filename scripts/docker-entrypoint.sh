@@ -27,7 +27,8 @@ done
 # SEED_DEMO_DATA=true: seeds data only (production mode, no demo UI)
 if [ "${DEMO_MODE}" = "true" ] || [ "${SEED_DEMO_DATA}" = "true" ]; then
     echo "DEMO_MODE=true — checking if seeding is needed..."
-    LOT_COUNT=$(wget -qO- http://127.0.0.1:${PORT:-10000}/api/v1/lots 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('total',len(d.get('data',d if isinstance(d,list) else []))))" 2>/dev/null || echo "0")
+    LOT_COUNT=$(wget -qO- http://127.0.0.1:${PORT:-10000}/api/v1/lots 2>/dev/null | sed -n 's/.*"total"\s*:\s*\([0-9]*\).*/\1/p' || echo "0")
+    [ -z "$LOT_COUNT" ] && LOT_COUNT=0
     if [ "$LOT_COUNT" -le 1 ]; then
         echo "Seeding demo data (10 lots, 200 users, ~3500 bookings)..."
 
@@ -52,7 +53,7 @@ if [ "${DEMO_MODE}" = "true" ] || [ "${SEED_DEMO_DATA}" = "true" ]; then
 
         # Run the seed script
         # Password passed via env var PARKHUB_ADMIN_PASSWORD (not CLI arg — avoids /proc exposure)
-        PARKHUB_ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-demo}" python3 /app/seed_demo.py --base-url http://127.0.0.1:${PORT:-10000} 2>&1 || echo "WARNING: Demo seeding failed"
+        PARKHUB_ADMIN_PASSWORD="${PARKHUB_ADMIN_PASSWORD:-demo}" /app/seed_demo.sh "http://127.0.0.1:${PORT:-10000}" 2>&1 || echo "WARNING: Demo seeding failed"
         echo "Demo seeding complete."
 
         # Disable self-registration again
