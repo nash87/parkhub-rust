@@ -7,6 +7,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.0.0] - 2026-03-23
+
+### Added
+- **Plugin/Extension System**: Modular plugin architecture with trait-based contract (`name()`, `version()`, `on_event()`, `routes()`). Plugin registry with load/unload/enable/disable. Event hooks: booking_created, booking_cancelled, user_registered, lot_full. 2 built-in plugins: "Slack Notifier" (webhook notifications), "Auto-Assign Preferred Spot" (favorite spot assignment). Admin API: `GET /api/v1/admin/plugins`, `PUT /api/v1/admin/plugins/{id}/toggle`, `GET/PUT /api/v1/admin/plugins/{id}/config`. Frontend: marketplace-style grid with toggle switches and config dialogs. Feature flag: `mod-plugins`. 24 backend + 8 frontend tests. (#257)
+- **GraphQL API**: Full GraphQL interface alongside REST. Schema: Query (me, lots, lot, bookings, booking, myVehicles) + Mutation (createBooking, cancelBooking, addVehicle). Interactive GraphiQL playground at `GET /api/v1/graphql/playground`. Schema SDL at `GET /api/v1/graphql/schema`. Execute at `POST /api/v1/graphql`. Same Bearer token auth. Feature flag: `mod-graphql`. 30 backend + 3 frontend tests. (#258)
+- **Compliance Reports & Audit Trail**: GDPR/DSGVO compliance monitoring system. Compliance status report with 10 checks (encryption, access control, data portability, DPO, etc.). Art. 30 data processing inventory (data map). Full audit trail export (CSV/JSON). PDF compliance report. TOM summary with scoring. `GET /api/v1/admin/compliance/report`, `/report/pdf`, `/data-map`, `/audit-export`. Frontend: compliance dashboard with status cards (green/yellow/red), download buttons. Feature flag: `mod-compliance`. 21 backend + 7 frontend tests. (#259)
+- **i18n**: plugins, compliance, graphql keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
+- **54 feature flags**: Added `mod-plugins`, `mod-graphql`, `mod-compliance` (was 51)
+
+---
+
 ## [3.9.0] - 2026-03-23
 
 ### Added

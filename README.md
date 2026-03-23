@@ -116,7 +116,10 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Operating hours** -- Per-lot 7-day schedule with booking validation and "Open Now" badges
 - **SMS/WhatsApp stubs** -- Notification channel expansion with per-event toggles
 - **PDF invoices** -- Professional booking invoices with VAT breakdown
-- **36 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
+- **Plugin/extension system** -- Trait-based plugin architecture with event hooks, built-in Slack Notifier and Auto-Assign Preferred Spot plugins
+- **GraphQL API** -- Full GraphQL schema alongside REST with interactive playground
+- **GDPR compliance reports** -- Art. 30 data map, audit trail export, TOM summary, PDF reports
+- **54 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
 - **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
 - **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
 - **Community translations** -- 10 languages with proposal voting and admin review
