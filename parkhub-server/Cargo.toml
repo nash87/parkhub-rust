@@ -180,6 +180,7 @@ full = [
     "mod-webhooks-v2",
     "mod-enhanced-pwa",
     "mod-rbac",
+    "mod-audit-export",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -250,6 +251,7 @@ mod-sso = []
 mod-webhooks-v2 = []
 mod-enhanced-pwa = []
 mod-rbac = []
+mod-audit-export = []
 
 [dev-dependencies]
 tempfile = "3"

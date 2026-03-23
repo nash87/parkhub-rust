@@ -69,6 +69,8 @@ pub mod admin_ext;
 pub mod admin_handlers;
 #[cfg(feature = "mod-analytics")]
 pub mod analytics;
+#[cfg(feature = "mod-audit-export")]
+pub mod audit_export;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 #[cfg(feature = "mod-api-docs")]
@@ -516,6 +518,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert("sso".into(), cfg!(feature = "mod-sso").into());
     modules.insert("rbac".into(), cfg!(feature = "mod-rbac").into());
     modules.insert(
+        "audit-export".into(),
+        cfg!(feature = "mod-audit-export").into(),
+    );
+    modules.insert(
         "enhanced-pwa".into(),
         cfg!(feature = "mod-enhanced-pwa").into(),
     );
@@ -692,6 +698,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         public_routes = public_routes
             .route("/api/v1/version", get(versioning::api_version))
             .route("/api/v1/changelog", get(versioning::api_changelog));
+    }
+
+    // Audit export download — token-based auth (no bearer needed)
+    #[cfg(feature = "mod-audit-export")]
+    {
+        public_routes = public_routes.route(
+            "/api/v1/admin/audit-log/export/download/{token}",
+            get(audit_export::download_audit_export),
+        );
     }
 
     // Feature-gated public routes
@@ -909,6 +924,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/audit-log/export",
             get(admin_audit_log_export),
         );
+
+    #[cfg(feature = "mod-audit-export")]
+    let admin_routes = admin_routes.route(
+        "/api/v1/admin/audit-log/export/enhanced",
+        get(audit_export::enhanced_audit_export),
+    );
 
     #[cfg(feature = "mod-analytics")]
     let admin_routes = admin_routes.route(
