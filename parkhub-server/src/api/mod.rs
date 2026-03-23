@@ -613,6 +613,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/docs/openapi.json",
                 get(api_docs::api_docs_openapi_json),
+            )
+            .route(
+                "/api/v1/docs/postman.json",
+                get(api_docs::api_docs_postman_json),
             );
     }
 
