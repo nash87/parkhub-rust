@@ -84,6 +84,8 @@ pub mod branding;
 pub mod calendar;
 #[cfg(feature = "mod-calendar-drag")]
 pub mod calendar_drag;
+#[cfg(feature = "mod-compliance")]
+pub mod compliance;
 #[cfg(feature = "mod-credits")]
 pub mod credits;
 #[cfg(feature = "mod-data-import")]
@@ -492,6 +494,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "graphql".into(),
         cfg!(feature = "mod-graphql").into(),
+    );
+    modules.insert(
+        "compliance".into(),
+        cfg!(feature = "mod-compliance").into(),
     );
 
     Json(serde_json::json!({
@@ -947,6 +953,25 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/plugins/{id}/config",
             get(plugins::get_plugin_config).put(plugins::update_plugin_config),
+        );
+
+    #[cfg(feature = "mod-compliance")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/compliance/report",
+            get(compliance::compliance_report),
+        )
+        .route(
+            "/api/v1/admin/compliance/report/pdf",
+            get(compliance::compliance_report_pdf),
+        )
+        .route(
+            "/api/v1/admin/compliance/data-map",
+            get(compliance::compliance_data_map),
+        )
+        .route(
+            "/api/v1/admin/compliance/audit-export",
+            get(compliance::compliance_audit_export),
         );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
