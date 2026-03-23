@@ -1372,6 +1372,14 @@ export default {
       lastSent: 'Last sent',
       empty: 'No schedules configured',
     },
+    apiVersion: {
+      title: 'API Version',
+      version: 'Version',
+      prefix: 'Prefix',
+      status: 'Status',
+      deprecations: 'Deprecations',
+      tooltip: 'Current API version',
+    },
     compliance: {
       title: 'Compliance',
       subtitle: 'GDPR/DSGVO compliance monitoring',
