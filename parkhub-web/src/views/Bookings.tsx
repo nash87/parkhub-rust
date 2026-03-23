@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarBlank, Clock, Car, X, SpinnerGap,
-  ArrowClockwise, Warning, MapPin, CalendarPlus, Timer,
+  Clock, Car, X, SpinnerGap,
+  ArrowClockwise, Warning,
   MagnifyingGlass, Funnel, QrCode, FilePdf,
 } from '@phosphor-icons/react';
 import type { TFunction } from 'react-i18next';

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
 export function TwoFactorSetupComponent() {
-  const { t } = useTranslation();
+  useTranslation(); // initialized for future i18n
   const [enabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [setupData, setSetupData] = useState<TwoFactorSetup | null>(null);

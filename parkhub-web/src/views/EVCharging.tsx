@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Lightning, Play, Stop, Question, Clock, BatteryCharging } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 interface EvCharger {

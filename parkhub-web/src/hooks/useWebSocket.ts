@@ -84,13 +84,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
         // Update occupancy map from occupancy_changed events
         if (event.event === 'occupancy_changed' && event.data.lot_id) {
-          setOccupancy(prev => ({
-            ...prev,
-            [event.data.lot_id as string]: {
-              available: event.data.available as number,
-              total: event.data.total as number,
-            },
-          }));
+          const lotId = String(event.data.lot_id);
+          // Prevent prototype pollution
+          if (lotId && !Object.prototype.hasOwnProperty.call({__proto__:1, constructor:1, prototype:1}, lotId)) {
+            setOccupancy(prev => {
+              const next: OccupancyMap = { ...prev };
+              next[lotId] = {
+                available: event.data.available as number,
+                total: event.data.total as number,
+              };
+              return next;
+            });
+          }
         }
       } catch {
         // Ignore non-JSON messages (e.g., pong frames)

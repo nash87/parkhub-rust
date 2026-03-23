@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ── Hoisted mocks ──
 // vi.hoisted runs BEFORE imports are evaluated, so the module-level
 // `window.matchMedia(...)` in ThemeContext.tsx sees our mock.
-const { localStorageMock, matchMediaState, persistentMql } = vi.hoisted(() => {
+const { localStorageMock, matchMediaState } = vi.hoisted(() => {
   let store: Record<string, string> = {};
   const localStorageMock = {
     getItem: vi.fn((key: string) => store[key] ?? null),

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Translate, MagnifyingGlass, CaretDown, ThumbsUp, ThumbsDown,
+  Translate, MagnifyingGlass, ThumbsUp, ThumbsDown,
   SpinnerGap, PaperPlaneTilt, X, Check, Clock,
   ChatCircleDots,
 } from '@phosphor-icons/react';

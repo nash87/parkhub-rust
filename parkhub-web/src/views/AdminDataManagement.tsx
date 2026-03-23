@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { UploadSimple, DownloadSimple, FileArrowUp, FileArrowDown, Table, Warning, CheckCircle } from '@phosphor-icons/react';
-import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 

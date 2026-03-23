@@ -35,7 +35,7 @@ export function AdminDashboardPage() {
   const [showCatalog, setShowCatalog] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [widgetData, setWidgetData] = useState<Record<string, any>>({});
-  const [saving, setSaving] = useState(false);
+  const [, setSaving] = useState(false);
 
   const loadLayout = useCallback(async () => {
     try {

@@ -35,7 +35,7 @@ export function DashboardPage() {
     }
   }, [t]);
 
-  const { connected: wsConnected, occupancy } = useWebSocket({ onEvent: handleWsEvent });
+  const { connected: wsConnected } = useWebSocket({ onEvent: handleWsEvent });
 
   useEffect(() => {
     Promise.all([api.getBookings(), api.getUserStats()]).then(([bRes, sRes]) => {

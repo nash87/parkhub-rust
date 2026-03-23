@@ -15,7 +15,7 @@ function parseUserAgent(ua: string): string {
 }
 
 export function LoginHistoryComponent() {
-  const { t } = useTranslation();
+  useTranslation(); // initialized for future i18n
   const [history, setHistory] = useState<LoginHistoryEntry[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);

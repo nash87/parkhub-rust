@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Calendar, Check, X, Clock, Question, PaperPlaneTilt, ChatText, Warning,
+  Calendar, Check, X, Clock, Question, PaperPlaneTilt, ChatText,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';

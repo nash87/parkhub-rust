@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   UserCircle, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
-  CalendarCheck, House, ChartBar, DownloadSimple, Trash, CaretDown, CaretUp,
-  Shield, MapPin, Question,
+  DownloadSimple, Trash, CaretDown, CaretUp,
+  MapPin, Question,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type UserStats } from '../api/client';
