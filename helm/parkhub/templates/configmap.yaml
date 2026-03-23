@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "parkhub.fullname" . }}
+  labels:
+    {{- include "parkhub.labels" . | nindent 4 }}
+data:
+  PARKHUB_PORT: {{ .Values.config.port | quote }}
+  RUST_LOG: {{ .Values.config.logLevel | quote }}
+  DEMO_MODE: {{ .Values.config.demoMode | quote }}
+  SMTP_PORT: {{ .Values.config.smtp.port | quote }}
+  SMTP_FROM: {{ .Values.config.smtp.from | quote }}
+  # Module feature flags
+  MODULE_BOOKINGS: {{ .Values.modules.bookings | quote }}
+  MODULE_VEHICLES: {{ .Values.modules.vehicles | quote }}
+  MODULE_ABSENCES: {{ .Values.modules.absences | quote }}
+  MODULE_BRANDING: {{ .Values.modules.branding | quote }}
+  MODULE_IMPORT: {{ .Values.modules.import | quote }}
+  MODULE_QR: {{ .Values.modules.qr | quote }}
+  MODULE_PWA: {{ .Values.modules.pwa | quote }}
+  MODULE_PAYMENTS: {{ .Values.modules.payments | quote }}
+  MODULE_WEBHOOKS: {{ .Values.modules.webhooks | quote }}
+  MODULE_NOTIFICATIONS: {{ .Values.modules.notifications | quote }}
+  MODULE_ANNOUNCEMENTS: {{ .Values.modules.announcements | quote }}
+  MODULE_RECURRING: {{ .Values.modules.recurring | quote }}
+  MODULE_GUEST: {{ .Values.modules.guest | quote }}
+  MODULE_CALENDAR: {{ .Values.modules.calendar | quote }}
+  MODULE_TEAM: {{ .Values.modules.team | quote }}
+  MODULE_SETTINGS: {{ .Values.modules.settings | quote }}
+  MODULE_JOBS: {{ .Values.modules.jobs | quote }}
+  MODULE_SWAP: {{ .Values.modules.swap | quote }}
+  MODULE_WAITLIST: {{ .Values.modules.waitlist | quote }}
+  MODULE_ZONES: {{ .Values.modules.zones | quote }}
+  MODULE_CREDITS: {{ .Values.modules.credits | quote }}
+  MODULE_EMAIL: {{ .Values.modules.email | quote }}
+  MODULE_EXPORT: {{ .Values.modules.export | quote }}
+  MODULE_FAVORITES: {{ .Values.modules.favorites | quote }}
+  MODULE_PUSH: {{ .Values.modules.push | quote }}
+  MODULE_RECOMMENDATIONS: {{ .Values.modules.recommendations | quote }}
+  MODULE_TRANSLATIONS: {{ .Values.modules.translations | quote }}
+  MODULE_SOCIAL: {{ .Values.modules.social | quote }}
+  MODULE_THEMES: {{ .Values.modules.themes | quote }}
+  MODULE_INVOICES: {{ .Values.modules.invoices | quote }}
+  MODULE_DYNAMIC_PRICING: {{ .Values.modules.dynamicPricing | quote }}
+  MODULE_OPERATING_HOURS: {{ .Values.modules.operatingHours | quote }}
+  MODULE_OAUTH: {{ .Values.modules.oauth | quote }}
+  MODULE_MAP: {{ .Values.modules.map | quote }}
+  MODULE_STRIPE: {{ .Values.modules.stripe | quote }}
+  MODULE_TENANTS: {{ .Values.modules.tenants | quote }}
+  MODULE_RATE_LIMIT: {{ .Values.modules.rateLimit | quote }}
+  MODULE_ACCESSIBLE: {{ .Values.modules.accessible | quote }}
+  MODULE_MAINTENANCE: {{ .Values.modules.maintenance | quote }}
+  MODULE_COST_CENTER: {{ .Values.modules.costCenter | quote }}
+  MODULE_FLEET: {{ .Values.modules.fleet | quote }}
+  MODULE_DATA_MANAGEMENT: {{ .Values.modules.dataManagement | quote }}
+  MODULE_AUDIT_LOG_UI: {{ .Values.modules.auditLogUi | quote }}
+  MODULE_HISTORY: {{ .Values.modules.history | quote }}
+  MODULE_GEOFENCE: {{ .Values.modules.geofence | quote }}
+  MODULE_VISITORS: {{ .Values.modules.visitors | quote }}
+  MODULE_EV_CHARGING: {{ .Values.modules.evCharging | quote }}
+  MODULE_WAITLIST_EXT: {{ .Values.modules.waitlistExt | quote }}
+  MODULE_PARKING_PASS: {{ .Values.modules.parkingPass | quote }}
+  MODULE_API_DOCS: {{ .Values.modules.apiDocs | quote }}
+  MODULE_ABSENCE_APPROVAL: {{ .Values.modules.absenceApproval | quote }}
+  MODULE_CALENDAR_DRAG: {{ .Values.modules.calendarDrag | quote }}
+  MODULE_WIDGETS: {{ .Values.modules.widgets | quote }}
