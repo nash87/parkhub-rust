@@ -9,6 +9,7 @@ import { CarSimple, Eye, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons
 import { useAuth } from '../context/AuthContext';
 import { FormField, FormInput } from '../components/ui/FormField';
 import { OAuthButtons } from '../components/OAuthButtons';
+import { SSOButtons } from '../components/SSOButtons';
 // @ts-ignore — Vite resolves JSON imports at build time
 import { version as APP_VERSION } from '../../package.json';
 
@@ -133,6 +134,9 @@ export function LoginPage() {
 
           {/* OAuth social login buttons */}
           <OAuthButtons />
+
+          {/* SSO / SAML enterprise login buttons */}
+          <SSOButtons />
 
           {/* Demo hint */}
           <button
