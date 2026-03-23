@@ -75,6 +75,7 @@ const AdminCompliancePage = lazy(() => import('./views/AdminCompliance'), 'Admin
 const AdminSSOPage = lazy(() => import('./views/AdminSSO'), 'AdminSSOPage');
 const AdminWebhooksPage = lazy(() => import('./views/AdminWebhooks'), 'AdminWebhooksPage');
 const AdminRolesPage = lazy(() => import('./views/AdminRoles'), 'AdminRolesPage');
+const AdminZonesPage = lazy(() => import('./views/AdminZones'), 'AdminZonesPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -180,6 +181,7 @@ function AnimatedRoutes() {
             <Route path="sso" element={<SuspenseRoute><AdminSSOPage /></SuspenseRoute>} />
             <Route path="webhooks" element={<SuspenseRoute><AdminWebhooksPage /></SuspenseRoute>} />
             <Route path="roles" element={<SuspenseRoute><AdminRolesPage /></SuspenseRoute>} />
+            <Route path="zones" element={<SuspenseRoute><AdminZonesPage /></SuspenseRoute>} />
           </Route>
         </Route>
         <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />

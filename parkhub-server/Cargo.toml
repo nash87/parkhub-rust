@@ -181,6 +181,7 @@ full = [
     "mod-enhanced-pwa",
     "mod-rbac",
     "mod-audit-export",
+    "mod-parking-zones",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -252,6 +253,7 @@ mod-webhooks-v2 = []
 mod-enhanced-pwa = []
 mod-rbac = []
 mod-audit-export = []
+mod-parking-zones = []
 
 [dev-dependencies]
 tempfile = "3"
