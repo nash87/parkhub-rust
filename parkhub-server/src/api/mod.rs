@@ -189,6 +189,8 @@ pub mod webhooks_v2;
 #[cfg(feature = "mod-widgets")]
 pub mod widgets;
 pub mod ws;
+#[cfg(feature = "mod-rbac")]
+pub mod rbac;
 #[cfg(feature = "mod-zones")]
 pub mod zones;
 
@@ -318,6 +320,8 @@ use waitlist_ext::{
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 #[cfg(feature = "mod-widgets")]
 use widgets::{get_widget_data, get_widget_layout, save_widget_layout};
+#[cfg(feature = "mod-rbac")]
+use rbac::{assign_user_roles, create_role, delete_role, get_user_roles, list_roles, update_role};
 #[cfg(feature = "mod-zones")]
 use zones::{create_zone, delete_zone, list_zones, update_zone};
 
@@ -510,6 +514,7 @@ async fn list_module_features() -> impl IntoResponse {
         cfg!(feature = "mod-api-versioning").into(),
     );
     modules.insert("sso".into(), cfg!(feature = "mod-sso").into());
+    modules.insert("rbac".into(), cfg!(feature = "mod-rbac").into());
     modules.insert(
         "enhanced-pwa".into(),
         cfg!(feature = "mod-enhanced-pwa").into(),
@@ -1066,6 +1071,21 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/api/v1/admin/webhooks-v2/{id}/deliveries",
             get(webhooks_v2::list_deliveries_v2),
+        );
+
+    #[cfg(feature = "mod-rbac")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/roles",
+            get(list_roles).post(create_role),
+        )
+        .route(
+            "/api/v1/admin/roles/{id}",
+            put(update_role).delete(delete_role),
+        )
+        .route(
+            "/api/v1/admin/users/{id}/roles",
+            get(get_user_roles).put(assign_user_roles),
         );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
