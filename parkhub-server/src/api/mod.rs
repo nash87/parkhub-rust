@@ -156,6 +156,8 @@ pub mod setup;
 pub mod sharing;
 #[cfg(feature = "mod-social")]
 mod social;
+#[cfg(feature = "mod-sso")]
+pub mod sso;
 #[cfg(feature = "mod-stripe")]
 pub mod stripe;
 #[cfg(feature = "mod-swap")]
@@ -279,6 +281,10 @@ async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
 }
 #[cfg(feature = "mod-parking-pass")]
 use parking_pass::{get_booking_pass, list_my_passes, verify_pass};
+#[cfg(feature = "mod-sso")]
+use sso::{
+    sso_callback, sso_configure_provider, sso_delete_provider, sso_list_providers, sso_login,
+};
 #[cfg(feature = "mod-swap")]
 use swap::{create_swap_request, list_swap_requests, update_swap_request};
 #[cfg(feature = "mod-team")]
@@ -499,6 +505,7 @@ async fn list_module_features() -> impl IntoResponse {
         "api-versioning".into(),
         cfg!(feature = "mod-api-versioning").into(),
     );
+    modules.insert("sso".into(), cfg!(feature = "mod-sso").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -720,6 +727,14 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         // Branding logo (public, cached)
         public_routes =
             public_routes.route("/api/v1/branding/logo", get(branding::get_branding_logo));
+    }
+    #[cfg(feature = "mod-sso")]
+    {
+        // SSO: providers list (public, no auth) + login redirect + callback
+        public_routes = public_routes
+            .route("/api/v1/auth/sso/providers", get(sso_list_providers))
+            .route("/api/v1/auth/sso/{provider}/login", get(sso_login))
+            .route("/api/v1/auth/sso/{provider}/callback", post(sso_callback));
     }
     #[cfg(feature = "mod-oauth")]
     {
@@ -1005,6 +1020,12 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             "/api/v1/admin/reports/schedules/{id}/send-now",
             post(scheduled_reports::send_now),
         );
+
+    #[cfg(feature = "mod-sso")]
+    let admin_routes = admin_routes.route(
+        "/api/v1/admin/sso/{provider}",
+        put(sso_configure_provider).delete(sso_delete_provider),
+    );
 
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),
