@@ -139,3 +139,87 @@ pub async fn team_list(
 
     Json(ApiResponse::success(members))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use parkhub_common::models::AbsenceType;
+
+    // ── TeamMemberStatus serialization ───────────────────────────────────────
+
+    #[test]
+    fn test_team_member_status_present_serialization() {
+        let member = TeamMemberStatus {
+            user_id: Uuid::nil(),
+            name: "Alice Smith".to_string(),
+            username: "alice".to_string(),
+            status: "present".to_string(),
+            absence_type: None,
+        };
+        let json = serde_json::to_string(&member).unwrap();
+        assert!(json.contains("Alice Smith"));
+        assert!(json.contains("alice"));
+        assert!(json.contains("present"));
+        // absence_type should be serialised as null or missing when None
+        // (serde default = include null)
+        assert!(json.contains("absence_type"));
+    }
+
+    #[test]
+    fn test_team_member_status_absent_homeoffice() {
+        let member = TeamMemberStatus {
+            user_id: Uuid::nil(),
+            name: "Bob".to_string(),
+            username: "bob".to_string(),
+            status: "homeoffice".to_string(),
+            absence_type: Some(AbsenceType::Homeoffice),
+        };
+        let json = serde_json::to_string(&member).unwrap();
+        assert!(json.contains("homeoffice"));
+        // AbsenceType::Homeoffice should be serialised as "homeoffice"
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["absence_type"], "homeoffice");
+    }
+
+    #[test]
+    fn test_team_member_status_absent_vacation() {
+        let member = TeamMemberStatus {
+            user_id: Uuid::nil(),
+            name: "Carol".to_string(),
+            username: "carol".to_string(),
+            status: "absent".to_string(),
+            absence_type: Some(AbsenceType::Vacation),
+        };
+        let json = serde_json::to_string(&member).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["absence_type"], "vacation");
+    }
+
+    #[test]
+    fn test_team_member_status_absent_sick() {
+        let member = TeamMemberStatus {
+            user_id: Uuid::nil(),
+            name: "Dave".to_string(),
+            username: "dave".to_string(),
+            status: "absent".to_string(),
+            absence_type: Some(AbsenceType::Sick),
+        };
+        let json = serde_json::to_string(&member).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["absence_type"], "sick");
+    }
+
+    #[test]
+    fn test_team_member_uuid_is_serialized() {
+        let id = Uuid::new_v4();
+        let member = TeamMemberStatus {
+            user_id: id,
+            name: "Eve".to_string(),
+            username: "eve".to_string(),
+            status: "present".to_string(),
+            absence_type: None,
+        };
+        let json = serde_json::to_string(&member).unwrap();
+        assert!(json.contains(&id.to_string()));
+    }
+}

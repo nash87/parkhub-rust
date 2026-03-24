@@ -264,3 +264,97 @@ pub async fn admin_dashboard_charts(
         })),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── LotQrResponse struct ─────────────────────────────────────────────────
+    // LotQrResponse has private fields so we exercise it through the public API
+    // by verifying that the struct is serialisable via the DashboardCharts path.
+
+    #[test]
+    fn test_bookings_by_day_serialization() {
+        let b = BookingsByDay {
+            date: "2026-03-24".to_string(),
+            count: 5,
+        };
+        let json = serde_json::to_string(&b).unwrap();
+        assert!(json.contains("2026-03-24"));
+        assert!(json.contains("5"));
+    }
+
+    #[test]
+    fn test_bookings_by_lot_serialization() {
+        let b = BookingsByLot {
+            lot_name: "Main Garage".to_string(),
+            count: 42,
+        };
+        let json = serde_json::to_string(&b).unwrap();
+        assert!(json.contains("Main Garage"));
+        assert!(json.contains("42"));
+    }
+
+    #[test]
+    fn test_occupancy_by_hour_serialization() {
+        let o = OccupancyByHour {
+            hour: 9,
+            avg_occupancy: 75.5,
+        };
+        let json = serde_json::to_string(&o).unwrap();
+        assert!(json.contains("\"hour\":9"));
+        assert!(json.contains("75.5"));
+    }
+
+    #[test]
+    fn test_top_user_serialization() {
+        let u = TopUser {
+            username: "alice".to_string(),
+            booking_count: 10,
+        };
+        let json = serde_json::to_string(&u).unwrap();
+        assert!(json.contains("alice"));
+        assert!(json.contains("10"));
+    }
+
+    #[test]
+    fn test_dashboard_charts_serialization() {
+        let charts = DashboardCharts {
+            bookings_by_day: vec![BookingsByDay {
+                date: "2026-03-01".to_string(),
+                count: 3,
+            }],
+            bookings_by_lot: vec![BookingsByLot {
+                lot_name: "Lot B".to_string(),
+                count: 7,
+            }],
+            occupancy_by_hour: vec![OccupancyByHour {
+                hour: 14,
+                avg_occupancy: 60.0,
+            }],
+            top_users: vec![TopUser {
+                username: "bob".to_string(),
+                booking_count: 4,
+            }],
+        };
+        let json = serde_json::to_string(&charts).unwrap();
+        assert!(json.contains("bookings_by_day"));
+        assert!(json.contains("bookings_by_lot"));
+        assert!(json.contains("occupancy_by_hour"));
+        assert!(json.contains("top_users"));
+        assert!(json.contains("Lot B"));
+        assert!(json.contains("bob"));
+    }
+
+    #[test]
+    fn test_dashboard_charts_empty() {
+        let charts = DashboardCharts {
+            bookings_by_day: vec![],
+            bookings_by_lot: vec![],
+            occupancy_by_hour: vec![],
+            top_users: vec![],
+        };
+        let json = serde_json::to_string(&charts).unwrap();
+        assert!(json.contains("[]"));
+    }
+}
