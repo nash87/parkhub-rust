@@ -1,0 +1,5 @@
+[session]
+default_tool = "codex"
+
+[worktree]
+enabled = true
