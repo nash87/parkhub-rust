@@ -39,4 +39,53 @@ mod tests {
     fn test_html_escape_empty() {
         assert_eq!(html_escape(""), "");
     }
+
+    #[test]
+    fn test_html_escape_all_five_special_chars() {
+        // Each special character must map to its entity
+        assert_eq!(html_escape("&"), "&amp;");
+        assert_eq!(html_escape("<"), "&lt;");
+        assert_eq!(html_escape(">"), "&gt;");
+        assert_eq!(html_escape("\""), "&quot;");
+        assert_eq!(html_escape("'"), "&#x27;");
+    }
+
+    #[test]
+    fn test_html_escape_no_special_chars() {
+        // Plain alphanumerics and spaces are unchanged
+        assert_eq!(html_escape("Hello World 123"), "Hello World 123");
+    }
+
+    #[test]
+    fn test_html_escape_multiple_consecutive_specials() {
+        assert_eq!(html_escape("&&"), "&amp;&amp;");
+        assert_eq!(html_escape("<<"), "&lt;&lt;");
+    }
+
+    #[test]
+    fn test_html_escape_mixed_content() {
+        // Realistic HTML injection attempt
+        let input = "<img src=x onerror=\"alert('xss')\">";
+        let out = html_escape(input);
+        assert!(!out.contains('<'));
+        assert!(!out.contains('>'));
+        assert!(!out.contains('"'));
+        assert!(!out.contains('\''));
+        assert!(out.contains("&lt;img"));
+        assert!(out.contains("&quot;"));
+        assert!(out.contains("&#x27;"));
+    }
+
+    #[test]
+    fn test_html_escape_unicode_passthrough() {
+        // Non-ASCII characters must be preserved as-is
+        let input = "Ünïcödé ñ 日本語";
+        assert_eq!(html_escape(input), input);
+    }
+
+    #[test]
+    fn test_html_escape_preserves_newlines_and_tabs() {
+        assert_eq!(html_escape("line1\nline2"), "line1\nline2");
+        assert_eq!(html_escape("col1\tcol2"), "col1\tcol2");
+    }
 }

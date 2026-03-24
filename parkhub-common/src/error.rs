@@ -84,3 +84,165 @@ pub mod error_codes {
     pub const INVALID_INPUT: &str = "INVALID_INPUT";
     pub const INTERNAL_ERROR: &str = "INTERNAL_ERROR";
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── Display / error message tests ────────────────────────────────────────
+
+    #[test]
+    fn test_display_invalid_credentials() {
+        assert_eq!(
+            ParkHubError::InvalidCredentials.to_string(),
+            "Invalid credentials"
+        );
+    }
+
+    #[test]
+    fn test_display_token_expired() {
+        assert_eq!(ParkHubError::TokenExpired.to_string(), "Token expired");
+    }
+
+    #[test]
+    fn test_display_unauthorized() {
+        assert_eq!(
+            ParkHubError::Unauthorized.to_string(),
+            "Unauthorized access"
+        );
+    }
+
+    #[test]
+    fn test_display_user_not_found() {
+        let err = ParkHubError::UserNotFound("alice".to_string());
+        assert_eq!(err.to_string(), "User not found: alice");
+    }
+
+    #[test]
+    fn test_display_slot_not_available() {
+        assert_eq!(
+            ParkHubError::SlotNotAvailable.to_string(),
+            "Slot not available"
+        );
+    }
+
+    #[test]
+    fn test_display_booking_not_found() {
+        let err = ParkHubError::BookingNotFound("b-42".to_string());
+        assert_eq!(err.to_string(), "Booking not found: b-42");
+    }
+
+    #[test]
+    fn test_display_booking_conflict() {
+        assert_eq!(
+            ParkHubError::BookingConflict.to_string(),
+            "Booking conflict: slot already booked for this time"
+        );
+    }
+
+    #[test]
+    fn test_display_invalid_booking_time() {
+        let err = ParkHubError::InvalidBookingTime("past date".to_string());
+        assert_eq!(err.to_string(), "Invalid booking time: past date");
+    }
+
+    #[test]
+    fn test_display_database() {
+        let err = ParkHubError::Database("connection refused".to_string());
+        assert_eq!(err.to_string(), "Database error: connection refused");
+    }
+
+    #[test]
+    fn test_display_connection() {
+        let err = ParkHubError::Connection("timeout".to_string());
+        assert_eq!(err.to_string(), "Connection error: timeout");
+    }
+
+    #[test]
+    fn test_display_server_not_found() {
+        assert_eq!(ParkHubError::ServerNotFound.to_string(), "Server not found");
+    }
+
+    #[test]
+    fn test_display_protocol_mismatch() {
+        let err = ParkHubError::ProtocolMismatch {
+            expected: "1.0.0".to_string(),
+            actual: "2.0.0".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "Protocol version mismatch: expected 1.0.0, got 2.0.0"
+        );
+    }
+
+    #[test]
+    fn test_display_config() {
+        let err = ParkHubError::Config("missing key".to_string());
+        assert_eq!(err.to_string(), "Configuration error: missing key");
+    }
+
+    #[test]
+    fn test_display_server_not_configured() {
+        assert_eq!(
+            ParkHubError::ServerNotConfigured.to_string(),
+            "Server not configured"
+        );
+    }
+
+    #[test]
+    fn test_display_not_found() {
+        let err = ParkHubError::NotFound("resource X".to_string());
+        assert_eq!(err.to_string(), "Not found: resource X");
+    }
+
+    #[test]
+    fn test_display_invalid_input() {
+        let err = ParkHubError::InvalidInput("bad value".to_string());
+        assert_eq!(err.to_string(), "Invalid input: bad value");
+    }
+
+    #[test]
+    fn test_display_internal() {
+        let err = ParkHubError::Internal("unexpected panic".to_string());
+        assert_eq!(err.to_string(), "Internal error: unexpected panic");
+    }
+
+    // ── Debug trait sanity ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_debug_implements() {
+        let err = ParkHubError::Unauthorized;
+        assert!(!format!("{err:?}").is_empty());
+    }
+
+    // ── error_codes constants ────────────────────────────────────────────────
+
+    #[test]
+    fn test_error_codes_values() {
+        assert_eq!(error_codes::INVALID_CREDENTIALS, "INVALID_CREDENTIALS");
+        assert_eq!(error_codes::TOKEN_EXPIRED, "TOKEN_EXPIRED");
+        assert_eq!(error_codes::UNAUTHORIZED, "UNAUTHORIZED");
+        assert_eq!(error_codes::USER_NOT_FOUND, "USER_NOT_FOUND");
+        assert_eq!(error_codes::SLOT_NOT_AVAILABLE, "SLOT_NOT_AVAILABLE");
+        assert_eq!(error_codes::BOOKING_NOT_FOUND, "BOOKING_NOT_FOUND");
+        assert_eq!(error_codes::BOOKING_CONFLICT, "BOOKING_CONFLICT");
+        assert_eq!(error_codes::INVALID_BOOKING_TIME, "INVALID_BOOKING_TIME");
+        assert_eq!(error_codes::DATABASE_ERROR, "DATABASE_ERROR");
+        assert_eq!(error_codes::CONNECTION_ERROR, "CONNECTION_ERROR");
+        assert_eq!(error_codes::SERVER_NOT_FOUND, "SERVER_NOT_FOUND");
+        assert_eq!(error_codes::PROTOCOL_MISMATCH, "PROTOCOL_MISMATCH");
+        assert_eq!(error_codes::CONFIG_ERROR, "CONFIG_ERROR");
+        assert_eq!(error_codes::NOT_FOUND, "NOT_FOUND");
+        assert_eq!(error_codes::INVALID_INPUT, "INVALID_INPUT");
+        assert_eq!(error_codes::INTERNAL_ERROR, "INTERNAL_ERROR");
+    }
+
+    // ── std::error::Error implementation ────────────────────────────────────
+
+    #[test]
+    fn test_std_error_source_is_none() {
+        use std::error::Error;
+        let err = ParkHubError::InvalidCredentials;
+        assert!(err.source().is_none());
+    }
+}
