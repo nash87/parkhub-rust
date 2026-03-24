@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { CommandPalette } from './CommandPalette';
+import { NotificationCenter } from './NotificationCenter';
 import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
@@ -224,13 +225,16 @@ export function Layout() {
                 <span className="font-bold text-surface-900 dark:text-white">ParkHub</span>
               </div>
             </div>
-            <button
-              onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
-              className="btn btn-ghost btn-icon"
-              aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
-            >
-              {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
-            </button>
+            <div className="flex items-center gap-1">
+              <NotificationCenter />
+              <button
+                onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+                className="btn btn-ghost btn-icon"
+                aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
+              >
+                {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -319,7 +323,11 @@ export function Layout() {
         </AnimatePresence>
 
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full">
-          <Breadcrumb />
+          <div className="hidden lg:flex justify-between items-center mb-2">
+            <Breadcrumb />
+            <NotificationCenter />
+          </div>
+          <div className="lg:hidden"><Breadcrumb /></div>
           <Outlet />
         </main>
       </div>

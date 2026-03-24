@@ -125,6 +125,8 @@ pub mod maintenance;
 #[cfg(feature = "mod-map")]
 pub mod map;
 pub mod misc;
+#[cfg(feature = "mod-notification-center")]
+pub mod notification_center;
 #[cfg(feature = "mod-notifications")]
 pub mod notification_channels;
 #[cfg(feature = "mod-notifications")]
@@ -249,6 +251,10 @@ use import::import_users_csv;
 use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_pricing, get_lot_slots,
     list_lots, update_lot, update_lot_pricing, update_slot,
+};
+#[cfg(feature = "mod-notification-center")]
+use notification_center::{
+    delete_notification, list_center_notifications, mark_all_read, unread_count,
 };
 #[cfg(feature = "mod-notifications")]
 use notifications::{list_notifications, mark_all_notifications_read, mark_notification_read};
@@ -534,6 +540,10 @@ async fn list_module_features() -> impl IntoResponse {
     modules.insert(
         "webhooks-v2".into(),
         cfg!(feature = "mod-webhooks-v2").into(),
+    );
+    modules.insert(
+        "notification-center".into(),
+        cfg!(feature = "mod-notification-center").into(),
     );
 
     Json(serde_json::json!({
@@ -1554,6 +1564,28 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             .route(
                 "/api/v1/notifications/read-all",
                 post(mark_all_notifications_read),
+            );
+    }
+
+    #[cfg(feature = "mod-notification-center")]
+    {
+        // Smart Notification Center (enhanced notification hub)
+        protected_routes = protected_routes
+            .route(
+                "/api/v1/notifications/center",
+                get(list_center_notifications),
+            )
+            .route(
+                "/api/v1/notifications/unread-count",
+                get(unread_count),
+            )
+            .route(
+                "/api/v1/notifications/center/read-all",
+                put(mark_all_read),
+            )
+            .route(
+                "/api/v1/notifications/center/{id}",
+                delete(delete_notification),
             );
     }
 

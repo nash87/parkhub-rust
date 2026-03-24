@@ -182,6 +182,7 @@ full = [
     "mod-rbac",
     "mod-audit-export",
     "mod-parking-zones",
+    "mod-notification-center",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -254,6 +255,7 @@ mod-enhanced-pwa = []
 mod-rbac = []
 mod-audit-export = []
 mod-parking-zones = []
+mod-notification-center = []
 
 [dev-dependencies]
 tempfile = "3"
