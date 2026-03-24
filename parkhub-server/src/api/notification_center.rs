@@ -198,7 +198,10 @@ pub async fn list_center_notifications(
             tracing::error!("Failed to list notifications: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list notifications")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list notifications",
+                )),
             );
         }
     };
@@ -233,9 +236,13 @@ pub async fn list_center_notifications(
     };
 
     // Apply type filter
-    let filtered: Vec<&CenterNotification> = if let Some(ref type_filter) = query.notification_type {
+    let filtered: Vec<&CenterNotification> = if let Some(ref type_filter) = query.notification_type
+    {
         let parsed = parse_notification_type(type_filter);
-        filtered.into_iter().filter(|n| n.notification_type == parsed).collect()
+        filtered
+            .into_iter()
+            .filter(|n| n.notification_type == parsed)
+            .collect()
     } else {
         filtered
     };
@@ -293,7 +300,10 @@ pub async fn unread_count(
             tracing::error!("Failed to count unread notifications: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to count notifications")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to count notifications",
+                )),
             )
         }
     }
@@ -344,7 +354,10 @@ pub async fn delete_notification(
             tracing::error!("Failed to delete notification: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to delete notification")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to delete notification",
+                )),
             )
         }
     }
@@ -370,7 +383,10 @@ pub async fn mark_all_read(
             tracing::error!("Failed to list notifications: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to mark all read")),
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to mark all read",
+                )),
             );
         }
     };
@@ -378,7 +394,11 @@ pub async fn mark_all_read(
     let mut marked = 0usize;
     for notif in &notifications {
         if !notif.read {
-            if let Ok(true) = state_guard.db.mark_notification_read(&notif.id.to_string()).await {
+            if let Ok(true) = state_guard
+                .db
+                .mark_notification_read(&notif.id.to_string())
+                .await
+            {
                 marked += 1;
             }
         }
@@ -440,14 +460,38 @@ mod tests {
 
     #[test]
     fn test_notification_type_display_names() {
-        assert_eq!(NotificationType::BookingConfirmed.display_name(), "Booking Confirmed");
-        assert_eq!(NotificationType::BookingCancelled.display_name(), "Booking Cancelled");
-        assert_eq!(NotificationType::BookingReminder.display_name(), "Booking Reminder");
-        assert_eq!(NotificationType::WaitlistOffer.display_name(), "Waitlist Offer");
-        assert_eq!(NotificationType::MaintenanceAlert.display_name(), "Maintenance Alert");
-        assert_eq!(NotificationType::SystemAnnouncement.display_name(), "System Announcement");
-        assert_eq!(NotificationType::PaymentReceived.display_name(), "Payment Received");
-        assert_eq!(NotificationType::VisitorArrived.display_name(), "Visitor Arrived");
+        assert_eq!(
+            NotificationType::BookingConfirmed.display_name(),
+            "Booking Confirmed"
+        );
+        assert_eq!(
+            NotificationType::BookingCancelled.display_name(),
+            "Booking Cancelled"
+        );
+        assert_eq!(
+            NotificationType::BookingReminder.display_name(),
+            "Booking Reminder"
+        );
+        assert_eq!(
+            NotificationType::WaitlistOffer.display_name(),
+            "Waitlist Offer"
+        );
+        assert_eq!(
+            NotificationType::MaintenanceAlert.display_name(),
+            "Maintenance Alert"
+        );
+        assert_eq!(
+            NotificationType::SystemAnnouncement.display_name(),
+            "System Announcement"
+        );
+        assert_eq!(
+            NotificationType::PaymentReceived.display_name(),
+            "Payment Received"
+        );
+        assert_eq!(
+            NotificationType::VisitorArrived.display_name(),
+            "Visitor Arrived"
+        );
     }
 
     #[test]
@@ -476,9 +520,14 @@ mod tests {
     #[test]
     fn test_all_types_deserialize() {
         let types = [
-            "booking_confirmed", "booking_cancelled", "booking_reminder",
-            "waitlist_offer", "maintenance_alert", "system_announcement",
-            "payment_received", "visitor_arrived",
+            "booking_confirmed",
+            "booking_cancelled",
+            "booking_reminder",
+            "waitlist_offer",
+            "maintenance_alert",
+            "system_announcement",
+            "payment_received",
+            "visitor_arrived",
         ];
         for t in types {
             let json = format!("\"{}\"", t);
@@ -488,18 +537,42 @@ mod tests {
 
     #[test]
     fn test_parse_notification_type_booking() {
-        assert_eq!(parse_notification_type("Booking Confirmed"), NotificationType::BookingConfirmed);
-        assert_eq!(parse_notification_type("Your booking was cancelled"), NotificationType::BookingCancelled);
-        assert_eq!(parse_notification_type("Reminder: parking tomorrow"), NotificationType::BookingReminder);
+        assert_eq!(
+            parse_notification_type("Booking Confirmed"),
+            NotificationType::BookingConfirmed
+        );
+        assert_eq!(
+            parse_notification_type("Your booking was cancelled"),
+            NotificationType::BookingCancelled
+        );
+        assert_eq!(
+            parse_notification_type("Reminder: parking tomorrow"),
+            NotificationType::BookingReminder
+        );
     }
 
     #[test]
     fn test_parse_notification_type_other() {
-        assert_eq!(parse_notification_type("Waitlist offer available"), NotificationType::WaitlistOffer);
-        assert_eq!(parse_notification_type("Maintenance scheduled"), NotificationType::MaintenanceAlert);
-        assert_eq!(parse_notification_type("Payment received"), NotificationType::PaymentReceived);
-        assert_eq!(parse_notification_type("Visitor arrived at lot"), NotificationType::VisitorArrived);
-        assert_eq!(parse_notification_type("General update"), NotificationType::SystemAnnouncement);
+        assert_eq!(
+            parse_notification_type("Waitlist offer available"),
+            NotificationType::WaitlistOffer
+        );
+        assert_eq!(
+            parse_notification_type("Maintenance scheduled"),
+            NotificationType::MaintenanceAlert
+        );
+        assert_eq!(
+            parse_notification_type("Payment received"),
+            NotificationType::PaymentReceived
+        );
+        assert_eq!(
+            parse_notification_type("Visitor arrived at lot"),
+            NotificationType::VisitorArrived
+        );
+        assert_eq!(
+            parse_notification_type("General update"),
+            NotificationType::SystemAnnouncement
+        );
     }
 
     #[test]

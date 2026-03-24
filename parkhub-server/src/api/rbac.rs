@@ -41,13 +41,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
 ];
 
 /// Built-in role names that cannot be deleted.
-pub const BUILT_IN_ROLES: &[&str] = &[
-    "super_admin",
-    "admin",
-    "manager",
-    "user",
-    "viewer",
-];
+pub const BUILT_IN_ROLES: &[&str] = &["super_admin", "admin", "manager", "user", "viewer"];
 
 /// A role definition with associated permissions.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,7 +104,9 @@ pub fn default_roles() -> Vec<RbacRole> {
         RbacRole {
             id: Uuid::new_v4(),
             name: "super_admin".to_string(),
-            description: Some("Full system access including user management and settings".to_string()),
+            description: Some(
+                "Full system access including user management and settings".to_string(),
+            ),
             permissions: ALL_PERMISSIONS.iter().map(|s| (*s).to_string()).collect(),
             built_in: true,
             created_at: now,
@@ -134,10 +130,7 @@ pub fn default_roles() -> Vec<RbacRole> {
             id: Uuid::new_v4(),
             name: "manager".to_string(),
             description: Some("Manage bookings and view reports".to_string()),
-            permissions: vec![
-                "manage_bookings".to_string(),
-                "view_reports".to_string(),
-            ],
+            permissions: vec!["manage_bookings".to_string(), "view_reports".to_string()],
             built_in: true,
             created_at: now,
             updated_at: now,
@@ -174,14 +167,20 @@ pub fn validate_permissions(permissions: &[String]) -> Option<String> {
     } else {
         Some(format!(
             "Unknown permissions: {}",
-            unknown.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+            unknown
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
         ))
     }
 }
 
 /// Check if a user has the required permission via their RBAC roles.
 pub fn has_permission(roles: &[RbacRole], permission: &str) -> bool {
-    roles.iter().any(|r| r.permissions.iter().any(|p| p == permission))
+    roles
+        .iter()
+        .any(|r| r.permissions.iter().any(|p| p == permission))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -275,12 +274,19 @@ pub async fn create_role(
     let state_guard = state.read().await;
 
     // SuperAdmin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
                 StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Super-admin access required")),
+                Json(ApiResponse::error(
+                    "FORBIDDEN",
+                    "Super-admin access required",
+                )),
             );
         }
     }
@@ -305,7 +311,10 @@ pub async fn create_role(
     if roles.iter().any(|r| r.name.eq_ignore_ascii_case(&req.name)) {
         return (
             StatusCode::CONFLICT,
-            Json(ApiResponse::error("DUPLICATE_NAME", "A role with this name already exists")),
+            Json(ApiResponse::error(
+                "DUPLICATE_NAME",
+                "A role with this name already exists",
+            )),
         );
     }
 
@@ -365,12 +374,19 @@ pub async fn update_role(
     let state_guard = state.read().await;
 
     // SuperAdmin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
                 StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Super-admin access required")),
+                Json(ApiResponse::error(
+                    "FORBIDDEN",
+                    "Super-admin access required",
+                )),
             );
         }
     }
@@ -456,12 +472,19 @@ pub async fn delete_role(
     let state_guard = state.read().await;
 
     // SuperAdmin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
                 StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Super-admin access required")),
+                Json(ApiResponse::error(
+                    "FORBIDDEN",
+                    "Super-admin access required",
+                )),
             );
         }
     }
@@ -487,7 +510,10 @@ pub async fn delete_role(
     if roles[idx].built_in {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("BUILT_IN", "Cannot delete built-in roles")),
+            Json(ApiResponse::error(
+                "BUILT_IN",
+                "Cannot delete built-in roles",
+            )),
         );
     }
 
@@ -599,12 +625,19 @@ pub async fn assign_user_roles(
     let state_guard = state.read().await;
 
     // SuperAdmin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
                 StatusCode::FORBIDDEN,
-                Json(ApiResponse::error("FORBIDDEN", "Super-admin access required")),
+                Json(ApiResponse::error(
+                    "FORBIDDEN",
+                    "Super-admin access required",
+                )),
             );
         }
     }
@@ -671,7 +704,11 @@ pub async fn assign_user_roles(
     let role_names: Vec<_> = assigned.iter().map(|r| r.name.as_str()).collect();
     AuditEntry::new(AuditEventType::ConfigChanged)
         .user(auth_user.user_id, "admin")
-        .detail(&format!("rbac_roles_assigned:{}:{}", user_id, role_names.join(",")))
+        .detail(&format!(
+            "rbac_roles_assigned:{}:{}",
+            user_id,
+            role_names.join(",")
+        ))
         .log()
         .persist(&state_guard.db)
         .await;
@@ -796,14 +833,22 @@ mod tests {
     #[test]
     fn test_has_permission_true() {
         let roles = default_roles();
-        let admin_roles: Vec<_> = roles.iter().filter(|r| r.name == "admin").cloned().collect();
+        let admin_roles: Vec<_> = roles
+            .iter()
+            .filter(|r| r.name == "admin")
+            .cloned()
+            .collect();
         assert!(has_permission(&admin_roles, "manage_lots"));
     }
 
     #[test]
     fn test_has_permission_false() {
         let roles = default_roles();
-        let viewer_roles: Vec<_> = roles.iter().filter(|r| r.name == "viewer").cloned().collect();
+        let viewer_roles: Vec<_> = roles
+            .iter()
+            .filter(|r| r.name == "viewer")
+            .cloned()
+            .collect();
         assert!(!has_permission(&viewer_roles, "manage_users"));
     }
 

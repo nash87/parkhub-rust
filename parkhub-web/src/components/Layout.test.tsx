@@ -93,33 +93,39 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
-vi.mock('@phosphor-icons/react', () => ({
-  House: (props: any) => <span data-testid="icon-house" {...props} />,
-  CalendarCheck: (props: any) => <span data-testid="icon-calendar-check" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  Calendar: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  CalendarX: (props: any) => <span data-testid="icon-calendar-x" {...props} />,
-  Coins: (props: any) => <span data-testid="icon-coins" {...props} />,
-  UserCircle: (props: any) => <span data-testid="icon-user" {...props} />,
-  Users: (props: any) => <span data-testid="icon-users" {...props} />,
-  Bell: (props: any) => <span data-testid="icon-bell" {...props} />,
-  GearSix: (props: any) => <span data-testid="icon-gear" {...props} />,
-  SignOut: (props: any) => <span data-testid="icon-signout" {...props} />,
-  List: (props: any) => <span data-testid="icon-list" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  CarSimple: (props: any) => <span data-testid="icon-car-simple" {...props} />,
-  SunDim: (props: any) => <span data-testid="icon-sun" {...props} />,
-  Moon: (props: any) => <span data-testid="icon-moon" {...props} />,
-  CalendarPlus: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
-  Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
-  Star: (props: any) => <span data-testid="icon-star" {...props} />,
-  Palette: (props: any) => <span data-testid="icon-palette" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  Globe: (props: any) => <span data-testid="icon-globe" {...props} />,
-  CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
-  MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
-  ClockCounterClockwise: (props: any) => <span data-testid="icon-history" {...props} />,
-}));
+vi.mock('@phosphor-icons/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@phosphor-icons/react')>();
+  const icon = (props: any) => <span {...props} />;
+  return {
+    ...actual,
+    House: icon,
+    CalendarCheck: icon,
+    Car: icon,
+    Calendar: icon,
+    CalendarX: icon,
+    Coins: icon,
+    UserCircle: icon,
+    Users: icon,
+    Bell: icon,
+    GearSix: icon,
+    SignOut: icon,
+    List: icon,
+    X: icon,
+    CarSimple: icon,
+    SunDim: icon,
+    Moon: icon,
+    CalendarPlus: icon,
+    Translate: icon,
+    Star: icon,
+    Palette: icon,
+    Check: icon,
+    CheckCircle: icon,
+    Globe: icon,
+    CaretDown: icon,
+    MapPin: icon,
+    ClockCounterClockwise: icon,
+  };
+});
 
 import { Layout } from './Layout';
 

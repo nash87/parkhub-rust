@@ -318,10 +318,7 @@ mod tests {
             AppError::BookingNotModifiable.code(),
             "BOOKING_NOT_MODIFIABLE"
         );
-        assert_eq!(
-            AppError::InvalidBookingTime.code(),
-            "INVALID_BOOKING_TIME"
-        );
+        assert_eq!(AppError::InvalidBookingTime.code(), "INVALID_BOOKING_TIME");
         assert_eq!(AppError::RateLimited.code(), "RATE_LIMITED");
         assert_eq!(AppError::Database("e".into()).code(), "DATABASE_ERROR");
         assert_eq!(AppError::Internal.code(), "INTERNAL_ERROR");
@@ -365,7 +362,10 @@ mod tests {
 
     #[test]
     fn test_error_display_messages() {
-        assert_eq!(AppError::InvalidCredentials.to_string(), "Invalid credentials");
+        assert_eq!(
+            AppError::InvalidCredentials.to_string(),
+            "Invalid credentials"
+        );
         assert_eq!(AppError::TokenExpired.to_string(), "Token expired");
         assert_eq!(AppError::Unauthorized.to_string(), "Unauthorized");
         assert_eq!(AppError::Forbidden.to_string(), "Forbidden");
@@ -406,7 +406,10 @@ mod tests {
         let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json["code"], "CONFLICT");
-        assert!(json["message"].as_str().unwrap().contains("booking overlap"));
+        assert!(json["message"]
+            .as_str()
+            .unwrap()
+            .contains("booking overlap"));
     }
 
     #[tokio::test]

@@ -58,10 +58,10 @@ impl PricingTier {
 
     pub const fn default_color(self) -> &'static str {
         match self {
-            Self::Economy => "#22c55e",   // green
-            Self::Standard => "#3b82f6",  // blue
-            Self::Premium => "#eab308",   // gold
-            Self::Vip => "#a855f7",       // purple
+            Self::Economy => "#22c55e",  // green
+            Self::Standard => "#3b82f6", // blue
+            Self::Premium => "#eab308",  // gold
+            Self::Vip => "#a855f7",      // purple
         }
     }
 }
@@ -127,7 +127,11 @@ async fn load_pricing(state: &crate::AppState) -> Vec<ZonePricing> {
 
 async fn save_pricing(state: &crate::AppState, pricing: &[ZonePricing]) -> Result<(), String> {
     let json = serde_json::to_string(pricing).map_err(|e| e.to_string())?;
-    state.db.set_setting(ZONE_PRICING_KEY, &json).await.map_err(|e| e.to_string())
+    state
+        .db
+        .set_setting(ZONE_PRICING_KEY, &json)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,7 +172,8 @@ pub async fn list_zones_pricing(
         .map(|z| {
             let zone_pricing = pricing.iter().find(|p| p.zone_id == z.id);
             let tier = zone_pricing.map_or(PricingTier::Standard, |p| p.tier);
-            let multiplier = zone_pricing.map_or(tier.default_multiplier(), |p| p.pricing_multiplier);
+            let multiplier =
+                zone_pricing.map_or(tier.default_multiplier(), |p| p.pricing_multiplier);
             let capacity = zone_pricing.and_then(|p| p.max_capacity);
 
             ZoneWithPricing {
@@ -213,7 +218,11 @@ pub async fn set_zone_pricing(
     let state_guard = state.read().await;
 
     // Admin check
-    match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) if u.role == UserRole::Admin || u.role == UserRole::SuperAdmin => {}
         _ => {
             return (
@@ -233,12 +242,17 @@ pub async fn set_zone_pricing(
         }
     };
 
-    let multiplier = req.pricing_multiplier.unwrap_or_else(|| req.tier.default_multiplier());
+    let multiplier = req
+        .pricing_multiplier
+        .unwrap_or_else(|| req.tier.default_multiplier());
 
     if multiplier <= 0.0 {
         return (
             StatusCode::BAD_REQUEST,
-            Json(ApiResponse::error("INVALID_MULTIPLIER", "Pricing multiplier must be positive")),
+            Json(ApiResponse::error(
+                "INVALID_MULTIPLIER",
+                "Pricing multiplier must be positive",
+            )),
         );
     }
 
@@ -451,8 +465,12 @@ mod tests {
 
     #[test]
     fn test_multiplier_ordering() {
-        assert!(PricingTier::Economy.default_multiplier() < PricingTier::Standard.default_multiplier());
-        assert!(PricingTier::Standard.default_multiplier() < PricingTier::Premium.default_multiplier());
+        assert!(
+            PricingTier::Economy.default_multiplier() < PricingTier::Standard.default_multiplier()
+        );
+        assert!(
+            PricingTier::Standard.default_multiplier() < PricingTier::Premium.default_multiplier()
+        );
         assert!(PricingTier::Premium.default_multiplier() < PricingTier::Vip.default_multiplier());
     }
 }

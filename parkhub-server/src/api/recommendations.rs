@@ -38,7 +38,7 @@ pub struct SlotRecommendation {
 }
 
 /// Recommendation reason badge for the frontend
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RecommendationBadge {
     YourUsualSpot,
@@ -248,7 +248,7 @@ pub async fn get_recommendation_stats(
     // Aggregate stats from booking data
     let users = state_guard.db.list_users().await.unwrap_or_default();
     let lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
-    let bookings = state_guard.db.list_all_bookings().await.unwrap_or_default();
+    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
 
     let mut lot_counts: HashMap<Uuid, i32> = HashMap::new();
     for b in &bookings {
@@ -377,7 +377,7 @@ mod tests {
         let max_price_score = 20.0;
         let max_distance_score = 10.0;
         let max_frequency_score = 40.0;
-        let total_max =
+        let total_max: f64 =
             availability_score + max_price_score + max_distance_score + max_frequency_score;
         assert!((total_max - 100.0).abs() < 0.01);
     }

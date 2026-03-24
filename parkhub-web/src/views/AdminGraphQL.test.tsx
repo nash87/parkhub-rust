@@ -40,15 +40,36 @@ vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
-vi.mock('@phosphor-icons/react', () => {
+vi.mock('@phosphor-icons/react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@phosphor-icons/react')>();
   const icon = (props: any) => <span {...props} />;
   return {
-    ChartBar: icon, GearSix: icon, Users: icon, Megaphone: icon,
-    ChartLine: icon, MapPin: icon, Translate: icon, PresentationChart: icon,
-    Gauge: icon, Buildings: icon, ClockCounterClockwise: icon, Database: icon,
-    Car: icon, Wheelchair: icon, Wrench: icon, CurrencyDollar: icon,
-    UserPlus: icon, Lightning: icon, PuzzlePiece: icon, GraphicsCard: icon,
+    ...actual,
+    ChartBar: icon,
+    GearSix: icon,
+    Users: icon,
+    Megaphone: icon,
+    ChartLine: icon,
+    MapPin: icon,
+    Translate: icon,
+    PresentationChart: icon,
+    Gauge: icon,
+    Buildings: icon,
+    ClockCounterClockwise: icon,
+    Database: icon,
+    Car: icon,
+    Wheelchair: icon,
+    Wrench: icon,
+    CurrencyDollar: icon,
+    UserPlus: icon,
+    Lightning: icon,
+    PuzzlePiece: icon,
+    GraphicsCard: icon,
     ShieldCheck: icon,
+    LockKey: icon,
+    MapTrifold: icon,
+    Clock: icon,
+    WebhooksLogo: icon,
   };
 });
 

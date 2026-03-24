@@ -563,7 +563,12 @@ pub async fn review_proposal(
 mod tests {
     use super::*;
 
-    fn make_proposal(lang: &str, key: &str, value: &str, context: Option<&str>) -> CreateProposalRequest {
+    fn make_proposal(
+        lang: &str,
+        key: &str,
+        value: &str,
+        context: Option<&str>,
+    ) -> CreateProposalRequest {
         CreateProposalRequest {
             language: lang.to_string(),
             key: key.to_string(),

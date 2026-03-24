@@ -9,7 +9,7 @@ use chrono::Utc;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use parkhub_common::models::WaitlistEntry;
+use parkhub_common::models::{WaitlistEntry, WaitlistStatus};
 use parkhub_common::ApiResponse;
 
 use super::settings::read_admin_setting;
@@ -91,6 +91,9 @@ pub async fn join_waitlist(
         lot_id: req.lot_id,
         created_at: Utc::now(),
         notified_at: None,
+        status: WaitlistStatus::Waiting,
+        offer_expires_at: None,
+        accepted_booking_id: None,
     };
 
     if let Err(e) = state_guard.db.save_waitlist_entry(&entry).await {

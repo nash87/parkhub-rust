@@ -102,7 +102,10 @@ mod tests {
 
     #[test]
     fn display_unauthorized() {
-        assert_eq!(ParkHubError::Unauthorized.to_string(), "Unauthorized access");
+        assert_eq!(
+            ParkHubError::Unauthorized.to_string(),
+            "Unauthorized access"
+        );
     }
 
     #[test]
@@ -153,10 +156,7 @@ mod tests {
 
     #[test]
     fn display_server_not_found() {
-        assert_eq!(
-            ParkHubError::ServerNotFound.to_string(),
-            "Server not found"
-        );
+        assert_eq!(ParkHubError::ServerNotFound.to_string(), "Server not found");
     }
 
     #[test]
@@ -260,8 +260,7 @@ mod tests {
 
     #[test]
     fn parkhub_error_implements_std_error() {
-        let err: Box<dyn std::error::Error> =
-            Box::new(ParkHubError::Internal("test".into()));
+        let err: Box<dyn std::error::Error> = Box::new(ParkHubError::Internal("test".into()));
         assert!(!err.to_string().is_empty());
     }
 }
