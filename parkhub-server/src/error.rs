@@ -297,4 +297,156 @@ mod tests {
         assert!(json["details"].is_array());
         assert_eq!(json["details"][0]["field"], "email");
     }
+
+    // ── Full code() coverage for all variants ────────────────────────────────
+
+    #[test]
+    fn test_all_error_codes() {
+        assert_eq!(AppError::InvalidCredentials.code(), "INVALID_CREDENTIALS");
+        assert_eq!(AppError::TokenExpired.code(), "TOKEN_EXPIRED");
+        assert_eq!(AppError::InvalidToken.code(), "INVALID_TOKEN");
+        assert_eq!(AppError::Unauthorized.code(), "UNAUTHORIZED");
+        assert_eq!(AppError::Forbidden.code(), "FORBIDDEN");
+        assert_eq!(
+            AppError::ValidationFailed(vec![]).code(),
+            "VALIDATION_FAILED"
+        );
+        assert_eq!(AppError::InvalidInput("x".into()).code(), "INVALID_INPUT");
+        assert_eq!(AppError::NotFound("x".into()).code(), "NOT_FOUND");
+        assert_eq!(AppError::AlreadyExists("x".into()).code(), "ALREADY_EXISTS");
+        assert_eq!(AppError::Conflict("x".into()).code(), "CONFLICT");
+        assert_eq!(AppError::SlotNotAvailable.code(), "SLOT_NOT_AVAILABLE");
+        assert_eq!(
+            AppError::BookingNotModifiable.code(),
+            "BOOKING_NOT_MODIFIABLE"
+        );
+        assert_eq!(
+            AppError::InvalidBookingTime.code(),
+            "INVALID_BOOKING_TIME"
+        );
+        assert_eq!(AppError::RateLimited.code(), "RATE_LIMITED");
+        assert_eq!(AppError::Database("x".into()).code(), "DATABASE_ERROR");
+        assert_eq!(AppError::Internal.code(), "INTERNAL_ERROR");
+    }
+
+    // ── Full status_code() coverage for all variants ─────────────────────────
+
+    #[test]
+    fn test_all_status_codes() {
+        assert_eq!(
+            AppError::TokenExpired.status_code(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            AppError::InvalidToken.status_code(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            AppError::SlotNotAvailable.status_code(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        assert_eq!(
+            AppError::BookingNotModifiable.status_code(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        assert_eq!(
+            AppError::InvalidBookingTime.status_code(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        assert_eq!(
+            AppError::Conflict("x".into()).status_code(),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            AppError::ValidationFailed(vec![]).status_code(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+
+    // ── From<serde_json::Error> ───────────────────────────────────────────────
+
+    #[test]
+    fn test_from_serde_json_error() {
+        let json_err = serde_json::from_str::<serde_json::Value>("{invalid}").unwrap_err();
+        let app_err = AppError::from(json_err);
+        assert_eq!(app_err.code(), "INVALID_INPUT");
+        assert_eq!(app_err.status_code(), StatusCode::BAD_REQUEST);
+    }
+
+    // ── IntoResponse for remaining variants ──────────────────────────────────
+
+    #[tokio::test]
+    async fn test_into_response_forbidden() {
+        let err = AppError::Forbidden;
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "FORBIDDEN");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_rate_limited() {
+        let err = AppError::RateLimited;
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "RATE_LIMITED");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_already_exists() {
+        let err = AppError::AlreadyExists("user@example.com".into());
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "ALREADY_EXISTS");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_slot_not_available() {
+        let err = AppError::SlotNotAvailable;
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "SLOT_NOT_AVAILABLE");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_database_error() {
+        let err = AppError::Database("disk full".into());
+        let resp = err.into_response();
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "DATABASE_ERROR");
+    }
+
+    // ── validation_failed details absent for non-validation errors ────────────
+
+    #[tokio::test]
+    async fn test_non_validation_error_has_no_details() {
+        let err = AppError::NotFound("slot-1".into());
+        let resp = err.into_response();
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        // "details" should not be present (skipped when None)
+        assert!(json.get("details").is_none());
+    }
+
+    // ── FieldError struct ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_field_error_clone() {
+        let fe = FieldError {
+            field: "email".into(),
+            message: "required".into(),
+        };
+        let cloned = fe.clone();
+        assert_eq!(cloned.field, "email");
+        assert_eq!(cloned.message, "required");
+    }
 }

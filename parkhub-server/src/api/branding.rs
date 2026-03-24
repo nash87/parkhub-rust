@@ -383,3 +383,147 @@ pub async fn get_branding_logo(State(state): State<SharedState>) -> Response {
                 .into_response()
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── BrandingConfig serialization ─────────────────────────────────────────
+
+    #[test]
+    fn test_branding_config_roundtrip_with_logo() {
+        let cfg = BrandingConfig {
+            app_name: "MyPark".to_string(),
+            primary_color: "#ff0000".to_string(),
+            logo_url: Some("/api/v1/branding/logo".to_string()),
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let back: BrandingConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.app_name, "MyPark");
+        assert_eq!(back.primary_color, "#ff0000");
+        assert_eq!(back.logo_url, Some("/api/v1/branding/logo".to_string()));
+    }
+
+    #[test]
+    fn test_branding_config_roundtrip_no_logo() {
+        let cfg = BrandingConfig {
+            app_name: "ParkHub".to_string(),
+            primary_color: "#2563eb".to_string(),
+            logo_url: None,
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let back: BrandingConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.app_name, "ParkHub");
+        assert!(back.logo_url.is_none());
+    }
+
+    // ── BrandingUpdate deserialization ───────────────────────────────────────
+
+    #[test]
+    fn test_branding_update_all_fields() {
+        let json = r#"{"app_name":"NewName","primary_color":"#123456"}"#;
+        let update: BrandingUpdate = serde_json::from_str(json).unwrap();
+        assert_eq!(update.app_name, Some("NewName".to_string()));
+        assert_eq!(update.primary_color, Some("#123456".to_string()));
+    }
+
+    #[test]
+    fn test_branding_update_partial() {
+        let json = r#"{"app_name":"OnlyName"}"#;
+        let update: BrandingUpdate = serde_json::from_str(json).unwrap();
+        assert_eq!(update.app_name, Some("OnlyName".to_string()));
+        assert!(update.primary_color.is_none());
+    }
+
+    #[test]
+    fn test_branding_update_empty() {
+        let json = r#"{}"#;
+        let update: BrandingUpdate = serde_json::from_str(json).unwrap();
+        assert!(update.app_name.is_none());
+        assert!(update.primary_color.is_none());
+    }
+
+    // ── strip_data_uri ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_strip_data_uri_with_prefix() {
+        let input = "data:image/png;base64,iVBORw0KGgo=";
+        let stripped = strip_data_uri(input);
+        assert_eq!(stripped, "iVBORw0KGgo=");
+    }
+
+    #[test]
+    fn test_strip_data_uri_without_prefix() {
+        let raw = "iVBORw0KGgoAAAANSUhEUgAAAAUA";
+        assert_eq!(strip_data_uri(raw), raw);
+    }
+
+    #[test]
+    fn test_strip_data_uri_jpeg_prefix() {
+        let input = "data:image/jpeg;base64,/9j/4AAQSkZJRgAB";
+        let stripped = strip_data_uri(input);
+        assert_eq!(stripped, "/9j/4AAQSkZJRgAB");
+    }
+
+    #[test]
+    fn test_strip_data_uri_empty_input() {
+        assert_eq!(strip_data_uri(""), "");
+    }
+
+    // ── detect_mime ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_detect_mime_jpeg_magic() {
+        let bytes = [0xFF_u8, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+        assert_eq!(detect_mime(&bytes), Some("image/jpeg"));
+    }
+
+    #[test]
+    fn test_detect_mime_png_magic() {
+        // PNG magic: 0x89 P N G
+        let bytes = [0x89_u8, 0x50, 0x4E, 0x47, 0x0D, 0x0A];
+        assert_eq!(detect_mime(&bytes), Some("image/png"));
+    }
+
+    #[test]
+    fn test_detect_mime_unknown_returns_none() {
+        let bytes = [0x00_u8, 0x01, 0x02, 0x03];
+        assert_eq!(detect_mime(&bytes), None);
+    }
+
+    #[test]
+    fn test_detect_mime_too_short_for_jpeg() {
+        // Only 2 bytes — not enough to detect JPEG
+        let bytes = [0xFF_u8, 0xD8];
+        // 2 < 3, so should not match JPEG
+        assert_eq!(detect_mime(&bytes), None);
+    }
+
+    #[test]
+    fn test_detect_mime_too_short_for_png() {
+        // Only 3 bytes — not enough to detect PNG (needs 4)
+        let bytes = [0x89_u8, 0x50, 0x4E];
+        assert_eq!(detect_mime(&bytes), None);
+    }
+
+    #[test]
+    fn test_detect_mime_empty_slice() {
+        assert_eq!(detect_mime(&[]), None);
+    }
+
+    // ── MAX_LOGO_BYTES constant ──────────────────────────────────────────────
+
+    #[test]
+    fn test_max_logo_bytes_is_two_mib() {
+        assert_eq!(MAX_LOGO_BYTES, 2 * 1024 * 1024);
+    }
+
+    // ── LogoUpload deserialization ───────────────────────────────────────────
+
+    #[test]
+    fn test_logo_upload_roundtrip() {
+        let json = r#"{"logo":"data:image/png;base64,iVBOR="}"#;
+        let upload: LogoUpload = serde_json::from_str(json).unwrap();
+        assert!(upload.logo.starts_with("data:image/png"));
+    }
+}

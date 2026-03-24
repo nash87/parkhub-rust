@@ -1059,4 +1059,507 @@ mod tests {
         assert_eq!(request.license_plate, deserialized.license_plate);
         assert_eq!(request.notes, deserialized.notes);
     }
+
+    // ── NotificationType serialization ───────────────────────────────────────
+
+    #[test]
+    fn test_notification_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&NotificationType::BookingConfirmed).unwrap(),
+            "\"booking_confirmed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&NotificationType::BookingReminder).unwrap(),
+            "\"booking_reminder\""
+        );
+        assert_eq!(
+            serde_json::to_string(&NotificationType::WaitlistOffer).unwrap(),
+            "\"waitlist_offer\""
+        );
+        assert_eq!(
+            serde_json::to_string(&NotificationType::SystemMessage).unwrap(),
+            "\"system_message\""
+        );
+    }
+
+    // ── CreditTransactionType serialization ──────────────────────────────────
+
+    #[test]
+    fn test_credit_transaction_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&CreditTransactionType::Grant).unwrap(),
+            "\"grant\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CreditTransactionType::Deduction).unwrap(),
+            "\"deduction\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CreditTransactionType::Refund).unwrap(),
+            "\"refund\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CreditTransactionType::MonthlyRefill).unwrap(),
+            "\"monthly_refill\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CreditTransactionType::Adjustment).unwrap(),
+            "\"adjustment\""
+        );
+    }
+
+    // ── VehicleType serialization ────────────────────────────────────────────
+
+    #[test]
+    fn test_vehicle_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&VehicleType::Car).unwrap(),
+            "\"car\""
+        );
+        assert_eq!(
+            serde_json::to_string(&VehicleType::Motorcycle).unwrap(),
+            "\"motorcycle\""
+        );
+        assert_eq!(
+            serde_json::to_string(&VehicleType::Electric).unwrap(),
+            "\"electric\""
+        );
+    }
+
+    // ── PaymentStatus serialization ──────────────────────────────────────────
+
+    #[test]
+    fn test_payment_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&PaymentStatus::Paid).unwrap(),
+            "\"paid\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PaymentStatus::Failed).unwrap(),
+            "\"failed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PaymentStatus::Refunded).unwrap(),
+            "\"refunded\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PaymentStatus::PartialRefund).unwrap(),
+            "\"partial_refund\""
+        );
+    }
+
+    // ── BookingStatus full coverage ──────────────────────────────────────────
+
+    #[test]
+    fn test_booking_status_full_serialization() {
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::Confirmed).unwrap(),
+            "\"confirmed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::Expired).unwrap(),
+            "\"expired\""
+        );
+        assert_eq!(
+            serde_json::to_string(&BookingStatus::NoShow).unwrap(),
+            "\"no_show\""
+        );
+    }
+
+    // ── AbsenceType serialization ────────────────────────────────────────────
+
+    #[test]
+    fn test_absence_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&AbsenceType::Homeoffice).unwrap(),
+            "\"homeoffice\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AbsenceType::Vacation).unwrap(),
+            "\"vacation\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AbsenceType::Sick).unwrap(),
+            "\"sick\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AbsenceType::Training).unwrap(),
+            "\"training\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AbsenceType::Other).unwrap(),
+            "\"other\""
+        );
+    }
+
+    // ── WaitlistStatus serialization ─────────────────────────────────────────
+
+    #[test]
+    fn test_waitlist_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&WaitlistStatus::Waiting).unwrap(),
+            "\"waiting\""
+        );
+        assert_eq!(
+            serde_json::to_string(&WaitlistStatus::Offered).unwrap(),
+            "\"offered\""
+        );
+        assert_eq!(
+            serde_json::to_string(&WaitlistStatus::Accepted).unwrap(),
+            "\"accepted\""
+        );
+        assert_eq!(
+            serde_json::to_string(&WaitlistStatus::Declined).unwrap(),
+            "\"declined\""
+        );
+        assert_eq!(
+            serde_json::to_string(&WaitlistStatus::Expired).unwrap(),
+            "\"expired\""
+        );
+    }
+
+    #[test]
+    fn test_waitlist_status_default_is_waiting() {
+        assert_eq!(default_waitlist_status(), WaitlistStatus::Waiting);
+    }
+
+    // ── SwapRequestStatus serialization ──────────────────────────────────────
+
+    #[test]
+    fn test_swap_request_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&SwapRequestStatus::Pending).unwrap(),
+            "\"pending\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SwapRequestStatus::Accepted).unwrap(),
+            "\"accepted\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SwapRequestStatus::Declined).unwrap(),
+            "\"declined\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SwapRequestStatus::Cancelled).unwrap(),
+            "\"cancelled\""
+        );
+    }
+
+    // ── AnnouncementSeverity serialization ───────────────────────────────────
+
+    #[test]
+    fn test_announcement_severity_serialization() {
+        assert_eq!(
+            serde_json::to_string(&AnnouncementSeverity::Info).unwrap(),
+            "\"info\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AnnouncementSeverity::Warning).unwrap(),
+            "\"warning\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AnnouncementSeverity::Error).unwrap(),
+            "\"error\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AnnouncementSeverity::Success).unwrap(),
+            "\"success\""
+        );
+    }
+
+    // ── ProposalStatus serialization ─────────────────────────────────────────
+
+    #[test]
+    fn test_proposal_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&ProposalStatus::Pending).unwrap(),
+            "\"pending\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ProposalStatus::Approved).unwrap(),
+            "\"approved\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ProposalStatus::Rejected).unwrap(),
+            "\"rejected\""
+        );
+    }
+
+    // ── VisitorStatus serialization ───────────────────────────────────────────
+
+    #[test]
+    fn test_visitor_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&VisitorStatus::Pending).unwrap(),
+            "\"pending\""
+        );
+        assert_eq!(
+            serde_json::to_string(&VisitorStatus::CheckedIn).unwrap(),
+            "\"checked_in\""
+        );
+        assert_eq!(
+            serde_json::to_string(&VisitorStatus::Expired).unwrap(),
+            "\"expired\""
+        );
+        assert_eq!(
+            serde_json::to_string(&VisitorStatus::Cancelled).unwrap(),
+            "\"cancelled\""
+        );
+    }
+
+    // ── ConnectorType / EvChargerStatus / ChargingSessionStatus ─────────────
+
+    #[test]
+    fn test_connector_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&ConnectorType::Type2).unwrap(),
+            "\"type2\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ConnectorType::Ccs).unwrap(),
+            "\"ccs\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ConnectorType::Chademo).unwrap(),
+            "\"chademo\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ConnectorType::Tesla).unwrap(),
+            "\"tesla\""
+        );
+    }
+
+    #[test]
+    fn test_ev_charger_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&EvChargerStatus::Available).unwrap(),
+            "\"available\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EvChargerStatus::InUse).unwrap(),
+            "\"in_use\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EvChargerStatus::Offline).unwrap(),
+            "\"offline\""
+        );
+        assert_eq!(
+            serde_json::to_string(&EvChargerStatus::Maintenance).unwrap(),
+            "\"maintenance\""
+        );
+    }
+
+    #[test]
+    fn test_charging_session_status_serialization() {
+        assert_eq!(
+            serde_json::to_string(&ChargingSessionStatus::Active).unwrap(),
+            "\"active\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ChargingSessionStatus::Completed).unwrap(),
+            "\"completed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ChargingSessionStatus::Cancelled).unwrap(),
+            "\"cancelled\""
+        );
+    }
+
+    // ── SlotType full coverage ────────────────────────────────────────────────
+
+    #[test]
+    fn test_slot_type_full_serialization() {
+        assert_eq!(
+            serde_json::to_string(&SlotType::Compact).unwrap(),
+            "\"compact\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotType::Large).unwrap(),
+            "\"large\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotType::Motorcycle).unwrap(),
+            "\"motorcycle\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotType::Reserved).unwrap(),
+            "\"reserved\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotType::Vip).unwrap(),
+            "\"vip\""
+        );
+    }
+
+    // ── SlotStatus full coverage ──────────────────────────────────────────────
+
+    #[test]
+    fn test_slot_status_full_serialization() {
+        assert_eq!(
+            serde_json::to_string(&SlotStatus::Reserved).unwrap(),
+            "\"reserved\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotStatus::Disabled).unwrap(),
+            "\"disabled\""
+        );
+    }
+
+    // ── SlotFeature full coverage ─────────────────────────────────────────────
+
+    #[test]
+    fn test_slot_feature_full_serialization() {
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::NearElevator).unwrap(),
+            "\"near_elevator\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::NearStairs).unwrap(),
+            "\"near_stairs\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::Covered).unwrap(),
+            "\"covered\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::SecurityCamera).unwrap(),
+            "\"security_camera\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::WellLit).unwrap(),
+            "\"well_lit\""
+        );
+        assert_eq!(
+            serde_json::to_string(&SlotFeature::WideLane).unwrap(),
+            "\"wide_lane\""
+        );
+    }
+
+    // ── LotStatus full coverage ───────────────────────────────────────────────
+
+    #[test]
+    fn test_lot_status_full_serialization() {
+        assert_eq!(
+            serde_json::to_string(&LotStatus::Closed).unwrap(),
+            "\"closed\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LotStatus::Full).unwrap(),
+            "\"full\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LotStatus::Maintenance).unwrap(),
+            "\"maintenance\""
+        );
+    }
+
+    // ── DynamicPricingRules default ───────────────────────────────────────────
+
+    #[test]
+    fn test_dynamic_pricing_rules_default() {
+        let rules = DynamicPricingRules::default();
+        assert!(!rules.enabled);
+        assert_eq!(rules.base_price, 2.50);
+        assert_eq!(rules.surge_multiplier, 1.5);
+        assert_eq!(rules.discount_multiplier, 0.8);
+        assert_eq!(rules.surge_threshold, 80.0);
+        assert_eq!(rules.discount_threshold, 20.0);
+    }
+
+    #[test]
+    fn test_dynamic_pricing_rules_roundtrip() {
+        let rules = DynamicPricingRules {
+            enabled: true,
+            base_price: 5.0,
+            surge_multiplier: 2.0,
+            discount_multiplier: 0.5,
+            surge_threshold: 90.0,
+            discount_threshold: 10.0,
+        };
+        let json = serde_json::to_string(&rules).unwrap();
+        let back: DynamicPricingRules = serde_json::from_str(&json).unwrap();
+        assert!(back.enabled);
+        assert_eq!(back.base_price, 5.0);
+        assert_eq!(back.surge_multiplier, 2.0);
+    }
+
+    // ── LayoutElementType full coverage ──────────────────────────────────────
+
+    #[test]
+    fn test_layout_element_type_full_serialization() {
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Road).unwrap(),
+            "\"road\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Exit).unwrap(),
+            "\"exit\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Elevator).unwrap(),
+            "\"elevator\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Stairs).unwrap(),
+            "\"stairs\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Wall).unwrap(),
+            "\"wall\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Pillar).unwrap(),
+            "\"pillar\""
+        );
+        assert_eq!(
+            serde_json::to_string(&LayoutElementType::Obstacle).unwrap(),
+            "\"obstacle\""
+        );
+    }
+
+    // ── default_credits_quota ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_default_credits_quota_is_forty() {
+        assert_eq!(default_credits_quota(), 40);
+    }
+
+    // ── ExtendBookingRequest roundtrip ────────────────────────────────────────
+
+    #[test]
+    fn test_extend_booking_request_roundtrip() {
+        let req = ExtendBookingRequest {
+            additional_minutes: 30,
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        let back: ExtendBookingRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.additional_minutes, 30);
+    }
+
+    // ── UserPreferences default field values ──────────────────────────────────
+
+    #[test]
+    fn test_user_preferences_default_duration_is_none() {
+        let prefs = UserPreferences::default();
+        assert!(prefs.default_duration_minutes.is_none());
+    }
+
+    #[test]
+    fn test_user_preferences_roundtrip() {
+        let prefs = UserPreferences {
+            default_duration_minutes: Some(60),
+            favorite_slots: vec!["slot-1".to_string()],
+            notifications_enabled: true,
+            email_reminders: false,
+            language: "de".to_string(),
+            theme: "dark".to_string(),
+        };
+        let json = serde_json::to_string(&prefs).unwrap();
+        let back: UserPreferences = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.default_duration_minutes, Some(60));
+        assert_eq!(back.favorite_slots, vec!["slot-1".to_string()]);
+        assert!(back.notifications_enabled);
+        assert_eq!(back.language, "de");
+        assert_eq!(back.theme, "dark");
+    }
 }
