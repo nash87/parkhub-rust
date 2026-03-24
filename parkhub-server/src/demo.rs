@@ -365,3 +365,136 @@ pub async fn demo_config(
         demo_mode: s.enabled,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Build a DemoState with `enabled = true` without touching the environment.
+    fn enabled_demo_state() -> DemoState {
+        let now = Utc::now();
+        DemoState {
+            enabled: true,
+            started_at: Instant::now(),
+            votes: HashMap::new(),
+            viewers: HashMap::new(),
+            last_reset_at: Some(now),
+            next_scheduled_reset: Some(now + chrono::Duration::hours(AUTO_RESET_INTERVAL_HOURS)),
+            reset_in_progress: false,
+        }
+    }
+
+    #[test]
+    fn demo_state_disabled_by_default_when_env_not_set() {
+        // Temporarily ensure DEMO_MODE is unset (guard against test-ordering effects).
+        let original = std::env::var("DEMO_MODE").ok();
+        std::env::remove_var("DEMO_MODE");
+
+        let state = DemoState::new();
+        assert!(!state.enabled, "DemoState must default to disabled");
+        assert!(
+            state.last_reset_at.is_none(),
+            "last_reset_at must be None when disabled"
+        );
+        assert!(
+            state.next_scheduled_reset.is_none(),
+            "next_scheduled_reset must be None when disabled"
+        );
+
+        // Restore original value so other tests are unaffected.
+        if let Some(val) = original {
+            std::env::set_var("DEMO_MODE", val);
+        }
+    }
+
+    #[test]
+    fn demo_state_reset_clears_votes_and_restarts_timer() {
+        let mut state = enabled_demo_state();
+        state.votes.insert("1.2.3.4".to_string(), Instant::now());
+        state.votes.insert("5.6.7.8".to_string(), Instant::now());
+        assert_eq!(state.votes.len(), 2);
+
+        state.reset();
+
+        assert!(state.votes.is_empty(), "reset() must clear all votes");
+        // started_at should be refreshed; remaining time close to full.
+        assert!(
+            state.remaining_secs() >= TIMER_DURATION_SECS - 1,
+            "remaining_secs should be near full after reset"
+        );
+    }
+
+    #[test]
+    fn demo_state_mark_reset_complete_updates_timestamps_and_clears_flag() {
+        let mut state = enabled_demo_state();
+        state.reset_in_progress = true;
+
+        let before = Utc::now();
+        state.mark_reset_complete();
+        let after = Utc::now();
+
+        assert!(!state.reset_in_progress, "reset_in_progress must be cleared");
+
+        let last = state.last_reset_at.expect("last_reset_at must be set");
+        assert!(last >= before && last <= after, "last_reset_at must be current time");
+
+        let next = state
+            .next_scheduled_reset
+            .expect("next_scheduled_reset must be set");
+        let expected_next = last + chrono::Duration::hours(AUTO_RESET_INTERVAL_HOURS);
+        // Allow ±2 s for execution time.
+        assert!(
+            (next - expected_next).num_seconds().abs() <= 2,
+            "next_scheduled_reset must be AUTO_RESET_INTERVAL_HOURS after last_reset_at"
+        );
+    }
+
+    #[test]
+    fn demo_state_remaining_secs_starts_near_full_duration() {
+        let state = enabled_demo_state();
+        let remaining = state.remaining_secs();
+        assert!(
+            remaining >= TIMER_DURATION_SECS - 1,
+            "fresh state must have nearly full remaining time, got {remaining}"
+        );
+        assert!(
+            remaining <= TIMER_DURATION_SECS,
+            "remaining must not exceed total timer duration"
+        );
+    }
+
+    #[test]
+    fn demo_state_prune_viewers_keeps_fresh_entries() {
+        let mut state = enabled_demo_state();
+        // Insert a viewer right now — it must survive pruning.
+        state.viewers.insert("10.0.0.1".to_string(), Instant::now());
+        assert_eq!(state.viewers.len(), 1);
+
+        state.prune_viewers();
+
+        assert_eq!(
+            state.viewers.len(),
+            1,
+            "fresh viewer must not be pruned"
+        );
+    }
+
+    #[test]
+    fn demo_state_vote_threshold_and_count() {
+        let mut state = enabled_demo_state();
+
+        // Insert votes up to threshold - 1; should_reset logic lives in the HTTP handler,
+        // but here we verify that votes.len() tracks correctly.
+        for i in 0..VOTE_THRESHOLD {
+            state.votes.insert(format!("ip_{i}"), Instant::now());
+        }
+        assert_eq!(
+            state.votes.len(),
+            VOTE_THRESHOLD,
+            "vote count must match number of inserted votes"
+        );
+
+        let should_reset = state.votes.len() >= VOTE_THRESHOLD;
+        assert!(should_reset, "should_reset must be true at threshold");
+    }
+}

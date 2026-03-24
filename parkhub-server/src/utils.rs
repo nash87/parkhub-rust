@@ -39,4 +39,34 @@ mod tests {
     fn test_html_escape_empty() {
         assert_eq!(html_escape(""), "");
     }
+
+    #[test]
+    fn test_html_escape_each_special_char_individually() {
+        assert_eq!(html_escape("&"), "&amp;");
+        assert_eq!(html_escape("<"), "&lt;");
+        assert_eq!(html_escape(">"), "&gt;");
+        assert_eq!(html_escape("\""), "&quot;");
+        assert_eq!(html_escape("'"), "&#x27;");
+    }
+
+    #[test]
+    fn test_html_escape_unicode_passthrough() {
+        assert_eq!(html_escape("héllo"), "héllo");
+        assert_eq!(html_escape("日本語"), "日本語");
+        assert_eq!(html_escape("Ñoño"), "Ñoño");
+        assert_eq!(html_escape("emoji: 🎉"), "emoji: 🎉");
+    }
+
+    #[test]
+    fn test_html_escape_repeated_special_chars() {
+        assert_eq!(html_escape("&&"), "&amp;&amp;");
+        assert_eq!(html_escape("<<>>"), "&lt;&lt;&gt;&gt;");
+        assert_eq!(html_escape("\"\""), "&quot;&quot;");
+    }
+
+    #[test]
+    fn test_html_escape_plain_text_unchanged() {
+        let plain = "The quick brown fox jumps over the lazy dog 0123456789";
+        assert_eq!(html_escape(plain), plain);
+    }
 }

@@ -297,4 +297,155 @@ mod tests {
         assert!(json["details"].is_array());
         assert_eq!(json["details"][0]["field"], "email");
     }
+
+    #[test]
+    fn test_all_error_codes_exhaustive() {
+        assert_eq!(AppError::InvalidCredentials.code(), "INVALID_CREDENTIALS");
+        assert_eq!(AppError::TokenExpired.code(), "TOKEN_EXPIRED");
+        assert_eq!(AppError::InvalidToken.code(), "INVALID_TOKEN");
+        assert_eq!(AppError::Unauthorized.code(), "UNAUTHORIZED");
+        assert_eq!(AppError::Forbidden.code(), "FORBIDDEN");
+        assert_eq!(
+            AppError::ValidationFailed(vec![]).code(),
+            "VALIDATION_FAILED"
+        );
+        assert_eq!(AppError::InvalidInput("x".into()).code(), "INVALID_INPUT");
+        assert_eq!(AppError::NotFound("y".into()).code(), "NOT_FOUND");
+        assert_eq!(AppError::AlreadyExists("z".into()).code(), "ALREADY_EXISTS");
+        assert_eq!(AppError::Conflict("c".into()).code(), "CONFLICT");
+        assert_eq!(AppError::SlotNotAvailable.code(), "SLOT_NOT_AVAILABLE");
+        assert_eq!(
+            AppError::BookingNotModifiable.code(),
+            "BOOKING_NOT_MODIFIABLE"
+        );
+        assert_eq!(
+            AppError::InvalidBookingTime.code(),
+            "INVALID_BOOKING_TIME"
+        );
+        assert_eq!(AppError::RateLimited.code(), "RATE_LIMITED");
+        assert_eq!(AppError::Database("e".into()).code(), "DATABASE_ERROR");
+        assert_eq!(AppError::Internal.code(), "INTERNAL_ERROR");
+    }
+
+    #[test]
+    fn test_all_status_codes_exhaustive() {
+        assert_eq!(
+            AppError::TokenExpired.status_code(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            AppError::InvalidToken.status_code(),
+            StatusCode::UNAUTHORIZED
+        );
+        assert_eq!(
+            AppError::SlotNotAvailable.status_code(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        assert_eq!(
+            AppError::BookingNotModifiable.status_code(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        assert_eq!(
+            AppError::InvalidBookingTime.status_code(),
+            StatusCode::UNPROCESSABLE_ENTITY
+        );
+        assert_eq!(
+            AppError::Conflict("x".into()).status_code(),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            AppError::AlreadyExists("x".into()).status_code(),
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            AppError::ValidationFailed(vec![]).status_code(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+
+    #[test]
+    fn test_error_display_messages() {
+        assert_eq!(AppError::InvalidCredentials.to_string(), "Invalid credentials");
+        assert_eq!(AppError::TokenExpired.to_string(), "Token expired");
+        assert_eq!(AppError::Unauthorized.to_string(), "Unauthorized");
+        assert_eq!(AppError::Forbidden.to_string(), "Forbidden");
+        assert_eq!(AppError::SlotNotAvailable.to_string(), "Slot not available");
+        assert_eq!(
+            AppError::NotFound("lot".into()).to_string(),
+            "Resource not found: lot"
+        );
+        assert_eq!(
+            AppError::InvalidInput("bad data".into()).to_string(),
+            "Invalid input: bad data"
+        );
+        assert_eq!(AppError::Internal.to_string(), "Internal server error");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_forbidden() {
+        let resp = AppError::Forbidden.into_response();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "FORBIDDEN");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_rate_limited() {
+        let resp = AppError::RateLimited.into_response();
+        assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "RATE_LIMITED");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_conflict() {
+        let resp = AppError::Conflict("booking overlap".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "CONFLICT");
+        assert!(json["message"].as_str().unwrap().contains("booking overlap"));
+    }
+
+    #[tokio::test]
+    async fn test_into_response_slot_not_available() {
+        let resp = AppError::SlotNotAvailable.into_response();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "SLOT_NOT_AVAILABLE");
+    }
+
+    #[tokio::test]
+    async fn test_into_response_database_error() {
+        let resp = AppError::Database("connection lost".into()).into_response();
+        assert_eq!(resp.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json["code"], "DATABASE_ERROR");
+    }
+
+    #[tokio::test]
+    async fn test_validation_error_details_absent_for_non_validation_errors() {
+        let resp = AppError::NotFound("thing".into()).into_response();
+        let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert!(
+            json.get("details").is_none(),
+            "non-validation errors must not include a `details` field"
+        );
+    }
+
+    #[test]
+    fn test_field_error_is_cloneable() {
+        let fe = FieldError {
+            field: "name".into(),
+            message: "too short".into(),
+        };
+        let cloned = fe.clone();
+        assert_eq!(cloned.field, fe.field);
+        assert_eq!(cloned.message, fe.message);
+    }
 }
