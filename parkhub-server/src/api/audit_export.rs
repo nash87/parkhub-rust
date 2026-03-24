@@ -207,7 +207,10 @@ pub async fn enhanced_audit_export(
         if NaiveDate::parse_from_str(from, "%Y-%m-%d").is_err() {
             return (
                 StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_DATE", "Invalid 'from' date format. Use YYYY-MM-DD")),
+                Json(ApiResponse::error(
+                    "INVALID_DATE",
+                    "Invalid 'from' date format. Use YYYY-MM-DD",
+                )),
             );
         }
     }
@@ -215,7 +218,10 @@ pub async fn enhanced_audit_export(
         if NaiveDate::parse_from_str(to, "%Y-%m-%d").is_err() {
             return (
                 StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_DATE", "Invalid 'to' date format. Use YYYY-MM-DD")),
+                Json(ApiResponse::error(
+                    "INVALID_DATE",
+                    "Invalid 'to' date format. Use YYYY-MM-DD",
+                )),
             );
         }
     }
@@ -279,10 +285,16 @@ pub async fn download_audit_export(
     let tokens = load_tokens(&state_guard).await;
     let now = Utc::now();
 
-    let Some(dl_token) = tokens.iter().find(|t| t.token == token && t.expires_at > now) else {
+    let Some(dl_token) = tokens
+        .iter()
+        .find(|t| t.token == token && t.expires_at > now)
+    else {
         return (
             StatusCode::UNAUTHORIZED,
-            [(header::CONTENT_TYPE, "text/plain; charset=utf-8"), (header::CONTENT_DISPOSITION, "inline")],
+            [
+                (header::CONTENT_TYPE, "text/plain; charset=utf-8"),
+                (header::CONTENT_DISPOSITION, "inline"),
+            ],
             "Invalid or expired download token".to_string(),
         );
     };
@@ -297,7 +309,10 @@ pub async fn download_audit_export(
             tracing::error!("Failed to load audit log: {e}");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                [(header::CONTENT_TYPE, "text/plain; charset=utf-8"), (header::CONTENT_DISPOSITION, "inline")],
+                [
+                    (header::CONTENT_TYPE, "text/plain; charset=utf-8"),
+                    (header::CONTENT_DISPOSITION, "inline"),
+                ],
                 "Failed to load audit log".to_string(),
             );
         }
@@ -312,7 +327,9 @@ pub async fn download_audit_export(
     if let Some(ref user) = filters.user_id {
         let q = user.to_lowercase();
         filtered.retain(|e| {
-            e.username.as_ref().is_some_and(|u| u.to_lowercase().contains(&q))
+            e.username
+                .as_ref()
+                .is_some_and(|u| u.to_lowercase().contains(&q))
                 || e.user_id.is_some_and(|id| id.to_string().contains(&q))
         });
     }
@@ -333,14 +350,21 @@ pub async fn download_audit_export(
         ExportFormat::Pdf => render_pdf(&filtered),
     };
 
-    let filename = format!("audit-log-{}.{}", Utc::now().format("%Y%m%d-%H%M%S"), format.extension());
+    let filename = format!(
+        "audit-log-{}.{}",
+        Utc::now().format("%Y%m%d-%H%M%S"),
+        format.extension()
+    );
     let disposition = format!("attachment; filename=\"{filename}\"");
     // Use a leaked string for the content-disposition to get &'static str
     let disposition: &'static str = Box::leak(disposition.into_boxed_str());
 
     (
         StatusCode::OK,
-        [(header::CONTENT_TYPE, format.content_type()), (header::CONTENT_DISPOSITION, disposition)],
+        [
+            (header::CONTENT_TYPE, format.content_type()),
+            (header::CONTENT_DISPOSITION, disposition),
+        ],
         body,
     )
 }
@@ -419,7 +443,11 @@ fn render_pdf(entries: &[crate::db::AuditLogEntry]) -> String {
     let mut report = String::from("ParkHub Audit Log Report\n");
     let _ = writeln!(report, "Generated: {}", Utc::now().to_rfc3339());
     let _ = writeln!(report, "Total Entries: {}\n", entries.len());
-    let _ = writeln!(report, "{:<36} {:<24} {:<20} {:<20}", "ID", "Timestamp", "Event", "User");
+    let _ = writeln!(
+        report,
+        "{:<36} {:<24} {:<20} {:<20}",
+        "ID", "Timestamp", "Event", "User"
+    );
     let _ = writeln!(report, "{}", "-".repeat(100));
 
     for e in entries {
@@ -456,7 +484,10 @@ mod tests {
     #[test]
     fn test_export_format_content_type() {
         assert_eq!(ExportFormat::Csv.content_type(), "text/csv; charset=utf-8");
-        assert_eq!(ExportFormat::Json.content_type(), "application/json; charset=utf-8");
+        assert_eq!(
+            ExportFormat::Json.content_type(),
+            "application/json; charset=utf-8"
+        );
         assert_eq!(ExportFormat::Pdf.content_type(), "application/pdf");
     }
 

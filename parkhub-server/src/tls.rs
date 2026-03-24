@@ -110,7 +110,11 @@ mod tests {
         let fp = certificate_fingerprint(b"some bytes");
         // SHA256 produces 32 bytes → 32 hex pairs separated by colons
         let parts: Vec<&str> = fp.split(':').collect();
-        assert_eq!(parts.len(), 32, "SHA256 fingerprint should have 32 hex pairs");
+        assert_eq!(
+            parts.len(),
+            32,
+            "SHA256 fingerprint should have 32 hex pairs"
+        );
         for part in &parts {
             assert_eq!(part.len(), 2, "Each hex pair must be 2 chars");
             assert!(
@@ -124,7 +128,8 @@ mod tests {
     fn fingerprint_uses_uppercase_hex() {
         let fp = certificate_fingerprint(b"uppercase check");
         assert!(
-            fp.chars().all(|c| c == ':' || c.is_ascii_uppercase() || c.is_ascii_digit()),
+            fp.chars()
+                .all(|c| c == ':' || c.is_ascii_uppercase() || c.is_ascii_digit()),
             "Fingerprint should use uppercase hex: {fp}"
         );
     }

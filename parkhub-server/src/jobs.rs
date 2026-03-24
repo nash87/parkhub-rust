@@ -1016,10 +1016,17 @@ mod tests {
 
         // Value format is "<occupied>/<total>".
         let parts: Vec<&str> = value.split('/').collect();
-        assert_eq!(parts.len(), 2, "stats value must be in '<occupied>/<total>' format");
+        assert_eq!(
+            parts.len(),
+            2,
+            "stats value must be in '<occupied>/<total>' format"
+        );
         let occupied: u64 = parts[0].parse().expect("occupied must be a number");
         let total: u64 = parts[1].parse().expect("total must be a number");
-        assert_eq!(occupied, 1, "one active booking should be counted as occupied");
+        assert_eq!(
+            occupied, 1,
+            "one active booking should be counted as occupied"
+        );
         assert_eq!(total, 10, "total must match lot.total_slots");
     }
 }

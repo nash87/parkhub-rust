@@ -104,27 +104,43 @@ const fn default_true() -> bool {
 /// Extract text content between matching XML tags.
 /// Handles both `<ns:Tag>` and `<Tag>` forms.
 fn extract_xml_element(xml: &str, local_name: &str) -> Option<String> {
-    // Try namespaced pattern first, then plain
-    for pattern in [format!(":{local_name}>"), format!("<{local_name}>")] {
-        if let Some(start_idx) = xml.find(&pattern) {
-            let content_start = start_idx + pattern.len();
-            // Find closing tag (plain form)
-            let close = format!("</{local_name}>");
-            if let Some(end_idx) = xml[content_start..].find(&close) {
-                let value = &xml[content_start..content_start + end_idx];
-                return Some(value.trim().to_string());
-            }
-            // Namespaced closing tag: find </...localName>
-            let close_tag = format!("{local_name}>");
-            if let Some(end_search_start) = xml[content_start..].find("</") {
-                let after_close = &xml[content_start + end_search_start + 2..];
-                if after_close.contains(&close_tag) {
-                    let value = &xml[content_start..content_start + end_search_start];
-                    return Some(value.trim().to_string());
+    for open_pattern in [format!("<{local_name}"), format!(":{local_name}")] {
+        if let Some(tag_start) = xml.find(&open_pattern) {
+            let tag_rest = &xml[tag_start..];
+            if let Some(open_end) = tag_rest.find('>') {
+                let content_start = tag_start + open_end + 1;
+                let rest = &xml[content_start..];
+
+                if let Some(end_idx) = rest.find(&format!("</{local_name}>")) {
+                    return Some(rest[..end_idx].trim().to_string());
+                }
+
+                if let Some(end_idx) = rest.find(&format!(":{local_name}>")) {
+                    let closing_slice = &rest[..end_idx];
+                    if let Some(open_close_idx) = closing_slice.rfind("</") {
+                        return Some(closing_slice[..open_close_idx].trim().to_string());
+                    }
                 }
             }
         }
     }
+
+    None
+}
+
+fn extract_saml_attribute_value(xml: &str, attribute_name: &str) -> Option<String> {
+    for pattern in [
+        format!("Name=\"{attribute_name}\""),
+        format!("FriendlyName=\"{attribute_name}\""),
+    ] {
+        if let Some(attr_idx) = xml.find(&pattern) {
+            let attr_xml = &xml[attr_idx..];
+            if let Some(value) = extract_xml_element(attr_xml, "AttributeValue") {
+                return Some(value);
+            }
+        }
+    }
+
     None
 }
 
@@ -143,6 +159,9 @@ fn parse_saml_response(base64_response: &str) -> Result<SamlAttributes, String> 
     let email = extract_xml_element(&xml, "EmailAddress")
         .or_else(|| extract_xml_element(&xml, "emailaddress"))
         .or_else(|| extract_xml_element(&xml, "email"))
+        .or_else(|| extract_saml_attribute_value(&xml, "EmailAddress"))
+        .or_else(|| extract_saml_attribute_value(&xml, "emailaddress"))
+        .or_else(|| extract_saml_attribute_value(&xml, "email"))
         .or_else(|| {
             // If NameID looks like an email, use it
             if name_id.contains('@') {

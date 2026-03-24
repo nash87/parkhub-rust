@@ -590,7 +590,11 @@ mod tests {
 
     #[test]
     fn validate_integer_settings() {
-        for key in ["max_bookings_per_day", "auto_release_minutes", "credits_per_booking"] {
+        for key in [
+            "max_bookings_per_day",
+            "auto_release_minutes",
+            "credits_per_booking",
+        ] {
             assert!(validate_setting_value(key, "0").is_ok());
             assert!(validate_setting_value(key, "42").is_ok());
             assert!(validate_setting_value(key, "-1").is_ok());
@@ -627,7 +631,10 @@ mod tests {
     fn use_case_theme_company_has_correct_key() {
         let theme = use_case_theme("company");
         assert_eq!(theme["key"], "company");
-        assert!(theme["terminology"]["user"].as_str().unwrap().contains("Employee"));
+        assert!(theme["terminology"]["user"]
+            .as_str()
+            .unwrap()
+            .contains("Employee"));
     }
 
     #[test]
@@ -665,7 +672,10 @@ mod tests {
             assert!(theme["primary_color"].is_string(), "{key}: primary_color");
             assert!(theme["accent_color"].is_string(), "{key}: accent_color");
             assert!(theme["terminology"].is_object(), "{key}: terminology");
-            assert!(theme["features_emphasis"].is_array(), "{key}: features_emphasis");
+            assert!(
+                theme["features_emphasis"].is_array(),
+                "{key}: features_emphasis"
+            );
         }
     }
 

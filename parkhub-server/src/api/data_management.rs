@@ -18,7 +18,10 @@ use std::fmt::Write;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use parkhub_common::{ApiResponse, User, UserPreferences, UserRole};
+use parkhub_common::{
+    ApiResponse, DayHours, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot,
+    PricingInfo, PricingRate, SlotPosition, SlotStatus, SlotType, User, UserPreferences, UserRole,
+};
 
 use super::{check_admin, AuthUser};
 use crate::AppState;
@@ -48,7 +51,7 @@ pub struct DataImportError {
 }
 
 /// Import request body (CSV or JSON, base64-encoded CSV data or raw JSON array).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct ImportRequest {
     /// "csv" or "json"
     pub format: String,
@@ -273,7 +276,17 @@ pub async fn import_users(
         }
 
         let password = entry.password.as_deref().unwrap_or("ParkHub2026!");
-        let password_hash = super::hash_password_simple(password);
+        let password_hash = match super::hash_password_simple(password).await {
+            Ok(hash) => hash,
+            Err(e) => {
+                result.errors.push(DataImportError {
+                    row,
+                    field: "password".to_string(),
+                    message: e.to_string(),
+                });
+                continue;
+            }
+        };
         let role = parse_role(entry.role.as_deref().unwrap_or("user"));
 
         let user = User {
@@ -403,22 +416,52 @@ pub async fn import_lots(
             continue;
         }
 
-        let total_slots = entry.total_slots.unwrap_or(10);
-        let lot = parkhub_common::ParkingLot {
-            id: uuid::Uuid::new_v4(),
+        let total_slots = i32::try_from(entry.total_slots.unwrap_or(10)).unwrap_or(10);
+        let lot_id = uuid::Uuid::new_v4();
+        let floor_id = uuid::Uuid::new_v4();
+        let now = Utc::now();
+        let lot = ParkingLot {
+            id: lot_id,
             name: entry.name.clone(),
             address: entry.address.clone().unwrap_or_default(),
+            latitude: 0.0,
+            longitude: 0.0,
             total_slots,
             available_slots: total_slots,
-            status: parkhub_common::LotStatus::Open,
-            hourly_rate: entry.hourly_rate.unwrap_or(2.0),
-            daily_max: entry.daily_max.unwrap_or(20.0),
-            monthly_pass: None,
-            currency: entry.currency.clone().unwrap_or_else(|| "EUR".to_string()),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            latitude: None,
-            longitude: None,
+            floors: vec![ParkingFloor {
+                id: floor_id,
+                lot_id,
+                name: "Ground Floor".to_string(),
+                floor_number: 1,
+                total_slots,
+                available_slots: total_slots,
+                slots: Vec::new(),
+            }],
+            amenities: Vec::new(),
+            pricing: PricingInfo {
+                currency: entry.currency.clone().unwrap_or_else(|| "EUR".to_string()),
+                rates: vec![PricingRate {
+                    duration_minutes: 60,
+                    price: entry.hourly_rate.unwrap_or(2.0),
+                    label: "1 hour".to_string(),
+                }],
+                daily_max: entry.daily_max,
+                monthly_pass: None,
+            },
+            operating_hours: OperatingHours {
+                is_24h: true,
+                monday: None::<DayHours>,
+                tuesday: None::<DayHours>,
+                wednesday: None::<DayHours>,
+                thursday: None::<DayHours>,
+                friday: None::<DayHours>,
+                saturday: None::<DayHours>,
+                sunday: None::<DayHours>,
+            },
+            images: Vec::new(),
+            status: LotStatus::Open,
+            created_at: now,
+            updated_at: now,
             tenant_id: None,
         };
 
@@ -427,18 +470,18 @@ pub async fn import_lots(
                 // Create slots for the lot
                 for slot_num in 1..=total_slots {
                     #[allow(clippy::cast_possible_truncation)]
-                    let slot = parkhub_common::ParkingSlot {
+                    let slot = ParkingSlot {
                         id: uuid::Uuid::new_v4(),
                         lot_id: lot.id,
-                        floor_id: lot.floors.first().map_or_else(uuid::Uuid::new_v4, |f| f.id),
+                        floor_id,
                         slot_number: slot_num as i32,
                         row: ((slot_num - 1) / 10 + 1) as i32,
                         column: ((slot_num - 1) % 10 + 1) as i32,
-                        slot_type: parkhub_common::SlotType::Standard,
-                        status: parkhub_common::SlotStatus::Available,
+                        slot_type: SlotType::Standard,
+                        status: SlotStatus::Available,
                         current_booking: None,
                         features: Vec::new(),
-                        position: parkhub_common::SlotPosition {
+                        position: SlotPosition {
                             x: (((slot_num - 1) % 10) as f32) * 3.0,
                             y: (((slot_num - 1) / 10) as f32) * 5.0,
                             width: 2.5,
@@ -510,9 +553,9 @@ pub async fn export_lots_csv(
             lot.total_slots,
             lot.available_slots,
             csv_escape(&format!("{:?}", lot.status).to_lowercase()),
-            lot.hourly_rate,
-            lot.daily_max,
-            csv_escape(&lot.currency),
+            lot.pricing.rates.first().map_or(0.0, |rate| rate.price),
+            lot.pricing.daily_max.unwrap_or(0.0),
+            csv_escape(&lot.pricing.currency),
             booking_count,
             lot.created_at.to_rfc3339(),
         );

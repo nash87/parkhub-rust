@@ -433,10 +433,16 @@ mod tests {
         state.mark_reset_complete();
         let after = Utc::now();
 
-        assert!(!state.reset_in_progress, "reset_in_progress must be cleared");
+        assert!(
+            !state.reset_in_progress,
+            "reset_in_progress must be cleared"
+        );
 
         let last = state.last_reset_at.expect("last_reset_at must be set");
-        assert!(last >= before && last <= after, "last_reset_at must be current time");
+        assert!(
+            last >= before && last <= after,
+            "last_reset_at must be current time"
+        );
 
         let next = state
             .next_scheduled_reset
@@ -472,11 +478,7 @@ mod tests {
 
         state.prune_viewers();
 
-        assert_eq!(
-            state.viewers.len(),
-            1,
-            "fresh viewer must not be pruned"
-        );
+        assert_eq!(state.viewers.len(), 1, "fresh viewer must not be pruned");
     }
 
     #[test]

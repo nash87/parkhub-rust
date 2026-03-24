@@ -69,12 +69,12 @@ pub mod admin_ext;
 pub mod admin_handlers;
 #[cfg(feature = "mod-analytics")]
 pub mod analytics;
-#[cfg(feature = "mod-audit-export")]
-pub mod audit_export;
 #[cfg(feature = "mod-announcements")]
 pub mod announcements;
 #[cfg(feature = "mod-api-docs")]
 pub mod api_docs;
+#[cfg(feature = "mod-audit-export")]
+pub mod audit_export;
 pub mod auth;
 #[cfg(feature = "mod-cost-center")]
 pub mod billing;
@@ -125,6 +125,8 @@ pub mod maintenance;
 #[cfg(feature = "mod-map")]
 pub mod map;
 pub mod misc;
+#[cfg(feature = "mod-mobile")]
+pub mod mobile;
 #[cfg(feature = "mod-notification-center")]
 pub mod notification_center;
 #[cfg(feature = "mod-notifications")]
@@ -150,6 +152,8 @@ pub mod pwa;
 #[cfg(feature = "mod-qr")]
 pub mod qr;
 pub mod rate_dashboard;
+#[cfg(feature = "mod-rbac")]
+pub mod rbac;
 #[cfg(feature = "mod-recommendations")]
 pub mod recommendations;
 #[cfg(feature = "mod-recurring")]
@@ -177,7 +181,7 @@ pub mod team;
 pub mod tenants;
 #[cfg(feature = "mod-translations")]
 pub mod translations;
-mod users;
+pub mod users;
 #[cfg(feature = "mod-vehicles")]
 pub mod vehicles;
 #[cfg(feature = "mod-api-versioning")]
@@ -195,8 +199,6 @@ pub mod webhooks_v2;
 #[cfg(feature = "mod-widgets")]
 pub mod widgets;
 pub mod ws;
-#[cfg(feature = "mod-rbac")]
-pub mod rbac;
 #[cfg(feature = "mod-zones")]
 pub mod zones;
 
@@ -252,6 +254,8 @@ use lots::{
     create_lot, create_slot, delete_lot, delete_slot, get_lot, get_lot_pricing, get_lot_slots,
     list_lots, update_lot, update_lot_pricing, update_slot,
 };
+#[cfg(feature = "mod-mobile")]
+use mobile::{active_booking, nearby_lots, quick_book as mobile_quick_book};
 #[cfg(feature = "mod-notification-center")]
 use notification_center::{
     delete_notification, list_center_notifications, mark_all_read, unread_count,
@@ -297,6 +301,8 @@ async fn read_admin_setting(db: &crate::db::Database, key: &str) -> String {
 }
 #[cfg(feature = "mod-parking-pass")]
 use parking_pass::{get_booking_pass, list_my_passes, verify_pass};
+#[cfg(feature = "mod-rbac")]
+use rbac::{assign_user_roles, create_role, delete_role, get_user_roles, list_roles, update_role};
 #[cfg(feature = "mod-sso")]
 use sso::{
     sso_callback, sso_configure_provider, sso_delete_provider, sso_list_providers, sso_login,
@@ -330,24 +336,22 @@ use waitlist_ext::{
 use webhooks::{create_webhook, delete_webhook, list_webhooks, test_webhook, update_webhook};
 #[cfg(feature = "mod-widgets")]
 use widgets::{get_widget_data, get_widget_layout, save_widget_layout};
-#[cfg(feature = "mod-rbac")]
-use rbac::{assign_user_roles, create_role, delete_role, get_user_roles, list_roles, update_role};
 #[cfg(feature = "mod-zones")]
 use zones::{create_zone, delete_zone, list_zones, update_zone};
 
 // Re-exports from extracted modules (Phase 3)
-use admin_handlers::{
+pub use admin_handlers::{
     admin_audit_log, admin_audit_log_export, admin_delete_user, admin_get_auto_release,
     admin_get_email_settings, admin_get_privacy, admin_heatmap, admin_list_bookings,
     admin_list_users, admin_reports, admin_reset, admin_stats, admin_update_auto_release,
     admin_update_email_settings, admin_update_privacy, admin_update_user, admin_update_user_role,
     admin_update_user_status,
 };
-use lots_ext::{admin_dashboard_charts, lot_qr_code};
-use misc::{
+pub use lots_ext::{admin_dashboard_charts, lot_qr_code};
+pub use misc::{
     get_impressum, get_impressum_admin, public_display, public_occupancy, update_impressum,
 };
-use users::{
+pub use users::{
     change_password, gdpr_delete_account, gdpr_export_data, get_current_user, get_user,
     get_user_preferences, update_current_user, update_user_preferences, user_stats,
 };
@@ -545,6 +549,7 @@ async fn list_module_features() -> impl IntoResponse {
         "notification-center".into(),
         cfg!(feature = "mod-notification-center").into(),
     );
+    modules.insert("mobile".into(), cfg!(feature = "mod-mobile").into());
 
     Json(serde_json::json!({
         "modules": modules,
@@ -1112,10 +1117,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
 
     #[cfg(feature = "mod-rbac")]
     let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/roles",
-            get(list_roles).post(create_role),
-        )
+        .route("/api/v1/admin/roles", get(list_roles).post(create_role))
         .route(
             "/api/v1/admin/roles/{id}",
             put(update_role).delete(delete_role),
@@ -1567,6 +1569,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             );
     }
 
+    #[cfg(feature = "mod-mobile")]
+    {
+        // Mobile-optimized booking flow
+        protected_routes = protected_routes
+            .route("/api/v1/mobile/quick-book", get(mobile_quick_book))
+            .route("/api/v1/mobile/nearby-lots", get(nearby_lots))
+            .route("/api/v1/mobile/active-booking", get(active_booking));
+    }
+
     #[cfg(feature = "mod-notification-center")]
     {
         // Smart Notification Center (enhanced notification hub)
@@ -1575,14 +1586,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                 "/api/v1/notifications/center",
                 get(list_center_notifications),
             )
-            .route(
-                "/api/v1/notifications/unread-count",
-                get(unread_count),
-            )
-            .route(
-                "/api/v1/notifications/center/read-all",
-                put(mark_all_read),
-            )
+            .route("/api/v1/notifications/unread-count", get(unread_count))
+            .route("/api/v1/notifications/center/read-all", put(mark_all_read))
             .route(
                 "/api/v1/notifications/center/{id}",
                 delete(delete_notification),
