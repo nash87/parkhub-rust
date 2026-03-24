@@ -60,7 +60,7 @@ thiserror.workspace = true
 anyhow.workspace = true
 
 # Config
-toml = "1.0"
+toml = "1.1"
 directories = "6"
 hostname = "0.4"
 
