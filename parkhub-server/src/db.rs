@@ -1808,6 +1808,21 @@ impl Database {
         }
     }
 
+    /// Delete a notification by ID
+    pub async fn delete_notification(&self, id: &str) -> Result<bool> {
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(NOTIFICATIONS)?;
+            if table.get(id)?.is_none() {
+                return Ok(false);
+            }
+            table.remove(id)?;
+        }
+        write_txn.commit()?;
+        Ok(true)
+    }
+
     // ── Credit Transactions ──
 
     pub async fn save_credit_transaction(
