@@ -563,6 +563,8 @@ pub async fn review_proposal(
 mod tests {
     use super::*;
 
+    // ── HEAD helper ─────────────────────────────────────────────────────────
+
     fn make_proposal(
         lang: &str,
         key: &str,
@@ -577,7 +579,7 @@ mod tests {
         }
     }
 
-    // ── validate_proposal_input ─────────────────────────────────────────────
+    // ── HEAD: validate_proposal_input ───────────────────────────────────────
 
     #[test]
     fn valid_proposal_no_context() {
@@ -683,7 +685,7 @@ mod tests {
         assert!(validate_proposal_input(&req).is_ok());
     }
 
-    // ── DTO deserialization ─────────────────────────────────────────────────
+    // ── HEAD: DTO deserialization ───────────────────────────────────────────
 
     #[test]
     fn create_proposal_request_deserialization() {
@@ -744,5 +746,195 @@ mod tests {
         let json = r#"{}"#;
         let q: ProposalQuery = serde_json::from_str(json).unwrap();
         assert!(q.status.is_none());
+    }
+
+    // ── Copilot: CreateProposalRequest ──────────────────────────────────────
+
+    #[test]
+    fn test_create_proposal_request_full() {
+        let json = r#"{
+            "language": "de",
+            "key": "button.save",
+            "proposed_value": "Speichern",
+            "context": "Main save button in the booking form"
+        }"#;
+        let req: CreateProposalRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.language, "de");
+        assert_eq!(req.key, "button.save");
+        assert_eq!(req.proposed_value, "Speichern");
+        assert_eq!(
+            req.context,
+            Some("Main save button in the booking form".to_string())
+        );
+    }
+
+    #[test]
+    fn test_create_proposal_request_no_context() {
+        let json = r#"{"language":"en","key":"title.home","proposed_value":"Home"}"#;
+        let req: CreateProposalRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.language, "en");
+        assert!(req.context.is_none());
+    }
+
+    // ── Copilot: VoteRequest ────────────────────────────────────────────────
+
+    #[test]
+    fn test_vote_request_up() {
+        let json = r#"{"vote":"up"}"#;
+        let req: VoteRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.vote, "up");
+    }
+
+    #[test]
+    fn test_vote_request_down() {
+        let json = r#"{"vote":"down"}"#;
+        let req: VoteRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.vote, "down");
+    }
+
+    // ── Copilot: ReviewRequest ──────────────────────────────────────────────
+
+    #[test]
+    fn test_review_request_approved_with_comment() {
+        let json = r#"{"status":"approved","comment":"Looks good"}"#;
+        let req: ReviewRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.status, "approved");
+        assert_eq!(req.comment, Some("Looks good".to_string()));
+    }
+
+    #[test]
+    fn test_review_request_rejected_no_comment() {
+        let json = r#"{"status":"rejected"}"#;
+        let req: ReviewRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.status, "rejected");
+        assert!(req.comment.is_none());
+    }
+
+    // ── Copilot: ProposalQuery ──────────────────────────────────────────────
+
+    #[test]
+    fn test_proposal_query_with_status() {
+        let json = r#"{"status":"pending"}"#;
+        let q: ProposalQuery = serde_json::from_str(json).unwrap();
+        assert_eq!(q.status, Some("pending".to_string()));
+    }
+
+    #[test]
+    fn test_proposal_query_empty() {
+        let json = r#"{}"#;
+        let q: ProposalQuery = serde_json::from_str(json).unwrap();
+        assert!(q.status.is_none());
+    }
+
+    // ── Copilot: validate_proposal_input ────────────────────────────────────
+
+    #[test]
+    fn test_validate_proposal_input_valid() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "some.key".to_string(),
+            proposed_value: "Some value".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_empty_language() {
+        let req = CreateProposalRequest {
+            language: "".to_string(),
+            key: "k".to_string(),
+            proposed_value: "v".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_language_too_long() {
+        let req = CreateProposalRequest {
+            language: "a".repeat(11),
+            key: "k".to_string(),
+            proposed_value: "v".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_empty_key() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "".to_string(),
+            proposed_value: "v".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_empty_value() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "k".to_string(),
+            proposed_value: "".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_context_too_long() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "k".to_string(),
+            proposed_value: "v".to_string(),
+            context: Some("x".repeat(1001)),
+        };
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_context_at_max() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "k".to_string(),
+            proposed_value: "v".to_string(),
+            context: Some("x".repeat(1000)),
+        };
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_key_at_max() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "k".repeat(255),
+            proposed_value: "v".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_key_too_long() {
+        let req = CreateProposalRequest {
+            language: "en".to_string(),
+            key: "k".repeat(256),
+            proposed_value: "v".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn test_validate_proposal_input_language_at_max() {
+        let req = CreateProposalRequest {
+            language: "a".repeat(10),
+            key: "k".to_string(),
+            proposed_value: "v".to_string(),
+            context: None,
+        };
+        assert!(validate_proposal_input(&req).is_ok());
     }
 }
