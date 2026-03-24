@@ -383,3 +383,153 @@ pub async fn get_branding_logo(State(state): State<SharedState>) -> Response {
                 .into_response()
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── strip_data_uri ──────────────────────────────────────────────────────
+
+    #[test]
+    fn strip_data_uri_with_prefix() {
+        let input = "data:image/png;base64,iVBOR...";
+        assert_eq!(strip_data_uri(input), "iVBOR...");
+    }
+
+    #[test]
+    fn strip_data_uri_with_jpeg_prefix() {
+        let input = "data:image/jpeg;base64,/9j/4AAQ";
+        assert_eq!(strip_data_uri(input), "/9j/4AAQ");
+    }
+
+    #[test]
+    fn strip_data_uri_no_prefix() {
+        let input = "iVBORw0KGgoAAAANS";
+        assert_eq!(strip_data_uri(input), "iVBORw0KGgoAAAANS");
+    }
+
+    #[test]
+    fn strip_data_uri_empty_string() {
+        assert_eq!(strip_data_uri(""), "");
+    }
+
+    #[test]
+    fn strip_data_uri_only_prefix() {
+        let input = "data:image/png;base64,";
+        assert_eq!(strip_data_uri(input), "");
+    }
+
+    #[test]
+    fn strip_data_uri_semicolon_no_base64() {
+        let input = "data:image/png;charset=utf8,ABC";
+        // No ";base64," → returns input unchanged
+        assert_eq!(strip_data_uri(input), input);
+    }
+
+    // ── detect_mime ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn detect_mime_jpeg() {
+        let jpeg_header = [0xFF, 0xD8, 0xFF, 0xE0];
+        assert_eq!(detect_mime(&jpeg_header), Some("image/jpeg"));
+    }
+
+    #[test]
+    fn detect_mime_jpeg_minimal() {
+        let jpeg_min = [0xFF, 0xD8, 0xFF];
+        assert_eq!(detect_mime(&jpeg_min), Some("image/jpeg"));
+    }
+
+    #[test]
+    fn detect_mime_png() {
+        let png_header = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A];
+        assert_eq!(detect_mime(&png_header), Some("image/png"));
+    }
+
+    #[test]
+    fn detect_mime_png_minimal() {
+        let png_min = [0x89, 0x50, 0x4E, 0x47];
+        assert_eq!(detect_mime(&png_min), Some("image/png"));
+    }
+
+    #[test]
+    fn detect_mime_unknown_format() {
+        let gif_header = [0x47, 0x49, 0x46, 0x38];
+        assert_eq!(detect_mime(&gif_header), None);
+    }
+
+    #[test]
+    fn detect_mime_empty_bytes() {
+        assert_eq!(detect_mime(&[]), None);
+    }
+
+    #[test]
+    fn detect_mime_too_short_for_jpeg() {
+        assert_eq!(detect_mime(&[0xFF, 0xD8]), None);
+    }
+
+    #[test]
+    fn detect_mime_too_short_for_png() {
+        assert_eq!(detect_mime(&[0x89, 0x50, 0x4E]), None);
+    }
+
+    #[test]
+    fn detect_mime_single_byte() {
+        assert_eq!(detect_mime(&[0xFF]), None);
+    }
+
+    // ── BrandingConfig serde ────────────────────────────────────────────────
+
+    #[test]
+    fn branding_config_serde_with_logo() {
+        let config = BrandingConfig {
+            app_name: "MyParking".into(),
+            primary_color: "#ff0000".into(),
+            logo_url: Some("/api/v1/branding/logo".into()),
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let parsed: BrandingConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.app_name, "MyParking");
+        assert_eq!(parsed.logo_url.unwrap(), "/api/v1/branding/logo");
+    }
+
+    #[test]
+    fn branding_config_serde_without_logo() {
+        let config = BrandingConfig {
+            app_name: "ParkHub".into(),
+            primary_color: "#2563eb".into(),
+            logo_url: None,
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let parsed: BrandingConfig = serde_json::from_str(&json).unwrap();
+        assert!(parsed.logo_url.is_none());
+    }
+
+    #[test]
+    fn branding_update_deserialization() {
+        let json = r##"{"app_name":"New Name","primary_color":"#123456"}"##;
+        let update: BrandingUpdate = serde_json::from_str(json).unwrap();
+        assert_eq!(update.app_name.unwrap(), "New Name");
+        assert_eq!(update.primary_color.unwrap(), "#123456");
+    }
+
+    #[test]
+    fn branding_update_partial() {
+        let json = r#"{"app_name":"Only Name"}"#;
+        let update: BrandingUpdate = serde_json::from_str(json).unwrap();
+        assert_eq!(update.app_name.unwrap(), "Only Name");
+        assert!(update.primary_color.is_none());
+    }
+
+    #[test]
+    fn logo_upload_deserialization() {
+        let json = r#"{"logo":"data:image/png;base64,iVBOR..."}"#;
+        let upload: LogoUpload = serde_json::from_str(json).unwrap();
+        assert!(upload.logo.starts_with("data:"));
+    }
+
+    #[test]
+    fn max_logo_bytes_is_two_mb() {
+        assert_eq!(MAX_LOGO_BYTES, 2 * 1024 * 1024);
+    }
+}

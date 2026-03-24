@@ -92,3 +92,65 @@ pub fn certificate_fingerprint(cert_der: &[u8]) -> String {
 
     fingerprint
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fingerprint_is_deterministic() {
+        let data = b"test certificate data";
+        let fp1 = certificate_fingerprint(data);
+        let fp2 = certificate_fingerprint(data);
+        assert_eq!(fp1, fp2);
+    }
+
+    #[test]
+    fn fingerprint_format_is_colon_separated_hex() {
+        let fp = certificate_fingerprint(b"some bytes");
+        // SHA256 produces 32 bytes → 32 hex pairs separated by colons
+        let parts: Vec<&str> = fp.split(':').collect();
+        assert_eq!(parts.len(), 32, "SHA256 fingerprint should have 32 hex pairs");
+        for part in &parts {
+            assert_eq!(part.len(), 2, "Each hex pair must be 2 chars");
+            assert!(
+                part.chars().all(|c| c.is_ascii_hexdigit()),
+                "Each part must be valid hex: {part}"
+            );
+        }
+    }
+
+    #[test]
+    fn fingerprint_uses_uppercase_hex() {
+        let fp = certificate_fingerprint(b"uppercase check");
+        assert!(
+            fp.chars().all(|c| c == ':' || c.is_ascii_uppercase() || c.is_ascii_digit()),
+            "Fingerprint should use uppercase hex: {fp}"
+        );
+    }
+
+    #[test]
+    fn fingerprint_different_inputs_produce_different_outputs() {
+        let fp1 = certificate_fingerprint(b"cert A");
+        let fp2 = certificate_fingerprint(b"cert B");
+        assert_ne!(fp1, fp2);
+    }
+
+    #[test]
+    fn fingerprint_empty_input() {
+        let fp = certificate_fingerprint(b"");
+        // SHA256 of empty input is well-defined
+        let parts: Vec<&str> = fp.split(':').collect();
+        assert_eq!(parts.len(), 32);
+    }
+
+    #[test]
+    fn fingerprint_known_value() {
+        // SHA256 of empty bytes is e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+        let fp = certificate_fingerprint(b"");
+        assert_eq!(
+            fp,
+            "E3:B0:C4:42:98:FC:1C:14:9A:FB:F4:C8:99:6F:B9:24:27:AE:41:E4:64:9B:93:4C:A4:95:99:1B:78:52:B8:55"
+        );
+    }
+}

@@ -558,3 +558,186 @@ pub async fn review_proposal(
 
     (StatusCode::OK, Json(ApiResponse::success(proposal)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_proposal(lang: &str, key: &str, value: &str, context: Option<&str>) -> CreateProposalRequest {
+        CreateProposalRequest {
+            language: lang.to_string(),
+            key: key.to_string(),
+            proposed_value: value.to_string(),
+            context: context.map(String::from),
+        }
+    }
+
+    // ── validate_proposal_input ─────────────────────────────────────────────
+
+    #[test]
+    fn valid_proposal_no_context() {
+        let req = make_proposal("en", "greeting.hello", "Hello!", None);
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn valid_proposal_with_context() {
+        let req = make_proposal("de", "nav.home", "Startseite", Some("Navigation bar"));
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn language_empty_rejected() {
+        let req = make_proposal("", "key", "value", None);
+        assert_eq!(
+            validate_proposal_input(&req),
+            Err("Language must be 1-10 characters")
+        );
+    }
+
+    #[test]
+    fn language_at_max_length_accepted() {
+        let lang = "a".repeat(10);
+        let req = make_proposal(&lang, "key", "value", None);
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn language_over_max_rejected() {
+        let lang = "a".repeat(11);
+        let req = make_proposal(&lang, "key", "value", None);
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn key_empty_rejected() {
+        let req = make_proposal("en", "", "value", None);
+        assert_eq!(
+            validate_proposal_input(&req),
+            Err("Key must be 1-255 characters")
+        );
+    }
+
+    #[test]
+    fn key_at_max_length_accepted() {
+        let key = "k".repeat(255);
+        let req = make_proposal("en", &key, "value", None);
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn key_over_max_rejected() {
+        let key = "k".repeat(256);
+        let req = make_proposal("en", &key, "value", None);
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn proposed_value_empty_rejected() {
+        let req = make_proposal("en", "key", "", None);
+        assert_eq!(
+            validate_proposal_input(&req),
+            Err("Proposed value must be 1-5000 characters")
+        );
+    }
+
+    #[test]
+    fn proposed_value_at_max_length_accepted() {
+        let val = "v".repeat(5000);
+        let req = make_proposal("en", "key", &val, None);
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn proposed_value_over_max_rejected() {
+        let val = "v".repeat(5001);
+        let req = make_proposal("en", "key", &val, None);
+        assert!(validate_proposal_input(&req).is_err());
+    }
+
+    #[test]
+    fn context_at_max_length_accepted() {
+        let ctx = "c".repeat(1000);
+        let req = make_proposal("en", "key", "value", Some(&ctx));
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    #[test]
+    fn context_over_max_rejected() {
+        let ctx = "c".repeat(1001);
+        let req = make_proposal("en", "key", "value", Some(&ctx));
+        assert_eq!(
+            validate_proposal_input(&req),
+            Err("Context must be at most 1000 characters")
+        );
+    }
+
+    #[test]
+    fn context_empty_string_accepted() {
+        let req = make_proposal("en", "key", "value", Some(""));
+        assert!(validate_proposal_input(&req).is_ok());
+    }
+
+    // ── DTO deserialization ─────────────────────────────────────────────────
+
+    #[test]
+    fn create_proposal_request_deserialization() {
+        let json = r#"{"language":"en","key":"hello","proposed_value":"Hi!","context":"Test"}"#;
+        let req: CreateProposalRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.language, "en");
+        assert_eq!(req.key, "hello");
+        assert_eq!(req.proposed_value, "Hi!");
+        assert_eq!(req.context.unwrap(), "Test");
+    }
+
+    #[test]
+    fn create_proposal_request_without_context() {
+        let json = r#"{"language":"de","key":"bye","proposed_value":"Tschüss"}"#;
+        let req: CreateProposalRequest = serde_json::from_str(json).unwrap();
+        assert!(req.context.is_none());
+    }
+
+    #[test]
+    fn vote_request_up() {
+        let json = r#"{"vote":"up"}"#;
+        let req: VoteRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.vote, "up");
+    }
+
+    #[test]
+    fn vote_request_down() {
+        let json = r#"{"vote":"down"}"#;
+        let req: VoteRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.vote, "down");
+    }
+
+    #[test]
+    fn review_request_approved() {
+        let json = r#"{"status":"approved","comment":"Looks good"}"#;
+        let req: ReviewRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.status, "approved");
+        assert_eq!(req.comment.unwrap(), "Looks good");
+    }
+
+    #[test]
+    fn review_request_rejected_no_comment() {
+        let json = r#"{"status":"rejected"}"#;
+        let req: ReviewRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.status, "rejected");
+        assert!(req.comment.is_none());
+    }
+
+    #[test]
+    fn proposal_query_with_status() {
+        let json = r#"{"status":"pending"}"#;
+        let q: ProposalQuery = serde_json::from_str(json).unwrap();
+        assert_eq!(q.status.unwrap(), "pending");
+    }
+
+    #[test]
+    fn proposal_query_empty() {
+        let json = r#"{}"#;
+        let q: ProposalQuery = serde_json::from_str(json).unwrap();
+        assert!(q.status.is_none());
+    }
+}
