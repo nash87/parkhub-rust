@@ -476,10 +476,7 @@ mod tests {
             AppError::BookingNotModifiable.code(),
             "BOOKING_NOT_MODIFIABLE"
         );
-        assert_eq!(
-            AppError::InvalidBookingTime.code(),
-            "INVALID_BOOKING_TIME"
-        );
+        assert_eq!(AppError::InvalidBookingTime.code(), "INVALID_BOOKING_TIME");
         assert_eq!(AppError::RateLimited.code(), "RATE_LIMITED");
         assert_eq!(AppError::Database("x".into()).code(), "DATABASE_ERROR");
         assert_eq!(AppError::Internal.code(), "INTERNAL_ERROR");

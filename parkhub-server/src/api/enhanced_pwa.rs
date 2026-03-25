@@ -7,12 +7,7 @@
 //! - `GET /api/v1/pwa/manifest` — dynamic manifest based on branding settings
 //! - `GET /api/v1/pwa/offline-data` — minimal data for offline mode
 
-use axum::{
-    extract::State,
-    http::header,
-    response::IntoResponse,
-    Extension, Json,
-};
+use axum::{extract::State, http::header, response::IntoResponse, Extension, Json};
 use serde::Serialize;
 
 use parkhub_common::ApiResponse;

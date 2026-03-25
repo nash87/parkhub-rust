@@ -378,7 +378,10 @@ async fn test_mobile_nearby_lots_with_lots() {
     assert_eq!(json["success"], true);
     let lots = json["data"].as_array().unwrap();
     // Lots without coordinates get included with large distance marker
-    assert!(!lots.is_empty(), "should include lots (even without coords)");
+    assert!(
+        !lots.is_empty(),
+        "should include lots (even without coords)"
+    );
     // Verify structure
     let first = &lots[0];
     assert!(first["id"].is_string());
@@ -657,7 +660,11 @@ async fn create_lot_with_coords(
         )
         .await
         .unwrap();
-    assert_eq!(resp.status(), StatusCode::CREATED, "create lot with coords failed");
+    assert_eq!(
+        resp.status(),
+        StatusCode::CREATED,
+        "create lot with coords failed"
+    );
     let json = body_json(resp).await;
     json["data"]["id"].as_str().unwrap().to_string()
 }
@@ -729,24 +736,15 @@ async fn test_mobile_nearby_lots_known_coordinates_distance() {
     // The haversine distance for 0.001° latitude at that latitude is ~111 m.
     let state = test_state().await;
     let admin_tok = admin_token(state.clone()).await;
-    create_lot_with_coords(
-        state.clone(),
-        &admin_tok,
-        "Munich Lot",
-        48.1351,
-        11.5820,
-    )
-    .await;
+    create_lot_with_coords(state.clone(), &admin_tok, "Munich Lot", 48.1351, 11.5820).await;
 
     let app = router(state);
     let resp = app
         .oneshot(
-            Request::get(
-                "/api/v1/mobile/nearby-lots?lat=48.1361&lng=11.5820&radius=500",
-            )
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::get("/api/v1/mobile/nearby-lots?lat=48.1361&lng=11.5820&radius=500")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -779,12 +777,10 @@ async fn test_mobile_nearby_lots_radius_filters_out_far_lots() {
     let app = router(state);
     let resp = app
         .oneshot(
-            Request::get(
-                "/api/v1/mobile/nearby-lots?lat=48.1361&lng=11.5820&radius=500",
-            )
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::get("/api/v1/mobile/nearby-lots?lat=48.1361&lng=11.5820&radius=500")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -793,10 +789,7 @@ async fn test_mobile_nearby_lots_radius_filters_out_far_lots() {
     let json = body_json(resp).await;
     let lots = json["data"].as_array().unwrap();
 
-    let names: Vec<&str> = lots
-        .iter()
-        .filter_map(|l| l["name"].as_str())
-        .collect();
+    let names: Vec<&str> = lots.iter().filter_map(|l| l["name"].as_str()).collect();
     assert!(
         names.contains(&"Near Lot"),
         "Near Lot should be within 500 m radius"
@@ -822,12 +815,10 @@ async fn test_mobile_nearby_lots_sorted_closest_first() {
     let app = router(state);
     let resp = app
         .oneshot(
-            Request::get(
-                "/api/v1/mobile/nearby-lots?lat=48.1351&lng=11.5820&radius=5000",
-            )
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::get("/api/v1/mobile/nearby-lots?lat=48.1351&lng=11.5820&radius=5000")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -838,9 +829,7 @@ async fn test_mobile_nearby_lots_sorted_closest_first() {
     // Filter to only our named lots (ignore zero-coordinate lots from harness setup)
     let named: Vec<_> = lots
         .iter()
-        .filter(|l| {
-            matches!(l["name"].as_str(), Some("Closer Lot") | Some("Farther Lot"))
-        })
+        .filter(|l| matches!(l["name"].as_str(), Some("Closer Lot") | Some("Farther Lot")))
         .collect();
     assert_eq!(named.len(), 2, "both lots should be in results");
 
@@ -864,12 +853,10 @@ async fn test_mobile_nearby_lots_min_radius_clamped_to_100() {
     let app = router(state);
     let resp = app
         .oneshot(
-            Request::get(
-                "/api/v1/mobile/nearby-lots?lat=48.1351&lng=11.5820&radius=1",
-            )
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::get("/api/v1/mobile/nearby-lots?lat=48.1351&lng=11.5820&radius=1")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -896,12 +883,10 @@ async fn test_mobile_nearby_lots_no_coordinates_returns_max_distance() {
     let app = router(state);
     let resp = app
         .oneshot(
-            Request::get(
-                "/api/v1/mobile/nearby-lots?lat=48.1351&lng=11.5820&radius=5000",
-            )
-            .header("authorization", format!("Bearer {admin_tok}"))
-            .body(Body::empty())
-            .unwrap(),
+            Request::get("/api/v1/mobile/nearby-lots?lat=48.1351&lng=11.5820&radius=5000")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
         )
         .await
         .unwrap();
@@ -911,9 +896,11 @@ async fn test_mobile_nearby_lots_no_coordinates_returns_max_distance() {
     let lots = json["data"].as_array().unwrap();
     assert!(!lots.is_empty());
     // The zero-coordinate lot must have distance_meters = f64::MAX
-    let has_max = lots
-        .iter()
-        .any(|l| l["distance_meters"].as_f64().map_or(false, |d| d >= f64::MAX));
+    let has_max = lots.iter().any(|l| {
+        l["distance_meters"]
+            .as_f64()
+            .map_or(false, |d| d >= f64::MAX)
+    });
     assert!(
         has_max,
         "lot without coordinates must have distance_meters = f64::MAX"
@@ -997,7 +984,11 @@ async fn test_mobile_quick_book_multiple_lots_all_returned() {
             )
             .await
             .unwrap();
-        assert_eq!(resp.status(), StatusCode::CREATED, "failed to create {name}");
+        assert_eq!(
+            resp.status(),
+            StatusCode::CREATED,
+            "failed to create {name}"
+        );
     }
 
     let app = router(state);
@@ -1319,7 +1310,11 @@ async fn test_mobile_active_booking_future_start_excluded() {
             )
             .await
             .unwrap();
-        assert_eq!(resp.status(), StatusCode::CREATED, "future booking must be created");
+        assert_eq!(
+            resp.status(),
+            StatusCode::CREATED,
+            "future booking must be created"
+        );
     }
 
     let app = router(state);

@@ -3,11 +3,7 @@
 //! Self-service: operators configure their own Stripe keys via admin settings.
 //! When keys are not configured, endpoints return `501 Not Implemented`.
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Extension, Json,
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

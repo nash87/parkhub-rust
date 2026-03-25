@@ -500,10 +500,7 @@ async fn test_webhooks_v2_create_empty_events() {
     let json = body_json(resp).await;
     assert_eq!(json["error"]["code"], "VALIDATION_ERROR");
     assert!(
-        json["error"]["message"]
-            .as_str()
-            .unwrap()
-            .contains("event"),
+        json["error"]["message"].as_str().unwrap().contains("event"),
         "error message should mention events"
     );
 }

@@ -229,8 +229,8 @@ pub use bookings::{
 };
 #[cfg(feature = "mod-calendar")]
 use calendar::{
-    calendar_events, calendar_ical_authenticated, calendar_ical_by_token,
-    generate_calendar_token, user_calendar_ics,
+    calendar_events, calendar_ical_authenticated, calendar_ical_by_token, generate_calendar_token,
+    user_calendar_ics,
 };
 #[cfg(feature = "mod-calendar-drag")]
 use calendar_drag::reschedule_booking;
@@ -739,10 +739,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Calendar iCal via personal subscription token — public (no auth, token in URL)
     #[cfg(feature = "mod-calendar")]
     {
-        public_routes = public_routes.route(
-            "/api/v1/calendar/ical/{token}",
-            get(calendar_ical_by_token),
-        );
+        public_routes =
+            public_routes.route("/api/v1/calendar/ical/{token}", get(calendar_ical_by_token));
     }
 
     // Feature-gated public routes
