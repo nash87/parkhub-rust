@@ -9,19 +9,31 @@ on:
     - cron: '0 6 * * 1'
   workflow_dispatch:
 
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
   security-events: write
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: '1.85'
+  NODE_VERSION: '22.12.0'
+
 jobs:
   analyze:
-    name: Analyze
+    name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript-typescript']
+        include:
+          - language: rust
+          - language: javascript-typescript
 
     steps:
       - name: Checkout
@@ -33,10 +45,35 @@ jobs:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+      - name: Install Rust
+        if: matrix.language == 'rust'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Build Rust for CodeQL
+        if: matrix.language == 'rust'
+        run: |
+          mkdir -p parkhub-web/dist
+          printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+          cargo build --locked --package parkhub-server --no-default-features --features headless
+
+      - name: Setup Node.js
+        if: matrix.language == 'javascript-typescript'
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build frontend for CodeQL
+        if: matrix.language == 'javascript-typescript'
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: /language:${{ matrix.language }}
