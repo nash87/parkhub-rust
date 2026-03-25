@@ -226,7 +226,10 @@ pub use bookings::{
     list_bookings, quick_book, update_booking,
 };
 #[cfg(feature = "mod-calendar")]
-use calendar::{calendar_events, user_calendar_ics};
+use calendar::{
+    calendar_events, calendar_ical_authenticated, calendar_ical_by_token,
+    generate_calendar_token, user_calendar_ics,
+};
 #[cfg(feature = "mod-calendar-drag")]
 use calendar_drag::reschedule_booking;
 #[cfg(feature = "mod-credits")]
@@ -728,6 +731,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         public_routes = public_routes.route(
             "/api/v1/admin/audit-log/export/download/{token}",
             get(audit_export::download_audit_export),
+        );
+    }
+
+    // Calendar iCal via personal subscription token — public (no auth, token in URL)
+    #[cfg(feature = "mod-calendar")]
+    {
+        public_routes = public_routes.route(
+            "/api/v1/calendar/ical/{token}",
+            get(calendar_ical_by_token),
         );
     }
 
@@ -1661,7 +1673,13 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         protected_routes = protected_routes
             .route("/api/v1/calendar/events", get(calendar_events))
             // iCal export for user's bookings
-            .route("/api/v1/user/calendar.ics", get(user_calendar_ics));
+            .route("/api/v1/user/calendar.ics", get(user_calendar_ics))
+            // iCal feed (authenticated, per issue spec)
+            .route("/api/v1/bookings/ical", get(calendar_ical_authenticated))
+            // iCal feed alias
+            .route("/api/v1/calendar/ical", get(calendar_ical_authenticated))
+            // Generate personal calendar subscription token
+            .route("/api/v1/calendar/token", post(generate_calendar_token));
     }
 
     #[cfg(feature = "mod-webhooks")]

@@ -52,6 +52,8 @@ mod validation;
 
 #[cfg(all(test, feature = "full"))]
 mod booking_tests;
+#[cfg(all(test, feature = "full"))]
+mod calendar_tests;
 #[cfg(test)]
 mod coverage_tests;
 #[cfg(all(test, feature = "full"))]

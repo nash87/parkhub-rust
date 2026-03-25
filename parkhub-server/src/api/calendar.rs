@@ -169,14 +169,20 @@ async fn build_ical_feed(state: &crate::AppState, user_id: &str) -> String {
     );
 
     for b in &bookings {
-        // Resolve lot name for LOCATION
-        let lot_name = state
+        // Resolve lot name and address for SUMMARY/LOCATION
+        let lot = state
             .db
             .get_parking_lot(&b.lot_id.to_string())
             .await
             .ok()
-            .flatten()
-            .map_or_else(|| b.floor_name.clone(), |lot| lot.name);
+            .flatten();
+        let lot_name = lot
+            .as_ref()
+            .map_or_else(|| b.floor_name.clone(), |l| l.name.clone());
+        let lot_address = lot
+            .as_ref()
+            .map(|l| l.address.clone())
+            .unwrap_or_else(|| lot_name.clone());
 
         let _ = write!(ical, "BEGIN:VEVENT\r\n");
         let _ = write!(ical, "UID:{}@parkhub\r\n", b.id);
@@ -187,7 +193,7 @@ async fn build_ical_feed(state: &crate::AppState, user_id: &str) -> String {
         );
         let _ = write!(ical, "DTEND:{}\r\n", b.end_time.format("%Y%m%dT%H%M%SZ"));
         let _ = write!(ical, "SUMMARY:{} - Slot {}\r\n", lot_name, b.slot_number);
-        let _ = write!(ical, "LOCATION:{lot_name}\r\n");
+        let _ = write!(ical, "LOCATION:{lot_address}\r\n");
         let _ = write!(
             ical,
             "DESCRIPTION:Floor: {}\\nSlot: {}\\nStatus: {}\r\n",
@@ -241,14 +247,13 @@ pub async fn user_calendar_ics(
     )
 }
 
-/// `GET /api/v1/calendar/ical` — iCal feed of user's bookings (auth required, inline)
-#[utoipa::path(get, path = "/api/v1/calendar/ical", tag = "Calendar",
+/// `GET /api/v1/bookings/ical` / `GET /api/v1/calendar/ical` — iCal feed of user's bookings (auth required, inline)
+#[utoipa::path(get, path = "/api/v1/bookings/ical", tag = "Calendar",
     summary = "iCal feed (authenticated)",
     description = "Returns the user's bookings as an iCal feed for direct subscription.",
     security(("bearer_auth" = [])),
     responses((status = 200, description = "iCalendar feed"))
 )]
-#[allow(dead_code)]
 pub async fn calendar_ical_authenticated(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -266,7 +271,7 @@ pub async fn calendar_ical_authenticated(
     )
 }
 
-/// `GET /api/v1/calendar/ical/:token` — public iCal feed via personal subscription token
+/// `GET /api/v1/calendar/ical/{token}` — public iCal feed via personal subscription token
 #[utoipa::path(get, path = "/api/v1/calendar/ical/{token}", tag = "Calendar",
     summary = "iCal feed (public via token)",
     description = "Returns a user's bookings as an iCal feed via a personal subscription token.",
@@ -275,7 +280,6 @@ pub async fn calendar_ical_authenticated(
         (status = 404, description = "Invalid or expired token")
     )
 )]
-#[allow(dead_code)]
 pub async fn calendar_ical_by_token(
     State(state): State<SharedState>,
     Path(token): Path<String>,
@@ -314,7 +318,6 @@ pub async fn calendar_ical_by_token(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Token generated"))
 )]
-#[allow(dead_code)]
 pub async fn generate_calendar_token(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
