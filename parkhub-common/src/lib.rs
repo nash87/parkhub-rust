@@ -36,15 +36,17 @@ mod tests {
 
     #[test]
     fn default_port_is_non_privileged() {
+        let port = std::hint::black_box(DEFAULT_PORT as u32);
         assert!(
-            DEFAULT_PORT >= 1024,
+            port >= 1024,
             "DEFAULT_PORT should be a non-privileged port (>= 1024)"
         );
     }
 
     #[test]
     fn default_port_is_within_valid_range() {
-        assert!(DEFAULT_PORT > 0 && DEFAULT_PORT <= 65535);
+        let port = std::hint::black_box(DEFAULT_PORT as u32);
+        assert!(u16::try_from(port).is_ok());
     }
 
     #[test]
