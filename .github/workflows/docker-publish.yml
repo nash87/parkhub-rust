@@ -17,9 +17,23 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  validate-tag:
+    name: Validate container release ref
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require v* tag ref
+        run: |
+          if [[ ! "${GITHUB_REF}" =~ ^refs/tags/v ]]; then
+            echo "workflow_dispatch must target a v* tag ref"
+            exit 1
+          fi
+
   build-and-push:
     name: Build and Publish GHCR Image
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [validate-tag]
+    if: github.event_name != 'workflow_dispatch' || needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -55,7 +69,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=sha-,format=short
-            type=raw,value=latest
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
       - name: Build and push
         id: build

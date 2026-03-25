@@ -56,18 +56,23 @@ jobs:
         run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless'
 
       - name: Start server in background
+        shell: bash
         run: |
           ./target/release/parkhub-server --headless --unattended --port 8081 &
           echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          READY=0
           for i in $(seq 1 45); do
             if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
               echo "Server ready after ${i}s"
-              exit 0
+              READY=1
+              break
             fi
             sleep 1
           done
-          echo 'Server did not become healthy in time'
-          exit 1
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy in time'
+            exit 1
+          fi
         env:
           DEMO_MODE: 'true'
           PARKHUB_ADMIN_PASSWORD: 'demo'

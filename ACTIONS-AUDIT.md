@@ -34,6 +34,7 @@
   - Pinned Rust validation to the declared toolchain baseline (`1.85`).
   - Kept PR CI focused on the repository's realistic headless Rust path plus the real frontend build/test path.
   - Intentionally did **not** force `--workspace --all-features` into PR CI because that would drag the optional Slint GUI/client path into every Linux PR run even though releases already validate desktop artifacts separately.
+  - Kept `fmt` and `clippy -D warnings` visible in PR CI, but left them outside the required aggregate gate until the repo's pre-existing failures are cleaned up.
   - Added workflow-level concurrency cancellation and explicit job timeouts.
   - Kept a single gate job (`CI`) for branch protection.
 
@@ -53,6 +54,7 @@
   - Added `--locked` release builds.
   - Added artifact retention, checksums, provenance attestation, and explicit job timeouts.
   - Kept Linux + Windows release packaging because that matches the current shipped binaries.
+  - Added an explicit manual-dispatch tag validation step so maintainers get a clear failure instead of a silent no-op.
 
 - **Container publish (`.github/workflows/docker-publish.yml`)**
   - Split the workflow back down to one responsibility: build/publish the GHCR image for release tags.
@@ -60,7 +62,7 @@
   - Added `linux/arm64` alongside `linux/amd64` for release images.
   - Added image provenance attestation and a CycloneDX SBOM artifact.
   - Kept Trivy image scanning and SARIF upload.
-  - Added an explicit tag guard so manual dispatch cannot publish from arbitrary branches.
+  - Added an explicit manual-dispatch tag validation step so maintainers get a clear failure instead of a silent no-op.
 
 - **Dependency review, E2E, and Lighthouse**
   - Added concurrency and timeouts where missing.
