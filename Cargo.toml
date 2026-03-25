@@ -91,8 +91,6 @@ needless_raw_string_hashes = "allow"
 unreadable_literal = "allow"
 # Rust 1.94+ pedantic: f64 assert_eq in tests — acceptable for exact computed values
 float_cmp = "allow"
-# Rust 1.94+ pedantic: hardcoded "0.0.0.0" / "127.0.0.1" for server bind addresses
-ip_constant = "allow"
 # Rust 1.94+ nursery: .clone() on values moving into closures
 redundant_clone = "allow"
 # Rust 1.94+ pedantic: .iter() in for loops vs direct reference
