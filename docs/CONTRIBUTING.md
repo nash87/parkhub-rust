@@ -2,6 +2,9 @@
 
 Thank you for your interest in contributing to ParkHub Rust.
 
+> The canonical contributing guide lives in [CONTRIBUTING.md](../CONTRIBUTING.md) at the
+> repository root. This document provides additional detail for specific workflows.
+
 ---
 
 ## Table of Contents
@@ -10,6 +13,7 @@ Thank you for your interest in contributing to ParkHub Rust.
 - [Running Tests](#running-tests)
 - [Code Style](#code-style)
 - [Project Structure](#project-structure)
+- [Module System (Feature Flags)](#module-system-feature-flags)
 - [Pull Request Process](#pull-request-process)
 - [Reporting Bugs](#reporting-bugs)
 - [Security Vulnerabilities](#security-vulnerabilities)
@@ -81,21 +85,58 @@ cargo watch -x 'run --package parkhub-server -- --headless --unattended --debug'
 ### Rust unit and integration tests
 
 ```bash
-# Run all tests in the workspace
-cargo test
+# Recommended: server tests in headless mode (no GUI deps required)
+cargo test --package parkhub-server --no-default-features --features headless
 
-# Run tests for a specific package
-cargo test --package parkhub-server
+# Shared library tests
 cargo test --package parkhub-common
 
 # Run a specific test by name
-cargo test test_booking_creation
+cargo test --package parkhub-server \
+  --no-default-features --features headless \
+  -- test_booking_creation
 
 # Show println! output (for debugging test failures)
 cargo test -- --nocapture
 
 # Run with verbose output
 cargo test -- --test-output immediate
+```
+
+> **Note**: `cargo test --workspace` requires `glib-2.0` (Slint GUI dep) on Linux.
+> Use `--no-default-features --features headless` when running without a GUI environment.
+
+### Frontend unit tests (Vitest)
+
+```bash
+cd parkhub-web
+
+# Run all unit/component tests once
+npx vitest run
+
+# Watch mode
+npx vitest
+
+# Coverage report
+npx vitest run --coverage
+```
+
+### Frontend E2E tests (Playwright)
+
+```bash
+cd parkhub-web
+
+# Install browsers on first run
+npx playwright install --with-deps
+
+# Run all E2E specs (server must be running on :7878)
+npx playwright test
+
+# Run a single spec with browser visible
+npx playwright test e2e/login.spec.ts --headed
+
+# Show HTML report
+npx playwright show-report
 ```
 
 ### Frontend type checking and linting
@@ -118,8 +159,9 @@ npm run build
 ```bash
 cargo fmt --all
 cargo clippy --workspace -- -D warnings
-cargo test --workspace
-cd parkhub-web && npm run build
+cargo test --package parkhub-server --no-default-features --features headless
+cargo test --package parkhub-common
+cd parkhub-web && npm run type-check && npm run lint && npx vitest run && npm run build
 ```
 
 ---
@@ -199,6 +241,43 @@ parkhub/
 
 ---
 
+## Module System (Feature Flags)
+
+ParkHub Rust uses Cargo feature flags to compile optional modules in or out of the binary.
+
+| Feature | Description |
+|---------|-------------|
+| `default` | `gui` + `full` — all modules plus the Slint desktop GUI |
+| `headless` | Disables the GUI; use this for Docker/server deployments |
+| `full` | Enables all `mod-*` optional modules |
+
+Individual `mod-*` flags (selected examples):
+
+| Flag | What it enables |
+|------|----------------|
+| `mod-bookings` | Core booking CRUD |
+| `mod-vehicles` | Vehicle registry |
+| `mod-calendar` | Calendar view API |
+| `mod-recurring` | Recurring bookings |
+| `mod-guest` | Guest booking flow |
+| `mod-credits` | Credit/quota system |
+| `mod-email` | SMTP email transport |
+| `mod-webhooks` | Outgoing webhooks |
+| `mod-push` | Web Push (VAPID) |
+| `mod-export` | CSV/data export |
+| `mod-oauth` | OAuth2 login |
+
+```bash
+# Headless server with a minimal feature set
+cargo build --package parkhub-server \
+  --no-default-features \
+  --features "headless,mod-bookings,mod-vehicles"
+```
+
+See [`parkhub-server/Cargo.toml`](../parkhub-server/Cargo.toml) for the full list.
+
+---
+
 ## Pull Request Process
 
 1. **Fork** the repository and create a feature branch from `main`:
@@ -222,8 +301,9 @@ parkhub/
    ```bash
    cargo fmt --all
    cargo clippy --workspace -- -D warnings
-   cargo test --workspace
-   cd parkhub-web && npm run build
+   cargo test --package parkhub-server --no-default-features --features headless
+   cargo test --package parkhub-common
+   cd parkhub-web && npm run type-check && npm run lint && npx vitest run && npm run build
    ```
 
 4. **Commit messages** — use the imperative mood, reference issues:
