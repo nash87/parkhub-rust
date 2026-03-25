@@ -184,6 +184,7 @@ full = [
     "mod-parking-zones",
     "mod-notification-center",
     "mod-mobile",
+    "mod-admin-analytics",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = []
@@ -258,6 +259,7 @@ mod-audit-export = []
 mod-parking-zones = []
 mod-notification-center = []
 mod-mobile = []
+mod-admin-analytics = []
 
 [dev-dependencies]
 tempfile = "3"
