@@ -611,12 +611,16 @@ async fn complete_oauth_login(
             // Create new user
             let username = email.split('@').next().unwrap_or("user").to_string();
 
-            // Deduplicate username
+            // Deduplicate username (cap at 99)
             let mut final_username = username.clone();
-            let mut counter = 1;
-            while let Ok(Some(_)) = state_guard.db.get_user_by_username(&final_username).await {
+            let mut counter = 1u32;
+            while counter <= 99 && matches!(state_guard.db.get_user_by_username(&final_username).await, Ok(Some(_))) {
                 final_username = format!("{username}{counter}");
                 counter += 1;
+            }
+            if counter > 99 {
+                tracing::warn!("Username exhausted for OAuth email prefix: {username}");
+                return oauth_error_response("Too many accounts with this email prefix");
             }
 
             // Generate a random password hash (user logs in via OAuth, not password)

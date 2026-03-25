@@ -337,6 +337,18 @@ pub async fn register(
             .into_response();
     }
 
+    // Reject excessively long passwords before hashing (Argon2 CPU DoS prevention)
+    if request.password.len() > 256 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::<LoginResponse>::error(
+                "INVALID_INPUT",
+                "Password must not exceed 256 characters",
+            )),
+        )
+            .into_response();
+    }
+
     // Check if email already exists
     if let Ok(Some(_)) = state_guard.db.get_user_by_email(&request.email).await {
         return (
@@ -357,21 +369,19 @@ pub async fn register(
         .unwrap_or("user")
         .to_string();
 
-    // Check if username already exists, append number if needed
+    // Check if username already exists, append number if needed (cap at 99)
     let mut final_username = username.clone();
-    let mut counter = 1;
-    while let Ok(Some(_)) = state_guard.db.get_user_by_username(&final_username).await {
+    let mut counter = 1u32;
+    while counter <= 99 && matches!(state_guard.db.get_user_by_username(&final_username).await, Ok(Some(_))) {
         final_username = format!("{username}{counter}");
         counter += 1;
     }
-
-    // Reject excessively long passwords before hashing (Argon2 CPU DoS prevention)
-    if request.password.len() > 256 {
+    if counter > 99 {
         return (
-            StatusCode::BAD_REQUEST,
+            StatusCode::CONFLICT,
             Json(ApiResponse::<LoginResponse>::error(
-                "INVALID_INPUT",
-                "Password must not exceed 256 characters",
+                "USERNAME_EXHAUSTED",
+                "Too many accounts with this email prefix. Please use a different email address.",
             )),
         )
             .into_response();
