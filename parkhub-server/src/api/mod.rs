@@ -63,6 +63,8 @@ pub mod absences;
 #[cfg(feature = "mod-accessible")]
 pub mod accessible;
 pub mod admin;
+#[cfg(feature = "mod-admin-analytics")]
+pub mod admin_analytics;
 pub mod admin_ext;
 pub mod admin_handlers;
 #[cfg(feature = "mod-analytics")]
@@ -958,6 +960,21 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         "/api/v1/admin/analytics/overview",
         get(analytics::analytics_overview),
     );
+
+    #[cfg(feature = "mod-admin-analytics")]
+    let admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/analytics/occupancy",
+            get(admin_analytics::admin_occupancy),
+        )
+        .route(
+            "/api/v1/admin/analytics/revenue",
+            get(admin_analytics::admin_revenue_summary),
+        )
+        .route(
+            "/api/v1/admin/analytics/popular-lots",
+            get(admin_analytics::admin_popular_lots),
+        );
 
     let admin_routes = admin_routes
         .route("/api/v1/admin/reset", post(admin_reset))
