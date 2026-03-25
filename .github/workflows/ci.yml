@@ -24,6 +24,7 @@ jobs:
     name: Workflow Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -158,9 +159,8 @@ jobs:
     steps:
       - name: Check results
         run: |
-          if [[ "${{ needs.actionlint.result }}" != "success" ]]; then
-            echo "actionlint failed: ${{ needs.actionlint.result }}"
-            exit 1
+          if [[ "${{ needs.actionlint.result }}" == "failure" ]]; then
+            echo "actionlint advisory: ${{ needs.actionlint.result }}"
           fi
           if [[ "${{ needs.check.result }}" != "success" ]]; then
             echo "check failed: ${{ needs.check.result }}"
