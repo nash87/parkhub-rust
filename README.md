@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <a href="https://parkhub-rust-demo.onrender.com"><strong>Try the Live Demo</strong></a> &nbsp;·&nbsp;
+  <a href="https://parkhub-rust-demo.onrender.com"><strong>🚀 Try the Live Demo</strong></a> &nbsp;·&nbsp;
   <a href="docs/INSTALLATION.md">Installation</a> &nbsp;·&nbsp;
   <a href="docs/API.md">API Docs</a> &nbsp;·&nbsp;
   <a href="docs/GDPR.md">GDPR Guide</a> &nbsp;·&nbsp;
@@ -35,17 +35,17 @@
 
 ---
 
-## Why Self-Hosted?
+## 💡 Why Self-Hosted?
 
-Most parking management SaaS costs 200--2,000 EUR/month, stores your data on US cloud infrastructure, and requires a data processing agreement just to get started.
+Most parking management SaaS costs 200–2,000 EUR/month, stores your data on US cloud infrastructure, and requires a data processing agreement just to get started.
 
-ParkHub is different. It runs on your server -- a Raspberry Pi, a VPS, or your company network. Your data never leaves your premises, which means **no GDPR processor agreement needed**, no CLOUD Act exposure, and no monthly fees. The entire source code is MIT-licensed and auditable.
+ParkHub is different. It runs on your server — a Raspberry Pi, a VPS, or your company network. Your data never leaves your premises, which means **no GDPR processor agreement needed**, no CLOUD Act exposure, and no monthly fees. The entire source code is MIT-licensed and auditable.
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Docker (recommended)
+### 🐳 Docker (recommended)
 
 ```bash
 git clone https://github.com/nash87/parkhub-rust.git && cd parkhub-rust
@@ -53,11 +53,23 @@ docker compose up -d
 # Open http://localhost:8080 — admin password is in the logs
 ```
 
-The first build takes 5--10 minutes (compiles Rust + React from source). After that, starts are instant.
+The first build takes 5–10 minutes (compiles Rust + React from source). After that, starts are instant.
 
-### Native binary
+### 📦 Pre-built binary
+
+Download the latest release binary from [GitHub Releases](https://github.com/nash87/parkhub-rust/releases/latest) (built automatically by CI on every tagged release):
 
 ```bash
+# Linux x86_64
+curl -Lo parkhub-server https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-server-linux-x86_64
+chmod +x parkhub-server
+./parkhub-server --headless --unattended --port 8080
+```
+
+### 🔨 Build from source
+
+```bash
+git clone https://github.com/nash87/parkhub-rust.git && cd parkhub-rust
 cargo build --release --package parkhub-server --no-default-features --features headless
 ./target/release/parkhub-server --headless --unattended --port 8080
 ```
@@ -66,133 +78,57 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ---
 
-## Features
+## ✨ Feature Highlights
 
-### v4.3.0 Highlights
+### 🏢 Core Platform
+- **Full booking lifecycle** — one-tap quick booking, recurring reservations, guest bookings, swap requests, waitlists, automatic no-show release
+- **Visual lot editor** — per-floor interactive grid with drag-and-drop, real-time occupancy, color-coded availability
+- **4-tier RBAC** — user, premium, admin, superadmin with JWT session auth and token refresh
+- **Credits system** — monthly quotas with per-booking deduction
+- **Absence tracking** — homeoffice, vacation, sick leave with team overview and iCal import
+- **Admin dashboard** — occupancy stats, 7-day booking charts, weekday/hour heatmaps, CSV export, announcements
 
-- **Role-Based Access Control (RBAC)** -- 5 built-in roles, 6 granular permissions, custom role creation, user role assignment
-- **Advanced Audit Export** -- Multi-format export (PDF, CSV, JSON) with signed download URLs and full filtering
-- **Parking Zones with Pricing Tiers** -- Economy/Standard/Premium/VIP tiers with pricing multipliers and capacity management
+### 🌍 Localization & Accessibility
+- **10 languages** — EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH with runtime hot-loading
+- **12 switchable themes** — Classic, Glass, Bento, Brutalist, Neon, Warm, Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco
+- **Accessible parking** — `is_accessible` slots with 30-min priority booking, admin toggle, stats
 
-### v4.2.0 Highlights
+### 🔌 Integrations & Extensions
+- **Webhooks v2** — HMAC-SHA256 signed event delivery with retry logic and delivery logs
+- **iCal Calendar Sync** — subscribe to bookings from Google Calendar, Outlook, or Apple Calendar
+- **Web Push notifications** — VAPID-based push with action buttons and service worker handler
+- **Stripe payments** — checkout sessions, webhook handler, payment history, self-service config
+- **OAuth/Social login** — self-service Google + GitHub OAuth
+- **SAML 2.0 SSO** — enterprise single sign-on with IdP configuration
+- **GraphQL API** — full schema alongside REST with interactive GraphiQL playground
+- **Plugin/extension system** — trait-based plugin architecture with event hooks
 
-- **SAML/SSO Enterprise Authentication** -- Full SAML 2.0 single sign-on with IdP configuration, login redirect, SAML response parsing
-- **Webhooks v2 (Outgoing Event Subscriptions)** -- HMAC-SHA256 signed event delivery with retry logic, delivery logs, 5 event types
-- **Enhanced PWA / Mobile Experience** -- Dynamic manifest, offline data caching, bottom navigation, pull-to-refresh, offline indicator
+### 📊 Analytics & Operations
+- **Admin analytics dashboard** — daily bookings/revenue charts, peak hours heatmap, top lots, user growth
+- **Prometheus metrics** — `/metrics` endpoint for Grafana/K8s monitoring
+- **Audit log** — full audit trail with UI, filtering, and multi-format export (PDF, CSV, JSON)
+- **Scheduled reports** — automated daily/weekly/monthly email digests
+- **k6 load tests** — smoke, load, stress, and spike test scripts in `tests/load/`
+- **Lighthouse CI** — accessibility ≥ 95, performance ≥ 90, SEO ≥ 95 gates
 
-### v4.1.0 Highlights
-
-- **Booking Sharing & Guest Invites** -- Share bookings via secure links with optional expiry, invite guests by email
-- **Scheduled Reports (Email Digest)** -- Automated daily/weekly/monthly report delivery via email (occupancy, revenue, activity, trends)
-- **API Versioning & Deprecation** -- `X-API-Version` header, deprecation notices, `Sunset` header on deprecated endpoints, version changelog
-
-### v4.0.0 Highlights
-
-- **Plugin/Extension System** -- Trait-based plugin architecture with event hooks, marketplace-style admin UI, 2 built-in plugins (Slack Notifier, Auto-Assign Preferred Spot)
-- **GraphQL API** -- Full GraphQL schema alongside REST with interactive GraphiQL playground
-- **Compliance Reports & Audit Trail** -- GDPR/DSGVO compliance dashboard with 10 automated checks, Art. 30 data map, audit trail export, PDF compliance report
-
-### v3.6--v3.9 Highlights
-
-- **Parking History & Stats** -- Personal booking timeline with stats (favourite lot, avg duration, monthly trends)
-- **Geofencing & Auto Check-in** -- GPS proximity-based auto check-in using haversine distance
-- **Enhanced Waitlist** -- Priority-based with accept/decline offers and 15-minute expiry
-- **Digital Parking Pass** -- QR badge generation with public verification endpoint
-- **Absence Approval Workflows** -- Submit/approve/reject absence requests with admin queue
-- **Calendar Drag-to-Reschedule** -- Drag booking events to new dates with conflict detection
-- **Customizable Admin Widgets** -- 8 configurable dashboard widget types with per-user layout
-- **Kubernetes Helm Chart** -- Production-ready chart with HPA, PVC, all module flags, ingress + TLS
-- **k6 Load Testing Suite** -- Smoke, load, stress, and spike test scripts
-- **Postman Collection** -- Auto-generated from OpenAPI spec, 100+ requests in 17 folders
-
-### v3.5.0 Highlights
-
-- **Visitor Pre-Registration** -- Pre-register visitors with QR code passes, check-in tracking, admin overview with search/filter
-- **EV Charging Stations** -- Manage EV chargers (Type2/CCS/CHAdeMO/Tesla), start/stop sessions, kWh tracking, admin utilization stats
-- **Smart Recommendations** -- Weighted scoring algorithm (frequency 40%, availability 30%, price 20%, distance 10%), recommendation badges, star ratings in booking flow
-
-### v3.4.0 Highlights
-
-- **Accessible Parking** -- `is_accessible` slots with 30-min priority booking for users with disabilities, admin toggle, stats dashboard
-- **Maintenance Scheduling** -- CRUD for maintenance windows, auto-block slots, booking overlap validation, active maintenance banners
-- **Cost Center Billing** -- Billing analytics by cost center/department, CSV export, credit allocation per cost center
-
-### v3.3.0 Highlights
-
-- **Audit Log UI + Export** -- Paginated audit log at `/admin/audit-log` with action/user/date filters, color-coded badges, CSV export
-- **Data Import/Export Suite** -- Bulk CSV/JSON import for users and lots with drag-and-drop UI, enhanced CSV exports with stats
-- **Fleet / Vehicle Management** -- Admin fleet overview at `/admin/fleet` with type distribution, electric ratio, vehicle flagging
-
-### v3.2.0 Highlights
-
-- **iCal Calendar Sync** -- Subscribe to parking bookings from Google Calendar, Outlook, or Apple Calendar via personal token URL
-- **API Rate Limiting Dashboard** -- Admin view at `/admin/rate-limits` with per-group stats and 24h blocked-request chart
-- **Multi-Tenant Isolation** -- `tenant_id` on User/Lot/Booking, admin tenant CRUD, super-admin scoping, branding support
-
-### v3.1.0 Highlights
-
-- **Interactive Map View** -- Leaflet.js + OpenStreetMap at `/map` with color-coded lot markers, live availability, click-to-book popups
-- **Web Push Notifications** -- Structured push payloads with action buttons, service worker handler, useNotifications hook
-- **Stripe Payment Integration** -- Checkout sessions for credit purchase, webhook handler, payment history, self-service Stripe configuration
-
-### v3.0.0 Highlights
-
-- **10-Language Support** -- Complete translations for EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH with language selector dropdown
-- **Admin Analytics Dashboard** -- Comprehensive analytics at `/admin/analytics` with daily bookings/revenue charts, peak hours heatmap, top lots, user growth, CSV export
-- **Email Notification Templates** -- 6 professional HTML email templates with inline CSS (booking confirmation, reminder, cancellation, password reset, welcome, weekly summary)
-- **Lobby Display / Kiosk Mode** -- Full-screen public display at `/lobby/:lotId` for parking garage monitors (no auth, auto-refresh, per-floor breakdown)
-- **Interactive Onboarding Wizard** -- 4-step setup wizard at `/setup` (company info, create lot, invite users, pick theme)
-- **WebSocket real-time updates** -- Live booking/occupancy events with token auth, heartbeat, and auto-reconnect
-- **API architecture overhaul** -- mod.rs reduced from 4500 to 1500 lines via Phase 3 handler extraction
-- **12 switchable themes** -- Classic, Glass, Bento, Brutalist, Neon, Warm, Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco
-- **httpOnly cookie auth** -- XSS-proof authentication with SameSite=Lax and CSRF protection
-- **OAuth/Social login** -- Self-service Google + GitHub OAuth (users configure their own apps)
-- **Glass morphism UI** -- Bento grid dashboard with animated counters, spring physics, frosted-glass cards
-- **2FA/TOTP authentication** -- QR code enrollment, backup codes, per-account enable/disable
-- **Dynamic pricing** -- Occupancy-based surge/discount pricing with admin-configurable thresholds
-- **Operating hours** -- Per-lot 7-day schedule with booking validation and "Open Now" badges
-- **SMS/WhatsApp stubs** -- Notification channel expansion with per-event toggles
-- **PDF invoices** -- Professional booking invoices with VAT breakdown
-- **Plugin/extension system** -- Trait-based plugin architecture with event hooks, built-in Slack Notifier and Auto-Assign Preferred Spot plugins
-- **GraphQL API** -- Full GraphQL schema alongside REST with interactive playground
-- **GDPR compliance reports** -- Art. 30 data map, audit trail export, TOM summary, PDF reports
-- **60 Cargo feature flags** -- Build only the modules you need (see [Module System](#module-system))
-- **Lighthouse CI** -- Automated accessibility (>= 95), performance (>= 90), SEO (>= 95) gates
-- **Smart recommendations** -- Heuristic scoring engine that learns from usage patterns
-- **Community translations** -- 10 languages with proposal voting and admin review
-
-### Core
-
-- **Full booking lifecycle** -- One-tap quick booking, recurring reservations, guest bookings, swap requests, waitlists, automatic no-show release
-- **Visual lot editor** -- Per-floor interactive grid layouts with drag-and-drop, real-time occupancy, color-coded availability
-- **4-tier RBAC** -- User, premium, admin, superadmin with JWT session auth and token refresh
-- **Credits system** -- Monthly quotas with per-booking deduction
-- **Absence tracking** -- Homeoffice, vacation, sick leave with team overview and iCal import
-- **Admin dashboard** -- Occupancy stats, 7-day booking charts, weekday/hour heatmaps, CSV export, announcements
-- **10 languages** -- EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH with runtime hot-loading
-- **GDPR & German legal compliance** -- Art. 15/17, DDG SS5, 7 legal templates, audited for DSGVO/TTDSG/UK GDPR/CCPA/nDSG
-- **Observability** -- Prometheus metrics, OpenAPI 3.0 with 125+ endpoints at `/swagger-ui`, K8s health probes, structured tracing
-
-### Security
-
+### 🔒 Security
 - **httpOnly cookie auth** with SameSite=Lax (XSS-proof, Bearer fallback for APIs)
-- Argon2id password hashing (wrapped in spawn_blocking)
-- Optional AES-256-GCM database encryption at rest
-- Auto-generated TLS 1.3 certificates (rustls, no OpenSSL)
-- Constant-time token comparison (subtle crate)
-- IP-based rate limiting (5 login/min, 100 req/s global)
-- Nonce-based CSP + HSTS + security headers
-- Input length validation on all endpoints
-- Password change invalidates other sessions
-- Login history tracking with IP/user-agent
-- Session management (list/revoke active tokens)
-- API key authentication support
-- 4 MiB request body limit
-- Complete audit log
+- **Argon2id** password hashing (wrapped in spawn_blocking)
+- **Optional AES-256-GCM** database encryption at rest
+- **Auto-generated TLS 1.3** certificates (rustls, no OpenSSL)
+- **Constant-time token comparison** (subtle crate)
+- **IP-based rate limiting** — 5 login/min, 100 req/s global
+- **Nonce-based CSP + HSTS** + security headers
+- **2FA/TOTP** — QR code enrollment, backup codes, per-account enable/disable
+- **Session management** — list and revoke active tokens, login history with IP/user-agent
+- **Complete audit log** — every write operation recorded
+
+### 🧩 Modularity
+**63 Cargo feature flags** — build only the modules you need. The `full` feature enables everything; `headless` gives you a minimal server binary. See [ARCHITECTURE.md](ARCHITECTURE.md#module-system) for the full feature flag reference.
 
 ---
 
-## Screenshots
+## 📸 Screenshots
 
 | | |
 |---|---|
@@ -200,10 +136,48 @@ cargo build --release --package parkhub-server --no-default-features --features 
 | Dashboard with occupancy stats | Interactive booking flow |
 | ![Admin Panel](screenshots/09-admin.png) | ![Dark Mode](screenshots/10-dark-mode.png) |
 | Admin panel with layout editor | Full dark mode support |
+| ![Login](screenshots/01-login.png) | ![Vehicles](screenshots/08-vehicles.png) |
+| Clean login screen | Vehicle registry |
 
 ---
 
-## Architecture
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Language** | [Rust](https://www.rust-lang.org/) 1.85+ (edition 2021) |
+| **HTTP Framework** | [Axum](https://github.com/tokio-rs/axum) 0.8 + [Tokio](https://tokio.rs/) async runtime |
+| **Database** | [redb](https://github.com/cberner/redb) 2 — embedded pure-Rust key-value store |
+| **Encryption** | AES-256-GCM at rest · Argon2id passwords · rustls TLS 1.3 |
+| **Frontend** | [React](https://react.dev/) 19 + [TypeScript](https://www.typescriptlang.org/) + [Astro](https://astro.build/) 6 |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) 4 — 12 switchable themes |
+| **API Docs** | [utoipa](https://github.com/juhaku/utoipa) + Swagger UI — 125+ annotated endpoints |
+| **Desktop Client** | [Slint](https://slint.dev/) GUI with system tray (Windows/macOS) |
+| **Service Discovery** | [mdns-sd](https://github.com/keepsimple1/mdns-sd) — zero-config LAN autodiscovery |
+| **Deployment** | Single binary · Docker · Helm chart · Render/Koyeb PaaS |
+
+---
+
+## ⚖️ How ParkHub Compares
+
+| Feature | **ParkHub** | Parkeon | ParkMobile | SpotHero |
+|---------|-------------|---------|------------|---------|
+| **Self-hosted / On-premise** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Open source** | ✅ MIT | ❌ No | ❌ No | ❌ No |
+| **Monthly SaaS fee** | 🆓 Free | 💰 High | 💰 High | 💰 High |
+| **GDPR compliant by default** | ✅ Yes | ⚠️ Contract needed | ⚠️ Contract needed | ⚠️ Contract needed |
+| **Data leaves your premises** | ✅ Never | ❌ Always | ❌ Always | ❌ Always |
+| **Single binary deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+| **Customizable / Extensible** | ✅ 64 feature flags | ❌ No | ❌ No | ❌ No |
+| **Multi-language UI** | ✅ 10 languages | ⚠️ Limited | ⚠️ Limited | ⚠️ Limited |
+| **API access** | ✅ Full REST + GraphQL | ⚠️ Enterprise only | ⚠️ Limited | ⚠️ Limited |
+| **Air-gapped deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
+
+> *ParkHub is designed for organizations that need full data sovereignty. SaaS tools are optimized for consumer/enterprise cloud use cases.*
+
+---
+
+## 🏗️ Architecture
 
 ```
                     ┌─────────────────────────────────┐
@@ -222,164 +196,60 @@ cargo build --release --package parkhub-server --no-default-features --features 
                           Single Rust binary (~15 MB)
 ```
 
-The entire stack -- API server, database, and frontend -- compiles into a **single binary**. No PostgreSQL, no Redis, no nginx. Just download and run. The React frontend is embedded via `rust-embed` and served as static files.
+The entire stack — API server, database, and frontend — compiles into a **single binary**. No PostgreSQL, no Redis, no nginx. Just download and run. The React frontend is embedded via `rust-embed` and served as static files.
 
 For LAN deployments, mDNS autodiscovery lets clients find the server without any DNS configuration. A desktop client (Slint UI) with system tray integration is available for Windows and macOS.
 
----
-
-## Module System
-
-ParkHub uses Cargo feature flags to let you build only the modules you need. The `full` feature enables everything. Use `--no-default-features --features headless` for a minimal server build, then add individual modules as needed.
-
-| Flag | Description |
-|------|-------------|
-| `mod-bookings` | Core booking lifecycle (create, cancel, check-in) |
-| `mod-vehicles` | Vehicle registry with licence plate management |
-| `mod-absences` | Homeoffice, vacation, sick leave tracking |
-| `mod-branding` | Custom logo, colors, company name |
-| `mod-import` | Bulk user import (CSV, up to 500 users) |
-| `mod-qr` | QR code generation for bookings and slots |
-| `mod-pwa` | Progressive Web App (service worker, manifest) |
-| `mod-payments` | Credits and payment processing |
-| `mod-webhooks` | Outbound webhooks with HMAC signing |
-| `mod-notifications` | In-app notification system |
-| `mod-announcements` | Admin announcements with expiry |
-| `mod-recurring` | Recurring booking patterns |
-| `mod-guest` | Guest bookings without user accounts |
-| `mod-calendar` | Calendar view and iCal export |
-| `mod-team` | Team overview and today's status |
-| `mod-settings` | Application settings management |
-| `mod-jobs` | Background job processing |
-| `mod-swap` | Booking swap requests between users |
-| `mod-waitlist` | Waitlist for fully occupied lots |
-| `mod-zones` | Per-lot zone management |
-| `mod-credits` | Monthly credit quotas |
-| `mod-email` | SMTP email notifications |
-| `mod-export` | CSV data export |
-| `mod-favorites` | Favourite slot pinning |
-| `mod-push` | Web Push notifications (VAPID) |
-| `mod-recommendations` | Smart slot recommendation engine |
-| `mod-translations` | Community translation management |
-| `mod-social` | Social features |
-| `mod-themes` | 12 switchable design themes |
-| `mod-invoices` | PDF invoice generation with VAT |
-| `mod-dynamic-pricing` | Occupancy-based surge/discount pricing |
-| `mod-operating-hours` | Per-lot 7-day schedule |
-| `mod-oauth` | OAuth/Social login (Google, GitHub) |
-| `mod-analytics` | Admin analytics dashboard with charts |
-| `mod-email-templates` | Professional HTML email templates |
-| `mod-lobby-display` | Public kiosk/lobby display mode |
-| `mod-setup-wizard` | Interactive onboarding wizard |
-| `mod-map` | Interactive Leaflet map view |
-| `mod-stripe` | Stripe payment integration |
-| `mod-ical` | iCal calendar subscription feeds |
-| `mod-multi-tenant` | Multi-tenant isolation |
-| `mod-data-import` | Bulk CSV/JSON data import |
-| `mod-fleet` | Fleet/vehicle management overview |
-| `mod-accessible` | Accessible parking management |
-| `mod-maintenance` | Maintenance scheduling system |
-| `mod-cost-center` | Cost center billing analytics |
-| `mod-visitors` | Visitor pre-registration with QR passes |
-| `mod-ev-charging` | EV charging station management |
-| `mod-history` | Personal parking history and stats |
-| `mod-geofence` | Geofencing with auto check-in |
-| `mod-waitlist-ext` | Enhanced waitlist with notifications |
-| `mod-parking-pass` | Digital parking pass / QR badge |
-| `mod-api-docs` | Interactive Swagger UI documentation |
-| `mod-absence-approval` | Absence approval workflows |
-| `mod-calendar-drag` | Calendar drag-to-reschedule |
-| `mod-widgets` | Customizable admin dashboard widgets |
-| `mod-plugins` | Plugin/extension system |
-| `mod-graphql` | GraphQL API with playground |
-| `mod-compliance` | GDPR compliance reports and audit trail |
-| `mod-sharing` | Booking sharing and guest invites |
-| `mod-scheduled-reports` | Scheduled email report delivery |
-| `mod-api-versioning` | API versioning and deprecation |
-| `gui` | Slint desktop GUI with system tray |
-| `headless` | Server-only mode (no GUI dependencies) |
-
-Example: build a minimal server with just bookings and email:
-
-```bash
-cargo build --release -p parkhub-server --no-default-features \
-  --features "headless,mod-bookings,mod-email"
-```
+For a deep dive into code structure, database design, and key design decisions, see **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ---
 
-## Deployment
+## 🚢 Deployment
 
-ParkHub runs anywhere -- from a Raspberry Pi to Kubernetes.
+ParkHub runs anywhere — from a Raspberry Pi to Kubernetes.
 
 | Method | Complexity | Best For |
 |--------|------------|----------|
-| **Docker Compose** | Low | Standard deployment -- `docker compose up -d` |
-| **Kubernetes / Helm** | Medium | Enterprise -- full chart with HPA, PVC, all 57 module flags, TLS ingress |
+| **Docker Compose** | Low | Standard deployment — `docker compose up -d` |
+| **Kubernetes / Helm** | Medium | Enterprise — full chart with HPA, PVC, all module flags, TLS ingress |
 | **Bare Metal** | Low | Single binary, zero dependencies, x86_64 + ARM64 |
 | **Windows** | Low | Desktop GUI with system tray and setup wizard |
-| **PaaS** (Render) | Low | Quick demos -- [Live Demo](https://parkhub-rust-demo.onrender.com) |
+| **PaaS** (Render) | Low | Quick demos — [Live Demo](https://parkhub-rust-demo.onrender.com) |
 
 - **Container images**: `ghcr.io/nash87/parkhub-rust:latest` (multi-arch)
-- **Helm chart**: `helm/parkhub/` -- see [helm/README.md](helm/README.md)
+- **Helm chart**: `helm/parkhub/` — see [helm/README.md](helm/README.md)
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ---
 
-## Testing
+## 🧪 Testing
 
-**1,400+ tests** across Rust backend and React frontend, plus E2E Playwright suites. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility >= 95, performance >= 90.
-
-### CI & Security Scanning
-
-- **GitHub Actions** CI on every push (Rust tests, frontend tests, clippy, format)
-- **CodeQL** -- automated code scanning, 0 open alerts
-- **Trivy** -- container image vulnerability scanning
-- **Dependabot** -- automated dependency updates with auto-merge for patch/minor
-- **cargo-deny** -- license audit and advisory database checks
+**1,400+ tests** across Rust backend and React frontend, plus E2E Playwright suites. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
 
 ```bash
 cargo test --workspace           # Rust backend
-cd parkhub-web && npx vitest run # Frontend
-npx playwright test              # E2E
+cd parkhub-web && npx vitest run # Frontend unit tests
+npx playwright test              # E2E tests
 ```
 
-### Load Testing (k6)
-
-Performance testing with [k6](https://grafana.com/docs/k6/) in `tests/load/`:
-
-```bash
-k6 run tests/load/smoke.js    # 1 VU, 30s — quick sanity
-k6 run tests/load/load.js     # 50 VUs, 5min — sustained load
-k6 run tests/load/stress.js   # 100 VUs, 10min — all endpoints
-k6 run tests/load/spike.js    # 1→200→1 VUs — sudden surge
-```
-
-See [tests/load/README.md](tests/load/README.md) for setup and interpretation.
+CI runs on every push via **GitHub Actions** with CodeQL scanning, Trivy container scanning, Dependabot updates, and cargo-deny license audits.
 
 ---
 
-## Postman Collection
+## 📖 API Documentation
 
-Import the ready-made Postman collection to explore the API interactively:
+Interactive API docs at `/swagger-ui` when the server is running. The OpenAPI 3.0 spec covers **125+ endpoints** across auth, bookings, lots, vehicles, admin, GDPR, and more.
 
-1. Import `docs/postman/ParkHub.postman_collection.json` into Postman
-2. Import `docs/postman/ParkHub.postman_environment.json` as environment
-3. Set `base_url` to your ParkHub instance
-4. Run the **Login** request — it auto-sets the `{{token}}` variable
+**[Live API Docs →](https://parkhub-rust-demo.onrender.com/swagger-ui)**
 
-Or fetch the auto-generated collection from a running server:
-
-```
-GET /api/v1/docs/postman.json
-```
+A ready-made Postman collection is available at `docs/postman/` — see [ARCHITECTURE.md](ARCHITECTURE.md#postman-collection) for import instructions.
 
 ---
 
-## Configuration
+## ⚙️ Configuration
 
-All configuration via environment variables or `config.toml`. Key settings:
+All configuration is via environment variables or `config.toml`. Key variables:
 
 | Variable | Purpose |
 |----------|---------|
@@ -387,33 +257,23 @@ All configuration via environment variables or `config.toml`. Key settings:
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Email notifications |
 | `PARKHUB_ADMIN_PASSWORD` | Set admin password (auto-generated if omitted) |
 | `DEMO_MODE=true` | Enable demo overlay with 6-hour auto-reset |
-| `OAUTH_GOOGLE_CLIENT_ID` | Google OAuth client ID (free at console.cloud.google.com) |
-| `OAUTH_GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `OAUTH_GITHUB_CLIENT_ID` | GitHub OAuth client ID (free at github.com/settings/developers) |
-| `OAUTH_GITHUB_CLIENT_SECRET` | GitHub OAuth client secret |
+| `OAUTH_GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `OAUTH_GITHUB_CLIENT_ID` | GitHub OAuth client ID |
 | `RUST_LOG=info` | Log level |
 
 Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 ---
 
-## API Documentation
-
-Interactive API docs are available at `/swagger-ui` when the server is running. The OpenAPI 3.0 spec covers 125+ annotated endpoints across auth, bookings, lots, vehicles, admin, GDPR, and more.
-
-**[Live API Docs](https://parkhub-rust-demo.onrender.com/swagger-ui)**
-
----
-
-## PHP Edition
+## 🐘 PHP Edition
 
 A feature-equivalent **PHP edition** (Laravel 12 + MySQL/SQLite/PostgreSQL) exists for environments where shared hosting compatibility matters. Both editions share the same React frontend and REST API surface, so they're fully interchangeable.
 
-**[nash87/parkhub-php](https://github.com/nash87/parkhub-php)**
+**[nash87/parkhub-php →](https://github.com/nash87/parkhub-php)**
 
 ---
 
-## Legal Compliance
+## 📜 Legal Compliance
 
 ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regulatory frameworks**:
 
@@ -421,30 +281,41 @@ ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regula
 
 | Document | Scope |
 |----------|-------|
-| [GDPR Guide](docs/GDPR.md) | Data inventory, user rights (Art. 15--22), retention, TOMs |
-| [Compliance Matrix](docs/COMPLIANCE.md) | German (DSGVO, TTDSG, DDG, BDSG, GoBD), EU (NIS2), UK, US (CCPA), Swiss (nDSG), Brazilian (LGPD) |
+| [GDPR Guide](docs/GDPR.md) | Data inventory, user rights (Art. 15–22), retention, TOMs |
+| [Compliance Matrix](docs/COMPLIANCE.md) | DSGVO, TTDSG, DDG, BDSG, GoBD, NIS2, UK GDPR, CCPA, nDSG, LGPD |
 | [Compliance Report](COMPLIANCE-REPORT.md) | Automated compliance checks with scoring |
 | [Security Model](docs/SECURITY.md) | Auth, encryption, OWASP Top 10, vulnerability disclosure |
-| [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Ready-to-use Datenschutzerklarung (German) |
-| [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG SS5 provider identification (German) |
+| [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Ready-to-use Datenschutzerklärung (German) |
+| [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG §5 provider identification (German) |
 | [Third-Party Licenses](LICENSE-THIRD-PARTY.md) | All Rust crate and npm dependency licenses |
 
-**Key compliance features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3,
-audit logging, data export (Art. 15/20), account erasure (Art. 17), no cookies, no tracking,
-no third-party data processors by default. Built-in compliance dashboard with 10 automated checks.
+**Key compliance features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3, audit logging, data export (Art. 15/20), account erasure (Art. 17), no cookies, no tracking, no third-party data processors by default.
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-Contributions welcome -- see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for setup and PR process.
+Contributions are very welcome! Here's how to get started:
 
-Bug reports and feature requests: [GitHub Issues](https://github.com/nash87/parkhub-rust/issues)
+1. **Fork** the repository and create a feature branch
+2. **Read** [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for code style, commit conventions, and PR process
+3. **Run the test suite** before opening a PR:
+   ```bash
+   cargo clippy --workspace -- -D warnings
+   cargo fmt --all -- --check
+   cargo test -p parkhub-server --no-default-features --features headless
+   cd parkhub-web && npm ci && npx vitest run
+   ```
+4. **Open a PR** — CI will run automatically
+
+**Bug reports and feature requests:** [GitHub Issues](https://github.com/nash87/parkhub-rust/issues)
+
+**Security vulnerabilities:** please follow the [responsible disclosure policy](SECURITY.md) — do not open a public issue.
 
 ---
 
-## License
+## 📄 License
 
-MIT -- see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
 The default build includes [Slint](https://slint.dev/) for the desktop GUI (GPL-3.0 community edition). Server/Docker builds use `--features headless` and are purely MIT. See [LICENSES.md](LICENSES.md) for the full dependency license inventory.
