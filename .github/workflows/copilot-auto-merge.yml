@@ -1,0 +1,32 @@
+name: Auto-merge Copilot PRs
+
+on:
+  check_suite:
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-merge low-risk Copilot PRs
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'check_suite' && github.event.check_suite.conclusion == 'success')
+    steps:
+      - name: Find and merge eligible Copilot PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Get copilot PRs as JSON, process safely without shell interpolation
+          gh pr list --repo "$REPO" --state open \
+            --json number,headRefName,isDraft,additions,deletions \
+            --jq '.[] | select(.headRefName | startswith("copilot/")) | select(.isDraft == false) | select(.additions < 500) | .number' \
+          | while read -r num; do
+            echo "Auto-merging Copilot PR #$num"
+            gh pr merge "$num" --repo "$REPO" --squash --auto 2>&1 || true
+          done
