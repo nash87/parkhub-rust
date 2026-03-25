@@ -18,7 +18,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: '1.85'
+  RUST_TOOLCHAIN: '1.88.0'
 
 jobs:
   cargo-deny:
@@ -28,12 +28,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Run cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@v2
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          log-level: warn
-          command: check
-          arguments: --all-features advisories bans licenses sources
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
+      - name: Run cargo-deny
+        run: cargo deny check advisories bans licenses sources
 
   cargo-audit:
     name: Cargo Audit
