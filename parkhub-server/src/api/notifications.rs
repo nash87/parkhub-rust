@@ -168,6 +168,7 @@ mod tests {
             title: "Old".into(),
             message: "Old message".into(),
             notification_type: NotificationType::BookingConfirmed,
+            data: None,
             read: false,
             created_at: now - chrono::Duration::hours(2),
         };
@@ -177,6 +178,7 @@ mod tests {
             title: "New".into(),
             message: "New message".into(),
             notification_type: NotificationType::BookingReminder,
+            data: None,
             read: false,
             created_at: now,
         };
@@ -200,6 +202,7 @@ mod tests {
                 title: format!("Notification {i}"),
                 message: format!("Message {i}"),
                 notification_type: NotificationType::BookingConfirmed,
+                data: None,
                 read: false,
                 created_at: now + chrono::Duration::minutes(i),
             })
@@ -225,6 +228,7 @@ mod tests {
             title: "Test".into(),
             message: "Test msg".into(),
             notification_type: NotificationType::BookingConfirmed,
+            data: None,
             read: false,
             created_at: now,
         }];
@@ -252,6 +256,7 @@ mod tests {
             title: "A's notif".into(),
             message: "Message".into(),
             notification_type: NotificationType::BookingConfirmed,
+            data: None,
             read: false,
             created_at: now,
         }];
@@ -275,6 +280,7 @@ mod tests {
                 title: "Read".into(),
                 message: "Already read".into(),
                 notification_type: NotificationType::BookingConfirmed,
+                data: None,
                 read: true,
                 created_at: now,
             },
@@ -284,6 +290,7 @@ mod tests {
                 title: "Unread".into(),
                 message: "Not yet read".into(),
                 notification_type: NotificationType::BookingReminder,
+                data: None,
                 read: false,
                 created_at: now,
             },
