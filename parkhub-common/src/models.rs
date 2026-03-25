@@ -1112,10 +1112,7 @@ mod tests {
 
     #[test]
     fn test_vehicle_type_serialization() {
-        assert_eq!(
-            serde_json::to_string(&VehicleType::Car).unwrap(),
-            "\"car\""
-        );
+        assert_eq!(serde_json::to_string(&VehicleType::Car).unwrap(), "\"car\"");
         assert_eq!(
             serde_json::to_string(&VehicleType::Motorcycle).unwrap(),
             "\"motorcycle\""
@@ -1385,10 +1382,7 @@ mod tests {
             serde_json::to_string(&SlotType::Reserved).unwrap(),
             "\"reserved\""
         );
-        assert_eq!(
-            serde_json::to_string(&SlotType::Vip).unwrap(),
-            "\"vip\""
-        );
+        assert_eq!(serde_json::to_string(&SlotType::Vip).unwrap(), "\"vip\"");
     }
 
     // ── SlotStatus full coverage ──────────────────────────────────────────────
@@ -1443,10 +1437,7 @@ mod tests {
             serde_json::to_string(&LotStatus::Closed).unwrap(),
             "\"closed\""
         );
-        assert_eq!(
-            serde_json::to_string(&LotStatus::Full).unwrap(),
-            "\"full\""
-        );
+        assert_eq!(serde_json::to_string(&LotStatus::Full).unwrap(), "\"full\"");
         assert_eq!(
             serde_json::to_string(&LotStatus::Maintenance).unwrap(),
             "\"maintenance\""

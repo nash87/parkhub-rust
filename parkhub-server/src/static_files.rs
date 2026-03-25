@@ -93,7 +93,10 @@ mod tests {
                 cache.contains("immutable"),
                 "JS assets must get immutable cache header, got: {cache}"
             );
-            assert!(cache.contains("31536000"), "JS assets must get 1-year max-age");
+            assert!(
+                cache.contains("31536000"),
+                "JS assets must get 1-year max-age"
+            );
         }
     }
 
@@ -106,7 +109,10 @@ mod tests {
                 .get(header::CACHE_CONTROL)
                 .and_then(|v| v.to_str().ok())
                 .unwrap_or("");
-            assert!(cache.contains("immutable"), "CSS assets must get immutable cache header");
+            assert!(
+                cache.contains("immutable"),
+                "CSS assets must get immutable cache header"
+            );
         }
     }
 

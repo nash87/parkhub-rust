@@ -149,10 +149,16 @@ async fn test_bookings_ical_returns_vcalendar() {
         .get("content-type")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    assert!(ct.contains("text/calendar"), "Expected text/calendar, got {ct}");
+    assert!(
+        ct.contains("text/calendar"),
+        "Expected text/calendar, got {ct}"
+    );
 
     let body = String::from_utf8(body_bytes(resp).await).expect("utf8");
-    assert!(body.starts_with("BEGIN:VCALENDAR"), "Missing BEGIN:VCALENDAR");
+    assert!(
+        body.starts_with("BEGIN:VCALENDAR"),
+        "Missing BEGIN:VCALENDAR"
+    );
     assert!(body.contains("VERSION:2.0"), "Missing VERSION:2.0");
     assert!(body.contains("PRODID:-//ParkHub//EN"), "Missing PRODID");
     assert!(body.ends_with("END:VCALENDAR\r\n"), "Missing END:VCALENDAR");
@@ -296,10 +302,16 @@ async fn test_calendar_ical_by_valid_token_returns_vcalendar() {
         .get("content-type")
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    assert!(ct.contains("text/calendar"), "Expected text/calendar, got {ct}");
+    assert!(
+        ct.contains("text/calendar"),
+        "Expected text/calendar, got {ct}"
+    );
 
     let body = String::from_utf8(body_bytes(ical_resp).await).expect("utf8");
-    assert!(body.starts_with("BEGIN:VCALENDAR"), "Missing BEGIN:VCALENDAR");
+    assert!(
+        body.starts_with("BEGIN:VCALENDAR"),
+        "Missing BEGIN:VCALENDAR"
+    );
     assert!(body.ends_with("END:VCALENDAR\r\n"), "Missing END:VCALENDAR");
 }
 

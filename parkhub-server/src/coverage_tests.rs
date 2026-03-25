@@ -2981,8 +2981,7 @@ async fn test_get_current_user_requires_auth() {
 #[tokio::test]
 async fn test_get_current_user_returns_profile() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "profile@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "profile@test.com", "Test1234!").await;
     let app = router(h.state.clone());
 
     let resp = app
@@ -3004,8 +3003,7 @@ async fn test_get_current_user_returns_profile() {
 #[tokio::test]
 async fn test_get_current_user_excludes_password_hash() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "nohash@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "nohash@test.com", "Test1234!").await;
     let app = router(h.state.clone());
 
     let resp = app
@@ -3076,8 +3074,7 @@ async fn test_change_password_requires_auth() {
     let h = test_harness().await;
     let app = router(h.state.clone());
 
-    let body =
-        serde_json::json!({"current_password": "old", "new_password": "NewSecure123!"});
+    let body = serde_json::json!({"current_password": "old", "new_password": "NewSecure123!"});
     let resp = app
         .oneshot(
             Request::patch("/api/v1/users/me/password")
@@ -3094,8 +3091,7 @@ async fn test_change_password_requires_auth() {
 #[tokio::test]
 async fn test_change_password_wrong_current_returns_error() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "chgpwd@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "chgpwd@test.com", "Test1234!").await;
     let app = router(h.state.clone());
 
     let body = serde_json::json!({
@@ -3147,8 +3143,7 @@ async fn test_user_stats_requires_auth() {
 #[tokio::test]
 async fn test_user_stats_returns_data() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "stats@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "stats@test.com", "Test1234!").await;
     let app = router(h.state.clone());
 
     let resp = app
@@ -3190,8 +3185,7 @@ async fn test_user_preferences_requires_auth() {
 #[tokio::test]
 async fn test_get_user_preferences_authenticated() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "prefs@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "prefs@test.com", "Test1234!").await;
     let app = router(h.state.clone());
 
     let resp = app
@@ -3219,11 +3213,7 @@ async fn test_list_lots_requires_auth() {
     let app = router(h.state.clone());
 
     let resp = app
-        .oneshot(
-            Request::get("/api/v1/lots")
-                .body(Body::empty())
-                .unwrap(),
-        )
+        .oneshot(Request::get("/api/v1/lots").body(Body::empty()).unwrap())
         .await
         .unwrap();
 
@@ -3256,8 +3246,7 @@ async fn test_create_lot_requires_auth() {
 #[tokio::test]
 async fn test_me_alias_returns_same_as_users_me() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "alias@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "alias@test.com", "Test1234!").await;
 
     let app1 = router(h.state.clone());
     let resp1 = app1
@@ -3356,8 +3345,7 @@ async fn test_login_history_requires_auth() {
 #[tokio::test]
 async fn test_login_history_returns_list() {
     let h = test_harness().await;
-    let (tok, _uid) =
-        register_user_token(h.state.clone(), "history@test.com", "Test1234!").await;
+    let (tok, _uid) = register_user_token(h.state.clone(), "history@test.com", "Test1234!").await;
     let app = router(h.state.clone());
 
     let resp = app

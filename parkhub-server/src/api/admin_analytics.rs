@@ -4,11 +4,7 @@
 //! - `GET /api/v1/admin/analytics/revenue`        — daily revenue summary for last 30 days
 //! - `GET /api/v1/admin/analytics/popular-lots`   — top 10 lots by booking count
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    Extension, Json,
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use chrono::{Duration, Timelike, Utc};
 use parkhub_common::{ApiResponse, BookingStatus};
 use serde::Serialize;
@@ -239,9 +235,7 @@ pub async fn admin_popular_lots(
         if matches!(b.status, BookingStatus::Cancelled) {
             continue;
         }
-        let entry = lot_stats
-            .entry(b.lot_id.to_string())
-            .or_insert((0, 0.0));
+        let entry = lot_stats.entry(b.lot_id.to_string()).or_insert((0, 0.0));
         entry.0 += 1;
         entry.1 += b.pricing.total;
     }
