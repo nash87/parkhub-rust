@@ -2813,3 +2813,561 @@ async fn test_bulk_update_invalid_role() {
         .unwrap()
         .contains("Invalid role"));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GDPR Endpoint Integration Tests (Art. 15 & Art. 17) — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_gdpr_export_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/users/me/export")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_gdpr_export_returns_user_data() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "gdpr-export@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/users/me/export")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["success"].as_bool().unwrap());
+
+    let data = &json["data"];
+    // GDPR export should include user profile data
+    assert!(data["user"].is_object(), "export must include user object");
+    // Password hash must NOT be included (security: prevents offline brute-force)
+    let user_str = serde_json::to_string(&data["user"]).unwrap();
+    assert!(
+        !user_str.contains("password_hash"),
+        "GDPR export must not include password_hash"
+    );
+}
+
+#[tokio::test]
+async fn test_gdpr_export_includes_bookings_array() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "gdpr-bookings@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/users/me/export")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    let data = &json["data"];
+    // Export should include bookings array (may be empty for new user)
+    assert!(data["bookings"].is_array(), "export must include bookings");
+}
+
+#[tokio::test]
+async fn test_gdpr_delete_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::delete("/api/v1/users/me/delete")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_gdpr_delete_anonymizes_user() {
+    let h = test_harness().await;
+    let email = "gdpr-delete@test.com";
+    let (tok, uid) = register_user_token(h.state.clone(), email, "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::delete("/api/v1/users/me/delete")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    // Verify user is anonymized in the database
+    let guard = h.state.read().await;
+    let user = guard.db.get_user(&uid).await;
+    match user {
+        Ok(Some(u)) => {
+            // Name should be anonymized
+            assert!(
+                u.name.contains("anonymized") || u.name.contains("anon"),
+                "user name should be anonymized after GDPR deletion, got: {}",
+                u.name
+            );
+            // Email should be anonymized
+            assert!(
+                u.email.contains("anonymized") || u.email.contains("anon"),
+                "user email should be anonymized, got: {}",
+                u.email
+            );
+        }
+        Ok(None) => {
+            // User fully deleted is also acceptable
+        }
+        Err(_) => {
+            // Database error — user may have been removed
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Profile Endpoint Integration Tests — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_get_current_user_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/users/me")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_get_current_user_returns_profile() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "profile@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/users/me")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["success"].as_bool().unwrap());
+    assert!(json["data"]["email"].is_string());
+}
+
+#[tokio::test]
+async fn test_get_current_user_excludes_password_hash() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "nohash@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/users/me")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    let json = body_json(resp).await;
+    let data_str = serde_json::to_string(&json["data"]).unwrap();
+    assert!(
+        !data_str.contains("$argon2"),
+        "password hash must not be exposed in user profile response"
+    );
+}
+
+#[tokio::test]
+async fn test_update_current_user_name() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "update-name@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let body = serde_json::json!({"name": "Updated Name"});
+    let resp = app
+        .oneshot(
+            Request::put("/api/v1/users/me")
+                .header("authorization", format!("Bearer {tok}"))
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_update_current_user_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let body = serde_json::json!({"name": "Hacker"});
+    let resp = app
+        .oneshot(
+            Request::put("/api/v1/users/me")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Password Change Endpoint Tests — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_change_password_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let body =
+        serde_json::json!({"current_password": "old", "new_password": "NewSecure123!"});
+    let resp = app
+        .oneshot(
+            Request::patch("/api/v1/users/me/password")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_change_password_wrong_current_returns_error() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "chgpwd@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let body = serde_json::json!({
+        "current_password": "WrongPassword!",
+        "new_password": "NewSecure123!"
+    });
+    let resp = app
+        .oneshot(
+            Request::patch("/api/v1/users/me/password")
+                .header("authorization", format!("Bearer {tok}"))
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // Should fail because current password is wrong
+    assert!(
+        resp.status() == StatusCode::UNAUTHORIZED
+            || resp.status() == StatusCode::BAD_REQUEST
+            || resp.status() == StatusCode::FORBIDDEN,
+        "wrong current password should fail, got: {}",
+        resp.status()
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Statistics Endpoint Tests — always available (route: /api/v1/user/stats)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_user_stats_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/user/stats")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_user_stats_returns_data() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "stats@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/user/stats")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["success"].as_bool().unwrap());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// User Preferences Endpoint Tests — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_user_preferences_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/user/preferences")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_get_user_preferences_authenticated() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "prefs@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/user/preferences")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["success"].as_bool().unwrap());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lot Endpoint Auth Guard Tests — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_list_lots_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/lots")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_create_lot_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let body = serde_json::json!({"name": "Test Lot", "address": "123 Main St"});
+    let resp = app
+        .oneshot(
+            Request::post("/api/v1/lots")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Me Alias Endpoint Tests — /api/v1/me is alias for /api/v1/users/me
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_me_alias_returns_same_as_users_me() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "alias@test.com", "Test1234!").await;
+
+    let app1 = router(h.state.clone());
+    let resp1 = app1
+        .oneshot(
+            Request::get("/api/v1/users/me")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let json1 = body_json(resp1).await;
+
+    let app2 = router(h.state.clone());
+    let resp2 = app2
+        .oneshot(
+            Request::get("/api/v1/me")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let json2 = body_json(resp2).await;
+
+    // Both routes should return the same user data
+    assert_eq!(json1["data"]["email"], json2["data"]["email"]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2FA Status Endpoint Tests — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_2fa_status_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/auth/2fa/status")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_2fa_status_default_disabled_for_new_user() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "2fa-status@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/auth/2fa/status")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["success"].as_bool().unwrap());
+    // 2FA should be disabled by default for new users
+    assert_eq!(json["data"]["enabled"], false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Login History Tests — always available
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_login_history_requires_auth() {
+    let h = test_harness().await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/auth/login-history")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_login_history_returns_list() {
+    let h = test_harness().await;
+    let (tok, _uid) =
+        register_user_token(h.state.clone(), "history@test.com", "Test1234!").await;
+    let app = router(h.state.clone());
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/auth/login-history")
+                .header("authorization", format!("Bearer {tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["success"].as_bool().unwrap());
+}

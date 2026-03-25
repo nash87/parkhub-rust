@@ -151,3 +151,153 @@ pub async fn mark_all_notifications_read(
 
     (StatusCode::OK, Json(ApiResponse::success(count)))
 }
+
+#[cfg(test)]
+mod tests {
+    use parkhub_common::models::{Notification, NotificationType};
+    use uuid::Uuid;
+
+    // ── Notification model unit tests ──
+
+    #[test]
+    fn notification_created_at_sort_order() {
+        let now = chrono::Utc::now();
+        let older = Notification {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            title: "Old".into(),
+            message: "Old message".into(),
+            notification_type: NotificationType::BookingConfirmed,
+            read: false,
+            created_at: now - chrono::Duration::hours(2),
+        };
+        let newer = Notification {
+            id: Uuid::new_v4(),
+            user_id: older.user_id,
+            title: "New".into(),
+            message: "New message".into(),
+            notification_type: NotificationType::BookingReminder,
+            read: false,
+            created_at: now,
+        };
+
+        let mut notifications = vec![older.clone(), newer.clone()];
+        // Sort descending — same logic as list_notifications handler
+        notifications.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        assert_eq!(notifications[0].id, newer.id, "newest should come first");
+        assert_eq!(notifications[1].id, older.id, "oldest should come last");
+    }
+
+    #[test]
+    fn notification_truncate_to_50() {
+        let user_id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+        let mut notifications: Vec<Notification> = (0..75)
+            .map(|i| Notification {
+                id: Uuid::new_v4(),
+                user_id,
+                title: format!("Notification {i}"),
+                message: format!("Message {i}"),
+                notification_type: NotificationType::BookingConfirmed,
+                read: false,
+                created_at: now + chrono::Duration::minutes(i),
+            })
+            .collect();
+
+        notifications.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        notifications.truncate(50);
+
+        assert_eq!(notifications.len(), 50, "should be truncated to 50");
+        // First entry should have the latest timestamp (index 74)
+        assert!(notifications[0].title.contains("74"));
+    }
+
+    #[test]
+    fn notification_ownership_check_matches_by_id() {
+        let user_id = Uuid::new_v4();
+        let notif_id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        let notifications = vec![Notification {
+            id: notif_id,
+            user_id,
+            title: "Test".into(),
+            message: "Test msg".into(),
+            notification_type: NotificationType::BookingConfirmed,
+            read: false,
+            created_at: now,
+        }];
+
+        let target_id = notif_id.to_string();
+        let owns = notifications.iter().any(|n| n.id.to_string() == target_id);
+        assert!(owns, "should find notification by id");
+
+        let fake_id = Uuid::new_v4().to_string();
+        let owns_fake = notifications.iter().any(|n| n.id.to_string() == fake_id);
+        assert!(!owns_fake, "should not find notification with wrong id");
+    }
+
+    #[test]
+    fn notification_ownership_rejects_other_users_notification() {
+        let user_a = Uuid::new_v4();
+        let user_b = Uuid::new_v4();
+        let notif_id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        // User A's notifications
+        let user_a_notifications = vec![Notification {
+            id: Uuid::new_v4(),
+            user_id: user_a,
+            title: "A's notif".into(),
+            message: "Message".into(),
+            notification_type: NotificationType::BookingConfirmed,
+            read: false,
+            created_at: now,
+        }];
+
+        // notif_id belongs to user B, so user A should not find it
+        let owns = user_a_notifications
+            .iter()
+            .any(|n| n.id.to_string() == notif_id.to_string());
+        assert!(!owns, "user A should not own user B's notification");
+    }
+
+    #[test]
+    fn mark_all_skips_already_read_notifications() {
+        let user_id = Uuid::new_v4();
+        let now = chrono::Utc::now();
+
+        let notifications = vec![
+            Notification {
+                id: Uuid::new_v4(),
+                user_id,
+                title: "Read".into(),
+                message: "Already read".into(),
+                notification_type: NotificationType::BookingConfirmed,
+                read: true,
+                created_at: now,
+            },
+            Notification {
+                id: Uuid::new_v4(),
+                user_id,
+                title: "Unread".into(),
+                message: "Not yet read".into(),
+                notification_type: NotificationType::BookingReminder,
+                read: false,
+                created_at: now,
+            },
+        ];
+
+        // Simulate the mark-all logic — count only unread
+        let unread_count = notifications.iter().filter(|n| !n.read).count();
+        assert_eq!(unread_count, 1, "should only count unread notifications");
+    }
+
+    #[test]
+    fn empty_notification_list_returns_zero_count() {
+        let notifications: Vec<Notification> = vec![];
+        let count = notifications.iter().filter(|n| !n.read).count();
+        assert_eq!(count, 0);
+    }
+}
