@@ -40,6 +40,7 @@ pub struct CalendarEvent {
 
 /// Response for calendar subscription token generation
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 pub struct CalendarTokenResponse {
     pub token: String,
     pub url: String,
@@ -247,6 +248,7 @@ pub async fn user_calendar_ics(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "iCalendar feed"))
 )]
+#[allow(dead_code)]
 pub async fn calendar_ical_authenticated(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -273,6 +275,7 @@ pub async fn calendar_ical_authenticated(
         (status = 404, description = "Invalid or expired token")
     )
 )]
+#[allow(dead_code)]
 pub async fn calendar_ical_by_token(
     State(state): State<SharedState>,
     Path(token): Path<String>,
@@ -311,6 +314,7 @@ pub async fn calendar_ical_by_token(
     security(("bearer_auth" = [])),
     responses((status = 200, description = "Token generated"))
 )]
+#[allow(dead_code)]
 pub async fn generate_calendar_token(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,

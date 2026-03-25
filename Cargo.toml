@@ -99,6 +99,48 @@ redundant_clone = "allow"
 explicit_iter_loop = "allow"
 # Rust 1.94+ nursery: collect() into Vec before iteration
 needless_collect = "allow"
+# Pedantic: let...else rewrite suggestions — stylistic preference
+manual_let_else = "allow"
+# Pedantic: cast truncation/wrap/sign/lossless — acceptable in this codebase
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+cast_lossless = "allow"
+# Nursery: redundant pub(crate) in private module
+redundant_pub_crate = "allow"
+# Pedantic: map_unwrap_or, option_if_let_else — stylistic
+map_unwrap_or = "allow"
+option_if_let_else = "allow"
+# Pedantic: items_after_statements (use inside fn body)
+items_after_statements = "allow"
+# Pedantic: ignored_unit_patterns — Ok(_) vs Ok(())
+ignored_unit_patterns = "allow"
+# Nursery: missing_const_for_fn — too noisy for methods
+missing_const_for_fn = "allow"
+# Nursery: use_self — Self vs TypeName in const/impl
+use_self = "allow"
+# Pedantic: match_same_arms — intentionally separate for clarity
+match_same_arms = "allow"
+# Pedantic: unnecessary_wraps — Result return is forward-compatible
+unnecessary_wraps = "allow"
+# Nursery: suboptimal_flops — mul_add readability tradeoff
+suboptimal_flops = "allow"
+# Pedantic: used_underscore_binding — false positive on extractors
+used_underscore_binding = "allow"
+# Nursery: equatable_if_let — matches! vs if let stylistic
+equatable_if_let = "allow"
+# Pedantic: format_push_string — write! vs push_str(format!) stylistic
+format_push_string = "allow"
+# Pedantic: single_match_else — match vs if/else stylistic
+single_match_else = "allow"
+# Pedantic: trivially_copy_pass_by_ref — &bool vs bool in trait impls
+trivially_copy_pass_by_ref = "allow"
+# Nursery: or_fun_call — map_or vs unwrap_or with fn
+or_fun_call = "allow"
+# Pedantic: ref_option — &Option<T> vs Option<&T> in existing APIs
+ref_option = "allow"
+# Nursery: unnecessary_literal_bound — lifetime bound stylistic
+unnecessary_literal_bound = "allow"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

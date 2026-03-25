@@ -36,6 +36,7 @@ pub enum ReportType {
     BookingTrends,
 }
 
+#[allow(dead_code)]
 impl ReportType {
     /// Human-readable label
     pub fn label(&self) -> &'static str {
@@ -65,6 +66,7 @@ pub enum ScheduleFrequency {
     Monthly,
 }
 
+#[allow(dead_code)]
 impl ScheduleFrequency {
     /// Human-readable label
     pub fn label(&self) -> &'static str {

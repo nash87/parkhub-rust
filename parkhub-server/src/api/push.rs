@@ -236,7 +236,7 @@ impl PushPayload {
             title: "Booking Confirmed".to_string(),
             body: format!("Your booking at {} has been confirmed.", lot_name),
             event_type: PushEventType::BookingConfirmed,
-            url: Some(format!("/bookings")),
+            url: Some("/bookings".to_string()),
             reference_id: Some(booking_id.to_string()),
         }
     }
@@ -249,7 +249,7 @@ impl PushPayload {
                 lot_name, minutes
             ),
             event_type: PushEventType::BookingReminder,
-            url: Some(format!("/bookings")),
+            url: Some("/bookings".to_string()),
             reference_id: Some(booking_id.to_string()),
         }
     }
@@ -259,7 +259,7 @@ impl PushPayload {
             title: "Booking Cancelled".to_string(),
             body: format!("Your booking at {} has been cancelled.", lot_name),
             event_type: PushEventType::BookingCancelled,
-            url: Some(format!("/bookings")),
+            url: Some("/bookings".to_string()),
             reference_id: Some(booking_id.to_string()),
         }
     }

@@ -56,6 +56,7 @@ pub struct DepartmentSummary {
 pub struct AllocateCreditsRequest {
     pub cost_center: String,
     pub credits: i32,
+    #[allow(dead_code)]
     pub reason: Option<String>,
 }
 
@@ -345,7 +346,7 @@ pub async fn billing_allocate(
     let mut allocated = 0i32;
 
     for user in &matching {
-        let mut u = user.clone().clone();
+        let mut u = (*user).clone();
         u.credits_balance += req.credits;
         allocated += req.credits;
         if let Err(e) = state_guard.db.save_user(&u).await {

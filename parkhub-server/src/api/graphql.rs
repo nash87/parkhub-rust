@@ -15,8 +15,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use parkhub_common::ApiResponse;
-
 use super::{AuthUser, SharedState};
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -28,8 +26,10 @@ use super::{AuthUser, SharedState};
 pub struct GraphQLRequest {
     pub query: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub variables: Option<serde_json::Value>,
     #[serde(default, rename = "operationName")]
+    #[allow(dead_code)]
     pub operation_name: Option<String>,
 }
 
@@ -62,6 +62,7 @@ pub struct GraphQLLocation {
 /// Available query types in the schema
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub enum QueryType {
     Me,
     Lots,
@@ -71,6 +72,7 @@ pub enum QueryType {
     MyVehicles,
 }
 
+#[allow(dead_code)]
 impl QueryType {
     /// All supported query types
     pub const ALL: &[QueryType] = &[
@@ -107,12 +109,14 @@ impl QueryType {
 /// Available mutation types in the schema
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub enum MutationType {
     CreateBooking,
     CancelBooking,
     AddVehicle,
 }
 
+#[allow(dead_code)]
 impl MutationType {
     /// All supported mutation types
     pub const ALL: &[MutationType] = &[Self::CreateBooking, Self::CancelBooking, Self::AddVehicle];
@@ -556,11 +560,8 @@ pub async fn graphql_execute(
     match parse_operation(&request.query) {
         Ok((op_type, field, args)) => {
             let response = execute_query(&op_type, &field, &args, &user_id);
-            let status = if response.errors.is_empty() {
-                StatusCode::OK
-            } else {
-                StatusCode::OK // GraphQL always returns 200 even with errors
-            };
+            // GraphQL always returns 200 even with errors
+            let status = StatusCode::OK;
             (status, Json(response))
         }
         Err(e) => (

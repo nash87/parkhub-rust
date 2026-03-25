@@ -33,7 +33,9 @@ pub struct RegisterVisitorRequest {
 pub struct VisitorQuery {
     pub status: Option<String>,
     pub search: Option<String>,
+    #[allow(dead_code)]
     pub from_date: Option<String>,
+    #[allow(dead_code)]
     pub to_date: Option<String>,
 }
 

@@ -450,6 +450,7 @@ pub async fn active_maintenance(
 }
 
 /// Check if a booking overlaps with any maintenance window
+#[allow(dead_code)]
 pub fn booking_overlaps_maintenance(
     windows: &[MaintenanceWindow],
     lot_id: &Uuid,

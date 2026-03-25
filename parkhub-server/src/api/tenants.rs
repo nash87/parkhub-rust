@@ -69,11 +69,10 @@ pub async fn list_tenants(
         if let Some(tenant) = load_tenant(&state_guard, tid).await {
             // Regular admins can only see their own tenant
             if let Some(ref u) = user {
-                if u.role != UserRole::SuperAdmin {
-                    if u.tenant_id.as_deref() != Some(tid.as_str()) {
+                if u.role != UserRole::SuperAdmin
+                    && u.tenant_id.as_deref() != Some(tid.as_str()) {
                         continue;
                     }
-                }
             }
             tenants.push(tenant);
         }

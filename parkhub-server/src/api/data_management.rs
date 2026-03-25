@@ -88,6 +88,7 @@ pub struct UserImportEntry {
 pub struct ExportParams {
     pub from: Option<NaiveDate>,
     pub to: Option<NaiveDate>,
+    #[allow(dead_code)]
     pub format: Option<String>,
 }
 
@@ -183,7 +184,7 @@ pub async fn import_users(
             Err(e) => {
                 return (
                     StatusCode::BAD_REQUEST,
-                    Json(ApiResponse::error("INVALID_JSON", &e.to_string())),
+                    Json(ApiResponse::error("INVALID_JSON", e.to_string())),
                 )
             }
         }
@@ -218,7 +219,7 @@ pub async fn import_users(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "TOO_MANY_ROWS",
-                &format!("Maximum {MAX_IMPORT_ROWS} rows per import"),
+                format!("Maximum {MAX_IMPORT_ROWS} rows per import"),
             )),
         );
     }
@@ -356,7 +357,7 @@ pub async fn import_lots(
             Err(e) => {
                 return (
                     StatusCode::BAD_REQUEST,
-                    Json(ApiResponse::error("INVALID_JSON", &e.to_string())),
+                    Json(ApiResponse::error("INVALID_JSON", e.to_string())),
                 )
             }
         }
@@ -391,7 +392,7 @@ pub async fn import_lots(
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "TOO_MANY_ROWS",
-                &format!("Maximum {MAX_IMPORT_ROWS} rows per import"),
+                format!("Maximum {MAX_IMPORT_ROWS} rows per import"),
             )),
         );
     }
@@ -474,9 +475,9 @@ pub async fn import_lots(
                         id: uuid::Uuid::new_v4(),
                         lot_id: lot.id,
                         floor_id,
-                        slot_number: slot_num as i32,
-                        row: ((slot_num - 1) / 10 + 1) as i32,
-                        column: ((slot_num - 1) % 10 + 1) as i32,
+                        slot_number: slot_num,
+                        row: (slot_num - 1) / 10 + 1,
+                        column: (slot_num - 1) % 10 + 1,
                         slot_type: SlotType::Standard,
                         status: SlotStatus::Available,
                         current_booking: None,
@@ -544,9 +545,9 @@ pub async fn export_lots_csv(
 
     for lot in &lots {
         let booking_count = bookings.iter().filter(|b| b.lot_id == lot.id).count();
-        let _ = write!(
+        let _ = writeln!(
             csv,
-            "{},{},{},{},{},{},{:.2},{:.2},{},{},{}\n",
+            "{},{},{},{},{},{},{:.2},{:.2},{},{},{}",
             lot.id,
             csv_escape(&lot.name),
             csv_escape(&lot.address),
@@ -621,9 +622,9 @@ pub async fn export_bookings_csv(
             _ => b.lot_id.to_string(),
         };
 
-        let _ = write!(
+        let _ = writeln!(
             csv,
-            "{},{},{},{},{},{},{},{},{:.2},{},{}\n",
+            "{},{},{},{},{},{},{},{},{:.2},{},{}",
             b.id,
             b.user_id,
             csv_escape(&lot_name),
@@ -681,9 +682,9 @@ pub async fn export_users_csv(
 
     for u in &users {
         let booking_count = bookings.iter().filter(|b| b.user_id == u.id).count();
-        let _ = write!(
+        let _ = writeln!(
             csv,
-            "{},{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{},{}",
             u.id,
             csv_escape(&u.username),
             csv_escape(&u.email),

@@ -27,8 +27,6 @@ use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
 use crate::demo;
-#[cfg(feature = "mod-email")]
-use crate::email;
 use crate::metrics;
 #[cfg(feature = "full")]
 use crate::openapi::ApiDoc;
@@ -130,6 +128,7 @@ pub mod mobile;
 #[cfg(feature = "mod-notification-center")]
 pub mod notification_center;
 #[cfg(feature = "mod-notifications")]
+#[allow(dead_code)]
 pub mod notification_channels;
 #[cfg(feature = "mod-notifications")]
 pub mod notifications;
@@ -144,8 +143,10 @@ pub mod parking_zones;
 #[cfg(feature = "mod-payments")]
 pub mod payments;
 #[cfg(feature = "mod-plugins")]
+#[allow(dead_code)]
 pub mod plugins;
 #[cfg(feature = "mod-push")]
+#[allow(dead_code)]
 pub mod push;
 #[cfg(feature = "mod-pwa")]
 pub mod pwa;

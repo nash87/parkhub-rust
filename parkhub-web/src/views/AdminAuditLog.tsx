@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ClockCounterClockwise, DownloadSimple, FunnelSimple, MagnifyingGlass, FileCsv, FileDoc, FileJs, Question, CircleNotch } from '@phosphor-icons/react';
+import { ClockCounterClockwise, DownloadSimple, FunnelSimple, MagnifyingGlass, FileCsv, FileDoc, FileJs, CircleNotch } from '@phosphor-icons/react';
 import { api, type AuditLogEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';

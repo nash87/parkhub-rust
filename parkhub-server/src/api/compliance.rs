@@ -37,6 +37,7 @@ pub enum ComplianceLevel {
     NonCompliant,
 }
 
+#[allow(dead_code)]
 impl ComplianceLevel {
     /// Get the display label
     pub fn label(&self) -> &'static str {
@@ -136,6 +137,7 @@ pub struct TomSummary {
     pub regular_audits: bool,
 }
 
+#[allow(dead_code)]
 impl TomSummary {
     /// Calculate the TOM compliance score (0.0 - 1.0)
     pub fn score(&self) -> f64 {
@@ -208,7 +210,9 @@ pub struct AuditExportEntry {
 pub struct AuditExportParams {
     #[serde(default = "default_format")]
     pub format: String,
+    #[allow(dead_code)]
     pub from: Option<String>,
+    #[allow(dead_code)]
     pub to: Option<String>,
 }
 

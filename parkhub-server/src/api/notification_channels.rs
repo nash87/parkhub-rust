@@ -9,6 +9,7 @@ use tracing::info;
 
 /// Notification event types that trigger channel-specific messages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 pub enum NotificationEvent {
     BookingCreated,
     BookingCancelled,

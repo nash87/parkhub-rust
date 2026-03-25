@@ -353,12 +353,14 @@ pub async fn update_accessibility_needs(
 
 /// Check if a user has accessibility needs and should get priority booking
 /// on accessible slots. Returns true if they get a 30-min head start.
+#[allow(dead_code)]
 pub fn user_has_accessible_priority(accessibility_needs: Option<&str>) -> bool {
     accessibility_needs.is_some_and(|n| n != "none" && !n.is_empty())
 }
 
 /// Check if an accessible booking should be allowed (priority window check).
 /// Non-accessible users can only book accessible slots after the priority window.
+#[allow(dead_code)]
 pub fn check_accessible_priority(
     slot_is_accessible: bool,
     user_needs: Option<&str>,

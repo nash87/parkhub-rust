@@ -36,6 +36,7 @@ pub enum WidgetType {
     EvChargingStatus,
 }
 
+#[allow(dead_code)]
 impl WidgetType {
     /// All available widget types
     pub const ALL: &[WidgetType] = &[
