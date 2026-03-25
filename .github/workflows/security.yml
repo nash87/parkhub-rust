@@ -1,23 +1,52 @@
-name: Security Scanning
+name: Security
 
 on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   schedule:
-    # Run weekly on Monday at 08:00 UTC to catch new CVEs
     - cron: '0 8 * * 1'
   workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: '1.85'
+
 jobs:
-  cargo-audit:
-    name: Cargo Audit (CVE Check)
+  cargo-deny:
+    name: Cargo Deny
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          log-level: warn
+          command: check
+          arguments: --all-features advisories bans licenses sources
+
+  cargo-audit:
+    name: Cargo Audit
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -42,22 +71,11 @@ jobs:
             --ignore RUSTSEC-2023-0019 \
             --ignore RUSTSEC-2025-0141
 
-  cargo-deny:
-    name: Cargo Deny (License + Dependency Policy)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Run cargo-deny
-        uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          log-level: warn
-          command: check
-          arguments: --all-features
-
   trivy-fs:
     name: Trivy Filesystem Scan
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       security-events: write
@@ -68,14 +86,15 @@ jobs:
         uses: aquasecurity/trivy-action@0.35.0
         continue-on-error: true
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('trivy-results.sarif') != ''
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: trivy-results.sarif

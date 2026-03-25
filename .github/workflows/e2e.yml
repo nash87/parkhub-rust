@@ -7,15 +7,23 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: '1.85'
+  NODE_VERSION: '22.12.0'
 
 jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    # Informational — don't block CI on E2E failures
+    timeout-minutes: 45
     continue-on-error: true
 
     steps:
@@ -23,38 +31,53 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Create placeholder web dist
-        run: mkdir -p parkhub-web/dist && echo '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            parkhub-web/package-lock.json
+
+      - name: Build frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
 
       - name: Build server (headless)
-        run: cargo build --release -p parkhub-server --no-default-features --features "full,headless"
+        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless'
 
       - name: Start server in background
+        shell: bash
         run: |
           ./target/release/parkhub-server --headless --unattended --port 8081 &
           echo "SERVER_PID=$!" >> "$GITHUB_ENV"
-          # Wait for server to be ready
-          for i in $(seq 1 30); do
+          READY=0
+          for i in $(seq 1 45); do
             if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
               echo "Server ready after ${i}s"
+              READY=1
               break
             fi
             sleep 1
           done
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy in time'
+            exit 1
+          fi
         env:
-          DEMO_MODE: "true"
-          PARKHUB_ADMIN_PASSWORD: "demo"
+          DEMO_MODE: 'true'
+          PARKHUB_ADMIN_PASSWORD: 'demo'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
+      - name: Install Playwright dependencies
         run: npm ci
 
       - name: Install Playwright browsers

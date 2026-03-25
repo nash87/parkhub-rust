@@ -1,4 +1,4 @@
-name: ParkHub CI/CD
+name: ParkHub mirror CI
 
 on:
   push:
@@ -9,33 +9,15 @@ on:
     branches:
       - main
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
-  check:
-    name: Cargo Check
-    runs-on: ubuntu-latest
-    container:
-      image: rust:latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run cargo check
-        run: cargo check --workspace --all-targets
-
   fmt:
     name: Cargo Format
     runs-on: ubuntu-latest
     container:
-      image: rust:latest
+      image: rust:1.85
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -46,11 +28,30 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-  clippy:
-    name: Cargo Clippy
+  check:
+    name: Cargo Check (headless)
     runs-on: ubuntu-latest
     container:
-      image: rust:latest
+      image: rust:1.85
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare embedded web placeholder
+        run: |
+          mkdir -p parkhub-web/dist
+          printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
+      - name: Run cargo check
+        run: |
+          cargo check --locked --package parkhub-common --all-targets
+          cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets
+
+  clippy:
+    name: Cargo Clippy (headless)
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.85
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,70 +59,32 @@ jobs:
       - name: Install clippy
         run: rustup component add clippy
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Prepare embedded web placeholder
+        run: |
+          mkdir -p parkhub-web/dist
+          printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
+        run: |
+          cargo clippy --locked --package parkhub-common --all-targets -- -D warnings
+          cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings
 
   test:
-    name: Cargo Test
+    name: Cargo Test (headless)
     runs-on: ubuntu-latest
     container:
-      image: rust:latest
+      image: rust:1.85
     needs: [check]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Prepare embedded web placeholder
+        run: |
+          mkdir -p parkhub-web/dist
+          printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
       - name: Run tests
-        run: cargo test --workspace
-
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    container:
-      image: rust:latest
-    needs: [check]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
         run: |
-          apt-get update
-          apt-get install -y cmake libfontconfig1-dev
-
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Build server (headless)
-        run: cargo build --release --package parkhub-server --no-default-features --features headless
-
-      - name: Upload server artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: parkhub-server-linux
-          path: target/release/parkhub-server
+          cargo test --locked --package parkhub-common --all-targets
+          cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets
