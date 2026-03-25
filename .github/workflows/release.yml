@@ -6,17 +6,24 @@ on:
       - 'v*'
   workflow_dispatch:
 
-# Default minimal permissions — the release job overrides to contents: write only where needed
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: '1.85'
+  NODE_VERSION: '22.12.0'
 
 jobs:
   build-linux:
     name: Build Linux
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -25,6 +32,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
 
       - name: Install dependencies
         run: |
@@ -34,19 +43,21 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
 
       - name: Build web frontend
+        working-directory: parkhub-web
         run: |
-          cd parkhub-web
           npm ci
           npm run build
 
       - name: Build server (headless)
-        run: cargo build --release --package parkhub-server --no-default-features --features headless
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
 
       - name: Build client
-        run: cargo build --release --package parkhub-client
+        run: cargo build --locked --release --package parkhub-client
 
       - name: Create portable package
         run: |
@@ -63,10 +74,13 @@ jobs:
         with:
           name: parkhub-linux-x64
           path: parkhub-linux-x64.tar.gz
+          retention-days: 14
 
   build-windows:
     name: Build Windows
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
+    timeout-minutes: 90
     permissions:
       contents: read
     steps:
@@ -75,23 +89,27 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
 
       - name: Build web frontend
+        working-directory: parkhub-web
         run: |
-          cd parkhub-web
           npm ci
           npm run build
 
       - name: Build server (headless)
-        run: cargo build --release --package parkhub-server --no-default-features --features headless
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
 
       - name: Build client
-        run: cargo build --release --package parkhub-client
+        run: cargo build --locked --release --package parkhub-client
 
       - name: Create portable package
         shell: pwsh
@@ -110,13 +128,18 @@ jobs:
         with:
           name: parkhub-windows-x64
           path: parkhub-windows-x64.zip
+          retention-days: 14
 
   release:
     name: Create Release
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
+      attestations: write
+      id-token: write
     steps:
       - name: Download Linux artifact
         uses: actions/download-artifact@v8
@@ -128,10 +151,22 @@ jobs:
         with:
           name: parkhub-windows-x64
 
+      - name: Generate checksums
+        run: sha256sum parkhub-linux-x64.tar.gz parkhub-windows-x64.zip > checksums.txt
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            parkhub-linux-x64.tar.gz
+            parkhub-windows-x64.zip
+            checksums.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             parkhub-linux-x64.tar.gz
             parkhub-windows-x64.zip
+            checksums.txt
           generate_release_notes: true
