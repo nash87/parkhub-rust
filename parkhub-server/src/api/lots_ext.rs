@@ -281,7 +281,7 @@ mod tests {
         };
         let json = serde_json::to_string(&b).unwrap();
         assert!(json.contains("2026-03-24"));
-        assert!(json.contains("5"));
+        assert!(json.contains('5'));
     }
 
     #[test]

@@ -245,7 +245,6 @@ mod tests {
     #[test]
     fn notification_ownership_rejects_other_users_notification() {
         let user_a = Uuid::new_v4();
-        let user_b = Uuid::new_v4();
         let notif_id = Uuid::new_v4();
         let now = chrono::Utc::now();
 

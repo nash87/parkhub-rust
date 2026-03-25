@@ -60,8 +60,6 @@ self.addEventListener('fetch', e => {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // ── Service Worker ──
 
     #[test]

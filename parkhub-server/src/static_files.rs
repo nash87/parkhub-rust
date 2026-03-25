@@ -229,8 +229,7 @@ mod tests {
     #[test]
     fn has_web_assets_returns_bool() {
         // In test env we only have a stub index.html, but the function should not panic
-        let result = has_web_assets();
-        assert!(result == true || result == false);
+        let _result = has_web_assets();
     }
 
     // ── list_assets ──
