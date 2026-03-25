@@ -37,6 +37,7 @@ pub enum ShareStatus {
     Expired,
 }
 
+#[allow(dead_code)]
 impl ShareStatus {
     /// Human-readable label
     pub fn label(&self) -> &'static str {
@@ -90,6 +91,7 @@ pub struct InviteGuestRequest {
     /// Guest email address
     pub email: String,
     /// Optional personal message
+    #[allow(dead_code)]
     pub message: Option<String>,
 }
 
@@ -131,6 +133,7 @@ fn build_share_url(code: &str) -> String {
 }
 
 /// Check if a share link has expired
+#[allow(dead_code)]
 fn is_expired(expires_at: &Option<String>) -> bool {
     if let Some(exp) = expires_at {
         if let Ok(dt) = exp.parse::<DateTime<Utc>>() {

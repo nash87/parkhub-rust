@@ -4,7 +4,7 @@
 //! When keys are not configured, endpoints return `501 Not Implemented`.
 
 use axum::{
-    extract::{Path, State},
+    extract::State,
     http::StatusCode,
     Extension, Json,
 };
@@ -114,10 +114,13 @@ pub struct WebhookEventData {
 pub struct WebhookObject {
     pub id: String,
     #[serde(default)]
+    #[allow(dead_code)]
     pub metadata: std::collections::HashMap<String, String>,
     #[serde(default)]
+    #[allow(dead_code)]
     pub amount_total: Option<u64>,
     #[serde(default)]
+    #[allow(dead_code)]
     pub payment_status: Option<String>,
 }
 

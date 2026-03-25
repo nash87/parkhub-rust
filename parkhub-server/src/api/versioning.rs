@@ -49,6 +49,7 @@ pub enum DeprecationSeverity {
     Critical,
 }
 
+#[allow(dead_code)]
 impl DeprecationSeverity {
     pub fn label(&self) -> &'static str {
         match self {
@@ -98,6 +99,7 @@ pub enum ChangeType {
     Deprecation,
 }
 
+#[allow(dead_code)]
 impl ChangeType {
     pub fn label(&self) -> &'static str {
         match self {

@@ -53,6 +53,7 @@ pub struct ConflictDetail {
 
 /// Availability check result
 #[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(dead_code)]
 pub struct AvailabilityResult {
     pub available: bool,
     pub conflicts: Vec<ConflictDetail>,

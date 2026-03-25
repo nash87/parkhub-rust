@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use uuid::Uuid;
 
-use parkhub_common::{ApiResponse, UserRole};
+use parkhub_common::ApiResponse;
 
 use crate::audit::{AuditEntry, AuditEventType};
 
@@ -325,6 +325,7 @@ async fn deliver_event(
 
 /// Dispatch an event to all matching webhook subscriptions.
 /// Runs asynchronously — does not block the caller.
+#[allow(dead_code)]
 pub fn dispatch_event(state: super::SharedState, event_type: String, payload: serde_json::Value) {
     tokio::spawn(async move {
         let state_guard = state.read().await;

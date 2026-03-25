@@ -114,7 +114,7 @@ pub async fn nearby_lots(
     Query(query): Query<NearbyLotsQuery>,
 ) -> (StatusCode, Json<ApiResponse<Vec<NearbyLot>>>) {
     let state_guard = state.read().await;
-    let radius = query.radius.unwrap_or(1000.0).min(10000.0).max(100.0);
+    let radius = query.radius.unwrap_or(1000.0).clamp(100.0, 10000.0);
 
     let lots = match state_guard.db.list_parking_lots().await {
         Ok(l) => l,

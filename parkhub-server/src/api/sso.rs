@@ -82,6 +82,7 @@ pub struct SsoCallbackPayload {
     pub saml_response: String,
     /// Relay state for CSRF protection
     #[serde(default)]
+    #[allow(dead_code)]
     pub relay_state: Option<String>,
 }
 
@@ -183,6 +184,7 @@ fn parse_saml_response(base64_response: &str) -> Result<SamlAttributes, String> 
 }
 
 /// Parse SAML metadata XML and extract entity ID and SSO URL.
+#[allow(dead_code)]
 pub fn parse_saml_metadata(xml: &str) -> Option<(String, String)> {
     // entity ID is typically an attribute: entityID="..."
     let entity_id = xml.find("entityID=\"").map(|idx| {

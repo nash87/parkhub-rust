@@ -9,7 +9,7 @@
 
 use axum::{
     extract::State,
-    http::{header, StatusCode},
+    http::header,
     response::IntoResponse,
     Extension, Json,
 };

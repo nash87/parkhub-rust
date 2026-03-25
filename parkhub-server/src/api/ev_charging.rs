@@ -8,7 +8,7 @@ use axum::{
     http::StatusCode,
     Extension, Json,
 };
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

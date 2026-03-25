@@ -41,6 +41,7 @@ pub const ALL_PERMISSIONS: &[&str] = &[
 ];
 
 /// Built-in role names that cannot be deleted.
+#[allow(dead_code)]
 pub const BUILT_IN_ROLES: &[&str] = &["super_admin", "admin", "manager", "user", "viewer"];
 
 /// A role definition with associated permissions.
@@ -177,6 +178,7 @@ pub fn validate_permissions(permissions: &[String]) -> Option<String> {
 }
 
 /// Check if a user has the required permission via their RBAC roles.
+#[allow(dead_code)]
 pub fn has_permission(roles: &[RbacRole], permission: &str) -> bool {
     roles
         .iter()
@@ -730,6 +732,7 @@ pub async fn assign_user_roles(
 ///
 /// Returns `Ok(())` if the user has the permission (via any assigned role),
 /// or if the user is a `SuperAdmin` (always has all permissions).
+#[allow(dead_code)]
 pub async fn check_rbac_permission(
     state: &crate::AppState,
     auth_user: &AuthUser,

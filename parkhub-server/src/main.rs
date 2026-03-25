@@ -23,6 +23,7 @@ mod discovery;
 #[cfg(feature = "mod-email")]
 mod email;
 #[cfg(feature = "mod-email-templates")]
+#[allow(dead_code)]
 mod email_templates;
 #[allow(dead_code)]
 mod error;

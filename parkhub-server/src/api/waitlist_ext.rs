@@ -36,6 +36,7 @@ pub struct SubscribeWaitlistRequest {
     #[serde(default = "default_priority")]
     pub priority: u8,
     /// Optional notes
+    #[allow(dead_code)]
     pub notes: Option<String>,
 }
 
