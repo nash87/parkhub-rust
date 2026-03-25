@@ -56,6 +56,10 @@ mod booking_tests;
 mod coverage_tests;
 #[cfg(all(test, feature = "full"))]
 mod integration_tests;
+#[cfg(all(test, feature = "full"))]
+mod mobile_tests;
+#[cfg(all(test, feature = "full"))]
+mod webhooks_v2_tests;
 
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};
