@@ -372,7 +372,12 @@ pub async fn register(
     // Check if username already exists, append number if needed (cap at 99)
     let mut final_username = username.clone();
     let mut counter = 1u32;
-    while counter <= 99 && matches!(state_guard.db.get_user_by_username(&final_username).await, Ok(Some(_))) {
+    while counter <= 99
+        && matches!(
+            state_guard.db.get_user_by_username(&final_username).await,
+            Ok(Some(_))
+        )
+    {
         final_username = format!("{username}{counter}");
         counter += 1;
     }
