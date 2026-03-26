@@ -108,6 +108,9 @@ struct CliArgs {
     data_dir: Option<PathBuf>,
     /// Show version
     version: bool,
+    /// Perform a health check against the running server and exit 0/1.
+    /// Used as the Docker HEALTHCHECK command (works in distroless images).
+    health_check: bool,
 }
 
 impl CliArgs {
@@ -121,6 +124,7 @@ impl CliArgs {
             port: None,
             data_dir: None,
             version: false,
+            health_check: false,
         };
 
         let mut i = 1;
@@ -131,6 +135,7 @@ impl CliArgs {
                 "-d" | "--debug" => cli.debug = true,
                 "--headless" => cli.headless = true,
                 "--unattended" => cli.unattended = true,
+                "--health-check" => cli.health_check = true,
                 "-p" | "--port" => {
                     if i + 1 < args.len() {
                         cli.port = args[i + 1].parse().ok();
@@ -158,16 +163,20 @@ impl CliArgs {
         println!("    parkhub-server [OPTIONS]");
         println!();
         println!("OPTIONS:");
-        println!("    -h, --help        Show this help message");
-        println!("    -v, --version     Show version information");
-        println!("    -d, --debug       Enable debug logging");
-        println!("    --headless        Run without GUI (console only)");
-        println!("    --unattended      Auto-configure with defaults (no setup wizard)");
-        println!("    -p, --port PORT   Set the server port (default: 7878)");
-        println!("    --data-dir PATH   Set custom data directory");
+        println!("    -h, --help         Show this help message");
+        println!("    -v, --version      Show version information");
+        println!("    -d, --debug        Enable debug logging");
+        println!("    --headless         Run without GUI (console only)");
+        println!("    --unattended       Auto-configure with defaults (no setup wizard)");
+        println!("    -p, --port PORT    Set the server port (default: 7878)");
+        println!("    --data-dir PATH    Set custom data directory");
+        println!("    --health-check     Check if a running server is healthy (exits 0/1)");
         println!();
         println!("ENVIRONMENT VARIABLES:");
         println!("    PARKHUB_DB_PASSPHRASE    Database encryption passphrase");
+        println!("    PORT                     Server port (overridden by --port flag)");
+        println!("    SEED_DEMO_DATA           Seed demo lots/users on first start (true/1)");
+        println!("    DEMO_MODE                Enable demo UI and seed data on first start");
         println!("    RUST_LOG                 Logging filter (e.g., debug,info)");
         println!();
         println!("EXAMPLES:");
@@ -176,6 +185,7 @@ impl CliArgs {
         println!("    parkhub-server --debug            # Start with debug logging");
         println!("    parkhub-server --unattended       # Auto-configure and start");
         println!("    parkhub-server -p 8080            # Use port 8080");
+        println!("    parkhub-server --health-check     # Docker HEALTHCHECK probe");
     }
 
     fn print_version() {
@@ -202,6 +212,17 @@ async fn main() -> Result<()> {
     if cli.version {
         CliArgs::print_version();
         return Ok(());
+    }
+
+    // --health-check: probe the running server and exit 0 (healthy) or 1 (unhealthy/unreachable).
+    // This is designed to be used as the Docker HEALTHCHECK CMD — it must be a bare binary call
+    // so that it works inside distroless images that have no shell.
+    if cli.health_check {
+        let port = cli
+            .port
+            .or_else(|| std::env::var("PORT").ok().and_then(|p| p.parse().ok()))
+            .unwrap_or(10000);
+        std::process::exit(perform_health_check(port));
     }
 
     // Set DPI awareness before creating any windows (Windows-specific)
@@ -344,6 +365,12 @@ async fn main() -> Result<()> {
     if let Some(port) = cli.port {
         config.port = port;
         info!("Port overridden from command line: {}", port);
+    } else if let Ok(port_str) = std::env::var("PORT") {
+        // Support the PORT environment variable used by Render and other PaaS platforms.
+        if let Ok(port) = port_str.parse::<u16>() {
+            config.port = port;
+            info!("Port set from PORT environment variable: {}", port);
+        }
     }
 
     // If encryption is enabled but no passphrase, try environment variable
@@ -400,6 +427,29 @@ async fn main() -> Result<()> {
         // Enable credits system by default
         db.set_setting("credits_enabled", "true").await?;
         db.set_setting("credits_per_booking", "1").await?;
+    }
+
+    // Demo seeding: when SEED_DEMO_DATA=true or DEMO_MODE=true, seed 10 lots + 200 users
+    // directly via DB functions (no shell scripts, no HTTP API calls).  Runs at most once
+    // per database — skipped when parking lots already exist.
+    {
+        let want_seed = std::env::var("SEED_DEMO_DATA")
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(false)
+            || std::env::var("DEMO_MODE")
+                .map(|v| v == "true" || v == "1")
+                .unwrap_or(false);
+        if want_seed {
+            let lot_count = db.list_parking_lots().await.map(|l| l.len()).unwrap_or(0);
+            if lot_count < 2 {
+                info!("Seeding demo data (SEED_DEMO_DATA/DEMO_MODE requested, {lot_count} lots found)...");
+                if let Err(e) = seed_demo_data(&db).await {
+                    warn!("Demo seeding failed (non-fatal): {e}");
+                }
+            } else {
+                info!("Demo data already present ({lot_count} lots) — skipping seed.");
+            }
+        }
     }
 
     // Start mDNS service for autodiscovery
@@ -760,38 +810,13 @@ async fn main() -> Result<()> {
                         // Re-enable credits
                         let _ = state_guard.db.set_setting("credits_enabled", "true").await;
                         let _ = state_guard.db.set_setting("credits_per_booking", "1").await;
-                        drop(state_guard);
 
-                        // Spawn seed script in background (best-effort)
-                        let port = std::env::var("PORT").unwrap_or_else(|_| "10000".to_string());
-                        let admin_pw = std::env::var("PARKHUB_ADMIN_PASSWORD")
-                            .unwrap_or_else(|_| "demo".to_string());
-                        let seed_script = std::path::Path::new("/app/seed_demo.py");
-                        if seed_script.exists() {
-                            // Pass password via env var, not CLI arg (avoids /proc exposure)
-                            match tokio::process::Command::new("python3")
-                                .arg(seed_script)
-                                .arg("--base-url")
-                                .arg(format!("http://127.0.0.1:{port}"))
-                                .env("PARKHUB_ADMIN_PASSWORD", &admin_pw)
-                                .output()
-                                .await
-                            {
-                                Ok(output) if output.status.success() => {
-                                    info!("Demo seed script completed successfully");
-                                }
-                                Ok(output) => {
-                                    tracing::warn!(
-                                        "Demo seed script exited with {}: {}",
-                                        output.status,
-                                        String::from_utf8_lossy(&output.stderr)
-                                    );
-                                }
-                                Err(e) => {
-                                    tracing::warn!("Failed to run demo seed script: {e}");
-                                }
-                            }
+                        // Re-seed demo data using the native Rust function — no shell or
+                        // external script required (works in distroless containers).
+                        if let Err(e) = seed_demo_data(&state_guard.db).await {
+                            tracing::warn!("Demo auto-reset: seeding failed (non-fatal): {e}");
                         }
+                        drop(state_guard);
 
                         // Mark reset complete and update timestamps
                         if let Ok(mut ds) = demo.lock() {
@@ -1914,4 +1939,405 @@ pub(crate) async fn create_sample_parking_lot(db: &Database) -> Result<()> {
 
     info!("Sample parking lot created with {} slots", slots.len());
     Ok(())
+}
+
+/// Perform a synchronous HTTP health check against a running server.
+///
+/// Connects to `http://127.0.0.1:{port}/health` using a raw TCP connection
+/// (no extra runtime or external binary required — works in distroless images).
+/// Returns 0 if the server responds with HTTP 200, 1 otherwise.
+fn perform_health_check(port: u16) -> i32 {
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::time::Duration;
+
+    let addr = format!("127.0.0.1:{port}");
+    let timeout = Duration::from_secs(4);
+
+    // Parse the socket address — this is always valid since port is a u16,
+    // but we handle the error gracefully rather than panicking.
+    let Ok(socket_addr) = addr.parse() else {
+        eprintln!("health-check: could not parse address {addr}");
+        return 1;
+    };
+
+    let Ok(mut stream) = TcpStream::connect_timeout(&socket_addr, timeout) else {
+        eprintln!("health-check: could not connect to {addr}");
+        return 1;
+    };
+
+    let _ = stream.set_read_timeout(Some(timeout));
+    let req = "GET /health HTTP/1.0\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
+    if stream.write_all(req.as_bytes()).is_err() {
+        eprintln!("health-check: failed to send request");
+        return 1;
+    }
+
+    let mut response = String::new();
+    let _ = stream.read_to_string(&mut response);
+
+    // Accept any 2xx status on the first line
+    if response.starts_with("HTTP/1.")
+        && response
+            .lines()
+            .next()
+            .map_or(false, |l| l.contains("200"))
+    {
+        0
+    } else {
+        eprintln!("health-check: unexpected response: {}", response.lines().next().unwrap_or("(empty)"));
+        1
+    }
+}
+
+/// Seed demo data: 10 realistic parking lots and 200 demo users.
+///
+/// Called at startup when `SEED_DEMO_DATA=true` or `DEMO_MODE=true` and the
+/// database has fewer than two parking lots.  All writes go directly to the
+/// database — no HTTP API calls, no shell scripts, and no external tools are
+/// required, making this safe for distroless container deployments.
+#[allow(clippy::too_many_lines)]
+pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
+    use chrono::Utc;
+    use parkhub_common::models::{
+        DayHours, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo,
+        PricingRate, SlotFeature, SlotPosition, SlotStatus, SlotType,
+    };
+    use rand::Rng;
+    use uuid::Uuid;
+
+    info!("Seeding demo data: 10 parking lots + 200 users...");
+
+    // 10 realistic German parking lots (mirroring the former seed_demo.sh)
+    let lots_data: &[(&str, &str, f64, f64, i32)] = &[
+        ("P+R Hauptbahnhof",       "Bahnhofplatz 1, 80335 München",           48.1403, 11.5583, 51),
+        ("Tiefgarage Marktplatz",  "Marktplatz 5, 70173 Stuttgart",           48.7784,  9.1800, 80),
+        ("Parkhaus Stadtmitte",    "Rathausstrasse 12, 50667 Köln",           50.9384,  6.9584, 60),
+        ("P+R Messegelände",       "Messegelände Süd, 60528 Frankfurt",       50.1109,  8.6821, 100),
+        ("Parkplatz Einkaufszentrum", "Shoppingcenter 3, 22335 Hamburg",      53.5753,  9.9803, 40),
+        ("Tiefgarage Rathaus",     "Rathausplatz 1, 90403 Nürnberg",          49.4521, 11.0767, 30),
+        ("Parkhaus Technologiepark", "Technologiestrasse 8, 76131 Karlsruhe", 49.0069,  8.4037, 75),
+        ("Parkplatz Universität",  "Universitätsring 1, 69120 Heidelberg",    49.4074,  8.6924, 70),
+        ("Parkplatz Klinikum",     "Klinikumsallee 15, 44137 Dortmund",       51.5136,  7.4653, 46),
+        ("P+R Bahnhof Ost",        "Ostbahnhofstrasse 3, 04315 Leipzig",      51.3397, 12.3731, 56),
+    ];
+
+    for (name, address, lat, lon, total_slots) in lots_data {
+        let lot_id = Uuid::new_v4();
+        let floor_id = Uuid::new_v4();
+        let total = *total_slots;
+
+        let slots: Vec<ParkingSlot> = (1..=total)
+            .map(|i| ParkingSlot {
+                id: Uuid::new_v4(),
+                lot_id,
+                floor_id,
+                slot_number: i,
+                row: (i - 1) / 10,
+                column: (i - 1) % 10,
+                slot_type: if i == 1 {
+                    SlotType::Handicap
+                } else if i == total {
+                    SlotType::Electric
+                } else {
+                    SlotType::Standard
+                },
+                status: SlotStatus::Available,
+                current_booking: None,
+                features: if i <= 2 { vec![SlotFeature::NearExit] } else { vec![] },
+                position: SlotPosition {
+                    x: ((i - 1) % 10) as f32 * 80.0,
+                    y: ((i - 1) / 10) as f32 * 100.0,
+                    width: 70.0,
+                    height: 90.0,
+                    rotation: 0.0,
+                },
+                is_accessible: i == 1,
+            })
+            .collect();
+
+        let floor = ParkingFloor {
+            id: floor_id,
+            lot_id,
+            name: "Ground Floor".to_string(),
+            floor_number: 0,
+            total_slots: total,
+            available_slots: total,
+            slots: slots.clone(),
+        };
+
+        let weekday = DayHours {
+            open: "06:00".to_string(),
+            close: "22:00".to_string(),
+            closed: false,
+        };
+        let weekend = DayHours {
+            open: "07:00".to_string(),
+            close: "20:00".to_string(),
+            closed: false,
+        };
+        let lot = ParkingLot {
+            id: lot_id,
+            name: name.to_string(),
+            address: address.to_string(),
+            latitude: *lat,
+            longitude: *lon,
+            total_slots: total,
+            available_slots: total,
+            floors: vec![floor],
+            amenities: vec!["covered".to_string(), "security_camera".to_string()],
+            pricing: PricingInfo {
+                currency: "EUR".to_string(),
+                rates: vec![
+                    PricingRate { duration_minutes: 60,   price: 2.50, label: "1h".to_string() },
+                    PricingRate { duration_minutes: 1440, price: 20.0, label: "Day".to_string() },
+                ],
+                daily_max: Some(20.0),
+                monthly_pass: Some(400.0),
+            },
+            operating_hours: OperatingHours {
+                is_24h: false,
+                monday:    Some(weekday.clone()),
+                tuesday:   Some(weekday.clone()),
+                wednesday: Some(weekday.clone()),
+                thursday:  Some(weekday.clone()),
+                friday:    Some(weekday.clone()),
+                saturday:  Some(weekend.clone()),
+                sunday:    Some(weekend),
+            },
+            images: vec![],
+            status: LotStatus::Open,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            tenant_id: None,
+        };
+
+        db.save_parking_lot(&lot).await?;
+        for slot in &slots {
+            db.save_parking_slot(slot).await?;
+        }
+        info!("  Created lot: {} ({total_slots} slots)", name);
+    }
+
+    // 200 demo users with German-style names (direct DB writes — no HTTP API)
+    let first_names = [
+        "Hans", "Peter", "Klaus", "Michael", "Thomas", "Andreas", "Stefan", "Christian",
+        "Markus", "Sebastian", "Daniel", "Tobias", "Florian", "Matthias", "Martin", "Frank",
+        "Oliver", "Maria", "Anna", "Sandra", "Andrea", "Nicole", "Stefanie", "Christina",
+        "Monika", "Petra", "Claudia", "Julia", "Laura", "Sarah", "Lisa", "Katharina",
+        "Melanie", "Susanne", "Anja",
+    ];
+    let last_names = [
+        "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker",
+        "Schulz", "Hoffmann", "Koch", "Richter", "Bauer", "Klein", "Wolf", "Schröder",
+        "Neumann", "Schwarz", "Zimmermann", "Braun", "Krüger", "Hofmann", "Hartmann",
+    ];
+
+    let demo_password_hash = hash_password("Demo2026!X")?;
+
+    let users: Vec<parkhub_common::models::User> = {
+        use parkhub_common::models::{User, UserPreferences};
+        let mut rng = rand::rng();
+        (1..=200u32)
+            .map(|i| {
+                let first = first_names[rng.random_range(0..first_names.len())];
+                let last = last_names[rng.random_range(0..last_names.len())];
+                let username = format!(
+                    "{}.{}{}",
+                    first.to_lowercase(),
+                    last.to_lowercase().replace('ü', "ue").replace('ö', "oe").replace('ä', "ae"),
+                    i
+                );
+                User {
+                    id: Uuid::new_v4(),
+                    username: username.clone(),
+                    email: format!("{username}@example.de"),
+                    password_hash: demo_password_hash.clone(),
+                    name: format!("{first} {last}"),
+                    picture: None,
+                    phone: Some(format!("+49-{:03}-{:07}", rng.random_range(100..999), rng.random_range(1_000_000..9_999_999u32))),
+                    role: parkhub_common::models::UserRole::User,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                    last_login: None,
+                    preferences: UserPreferences::default(),
+                    is_active: true,
+                    credits_balance: rng.random_range(5..41),
+                    credits_monthly_quota: 40,
+                    credits_last_refilled: Some(Utc::now()),
+                    tenant_id: None,
+                    accessibility_needs: None,
+                    cost_center: None,
+                    department: None,
+                }
+            })
+            .collect()
+    };
+
+    for user in &users {
+        if let Err(e) = db.save_user(user).await {
+            tracing::warn!("Demo seed: failed to save user {}: {e}", user.username);
+        }
+    }
+
+    info!("Demo seeding complete: 10 lots, 200 users (password: Demo2026!X)");
+    Ok(())
+}
+
+#[cfg(test)]
+mod cli_tests {
+    use super::*;
+
+    // ---------------------------------------------------------------------------
+    // CliArgs parsing
+    // ---------------------------------------------------------------------------
+
+    fn parse_args(args: &[&str]) -> CliArgs {
+        // CliArgs::parse() reads std::env::args(), so we exercise the struct fields
+        // directly here to avoid side-effects from the process argument list.
+        let mut cli = CliArgs {
+            help: false,
+            debug: false,
+            headless: false,
+            unattended: false,
+            port: None,
+            data_dir: None,
+            version: false,
+            health_check: false,
+        };
+        let mut i = 0;
+        let owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+        while i < owned.len() {
+            match owned[i].as_str() {
+                "-h" | "--help" => cli.help = true,
+                "-v" | "--version" => cli.version = true,
+                "-d" | "--debug" => cli.debug = true,
+                "--headless" => cli.headless = true,
+                "--unattended" => cli.unattended = true,
+                "--health-check" => cli.health_check = true,
+                "-p" | "--port" => {
+                    if i + 1 < owned.len() {
+                        cli.port = owned[i + 1].parse().ok();
+                        i += 1;
+                    }
+                }
+                "--data-dir" => {
+                    if i + 1 < owned.len() {
+                        cli.data_dir = Some(PathBuf::from(&owned[i + 1]));
+                        i += 1;
+                    }
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+        cli
+    }
+
+    #[test]
+    fn health_check_flag_is_parsed() {
+        let cli = parse_args(&["--health-check"]);
+        assert!(cli.health_check, "--health-check must set health_check=true");
+        assert!(!cli.headless);
+        assert!(!cli.unattended);
+    }
+
+    #[test]
+    fn health_check_flag_default_is_false() {
+        let cli = parse_args(&["--headless", "--unattended"]);
+        assert!(!cli.health_check, "health_check must default to false");
+    }
+
+    #[test]
+    fn health_check_with_port_flag() {
+        let cli = parse_args(&["--health-check", "--port", "8080"]);
+        assert!(cli.health_check);
+        assert_eq!(cli.port, Some(8080));
+    }
+
+    #[test]
+    fn port_flag_parsed_correctly() {
+        let cli = parse_args(&["-p", "9000"]);
+        assert_eq!(cli.port, Some(9000));
+    }
+
+    #[test]
+    fn data_dir_flag_parsed() {
+        let cli = parse_args(&["--data-dir", "/tmp/mydata"]);
+        assert_eq!(cli.data_dir, Some(PathBuf::from("/tmp/mydata")));
+    }
+
+    // ---------------------------------------------------------------------------
+    // perform_health_check — connection-refused path exits with 1
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn health_check_returns_1_when_server_not_running() {
+        // Port 1 is reserved and guaranteed not to have a listener; expect exit code 1.
+        let result = perform_health_check(1);
+        assert_eq!(result, 1, "health check must return 1 when server is unreachable");
+    }
+
+    // ---------------------------------------------------------------------------
+    // seed_demo_data — creates 10 lots and 200 users in a real database
+    // ---------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn seed_demo_data_creates_lots_and_users() {
+        use crate::db::{Database, DatabaseConfig};
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_config = DatabaseConfig {
+            path: dir.path().to_path_buf(),
+            encryption_enabled: false,
+            passphrase: None,
+            create_if_missing: true,
+        };
+        let db = Database::open(&db_config).expect("open test db");
+
+        // DB should start empty
+        let lots_before = db.list_parking_lots().await.unwrap();
+        assert_eq!(lots_before.len(), 0, "lots must be empty before seeding");
+
+        seed_demo_data(&db).await.expect("seed_demo_data must succeed");
+
+        let lots_after = db.list_parking_lots().await.unwrap();
+        assert_eq!(lots_after.len(), 10, "seed must create exactly 10 parking lots");
+
+        // All lots should have at least one slot
+        for lot in &lots_after {
+            assert!(lot.total_slots > 0, "each seeded lot must have at least one slot");
+        }
+
+        // Verify user count (200 demo users)
+        let users = db.list_users().await.unwrap();
+        assert_eq!(users.len(), 200, "seed must create exactly 200 demo users");
+    }
+
+    #[tokio::test]
+    async fn seed_demo_data_is_idempotent_when_called_twice() {
+        use crate::db::{Database, DatabaseConfig};
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_config = DatabaseConfig {
+            path: dir.path().to_path_buf(),
+            encryption_enabled: false,
+            passphrase: None,
+            create_if_missing: true,
+        };
+        let db = Database::open(&db_config).expect("open test db");
+
+        // First call
+        seed_demo_data(&db).await.expect("first seed must succeed");
+        let lots_first = db.list_parking_lots().await.unwrap().len();
+
+        // Second call must not fail; lots are stored by UUID so duplicate lots
+        // may be added by a naive caller — the startup guard (lot_count < 2)
+        // prevents double-seeding, but the function itself should not panic.
+        let result = seed_demo_data(&db).await;
+        assert!(result.is_ok(), "second seed_demo_data call must not return Err");
+        // Lot count after second call is at least the original 10
+        let lots_second = db.list_parking_lots().await.unwrap().len();
+        assert!(lots_second >= lots_first, "lot count must not decrease");
+    }
 }

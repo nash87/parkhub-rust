@@ -5,8 +5,9 @@ services:
     # Image is built by GitHub Actions (.github/workflows/docker-publish.yml) on every push
     image:
       url: ghcr.io/nash87/parkhub-rust:latest
-    # Entrypoint: start server → wait healthy → seed demo data → keep running
-    dockerCommand: /app/docker-entrypoint.sh
+    # Direct binary invocation — demo seeding is handled inside the binary when
+    # SEED_DEMO_DATA=true or DEMO_MODE=true (no shell wrapper needed in distroless).
+    dockerCommand: /app/parkhub-server --headless --unattended --data-dir /data --port 10000
     port: 10000
     plan: free
     envVars:
