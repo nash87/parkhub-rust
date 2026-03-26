@@ -661,3 +661,154 @@ export component LoadingOverlay inherits Rectangle {
         }
     }
 }
+
+export component AdminUserDialog inherits Rectangle {
+    in property <bool> is-visible: false;
+    in property <bool> is-edit-mode: false;
+    in property <string> title: "Benutzer";
+    in-out property <string> username: "";
+    in-out property <string> email: "";
+    in-out property <string> full-name: "";
+    in-out property <string> role: "user";
+    callback cancel();
+    callback submit();
+
+    if root.is-visible : DialogBackdrop {
+        clicked => { root.cancel(); }
+    }
+
+    if root.is-visible : DialogContainer {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        dialog-width: 440px;
+
+        VerticalLayout {
+            padding: 24px;
+            spacing: 14px;
+
+            Text {
+                text: root.title;
+                font-size: 20px;
+                font-weight: 700;
+                color: Theme.text-primary;
+            }
+
+            Text {
+                text: root.is-edit-mode
+                    ? "Name, E-Mail und Rolle werden sofort gegen die Admin-API gespeichert."
+                    : "Ein temporäres Passwort wird automatisch erzeugt und nach dem Anlegen angezeigt.";
+                font-size: 12px;
+                color: Theme.text-tertiary;
+                wrap: word-wrap;
+            }
+
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: root.is-edit-mode ? Theme.surface-elevated : Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 14px;
+
+                    username-input := TextInput {
+                        horizontal-stretch: 1;
+                        text <=> root.username;
+                        enabled: !root.is-edit-mode;
+                        color: root.is-edit-mode ? Theme.text-tertiary : Theme.text-primary;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 14px;
+
+                    name-input := TextInput {
+                        horizontal-stretch: 1;
+                        text <=> root.full-name;
+                        color: Theme.text-primary;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 14px;
+
+                    email-input := TextInput {
+                        horizontal-stretch: 1;
+                        text <=> root.email;
+                        color: Theme.text-primary;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 48px;
+                border-radius: 10px;
+                background: Theme.background;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 14px;
+                    padding-right: 14px;
+
+                    role-input := TextInput {
+                        horizontal-stretch: 1;
+                        text <=> root.role;
+                        color: Theme.text-primary;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            Text {
+                text: "Rolle: user, premium, admin oder superadmin";
+                font-size: 12px;
+                color: Theme.text-tertiary;
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                Button {
+                    horizontal-stretch: 1;
+                    text: "Abbrechen";
+                    clicked => { root.cancel(); }
+                }
+
+                Button {
+                    horizontal-stretch: 1;
+                    primary: true;
+                    text: root.is-edit-mode ? "Speichern" : "Benutzer anlegen";
+                    clicked => { root.submit(); }
+                }
+            }
+        }
+    }
+}

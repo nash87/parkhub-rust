@@ -9,7 +9,7 @@ import { ParkingView, ParkingSlotData, BookingData, DurationOption, SlotStatus }
 import { LayoutEditor, LayoutElement, SavedLayout, ElementType } from "layout_editor.slint";
 import { SettingsPanel, AppSettings } from "settings.slint";
 import { VehicleManagement, VehicleInfo } from "vehicles.slint";
-import { BookingConfirmationDialog, CancelBookingDialog, SuccessDialog, ErrorDialog, LoadingOverlay } from "dialogs.slint";
+import { BookingConfirmationDialog, CancelBookingDialog, SuccessDialog, ErrorDialog, LoadingOverlay, AdminUserDialog } from "dialogs.slint";
 import { StatisticsPanel, MonthlyStatData } from "statistics.slint";
 import { ToastContainer, ToastData, ToastType } from "toast.slint";
 import { BookingHistoryPanel, HistoryBooking, HistoryFilter } from "history.slint";
@@ -278,8 +278,16 @@ export component MainWindow inherits Window {
     in-out property <bool> show-success-dialog: false;
     in-out property <bool> show-error-dialog: false;
     in-out property <bool> show-loading-overlay: false;
+    in-out property <bool> show-admin-user-dialog: false;
     in property <string> dialog-title: "";
     in property <string> dialog-message: "";
+    in-out property <bool> admin-user-edit-mode: false;
+    in-out property <string> admin-user-form-id: "";
+    in-out property <string> admin-user-form-title: "";
+    in-out property <string> admin-user-form-username: "";
+    in-out property <string> admin-user-form-email: "";
+    in-out property <string> admin-user-form-name: "";
+    in-out property <string> admin-user-form-role: "user";
 
     // Booking confirmation dialog data
     in property <int> confirm-slot-number: 0;
@@ -356,6 +364,8 @@ export component MainWindow inherits Window {
     callback admin-toggle-user-active(string);
     callback admin-add-user();
     callback admin-search-users(string);
+    callback admin-submit-user-form();
+    callback admin-cancel-user-form();
 
     // Admin server config callbacks
     callback admin-load-server-config();
@@ -1198,5 +1208,21 @@ export component MainWindow inherits Window {
     if root.show-loading-overlay : LoadingOverlay {
         is-visible: true;
         message: root.dialog-message != "" ? root.dialog-message : "Laden...";
+    }
+
+    if root.show-admin-user-dialog : AdminUserDialog {
+        is-visible: true;
+        is-edit-mode <=> root.admin-user-edit-mode;
+        title <=> root.admin-user-form-title;
+        username <=> root.admin-user-form-username;
+        full-name <=> root.admin-user-form-name;
+        email <=> root.admin-user-form-email;
+        role <=> root.admin-user-form-role;
+
+        cancel => {
+            root.show-admin-user-dialog = false;
+            root.admin-cancel-user-form();
+        }
+        submit => { root.admin-submit-user-form(); }
     }
 }

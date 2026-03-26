@@ -60,6 +60,55 @@ struct AppState {
     admin_users_cache: Vec<parkhub_common::User>,
 }
 
+fn role_label(role: &parkhub_common::UserRole) -> &'static str {
+    match role {
+        parkhub_common::UserRole::User => "User",
+        parkhub_common::UserRole::Premium => "Premium",
+        parkhub_common::UserRole::Admin => "Admin",
+        parkhub_common::UserRole::SuperAdmin => "SuperAdmin",
+    }
+}
+
+fn build_admin_user_info(user: &parkhub_common::User) -> AdminUserInfo {
+    AdminUserInfo {
+        id: SharedString::from(user.id.to_string()),
+        username: SharedString::from(&user.username),
+        email: SharedString::from(&user.email),
+        name: SharedString::from(&user.name),
+        initial: SharedString::from(
+            user.name
+                .chars()
+                .next()
+                .or_else(|| user.username.chars().next())
+                .map_or_else(|| "?".to_string(), |c| c.to_uppercase().to_string()),
+        ),
+        role: SharedString::from(role_label(&user.role)),
+        is_active: user.is_active,
+        last_login: SharedString::from(user.last_login.map_or_else(
+            || "-".to_string(),
+            |dt| dt.format("%d.%m.%Y %H:%M").to_string(),
+        )),
+        created_at: SharedString::from(user.created_at.format("%d.%m.%Y").to_string()),
+    }
+}
+
+fn render_admin_users(ui: &MainWindow, users: &[parkhub_common::User]) {
+    let user_data: Vec<AdminUserInfo> = users.iter().map(build_admin_user_info).collect();
+    ui.set_admin_users(ModelRc::new(VecModel::from(user_data)));
+}
+
+fn normalize_admin_role(role: &str) -> Result<&'static str> {
+    match role.trim().to_ascii_lowercase().as_str() {
+        "user" => Ok("user"),
+        "premium" => Ok("premium"),
+        "admin" => Ok("admin"),
+        "superadmin" | "super_admin" => Ok("superadmin"),
+        other => Err(anyhow::anyhow!(
+            "Unsupported role '{other}'. Use user, premium, admin, or superadmin."
+        )),
+    }
+}
+
 fn show_success_dialog(
     ui_weak: slint::Weak<MainWindow>,
     title: impl Into<String>,
@@ -599,35 +648,7 @@ async fn main() -> Result<()> {
                         }
 
                         if let Some(ui) = ui_weak.upgrade() {
-                            let user_data: Vec<AdminUserInfo> = users
-                                .iter()
-                                .map(|u| AdminUserInfo {
-                                    id: SharedString::from(u.id.to_string()),
-                                    username: SharedString::from(&u.username),
-                                    email: SharedString::from(&u.email),
-                                    name: SharedString::from(&u.name),
-                                    initial: SharedString::from(
-                                        u.name
-                                            .chars()
-                                            .next()
-                                            .or_else(|| u.username.chars().next())
-                                            .map_or_else(
-                                                || "?".to_string(),
-                                                |c| c.to_uppercase().to_string(),
-                                            ),
-                                    ),
-                                    role: SharedString::from(format!("{:?}", u.role)),
-                                    is_active: u.is_active,
-                                    last_login: SharedString::from(u.last_login.map_or_else(
-                                        || "-".to_string(),
-                                        |dt| dt.format("%d.%m.%Y %H:%M").to_string(),
-                                    )),
-                                    created_at: SharedString::from(
-                                        u.created_at.format("%d.%m.%Y").to_string(),
-                                    ),
-                                })
-                                .collect();
-                            ui.set_admin_users(ModelRc::new(VecModel::from(user_data)));
+                            render_admin_users(&ui, &users);
                         }
                     }
                     Err(e) => {
@@ -640,13 +661,47 @@ async fn main() -> Result<()> {
 
     // Edit user callback
     let ui_weak_admin2 = ui.as_weak();
+    let state_for_edit = state.clone();
     ui.on_admin_edit_user(move |user_id| {
+        let user_id = user_id.to_string();
         info!("Edit user: {}", user_id);
-        show_error_dialog(
-            ui_weak_admin2.clone(),
-            "Desktop flow pending",
-            "Inline user editing will land in the next desktop admin slice. The server-side admin endpoints are now in place.",
-        );
+        let state = state_for_edit.clone();
+        let ui_weak = ui_weak_admin2.clone();
+
+        tokio::spawn(async move {
+            let user = {
+                let state = state.read().await;
+                state
+                    .admin_users_cache
+                    .iter()
+                    .find(|u| u.id.to_string() == user_id)
+                    .cloned()
+            };
+
+            match user {
+                Some(user) => {
+                    let _ = slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.set_admin_user_edit_mode(true);
+                            ui.set_admin_user_form_id(SharedString::from(user.id.to_string()));
+                            ui.set_admin_user_form_title(SharedString::from("Benutzer bearbeiten"));
+                            ui.set_admin_user_form_username(SharedString::from(user.username));
+                            ui.set_admin_user_form_name(SharedString::from(user.name));
+                            ui.set_admin_user_form_email(SharedString::from(user.email));
+                            ui.set_admin_user_form_role(SharedString::from(
+                                normalize_admin_role(role_label(&user.role)).unwrap_or("user"),
+                            ));
+                            ui.set_show_admin_user_dialog(true);
+                        }
+                    });
+                }
+                None => show_error_dialog(
+                    ui_weak,
+                    "Benutzer nicht gefunden",
+                    "Der ausgewählte Benutzer ist nicht mehr im lokalen Admin-Cache vorhanden.",
+                ),
+            }
+        });
     });
 
     // Delete user callback
@@ -660,49 +715,45 @@ async fn main() -> Result<()> {
         let ui_weak = ui_weak_admin3.clone();
 
         tokio::spawn(async move {
-            let state = state.read().await;
-            if let Some(ref server) = state.server {
-                match server.delete_user(&user_id).await {
-                    Ok(()) => {
-                        info!("User {} deleted successfully", user_id);
-                        // Reload users list
-                        if let Ok(users) = server.list_users().await {
-                            if let Some(ui) = ui_weak.upgrade() {
-                                let user_data: Vec<AdminUserInfo> = users
-                                    .iter()
-                                    .map(|u| AdminUserInfo {
-                                        id: SharedString::from(u.id.to_string()),
-                                        username: SharedString::from(&u.username),
-                                        email: SharedString::from(&u.email),
-                                        name: SharedString::from(&u.name),
-                                        initial: SharedString::from(
-                                            u.name
-                                                .chars()
-                                                .next()
-                                                .or_else(|| u.username.chars().next())
-                                                .map_or_else(
-                                                    || "?".to_string(),
-                                                    |c| c.to_uppercase().to_string(),
-                                                ),
-                                        ),
-                                        role: SharedString::from(format!("{:?}", u.role)),
-                                        is_active: u.is_active,
-                                        last_login: SharedString::from(u.last_login.map_or_else(
-                                            || "-".to_string(),
-                                            |dt| dt.format("%d.%m.%Y %H:%M").to_string(),
-                                        )),
-                                        created_at: SharedString::from(
-                                            u.created_at.format("%d.%m.%Y").to_string(),
-                                        ),
-                                    })
-                                    .collect();
-                                ui.set_admin_users(ModelRc::new(VecModel::from(user_data)));
-                            }
+            let refresh_result = {
+                let state = state.read().await;
+                if let Some(ref server) = state.server {
+                    match server.delete_user(&user_id).await {
+                        Ok(()) => {
+                            info!("User {} deleted successfully", user_id);
+                            Some(server.list_users().await)
+                        }
+                        Err(e) => {
+                            warn!("Failed to delete user: {}", e);
+                            show_error_dialog(
+                                ui_weak.clone(),
+                                "Löschen fehlgeschlagen",
+                                e.to_string(),
+                            );
+                            None
                         }
                     }
-                    Err(e) => {
-                        warn!("Failed to delete user: {}", e);
+                } else {
+                    None
+                }
+            };
+
+            if let Some(result) = refresh_result {
+                match result {
+                    Ok(users) => {
+                        {
+                            let mut state = state.write().await;
+                            state.admin_users_cache.clone_from(&users);
+                        }
+                        if let Some(ui) = ui_weak.upgrade() {
+                            render_admin_users(&ui, &users);
+                        }
                     }
+                    Err(e) => show_error_dialog(
+                        ui_weak,
+                        "Benutzerliste konnte nicht aktualisiert werden",
+                        e.to_string(),
+                    ),
                 }
             }
         });
@@ -761,63 +812,65 @@ async fn main() -> Result<()> {
         let ui_weak = ui_weak_admin5.clone();
 
         tokio::spawn(async move {
-            let state = state.read().await;
-            if let Some(ref server) = state.server {
-                // First get current user state
-                match server.get_user(&user_id).await {
-                    Ok(user) => {
-                        let new_active = !user.is_active;
-                        let updates = serde_json::json!({ "is_active": new_active });
-                        match server.update_user(&user_id, updates).await {
-                            Ok(_) => {
-                                info!("User {} active toggled to {}", user_id, new_active);
-                                // Reload users list
-                                if let Ok(users) = server.list_users().await {
-                                    if let Some(ui) = ui_weak.upgrade() {
-                                        let user_data: Vec<AdminUserInfo> = users
-                                            .iter()
-                                            .map(|u| AdminUserInfo {
-                                                id: SharedString::from(u.id.to_string()),
-                                                username: SharedString::from(&u.username),
-                                                email: SharedString::from(&u.email),
-                                                name: SharedString::from(&u.name),
-                                                initial: SharedString::from(
-                                                    u.name
-                                                        .chars()
-                                                        .next()
-                                                        .or_else(|| u.username.chars().next())
-                                                        .map_or_else(
-                                                            || "?".to_string(),
-                                                            |c| c.to_uppercase().to_string(),
-                                                        ),
-                                                ),
-                                                role: SharedString::from(format!("{:?}", u.role)),
-                                                is_active: u.is_active,
-                                                last_login: SharedString::from(
-                                                    u.last_login.map_or_else(
-                                                        || "-".to_string(),
-                                                        |dt| {
-                                                            dt.format("%d.%m.%Y %H:%M").to_string()
-                                                        },
-                                                    ),
-                                                ),
-                                                created_at: SharedString::from(
-                                                    u.created_at.format("%d.%m.%Y").to_string(),
-                                                ),
-                                            })
-                                            .collect();
-                                        ui.set_admin_users(ModelRc::new(VecModel::from(user_data)));
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                warn!("Failed to toggle user active: {}", e);
-                            }
+            let current_user = {
+                let state = state.read().await;
+                state
+                    .admin_users_cache
+                    .iter()
+                    .find(|u| u.id.to_string() == user_id)
+                    .cloned()
+            };
+
+            let Some(user) = current_user else {
+                show_error_dialog(
+                    ui_weak.clone(),
+                    "Benutzer nicht gefunden",
+                    "Der ausgewählte Benutzer ist nicht mehr im lokalen Admin-Cache vorhanden.",
+                );
+                return;
+            };
+
+            let refresh_result = {
+                let state = state.read().await;
+                if let Some(ref server) = state.server {
+                    let new_active = !user.is_active;
+                    let updates = serde_json::json!({ "is_active": new_active });
+                    match server.update_user(&user_id, updates).await {
+                        Ok(_) => {
+                            info!("User {} active toggled to {}", user_id, new_active);
+                            Some(server.list_users().await)
+                        }
+                        Err(e) => {
+                            warn!("Failed to toggle user active: {}", e);
+                            show_error_dialog(
+                                ui_weak.clone(),
+                                "Statuswechsel fehlgeschlagen",
+                                e.to_string(),
+                            );
+                            None
                         }
                     }
-                    Err(e) => {
-                        warn!("Failed to get user: {}", e);
+                } else {
+                    None
+                }
+            };
+
+            if let Some(result) = refresh_result {
+                match result {
+                    Ok(users) => {
+                        {
+                            let mut state = state.write().await;
+                            state.admin_users_cache.clone_from(&users);
+                        }
+                        if let Some(ui) = ui_weak.upgrade() {
+                            render_admin_users(&ui, &users);
+                        }
                     }
+                    Err(e) => show_error_dialog(
+                        ui_weak,
+                        "Benutzerliste konnte nicht aktualisiert werden",
+                        e.to_string(),
+                    ),
                 }
             }
         });
@@ -827,11 +880,160 @@ async fn main() -> Result<()> {
     let ui_weak_admin6 = ui.as_weak();
     ui.on_admin_add_user(move || {
         info!("Add new user");
-        show_error_dialog(
-            ui_weak_admin6.clone(),
-            "Desktop flow pending",
-            "Add-user UI is not wired yet. The next desktop admin slice will add a proper modal on top of the now-correct admin API paths.",
-        );
+        let _ = slint::invoke_from_event_loop({
+            let ui_weak = ui_weak_admin6.clone();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.set_admin_user_edit_mode(false);
+                    ui.set_admin_user_form_id(SharedString::from(""));
+                    ui.set_admin_user_form_title(SharedString::from("Benutzer hinzufügen"));
+                    ui.set_admin_user_form_username(SharedString::from(""));
+                    ui.set_admin_user_form_name(SharedString::from(""));
+                    ui.set_admin_user_form_email(SharedString::from(""));
+                    ui.set_admin_user_form_role(SharedString::from("user"));
+                    ui.set_show_admin_user_dialog(true);
+                }
+            }
+        });
+    });
+
+    // Admin user form cancel callback
+    let ui_weak_admin8 = ui.as_weak();
+    ui.on_admin_cancel_user_form(move || {
+        let _ = slint::invoke_from_event_loop({
+            let ui_weak = ui_weak_admin8.clone();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.set_show_admin_user_dialog(false);
+                }
+            }
+        });
+    });
+
+    // Admin user form submit callback
+    let ui_weak_admin9 = ui.as_weak();
+    let state_for_submit = state.clone();
+    ui.on_admin_submit_user_form(move || {
+        let Some(ui) = ui_weak_admin9.upgrade() else {
+            return;
+        };
+
+        let is_edit = ui.get_admin_user_edit_mode();
+        let user_id = ui.get_admin_user_form_id().to_string();
+        let username = ui.get_admin_user_form_username().trim().to_string();
+        let name = ui.get_admin_user_form_name().trim().to_string();
+        let email = ui.get_admin_user_form_email().trim().to_string();
+        let role_input = ui.get_admin_user_form_role().trim().to_string();
+
+        if name.is_empty() || email.is_empty() || (!is_edit && username.is_empty()) {
+            show_error_dialog(
+                ui_weak_admin9.clone(),
+                "Pflichtfelder fehlen",
+                "Bitte Benutzername, Name und E-Mail ausfüllen.",
+            );
+            return;
+        }
+
+        let role = match normalize_admin_role(&role_input) {
+            Ok(role) => role.to_string(),
+            Err(e) => {
+                show_error_dialog(ui_weak_admin9.clone(), "Ungültige Rolle", e.to_string());
+                return;
+            }
+        };
+
+        let _ = slint::invoke_from_event_loop({
+            let ui_weak = ui_weak_admin9.clone();
+            move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.set_show_admin_user_dialog(false);
+                }
+            }
+        });
+
+        let state = state_for_submit.clone();
+        let ui_weak = ui_weak_admin9.clone();
+        tokio::spawn(async move {
+            let temporary_password = Alphanumeric.sample_string(&mut rand::rng(), 20);
+            let users_result = {
+                let state = state.read().await;
+                if let Some(ref server) = state.server {
+                    let result = if is_edit {
+                        let updates = serde_json::json!({
+                            "name": name,
+                            "email": email,
+                            "role": role,
+                        });
+                        server.update_user(&user_id, updates).await
+                    } else {
+                        server
+                            .create_user(&username, &email, &name, &role, &temporary_password)
+                            .await
+                    };
+
+                    match result {
+                        Ok(()) => Some(server.list_users().await),
+                        Err(e) => {
+                            show_error_dialog(
+                                ui_weak.clone(),
+                                if is_edit {
+                                    "Benutzer konnte nicht gespeichert werden"
+                                } else {
+                                    "Benutzer konnte nicht angelegt werden"
+                                },
+                                e.to_string(),
+                            );
+                            None
+                        }
+                    }
+                } else {
+                    show_error_dialog(
+                        ui_weak.clone(),
+                        "Keine Verbindung",
+                        "Es ist aktuell kein Server verbunden.",
+                    );
+                    None
+                }
+            };
+
+            if let Some(result) = users_result {
+                match result {
+                    Ok(users) => {
+                        {
+                            let mut state = state.write().await;
+                            state.admin_users_cache.clone_from(&users);
+                        }
+                        if let Some(ui) = ui_weak.upgrade() {
+                            render_admin_users(&ui, &users);
+                        }
+
+                        if is_edit {
+                            show_success_dialog(
+                                ui_weak,
+                                "Benutzer gespeichert",
+                                format!("Die Änderungen für {} wurden übernommen.", name),
+                            );
+                        } else {
+                            show_success_dialog(
+                                ui_weak,
+                                "Benutzer angelegt",
+                                format!(
+                                    "Benutzer {} wurde angelegt.\n\nTemporäres Passwort:\n{}\n\nBitte sicher übermitteln und beim ersten Login rotieren.",
+                                    username, temporary_password
+                                ),
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        show_error_dialog(
+                            ui_weak,
+                            "Benutzerliste konnte nicht aktualisiert werden",
+                            e.to_string(),
+                        );
+                    }
+                }
+            }
+        });
     });
 
     // Search users callback
