@@ -1,7 +1,7 @@
 # =============================================================================
 # ParkHub Rust — Optimized multi-stage Docker build
 # Uses cargo-chef for dependency layer caching, fat LTO for smallest binary,
-# and minimal Debian slim runtime.
+# and a distroless runtime for minimal attack surface (~20 MB image).
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -64,42 +64,43 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
     strip /app/target/release/parkhub-server || true
 
 # ---------------------------------------------------------------------------
-# Stage 6: Runtime — minimal Debian slim, patched + no python3
-# Upgrade all packages to eliminate known CVEs. Python3 replaced with shell seeder.
+# Stage 6: Data-directory scaffold
+# distroless has no shell, so we create /data with the correct UID here and
+# copy the empty directory tree into the final image.
+# UID 65532 is the built-in "nonroot" user in gcr.io/distroless/cc-debian12.
 # ---------------------------------------------------------------------------
-FROM debian:bookworm-slim AS runtime
+FROM busybox:latest AS data-setup
+RUN mkdir -p /data && chown 65532:65532 /data
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-        ca-certificates tzdata wget \
-    && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* \
-    && groupadd -r parkhub && useradd -r -g parkhub -s /sbin/nologin parkhub
+# ---------------------------------------------------------------------------
+# Stage 7: Runtime — distroless/cc for minimal attack surface
+# No shell, no package manager, no wget — just glibc + libstdc++ + ca-certs.
+# Demo seeding and health checks are handled by the binary itself.
+# ---------------------------------------------------------------------------
+FROM gcr.io/distroless/cc-debian12 AS runtime
 
 WORKDIR /app
 
 # Copy binary
-COPY --from=builder --chown=parkhub:parkhub /app/target/release/parkhub-server /app/parkhub-server
+COPY --from=builder --chown=65532:65532 /app/target/release/parkhub-server /app/parkhub-server
 
-# Copy shell-based seed script and entrypoint (no python3 dependency)
-COPY --chown=parkhub:parkhub scripts/seed_demo.sh /app/seed_demo.sh
-COPY --chown=parkhub:parkhub scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+# Copy pre-created /data directory (owned by nonroot UID 65532)
+COPY --from=data-setup /data /data
 
-# Create data directory owned by the non-root user
-RUN mkdir -p /data && chown parkhub:parkhub /data
-
-# Drop to non-root
-USER parkhub
+# Drop to non-root (distroless built-in nonroot user)
+USER 65532:65532
 
 # Environment
-ENV PARKHUB_DATA_DIR=/data
-ENV PARKHUB_HOST=0.0.0.0
-ENV PARKHUB_PORT=10000
 ENV RUST_LOG=info
 
 EXPOSE 10000
 
-# Health check — longer start-period for --unattended first-run + demo seeding
+# Health check — uses the binary's built-in --health-check mode so no shell
+# or external tools (wget/curl) are needed in the distroless image.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:10000/health || exit 1
+    CMD ["/app/parkhub-server", "--health-check", "--port", "10000"]
 
-# Entrypoint handles: start server -> wait healthy -> seed demo data -> keep running
-CMD ["/app/docker-entrypoint.sh"]
+# Direct binary invocation — no shell wrapper required.
+# Demo seeding (SEED_DEMO_DATA=true / DEMO_MODE=true) is handled inside the
+# binary at startup; no docker-entrypoint.sh is needed.
+CMD ["/app/parkhub-server", "--headless", "--unattended", "--data-dir", "/data", "--port", "10000"]
