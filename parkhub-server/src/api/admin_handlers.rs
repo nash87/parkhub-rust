@@ -9,18 +9,24 @@ use axum::{
     Extension, Json,
 };
 use chrono::{Datelike, TimeDelta, Timelike, Utc};
-use parkhub_common::{ApiResponse, BookingStatus, User, UserRole};
+use parkhub_common::{ApiResponse, BookingStatus, PaginatedResponse, User, UserRole};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::audit::{AuditEntry, AuditEventType};
+use crate::requests::PaginationParams;
 use crate::AppState;
 
 use super::admin::AdminUserResponse;
 use super::{check_admin, read_admin_setting, AuthUser};
 
 type SharedState = Arc<RwLock<AppState>>;
+
+/// Compute total number of pages (minimum 1) for a given total item count and page size.
+fn total_pages(total: usize, per_page: i32) -> i32 {
+    ((total as i32 + per_page - 1) / per_page).max(1)
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN — USER MANAGEMENT
@@ -40,25 +46,40 @@ pub struct UpdateUserStatusRequest {
 
 /// `GET /api/v1/admin/users` — list all users (admin only)
 #[utoipa::path(get, path = "/api/v1/admin/users", tag = "Admin",
-    summary = "List all users (admin)", description = "Returns all registered users. Admin only.",
+    summary = "List all users (admin)", description = "Returns paginated registered users. Admin only.",
     security(("bearer_auth" = [])),
+    params(PaginationParams),
     responses((status = 200, description = "User list"), (status = 403, description = "Forbidden"))
 )]
 #[tracing::instrument(skip(state), fields(admin_id = %auth_user.user_id))]
 pub async fn admin_list_users(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> (StatusCode, Json<ApiResponse<Vec<AdminUserResponse>>>) {
+    Query(pagination): Query<PaginationParams>,
+) -> (StatusCode, Json<ApiResponse<PaginatedResponse<AdminUserResponse>>>) {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    match state_guard.db.list_users().await {
-        Ok(users) => {
-            tracing::debug!(count = users.len(), "Admin listed users");
-            let response: Vec<AdminUserResponse> =
+    match state_guard
+        .db
+        .list_users_paginated(pagination.page, pagination.per_page)
+        .await
+    {
+        Ok((users, total)) => {
+            tracing::debug!(count = users.len(), total, "Admin listed users");
+            let items: Vec<AdminUserResponse> =
                 users.iter().map(AdminUserResponse::from).collect();
+            let total_pages =
+                total_pages(total, pagination.per_page);
+            let response = PaginatedResponse {
+                items,
+                page: pagination.page,
+                per_page: pagination.per_page,
+                total: total as i32,
+                total_pages,
+            };
             (StatusCode::OK, Json(ApiResponse::success(response)))
         }
         Err(e) => {
@@ -338,21 +359,27 @@ pub struct AdminBookingResponse {
 
 /// `GET /api/v1/admin/bookings` — list all bookings (admin only)
 #[utoipa::path(get, path = "/api/v1/admin/bookings", tag = "Admin",
-    summary = "List all bookings (admin)", description = "Returns all bookings with enriched details. Admin only.",
+    summary = "List all bookings (admin)", description = "Returns paginated bookings with enriched details. Admin only.",
     security(("bearer_auth" = [])),
+    params(PaginationParams),
     responses((status = 200, description = "All bookings"), (status = 403, description = "Forbidden"))
 )]
 pub async fn admin_list_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
-) -> (StatusCode, Json<ApiResponse<Vec<AdminBookingResponse>>>) {
+    Query(pagination): Query<PaginationParams>,
+) -> (StatusCode, Json<ApiResponse<PaginatedResponse<AdminBookingResponse>>>) {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    let bookings = match state_guard.db.list_bookings().await {
-        Ok(b) => b,
+    let (bookings, total) = match state_guard
+        .db
+        .list_bookings_paginated(pagination.page, pagination.per_page)
+        .await
+    {
+        Ok(result) => result,
         Err(e) => {
             tracing::error!("Failed to list bookings: {}", e);
             return (
@@ -378,7 +405,7 @@ pub async fn admin_list_bookings(
         .map(|l| (l.id.to_string(), l))
         .collect();
 
-    let mut response = Vec::with_capacity(bookings.len());
+    let mut items = Vec::with_capacity(bookings.len());
     for booking in bookings {
         let (user_name, user_email) = match user_map.get(&booking.user_id.to_string()) {
             Some(u) => (u.name.clone(), u.email.clone()),
@@ -390,7 +417,7 @@ pub async fn admin_list_bookings(
             None => booking.lot_id.to_string(),
         };
 
-        response.push(AdminBookingResponse {
+        items.push(AdminBookingResponse {
             id: booking.id.to_string(),
             user_id: booking.user_id.to_string(),
             user_name,
@@ -407,6 +434,14 @@ pub async fn admin_list_bookings(
         });
     }
 
+    let total_pages = total_pages(total, pagination.per_page);
+    let response = PaginatedResponse {
+        items,
+        page: pagination.page,
+        per_page: pagination.per_page,
+        total: total as i32,
+        total_pages,
+    };
     (StatusCode::OK, Json(ApiResponse::success(response)))
 }
 

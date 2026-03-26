@@ -348,7 +348,7 @@ pub fn parse_lot_status(s: &str) -> Option<parkhub_common::models::LotStatus> {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Pagination parameters
-#[derive(Debug, Deserialize, Validate, ToSchema, Default)]
+#[derive(Debug, Deserialize, Validate, ToSchema, utoipa::IntoParams, Default)]
 pub struct PaginationParams {
     /// Page number (1-based)
     #[validate(range(min = 1, message = "Page must be >= 1"))]
