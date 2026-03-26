@@ -896,11 +896,9 @@ async fn test_mobile_nearby_lots_no_coordinates_returns_max_distance() {
     let lots = json["data"].as_array().unwrap();
     assert!(!lots.is_empty());
     // The zero-coordinate lot must have distance_meters = f64::MAX
-    let has_max = lots.iter().any(|l| {
-        l["distance_meters"]
-            .as_f64()
-            .map_or(false, |d| d >= f64::MAX)
-    });
+    let has_max = lots
+        .iter()
+        .any(|l| l["distance_meters"].as_f64().is_some_and(|d| d >= f64::MAX));
     assert!(
         has_max,
         "lot without coordinates must have distance_meters = f64::MAX"
