@@ -3,7 +3,12 @@
 use axum::{extract::State, http::StatusCode, Extension, Json};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::io::Cursor;
 use uuid::Uuid;
+use web_push::{
+    ContentEncoding, HyperWebPushClient, SubscriptionInfo, VapidSignatureBuilder, WebPushClient,
+    WebPushMessage, WebPushMessageBuilder,
+};
 
 use parkhub_common::ApiResponse;
 
@@ -282,8 +287,7 @@ impl PushPayload {
 /// Send a structured push notification to all subscriptions for the given user.
 ///
 /// Serializes the `PushPayload` as JSON and delivers to each subscription
-/// endpoint. Currently logs the delivery attempt — replace the inner loop
-/// body with the `web-push` crate for real Web Push Protocol delivery.
+/// endpoint using the Web Push Protocol when VAPID signing material is configured.
 #[allow(dead_code)]
 pub async fn send_push_notification(
     db: &crate::db::Database,
@@ -298,6 +302,19 @@ pub async fn send_push_notification(
         }
     };
 
+    let vapid_private_key = match std::env::var("VAPID_PRIVATE_KEY") {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            tracing::warn!(
+                "Web Push delivery skipped: VAPID_PRIVATE_KEY is not configured for user {}",
+                user_id
+            );
+            return;
+        }
+    };
+
+    let client = HyperWebPushClient::new();
+
     match db.get_push_subscriptions_by_user(user_id).await {
         Ok(subs) if subs.is_empty() => {
             tracing::debug!("No push subscriptions for user {}", user_id);
@@ -310,15 +327,32 @@ pub async fn send_push_notification(
                 payload.event_type,
             );
             for sub in &subs {
-                // TODO: Replace with actual web-push delivery
-                // using the web-push crate or reqwest to the push service endpoint.
-                // The subscription endpoint, p256dh, and auth keys are available in `sub`.
-                tracing::info!(
-                    "Push delivery: endpoint={} payload_len={} event={:?}",
-                    sub.endpoint,
-                    json_payload.len(),
-                    payload.event_type,
-                );
+                match build_web_push_message(sub, &json_payload, &vapid_private_key) {
+                    Ok(message) => match client.send(message).await {
+                        Ok(_) => {
+                            tracing::info!(
+                                "Push delivered: endpoint={} payload_len={} event={:?}",
+                                sub.endpoint,
+                                json_payload.len(),
+                                payload.event_type,
+                            );
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                "Push delivery failed for endpoint {}: {}",
+                                sub.endpoint,
+                                e
+                            );
+                        }
+                    },
+                    Err(e) => {
+                        tracing::warn!(
+                            "Push message construction failed for endpoint {}: {}",
+                            sub.endpoint,
+                            e
+                        );
+                    }
+                }
             }
         }
         Err(e) => {
@@ -342,6 +376,30 @@ pub async fn send_push_simple(db: &crate::db::Database, user_id: &Uuid, title: &
         reference_id: None,
     };
     send_push_notification(db, user_id, &payload).await;
+}
+
+fn build_web_push_message(
+    sub: &PushSubscription,
+    json_payload: &str,
+    vapid_private_key: &str,
+) -> Result<WebPushMessage, String> {
+    let subscription_info =
+        SubscriptionInfo::new(sub.endpoint.clone(), sub.p256dh.clone(), sub.auth.clone());
+
+    let vapid_signature = VapidSignatureBuilder::from_pem(
+        Cursor::new(vapid_private_key.as_bytes()),
+        &subscription_info,
+    )
+    .map_err(|e| format!("invalid VAPID private key: {e}"))?
+    .build()
+    .map_err(|e| format!("failed to build VAPID signature: {e}"))?;
+
+    let mut builder = WebPushMessageBuilder::new(&subscription_info);
+    builder.set_payload(ContentEncoding::Aes128Gcm, json_payload.as_bytes());
+    builder.set_vapid_signature(vapid_signature);
+    builder
+        .build()
+        .map_err(|e| format!("failed to build push message: {e}"))
 }
 
 #[cfg(test)]
@@ -523,5 +581,20 @@ mod tests {
         assert_eq!(sub.endpoint, deserialized.endpoint);
         assert_eq!(sub.p256dh, deserialized.p256dh);
         assert_eq!(sub.auth, deserialized.auth);
+    }
+
+    #[test]
+    fn test_build_web_push_message_rejects_invalid_vapid_key() {
+        let sub = PushSubscription {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            endpoint: "https://push.example.com/sub/123".to_string(),
+            p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8p8ljwlQA".to_string(),
+            auth: "tBHItJI5svbpC7Aq".to_string(),
+            created_at: Utc::now(),
+        };
+
+        let result = build_web_push_message(&sub, r#"{"title":"Hi"}"#, "not-a-pem");
+        assert!(result.is_err());
     }
 }

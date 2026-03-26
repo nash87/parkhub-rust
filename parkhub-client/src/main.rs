@@ -7,6 +7,7 @@
 #![allow(unsafe_code)] // Slint uses unsafe FFI for native window management
 
 use anyhow::{Context, Result};
+use rand::distr::{Alphanumeric, SampleString};
 use serde::{Deserialize, Serialize};
 use slint::{ModelRc, SharedString, VecModel};
 use std::sync::Arc;
@@ -57,6 +58,40 @@ struct AppState {
     is_scanning: bool,
     /// Cached full user list for search filtering
     admin_users_cache: Vec<parkhub_common::User>,
+}
+
+fn show_success_dialog(
+    ui_weak: slint::Weak<MainWindow>,
+    title: impl Into<String>,
+    message: impl Into<String>,
+) {
+    let title = title.into();
+    let message = message.into();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            ui.set_dialog_title(SharedString::from(title));
+            ui.set_dialog_message(SharedString::from(message));
+            ui.set_show_error_dialog(false);
+            ui.set_show_success_dialog(true);
+        }
+    });
+}
+
+fn show_error_dialog(
+    ui_weak: slint::Weak<MainWindow>,
+    title: impl Into<String>,
+    message: impl Into<String>,
+) {
+    let title = title.into();
+    let message = message.into();
+    let _ = slint::invoke_from_event_loop(move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            ui.set_dialog_title(SharedString::from(title));
+            ui.set_dialog_message(SharedString::from(message));
+            ui.set_show_success_dialog(false);
+            ui.set_show_error_dialog(true);
+        }
+    });
 }
 
 #[tokio::main]
@@ -607,10 +642,11 @@ async fn main() -> Result<()> {
     let ui_weak_admin2 = ui.as_weak();
     ui.on_admin_edit_user(move |user_id| {
         info!("Edit user: {}", user_id);
-        // TODO: Open user edit dialog
-        if let Some(_ui) = ui_weak_admin2.upgrade() {
-            // Will be implemented when we add the edit dialog
-        }
+        show_error_dialog(
+            ui_weak_admin2.clone(),
+            "Desktop flow pending",
+            "Inline user editing will land in the next desktop admin slice. The server-side admin endpoints are now in place.",
+        );
     });
 
     // Delete user callback
@@ -680,18 +716,34 @@ async fn main() -> Result<()> {
         info!("Reset password for user: {}", user_id);
 
         let state = state_for_reset.clone();
-        let _ui_weak = ui_weak_admin4.clone();
+        let ui_weak = ui_weak_admin4.clone();
+        let temporary_password = Alphanumeric.sample_string(&mut rand::rng(), 20);
 
         tokio::spawn(async move {
             let state = state.read().await;
             if let Some(ref server) = state.server {
-                // Reset to default password
-                match server.reset_user_password(&user_id, "12351235").await {
+                match server
+                    .reset_user_password(&user_id, &temporary_password)
+                    .await
+                {
                     Ok(()) => {
-                        info!("Password reset for user {} to default", user_id);
+                        info!("Password reset for user {} to generated temporary password", user_id);
+                        show_success_dialog(
+                            ui_weak.clone(),
+                            "Password reset",
+                            format!(
+                                "Temporary password for user {}:\n{}\n\nShare it securely and rotate it after first login.",
+                                user_id, temporary_password
+                            ),
+                        );
                     }
                     Err(e) => {
                         warn!("Failed to reset password: {}", e);
+                        show_error_dialog(
+                            ui_weak.clone(),
+                            "Password reset failed",
+                            e.to_string(),
+                        );
                     }
                 }
             }
@@ -775,10 +827,11 @@ async fn main() -> Result<()> {
     let ui_weak_admin6 = ui.as_weak();
     ui.on_admin_add_user(move || {
         info!("Add new user");
-        // TODO: Open add user dialog
-        if let Some(_ui) = ui_weak_admin6.upgrade() {
-            // Will be implemented when we add the add user dialog
-        }
+        show_error_dialog(
+            ui_weak_admin6.clone(),
+            "Desktop flow pending",
+            "Add-user UI is not wired yet. The next desktop admin slice will add a proper modal on top of the now-correct admin API paths.",
+        );
     });
 
     // Search users callback

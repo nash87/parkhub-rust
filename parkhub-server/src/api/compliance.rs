@@ -15,6 +15,10 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use printpdf::{
+    BuiltinFont, Color, Line, LinePoint, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Point, Pt,
+    Rgb, TextItem,
+};
 use serde::{Deserialize, Serialize};
 
 use parkhub_common::ApiResponse;
@@ -591,26 +595,187 @@ pub async fn compliance_report(
 
 /// `GET /api/v1/admin/compliance/report/pdf` — generate PDF compliance report.
 pub async fn compliance_report_pdf(State(_state): State<SharedState>) -> impl IntoResponse {
-    // Generate a simple text-based PDF placeholder
-    // In production, this would use printpdf to generate a proper PDF
-    let content = "ParkHub GDPR Compliance Report\n\
-        Generated: "
-        .to_string()
-        + &chrono::Utc::now().to_rfc3339()
-        + "\n\nThis is a compliance report placeholder.\n\
-           For the full JSON report, use GET /api/v1/admin/compliance/report";
+    let checks = generate_compliance_checks();
+    let report = ComplianceReport {
+        generated_at: chrono::Utc::now().to_rfc3339(),
+        overall_status: overall_status(&checks),
+        checks,
+        data_categories: generate_data_categories(),
+        legal_basis: generate_legal_basis(),
+        retention_periods: generate_retention_policies(),
+        sub_processors: generate_sub_processors(),
+        tom_summary: TomSummary::default(),
+    };
 
-    (
-        StatusCode::OK,
-        [
-            (header::CONTENT_TYPE, "application/pdf"),
-            (
-                header::CONTENT_DISPOSITION,
-                "attachment; filename=\"parkhub-compliance-report.pdf\"",
-            ),
-        ],
-        content,
-    )
+    match generate_compliance_pdf(&report) {
+        Ok(pdf_bytes) => (
+            StatusCode::OK,
+            [
+                (header::CONTENT_TYPE, "application/pdf"),
+                (
+                    header::CONTENT_DISPOSITION,
+                    "attachment; filename=\"parkhub-compliance-report.pdf\"",
+                ),
+            ],
+            pdf_bytes,
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<()>::error(
+                "PDF_ERROR",
+                &format!("Failed to generate compliance PDF: {e}"),
+            )),
+        )
+            .into_response(),
+    }
+}
+
+fn generate_compliance_pdf(
+    report: &ComplianceReport,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    fn text_at(ops: &mut Vec<Op>, text: &str, size: f32, x: Mm, y: Mm, font: BuiltinFont) {
+        ops.push(Op::StartTextSection);
+        ops.push(Op::SetFontSizeBuiltinFont {
+            size: Pt(size),
+            font,
+        });
+        ops.push(Op::SetTextCursor {
+            pos: Point::new(x, y),
+        });
+        ops.push(Op::WriteTextBuiltinFont {
+            items: vec![TextItem::Text(text.to_string())],
+            font,
+        });
+        ops.push(Op::EndTextSection);
+    }
+
+    fn hline(ops: &mut Vec<Op>, x1: Mm, x2: Mm, y: Mm, r: f32, g: f32, b: f32, thickness: f32) {
+        ops.push(Op::SetOutlineColor {
+            col: Color::Rgb(Rgb::new(r, g, b, None)),
+        });
+        ops.push(Op::SetOutlineThickness { pt: Pt(thickness) });
+        ops.push(Op::DrawLine {
+            line: Line {
+                points: vec![
+                    LinePoint {
+                        p: Point::new(x1, y),
+                        bezier: false,
+                    },
+                    LinePoint {
+                        p: Point::new(x2, y),
+                        bezier: false,
+                    },
+                ],
+                is_closed: false,
+            },
+        });
+    }
+
+    let mut ops = Vec::new();
+    let mut y = 280.0_f32;
+
+    let compliant = report
+        .checks
+        .iter()
+        .filter(|check| check.status == ComplianceLevel::Compliant)
+        .count();
+    let warnings = report
+        .checks
+        .iter()
+        .filter(|check| check.status == ComplianceLevel::Warning)
+        .count();
+    let non_compliant = report
+        .checks
+        .iter()
+        .filter(|check| check.status == ComplianceLevel::NonCompliant)
+        .count();
+
+    text_at(
+        &mut ops,
+        "ParkHub GDPR Compliance Report",
+        22.0,
+        Mm(20.0),
+        Mm(y),
+        BuiltinFont::HelveticaBold,
+    );
+    y -= 8.0;
+    text_at(
+        &mut ops,
+        &format!("Generated: {}", report.generated_at),
+        10.0,
+        Mm(20.0),
+        Mm(y),
+        BuiltinFont::Helvetica,
+    );
+    y -= 6.0;
+    text_at(
+        &mut ops,
+        &format!("Overall status: {}", report.overall_status.label()),
+        12.0,
+        Mm(20.0),
+        Mm(y),
+        BuiltinFont::HelveticaBold,
+    );
+    y -= 6.0;
+    hline(&mut ops, Mm(20.0), Mm(190.0), Mm(y), 0.2, 0.4, 0.8, 1.0);
+    y -= 10.0;
+
+    for line in [
+        format!("Compliant checks: {compliant}"),
+        format!("Warnings: {warnings}"),
+        format!("Non-compliant checks: {non_compliant}"),
+        format!("Data categories: {}", report.data_categories.len()),
+        format!("Legal bases: {}", report.legal_basis.len()),
+        format!("Retention policies: {}", report.retention_periods.len()),
+        format!("Sub-processors: {}", report.sub_processors.len()),
+    ] {
+        text_at(
+            &mut ops,
+            &line,
+            11.0,
+            Mm(20.0),
+            Mm(y),
+            BuiltinFont::Helvetica,
+        );
+        y -= 6.0;
+    }
+
+    y -= 4.0;
+    text_at(
+        &mut ops,
+        "Top compliance checks",
+        14.0,
+        Mm(20.0),
+        Mm(y),
+        BuiltinFont::HelveticaBold,
+    );
+    y -= 8.0;
+
+    for check in report.checks.iter().take(10) {
+        let line = format!(
+            "[{}] {} — {}",
+            check.status.label(),
+            check.name,
+            check.description
+        );
+        text_at(
+            &mut ops,
+            &line,
+            9.0,
+            Mm(20.0),
+            Mm(y),
+            BuiltinFont::Helvetica,
+        );
+        y -= 6.0;
+    }
+
+    let page = PdfPage::new(Mm(210.0), Mm(297.0), ops);
+    let mut doc = PdfDocument::new("ParkHub Compliance Report");
+    doc.with_pages(vec![page]);
+
+    let mut warnings = Vec::new();
+    Ok(doc.save(&PdfSaveOptions::default(), &mut warnings))
 }
 
 /// `GET /api/v1/admin/compliance/data-map` — data processing inventory (Art. 30 GDPR).
@@ -897,5 +1062,24 @@ mod tests {
         let json = r#"{"format":"csv"}"#;
         let params: AuditExportParams = serde_json::from_str(json).unwrap();
         assert_eq!(params.format, "csv");
+    }
+
+    #[test]
+    fn test_generate_compliance_pdf_produces_valid_pdf() {
+        let checks = generate_compliance_checks();
+        let report = ComplianceReport {
+            generated_at: "2026-03-26T00:00:00Z".to_string(),
+            overall_status: overall_status(&checks),
+            checks,
+            data_categories: generate_data_categories(),
+            legal_basis: generate_legal_basis(),
+            retention_periods: generate_retention_policies(),
+            sub_processors: generate_sub_processors(),
+            tom_summary: TomSummary::default(),
+        };
+
+        let bytes = generate_compliance_pdf(&report).expect("pdf generation must succeed");
+        assert!(bytes.starts_with(b"%PDF-"));
+        assert!(bytes.len() > 500);
     }
 }
