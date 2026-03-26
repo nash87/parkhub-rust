@@ -1688,8 +1688,7 @@ impl UsernameStyle {
     }
 }
 
-/// Generate 50 GDPR-compliant dummy users for testing
-/// All users have password "12351235" and can login immediately
+/// Generate 50 GDPR-compliant dummy users for testing.
 #[allow(clippy::too_many_lines)]
 async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> Result<()> {
     use chrono::Utc;
@@ -1761,9 +1760,8 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
         "Peterson",
     ];
 
-    // Default password for all dummy users - they can login with this
-    let default_password = "12351235";
-    let password_hash = hash_password(default_password)?;
+    let default_password = seed_password("PARKHUB_DUMMY_USERS_PASSWORD", "dummy-users");
+    let password_hash = hash_password(&default_password)?;
 
     // Role distribution: mostly Users, some Premium, few Admin
     let roles = [
@@ -1775,7 +1773,9 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
         UserRole::Admin,
     ];
 
-    info!("Generating 50 GDPR-compliant dummy users (password: {default_password})...",);
+    info!(
+        "Generating 50 GDPR-compliant dummy users (password source: PARKHUB_DUMMY_USERS_PASSWORD or generated fallback)..."
+    );
 
     // Pre-generate all users with rng (ThreadRng is not Send, so must not cross await)
     let users: Vec<User> = {
@@ -1977,15 +1977,14 @@ fn perform_health_check(port: u16) -> i32 {
     let _ = stream.read_to_string(&mut response);
 
     // Accept any 2xx status on the first line
-    if response.starts_with("HTTP/1.")
-        && response
-            .lines()
-            .next()
-            .is_some_and(|l| l.contains("200"))
+    if response.starts_with("HTTP/1.") && response.lines().next().is_some_and(|l| l.contains("200"))
     {
         0
     } else {
-        eprintln!("health-check: unexpected response: {}", response.lines().next().unwrap_or("(empty)"));
+        eprintln!(
+            "health-check: unexpected response: {}",
+            response.lines().next().unwrap_or("(empty)")
+        );
         1
     }
 }
@@ -2010,16 +2009,76 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
 
     // 10 realistic German parking lots (mirroring the former seed_demo.sh)
     let lots_data: &[(&str, &str, f64, f64, i32)] = &[
-        ("P+R Hauptbahnhof",       "Bahnhofplatz 1, 80335 München",           48.1403, 11.5583, 51),
-        ("Tiefgarage Marktplatz",  "Marktplatz 5, 70173 Stuttgart",           48.7784,  9.1800, 80),
-        ("Parkhaus Stadtmitte",    "Rathausstrasse 12, 50667 Köln",           50.9384,  6.9584, 60),
-        ("P+R Messegelände",       "Messegelände Süd, 60528 Frankfurt",       50.1109,  8.6821, 100),
-        ("Parkplatz Einkaufszentrum", "Shoppingcenter 3, 22335 Hamburg",      53.5753,  9.9803, 40),
-        ("Tiefgarage Rathaus",     "Rathausplatz 1, 90403 Nürnberg",          49.4521, 11.0767, 30),
-        ("Parkhaus Technologiepark", "Technologiestrasse 8, 76131 Karlsruhe", 49.0069,  8.4037, 75),
-        ("Parkplatz Universität",  "Universitätsring 1, 69120 Heidelberg",    49.4074,  8.6924, 70),
-        ("Parkplatz Klinikum",     "Klinikumsallee 15, 44137 Dortmund",       51.5136,  7.4653, 46),
-        ("P+R Bahnhof Ost",        "Ostbahnhofstrasse 3, 04315 Leipzig",      51.3397, 12.3731, 56),
+        (
+            "P+R Hauptbahnhof",
+            "Bahnhofplatz 1, 80335 München",
+            48.1403,
+            11.5583,
+            51,
+        ),
+        (
+            "Tiefgarage Marktplatz",
+            "Marktplatz 5, 70173 Stuttgart",
+            48.7784,
+            9.1800,
+            80,
+        ),
+        (
+            "Parkhaus Stadtmitte",
+            "Rathausstrasse 12, 50667 Köln",
+            50.9384,
+            6.9584,
+            60,
+        ),
+        (
+            "P+R Messegelände",
+            "Messegelände Süd, 60528 Frankfurt",
+            50.1109,
+            8.6821,
+            100,
+        ),
+        (
+            "Parkplatz Einkaufszentrum",
+            "Shoppingcenter 3, 22335 Hamburg",
+            53.5753,
+            9.9803,
+            40,
+        ),
+        (
+            "Tiefgarage Rathaus",
+            "Rathausplatz 1, 90403 Nürnberg",
+            49.4521,
+            11.0767,
+            30,
+        ),
+        (
+            "Parkhaus Technologiepark",
+            "Technologiestrasse 8, 76131 Karlsruhe",
+            49.0069,
+            8.4037,
+            75,
+        ),
+        (
+            "Parkplatz Universität",
+            "Universitätsring 1, 69120 Heidelberg",
+            49.4074,
+            8.6924,
+            70,
+        ),
+        (
+            "Parkplatz Klinikum",
+            "Klinikumsallee 15, 44137 Dortmund",
+            51.5136,
+            7.4653,
+            46,
+        ),
+        (
+            "P+R Bahnhof Ost",
+            "Ostbahnhofstrasse 3, 04315 Leipzig",
+            51.3397,
+            12.3731,
+            56,
+        ),
     ];
 
     for (name, address, lat, lon, total_slots) in lots_data {
@@ -2044,7 +2103,11 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
                 },
                 status: SlotStatus::Available,
                 current_booking: None,
-                features: if i <= 2 { vec![SlotFeature::NearExit] } else { vec![] },
+                features: if i <= 2 {
+                    vec![SlotFeature::NearExit]
+                } else {
+                    vec![]
+                },
                 position: SlotPosition {
                     x: ((i - 1) % 10) as f32 * 80.0,
                     y: ((i - 1) / 10) as f32 * 100.0,
@@ -2078,8 +2141,8 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
         };
         let lot = ParkingLot {
             id: lot_id,
-            name: name.to_string(),
-            address: address.to_string(),
+            name: (*name).to_string(),
+            address: (*address).to_string(),
             latitude: *lat,
             longitude: *lon,
             total_slots: total,
@@ -2089,21 +2152,29 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
             pricing: PricingInfo {
                 currency: "EUR".to_string(),
                 rates: vec![
-                    PricingRate { duration_minutes: 60,   price: 2.50, label: "1h".to_string() },
-                    PricingRate { duration_minutes: 1440, price: 20.0, label: "Day".to_string() },
+                    PricingRate {
+                        duration_minutes: 60,
+                        price: 2.50,
+                        label: "1h".to_string(),
+                    },
+                    PricingRate {
+                        duration_minutes: 1440,
+                        price: 20.0,
+                        label: "Day".to_string(),
+                    },
                 ],
                 daily_max: Some(20.0),
                 monthly_pass: Some(400.0),
             },
             operating_hours: OperatingHours {
                 is_24h: false,
-                monday:    Some(weekday.clone()),
-                tuesday:   Some(weekday.clone()),
+                monday: Some(weekday.clone()),
+                tuesday: Some(weekday.clone()),
                 wednesday: Some(weekday.clone()),
-                thursday:  Some(weekday.clone()),
-                friday:    Some(weekday.clone()),
-                saturday:  Some(weekend.clone()),
-                sunday:    Some(weekend),
+                thursday: Some(weekday.clone()),
+                friday: Some(weekday.clone()),
+                saturday: Some(weekend.clone()),
+                sunday: Some(weekend),
             },
             images: vec![],
             status: LotStatus::Open,
@@ -2121,19 +2192,70 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
 
     // 200 demo users with German-style names (direct DB writes — no HTTP API)
     let first_names = [
-        "Hans", "Peter", "Klaus", "Michael", "Thomas", "Andreas", "Stefan", "Christian",
-        "Markus", "Sebastian", "Daniel", "Tobias", "Florian", "Matthias", "Martin", "Frank",
-        "Oliver", "Maria", "Anna", "Sandra", "Andrea", "Nicole", "Stefanie", "Christina",
-        "Monika", "Petra", "Claudia", "Julia", "Laura", "Sarah", "Lisa", "Katharina",
-        "Melanie", "Susanne", "Anja",
+        "Hans",
+        "Peter",
+        "Klaus",
+        "Michael",
+        "Thomas",
+        "Andreas",
+        "Stefan",
+        "Christian",
+        "Markus",
+        "Sebastian",
+        "Daniel",
+        "Tobias",
+        "Florian",
+        "Matthias",
+        "Martin",
+        "Frank",
+        "Oliver",
+        "Maria",
+        "Anna",
+        "Sandra",
+        "Andrea",
+        "Nicole",
+        "Stefanie",
+        "Christina",
+        "Monika",
+        "Petra",
+        "Claudia",
+        "Julia",
+        "Laura",
+        "Sarah",
+        "Lisa",
+        "Katharina",
+        "Melanie",
+        "Susanne",
+        "Anja",
     ];
     let last_names = [
-        "Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker",
-        "Schulz", "Hoffmann", "Koch", "Richter", "Bauer", "Klein", "Wolf", "Schröder",
-        "Neumann", "Schwarz", "Zimmermann", "Braun", "Krüger", "Hofmann", "Hartmann",
+        "Müller",
+        "Schmidt",
+        "Schneider",
+        "Fischer",
+        "Weber",
+        "Meyer",
+        "Wagner",
+        "Becker",
+        "Schulz",
+        "Hoffmann",
+        "Koch",
+        "Richter",
+        "Bauer",
+        "Klein",
+        "Wolf",
+        "Schröder",
+        "Neumann",
+        "Schwarz",
+        "Zimmermann",
+        "Braun",
+        "Krüger",
+        "Hofmann",
+        "Hartmann",
     ];
 
-    let demo_password_hash = hash_password("Demo2026!X")?;
+    let demo_password = seed_password("PARKHUB_DEMO_USERS_PASSWORD", "demo-users");
+    let demo_password_hash = hash_password(&demo_password)?;
 
     let users: Vec<parkhub_common::models::User> = {
         use parkhub_common::models::{User, UserPreferences};
@@ -2145,7 +2267,10 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
                 let username = format!(
                     "{}.{}{}",
                     first.to_lowercase(),
-                    last.to_lowercase().replace('ü', "ue").replace('ö', "oe").replace('ä', "ae"),
+                    last.to_lowercase()
+                        .replace('ü', "ue")
+                        .replace('ö', "oe")
+                        .replace('ä', "ae"),
                     i
                 );
                 User {
@@ -2155,7 +2280,11 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
                     password_hash: demo_password_hash.clone(),
                     name: format!("{first} {last}"),
                     picture: None,
-                    phone: Some(format!("+49-{:03}-{:07}", rng.random_range(100..999), rng.random_range(1_000_000..9_999_999u32))),
+                    phone: Some(format!(
+                        "+49-{:03}-{:07}",
+                        rng.random_range(100..999),
+                        rng.random_range(1_000_000..9_999_999u32)
+                    )),
                     role: parkhub_common::models::UserRole::User,
                     created_at: Utc::now(),
                     updated_at: Utc::now(),
@@ -2180,8 +2309,20 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
         }
     }
 
-    info!("Demo seeding complete: 10 lots, 200 users (password: Demo2026!X)");
+    info!(
+        "Demo seeding complete: 10 lots, 200 users (password source: PARKHUB_DEMO_USERS_PASSWORD or generated fallback)"
+    );
     Ok(())
+}
+
+fn seed_password(env_name: &str, label: &str) -> String {
+    use rand::distr::{Alphanumeric, SampleString};
+
+    std::env::var(env_name).unwrap_or_else(|_| {
+        let generated = Alphanumeric.sample_string(&mut rand::rng(), 20);
+        tracing::warn!("{label}: generated a temporary password because {env_name} was not set");
+        generated
+    })
 }
 
 #[cfg(test)]
@@ -2206,7 +2347,7 @@ mod cli_tests {
             health_check: false,
         };
         let mut i = 0;
-        let owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+        let owned: Vec<String> = args.iter().map(std::string::ToString::to_string).collect();
         while i < owned.len() {
             match owned[i].as_str() {
                 "-h" | "--help" => cli.help = true,
@@ -2237,7 +2378,10 @@ mod cli_tests {
     #[test]
     fn health_check_flag_is_parsed() {
         let cli = parse_args(&["--health-check"]);
-        assert!(cli.health_check, "--health-check must set health_check=true");
+        assert!(
+            cli.health_check,
+            "--health-check must set health_check=true"
+        );
         assert!(!cli.headless);
         assert!(!cli.unattended);
     }
@@ -2275,7 +2419,10 @@ mod cli_tests {
     fn health_check_returns_1_when_server_not_running() {
         // Port 1 is reserved and guaranteed not to have a listener; expect exit code 1.
         let result = perform_health_check(1);
-        assert_eq!(result, 1, "health check must return 1 when server is unreachable");
+        assert_eq!(
+            result, 1,
+            "health check must return 1 when server is unreachable"
+        );
     }
 
     // ---------------------------------------------------------------------------
@@ -2299,14 +2446,23 @@ mod cli_tests {
         let lots_before = db.list_parking_lots().await.unwrap();
         assert_eq!(lots_before.len(), 0, "lots must be empty before seeding");
 
-        seed_demo_data(&db).await.expect("seed_demo_data must succeed");
+        seed_demo_data(&db)
+            .await
+            .expect("seed_demo_data must succeed");
 
         let lots_after = db.list_parking_lots().await.unwrap();
-        assert_eq!(lots_after.len(), 10, "seed must create exactly 10 parking lots");
+        assert_eq!(
+            lots_after.len(),
+            10,
+            "seed must create exactly 10 parking lots"
+        );
 
         // All lots should have at least one slot
         for lot in &lots_after {
-            assert!(lot.total_slots > 0, "each seeded lot must have at least one slot");
+            assert!(
+                lot.total_slots > 0,
+                "each seeded lot must have at least one slot"
+            );
         }
 
         // Verify user count (200 demo users)
@@ -2335,7 +2491,10 @@ mod cli_tests {
         // may be added by a naive caller — the startup guard (lot_count < 2)
         // prevents double-seeding, but the function itself should not panic.
         let result = seed_demo_data(&db).await;
-        assert!(result.is_ok(), "second seed_demo_data call must not return Err");
+        assert!(
+            result.is_ok(),
+            "second seed_demo_data call must not return Err"
+        );
         // Lot count after second call is at least the original 10
         let lots_second = db.list_parking_lots().await.unwrap().len();
         assert!(lots_second >= lots_first, "lot count must not decrease");

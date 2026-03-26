@@ -56,7 +56,10 @@ pub async fn admin_list_users(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(pagination): Query<PaginationParams>,
-) -> (StatusCode, Json<ApiResponse<PaginatedResponse<AdminUserResponse>>>) {
+) -> (
+    StatusCode,
+    Json<ApiResponse<PaginatedResponse<AdminUserResponse>>>,
+) {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
@@ -69,10 +72,8 @@ pub async fn admin_list_users(
     {
         Ok((users, total)) => {
             tracing::debug!(count = users.len(), total, "Admin listed users");
-            let items: Vec<AdminUserResponse> =
-                users.iter().map(AdminUserResponse::from).collect();
-            let total_pages =
-                total_pages(total, pagination.per_page);
+            let items: Vec<AdminUserResponse> = users.iter().map(AdminUserResponse::from).collect();
+            let total_pages = total_pages(total, pagination.per_page);
             let response = PaginatedResponse {
                 items,
                 page: pagination.page,
@@ -368,7 +369,10 @@ pub async fn admin_list_bookings(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(pagination): Query<PaginationParams>,
-) -> (StatusCode, Json<ApiResponse<PaginatedResponse<AdminBookingResponse>>>) {
+) -> (
+    StatusCode,
+    Json<ApiResponse<PaginatedResponse<AdminBookingResponse>>>,
+) {
     let state_guard = state.read().await;
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
