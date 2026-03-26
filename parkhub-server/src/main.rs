@@ -1981,7 +1981,7 @@ fn perform_health_check(port: u16) -> i32 {
         && response
             .lines()
             .next()
-            .map_or(false, |l| l.contains("200"))
+            .is_some_and(|l| l.contains("200"))
     {
         0
     } else {
