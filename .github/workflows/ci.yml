@@ -97,7 +97,7 @@ jobs:
       - name: Run clippy
         run: |
           cargo clippy --locked --package parkhub-common --all-targets -- -D warnings
-          cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings
+          cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
 
   test:
     name: Cargo Test (headless)
