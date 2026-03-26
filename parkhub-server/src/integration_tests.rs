@@ -1481,7 +1481,11 @@ async fn test_admin_list_all_bookings() {
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
     assert_eq!(json["success"], true);
-    let bookings = json["data"].as_array().unwrap();
+    // Pagination envelope: {items, total, page, per_page} or direct array
+    let bookings = json["data"]["items"]
+        .as_array()
+        .or_else(|| json["data"].as_array())
+        .unwrap();
     assert!(
         !bookings.is_empty(),
         "admin should see at least one booking"
