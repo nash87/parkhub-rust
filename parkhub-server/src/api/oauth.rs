@@ -12,7 +12,7 @@
 
 use axum::{
     extract::{Query, State},
-    http::{header, StatusCode},
+    http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
     Json,
 };
@@ -65,9 +65,8 @@ impl OAuthConfig {
 #[derive(Debug, Deserialize)]
 pub struct OAuthCallbackParams {
     pub code: String,
-    /// CSRF state parameter — reserved for future use.
+    /// CSRF state parameter — validated against the `oauth_state` cookie.
     #[serde(default)]
-    #[allow(dead_code)]
     pub state: Option<String>,
 }
 
@@ -131,8 +130,8 @@ pub struct OAuthProvider {
 // URL builders
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Build the Google OAuth consent URL.
-pub fn google_auth_url(config: &OAuthConfig) -> String {
+/// Build the Google OAuth consent URL including the CSRF `state` nonce.
+pub fn google_auth_url(config: &OAuthConfig, state: &str) -> String {
     let redirect_uri = format!(
         "{}/api/v1/auth/oauth/google/callback",
         config.redirect_base_url
@@ -144,14 +143,16 @@ pub fn google_auth_url(config: &OAuthConfig) -> String {
          response_type=code&\
          scope=openid%20email%20profile&\
          access_type=offline&\
-         prompt=consent",
+         prompt=consent&\
+         state={}",
         urlencoding(&config.google_client_id),
         urlencoding(&redirect_uri),
+        urlencoding(state),
     )
 }
 
-/// Build the GitHub OAuth consent URL.
-pub fn github_auth_url(config: &OAuthConfig) -> String {
+/// Build the GitHub OAuth consent URL including the CSRF `state` nonce.
+pub fn github_auth_url(config: &OAuthConfig, state: &str) -> String {
     let redirect_uri = format!(
         "{}/api/v1/auth/oauth/github/callback",
         config.redirect_base_url
@@ -160,16 +161,55 @@ pub fn github_auth_url(config: &OAuthConfig) -> String {
         "https://github.com/login/oauth/authorize?\
          client_id={}&\
          redirect_uri={}&\
-         scope={}",
+         scope={}&\
+         state={}",
         urlencoding(&config.github_client_id),
         urlencoding(&redirect_uri),
         urlencoding("user:email"),
+        urlencoding(state),
     )
 }
 
 /// Simple percent-encoding for URL query parameters.
 fn urlencoding(s: &str) -> String {
     url::form_urlencoded::byte_serialize(s.as_bytes()).collect()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CSRF state cookie helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Cookie name used to store the OAuth CSRF state nonce.
+const OAUTH_STATE_COOKIE: &str = "oauth_state";
+/// Lifetime of the CSRF state cookie in seconds (10 minutes).
+const OAUTH_STATE_MAX_AGE: u32 = 600;
+
+/// Build a `Set-Cookie` header value for the OAuth CSRF state nonce.
+fn build_oauth_state_cookie(state_nonce: &str) -> String {
+    let secure_flag = std::env::var("APP_URL")
+        .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
+        .unwrap_or(false);
+    let mut cookie = format!(
+        "{OAUTH_STATE_COOKIE}={state_nonce}; HttpOnly; SameSite=Lax; Path=/api/v1/auth/oauth; Max-Age={OAUTH_STATE_MAX_AGE}"
+    );
+    if secure_flag {
+        cookie.push_str("; Secure");
+    }
+    cookie
+}
+
+/// Extract the OAuth CSRF state nonce from the incoming `Cookie` header.
+fn extract_oauth_state_cookie(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::COOKIE)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|cookies| {
+            cookies.split(';').find_map(|c| {
+                let c = c.trim();
+                c.strip_prefix(&format!("{OAUTH_STATE_COOKIE}="))
+                    .map(std::string::ToString::to_string)
+            })
+        })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,7 +273,13 @@ pub async fn oauth_google_redirect() -> Response {
         )
             .into_response();
     };
-    Redirect::temporary(&google_auth_url(&config)).into_response()
+    let state_nonce = Uuid::new_v4().to_string();
+    let cookie = build_oauth_state_cookie(&state_nonce);
+    let mut resp = Redirect::temporary(&google_auth_url(&config, &state_nonce)).into_response();
+    if let Ok(hv) = header::HeaderValue::from_str(&cookie) {
+        resp.headers_mut().insert(header::SET_COOKIE, hv);
+    }
+    resp
 }
 
 /// `GET /api/v1/auth/oauth/google/callback` — exchange code for token, create/link user.
@@ -251,6 +297,7 @@ pub async fn oauth_google_redirect() -> Response {
 )]
 pub async fn oauth_google_callback(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     Query(params): Query<OAuthCallbackParams>,
 ) -> Response {
     let Some(config) = OAuthConfig::from_env() else {
@@ -263,6 +310,13 @@ pub async fn oauth_google_callback(
         )
             .into_response();
     };
+
+    // Validate CSRF state: the `state` query param must match the `oauth_state` cookie.
+    let stored_state = extract_oauth_state_cookie(&headers);
+    match (&stored_state, &params.state) {
+        (Some(stored), Some(received)) if stored == received => {}
+        _ => return oauth_error_response("Invalid or missing CSRF state parameter"),
+    }
 
     let redirect_uri = format!(
         "{}/api/v1/auth/oauth/google/callback",
@@ -360,7 +414,13 @@ pub async fn oauth_github_redirect() -> Response {
         )
             .into_response();
     };
-    Redirect::temporary(&github_auth_url(&config)).into_response()
+    let state_nonce = Uuid::new_v4().to_string();
+    let cookie = build_oauth_state_cookie(&state_nonce);
+    let mut resp = Redirect::temporary(&github_auth_url(&config, &state_nonce)).into_response();
+    if let Ok(hv) = header::HeaderValue::from_str(&cookie) {
+        resp.headers_mut().insert(header::SET_COOKIE, hv);
+    }
+    resp
 }
 
 /// `GET /api/v1/auth/oauth/github/callback` — exchange code for token, create/link user.
@@ -378,6 +438,7 @@ pub async fn oauth_github_redirect() -> Response {
 )]
 pub async fn oauth_github_callback(
     State(state): State<SharedState>,
+    headers: HeaderMap,
     Query(params): Query<OAuthCallbackParams>,
 ) -> Response {
     let Some(config) = OAuthConfig::from_env() else {
@@ -390,6 +451,13 @@ pub async fn oauth_github_callback(
         )
             .into_response();
     };
+
+    // Validate CSRF state: the `state` query param must match the `oauth_state` cookie.
+    let stored_state = extract_oauth_state_cookie(&headers);
+    match (&stored_state, &params.state) {
+        (Some(stored), Some(received)) if stored == received => {}
+        _ => return oauth_error_response("Invalid or missing CSRF state parameter"),
+    }
 
     let redirect_uri = format!(
         "{}/api/v1/auth/oauth/github/callback",
@@ -528,6 +596,18 @@ async fn complete_oauth_login(
             existing
         }
         _ => {
+            // Enforce self-registration gate before creating a new account.
+            if !state_guard.config.allow_self_registration {
+                return (
+                    StatusCode::FORBIDDEN,
+                    Json(ApiResponse::<()>::error(
+                        "REGISTRATION_DISABLED",
+                        "Self-registration is disabled. Contact an administrator.",
+                    )),
+                )
+                    .into_response();
+            }
+
             // Create new user
             let username = email.split('@').next().unwrap_or("user").to_string();
 
@@ -657,7 +737,7 @@ mod tests {
             github_client_secret: "gh-secret".to_string(),
             redirect_base_url: "https://app.example.com".to_string(),
         };
-        let url = google_auth_url(&config);
+        let url = google_auth_url(&config, "test-nonce");
         assert!(url.starts_with("https://accounts.google.com/o/oauth2/v2/auth?"));
         assert!(url.contains("client_id=test-client-id"));
         assert!(url.contains("redirect_uri="));
@@ -675,7 +755,7 @@ mod tests {
             github_client_secret: "gh-secret".to_string(),
             redirect_base_url: "https://app.example.com".to_string(),
         };
-        let url = github_auth_url(&config);
+        let url = github_auth_url(&config, "test-nonce");
         assert!(url.starts_with("https://github.com/login/oauth/authorize?"));
         assert!(url.contains("client_id=gh-test-id"));
         assert!(url.contains("scope=user%3Aemail") || url.contains("scope=user:email"));
@@ -691,8 +771,8 @@ mod tests {
             github_client_secret: "secret".to_string(),
             redirect_base_url: "https://parkhub.example.com".to_string(),
         };
-        let google_url = google_auth_url(&config);
-        let github_url = github_auth_url(&config);
+        let google_url = google_auth_url(&config, "nonce");
+        let github_url = github_auth_url(&config, "nonce");
         assert!(google_url.contains("parkhub.example.com"));
         assert!(github_url.contains("parkhub.example.com"));
     }
@@ -741,7 +821,7 @@ mod tests {
             github_client_secret: "gh-s".to_string(),
             redirect_base_url: "http://localhost:3000".to_string(),
         };
-        let url = google_auth_url(&config);
+        let url = google_auth_url(&config, "some-nonce");
         // Must contain all required OAuth 2.0 params
         assert!(url.contains("client_id="));
         assert!(url.contains("redirect_uri="));
@@ -749,6 +829,7 @@ mod tests {
         assert!(url.contains("scope="));
         assert!(url.contains("access_type=offline"));
         assert!(url.contains("prompt=consent"));
+        assert!(url.contains("state=some-nonce"));
     }
 
     #[test]
@@ -760,7 +841,75 @@ mod tests {
             github_client_secret: "gh-secret".to_string(),
             redirect_base_url: "http://localhost:3000".to_string(),
         };
-        let url = github_auth_url(&config);
+        let url = github_auth_url(&config, "my-nonce");
         assert!(url.contains("scope=user%3Aemail") || url.contains("scope=user:email"));
+        assert!(url.contains("state=my-nonce"));
+    }
+
+    #[test]
+    fn test_google_auth_url_embeds_state_nonce() {
+        let config = OAuthConfig {
+            google_client_id: "id".to_string(),
+            google_client_secret: "sec".to_string(),
+            github_client_id: "gh".to_string(),
+            github_client_secret: "ghs".to_string(),
+            redirect_base_url: "http://localhost:3000".to_string(),
+        };
+        let nonce = "abc123-csrf-nonce";
+        let url = google_auth_url(&config, nonce);
+        assert!(url.contains(&format!("state={nonce}")));
+    }
+
+    #[test]
+    fn test_github_auth_url_embeds_state_nonce() {
+        let config = OAuthConfig {
+            google_client_id: "id".to_string(),
+            google_client_secret: "sec".to_string(),
+            github_client_id: "gh".to_string(),
+            github_client_secret: "ghs".to_string(),
+            redirect_base_url: "http://localhost:3000".to_string(),
+        };
+        let nonce = "xyz789-csrf-nonce";
+        let url = github_auth_url(&config, nonce);
+        assert!(url.contains(&format!("state={nonce}")));
+    }
+
+    #[test]
+    fn test_build_oauth_state_cookie_format() {
+        let cookie = build_oauth_state_cookie("test-nonce-value");
+        assert!(cookie.starts_with("oauth_state=test-nonce-value;"));
+        assert!(cookie.contains("HttpOnly"));
+        assert!(cookie.contains("SameSite=Lax"));
+        assert!(cookie.contains("Path=/api/v1/auth/oauth"));
+        assert!(cookie.contains(&format!("Max-Age={OAUTH_STATE_MAX_AGE}")));
+    }
+
+    #[test]
+    fn test_extract_oauth_state_cookie_present() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::COOKIE,
+            axum::http::HeaderValue::from_static("oauth_state=my-nonce; parkhub_token=tok"),
+        );
+        let result = extract_oauth_state_cookie(&headers);
+        assert_eq!(result, Some("my-nonce".to_string()));
+    }
+
+    #[test]
+    fn test_extract_oauth_state_cookie_absent() {
+        let headers = axum::http::HeaderMap::new();
+        let result = extract_oauth_state_cookie(&headers);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_oauth_state_cookie_other_cookies_only() {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::COOKIE,
+            axum::http::HeaderValue::from_static("parkhub_token=abc; some_other=value"),
+        );
+        let result = extract_oauth_state_cookie(&headers);
+        assert!(result.is_none());
     }
 }
