@@ -19,7 +19,7 @@ use crate::requests::PaginationParams;
 use crate::AppState;
 
 use super::admin::AdminUserResponse;
-use super::{check_admin, read_admin_setting, AuthUser};
+use super::{check_admin, hash_password_simple, read_admin_setting, AuthUser};
 
 type SharedState = Arc<RwLock<AppState>>;
 
@@ -42,6 +42,12 @@ pub struct UpdateUserRoleRequest {
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct UpdateUserStatusRequest {
     status: String,
+}
+
+/// Request body for resetting a user's password
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct AdminResetPasswordRequest {
+    new_password: String,
 }
 
 /// `GET /api/v1/admin/users` — list all users (admin only)
@@ -1526,6 +1532,85 @@ pub async fn admin_update_user(
             "is_active": user.is_active,
         }))),
     )
+}
+
+/// `POST /api/v1/admin/users/{id}/reset-password` — admin can reset a user's password.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/users/{id}/reset-password",
+    tag = "Admin",
+    summary = "Reset user password",
+    description = "Admin can set a new password for any user.",
+    security(("bearer_auth" = []))
+)]
+pub async fn admin_reset_user_password(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(req): Json<AdminResetPasswordRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    if req.new_password.len() < 8 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "VALIDATION_ERROR",
+                "New password must be at least 8 characters",
+            )),
+        );
+    }
+
+    let state_guard = state.read().await;
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let mut user = match state_guard.db.get_user(&id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    let new_hash = match hash_password_simple(&req.new_password).await {
+        Ok(hash) => hash,
+        Err(e) => {
+            tracing::error!("Password hashing failed: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    user.password_hash = new_hash;
+    user.updated_at = Utc::now();
+
+    match state_guard.db.save_user(&user).await {
+        Ok(()) => {
+            AuditEntry::new(AuditEventType::UserUpdated)
+                .user(auth_user.user_id, "admin")
+                .resource("user_password_reset", &id)
+                .log();
+            (StatusCode::OK, Json(ApiResponse::success(())))
+        }
+        Err(e) => {
+            tracing::error!("Failed to persist password reset: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            )
+        }
+    }
 }
 
 #[cfg(test)]

@@ -1001,6 +1001,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             get(admin_get_privacy).put(admin_update_privacy),
         )
         .route("/api/v1/admin/users/{id}/update", put(admin_update_user))
+        .route(
+            "/api/v1/admin/users/{id}/reset-password",
+            post(admin_handlers::admin_reset_user_password),
+        )
         // ── Security: Admin password policy ──
         .route(
             "/api/v1/admin/settings/password-policy",

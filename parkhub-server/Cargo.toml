@@ -121,6 +121,7 @@ subtle = "2.6.1"
 
 # PDF generation (invoices)
 printpdf = "0.8"
+web-push = { version = "0.11", features = ["hyper-client"] }
 
 [build-dependencies]
 slint-build = { version = "1.15", optional = true }  # updated from 1.14

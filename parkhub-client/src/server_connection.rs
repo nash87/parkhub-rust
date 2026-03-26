@@ -4,11 +4,12 @@
 
 use anyhow::{Context, Result};
 use reqwest::Client;
+use serde::Deserialize;
 
 use parkhub_common::{
-    ApiResponse, AuthTokens, Booking, CreateBookingRequest, HandshakeRequest, HandshakeResponse,
-    LoginRequest, LoginResponse, ParkingLot, ParkingSlot, RegisterRequest, ServerInfo, User,
-    PROTOCOL_VERSION,
+    models::UserPreferences, ApiResponse, AuthTokens, Booking, CreateBookingRequest,
+    HandshakeRequest, HandshakeResponse, LoginRequest, LoginResponse, PaginatedResponse,
+    ParkingLot, ParkingSlot, RegisterRequest, ServerInfo, User, UserRole, PROTOCOL_VERSION,
 };
 
 /// Connection to a ParkHub server
@@ -17,6 +18,53 @@ pub struct ServerConnection {
     base_url: String,
     server_info: ServerInfo,
     auth_tokens: Option<AuthTokens>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AdminUserRecord {
+    id: String,
+    username: String,
+    email: String,
+    name: String,
+    role: String,
+    is_active: bool,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+fn parse_admin_role(role: &str) -> UserRole {
+    match role.to_ascii_lowercase().as_str() {
+        "premium" => UserRole::Premium,
+        "admin" => UserRole::Admin,
+        "superadmin" => UserRole::SuperAdmin,
+        _ => UserRole::User,
+    }
+}
+
+impl From<AdminUserRecord> for User {
+    fn from(value: AdminUserRecord) -> Self {
+        Self {
+            id: uuid::Uuid::parse_str(&value.id).unwrap_or_else(|_| uuid::Uuid::nil()),
+            username: value.username,
+            email: value.email,
+            name: value.name,
+            password_hash: String::new(),
+            role: parse_admin_role(&value.role),
+            is_active: value.is_active,
+            phone: None,
+            picture: None,
+            preferences: UserPreferences::default(),
+            credits_balance: 0,
+            credits_monthly_quota: 0,
+            credits_last_refilled: None,
+            created_at: value.created_at,
+            updated_at: value.created_at,
+            last_login: None,
+            tenant_id: None,
+            accessibility_needs: None,
+            cost_center: None,
+            department: None,
+        }
+    }
 }
 
 impl ServerConnection {
@@ -311,13 +359,16 @@ impl ServerConnection {
 
     /// List all users (admin only)
     pub async fn list_users(&self) -> Result<Vec<User>> {
-        let mut request = self.client.get(format!("{}/api/v1/users", self.base_url));
+        let mut request = self.client.get(format!(
+            "{}/api/v1/admin/users?page=1&per_page=1000",
+            self.base_url
+        ));
 
         if let Some(auth) = self.auth_header() {
             request = request.header("Authorization", auth);
         }
 
-        let response: ApiResponse<Vec<User>> = request
+        let response: ApiResponse<PaginatedResponse<AdminUserRecord>> = request
             .send()
             .await
             .context("Request failed")?
@@ -325,7 +376,10 @@ impl ServerConnection {
             .await
             .context("Invalid response")?;
 
-        Ok(response.data.unwrap_or_default())
+        Ok(response
+            .data
+            .map(|page| page.items.into_iter().map(User::from).collect())
+            .unwrap_or_default())
     }
 
     /// Get a specific user (admin only)
@@ -352,17 +406,20 @@ impl ServerConnection {
     }
 
     /// Update a user (admin only)
-    pub async fn update_user(&self, user_id: &str, updates: serde_json::Value) -> Result<User> {
+    pub async fn update_user(&self, user_id: &str, updates: serde_json::Value) -> Result<()> {
         let mut request = self
             .client
-            .patch(format!("{}/api/v1/users/{}", self.base_url, user_id))
+            .put(format!(
+                "{}/api/v1/admin/users/{}/update",
+                self.base_url, user_id
+            ))
             .json(&updates);
 
         if let Some(auth) = self.auth_header() {
             request = request.header("Authorization", auth);
         }
 
-        let response: ApiResponse<User> = request
+        let response: ApiResponse<serde_json::Value> = request
             .send()
             .await
             .context("Request failed")?
@@ -370,9 +427,11 @@ impl ServerConnection {
             .await
             .context("Invalid response")?;
 
-        response
-            .data
-            .ok_or_else(|| anyhow::anyhow!("Update failed: {:?}", response.error))
+        if response.success {
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Update failed: {:?}", response.error))
+        }
     }
 
     /// Delete a user (admin only)
@@ -405,7 +464,7 @@ impl ServerConnection {
         let mut request = self
             .client
             .post(format!(
-                "{}/api/v1/users/{}/reset-password",
+                "{}/api/v1/admin/users/{}/reset-password",
                 self.base_url, user_id
             ))
             .json(&serde_json::json!({ "new_password": new_password }));
