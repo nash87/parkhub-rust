@@ -286,6 +286,14 @@ impl Encryptor {
 // DATABASE IMPLEMENTATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/// Compute (skip, per_page_usize) from 1-based page and per_page inputs.
+/// Returns (number of items to skip, items per page).
+fn pagination_offset(page: i32, per_page: i32) -> (usize, usize) {
+    let per_page = per_page.max(1) as usize;
+    let skip = (page.max(1) as usize - 1) * per_page;
+    (skip, per_page)
+}
+
 /// Main database wrapper with optional encryption support
 pub struct Database {
     inner: Arc<RwLock<RedbDatabase>>,
@@ -770,6 +778,28 @@ impl Database {
         Ok(users)
     }
 
+    /// List users with pagination. Returns (page_items, total_count).
+    pub async fn list_users_paginated(
+        &self,
+        page: i32,
+        per_page: i32,
+    ) -> Result<(Vec<User>, usize)> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(USERS)?;
+
+        let total = table.len()? as usize;
+        let (skip, per_page) = pagination_offset(page, per_page);
+
+        let mut users = Vec::with_capacity(per_page.min(total.saturating_sub(skip)));
+        for entry in table.iter()?.skip(skip).take(per_page) {
+            let (_, value) = entry?;
+            users.push(self.deserialize(value.value())?);
+        }
+        Ok((users, total))
+    }
+
     /// Delete a user
     pub async fn delete_user(&self, id: &str) -> Result<bool> {
         // First get the user to find the username/email
@@ -1108,6 +1138,28 @@ impl Database {
             bookings.push(self.deserialize(value.value())?);
         }
         Ok(bookings)
+    }
+
+    /// List bookings with pagination. Returns (page_items, total_count).
+    pub async fn list_bookings_paginated(
+        &self,
+        page: i32,
+        per_page: i32,
+    ) -> Result<(Vec<Booking>, usize)> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+        let table = read_txn.open_table(BOOKINGS)?;
+
+        let total = table.len()? as usize;
+        let (skip, per_page) = pagination_offset(page, per_page);
+
+        let mut bookings = Vec::with_capacity(per_page.min(total.saturating_sub(skip)));
+        for entry in table.iter()?.skip(skip).take(per_page) {
+            let (_, value) = entry?;
+            bookings.push(self.deserialize(value.value())?);
+        }
+        Ok((bookings, total))
     }
 
     /// Get bookings for a user using the BOOKINGS_BY_USER secondary index.
