@@ -415,3 +415,154 @@ is a single file that serves both API and frontend. Build scripts
 SQLite is the default for development and Render free-tier (ephemeral storage).
 The PHP edition also supports MySQL 8 for production via `docker-compose.yml`.
 This mirrors the Rust edition's single-file redb approach.
+
+---
+
+## Module System
+
+ParkHub uses Cargo feature flags to let you build only the modules you need. The `full` feature enables everything. Use `--no-default-features --features headless` for a minimal server build, then add individual modules as needed.
+
+```bash
+# Example: build a minimal server with just bookings and email
+cargo build --release -p parkhub-server --no-default-features \
+  --features "headless,mod-bookings,mod-email"
+```
+
+| Flag | Description |
+|------|-------------|
+| `mod-bookings` | Core booking lifecycle (create, cancel, check-in) |
+| `mod-vehicles` | Vehicle registry with licence plate management |
+| `mod-absences` | Homeoffice, vacation, sick leave tracking |
+| `mod-branding` | Custom logo, colors, company name |
+| `mod-import` | Bulk user import (CSV, up to 500 users) |
+| `mod-qr` | QR code generation for bookings and slots |
+| `mod-pwa` | Progressive Web App (service worker, manifest) |
+| `mod-payments` | Credits and payment processing |
+| `mod-webhooks` | Outbound webhooks with HMAC signing |
+| `mod-notifications` | In-app notification system |
+| `mod-announcements` | Admin announcements with expiry |
+| `mod-recurring` | Recurring booking patterns |
+| `mod-guest` | Guest bookings without user accounts |
+| `mod-calendar` | Calendar view and iCal export |
+| `mod-team` | Team overview and today's status |
+| `mod-settings` | Application settings management |
+| `mod-jobs` | Background job processing |
+| `mod-swap` | Booking swap requests between users |
+| `mod-waitlist` | Waitlist for fully occupied lots |
+| `mod-zones` | Per-lot zone management |
+| `mod-credits` | Monthly credit quotas |
+| `mod-email` | SMTP email notifications |
+| `mod-export` | CSV data export |
+| `mod-favorites` | Favourite slot pinning |
+| `mod-push` | Web Push notifications (VAPID) |
+| `mod-recommendations` | Smart slot recommendation engine |
+| `mod-translations` | Community translation management |
+| `mod-social` | Social features |
+| `mod-themes` | 12 switchable design themes |
+| `mod-invoices` | PDF invoice generation with VAT |
+| `mod-dynamic-pricing` | Occupancy-based surge/discount pricing |
+| `mod-operating-hours` | Per-lot 7-day schedule |
+| `mod-oauth` | OAuth/Social login (Google, GitHub) |
+| `mod-analytics` | Admin analytics dashboard with charts |
+| `mod-email-templates` | Professional HTML email templates |
+| `mod-lobby-display` | Public kiosk/lobby display mode |
+| `mod-setup-wizard` | Interactive onboarding wizard |
+| `mod-map` | Interactive Leaflet map view |
+| `mod-stripe` | Stripe payment integration |
+| `mod-ical` | iCal calendar subscription feeds |
+| `mod-multi-tenant` | Multi-tenant isolation |
+| `mod-data-import` | Bulk CSV/JSON data import |
+| `mod-fleet` | Fleet/vehicle management overview |
+| `mod-accessible` | Accessible parking management |
+| `mod-maintenance` | Maintenance scheduling system |
+| `mod-cost-center` | Cost center billing analytics |
+| `mod-visitors` | Visitor pre-registration with QR passes |
+| `mod-ev-charging` | EV charging station management |
+| `mod-history` | Personal parking history and stats |
+| `mod-geofence` | Geofencing with auto check-in |
+| `mod-waitlist-ext` | Enhanced waitlist with notifications |
+| `mod-parking-pass` | Digital parking pass / QR badge |
+| `mod-api-docs` | Interactive Swagger UI documentation |
+| `mod-absence-approval` | Absence approval workflows |
+| `mod-calendar-drag` | Calendar drag-to-reschedule |
+| `mod-widgets` | Customizable admin dashboard widgets |
+| `mod-plugins` | Plugin/extension system |
+| `mod-graphql` | GraphQL API with playground |
+| `mod-compliance` | GDPR compliance reports and audit trail |
+| `mod-sharing` | Booking sharing and guest invites |
+| `mod-scheduled-reports` | Scheduled email report delivery |
+| `mod-api-versioning` | API versioning and deprecation |
+| `mod-rbac` | Fine-grained RBAC with custom roles |
+| `mod-audit-export` | Multi-format audit log export (PDF, CSV, JSON) |
+| `mod-parking-zones` | Zone-based pricing tiers |
+| `gui` | Slint desktop GUI with system tray |
+| `headless` | Server-only mode (no GUI dependencies) |
+
+---
+
+## Configuration Reference
+
+All configuration can be supplied via environment variables or `config.toml`. The full list:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PARKHUB_DB_PASSPHRASE` | _(none)_ | Enable AES-256-GCM database encryption at rest |
+| `PARKHUB_ADMIN_PASSWORD` | _(auto-generated)_ | Initial admin password (printed to stdout if auto-generated) |
+| `PARKHUB_PORT` | `8080` | HTTP listen port |
+| `PARKHUB_HOST` | `0.0.0.0` | HTTP bind address |
+| `DEMO_MODE` | `false` | Enable demo overlay with 6-hour collaborative auto-reset |
+| `RUST_LOG` | `info` | Log level (`error`, `warn`, `info`, `debug`, `trace`) |
+| `SMTP_HOST` | _(none)_ | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP port |
+| `SMTP_USER` | _(none)_ | SMTP username |
+| `SMTP_PASS` | _(none)_ | SMTP password |
+| `SMTP_FROM` | _(none)_ | From address for outgoing emails |
+| `OAUTH_GOOGLE_CLIENT_ID` | _(none)_ | Google OAuth 2.0 client ID |
+| `OAUTH_GOOGLE_CLIENT_SECRET` | _(none)_ | Google OAuth 2.0 client secret |
+| `OAUTH_GITHUB_CLIENT_ID` | _(none)_ | GitHub OAuth app client ID |
+| `OAUTH_GITHUB_CLIENT_SECRET` | _(none)_ | GitHub OAuth app client secret |
+| `VAPID_PRIVATE_KEY` | _(auto-generated)_ | VAPID private key for Web Push |
+| `VAPID_PUBLIC_KEY` | _(auto-generated)_ | VAPID public key for Web Push |
+
+Full reference with all options: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
+
+---
+
+## Postman Collection
+
+A ready-made Postman collection lets you explore the API interactively without writing any code:
+
+1. Import `docs/postman/ParkHub.postman_collection.json` into Postman
+2. Import `docs/postman/ParkHub.postman_environment.json` as the environment
+3. Set `base_url` to your ParkHub instance URL
+4. Run the **Login** request — it auto-sets the `{{token}}` variable for all subsequent calls
+
+Alternatively, fetch the auto-generated collection from a running server:
+
+```
+GET /api/v1/docs/postman.json
+```
+
+The collection contains 100+ requests organised into 17 folders covering auth, bookings, lots, vehicles, admin, GDPR, and more.
+
+---
+
+## Load Testing
+
+Performance testing scripts with [k6](https://grafana.com/docs/k6/) live in `tests/load/`:
+
+| Script | Profile | Description |
+|--------|---------|-------------|
+| `smoke.js` | 1 VU, 30s | Quick sanity check — verifies the server responds correctly |
+| `load.js` | 50 VUs, 5min | Sustained load — baseline performance measurement |
+| `stress.js` | 100 VUs, 10min | All endpoints — find breaking points |
+| `spike.js` | 1 → 200 → 1 VUs | Sudden surge — test auto-scaling and recovery |
+
+```bash
+k6 run tests/load/smoke.js
+k6 run tests/load/load.js
+k6 run tests/load/stress.js
+k6 run tests/load/spike.js
+```
+
+See [tests/load/README.md](tests/load/README.md) for setup, environment variables, and result interpretation.
