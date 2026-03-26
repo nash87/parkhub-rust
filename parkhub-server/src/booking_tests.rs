@@ -753,9 +753,9 @@ async fn test_admin_list_users() {
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
     assert_eq!(json["success"], true);
-    assert!(json["data"].is_array());
+    assert!(json["data"]["items"].is_array());
     // Admin user exists
-    let users = json["data"].as_array().unwrap();
+    let users = json["data"]["items"].as_array().unwrap();
     assert!(!users.is_empty());
 }
 
@@ -807,7 +807,7 @@ async fn test_admin_list_bookings() {
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
     assert_eq!(json["success"], true);
-    assert!(json["data"].is_array());
+    assert!(json["data"]["items"].is_array());
 }
 
 #[tokio::test]
