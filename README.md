@@ -8,9 +8,9 @@
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.3.0-brightgreen.svg?style=flat-square" alt="v4.3.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
-  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.85%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.85+"></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.88%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.88+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
-  <img src="https://img.shields.io/badge/Tests-1400%2B-success.svg?style=flat-square" alt="1400+ tests">
+  <img src="https://img.shields.io/badge/Tests-1600%2B-success.svg?style=flat-square" alt="1600+ tests">
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -124,7 +124,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Complete audit log** — every write operation recorded
 
 ### 🧩 Modularity
-**63 Cargo feature flags** — build only the modules you need. The `full` feature enables everything; `headless` gives you a minimal server binary. See [ARCHITECTURE.md](ARCHITECTURE.md#module-system) for the full feature flag reference.
+**72 Cargo feature flags** — build only the modules you need. The `full` feature enables everything; `headless` gives you a minimal server binary. See [ARCHITECTURE.md](ARCHITECTURE.md#module-system) for the full feature flag reference.
 
 ---
 
@@ -145,7 +145,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 | Layer | Technology |
 |-------|-----------|
-| **Language** | [Rust](https://www.rust-lang.org/) 1.85+ (edition 2021) |
+| **Language** | [Rust](https://www.rust-lang.org/) 1.88+ (edition 2021) |
 | **HTTP Framework** | [Axum](https://github.com/tokio-rs/axum) 0.8 + [Tokio](https://tokio.rs/) async runtime |
 | **Database** | [redb](https://github.com/cberner/redb) 2 — embedded pure-Rust key-value store |
 | **Encryption** | AES-256-GCM at rest · Argon2id passwords · rustls TLS 1.3 |
