@@ -31,6 +31,18 @@ struct AdminUserRecord {
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(Debug, Deserialize)]
+struct DataImportError {
+    message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct DataImportResult {
+    imported: usize,
+    skipped: usize,
+    errors: Vec<DataImportError>,
+}
+
 fn parse_admin_role(role: &str) -> UserRole {
     match role.to_ascii_lowercase().as_str() {
         "premium" => UserRole::Premium,
@@ -434,11 +446,73 @@ impl ServerConnection {
         }
     }
 
+    /// Create a user (admin only)
+    pub async fn create_user(
+        &self,
+        username: &str,
+        email: &str,
+        name: &str,
+        role: &str,
+        password: &str,
+    ) -> Result<()> {
+        let payload = serde_json::json!({
+            "format": "json",
+            "data": serde_json::to_string(&vec![serde_json::json!({
+                "username": username,
+                "email": email,
+                "name": name,
+                "role": role,
+                "password": password,
+            })]).context("Failed to encode user import payload")?,
+        });
+
+        let mut request = self
+            .client
+            .post(format!("{}/api/v1/admin/import/users", self.base_url))
+            .json(&payload);
+
+        if let Some(auth) = self.auth_header() {
+            request = request.header("Authorization", auth);
+        }
+
+        let response: ApiResponse<DataImportResult> = request
+            .send()
+            .await
+            .context("Request failed")?
+            .json()
+            .await
+            .context("Invalid response")?;
+
+        if !response.success {
+            return Err(anyhow::anyhow!("Create failed: {:?}", response.error));
+        }
+
+        let result = response
+            .data
+            .ok_or_else(|| anyhow::anyhow!("Create failed: missing import result"))?;
+
+        if result.imported == 1 {
+            return Ok(());
+        }
+
+        if let Some(first_error) = result.errors.first() {
+            return Err(anyhow::anyhow!(first_error.message.clone()));
+        }
+
+        if result.skipped > 0 {
+            return Err(anyhow::anyhow!(
+                "User already exists or was skipped by import validation"
+            ));
+        }
+
+        Err(anyhow::anyhow!("User creation did not import any records"))
+    }
+
     /// Delete a user (admin only)
     pub async fn delete_user(&self, user_id: &str) -> Result<()> {
         let mut request = self
             .client
-            .delete(format!("{}/api/v1/users/{}", self.base_url, user_id));
+            .delete(format!("{}/api/v1/admin/users/{}", self.base_url, user_id));
 
         if let Some(auth) = self.auth_header() {
             request = request.header("Authorization", auth);
