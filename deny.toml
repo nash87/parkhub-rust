@@ -18,6 +18,7 @@ ignore = [
     "RUSTSEC-2025-0057", # fxhash unmaintained (transitive via selectors)
     "RUSTSEC-2023-0019", # kuchiki unmaintained (transitive via printpdf)
     "RUSTSEC-2025-0141", # bincode unmaintained (transitive via typed-index-collections)
+    "RUSTSEC-2024-0384", # instant unmaintained (transitive via web-push -> isahc; no maintained upgrade path yet)
 ]
 
 [licenses]
