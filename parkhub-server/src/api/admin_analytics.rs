@@ -123,8 +123,7 @@ pub async fn admin_occupancy(
         .map(|(hour, active_bookings)| {
             let occupancy_rate = if total_slots > 0 {
                 let raw = (active_bookings as f64 / total_slots as f64 * 100.0)
-                    .min(100.0)
-                    .max(0.0);
+                    .clamp(0.0, 100.0);
                 (raw * 100.0).round() / 100.0
             } else {
                 0.0
