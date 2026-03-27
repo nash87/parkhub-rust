@@ -512,7 +512,7 @@ async fn test_mobile_active_booking_with_active() {
             .unwrap();
         // Booking may be CREATED or OK depending on time validation
         let json = body_json(resp).await;
-        json["data"]["id"].as_str().map(|s| s.to_string())
+        json["data"]["id"].as_str().map(ToString::to_string)
     };
 
     // Check in the booking to make it "active"
@@ -671,6 +671,7 @@ async fn create_lot_with_coords(
 
 /// Helper: build and save a booking directly in the DB, bypassing API time
 /// validation. Returns the booking ID.
+#[allow(clippy::too_many_arguments)]
 async fn insert_booking_direct(
     state: Arc<RwLock<AppState>>,
     user_id: Uuid,
@@ -829,7 +830,7 @@ async fn test_mobile_nearby_lots_sorted_closest_first() {
     // Filter to only our named lots (ignore zero-coordinate lots from harness setup)
     let named: Vec<_> = lots
         .iter()
-        .filter(|l| matches!(l["name"].as_str(), Some("Closer Lot") | Some("Farther Lot")))
+        .filter(|l| matches!(l["name"].as_str(), Some("Closer Lot" | "Farther Lot")))
         .collect();
     assert_eq!(named.len(), 2, "both lots should be in results");
 
@@ -1221,7 +1222,7 @@ async fn test_mobile_active_booking_countdown_approximate() {
         "progress_percent should be ~25 %, got {progress}"
     );
     // Sanity: progress must always be in [0, 100]
-    assert!(progress >= 0.0 && progress <= 100.0);
+    assert!((0.0..=100.0).contains(&progress));
 }
 
 #[tokio::test]

@@ -235,7 +235,7 @@ mod tests {
     fn test_reschedule_request_deserialize() {
         let json = r#"{"new_start":"2026-04-15T08:00:00Z","new_end":"2026-04-15T18:00:00Z"}"#;
         let req: RescheduleRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.new_start.to_rfc3339().contains("2026-04-15"), true);
+        assert!(req.new_start.to_rfc3339().contains("2026-04-15"));
     }
 
     #[test]
