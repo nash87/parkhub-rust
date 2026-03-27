@@ -138,8 +138,8 @@ export function NotificationPreferencesComponent() {
         </div>
       </div>
 
-      {/* SMS Channel */}
-      <div className="space-y-1">
+      {/* SMS Channel (gated - no provider configured) */}
+      <div className="space-y-1 opacity-50 pointer-events-none">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
           <DeviceMobile size={16} />
           <span>{t('notifications.smsTitle', 'SMS Notifications')}</span>
@@ -164,8 +164,8 @@ export function NotificationPreferencesComponent() {
         </div>
       </div>
 
-      {/* WhatsApp Channel */}
-      <div className="space-y-1">
+      {/* WhatsApp Channel (gated - no provider configured) */}
+      <div className="space-y-1 opacity-50 pointer-events-none">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
           <ChatCircleDots size={16} />
           <span>{t('notifications.whatsappTitle', 'WhatsApp Notifications')}</span>
