@@ -995,7 +995,11 @@ async fn test_create_booking_reserves_slot() {
     assert_eq!(slot_before["status"], "available");
 
     // Create booking
-    let start_time = chrono::Utc::now() + TimeDelta::hours(1);
+    let start_time = (chrono::Utc::now() + TimeDelta::days(1))
+        .date_naive()
+        .and_hms_opt(12, 0, 0)
+        .unwrap()
+        .and_utc();
     let booking_body = serde_json::json!({
         "lot_id": lot_id,
         "slot_id": slot_id,
@@ -1050,7 +1054,11 @@ async fn test_create_booking_fails_when_slot_full() {
     let admin_tok = admin_token_it(state.clone()).await;
     let (lot_id, slot_id) = setup_lot_and_slot(state.clone(), &admin_tok).await;
 
-    let start_time = chrono::Utc::now() + TimeDelta::hours(1);
+    let start_time = (chrono::Utc::now() + TimeDelta::days(1))
+        .date_naive()
+        .and_hms_opt(12, 0, 0)
+        .unwrap()
+        .and_utc();
     let booking_body = serde_json::json!({
         "lot_id": lot_id,
         "slot_id": slot_id,
@@ -1367,7 +1375,7 @@ async fn test_booking_max_per_day_limit_enforced() {
     };
 
     // Register a regular user
-    let (user_tok, _) = register_user_it(state.clone(), "maxperday@example.com").await;
+    let (user_tok, user_id) = register_user_it(state.clone(), "maxperday@example.com").await;
 
     // Set max_bookings_per_day = 1
     {
@@ -1403,6 +1411,17 @@ async fn test_booking_max_per_day_limit_enforced() {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::CREATED);
+    }
+
+    {
+        let guard = state.read().await;
+        let configured_limit = guard.db.get_setting("max_bookings_per_day").await.unwrap();
+        assert_eq!(configured_limit.as_deref(), Some("1"));
+
+        let bookings = guard.db.list_bookings().await.unwrap();
+        assert_eq!(bookings.len(), 1);
+        assert_eq!(bookings[0].user_id.to_string(), user_id);
+        assert_eq!(bookings[0].start_time.date_naive(), start_time.date_naive());
     }
 
     // Second booking on the same day should be rejected

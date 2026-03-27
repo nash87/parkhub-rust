@@ -495,7 +495,7 @@ mod tests {
     use crate::db::{Database, DatabaseConfig};
 
     /// Create a minimal test state backed by a tempdir.
-    async fn job_test_state() -> (SharedState, tempfile::TempDir) {
+    fn job_test_state() -> (SharedState, tempfile::TempDir) {
         let dir = tempfile::tempdir().expect("tempdir");
         let db_config = DatabaseConfig {
             path: dir.path().to_path_buf(),
@@ -517,7 +517,7 @@ mod tests {
 
     #[tokio::test]
     async fn auto_release_disabled_is_noop() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
         // auto_release_enabled defaults to not set / false
         let result = auto_release_no_shows(&state).await;
         assert!(result.is_ok());
@@ -525,28 +525,28 @@ mod tests {
 
     #[tokio::test]
     async fn purge_expired_empty_db_is_noop() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
         let result = purge_expired_bookings(&state).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn aggregate_occupancy_empty_db_is_noop() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
         let result = aggregate_occupancy_stats(&state).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn expand_recurring_empty_db_is_noop() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
         let result = expand_recurring_bookings(&state).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn auto_release_marks_no_show_bookings() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         // Enable auto-release with a 0-minute threshold
         {
@@ -677,7 +677,7 @@ mod tests {
 
     #[tokio::test]
     async fn auto_release_skips_checked_in_booking() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         {
             let guard = state.read().await;
@@ -728,7 +728,7 @@ mod tests {
 
     #[tokio::test]
     async fn auto_release_skips_booking_within_threshold() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         {
             let guard = state.read().await;
@@ -780,7 +780,7 @@ mod tests {
 
     #[tokio::test]
     async fn auto_release_skips_non_releasable_status() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         {
             let guard = state.read().await;
@@ -830,7 +830,7 @@ mod tests {
 
     #[tokio::test]
     async fn purge_expired_deletes_old_cancelled_bookings() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         // Set a short retention of 1 day so 2-day-old bookings are purged.
         {
@@ -870,7 +870,7 @@ mod tests {
 
     #[tokio::test]
     async fn purge_expired_keeps_recent_cancelled_bookings() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         // 90-day retention (default) — a booking updated today should survive.
         let ids = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
@@ -904,7 +904,7 @@ mod tests {
 
     #[tokio::test]
     async fn purge_expired_skips_active_bookings() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         // Set retention to 1 day — even old *Active* bookings must not be purged.
         {
@@ -944,7 +944,7 @@ mod tests {
 
     #[tokio::test]
     async fn aggregate_occupancy_writes_stats_for_lot() {
-        let (state, _dir) = job_test_state().await;
+        let (state, _dir) = job_test_state();
 
         // Create a parking lot with 10 total slots.
         let lot = parkhub_common::ParkingLot {

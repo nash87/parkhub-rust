@@ -18,7 +18,7 @@
 
 <p align="center">
   <strong>Ihre Daten. Ihr Server. Ihre Kontrolle.</strong><br>
-  The on-premise parking management platform for enterprises, universities, and residential complexes.<br>
+  The on-premise parking management runtime for the canonical ParkHub product.<br>
   Ships as a <strong>single binary</strong> with zero external dependencies. Zero cloud. Zero tracking.<br>
   100% GDPR compliant by design.
 </p>
@@ -32,6 +32,14 @@
   <a href="docs/SECURITY.md">Security</a> &nbsp;·&nbsp;
   <a href="CHANGELOG.md">Changelog</a>
 </p>
+
+---
+
+## 🧭 Product Model
+
+ParkHub is one product with multiple runtimes. This Rust edition shares the same core product model as the PHP edition, while keeping a Rust-first deployment story: single binary, embedded storage, and local-first operation.
+
+Not every advanced module is equally hardened or equally enabled by default across runtimes. Treat the shared booking, admin, compliance, and theme surfaces as the core product line; treat advanced integrations and enterprise modules as optional and runtime-sensitive.
 
 ---
 
@@ -90,8 +98,13 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 ### 🌍 Localization & Accessibility
 - **10 languages** — EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH with runtime hot-loading
-- **12 switchable themes** — Classic, Glass, Bento, Brutalist, Neon, Warm, Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco
+- **12 switchable themes** — theme switching is part of the product contract, but the exact runtime theme set is still being pulled onto a shared semantic registry and parity gate
 - **Accessible parking** — `is_accessible` slots with 30-min priority booking, admin toggle, stats
+
+### 🎨 Theme Contract
+- **Shared product surface** — themes are a core ParkHub surface, not decorative runtime extras
+- **Semantic parity first** — theme switching must preserve state clarity, hierarchy, contrast, and critical controls across runtimes
+- **Registry alignment in progress** — Rust and PHP currently expose different concrete theme inventories, so public naming is gated until both runtimes match the shared registry
 
 ### 🔌 Integrations & Extensions
 - **Webhooks v2** — HMAC-SHA256 signed event delivery with retry logic and delivery logs
@@ -99,7 +112,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Web Push notifications** — VAPID-based push with action buttons and service worker handler
 - **Stripe payments** — checkout sessions, webhook handler, payment history, self-service config
 - **OAuth/Social login** — self-service Google + GitHub OAuth
-- **SAML 2.0 SSO** — enterprise single sign-on with IdP configuration
+- **Enterprise identity (optional)** — SAML/SSO and other advanced identity flows are runtime-sensitive and should be treated as optional enterprise modules, not as baseline auth
 - **GraphQL API** — full schema alongside REST with interactive GraphiQL playground
 - **Plugin/extension system** — trait-based plugin architecture with event hooks
 
@@ -110,6 +123,16 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **Scheduled reports** — automated daily/weekly/monthly email digests
 - **k6 load tests** — smoke, load, stress, and spike test scripts in `tests/load/`
 - **Lighthouse CI** — accessibility ≥ 95, performance ≥ 90, SEO ≥ 95 gates
+
+### 🔔 Notification Contract
+- **Core notifications** — in-app notifications plus transactional email
+- **Advanced notifications** — Web Push via VAPID where configured
+- **Gated channels** — SMS/WhatsApp-style channels should be treated as gated unless explicitly proven operational in the active runtime
+
+### 🎟️ Guest and Pass Contract
+- **Core guest flow** — guest bookings and host-visible guest handling
+- **Advanced pass flow** — digital passes, QR generation, visitor pre-registration, and check-in surfaces
+- **Runtime-sensitive surfaces** — QR/check-in/public verification flows should be treated as advanced and runtime-sensitive, not as unconditional baseline behavior
 
 ### 🔒 Security
 - **httpOnly cookie auth** with SameSite=Lax (XSS-proof, Bearer fallback for APIs)
@@ -122,6 +145,11 @@ cargo build --release --package parkhub-server --no-default-features --features 
 - **2FA/TOTP** — QR code enrollment, backup codes, per-account enable/disable
 - **Session management** — list and revoke active tokens, login history with IP/user-agent
 - **Complete audit log** — every write operation recorded
+
+### 🔐 Auth Contract
+- **Core auth** — login, registration, password reset, RBAC, 2FA/TOTP, session management
+- **Integration auth** — OAuth providers such as Google and GitHub
+- **Enterprise identity** — SAML/SSO and similar flows remain optional and runtime-sensitive
 
 ### 🧩 Modularity
 **72 Cargo feature flags** — build only the modules you need. The `full` feature enables everything; `headless` gives you a minimal server binary. See [ARCHITECTURE.md](ARCHITECTURE.md#module-system) for the full feature flag reference.
@@ -168,7 +196,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 | **GDPR compliant by default** | ✅ Yes | ⚠️ Contract needed | ⚠️ Contract needed | ⚠️ Contract needed |
 | **Data leaves your premises** | ✅ Never | ❌ Always | ❌ Always | ❌ Always |
 | **Single binary deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Customizable / Extensible** | ✅ 64 feature flags | ❌ No | ❌ No | ❌ No |
+| **Customizable / Extensible** | ✅ 72 feature flags | ❌ No | ❌ No | ❌ No |
 | **Multi-language UI** | ✅ 10 languages | ⚠️ Limited | ⚠️ Limited | ⚠️ Limited |
 | **API access** | ✅ Full REST + GraphQL | ⚠️ Enterprise only | ⚠️ Limited | ⚠️ Limited |
 | **Air-gapped deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
@@ -225,7 +253,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## 🧪 Testing
 
-**1,400+ tests** across Rust backend and React frontend, plus E2E Playwright suites. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
+**1,600+ tests** across Rust backend and React frontend, plus E2E Playwright suites. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
 
 ```bash
 cargo test --workspace           # Rust backend
