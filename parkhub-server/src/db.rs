@@ -8,7 +8,7 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use anyhow::{anyhow, Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
 use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
@@ -21,9 +21,10 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 use parkhub_common::models::{
-    Absence, Announcement, Booking, ChargingSession, EvCharger, GuestBooking, Notification,
-    ParkingLot, ParkingSlot, ProposalStatus, RecurringBooking, SwapRequest, TranslationOverride,
-    TranslationProposal, TranslationVote, User, Vehicle, Visitor, WaitlistEntry,
+    Absence, Announcement, Booking, BookingStatus, ChargingSession, EvCharger, GuestBooking,
+    Notification, ParkingLot, ParkingSlot, ProposalStatus, RecurringBooking, SwapRequest,
+    TranslationOverride, TranslationProposal, TranslationVote, User, Vehicle, Visitor,
+    WaitlistEntry,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1188,6 +1189,35 @@ impl Database {
             }
         }
         Ok(bookings)
+    }
+
+    /// Count non-cancelled bookings for a user on a specific calendar day.
+    /// Uses the canonical BOOKINGS table so policy enforcement does not rely on
+    /// secondary-index freshness.
+    pub async fn count_bookings_for_user_on_day(
+        &self,
+        user_id: &str,
+        booking_date: NaiveDate,
+    ) -> Result<usize> {
+        let db = self.inner.read().await;
+        let read_txn = db.begin_read()?;
+        drop(db);
+
+        let table = read_txn.open_table(BOOKINGS)?;
+        let mut count = 0usize;
+
+        for entry in table.iter()? {
+            let (_key, value) = entry?;
+            let booking: Booking = self.deserialize(value.value())?;
+            if booking.user_id.to_string() == user_id
+                && booking.start_time.date_naive() == booking_date
+                && booking.status != BookingStatus::Cancelled
+            {
+                count += 1;
+            }
+        }
+
+        Ok(count)
     }
 
     /// Delete a booking

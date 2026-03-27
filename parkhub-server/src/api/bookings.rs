@@ -190,25 +190,29 @@ pub async fn create_booking(
             .await
             .parse()
             .unwrap_or(0.0);
-        let max_per_day: i32 = read_admin_setting(&rg.db, "max_bookings_per_day")
+        let max_per_day: i32 = rg
+            .db
+            .get_setting("max_bookings_per_day")
             .await
-            .parse()
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse().ok())
             .unwrap_or(0);
 
         let same_day_count = if max_per_day > 0 {
-            let user_bookings = rg
-                .db
-                .list_bookings_by_user(&auth_user.user_id.to_string())
-                .await
-                .unwrap_or_default();
             let booking_date = req.start_time.date_naive();
-            user_bookings
-                .iter()
-                .filter(|b| {
-                    b.start_time.date_naive() == booking_date
-                        && b.status != BookingStatus::Cancelled
+            rg.db
+                .count_bookings_for_user_on_day(&auth_user.user_id.to_string(), booking_date)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!(
+                        error = %e,
+                        user_id = %auth_user.user_id,
+                        booking_date = %booking_date,
+                        "Failed to count same-day bookings from canonical table"
+                    );
+                    0
                 })
-                .count()
         } else {
             0
         };
