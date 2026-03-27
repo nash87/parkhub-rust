@@ -624,7 +624,7 @@ pub async fn compliance_report_pdf(State(_state): State<SharedState>) -> impl In
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::<()>::error(
                 "PDF_ERROR",
-                &format!("Failed to generate compliance PDF: {e}"),
+                format!("Failed to generate compliance PDF: {e}"),
             )),
         )
             .into_response(),
@@ -650,6 +650,7 @@ fn generate_compliance_pdf(
         ops.push(Op::EndTextSection);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn hline(ops: &mut Vec<Op>, x1: Mm, x2: Mm, y: Mm, r: f32, g: f32, b: f32, thickness: f32) {
         ops.push(Op::SetOutlineColor {
             col: Color::Rgb(Rgb::new(r, g, b, None)),

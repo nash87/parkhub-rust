@@ -183,7 +183,7 @@ mod tests {
             created_at: now,
         };
 
-        let mut notifications = vec![older.clone(), newer.clone()];
+        let mut notifications = [older.clone(), newer.clone()];
         // Sort descending — same logic as list_notifications handler
         notifications.sort_by(|a, b| b.created_at.cmp(&a.created_at));
 
@@ -222,7 +222,7 @@ mod tests {
         let notif_id = Uuid::new_v4();
         let now = chrono::Utc::now();
 
-        let notifications = vec![Notification {
+        let notifications = [Notification {
             id: notif_id,
             user_id,
             title: "Test".into(),
@@ -249,7 +249,7 @@ mod tests {
         let now = chrono::Utc::now();
 
         // User A's notifications
-        let user_a_notifications = vec![Notification {
+        let user_a_notifications = [Notification {
             id: Uuid::new_v4(),
             user_id: user_a,
             title: "A's notif".into(),
@@ -272,7 +272,7 @@ mod tests {
         let user_id = Uuid::new_v4();
         let now = chrono::Utc::now();
 
-        let notifications = vec![
+        let notifications = [
             Notification {
                 id: Uuid::new_v4(),
                 user_id,
