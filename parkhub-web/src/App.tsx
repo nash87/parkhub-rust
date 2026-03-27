@@ -111,8 +111,12 @@ function LoadingSplash() {
 function useThemeLoader() {
   useEffect(() => {
     fetch('/api/v1/theme')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then(res => {
+        if (!res) return;
         const key = res?.data?.use_case?.key;
         if (key) document.documentElement.dataset.usecase = key;
       })
