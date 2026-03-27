@@ -300,10 +300,10 @@ mod tests {
     #[test]
     fn occupancy_rate_zero_when_no_slots() {
         // Simulates the calculation when total_slots == 0
-        let total_slots: u64 = 0;
-        let active_bookings: u64 = 10;
-        let rate = if total_slots > 0 {
-            (active_bookings as f64 / total_slots as f64 * 100.0).min(100.0)
+        let total_slots: f64 = 0.0;
+        let active_bookings: f64 = 10.0;
+        let rate = if total_slots > 0.0 {
+            (active_bookings / total_slots * 100.0).min(100.0)
         } else {
             0.0
         };
@@ -313,9 +313,9 @@ mod tests {
     #[test]
     fn occupancy_rate_clamped_at_100() {
         // More bookings than slots should not exceed 100%
-        let total_slots: u64 = 5;
-        let active_bookings: u64 = 10;
-        let rate = (active_bookings as f64 / total_slots as f64 * 100.0).min(100.0);
+        let total_slots: f64 = 5.0;
+        let active_bookings: f64 = 10.0;
+        let rate = (active_bookings / total_slots * 100.0).min(100.0);
         assert_eq!(rate, 100.0);
     }
 
@@ -350,7 +350,7 @@ mod tests {
 
     #[test]
     fn revenue_summary_multiple_points_sorted() {
-        let mut points = vec![
+        let mut points = [
             RevenueSummaryPoint {
                 date: "2026-03-25".to_string(),
                 total_revenue: 50.0,

@@ -448,7 +448,7 @@ mod tests {
 
     #[test]
     fn test_all_tiers_have_different_colors() {
-        let colors = vec![
+        let colors = [
             PricingTier::Economy.default_color(),
             PricingTier::Standard.default_color(),
             PricingTier::Premium.default_color(),
