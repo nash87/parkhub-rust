@@ -90,7 +90,7 @@ describe('API client', () => {
     expect(JSON.parse(opts.body)).toEqual({ username: 'admin', password: 'demo' });
   });
 
-  it('handles 401 by clearing in-memory token and redirecting to /login', async () => {
+  it('handles 401 by clearing in-memory token and dispatching auth:unauthorized', async () => {
     setInMemoryToken('expired-token');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -99,12 +99,17 @@ describe('API client', () => {
       json: () => Promise.resolve({ error: { code: 'UNAUTHORIZED', message: 'Expired' } }),
     });
 
+    const handler = vi.fn();
+    window.addEventListener('auth:unauthorized', handler);
+
     const result = await api.me();
 
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('UNAUTHORIZED');
     expect(getInMemoryToken()).toBeNull();
-    expect(window.location.href).toBe('/login');
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener('auth:unauthorized', handler);
   });
 
   it('returns structured error for non-OK responses', async () => {

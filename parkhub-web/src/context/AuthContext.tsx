@@ -24,6 +24,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }).finally(() => setLoading(false));
   }, []);
 
+  // When any API call receives a 401 the client dispatches this event.
+  // Clear the user so ProtectedRoute can redirect via React Router
+  // instead of a hard page reload (which caused an infinite loop).
+  useEffect(() => {
+    const onUnauthorized = () => setUser(null);
+    window.addEventListener('auth:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', onUnauthorized);
+  }, []);
+
   async function login(username: string, password: string) {
     const res = await api.login(username, password);
     if (res.success && res.data?.tokens?.access_token) {
