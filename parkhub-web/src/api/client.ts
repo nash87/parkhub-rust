@@ -38,7 +38,10 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<ApiResp
 
     if (res.status === 401) {
       _inMemoryToken = null;
-      window.location.href = '/login';
+      // Notify AuthProvider so it can clear user state.
+      // ProtectedRoute handles the redirect via React Router — no hard
+      // page reload, which previously caused an infinite loop.
+      window.dispatchEvent(new Event('auth:unauthorized'));
       return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
     }
 

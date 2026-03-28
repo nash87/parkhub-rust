@@ -110,7 +110,7 @@ function LoadingSplash() {
 /** Fetch /api/v1/theme on mount and apply use-case CSS theme + load translation overrides */
 function useThemeLoader() {
   useEffect(() => {
-    fetch('/api/v1/theme')
+    fetch('/api/v1/theme', { credentials: 'include' })
       .then(r => {
         if (!r.ok) return null;
         return r.json();
