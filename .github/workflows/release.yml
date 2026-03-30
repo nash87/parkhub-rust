@@ -170,7 +170,7 @@ jobs:
         run: sha256sum parkhub-linux-x64.tar.gz parkhub-windows-x64.zip > checksums.txt
 
       - name: Attest release artifacts
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             parkhub-linux-x64.tar.gz
