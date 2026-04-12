@@ -3,7 +3,7 @@
 //! Uses real HTTP requests via reqwest to create all entities.
 //! Respects rate limits and retries on 429.
 
-use crate::common::{admin_login, auth_delete, auth_get, auth_post, TestServer};
+use crate::common::{admin_login, auth_delete, auth_post, TestServer};
 use crate::simulation::generator;
 use crate::simulation::profiles::SimProfile;
 use chrono::{Duration, Utc};
@@ -38,26 +38,46 @@ pub struct InjectionResults {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Retry helper
+// Retry helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Retry a request if we get 429 (rate limited).
-async fn retry_on_429<F, Fut>(max_retries: u32, mut f: F) -> (u16, Value)
-where
-    F: FnMut() -> Fut,
-    Fut: std::future::Future<Output = (u16, Value)>,
-{
+/// Retry a POST request if we get 429 (rate limited).
+async fn retry_on_429_post(
+    srv: &TestServer,
+    token: &str,
+    path: &str,
+    body: &Value,
+    max_retries: u32,
+) -> (u16, Value) {
     for attempt in 0..max_retries {
-        let (status, body) = f().await;
+        let (status, resp_body) = auth_post(srv, token, path, body).await;
         if status != 429 {
-            return (status, body);
+            return (status, resp_body);
         }
         // Exponential backoff: 200ms, 400ms, 800ms, ...
         let delay = StdDuration::from_millis(200 * 2u64.pow(attempt));
         tokio::time::sleep(delay).await;
     }
     // Last attempt
-    f().await
+    auth_post(srv, token, path, body).await
+}
+
+/// Retry a DELETE request if we get 429 (rate limited).
+async fn retry_on_429_delete(
+    srv: &TestServer,
+    token: &str,
+    path: &str,
+    max_retries: u32,
+) -> (u16, Value) {
+    for attempt in 0..max_retries {
+        let (status, resp_body) = auth_delete(srv, token, path).await;
+        if status != 429 {
+            return (status, resp_body);
+        }
+        let delay = StdDuration::from_millis(200 * 2u64.pow(attempt));
+        tokio::time::sleep(delay).await;
+    }
+    auth_delete(srv, token, path).await
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -140,22 +160,17 @@ pub async fn inject_bookings(
                 // Try to double-book a recently-booked slot
                 if let Some(_last_booking_id) = results.booking_ids.last() {
                     let start = Instant::now();
-                    let (status, _) = retry_on_429(3, || {
-                        auth_post(
-                            srv,
-                            user_token,
-                            "/api/v1/bookings",
-                            &serde_json::json!({
-                                "lot_id": lot_id,
-                                "slot_id": slot_id,
-                                "start_time": start_time.to_rfc3339(),
-                                "duration_minutes": duration,
-                                "vehicle_id": "00000000-0000-0000-0000-000000000000",
-                                "license_plate": plate,
-                            }),
-                        )
-                    })
-                    .await;
+                    let conflict_body = serde_json::json!({
+                        "lot_id": lot_id,
+                        "slot_id": slot_id,
+                        "start_time": start_time.to_rfc3339(),
+                        "duration_minutes": duration,
+                        "vehicle_id": "00000000-0000-0000-0000-000000000000",
+                        "license_plate": plate,
+                    });
+                    let (status, _) = retry_on_429_post(
+                        srv, user_token, "/api/v1/bookings", &conflict_body, 3,
+                    ).await;
                     results.latencies_ms.push(start.elapsed().as_millis() as u64);
 
                     if status == 409 {
@@ -171,22 +186,17 @@ pub async fn inject_bookings(
 
             // Normal booking
             let start = Instant::now();
-            let (status, body) = retry_on_429(3, || {
-                auth_post(
-                    srv,
-                    user_token,
-                    "/api/v1/bookings",
-                    &serde_json::json!({
-                        "lot_id": lot_id,
-                        "slot_id": slot_id,
-                        "start_time": start_time.to_rfc3339(),
-                        "duration_minutes": duration,
-                        "vehicle_id": "00000000-0000-0000-0000-000000000000",
-                        "license_plate": plate,
-                    }),
-                )
-            })
-            .await;
+            let booking_body = serde_json::json!({
+                "lot_id": lot_id,
+                "slot_id": slot_id,
+                "start_time": start_time.to_rfc3339(),
+                "duration_minutes": duration,
+                "vehicle_id": "00000000-0000-0000-0000-000000000000",
+                "license_plate": plate,
+            });
+            let (status, body) = retry_on_429_post(
+                srv, user_token, "/api/v1/bookings", &booking_body, 3,
+            ).await;
             results.latencies_ms.push(start.elapsed().as_millis() as u64);
 
             match status {
@@ -198,14 +208,10 @@ pub async fn inject_bookings(
                         // Maybe cancel this booking
                         if profile.enable_cancellations && generator::should_cancel() {
                             let cancel_start = Instant::now();
-                            let (cs, _) = retry_on_429(3, || {
-                                auth_delete(
-                                    srv,
-                                    user_token,
-                                    &format!("/api/v1/bookings/{id}"),
-                                )
-                            })
-                            .await;
+                            let cancel_path = format!("/api/v1/bookings/{id}");
+                            let (cs, _) = retry_on_429_delete(
+                                srv, user_token, &cancel_path, 3,
+                            ).await;
                             results.latencies_ms.push(cancel_start.elapsed().as_millis() as u64);
 
                             if cs == 200 || cs == 204 {
@@ -220,15 +226,10 @@ pub async fn inject_bookings(
 
                     // If conflict and waitlist is enabled, try to join waitlist
                     if profile.enable_waitlist && generator::should_waitlist() {
-                        let (ws, _) = retry_on_429(3, || {
-                            auth_post(
-                                srv,
-                                user_token,
-                                "/api/v1/waitlist",
-                                &serde_json::json!({ "lot_id": lot_id }),
-                            )
-                        })
-                        .await;
+                        let waitlist_body = serde_json::json!({ "lot_id": lot_id });
+                        let (ws, _) = retry_on_429_post(
+                            srv, user_token, "/api/v1/waitlist", &waitlist_body, 3,
+                        ).await;
                         if ws == 200 || ws == 201 {
                             results.waitlist_entries += 1;
                         }
@@ -257,24 +258,19 @@ pub async fn inject_bookings(
                     .format("%Y-%m-%d")
                     .to_string();
 
-                let (status, _) = retry_on_429(3, || {
-                    auth_post(
-                        srv,
-                        user_token,
-                        "/api/v1/recurring-bookings",
-                        &serde_json::json!({
-                            "lot_id": lot_id,
-                            "slot_id": slot_id,
-                            "days_of_week": [1, 2, 3, 4, 5],
-                            "start_date": today,
-                            "end_date": end,
-                            "start_time": "08:00",
-                            "end_time": "17:00",
-                            "vehicle_plate": generator::random_license_plate(),
-                        }),
-                    )
-                })
-                .await;
+                let recurring_body = serde_json::json!({
+                    "lot_id": lot_id,
+                    "slot_id": slot_id,
+                    "days_of_week": [1, 2, 3, 4, 5],
+                    "start_date": today,
+                    "end_date": end,
+                    "start_time": "08:00",
+                    "end_time": "17:00",
+                    "vehicle_plate": generator::random_license_plate(),
+                });
+                let (status, _) = retry_on_429_post(
+                    srv, user_token, "/api/v1/recurring-bookings", &recurring_body, 3,
+                ).await;
 
                 if status == 200 || status == 201 {
                     results.recurring_created += 1;

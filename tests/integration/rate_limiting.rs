@@ -90,7 +90,7 @@ async fn rate_limit_response_contains_retry_after() {
     let srv = start_test_server().await;
 
     // Exhaust the login rate limit
-    let mut retry_after_found = false;
+    let mut _retry_after_found = false;
 
     for _ in 0..15 {
         let resp = srv
@@ -112,7 +112,7 @@ async fn rate_limit_response_contains_retry_after() {
                 resp.headers().contains_key("x-retry-after");
 
             if has_retry_after || has_rate_limit_remaining || has_rate_limit_after {
-                retry_after_found = true;
+                _retry_after_found = true;
             }
             // Even without the header, the 429 itself is the important signal
             break;

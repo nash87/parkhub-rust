@@ -130,10 +130,11 @@ mod tests {
         let mut latencies: Vec<u64> = (1..=100).collect();
         latencies.sort_unstable();
 
-        let p50_idx = ((50.0 / 100.0) * latencies.len() as f64) as usize;
+        // Nearest-rank percentile: index = ceil(P/100 * N) - 1
+        let p50_idx = ((50.0 / 100.0) * latencies.len() as f64).ceil() as usize - 1;
         assert_eq!(latencies[p50_idx.min(latencies.len() - 1)], 50);
 
-        let p95_idx = ((95.0 / 100.0) * latencies.len() as f64) as usize;
+        let p95_idx = ((95.0 / 100.0) * latencies.len() as f64).ceil() as usize - 1;
         assert_eq!(latencies[p95_idx.min(latencies.len() - 1)], 95);
     }
 }

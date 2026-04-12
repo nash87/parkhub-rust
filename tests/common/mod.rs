@@ -63,14 +63,18 @@ fn server_binary() -> PathBuf {
 }
 
 /// Start a fresh test server and wait until it responds to `/health`.
+///
+/// Two-phase start: first launch creates config.toml with defaults, then we
+/// patch it to enable self-registration and restart.
 pub async fn start_test_server() -> TestServer {
     let port = free_port();
     let tmp_dir = tempfile::tempdir().expect("create temp dir");
     let data_dir = tmp_dir.path().to_path_buf();
-
     let binary = server_binary();
+    let config_path = data_dir.join("config.toml");
 
-    let child = Command::new(&binary)
+    // Phase 1: start server so it creates its default config.toml
+    let mut child = Command::new(&binary)
         .args([
             "--headless",
             "--unattended",
@@ -93,7 +97,7 @@ pub async fn start_test_server() -> TestServer {
         .build()
         .expect("build reqwest client");
 
-    // Poll `/health` until the server is up (max 15 seconds).
+    // Wait for first start to create config and become healthy
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
         if Instant::now() > deadline {
@@ -102,6 +106,51 @@ pub async fn start_test_server() -> TestServer {
         match client.get(format!("{url}/health")).send().await {
             Ok(resp) if resp.status().is_success() => break,
             _ => tokio::time::sleep(Duration::from_millis(100)).await,
+        }
+    }
+
+    // Phase 2: patch config.toml to enable self-registration, then restart
+    if config_path.exists() {
+        let content = std::fs::read_to_string(&config_path).expect("read config");
+        let patched = content.replace(
+            "allow_self_registration = false",
+            "allow_self_registration = true",
+        );
+        std::fs::write(&config_path, patched).expect("write patched config");
+
+        // Kill and restart
+        let _ = child.kill();
+        let _ = child.wait();
+
+        let child2 = Command::new(&binary)
+            .args([
+                "--headless",
+                "--unattended",
+                "--port",
+                &port.to_string(),
+                "--data-dir",
+                &data_dir.to_string_lossy(),
+            ])
+            .env("DEMO_MODE", "true")
+            .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
+            .env("RUST_LOG", "warn")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap_or_else(|e| panic!("Failed to restart server: {}", e));
+
+        child = child2;
+
+        // Wait for restart
+        let deadline = Instant::now() + Duration::from_secs(15);
+        loop {
+            if Instant::now() > deadline {
+                panic!("Server did not restart within 15 seconds on port {port}");
+            }
+            match client.get(format!("{url}/health")).send().await {
+                Ok(resp) if resp.status().is_success() => break,
+                _ => tokio::time::sleep(Duration::from_millis(100)).await,
+            }
         }
     }
 
@@ -148,10 +197,13 @@ pub async fn admin_login(srv: &TestServer) -> (String, String) {
 }
 
 /// Register a new user.  Returns `(access_token, user_id, username)`.
+///
+/// The server generates the username from the email prefix (part before @).
 pub async fn create_test_user(srv: &TestServer, suffix: &str) -> (String, String, String) {
-    let username = format!("testuser_{suffix}");
-    let email = format!("test_{suffix}@example.com");
+    let email = format!("testuser_{suffix}@example.com");
     let password = "TestPass123!";
+    // Server derives username from email prefix
+    let expected_username = format!("testuser_{suffix}");
 
     let resp = srv
         .client
@@ -161,33 +213,35 @@ pub async fn create_test_user(srv: &TestServer, suffix: &str) -> (String, String
             "password": password,
             "password_confirmation": password,
             "name": format!("Test User {suffix}"),
-            "username": username,
         }))
         .send()
         .await
         .expect("register request");
 
-    // Registration may return 200 or 201
+    let status = resp.status();
     assert!(
-        resp.status().is_success() || resp.status().as_u16() == 201,
+        status.is_success() || status.as_u16() == 201,
         "register failed: {} body: {:?}",
-        resp.status(),
+        status,
         resp.text().await.unwrap_or_default()
     );
 
-    // Now log in to get a token
+    // Now log in to get a token (username = email prefix)
     let resp = srv
         .client
         .post(format!("{}/api/v1/auth/login", srv.url))
         .json(&serde_json::json!({
-            "username": username,
+            "username": expected_username,
             "password": password,
         }))
         .send()
         .await
         .expect("login after register");
 
-    assert!(resp.status().is_success(), "login after register failed");
+    assert!(
+        resp.status().is_success(),
+        "login after register failed for username '{expected_username}'"
+    );
     let body: Value = resp.json().await.expect("parse json");
     let token = body["data"]["tokens"]["access_token"]
         .as_str()
@@ -197,7 +251,7 @@ pub async fn create_test_user(srv: &TestServer, suffix: &str) -> (String, String
         .as_str()
         .expect("user id")
         .to_string();
-    (token, user_id, username)
+    (token, user_id, expected_username)
 }
 
 /// Create a parking lot (requires admin token).  Returns `lot_id`.
@@ -211,8 +265,8 @@ pub async fn create_test_lot(srv: &TestServer, token: &str, name: &str) -> Strin
             "address": "123 Test Street",
             "latitude": 48.137154,
             "longitude": 11.576124,
-            "total_slots": 0,
-            "available_slots": 0,
+            "total_slots": 10,
+            "available_slots": 10,
             "floors": [],
             "amenities": [],
             "pricing": {
