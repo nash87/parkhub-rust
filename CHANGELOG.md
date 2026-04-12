@@ -7,6 +7,47 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.5.0] - 2026-03-25
+
+### Added
+- **Mobile Booking**: 3 endpoints + tests
+- **Notification Center**: 5 endpoints with 8 notification types and enriched metadata
+- Integration test suite (10 suites)
+- 1-month booking simulation engine (3 profiles)
+- k6 load test profiles (small/campus/enterprise)
+- axe-core WCAG2aa accessibility testing
+- Visual regression testing with Playwright
+- Lighthouse CI with LCP threshold
+- 6 new E2E test suites: multi-language, offline-reconnect, concurrent-users, admin-crud-complete, booking-edge-cases, security-flows
+
+### Changed
+- Rust toolchain pinned to 1.94.1 via rust-toolchain.toml
+- CI modernized: actionlint v1.7.12, setup-qemu-action v4
+
+### Fixed
+- Landing page infinite loop (event-driven 401 handling)
+- SMS/WhatsApp notification toggle gating
+
+### Security
+- Removed internal references from public repos
+- 6 critical security fixes (OAuth, SAML, importBackup, GraphQL, N+1)
+
+---
+
+## [4.4.0] - 2026-03-25
+
+### Added
+- **Notification Center module** (5 endpoints)
+- **Mobile Booking module**
+- Copilot Agent CI/CD integration
+- GitHub Audit Kit
+
+### Changed
+- Branch cleanup: 42 -> 11 branches
+- CI hardened with auto-merge for Copilot PRs
+
+---
+
 ## [4.3.0] - 2026-03-23
 
 ### Added

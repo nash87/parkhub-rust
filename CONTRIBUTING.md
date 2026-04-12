@@ -57,7 +57,7 @@ duplicate work.
 
 | Tool | Minimum version | Install |
 |------|----------------|---------|
-| Rust (stable) | 1.94 | See `rust-toolchain.toml` |
+| Rust (stable) | 1.94+ | See `rust-toolchain.toml` |
 | Node.js | 22 | [nodejs.org](https://nodejs.org) |
 | npm | 10 | bundled with Node.js |
 | Docker | any recent | optional, for integration testing |
@@ -273,6 +273,67 @@ npx playwright show-report
 
 > E2E tests expect the server to be running on `http://localhost:7878`.
 > Start it first with `cargo run --package parkhub-server --no-default-features --features headless -- --headless --unattended --port 7878`.
+
+### Integration Tests
+
+Integration tests exercise cross-module interactions and full API lifecycles:
+
+```bash
+# Run all integration tests (headless, no GUI deps)
+cargo test --package parkhub-server --no-default-features --features headless \
+  -- --test-threads=1 integration
+
+# Run the 1-month booking simulation
+cargo test --package parkhub-server --no-default-features --features headless \
+  -- simulation
+```
+
+### Running the Simulation Engine
+
+The booking simulation creates realistic 30-day booking patterns with configurable profiles:
+
+```bash
+# Default profile (small office, 10 users)
+cargo test --package parkhub-server --no-default-features --features headless \
+  -- simulation_small
+
+# Campus profile (50 users, multi-lot)
+cargo test --package parkhub-server --no-default-features --features headless \
+  -- simulation_campus
+```
+
+### Running k6 Load Tests
+
+Performance testing with [k6](https://grafana.com/docs/k6/):
+
+```bash
+# Install k6
+brew install k6  # macOS
+# or: https://grafana.com/docs/k6/latest/set-up/install-k6/
+
+# Run smoke test (quick sanity check)
+k6 run tests/load/smoke.js
+
+# Run sustained load test (50 VUs, 5 minutes)
+k6 run tests/load/load.js
+
+# Run stress test (100 VUs, 10 minutes)
+k6 run tests/load/stress.js
+
+# Run spike test (1 → 200 → 1 VUs)
+k6 run tests/load/spike.js
+
+# Custom base URL
+K6_BASE_URL=http://localhost:7878 k6 run tests/load/load.js
+```
+
+### Running with Docker Compose Test Profile
+
+```bash
+docker compose -f docker-compose.yml -f test.yml up -d
+cargo test --package parkhub-server --no-default-features --features headless
+docker compose -f docker-compose.yml -f test.yml down
+```
 
 ### Full pre-PR check suite
 
