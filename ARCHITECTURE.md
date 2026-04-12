@@ -319,7 +319,7 @@ Full OpenAPI 3.0 spec generated via `utoipa` crate, served at `/swagger-ui/`.
 
 | Type          | Count | Framework       | Location                      |
 |--------------|-------|-----------------|-------------------------------|
-| Unit tests    | ~493  | `#[test]`       | Inline `mod tests` blocks     |
+| Unit tests    | ~550  | `#[test]`       | Inline `mod tests` blocks     |
 | Integration   | ~30   | `#[tokio::test]`| `integration_tests.rs`        |
 
 Tests run with `cargo test` in the workspace root. Integration tests create
@@ -332,9 +332,57 @@ temporary redb databases and exercise the full handler → DB round-trip.
 | Unit/component| 32    | Vitest + Testing Library | `src/**/*.test.{ts,tsx}` |
 | E2E           | 14    | Playwright       | `e2e/*.spec.ts`              |
 
-### System E2E (Maestro)
+### System E2E
 
-5 YAML-based E2E flows in `/e2e/` testing the full stack via Maestro.
+15 Playwright spec files in the root `/e2e/` directory covering full-stack
+integration: API flows, booking lifecycle, admin CRUD, GDPR, PWA, accessibility,
+multi-language, offline resilience, concurrent user conflicts, security flows,
+booking edge cases, and visual regression.
+
+### Integration Tests
+
+10 integration test suites covering cross-module interactions:
+- Auth flow end-to-end (login, refresh, session management)
+- Booking lifecycle (create, modify, cancel, check-in, check-out)
+- Admin CRUD operations (lots, slots, zones, announcements)
+- Concurrent booking conflict detection
+- Credit system integration (deduction, refill, history)
+- Notification delivery pipeline
+- Webhook delivery and retry logic
+- GDPR data export and erasure
+- Module toggle validation (enabled/disabled states)
+- Security boundary enforcement (RBAC, rate limiting)
+
+### Simulation Engine
+
+A 1-month booking cycle simulation engine with 3 configurable profiles:
+
+| Profile | VUs | Duration | Scenario |
+|---------|-----|----------|----------|
+| Small office | 10 | 30 days | Single lot, standard hours |
+| Campus | 50 | 30 days | Multiple lots, recurring bookings, guest passes |
+| Enterprise | 200 | 30 days | Multi-tenant, dynamic pricing, high concurrency |
+
+The simulation creates realistic booking patterns including peak hours, cancellations,
+no-shows, and waitlist activity. Run via `cargo test --test simulation` or the
+E2E full-workflow spec.
+
+### Test Pyramid
+
+```
+           ┌──────────┐
+           │  29 E2E  │  Playwright (browser + API)
+           │  specs   │
+          ┌┴──────────┴┐
+          │  10 Integ.  │  Cross-module API tests
+          │  suites     │
+         ┌┴────────────┴┐
+         │  ~550 Unit    │  Rust #[test] + Vitest
+         │  tests        │
+        ┌┴──────────────┴┐
+        │  k6 Load Tests  │  smoke / load / stress / spike
+        └────────────────┘
+```
 
 ## Deployment
 
