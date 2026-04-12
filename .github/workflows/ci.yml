@@ -170,8 +170,8 @@ jobs:
         env:
           RUST_LOG: warn
 
-  ci:
-    name: CI
+  required:
+    name: Required checks
     if: always()
     needs: [actionlint, fmt, check, clippy, test, frontend, integration]
     runs-on: ubuntu-latest
