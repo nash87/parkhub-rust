@@ -38,15 +38,13 @@ vi.mock('@phosphor-icons/react', () =>
 // ── Minimal route guards (replicate App.tsx logic) ──
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { useAuth } = require('../context/AuthContext');
-  const { user } = useAuth();
+  const user = mockUser.current;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { useAuth } = require('../context/AuthContext');
-  const { user } = useAuth();
+  const user = mockUser.current;
   if (!user || !['admin', 'superadmin'].includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
