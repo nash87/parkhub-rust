@@ -113,15 +113,12 @@ pub mod per_ip {
         // their direct peer address regardless of the header value.
         let is_trusted_proxy = peer_ip.is_some_and(|ip| is_private_ip(&ip));
 
-        if is_trusted_proxy {
-            if let Some(forwarded) = forwarded_for {
-                if let Some(first_ip) = forwarded.split(',').next() {
-                    if let Ok(ip) = first_ip.trim().parse::<IpAddr>() {
+        if is_trusted_proxy
+            && let Some(forwarded) = forwarded_for
+                && let Some(first_ip) = forwarded.split(',').next()
+                    && let Ok(ip) = first_ip.trim().parse::<IpAddr>() {
                         return ip;
                     }
-                }
-            }
-        }
 
         // Fall back to direct connection IP
         peer_ip.unwrap_or_else(|| IpAddr::from([127, 0, 0, 1]))

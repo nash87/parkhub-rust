@@ -271,11 +271,10 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
                     )
                     .unwrap_or(u32::MAX);
                     let snapshot = WsEvent::occupancy_update(&lot.id.to_string(), available, total);
-                    if let Ok(json) = serde_json::to_string(&snapshot) {
-                        if sender.send(Message::Text(json.into())).await.is_err() {
+                    if let Ok(json) = serde_json::to_string(&snapshot)
+                        && sender.send(Message::Text(json.into())).await.is_err() {
                             return; // Client disconnected during snapshot
                         }
-                    }
                 }
             }
         }
@@ -294,11 +293,10 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
             event = rx.recv() => {
                 match event {
                     Ok(ws_event) => {
-                        if let Ok(json) = serde_json::to_string(&ws_event) {
-                            if sender.send(Message::Text(json.into())).await.is_err() {
+                        if let Ok(json) = serde_json::to_string(&ws_event)
+                            && sender.send(Message::Text(json.into())).await.is_err() {
                                 break; // Client disconnected
                             }
-                        }
                     }
                     Err(broadcast::error::RecvError::Lagged(n)) => {
                         warn!("WebSocket client lagged, skipped {n} messages");

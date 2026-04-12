@@ -186,16 +186,14 @@ async fn check_cancellation_count(
         // Check via admin endpoint
         let (status, body) = auth_get(srv, &ctx.admin_token, "/api/v1/admin/bookings").await;
 
-        if status == 200 {
-            if let Some(bookings) = body["data"].as_array() {
-                if let Some(bk) = bookings
+        if status == 200
+            && let Some(bookings) = body["data"].as_array()
+                && let Some(bk) = bookings
                     .iter()
                     .find(|b| b["id"].as_str() == Some(id.as_str()))
                 {
                     let _is_cancelled = bk["status"].as_str() == Some("cancelled");
                 }
-            }
-        }
     }
 
     // If we can't verify (no admin endpoint), pass
@@ -238,8 +236,8 @@ async fn check_waitlist(srv: &TestServer, ctx: &SimContext, results: &InjectionR
     // Spot-check waitlist entries
     for (token, _, _) in ctx.users.iter().take(5) {
         let (status, body) = auth_get(srv, token, "/api/v1/waitlist").await;
-        if status == 200 {
-            if let Some(entries) = body["data"].as_array() {
+        if status == 200
+            && let Some(entries) = body["data"].as_array() {
                 for entry in entries {
                     let wl_status = entry["status"].as_str().unwrap_or("unknown");
                     // All valid terminal or active states
@@ -252,7 +250,6 @@ async fn check_waitlist(srv: &TestServer, ctx: &SimContext, results: &InjectionR
                     }
                 }
             }
-        }
     }
 
     true

@@ -27,11 +27,10 @@ pub async fn static_handler(uri: Uri) -> impl IntoResponse {
     }
 
     // For SPA routing, serve index.html for non-asset paths
-    if !path.contains('.') || path.is_empty() {
-        if let Some(file) = WebAssets::get("index.html") {
+    if (!path.contains('.') || path.is_empty())
+        && let Some(file) = WebAssets::get("index.html") {
             return serve_file("index.html", file);
         }
-    }
 
     // 404 for missing assets
     (StatusCode::NOT_FOUND, "Not found").into_response()

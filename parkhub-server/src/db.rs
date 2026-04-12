@@ -1024,8 +1024,8 @@ impl Database {
         drop(db);
         let removed = {
             let mut table = write_txn.open_table(PARKING_SLOTS)?;
-            let r = table.remove(id)?.is_some();
-            r
+            
+            table.remove(id)?.is_some()
         };
         if removed && !keys_to_remove.is_empty() {
             let mut idx_table = write_txn.open_table(SLOTS_BY_LOT)?;
@@ -1243,13 +1243,12 @@ impl Database {
             let mut table = write_txn.open_table(BOOKINGS)?;
             let result = table.remove(id)?;
             // Remove secondary index entry if booking was found
-            if result.is_some() {
-                if let Some(ref uid) = user_id_opt {
+            if result.is_some()
+                && let Some(ref uid) = user_id_opt {
                     let mut idx = write_txn.open_table(BOOKINGS_BY_USER)?;
                     let idx_key = format!("{uid}:{id}");
                     idx.remove(idx_key.as_str())?;
                 }
-            }
             result.is_some()
         };
         write_txn.commit()?;
@@ -1959,26 +1958,22 @@ impl Database {
         for entry in table.iter()? {
             let (_, value) = entry?;
             let tx: parkhub_common::models::CreditTransaction = self.deserialize(value.value())?;
-            if let Some(uid) = user_id_filter {
-                if tx.user_id != uid {
+            if let Some(uid) = user_id_filter
+                && tx.user_id != uid {
                     continue;
                 }
-            }
-            if let Some(ref t) = type_filter {
-                if &tx.transaction_type != t {
+            if let Some(ref t) = type_filter
+                && &tx.transaction_type != t {
                     continue;
                 }
-            }
-            if let Some(f) = from {
-                if tx.created_at < f {
+            if let Some(f) = from
+                && tx.created_at < f {
                     continue;
                 }
-            }
-            if let Some(t) = to {
-                if tx.created_at > t {
+            if let Some(t) = to
+                && tx.created_at > t {
                     continue;
                 }
-            }
             transactions.push(tx);
         }
         transactions.sort_by(|a, b| b.created_at.cmp(&a.created_at));

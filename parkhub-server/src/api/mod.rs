@@ -1875,8 +1875,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route(
             "/metrics",
             get(move |req: Request<Body>| async move {
-                if let Ok(expected) = std::env::var("METRICS_TOKEN") {
-                    if !expected.is_empty() {
+                if let Ok(expected) = std::env::var("METRICS_TOKEN")
+                    && !expected.is_empty() {
                         let authorized = req
                             .headers()
                             .get(header::AUTHORIZATION)
@@ -1895,7 +1895,6 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
                             );
                         }
                     }
-                }
                 (
                     StatusCode::OK,
                     [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
