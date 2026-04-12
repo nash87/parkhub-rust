@@ -4,10 +4,8 @@
 //! test v1 and v2 webhooks, and delivery retry behavior.
 
 use crate::common::{
-    admin_login, auth_delete, auth_get, auth_post, create_test_booking, create_test_lot,
-    create_test_slot, create_test_user, start_test_server,
+    admin_login, auth_delete, auth_get, auth_post, create_test_user, start_test_server,
 };
-use serde_json::Value;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Webhook v1 CRUD

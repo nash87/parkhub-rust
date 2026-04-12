@@ -141,7 +141,7 @@ pub fn random_email(idx: usize) -> String {
 }
 
 /// Generate a random full name.
-pub fn random_name() -> String {
+pub fn _random_name() -> String {
     let mut rng = rand::rng();
     let first = FIRST_NAMES[rng.random_range(0..FIRST_NAMES.len())];
     let last = LAST_NAMES[rng.random_range(0..LAST_NAMES.len())];

@@ -57,8 +57,8 @@ fn server_binary() -> PathBuf {
     }
     panic!(
         "parkhub-server binary not found. Build with `cargo build -p parkhub-server` first.\n\
-         Searched: {:?}, {:?}, {:?}",
-        debug, release, ws_debug
+         Searched: {}, {}, {}",
+        debug.display(), release.display(), ws_debug.display()
     );
 }
 
@@ -89,7 +89,7 @@ pub async fn start_test_server() -> TestServer {
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .unwrap_or_else(|e| panic!("Failed to start server at {:?}: {}", binary, e));
+        .unwrap_or_else(|e| panic!("Failed to start server at {}: {}", binary.display(), e));
 
     let url = format!("http://127.0.0.1:{}", port);
     let client = Client::builder()
@@ -100,9 +100,10 @@ pub async fn start_test_server() -> TestServer {
     // Wait for first start to create config and become healthy
     let deadline = Instant::now() + Duration::from_secs(15);
     loop {
-        if Instant::now() > deadline {
-            panic!("Server did not become healthy within 15 seconds on port {port}");
-        }
+        assert!(
+            Instant::now() <= deadline,
+            "Server did not become healthy within 15 seconds on port {port}"
+        );
         match client.get(format!("{url}/health")).send().await {
             Ok(resp) if resp.status().is_success() => break,
             _ => tokio::time::sleep(Duration::from_millis(100)).await,
@@ -144,9 +145,10 @@ pub async fn start_test_server() -> TestServer {
         // Wait for restart
         let deadline = Instant::now() + Duration::from_secs(15);
         loop {
-            if Instant::now() > deadline {
-                panic!("Server did not restart within 15 seconds on port {port}");
-            }
+            assert!(
+                Instant::now() <= deadline,
+                "Server did not restart within 15 seconds on port {port}"
+            );
             match client.get(format!("{url}/health")).send().await {
                 Ok(resp) if resp.status().is_success() => break,
                 _ => tokio::time::sleep(Duration::from_millis(100)).await,

@@ -8,7 +8,6 @@ use crate::common::{
     admin_login, auth_delete, auth_get, auth_post, auth_put, create_test_lot, create_test_slot,
     start_test_server,
 };
-use serde_json::Value;
 
 /// Helper: create a tenant via the admin API.  Returns `tenant_id`.
 async fn create_tenant(

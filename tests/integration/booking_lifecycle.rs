@@ -8,7 +8,6 @@ use crate::common::{
     admin_login, auth_delete, auth_get, auth_post, auth_put, create_test_booking, create_test_lot,
     create_test_slot, create_test_user, start_test_server,
 };
-use serde_json::Value;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Full booking lifecycle
@@ -96,7 +95,7 @@ async fn full_booking_lifecycle() {
     }
 
     // 7. Check in
-    let (status, body) = auth_post(
+    let (status, _body) = auth_post(
         &srv,
         &user_token,
         &format!("/api/v1/bookings/{booking_id}/checkin"),
