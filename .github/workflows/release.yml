@@ -34,7 +34,7 @@ jobs:
   build-linux:
     name: Build Linux
     needs: [validate-tag]
-    if: github.event_name != 'workflow_dispatch' || needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped'
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -89,7 +89,7 @@ jobs:
   build-windows:
     name: Build Windows
     needs: [validate-tag]
-    if: github.event_name != 'workflow_dispatch' || needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped'
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
     runs-on: windows-latest
     timeout-minutes: 90
     permissions:
