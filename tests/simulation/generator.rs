@@ -251,11 +251,7 @@ pub fn is_weekday(day_in_month: usize) -> bool {
 /// Traffic multiplier based on day type.
 /// Weekdays get 100% traffic, weekends get ~30%.
 pub fn day_traffic_multiplier(day_in_month: usize) -> f64 {
-    if is_weekday(day_in_month) {
-        1.0
-    } else {
-        0.3
-    }
+    if is_weekday(day_in_month) { 1.0 } else { 0.3 }
 }
 
 /// Pick a random lot index.

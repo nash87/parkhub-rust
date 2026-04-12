@@ -2,7 +2,7 @@
 //!
 //! Provides /health and /ready endpoints for monitoring and orchestration.
 
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;

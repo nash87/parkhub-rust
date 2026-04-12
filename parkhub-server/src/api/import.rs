@@ -3,7 +3,7 @@
 //! - `POST /api/v1/admin/users/import` — import users from CSV (admin only)
 //! - `POST /api/v1/absences/import/ical` — import absences from iCal (user-scoped)
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use base64::Engine;
 use chrono::Utc;
 use uuid::Uuid;
@@ -12,7 +12,7 @@ use parkhub_common::models::{Absence, AbsenceType};
 use parkhub_common::{ApiResponse, User, UserPreferences, UserRole};
 
 use super::hash_password_simple;
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

@@ -1,9 +1,9 @@
 //! Absence handlers: CRUD for user absences, team absences, absence patterns.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;

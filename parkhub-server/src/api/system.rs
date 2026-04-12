@@ -4,19 +4,19 @@
 //! None require authentication (they are public/infrastructure endpoints).
 
 use axum::{
+    Json,
     body::Body,
     extract::State,
     http::{HeaderName, HeaderValue, Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
-    Json,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::Instrument;
 
 use parkhub_common::{
-    ApiResponse, HandshakeRequest, HandshakeResponse, ServerStatus, PROTOCOL_VERSION,
+    ApiResponse, HandshakeRequest, HandshakeResponse, PROTOCOL_VERSION, ServerStatus,
 };
 
 use crate::AppState;
@@ -297,11 +297,7 @@ pub fn normalize_metric_path(path: &str) -> String {
         .map(|s| {
             let is_uuid = s.len() == 36 && s.chars().filter(|c| *c == '-').count() == 4;
             let is_numeric = !s.is_empty() && s.chars().all(|c| c.is_ascii_digit());
-            if is_uuid || is_numeric {
-                ":id"
-            } else {
-                s
-            }
+            if is_uuid || is_numeric { ":id" } else { s }
         })
         .collect::<Vec<_>>()
         .join("/")

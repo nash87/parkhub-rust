@@ -9,9 +9,9 @@
 //! - `PUT  /api/v1/admin/plugins/{id}/config` — update plugin config
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -608,9 +608,11 @@ mod tests {
     #[test]
     fn test_plugin_config_update_nonexistent() {
         let mut registry = PluginRegistry::new();
-        assert!(registry
-            .update_config("nonexistent", HashMap::new())
-            .is_none());
+        assert!(
+            registry
+                .update_config("nonexistent", HashMap::new())
+                .is_none()
+        );
     }
 
     #[test]

@@ -7,10 +7,10 @@
 //! - `GET  /api/v1/graphql/playground` — interactive GraphQL playground UI
 
 use axum::{
+    Extension, Json,
     extract::State,
     http::StatusCode,
     response::{Html, IntoResponse},
-    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -842,10 +842,12 @@ mod tests {
         let args = HashMap::new();
         let resp = execute_query("query", "booking", &args, "u1");
         assert!(!resp.errors.is_empty());
-        assert!(resp.errors[0]
-            .path
-            .as_ref()
-            .unwrap()
-            .contains(&"booking".to_string()));
+        assert!(
+            resp.errors[0]
+                .path
+                .as_ref()
+                .unwrap()
+                .contains(&"booking".to_string())
+        );
     }
 }

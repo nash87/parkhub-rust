@@ -4,7 +4,7 @@
 //! - `GET /api/v1/admin/analytics/revenue`        — daily revenue summary for last 30 days
 //! - `GET /api/v1/admin/analytics/popular-lots`   — top 10 lots by booking count
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::{Duration, Timelike, Utc};
 use parkhub_common::{ApiResponse, BookingStatus};
 use serde::Serialize;
@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 
 use crate::AppState;
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 
 type SharedState = Arc<RwLock<AppState>>;
 

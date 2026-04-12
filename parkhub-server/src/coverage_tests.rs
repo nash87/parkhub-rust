@@ -11,10 +11,10 @@ use tokio::sync::RwLock;
 use tower::ServiceExt;
 use uuid::Uuid;
 
+use crate::AppState;
 use crate::api::create_router;
 use crate::config::ServerConfig;
 use crate::db::{Database, DatabaseConfig};
-use crate::AppState;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test helpers
@@ -69,8 +69,8 @@ fn router(state: Arc<RwLock<AppState>>) -> axum::Router {
 }
 
 fn hash_password_for_test(password: &str) -> String {
-    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
     use argon2::Argon2;
+    use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
@@ -188,10 +188,12 @@ async fn test_2fa_setup_returns_secret_and_qr() {
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
     assert!(json["data"]["secret"].is_string());
-    assert!(json["data"]["otpauth_uri"]
-        .as_str()
-        .unwrap()
-        .contains("otpauth://"));
+    assert!(
+        json["data"]["otpauth_uri"]
+            .as_str()
+            .unwrap()
+            .contains("otpauth://")
+    );
     assert!(json["data"]["qr_code_base64"].is_string());
 }
 
@@ -684,10 +686,12 @@ async fn test_create_api_key_success() {
 
     assert_eq!(resp.status(), StatusCode::CREATED);
     let json = body_json(resp).await;
-    assert!(json["data"]["api_key"]
-        .as_str()
-        .unwrap()
-        .starts_with("phk_"));
+    assert!(
+        json["data"]["api_key"]
+            .as_str()
+            .unwrap()
+            .starts_with("phk_")
+    );
     assert_eq!(json["data"]["name"], "Test Key");
     assert!(json["data"]["expires_at"].is_string());
 }
@@ -1119,10 +1123,12 @@ async fn test_bulk_delete_prevents_self_deletion() {
     let json = body_json(resp).await;
     assert_eq!(json["data"]["succeeded"], 0);
     assert_eq!(json["data"]["failed"], 1);
-    assert!(json["data"]["errors"][0]
-        .as_str()
-        .unwrap()
-        .contains("own account"));
+    assert!(
+        json["data"]["errors"][0]
+            .as_str()
+            .unwrap()
+            .contains("own account")
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2808,10 +2814,12 @@ async fn test_bulk_update_invalid_role() {
     let json = body_json(resp).await;
     // Invalid role counts as a failure
     assert_eq!(json["data"]["failed"], 1);
-    assert!(json["data"]["errors"][0]
-        .as_str()
-        .unwrap()
-        .contains("Invalid role"));
+    assert!(
+        json["data"]["errors"][0]
+            .as_str()
+            .unwrap()
+            .contains("Invalid role")
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

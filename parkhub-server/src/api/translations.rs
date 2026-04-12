@@ -1,20 +1,20 @@
 //! Translation management handlers: proposals, voting, review, and overrides.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;
 use uuid::Uuid;
 
+use parkhub_common::ApiResponse;
 use parkhub_common::models::{
     ProposalStatus, TranslationOverride, TranslationProposal, TranslationVote,
 };
-use parkhub_common::ApiResponse;
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Request / Query DTOs
@@ -298,7 +298,7 @@ pub async fn vote_on_proposal(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Proposal not found")),
-            )
+            );
         }
         Err(e) => {
             tracing::error!("DB error: {}", e);
@@ -484,7 +484,7 @@ pub async fn review_proposal(
                     "INVALID",
                     "Status must be 'approved' or 'rejected'",
                 )),
-            )
+            );
         }
     };
 
@@ -494,7 +494,7 @@ pub async fn review_proposal(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Proposal not found")),
-            )
+            );
         }
         Err(e) => {
             tracing::error!("DB error: {}", e);

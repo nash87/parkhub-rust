@@ -3,10 +3,10 @@
 //! Extracted from mod.rs — Phase 3 API extraction.
 
 use axum::{
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Extension, Json,
+    extract::{Path, State},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use chrono::Utc;
 use serde::Deserialize;
@@ -16,10 +16,10 @@ use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, BookingStatus, CreditTransactionType, User, UserRole};
 
-use crate::audit::{AuditEntry, AuditEventType};
 use crate::AppState;
+use crate::audit::{AuditEntry, AuditEventType};
 
-use super::{hash_password_simple, verify_password, AuthUser};
+use super::{AuthUser, hash_password_simple, verify_password};
 
 type SharedState = Arc<RwLock<AppState>>;
 
@@ -568,7 +568,7 @@ pub async fn user_stats(
         for b in &bookings {
             *lot_counts.entry(b.lot_id).or_insert(0) += 1;
         }
-        if let Some((&lot_id, _)) = lot_counts.iter().max_by_key(|(_, &c)| c) {
+        if let Some((lot_id, _)) = lot_counts.iter().max_by_key(|(_, c)| *c) {
             state_guard
                 .db
                 .get_parking_lot(&lot_id.to_string())

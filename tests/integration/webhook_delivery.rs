@@ -230,12 +230,16 @@ async fn webhook_stores_event_subscriptions() {
     assert!(status == 200 || status == 201);
     let stored_events = body["data"]["events"].as_array().unwrap();
     assert_eq!(stored_events.len(), 2);
-    assert!(stored_events
-        .iter()
-        .any(|e| e.as_str() == Some("booking.created")));
-    assert!(stored_events
-        .iter()
-        .any(|e| e.as_str() == Some("user.registered")));
+    assert!(
+        stored_events
+            .iter()
+            .any(|e| e.as_str() == Some("booking.created"))
+    );
+    assert!(
+        stored_events
+            .iter()
+            .any(|e| e.as_str() == Some("user.registered"))
+    );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

@@ -4,11 +4,11 @@
 //! booking details (`booking_id`, `user_email`, `lot_name`, start/end timestamps).
 
 use axum::{
+    Extension, Json,
     body::Body,
     extract::{Path, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{IntoResponse, Response},
-    Extension, Json,
 };
 use image::Luma;
 use qrcode::QrCode;

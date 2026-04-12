@@ -15,10 +15,10 @@ use tokio::sync::RwLock;
 use tower::ServiceExt;
 use uuid::Uuid;
 
+use crate::AppState;
 use crate::api::create_router;
 use crate::config::ServerConfig;
 use crate::db::{Database, DatabaseConfig};
-use crate::AppState;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test helpers
@@ -73,8 +73,8 @@ fn router(state: Arc<RwLock<AppState>>) -> axum::Router {
 }
 
 fn hash_password_for_test(password: &str) -> String {
-    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
     use argon2::Argon2;
+    use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)

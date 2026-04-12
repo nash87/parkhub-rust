@@ -10,10 +10,10 @@
 //! - `GET /api/v1/admin/compliance/audit-export`  — full audit trail as CSV/JSON
 
 use axum::{
-    extract::{Query, State},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Json,
+    extract::{Query, State},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use printpdf::{
     BuiltinFont, Color, Line, LinePoint, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Point, Pt,
@@ -982,9 +982,11 @@ mod tests {
     fn test_generate_legal_basis() {
         let basis = generate_legal_basis();
         assert!(basis.len() >= 4);
-        assert!(basis
-            .iter()
-            .any(|b| b.gdpr_article.contains("Art. 6(1)(b)")));
+        assert!(
+            basis
+                .iter()
+                .any(|b| b.gdpr_article.contains("Art. 6(1)(b)"))
+        );
     }
 
     #[test]
@@ -1006,9 +1008,10 @@ mod tests {
     fn test_generate_data_map() {
         let map = generate_data_map();
         assert!(map.len() >= 3);
-        assert!(map
-            .iter()
-            .any(|e| e.processing_activity.contains("User Account")));
+        assert!(
+            map.iter()
+                .any(|e| e.processing_activity.contains("User Account"))
+        );
         assert!(map.iter().all(|e| !e.transfers_to_third_countries));
     }
 

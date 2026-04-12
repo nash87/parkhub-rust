@@ -6,10 +6,10 @@
 //! - `GET /api/v1/bookings/:id/invoice/pdf` — download PDF receipt for a booking
 
 use axum::{
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{Path, State},
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use printpdf::{
     BuiltinFont, Color, Line, LinePoint, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Point, Pt,

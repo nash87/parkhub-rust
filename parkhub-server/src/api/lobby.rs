@@ -4,7 +4,7 @@
 //! No authentication required. Rate-limited to 10 requests per minute per IP.
 //! Feature flag: `mod-lobby-display`.
 
-use axum::{extract::Path, extract::State, http::StatusCode, Json};
+use axum::{Json, extract::Path, extract::State, http::StatusCode};
 use chrono::Utc;
 use serde::Serialize;
 use std::sync::Arc;

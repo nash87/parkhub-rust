@@ -1,9 +1,9 @@
 //! Credits handlers: user balance, admin grant, refill, quota management.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, CreditTransaction, CreditTransactionType, UserRole};
 
-use super::{admin::AdminUserResponse, check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, admin::AdminUserResponse, check_admin};
 use crate::audit::{AuditEntry, AuditEventType};
 
 // ─────────────────────────────────────────────────────────────────────────────

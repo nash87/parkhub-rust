@@ -3,7 +3,7 @@
 //! Self-service: operators configure their own Stripe keys via admin settings.
 //! When keys are not configured, endpoints return `501 Not Implemented`.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -395,10 +395,12 @@ mod tests {
 
     #[test]
     fn test_create_checkout_request_missing_credits() {
-        assert!(serde_json::from_value::<CreateCheckoutRequest>(
-            serde_json::json!({"price_per_credit": 100})
-        )
-        .is_err());
+        assert!(
+            serde_json::from_value::<CreateCheckoutRequest>(
+                serde_json::json!({"price_per_credit": 100})
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -541,8 +543,10 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn test_is_stripe_configured_default() {
-        std::env::remove_var("STRIPE_SECRET_KEY");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("STRIPE_SECRET_KEY") };
         assert!(!is_stripe_configured());
     }
 }

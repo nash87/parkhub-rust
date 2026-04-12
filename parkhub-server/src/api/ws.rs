@@ -16,19 +16,19 @@
 //! misses 3 consecutive pongs the connection is terminated.
 
 use axum::{
+    Json,
     extract::{
-        ws::{Message, WebSocket},
         Query, State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
     },
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::Utc;
 use parkhub_common::ApiResponse;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::{RwLock, broadcast};
 use tracing::{debug, warn};
 
 use crate::AppState;

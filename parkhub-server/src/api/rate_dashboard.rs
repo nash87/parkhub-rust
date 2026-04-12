@@ -1,6 +1,6 @@
 //! Rate limiting dashboard: admin endpoints for monitoring rate limit statistics.
 
-use axum::{extract::State, Extension, Json};
+use axum::{Extension, Json, extract::State};
 use chrono::{TimeDelta, Utc};
 use serde::Serialize;
 use std::sync::Arc;
@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use parkhub_common::ApiResponse;
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 
 use crate::AppState;
 

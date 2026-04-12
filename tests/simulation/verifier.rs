@@ -4,7 +4,7 @@
 //! credit balance accuracy, recurring instance counts,
 //! waitlist resolution, and no orphaned PII.
 
-use crate::common::{auth_get, TestServer};
+use crate::common::{TestServer, auth_get};
 use crate::simulation::injector::{InjectionResults, SimContext};
 use crate::simulation::profiles::SimProfile;
 use serde_json::Value;
@@ -213,7 +213,7 @@ async fn check_recurring_count(
     }
 
     // Spot-check: first user with recurring should have entries
-    for (ref token, _, _) in &ctx.users {
+    for (token, _, _) in &ctx.users {
         let (status, body) = auth_get(srv, token, "/api/v1/recurring-bookings").await;
         if status == 200 {
             let count = body["data"].as_array().map(Vec::len).unwrap_or(0);
@@ -236,7 +236,7 @@ async fn check_waitlist(srv: &TestServer, ctx: &SimContext, results: &InjectionR
     }
 
     // Spot-check waitlist entries
-    for (ref token, _, _) in ctx.users.iter().take(5) {
+    for (token, _, _) in ctx.users.iter().take(5) {
         let (status, body) = auth_get(srv, token, "/api/v1/waitlist").await;
         if status == 200 {
             if let Some(entries) = body["data"].as_array() {

@@ -5,16 +5,16 @@
 //! - `GET /api/v1/admin/export/revenue` — export revenue summary as CSV
 
 use axum::{
-    extract::{Query, State},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Extension,
+    extract::{Query, State},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Deserialize;
 use std::fmt::Write;
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Query params

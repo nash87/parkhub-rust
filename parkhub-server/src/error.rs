@@ -3,9 +3,9 @@
 //! Provides structured error responses for the REST API.
 
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -408,10 +408,12 @@ mod tests {
         let body = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
         let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json["code"], "CONFLICT");
-        assert!(json["message"]
-            .as_str()
-            .unwrap()
-            .contains("booking overlap"));
+        assert!(
+            json["message"]
+                .as_str()
+                .unwrap()
+                .contains("booking overlap")
+        );
     }
 
     #[tokio::test]

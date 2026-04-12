@@ -6,8 +6,8 @@
 
 use anyhow::{Context, Result};
 use lettre::{
-    message::header::ContentType, transport::smtp::authentication::Credentials, AsyncSmtpTransport,
-    AsyncTransport, Message, Tokio1Executor,
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor, message::header::ContentType,
+    transport::smtp::authentication::Credentials,
 };
 use tracing::{info, warn};
 
@@ -453,20 +453,28 @@ mod tests {
     // ── SmtpConfig::from_env ──
 
     #[test]
+    #[allow(unsafe_code)]
     fn smtp_config_returns_none_when_host_missing() {
         // Ensure SMTP_HOST is not set (tests run without it by default)
-        std::env::remove_var("SMTP_HOST");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("SMTP_HOST") };
         assert!(SmtpConfig::from_env().is_none());
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn smtp_config_parses_env_vars() {
         // Set up temporary env vars
-        std::env::set_var("SMTP_HOST", "mail.example.com");
-        std::env::set_var("SMTP_PORT", "465");
-        std::env::set_var("SMTP_USER", "user@example.com");
-        std::env::set_var("SMTP_PASS", "secret");
-        std::env::set_var("SMTP_FROM", "Test <test@example.com>");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("SMTP_HOST", "mail.example.com") };
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("SMTP_PORT", "465") };
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("SMTP_USER", "user@example.com") };
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("SMTP_PASS", "secret") };
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("SMTP_FROM", "Test <test@example.com>") };
 
         let config = SmtpConfig::from_env().expect("should parse SMTP config");
         assert_eq!(config.host, "mail.example.com");
@@ -476,26 +484,29 @@ mod tests {
         assert_eq!(config.from, "Test <test@example.com>");
 
         // Clean up
-        std::env::remove_var("SMTP_HOST");
-        std::env::remove_var("SMTP_PORT");
-        std::env::remove_var("SMTP_USER");
-        std::env::remove_var("SMTP_PASS");
-        std::env::remove_var("SMTP_FROM");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("SMTP_HOST") };
+        unsafe { std::env::remove_var("SMTP_PORT") };
+        unsafe { std::env::remove_var("SMTP_USER") };
+        unsafe { std::env::remove_var("SMTP_PASS") };
+        unsafe { std::env::remove_var("SMTP_FROM") };
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn smtp_config_defaults_port_to_587() {
-        std::env::set_var("SMTP_HOST", "mail.test.io");
-        std::env::remove_var("SMTP_PORT");
-        std::env::remove_var("SMTP_USER");
-        std::env::remove_var("SMTP_PASS");
-        std::env::remove_var("SMTP_FROM");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("SMTP_HOST", "mail.test.io") };
+        unsafe { std::env::remove_var("SMTP_PORT") };
+        unsafe { std::env::remove_var("SMTP_USER") };
+        unsafe { std::env::remove_var("SMTP_PASS") };
+        unsafe { std::env::remove_var("SMTP_FROM") };
 
         let config = SmtpConfig::from_env().unwrap();
         assert_eq!(config.port, 587);
         assert_eq!(config.from, "ParkHub <noreply@mail.test.io>");
 
-        std::env::remove_var("SMTP_HOST");
+        unsafe { std::env::remove_var("SMTP_HOST") };
     }
 
     // ── build_booking_confirmation_email ──
@@ -785,8 +796,10 @@ mod tests {
     // ── send_email (no SMTP configured) ──
 
     #[tokio::test]
+    #[allow(unsafe_code)]
     async fn send_email_noop_when_smtp_not_configured() {
-        std::env::remove_var("SMTP_HOST");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("SMTP_HOST") };
         let result = send_email("user@example.com", "Test", "<p>Hello</p>").await;
         assert!(result.is_ok());
     }

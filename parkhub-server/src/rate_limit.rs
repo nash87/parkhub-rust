@@ -9,10 +9,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use governor::{
+    Quota, RateLimiter,
     clock::DefaultClock,
     middleware::NoOpMiddleware,
     state::{InMemoryState, NotKeyed},
-    Quota, RateLimiter,
 };
 use std::{net::SocketAddr, num::NonZeroU32, sync::Arc, time::Duration};
 

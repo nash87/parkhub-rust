@@ -7,7 +7,7 @@
 //! - `GET /api/v1/docs/postman.json` — auto-generated Postman collection
 
 use axum::{
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{Html, IntoResponse},
 };
 
@@ -318,10 +318,12 @@ mod tests {
         let spec = generate_openapi_spec();
         let parsed: serde_json::Value = serde_json::from_str(&spec).unwrap();
         assert_eq!(parsed["openapi"], "3.0.3");
-        assert!(parsed["info"]["title"]
-            .as_str()
-            .unwrap()
-            .contains("ParkHub"));
+        assert!(
+            parsed["info"]["title"]
+                .as_str()
+                .unwrap()
+                .contains("ParkHub")
+        );
     }
 
     #[test]

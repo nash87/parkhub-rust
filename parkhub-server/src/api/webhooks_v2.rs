@@ -11,9 +11,9 @@
 //! - `GET    /api/v1/admin/webhooks/{id}/deliveries` — delivery log
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};

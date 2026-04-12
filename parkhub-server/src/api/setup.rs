@@ -3,7 +3,7 @@
 //! These endpoints are only accessible before setup is completed.
 //! Once setup is done, they return 400 and are effectively disabled.
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{Json, extract::State, http::StatusCode};
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;

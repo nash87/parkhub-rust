@@ -3,7 +3,7 @@
 //! Generates and loads self-signed certificates for secure connections.
 
 use anyhow::{Context, Result};
-use rcgen::{generate_simple_self_signed, CertifiedKey};
+use rcgen::{CertifiedKey, generate_simple_self_signed};
 use std::path::Path;
 use std::sync::Once;
 

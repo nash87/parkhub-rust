@@ -4,9 +4,9 @@
 //! `GET /api/v1/bookings/stats` — personal parking stats
 
 use axum::{
+    Extension, Json,
     extract::{Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
@@ -164,7 +164,7 @@ pub async fn booking_stats(
         for b in &bookings {
             *lot_counts.entry(b.lot_id).or_insert(0) += 1;
         }
-        if let Some((&lot_id, _)) = lot_counts.iter().max_by_key(|(_, &c)| c) {
+        if let Some((lot_id, _)) = lot_counts.iter().max_by_key(|(_, c)| *c) {
             state
                 .db
                 .get_parking_lot(&lot_id.to_string())
@@ -195,7 +195,7 @@ pub async fn booking_stats(
             let weekday = b.start_time.weekday().num_days_from_monday();
             *day_counts.entry(weekday).or_insert(0) += 1;
         }
-        day_counts.iter().max_by_key(|(_, &c)| c).map(|(&d, _)| {
+        day_counts.iter().max_by_key(|(_, c)| *c).map(|(d, _)| {
             match d {
                 0 => "Monday",
                 1 => "Tuesday",

@@ -7,6 +7,61 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.7.0] - 2026-04-12
+
+### Added
+- **Full Test Pyramid**: 8-layer test infrastructure matching production standards
+  - 10 integration test suites per repo (API contract, auth flow, booking lifecycle, webhook delivery, GDPR compliance, multi-tenant isolation, rate limiting, email templates, recurring bookings, DB migration)
+  - 1-month booking simulation engine with 3 profiles (small/campus/enterprise)
+  - k6 load test profiles with graduated thresholds (p95 <200ms/<500ms/<1s)
+  - 6 new E2E Playwright suites (multi-language, offline/reconnect, concurrent users, admin CRUD, booking edge cases, security flows)
+  - Frontend Vitest expansion: hooks, validation, router, error boundary tests
+  - axe-core WCAG2aa accessibility testing
+  - Visual regression testing with Playwright screenshots
+- **CI/CD Modernization**
+  - Integration tests in GitHub Actions CI (advisory)
+  - Nightly assurance workflow (Rust) / Security workflow (PHP) for parity
+  - `docker-compose.test.yml` for containerized test pipeline
+  - Dependabot auto-merge with version filtering (skip major bumps)
+  - Branch protection aligned to gate job ("Required checks")
+  - PHPStan static analysis in PHP CI (advisory)
+- **Quick-Start installer** (`install.sh`) for one-command setup
+
+### Changed
+- Rust toolchain pinned to 1.94.1 via `rust-toolchain.toml` (was 1.88.0, release had 1.85!)
+- MSRV bumped from 1.88 to 1.94
+- actionlint v1.7.11 → v1.7.12, setup-qemu-action v3 → v4
+- GDPR/COMPLIANCE docs synced to v3.3.0 across both repos
+- Lighthouse CI: added LCP ≤4000ms threshold, 3 runs per URL
+- All README badges updated to v4.7.0
+
+### Fixed
+- **ParkingPassController**: QR code v6 API migration (`OUTPUT_MARKUP_SVG` → `QRMarkupSVG::class`) — PHP only
+- E2E login payload: `email` → `username` field for Laravel Sanctum
+- 28 clippy warnings resolved (Rust test files)
+- 50 cargo fmt formatting diffs resolved
+- nightly.yml shellcheck issues (SC2015, SC2034)
+- `router.test.tsx`: `require()` → direct mock (Vitest jsdom compat)
+- Pint formatting on 17 PHP test files
+- `build:php` path: `../parkhub-php/public/` → `../public/`
+- serialize-javascript 7.0.4 → 7.0.5 (CVE DoS fix)
+- RUSTSEC-2026-0097 (rand unsoundness) acknowledged in deny.toml
+
+### Security
+- Removed `program.md` (exposed local filesystem paths)
+- Removed `.aoe/`, `.forge-operator/`, `.claude/` from git tracking
+- Removed internal IPs from AGENTS.md, package.json, seeders
+- Added `.aoe/`, `.forge-operator/`, `.fop/`, `.claude/`, `skills-lock.json` to .gitignore
+- 14 Dependabot security alerts resolved (vite, defu, lodash, serialize-javascript)
+- cargo-deny stale advisory (RUSTSEC-2025-0141) cleaned
+
+### Removed
+- `program.md` (internal autoimprove config, not for public)
+- `.aoe/config.toml`, `.forge-operator/config.toml` (internal tooling)
+- `.claude/skills/` (62 files, internal automation)
+
+---
+
 ## [4.5.0] - 2026-03-25
 
 ### Added

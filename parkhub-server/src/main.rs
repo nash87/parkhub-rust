@@ -73,8 +73,8 @@ slint::include_modules!();
 // System tray support
 #[cfg(all(feature = "gui", windows))]
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder, TrayIconEvent,
+    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
 };
 
 /// Application state shared across handlers
@@ -229,7 +229,7 @@ async fn main() -> Result<()> {
     #[cfg(all(feature = "gui", windows))]
     if !cli.headless {
         use windows_sys::Win32::UI::HiDpi::{
-            SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
+            DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
         };
         unsafe {
             SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -240,7 +240,11 @@ async fn main() -> Result<()> {
     // This ensures the app works on systems without GPU/OpenGL support
     #[cfg(feature = "gui")]
     if !cli.headless {
-        std::env::set_var("SLINT_BACKEND", "winit-software");
+        // SAFETY: called before any threads are spawned (main function, GUI init)
+        #[allow(unsafe_code)]
+        unsafe {
+            std::env::set_var("SLINT_BACKEND", "winit-software")
+        };
     }
 
     // Initialize logging based on debug flag
@@ -442,7 +446,9 @@ async fn main() -> Result<()> {
         if want_seed {
             let lot_count = db.list_parking_lots().await.map(|l| l.len()).unwrap_or(0);
             if lot_count < 2 {
-                info!("Seeding demo data (SEED_DEMO_DATA/DEMO_MODE requested, {lot_count} lots found)...");
+                info!(
+                    "Seeding demo data (SEED_DEMO_DATA/DEMO_MODE requested, {lot_count} lots found)..."
+                );
                 if let Err(e) = seed_demo_data(&db).await {
                     warn!("Demo seeding failed (non-fatal): {e}");
                 }
@@ -978,8 +984,8 @@ fn get_local_ip() -> Option<String> {
 /// Hash a password using Argon2
 pub(crate) fn hash_password(password: &str) -> Result<String> {
     use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Argon2,
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
 
     let salt = SaltString::generate(&mut OsRng);

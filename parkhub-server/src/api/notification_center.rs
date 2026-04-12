@@ -11,9 +11,9 @@
 //! - `DELETE /api/v1/notifications/:id`              — delete single notification
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

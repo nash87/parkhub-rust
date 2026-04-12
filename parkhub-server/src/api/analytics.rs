@@ -5,9 +5,9 @@
 //! average booking duration for the requested date range.
 
 use axum::{
+    Extension, Json,
     extract::{Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{Duration, TimeDelta, Timelike, Utc};
 use parkhub_common::ApiResponse;
@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 
 use crate::AppState;
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 
 type SharedState = Arc<RwLock<AppState>>;
 

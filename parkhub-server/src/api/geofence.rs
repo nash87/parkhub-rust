@@ -5,16 +5,16 @@
 //! `PUT  /api/v1/admin/lots/:id/geofence` — admin set geofence
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, BookingStatus};
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES

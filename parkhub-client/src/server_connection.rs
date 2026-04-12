@@ -7,9 +7,9 @@ use reqwest::Client;
 use serde::Deserialize;
 
 use parkhub_common::{
-    models::UserPreferences, ApiResponse, AuthTokens, Booking, CreateBookingRequest,
-    HandshakeRequest, HandshakeResponse, LoginRequest, LoginResponse, PaginatedResponse,
-    ParkingLot, ParkingSlot, RegisterRequest, ServerInfo, User, UserRole, PROTOCOL_VERSION,
+    ApiResponse, AuthTokens, Booking, CreateBookingRequest, HandshakeRequest, HandshakeResponse,
+    LoginRequest, LoginResponse, PROTOCOL_VERSION, PaginatedResponse, ParkingLot, ParkingSlot,
+    RegisterRequest, ServerInfo, User, UserRole, models::UserPreferences,
 };
 
 /// Connection to a ParkHub server

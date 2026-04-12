@@ -1,9 +1,9 @@
 //! Favorites handlers: users can pin preferred parking slots.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;

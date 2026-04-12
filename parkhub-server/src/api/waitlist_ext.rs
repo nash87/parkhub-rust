@@ -9,16 +9,16 @@
 //! - `POST /api/v1/lots/:id/waitlist/:entry_id/decline` — decline, move to next
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use parkhub_common::models::{Notification, NotificationType, WaitlistEntry, WaitlistStatus};
 use parkhub_common::ApiResponse;
+use parkhub_common::models::{Notification, NotificationType, WaitlistEntry, WaitlistStatus};
 
 use super::{AuthUser, SharedState};
 
@@ -304,7 +304,7 @@ pub async fn accept_waitlist_offer(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Waitlist entry not found")),
-            )
+            );
         }
     };
 
@@ -391,7 +391,7 @@ pub async fn decline_waitlist_offer(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Waitlist entry not found")),
-            )
+            );
         }
     };
 

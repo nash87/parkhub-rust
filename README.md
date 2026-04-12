@@ -6,11 +6,11 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.5.0-brightgreen.svg?style=flat-square" alt="v4.5.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.7.0-brightgreen.svg?style=flat-square" alt="v4.7.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.94%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.94+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
-  <img src="https://img.shields.io/badge/Tests-1700%2B-success.svg?style=flat-square" alt="1700+ tests">
+  <img src="https://img.shields.io/badge/Tests-1800%2B-success.svg?style=flat-square" alt="1800+ tests">
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -253,7 +253,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## 🧪 Testing
 
-**1,700+ tests** across Rust backend and React frontend, plus 29 E2E Playwright specs. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
+**1,800+ tests** across Rust backend and React frontend, plus 29 E2E Playwright specs. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
 
 ```bash
 cargo test --workspace           # Rust backend

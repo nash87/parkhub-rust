@@ -149,7 +149,7 @@ async fn main() -> Result<()> {
     #[cfg(windows)]
     {
         use windows_sys::Win32::UI::HiDpi::{
-            SetProcessDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
+            DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
         };
         unsafe {
             SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -157,7 +157,8 @@ async fn main() -> Result<()> {
     }
 
     // Try skia renderer first (DirectX on Windows), fallback to software
-    std::env::set_var("SLINT_BACKEND", "winit-skia");
+    // SAFETY: called before any threads are spawned (main entry point)
+    unsafe { std::env::set_var("SLINT_BACKEND", "winit-skia") };
 
     // Initialize logging
     tracing_subscriber::fmt().with_env_filter("info").init();
@@ -252,7 +253,7 @@ async fn main() -> Result<()> {
             use windows_sys::Win32::Foundation::HWND;
             use windows_sys::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture;
             use windows_sys::Win32::UI::WindowsAndMessaging::{
-                GetForegroundWindow, SendMessageW, HTCAPTION, WM_NCLBUTTONDOWN,
+                GetForegroundWindow, HTCAPTION, SendMessageW, WM_NCLBUTTONDOWN,
             };
 
             unsafe {

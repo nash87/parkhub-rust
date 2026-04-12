@@ -7,9 +7,9 @@
 //! - `GET /api/v1/admin/widgets/data/{widget_id}` — get data for a specific widget
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -359,7 +359,7 @@ pub async fn get_widget_data(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Widget not found")),
-            )
+            );
         }
     };
 

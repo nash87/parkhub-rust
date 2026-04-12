@@ -1,9 +1,9 @@
 //! Parking lot handlers: CRUD operations and slot listing.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;
@@ -16,7 +16,7 @@ use parkhub_common::{
     PricingRate, SlotStatus,
 };
 
-use crate::requests::{parse_lot_status, CreateParkingLotRequest, UpdateParkingLotRequest};
+use crate::requests::{CreateParkingLotRequest, UpdateParkingLotRequest, parse_lot_status};
 
 use super::{AuthUser, SharedState};
 use parkhub_common::UserRole;
@@ -1185,7 +1185,7 @@ mod tests {
     use parkhub_common::models::{LotStatus, SlotFeature, SlotStatus, SlotType};
     use parkhub_common::{PricingInfo, PricingRate};
 
-    use crate::requests::{parse_lot_status, CreateParkingLotRequest, UpdateParkingLotRequest};
+    use crate::requests::{CreateParkingLotRequest, UpdateParkingLotRequest, parse_lot_status};
     use validator::Validate;
 
     use super::{parse_slot_feature, parse_slot_status, parse_slot_type};
