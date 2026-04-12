@@ -18,6 +18,7 @@ ignore = [
     "RUSTSEC-2025-0057", # fxhash unmaintained (transitive via selectors)
     "RUSTSEC-2023-0019", # kuchiki unmaintained (transitive via printpdf)
     "RUSTSEC-2024-0384", # instant unmaintained (transitive via web-push -> isahc; no maintained upgrade path yet)
+    "RUSTSEC-2026-0097", # rand 0.9.2 unsoundness with custom logger + thread_rng (we use tracing, not log with thread_rng access)
 ]
 
 [licenses]
