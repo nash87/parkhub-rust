@@ -70,3 +70,8 @@ parkhub-web-old/
 playwright-report/
 test-results/
 blob-report/
+
+# Local dev tooling (not for public repo)
+.aoe/
+.forge-operator/
+.fop/

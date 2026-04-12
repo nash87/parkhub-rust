@@ -15,10 +15,10 @@ Self-hosted parking management platform for enterprises, universities, and resid
 ## Build
 ```sh
 # Server (headless, no GUI — for Docker/server deployments)
-RUSTC_WRAPPER="" RUSTC=/home/florian/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc cargo build --release --package parkhub-server --no-default-features --features headless
+cargo build --release --package parkhub-server --no-default-features --features headless
 
 # Full build (includes Slint GUI for Windows/desktop)
-RUSTC_WRAPPER="" RUSTC=/home/florian/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin/rustc cargo build --release
+cargo build --release
 
 # React frontend (must be built before server if modifying frontend)
 cd parkhub-web && npm install && npm run build
@@ -78,11 +78,10 @@ docker compose up -d
 # Direct binary
 ./target/release/parkhub-server --headless --unattended --port 8080
 
-# Container build for registry
-podman build --network=host -t parkhub-rust -f Dockerfile .
-podman tag parkhub-rust 192.168.178.250:5000/parkhub-rust:latest
-podman push 192.168.178.250:5000/parkhub-rust:latest
+# Container build
+docker build -t parkhub-rust -f Dockerfile .
+docker push ghcr.io/nash87/parkhub-rust:latest
 
-# Also deployed on Render (demo): https://parkhub-rust-demo.onrender.com
-# GitHub repo: https://github.com/nash87/parkhub-rust
+# Live demo: https://parkhub-rust-demo.onrender.com
+# GitHub: https://github.com/nash87/parkhub-rust
 ```
