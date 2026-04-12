@@ -117,10 +117,10 @@ pub async fn admin_fleet_list(
     for v in &vehicles {
         let vtype = format!("{:?}", v.vehicle_type).to_lowercase();
 
-        if let Some(ref tf) = type_filter {
-            if vtype != tf.to_lowercase() {
-                continue;
-            }
+        if let Some(ref tf) = type_filter
+            && vtype != tf.to_lowercase()
+        {
+            continue;
         }
 
         let username = user_map.get(&v.user_id).cloned();

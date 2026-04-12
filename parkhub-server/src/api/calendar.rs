@@ -78,15 +78,15 @@ pub async fn calendar_events(
         .await
     {
         for b in bookings {
-            if let Some(from) = from_date {
-                if b.start_time.date_naive() < from {
-                    continue;
-                }
+            if let Some(from) = from_date
+                && b.start_time.date_naive() < from
+            {
+                continue;
             }
-            if let Some(to) = to_date {
-                if b.start_time.date_naive() > to {
-                    continue;
-                }
+            if let Some(to) = to_date
+                && b.start_time.date_naive() > to
+            {
+                continue;
             }
 
             events.push(CalendarEvent {
@@ -119,15 +119,15 @@ pub async fn calendar_events(
                 .map(|dt| chrono::DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc));
 
             if let (Some(start_dt), Some(end_dt)) = (start, end) {
-                if let Some(from) = from_date {
-                    if end_dt.date_naive() < from {
-                        continue;
-                    }
+                if let Some(from) = from_date
+                    && end_dt.date_naive() < from
+                {
+                    continue;
                 }
-                if let Some(to) = to_date {
-                    if start_dt.date_naive() > to {
-                        continue;
-                    }
+                if let Some(to) = to_date
+                    && start_dt.date_naive() > to
+                {
+                    continue;
                 }
 
                 let type_label = format!("{:?}", a.absence_type);

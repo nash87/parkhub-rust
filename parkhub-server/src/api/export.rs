@@ -97,15 +97,15 @@ fn error_response(
 
 /// Check whether a UTC datetime falls within the optional date range.
 fn in_date_range(dt: &DateTime<Utc>, range: &ExportDateRange) -> bool {
-    if let Some(from) = range.from {
-        if dt.date_naive() < from {
-            return false;
-        }
+    if let Some(from) = range.from
+        && dt.date_naive() < from
+    {
+        return false;
     }
-    if let Some(to) = range.to {
-        if dt.date_naive() > to {
-            return false;
-        }
+    if let Some(to) = range.to
+        && dt.date_naive() > to
+    {
+        return false;
     }
     true
 }

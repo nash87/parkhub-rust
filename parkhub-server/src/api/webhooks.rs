@@ -138,10 +138,10 @@ fn validate_webhook_url(url: &str) -> Option<&'static str> {
     }
 
     // Try to parse as IP for private range checks
-    if let Ok(ip) = host.parse::<IpAddr>() {
-        if is_private_ip(&ip) {
-            return Some("URL must not target private/reserved IP ranges");
-        }
+    if let Ok(ip) = host.parse::<IpAddr>()
+        && is_private_ip(&ip)
+    {
+        return Some("URL must not target private/reserved IP ranges");
     }
 
     None

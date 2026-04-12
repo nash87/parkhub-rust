@@ -210,26 +210,26 @@ pub async fn admin_update_operating_hours(
             ("saturday", &new_hours.saturday),
             ("sunday", &new_hours.sunday),
         ] {
-            if let Some(day) = day_opt {
-                if !day.closed {
-                    if parse_time(&day.open).is_none() {
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            Json(ApiResponse::error(
-                                "VALIDATION_ERROR",
-                                format!("Invalid open time for {day_name}"),
-                            )),
-                        );
-                    }
-                    if parse_time(&day.close).is_none() {
-                        return (
-                            StatusCode::BAD_REQUEST,
-                            Json(ApiResponse::error(
-                                "VALIDATION_ERROR",
-                                format!("Invalid close time for {day_name}"),
-                            )),
-                        );
-                    }
+            if let Some(day) = day_opt
+                && !day.closed
+            {
+                if parse_time(&day.open).is_none() {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(ApiResponse::error(
+                            "VALIDATION_ERROR",
+                            format!("Invalid open time for {day_name}"),
+                        )),
+                    );
+                }
+                if parse_time(&day.close).is_none() {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(ApiResponse::error(
+                            "VALIDATION_ERROR",
+                            format!("Invalid close time for {day_name}"),
+                        )),
+                    );
                 }
             }
         }

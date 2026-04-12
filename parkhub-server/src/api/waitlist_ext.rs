@@ -328,17 +328,17 @@ pub async fn accept_waitlist_offer(
     }
 
     // Check offer expiry
-    if let Some(expires) = entry.offer_expires_at {
-        if Utc::now() > expires {
-            // Mark as expired
-            let mut expired_entry = entry;
-            expired_entry.status = WaitlistStatus::Expired;
-            let _ = state_guard.db.save_waitlist_entry(&expired_entry).await;
-            return (
-                StatusCode::GONE,
-                Json(ApiResponse::error("OFFER_EXPIRED", "The offer has expired")),
-            );
-        }
+    if let Some(expires) = entry.offer_expires_at
+        && Utc::now() > expires
+    {
+        // Mark as expired
+        let mut expired_entry = entry;
+        expired_entry.status = WaitlistStatus::Expired;
+        let _ = state_guard.db.save_waitlist_entry(&expired_entry).await;
+        return (
+            StatusCode::GONE,
+            Json(ApiResponse::error("OFFER_EXPIRED", "The offer has expired")),
+        );
     }
 
     // Accept

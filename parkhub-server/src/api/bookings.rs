@@ -90,16 +90,16 @@ pub async fn create_booking(
             )),
         );
     }
-    if let Some(ref notes) = req.notes {
-        if notes.len() > 500 {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_INPUT",
-                    "Notes must be at most 500 characters",
-                )),
-            );
-        }
+    if let Some(ref notes) = req.notes
+        && notes.len() > 500
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Notes must be at most 500 characters",
+            )),
+        );
     }
     // ── Phase 1: reads under a read lock ──────────────────────────────────────
     // Collect all data needed to validate and price the booking.  A read lock
@@ -720,12 +720,11 @@ pub async fn cancel_booking(
         .db
         .get_parking_slot(&booking.slot_id.to_string())
         .await
+        && slot.status == SlotStatus::Reserved
     {
-        if slot.status == SlotStatus::Reserved {
-            slot.status = SlotStatus::Available;
-            if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
-                tracing::error!("Failed to restore slot status after cancellation: {}", e);
-            }
+        slot.status = SlotStatus::Available;
+        if let Err(e) = state_guard.db.save_parking_slot(&slot).await {
+            tracing::error!("Failed to restore slot status after cancellation: {}", e);
         }
     }
 
@@ -751,25 +750,25 @@ pub async fn cancel_booking(
             .db
             .get_user(&auth_user.user_id.to_string())
             .await
+            && user.role != UserRole::Admin
+            && user.role != UserRole::SuperAdmin
         {
-            if user.role != UserRole::Admin && user.role != UserRole::SuperAdmin {
-                user.credits_balance += credits_per_booking;
-                if let Err(e) = state_guard.db.save_user(&user).await {
-                    tracing::warn!("Failed to save user credit refund: {e}");
-                }
-                let tx = CreditTransaction {
-                    id: Uuid::new_v4(),
-                    user_id: auth_user.user_id,
-                    booking_id: Some(booking.id),
-                    amount: credits_per_booking,
-                    transaction_type: CreditTransactionType::Refund,
-                    description: Some(format!("Cancelled booking {}", booking.id)),
-                    granted_by: None,
-                    created_at: Utc::now(),
-                };
-                if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
-                    tracing::warn!("Failed to save credit transaction: {e}");
-                }
+            user.credits_balance += credits_per_booking;
+            if let Err(e) = state_guard.db.save_user(&user).await {
+                tracing::warn!("Failed to save user credit refund: {e}");
+            }
+            let tx = CreditTransaction {
+                id: Uuid::new_v4(),
+                user_id: auth_user.user_id,
+                booking_id: Some(booking.id),
+                amount: credits_per_booking,
+                transaction_type: CreditTransactionType::Refund,
+                description: Some(format!("Cancelled booking {}", booking.id)),
+                granted_by: None,
+                created_at: Utc::now(),
+            };
+            if let Err(e) = state_guard.db.save_credit_transaction(&tx).await {
+                tracing::warn!("Failed to save credit transaction: {e}");
             }
         }
     }
@@ -849,29 +848,30 @@ pub async fn cancel_booking(
                 .unwrap_or_default();
 
             // Notify the earliest-queued user who has not yet been notified
-            if let Some(entry) = waitlist.iter().find(|e| e.notified_at.is_none()) {
-                if let Ok(Some(wl_user)) = state_r.db.get_user(&entry.user_id.to_string()).await {
-                    let email_html = email::build_waitlist_slot_available_email(
-                        &wl_user.name,
-                        &lot_name,
-                        &org_name_wl,
-                    );
-                    let subject = format!("Parking slot available at {lot_name} — ParkHub");
-                    if let Err(e) = email::send_email(&wl_user.email, &subject, &email_html).await {
-                        tracing::warn!("Failed to send waitlist notification: {}", e);
-                    } else {
-                        // Mark the entry as notified
-                        let mut updated = entry.clone();
-                        updated.notified_at = Some(Utc::now());
-                        if let Err(e) = state_r.db.save_waitlist_entry(&updated).await {
-                            tracing::warn!("Failed to update waitlist notified_at: {}", e);
-                        }
-                        tracing::info!(
-                            user_id = %wl_user.id,
-                            lot_id = %lot_id_str,
-                            "Waitlist slot-available notification sent"
-                        );
+            if let Some(entry) = waitlist.iter().find(|e| e.notified_at.is_none())
+                && let Ok(Some(wl_user)) =
+                    state_r.db.get_user(&entry.user_id.to_string()).await
+            {
+                let email_html = email::build_waitlist_slot_available_email(
+                    &wl_user.name,
+                    &lot_name,
+                    &org_name_wl,
+                );
+                let subject = format!("Parking slot available at {lot_name} — ParkHub");
+                if let Err(e) = email::send_email(&wl_user.email, &subject, &email_html).await {
+                    tracing::warn!("Failed to send waitlist notification: {}", e);
+                } else {
+                    // Mark the entry as notified
+                    let mut updated = entry.clone();
+                    updated.notified_at = Some(Utc::now());
+                    if let Err(e) = state_r.db.save_waitlist_entry(&updated).await {
+                        tracing::warn!("Failed to update waitlist notified_at: {}", e);
                     }
+                    tracing::info!(
+                        user_id = %wl_user.id,
+                        lot_id = %lot_id_str,
+                        "Waitlist slot-available notification sent"
+                    );
                 }
             }
         });
@@ -1455,10 +1455,10 @@ pub async fn booking_checkin(
     };
 
     // Only booking owner or admin can check in
-    if booking.user_id != auth_user.user_id {
-        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
-        }
+    if booking.user_id != auth_user.user_id
+        && let Err((status, msg)) = check_admin(&state_guard, &auth_user).await
+    {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
     // Only Confirmed or Pending bookings can be checked in

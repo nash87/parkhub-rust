@@ -606,15 +606,15 @@ pub async fn export_bookings_csv(
     );
 
     for b in &bookings {
-        if let Some(from) = params.from {
-            if b.start_time.date_naive() < from {
-                continue;
-            }
+        if let Some(from) = params.from
+            && b.start_time.date_naive() < from
+        {
+            continue;
         }
-        if let Some(to) = params.to {
-            if b.start_time.date_naive() > to {
-                continue;
-            }
+        if let Some(to) = params.to
+            && b.start_time.date_naive() > to
+        {
+            continue;
         }
 
         let lot_name = match state_guard.db.get_parking_lot(&b.lot_id.to_string()).await {

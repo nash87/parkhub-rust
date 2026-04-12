@@ -264,10 +264,10 @@ pub async fn check_in_visitor(
     };
 
     // Only the host or an admin can check in a visitor
-    if visitor.host_user_id != auth_user.user_id {
-        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
-        }
+    if visitor.host_user_id != auth_user.user_id
+        && let Err((status, msg)) = check_admin(&state_guard, &auth_user).await
+    {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
     if visitor.status == VisitorStatus::CheckedIn {
@@ -332,10 +332,10 @@ pub async fn cancel_visitor(
     };
 
     // Only the host or an admin can cancel
-    if visitor.host_user_id != auth_user.user_id {
-        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
-        }
+    if visitor.host_user_id != auth_user.user_id
+        && let Err((status, msg)) = check_admin(&state_guard, &auth_user).await
+    {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
     visitor.status = VisitorStatus::Cancelled;

@@ -105,10 +105,10 @@ async fn list_all_maintenance(state: &AppState) -> Vec<MaintenanceWindow> {
 
     for id in &ids {
         let key = format!("{MAINTENANCE_PREFIX}{id}");
-        if let Ok(Some(val)) = state.db.get_setting(&key).await {
-            if let Ok(window) = serde_json::from_str::<MaintenanceWindow>(&val) {
-                windows.push(window);
-            }
+        if let Ok(Some(val)) = state.db.get_setting(&key).await
+            && let Ok(window) = serde_json::from_str::<MaintenanceWindow>(&val)
+        {
+            windows.push(window);
         }
     }
 

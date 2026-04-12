@@ -393,14 +393,13 @@ pub async fn mark_all_read(
 
     let mut marked = 0usize;
     for notif in &notifications {
-        if !notif.read {
-            if let Ok(true) = state_guard
+        if !notif.read
+            && let Ok(true) = state_guard
                 .db
                 .mark_notification_read(&notif.id.to_string())
                 .await
-            {
-                marked += 1;
-            }
+        {
+            marked += 1;
         }
     }
 

@@ -135,10 +135,10 @@ fn build_share_url(code: &str) -> String {
 /// Check if a share link has expired
 #[allow(dead_code)]
 fn is_expired(expires_at: &Option<String>) -> bool {
-    if let Some(exp) = expires_at {
-        if let Ok(dt) = exp.parse::<DateTime<Utc>>() {
-            return Utc::now() > dt;
-        }
+    if let Some(exp) = expires_at
+        && let Ok(dt) = exp.parse::<DateTime<Utc>>()
+    {
+        return Utc::now() > dt;
     }
     false
 }

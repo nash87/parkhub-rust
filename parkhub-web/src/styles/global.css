@@ -163,7 +163,6 @@ html {
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   background: var(--theme-bg);
   color: var(--theme-text);
   min-height: 100dvh;
@@ -451,6 +450,93 @@ p { line-height: 1.6; }
     max-width: 200px;
     margin: 0 auto;
   }
+}
+
+/* ── Container queries — self-responsive inner components ─────────── */
+
+@utility container-card {
+  container-type: inline-size;
+  container-name: card;
+}
+
+@utility container-panel {
+  container-type: inline-size;
+  container-name: panel;
+}
+
+/* Stat cards: stack layout below 280px container width */
+@container card (max-width: 280px) {
+  .stat-card {
+    padding: 0.75rem;
+  }
+  .stat-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* Panel: switch to compact layout below 400px */
+@container panel (max-width: 400px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Scroll-driven animations (2026 CSS) ─────────────────────────── */
+
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(1.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Reveal cards on scroll — progressive enhancement */
+@utility scroll-reveal {
+  animation: slide-in-up linear both;
+  animation-timeline: view();
+  animation-range: entry 0% entry 40%;
+}
+
+@utility scroll-scale {
+  animation: scale-in linear both;
+  animation-timeline: view();
+  animation-range: entry 0% entry 35%;
+}
+
+/* Fallback: elements visible by default when scroll-timeline not supported */
+@supports not (animation-timeline: view()) {
+  .scroll-reveal,
+  .scroll-scale {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Typography (2026 CSS) ───────────────────────────────────────── */
+
+/* Balanced headings — prevents orphans and awkward line breaks */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+/* Pretty body text — smarter line breaks for readability */
+p, li, figcaption {
+  text-wrap: pretty;
+}
+
+/* ── Font optimization — explicit fallback chain + display swap ─── */
+
+body {
+  font-family:
+    "Inter var", Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Noto Sans", "Liberation Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+  font-optical-sizing: auto;
+  font-feature-settings: "cv11", "ss01"; /* contextual alt + open digits */
 }
 
 /* ── Modern UI 2026 — Gradient borders, glow effects, animations ──── */

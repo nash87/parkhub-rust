@@ -58,10 +58,10 @@ const fn validate_proposal_input(req: &CreateProposalRequest) -> Result<(), &'st
     if req.proposed_value.is_empty() || req.proposed_value.len() > 5000 {
         return Err("Proposed value must be 1-5000 characters");
     }
-    if let Some(ref ctx) = req.context {
-        if ctx.len() > 1000 {
-            return Err("Context must be at most 1000 characters");
-        }
+    if let Some(ref ctx) = req.context
+        && ctx.len() > 1000
+    {
+        return Err("Context must be at most 1000 characters");
     }
     Ok(())
 }
