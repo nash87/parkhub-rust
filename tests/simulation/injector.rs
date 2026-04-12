@@ -168,10 +168,12 @@ pub async fn inject_bookings(
                         "vehicle_id": "00000000-0000-0000-0000-000000000000",
                         "license_plate": plate,
                     });
-                    let (status, _) = retry_on_429_post(
-                        srv, user_token, "/api/v1/bookings", &conflict_body, 3,
-                    ).await;
-                    results.latencies_ms.push(start.elapsed().as_millis() as u64);
+                    let (status, _) =
+                        retry_on_429_post(srv, user_token, "/api/v1/bookings", &conflict_body, 3)
+                            .await;
+                    results
+                        .latencies_ms
+                        .push(start.elapsed().as_millis() as u64);
 
                     if status == 409 {
                         results.rejected_conflicts += 1;
@@ -194,10 +196,11 @@ pub async fn inject_bookings(
                 "vehicle_id": "00000000-0000-0000-0000-000000000000",
                 "license_plate": plate,
             });
-            let (status, body) = retry_on_429_post(
-                srv, user_token, "/api/v1/bookings", &booking_body, 3,
-            ).await;
-            results.latencies_ms.push(start.elapsed().as_millis() as u64);
+            let (status, body) =
+                retry_on_429_post(srv, user_token, "/api/v1/bookings", &booking_body, 3).await;
+            results
+                .latencies_ms
+                .push(start.elapsed().as_millis() as u64);
 
             match status {
                 200 | 201 => {
@@ -209,10 +212,11 @@ pub async fn inject_bookings(
                         if profile.enable_cancellations && generator::should_cancel() {
                             let cancel_start = Instant::now();
                             let cancel_path = format!("/api/v1/bookings/{id}");
-                            let (cs, _) = retry_on_429_delete(
-                                srv, user_token, &cancel_path, 3,
-                            ).await;
-                            results.latencies_ms.push(cancel_start.elapsed().as_millis() as u64);
+                            let (cs, _) =
+                                retry_on_429_delete(srv, user_token, &cancel_path, 3).await;
+                            results
+                                .latencies_ms
+                                .push(cancel_start.elapsed().as_millis() as u64);
 
                             if cs == 200 || cs == 204 {
                                 results.cancellations += 1;
@@ -228,8 +232,13 @@ pub async fn inject_bookings(
                     if profile.enable_waitlist && generator::should_waitlist() {
                         let waitlist_body = serde_json::json!({ "lot_id": lot_id });
                         let (ws, _) = retry_on_429_post(
-                            srv, user_token, "/api/v1/waitlist", &waitlist_body, 3,
-                        ).await;
+                            srv,
+                            user_token,
+                            "/api/v1/waitlist",
+                            &waitlist_body,
+                            3,
+                        )
+                        .await;
                         if ws == 200 || ws == 201 {
                             results.waitlist_entries += 1;
                         }
@@ -269,8 +278,13 @@ pub async fn inject_bookings(
                     "vehicle_plate": generator::random_license_plate(),
                 });
                 let (status, _) = retry_on_429_post(
-                    srv, user_token, "/api/v1/recurring-bookings", &recurring_body, 3,
-                ).await;
+                    srv,
+                    user_token,
+                    "/api/v1/recurring-bookings",
+                    &recurring_body,
+                    3,
+                )
+                .await;
 
                 if status == 200 || status == 201 {
                     results.recurring_created += 1;

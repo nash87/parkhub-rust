@@ -177,8 +177,15 @@ async fn modules_endpoint_reflects_build_features() {
 
     // At minimum these core modules should be present as keys
     let expected_keys = [
-        "bookings", "vehicles", "webhooks", "recurring", "calendar",
-        "waitlist", "credits", "settings", "team",
+        "bookings",
+        "vehicles",
+        "webhooks",
+        "recurring",
+        "calendar",
+        "waitlist",
+        "credits",
+        "settings",
+        "team",
     ];
 
     for key in &expected_keys {

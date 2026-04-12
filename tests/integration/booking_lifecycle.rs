@@ -34,12 +34,7 @@ async fn full_booking_lifecycle() {
     let slot_id = create_test_slot(&srv, &admin_token, &lot_id, 1).await;
 
     // 2. Verify slot is available
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/lots/{lot_id}/slots"),
-    )
-    .await;
+    let (status, body) = auth_get(&srv, &user_token, &format!("/api/v1/lots/{lot_id}/slots")).await;
     assert_eq!(status, 200);
     let slots = body["data"].as_array().expect("slots array");
     assert!(!slots.is_empty(), "Lot should have at least one slot");
@@ -73,17 +68,15 @@ async fn full_booking_lifecycle() {
     assert_eq!(status, 200);
     let bookings = body["data"].as_array().unwrap();
     assert!(
-        bookings.iter().any(|b| b["id"].as_str() == Some(&booking_id)),
+        bookings
+            .iter()
+            .any(|b| b["id"].as_str() == Some(&booking_id)),
         "New booking should appear in user's list"
     );
 
     // 5. Get single booking
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/bookings/{booking_id}"),
-    )
-    .await;
+    let (status, body) =
+        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     assert_eq!(status, 200);
     assert_eq!(body["data"]["id"].as_str().unwrap(), booking_id);
 
@@ -117,24 +110,16 @@ async fn full_booking_lifecycle() {
     );
 
     // 8. Cancel booking
-    let (status, body) = auth_delete(
-        &srv,
-        &user_token,
-        &format!("/api/v1/bookings/{booking_id}"),
-    )
-    .await;
+    let (status, body) =
+        auth_delete(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     assert!(
         status == 200 || status == 204,
         "Cancel failed: {status} body: {body}"
     );
 
     // 9. Verify booking is cancelled
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/bookings/{booking_id}"),
-    )
-    .await;
+    let (status, body) =
+        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     if status == 200 {
         let bk_status = body["data"]["status"].as_str().unwrap_or("");
         assert_eq!(bk_status, "cancelled", "Booking should be cancelled");
@@ -187,7 +172,10 @@ async fn quick_book_flow() {
     // Quick-book may return 200/201 or 404 if the feature is not implemented
     if status == 200 || status == 201 {
         assert_eq!(body["success"], true);
-        assert!(body["data"]["id"].is_string(), "Quick-book should return booking ID");
+        assert!(
+            body["data"]["id"].is_string(),
+            "Quick-book should return booking ID"
+        );
     } else {
         assert!(
             status == 404 || status == 422,
@@ -354,7 +342,10 @@ async fn double_booking_same_slot_rejected() {
         }),
     )
     .await;
-    assert!(status == 200 || status == 201, "First booking should succeed");
+    assert!(
+        status == 200 || status == 201,
+        "First booking should succeed"
+    );
 
     // User B tries to book the same slot at the same time
     let (status, body) = auth_post(
@@ -400,12 +391,7 @@ async fn slot_status_reflects_booking() {
     let slot_id = create_test_slot(&srv, &admin_token, &lot_id, 1).await;
 
     // Before booking — slot should be available
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/lots/{lot_id}/slots"),
-    )
-    .await;
+    let (status, body) = auth_get(&srv, &user_token, &format!("/api/v1/lots/{lot_id}/slots")).await;
     assert_eq!(status, 200);
     let slots = body["data"].as_array().unwrap();
     let slot = slots.iter().find(|s| s["id"].as_str() == Some(&slot_id));
@@ -415,12 +401,7 @@ async fn slot_status_reflects_booking() {
     let _booking_id = create_test_booking(&srv, &user_token, &lot_id, &slot_id).await;
 
     // After booking — slot should be occupied or reserved
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/lots/{lot_id}/slots"),
-    )
-    .await;
+    let (status, body) = auth_get(&srv, &user_token, &format!("/api/v1/lots/{lot_id}/slots")).await;
     assert_eq!(status, 200);
     let slots = body["data"].as_array().unwrap();
     let slot = slots
@@ -486,12 +467,8 @@ async fn booking_has_pricing_info() {
     let slot_id = create_test_slot(&srv, &admin_token, &lot_id, 1).await;
     let booking_id = create_test_booking(&srv, &user_token, &lot_id, &slot_id).await;
 
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/bookings/{booking_id}"),
-    )
-    .await;
+    let (status, body) =
+        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     assert_eq!(status, 200);
 
     let pricing = &body["data"]["pricing"];

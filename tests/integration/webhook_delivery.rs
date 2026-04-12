@@ -210,10 +210,7 @@ async fn webhook_stores_event_subscriptions() {
     let srv = start_test_server().await;
     let (token, _) = admin_login(&srv).await;
 
-    let events = vec![
-        "booking.created".to_string(),
-        "user.registered".to_string(),
-    ];
+    let events = vec!["booking.created".to_string(), "user.registered".to_string()];
 
     let (status, body) = auth_post(
         &srv,

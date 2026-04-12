@@ -41,12 +41,7 @@ async fn create_tenant(
         status == 200 || status == 201,
         "Create tenant '{name}' failed: {status} body: {body}"
     );
-    Some(
-        body["data"]["id"]
-            .as_str()
-            .expect("tenant id")
-            .to_string(),
-    )
+    Some(body["data"]["id"].as_str().expect("tenant id").to_string())
 }
 
 /// Helper: assign a user to a tenant (admin endpoint).
@@ -102,10 +97,8 @@ async fn tenant_isolation_users_and_lots() {
         .unwrap();
 
     // Create users for each tenant
-    let (user_a_token, user_a_id, _) =
-        crate::common::create_test_user(&srv, "tenant_a_user").await;
-    let (user_b_token, user_b_id, _) =
-        crate::common::create_test_user(&srv, "tenant_b_user").await;
+    let (user_a_token, user_a_id, _) = crate::common::create_test_user(&srv, "tenant_a_user").await;
+    let (user_b_token, user_b_id, _) = crate::common::create_test_user(&srv, "tenant_b_user").await;
 
     // Assign users to tenants
     assign_user_to_tenant(&srv, &admin_token, &user_a_id, &tenant_a_id).await;
@@ -120,10 +113,8 @@ async fn tenant_isolation_users_and_lots() {
     let slot_b = create_test_slot(&srv, &admin_token, &lot_b, 1).await;
 
     // Create bookings
-    let _booking_a =
-        crate::common::create_test_booking(&srv, &user_a_token, &lot_a, &slot_a).await;
-    let _booking_b =
-        crate::common::create_test_booking(&srv, &user_b_token, &lot_b, &slot_b).await;
+    let _booking_a = crate::common::create_test_booking(&srv, &user_a_token, &lot_a, &slot_a).await;
+    let _booking_b = crate::common::create_test_booking(&srv, &user_b_token, &lot_b, &slot_b).await;
 
     // Tenant A user should see their own bookings
     let (status, body_a) = auth_get(&srv, &user_a_token, "/api/v1/bookings").await;
@@ -165,7 +156,9 @@ async fn super_admin_sees_all_tenants() {
         Some(id) => id,
         None => return,
     };
-    let _t2 = create_tenant(&srv, &admin_token, "Visible B").await.unwrap();
+    let _t2 = create_tenant(&srv, &admin_token, "Visible B")
+        .await
+        .unwrap();
 
     let (status, body) = auth_get(&srv, &admin_token, "/api/v1/admin/tenants").await;
     assert_eq!(status, 200);
