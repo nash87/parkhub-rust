@@ -18,7 +18,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: '1.88.0'
 
 jobs:
   cargo-deny:
@@ -30,9 +29,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
@@ -52,9 +48,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 

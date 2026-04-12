@@ -57,7 +57,7 @@ duplicate work.
 
 | Tool | Minimum version | Install |
 |------|----------------|---------|
-| Rust (stable) | 1.84 | `rustup update stable` |
+| Rust (stable) | 1.94 | See `rust-toolchain.toml` |
 | Node.js | 22 | [nodejs.org](https://nodejs.org) |
 | npm | 10 | bundled with Node.js |
 | Docker | any recent | optional, for integration testing |

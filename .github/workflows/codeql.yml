@@ -20,7 +20,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: '1.88.0'
   NODE_VERSION: '22.12.0'
 
 jobs:
@@ -48,9 +47,6 @@ jobs:
       - name: Install Rust
         if: matrix.language == 'rust'
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
       - name: Build Rust for CodeQL
         if: matrix.language == 'rust'
         run: |
