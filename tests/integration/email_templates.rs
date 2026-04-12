@@ -13,7 +13,6 @@ use crate::common::{
     admin_login, auth_get, auth_post, create_test_booking, create_test_lot, create_test_slot,
     create_test_user, start_test_server,
 };
-use serde_json::Value;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Email preview endpoint (if available)

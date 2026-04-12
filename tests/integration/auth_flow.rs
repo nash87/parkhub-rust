@@ -4,7 +4,6 @@
 //! password reset, invalid credentials, and rate limiting.
 
 use crate::common::{admin_login, auth_get, auth_post, login, start_test_server};
-use serde_json::Value;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Registration + Login + Token lifecycle

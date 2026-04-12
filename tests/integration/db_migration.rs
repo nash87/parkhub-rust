@@ -52,7 +52,7 @@ async fn fresh_database_has_empty_collections() {
     // Lots should be empty (or only demo data)
     let (status, body) = auth_get(&srv, &token, "/api/v1/lots").await;
     assert_eq!(status, 200);
-    let lots = body["data"].as_array().unwrap();
+    let _lots = body["data"].as_array().unwrap();
     // In demo mode, there may be pre-seeded lots
     // What matters is that the endpoint works
 

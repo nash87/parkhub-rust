@@ -7,7 +7,6 @@ use crate::common::{
     admin_login, auth_delete, auth_get, auth_post, auth_put, create_test_lot, create_test_slot,
     create_test_user, start_test_server,
 };
-use serde_json::Value;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Create recurring booking
@@ -231,7 +230,7 @@ async fn update_recurring_booking_modifies_fields() {
                 .as_array()
                 .unwrap()
                 .iter()
-                .filter_map(|d| d.as_u64())
+                .filter_map(serde_json::Value::as_u64)
                 .collect();
             assert_eq!(days, vec![1, 3, 5]);
         }

@@ -36,7 +36,7 @@ pub async fn run_simulation(profile: &SimProfile) -> SimulationReport {
 // ═════════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-#[ignore] // Requires full feature set (mod-bookings) and higher rate limits
+#[ignore = "requires full feature set (mod-bookings) and higher rate limits"]
 async fn simulation_small_profile() {
     let report = run_simulation(&profiles::SMALL).await;
 
@@ -57,7 +57,7 @@ async fn simulation_small_profile() {
 }
 
 #[tokio::test]
-#[ignore] // Run explicitly: cargo test simulation_campus -- --ignored
+#[ignore = "run explicitly: cargo test simulation_campus -- --ignored"]
 async fn simulation_campus_profile() {
     let report = run_simulation(&profiles::CAMPUS).await;
 
@@ -77,7 +77,7 @@ async fn simulation_campus_profile() {
 }
 
 #[tokio::test]
-#[ignore] // Run explicitly: cargo test simulation_enterprise -- --ignored
+#[ignore = "run explicitly: cargo test simulation_enterprise -- --ignored"]
 async fn simulation_enterprise_profile() {
     let report = run_simulation(&profiles::ENTERPRISE).await;
 

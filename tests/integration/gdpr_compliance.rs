@@ -205,7 +205,7 @@ async fn gdpr_delete_preserves_anonymized_booking_records() {
         .unwrap();
 
     // Admin: check if booking still exists (AO section 147 requires retention)
-    let (status, body) = auth_get(&srv, &admin_token, &format!("/api/v1/admin/bookings")).await;
+    let (status, body) = auth_get(&srv, &admin_token, "/api/v1/admin/bookings").await;
 
     if status == 200 {
         let bookings = body["data"].as_array().unwrap_or(&Vec::new()).clone();

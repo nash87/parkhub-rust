@@ -30,8 +30,10 @@ pub async fn verify_consistency(
     _profile: &SimProfile,
     results: &InjectionResults,
 ) -> VerificationResult {
-    let mut v = VerificationResult::default();
-    v.passed = true;
+    let mut v = VerificationResult {
+        passed: true,
+        ..VerificationResult::default()
+    };
 
     // ── 1. No double-bookings ────────────────────────────────────────────────
     v.double_bookings_found = check_no_double_bookings(srv, ctx, results).await;
@@ -89,17 +91,18 @@ async fn check_no_double_bookings(
         )
         .await;
 
-        if status != 200 {
-            // Try without lot filter
-            let (status, body) = auth_get(srv, &ctx.admin_token, "/api/v1/admin/bookings").await;
-            if status != 200 {
-                continue;
-            }
+        if status == 200 {
             double_bookings += count_overlaps(&body["data"]);
-            break; // Already checked all bookings
-        } else {
-            double_bookings += count_overlaps(&body["data"]);
+            continue;
         }
+
+        // Try without lot filter
+        let (status, body) = auth_get(srv, &ctx.admin_token, "/api/v1/admin/bookings").await;
+        if status != 200 {
+            continue;
+        }
+        double_bookings += count_overlaps(&body["data"]);
+        break; // Already checked all bookings
     }
 
     double_bookings
@@ -128,7 +131,7 @@ fn count_overlaps(bookings_value: &Value) -> usize {
     }
 
     let mut overlaps = 0;
-    for (_slot, times) in &by_slot {
+    for times in by_slot.values() {
         for i in 0..times.len() {
             for j in (i + 1)..times.len() {
                 let (s1, e1) = times[i];
@@ -178,25 +181,21 @@ async fn check_cancellation_count(
     ctx: &SimContext,
     results: &InjectionResults,
 ) -> bool {
-    // Check that cancelled bookings are actually marked cancelled
-    let mut _verified_cancellations = 0;
-    let sample_size = results.cancelled_ids.len().min(20); // Spot-check
-
-    for id in results.cancelled_ids.iter().take(sample_size) {
+    // Check that cancelled bookings are actually marked cancelled (spot-check first ID)
+    if let Some(id) = results.cancelled_ids.first() {
         // Check via admin endpoint
         let (status, body) =
-            auth_get(srv, &ctx.admin_token, &format!("/api/v1/admin/bookings")).await;
+            auth_get(srv, &ctx.admin_token, "/api/v1/admin/bookings").await;
 
         if status == 200 {
             if let Some(bookings) = body["data"].as_array() {
-                if let Some(bk) = bookings.iter().find(|b| b["id"].as_str() == Some(id)) {
-                    if bk["status"].as_str() == Some("cancelled") {
-                        _verified_cancellations += 1;
-                    }
+                if let Some(bk) =
+                    bookings.iter().find(|b| b["id"].as_str() == Some(id.as_str()))
+                {
+                    let _is_cancelled = bk["status"].as_str() == Some("cancelled");
                 }
             }
         }
-        break; // Only need to check the batch once
     }
 
     // If we can't verify (no admin endpoint), pass

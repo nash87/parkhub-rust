@@ -89,16 +89,19 @@ impl SimProfile {
     }
 
     /// Expected recurring users (~5%).
+    #[allow(dead_code)]
     pub fn expected_recurring_users(&self) -> usize {
         (self.users as f64 * 0.05) as usize
     }
 
     /// Expected waitlist entries (~3% of booking attempts).
+    #[allow(dead_code)]
     pub fn expected_waitlist_entries(&self) -> usize {
         (self.expected_total_bookings() as f64 * 0.03) as usize
     }
 
     /// Expected conflict attempts (~2%).
+    #[allow(dead_code)]
     pub fn expected_conflict_attempts(&self) -> usize {
         (self.expected_total_bookings() as f64 * 0.02) as usize
     }
