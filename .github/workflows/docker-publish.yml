@@ -33,7 +33,7 @@ jobs:
   build-and-push:
     name: Build and Publish GHCR Image
     needs: [validate-tag]
-    if: github.event_name != 'workflow_dispatch' || needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped'
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
