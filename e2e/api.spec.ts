@@ -26,13 +26,13 @@ test.describe('API — Auth Flow', () => {
     expect(res.status()).toBe(200);
 
     const body = await res.json();
-    const token = body.data?.token ?? body.token;
+    const token = body.data?.tokens?.access_token ?? body.data?.token ?? body.token;
     expect(token).toBeTruthy();
   });
 
   test('POST /api/v1/auth/login with bad creds → 401', async ({ request }) => {
     const res = await request.post('/api/v1/auth/login', {
-      data: { email: 'wrong@test.com', password: 'wrong' },
+      data: { username: 'wrong@test.com', password: 'wrong' },
     });
     expect(res.status()).toBe(401);
   });
