@@ -403,13 +403,13 @@ pub async fn update_role(
         }
     };
 
-    if let Some(ref perms) = req.permissions {
-        if let Some(err) = validate_permissions(perms) {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("INVALID_PERMISSIONS", &err)),
-            );
-        }
+    if let Some(ref perms) = req.permissions
+        && let Some(err) = validate_permissions(perms)
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("INVALID_PERMISSIONS", &err)),
+        );
     }
 
     let mut roles = load_roles(&state_guard).await;
@@ -739,10 +739,10 @@ pub async fn check_rbac_permission(
     permission: &str,
 ) -> Result<(), (StatusCode, String)> {
     // SuperAdmin bypasses all checks
-    if let Ok(Some(u)) = state.db.get_user(&auth_user.user_id.to_string()).await {
-        if u.role == UserRole::SuperAdmin {
-            return Ok(());
-        }
+    if let Ok(Some(u)) = state.db.get_user(&auth_user.user_id.to_string()).await
+        && u.role == UserRole::SuperAdmin
+    {
+        return Ok(());
     }
 
     let all_roles = load_roles(state).await;

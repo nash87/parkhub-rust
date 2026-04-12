@@ -207,12 +207,11 @@ pub async fn api_version_middleware(request: Request<Body>, next: Next) -> Respo
     // Check if this endpoint has a sunset date
     let deprecations = generate_deprecation_notices();
     for notice in &deprecations {
-        if path.contains(&notice.endpoint.replace("{id}", "")) || path == notice.endpoint {
-            if let Some(ref sunset) = notice.sunset_date {
-                if let Ok(val) = HeaderValue::from_str(sunset) {
-                    response.headers_mut().insert(SUNSET.clone(), val);
-                }
-            }
+        if (path.contains(&notice.endpoint.replace("{id}", "")) || path == notice.endpoint)
+            && let Some(ref sunset) = notice.sunset_date
+            && let Ok(val) = HeaderValue::from_str(sunset)
+        {
+            response.headers_mut().insert(SUNSET.clone(), val);
         }
     }
 

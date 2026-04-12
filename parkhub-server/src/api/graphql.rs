@@ -346,20 +346,20 @@ pub fn parse_operation(query: &str) -> Result<(String, String, HashMap<String, S
 
     // Extract arguments (simple parser)
     let mut args = HashMap::new();
-    if let Some(paren_start) = body.find('(') {
-        if let Some(paren_end) = body.find(')') {
-            let args_str = &body[paren_start + 1..paren_end];
-            for part in args_str.split(',') {
-                let part = part.trim();
-                if let Some(colon) = part.find(':') {
-                    let key = part[..colon].trim().to_string();
-                    let value = part[colon + 1..]
-                        .trim()
-                        .trim_matches('"')
-                        .trim_matches('\'')
-                        .to_string();
-                    args.insert(key, value);
-                }
+    if let Some(paren_start) = body.find('(')
+        && let Some(paren_end) = body.find(')')
+    {
+        let args_str = &body[paren_start + 1..paren_end];
+        for part in args_str.split(',') {
+            let part = part.trim();
+            if let Some(colon) = part.find(':') {
+                let key = part[..colon].trim().to_string();
+                let value = part[colon + 1..]
+                    .trim()
+                    .trim_matches('"')
+                    .trim_matches('\'')
+                    .to_string();
+                args.insert(key, value);
             }
         }
     }

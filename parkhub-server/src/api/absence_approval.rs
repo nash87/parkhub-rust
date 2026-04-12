@@ -293,12 +293,11 @@ pub async fn list_pending_absences(
 
     for id in &pending_ids {
         let key = format!("absence_request:{id}");
-        if let Ok(Some(json_str)) = state_guard.db.get_setting(&key).await {
-            if let Ok(req) = serde_json::from_str::<AbsenceRequest>(&json_str) {
-                if req.status == ApprovalStatus::Pending {
-                    requests.push(req);
-                }
-            }
+        if let Ok(Some(json_str)) = state_guard.db.get_setting(&key).await
+            && let Ok(req) = serde_json::from_str::<AbsenceRequest>(&json_str)
+            && req.status == ApprovalStatus::Pending
+        {
+            requests.push(req);
         }
     }
 
@@ -495,10 +494,10 @@ pub async fn my_absence_requests(
     let mut requests = Vec::new();
     for id in &ids {
         let key = format!("absence_request:{id}");
-        if let Ok(Some(json_str)) = state_guard.db.get_setting(&key).await {
-            if let Ok(req) = serde_json::from_str::<AbsenceRequest>(&json_str) {
-                requests.push(req);
-            }
+        if let Ok(Some(json_str)) = state_guard.db.get_setting(&key).await
+            && let Ok(req) = serde_json::from_str::<AbsenceRequest>(&json_str)
+        {
+            requests.push(req);
         }
     }
 

@@ -203,27 +203,27 @@ pub async fn enhanced_audit_export(
     };
 
     // Validate date params if provided
-    if let Some(ref from) = params.from {
-        if NaiveDate::parse_from_str(from, "%Y-%m-%d").is_err() {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_DATE",
-                    "Invalid 'from' date format. Use YYYY-MM-DD",
-                )),
-            );
-        }
+    if let Some(ref from) = params.from
+        && NaiveDate::parse_from_str(from, "%Y-%m-%d").is_err()
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_DATE",
+                "Invalid 'from' date format. Use YYYY-MM-DD",
+            )),
+        );
     }
-    if let Some(ref to) = params.to {
-        if NaiveDate::parse_from_str(to, "%Y-%m-%d").is_err() {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_DATE",
-                    "Invalid 'to' date format. Use YYYY-MM-DD",
-                )),
-            );
-        }
+    if let Some(ref to) = params.to
+        && NaiveDate::parse_from_str(to, "%Y-%m-%d").is_err()
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_DATE",
+                "Invalid 'to' date format. Use YYYY-MM-DD",
+            )),
+        );
     }
 
     let token = Uuid::new_v4().to_string();
@@ -333,15 +333,15 @@ pub async fn download_audit_export(
                 || e.user_id.is_some_and(|id| id.to_string().contains(&q))
         });
     }
-    if let Some(ref from) = filters.from {
-        if let Ok(from_date) = NaiveDate::parse_from_str(from, "%Y-%m-%d") {
-            filtered.retain(|e| e.timestamp.date_naive() >= from_date);
-        }
+    if let Some(ref from) = filters.from
+        && let Ok(from_date) = NaiveDate::parse_from_str(from, "%Y-%m-%d")
+    {
+        filtered.retain(|e| e.timestamp.date_naive() >= from_date);
     }
-    if let Some(ref to) = filters.to {
-        if let Ok(to_date) = NaiveDate::parse_from_str(to, "%Y-%m-%d") {
-            filtered.retain(|e| e.timestamp.date_naive() <= to_date);
-        }
+    if let Some(ref to) = filters.to
+        && let Ok(to_date) = NaiveDate::parse_from_str(to, "%Y-%m-%d")
+    {
+        filtered.retain(|e| e.timestamp.date_naive() <= to_date);
     }
 
     let body = match format {

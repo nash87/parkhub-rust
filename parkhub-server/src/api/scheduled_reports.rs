@@ -259,13 +259,13 @@ pub async fn update_schedule(
     Path(schedule_id): Path<String>,
     Json(req): Json<UpdateScheduleRequest>,
 ) -> (StatusCode, Json<ApiResponse<ReportSchedule>>) {
-    if let Some(ref recipients) = req.recipients {
-        if let Err(msg) = validate_recipients(recipients) {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error("bad_request", msg)),
-            );
-        }
+    if let Some(ref recipients) = req.recipients
+        && let Err(msg) = validate_recipients(recipients)
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("bad_request", msg)),
+        );
     }
 
     let frequency = req.frequency.unwrap_or(ScheduleFrequency::Daily);

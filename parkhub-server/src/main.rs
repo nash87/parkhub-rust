@@ -243,7 +243,7 @@ async fn main() -> Result<()> {
         // SAFETY: called before any threads are spawned (main function, GUI init)
         #[allow(unsafe_code)]
         unsafe {
-            std::env::set_var("SLINT_BACKEND", "winit-software")
+            std::env::set_var("SLINT_BACKEND", "winit-software");
         };
     }
 
@@ -1322,20 +1322,20 @@ async fn run_status_gui(
             let state_clone = state_for_timer.clone();
             // Spawn async stats query without blocking
             tokio::spawn(async move {
-                if let Ok(state) = state_clone.try_read() {
-                    if let Ok(stats) = state.db.stats().await {
-                        // Update UI from event loop thread
-                        let _ = slint::invoke_from_event_loop(move || {
-                            #[allow(clippy::cast_possible_truncation)]
-                            if let Some(ui) = ui_weak_clone.upgrade() {
-                                ui.set_user_count(stats.users as i32);
-                                ui.set_booking_count(stats.bookings as i32);
-                                ui.set_parking_lot_count(stats.parking_lots as i32);
-                                ui.set_slot_count(stats.slots as i32);
-                                ui.set_session_count(stats.sessions as i32);
-                            }
-                        });
-                    }
+                if let Ok(state) = state_clone.try_read()
+                    && let Ok(stats) = state.db.stats().await
+                {
+                    // Update UI from event loop thread
+                    let _ = slint::invoke_from_event_loop(move || {
+                        #[allow(clippy::cast_possible_truncation)]
+                        if let Some(ui) = ui_weak_clone.upgrade() {
+                            ui.set_user_count(stats.users as i32);
+                            ui.set_booking_count(stats.bookings as i32);
+                            ui.set_parking_lot_count(stats.parking_lots as i32);
+                            ui.set_slot_count(stats.slots as i32);
+                            ui.set_session_count(stats.sessions as i32);
+                        }
+                    });
                 }
             });
         },

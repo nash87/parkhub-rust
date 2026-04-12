@@ -1201,17 +1201,16 @@ async fn main() -> Result<()> {
         );
     let config_path = config_dir.join("accessibility.toml");
 
-    if config_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&config_path) {
-            if let Ok(settings) = toml::from_str::<AccessibilitySettings>(&content) {
-                info!("Loaded accessibility settings from {:?}", config_path);
-                ui.global::<ThemeSettings>().set_mode(settings.theme_mode);
-                ui.global::<ThemeSettings>()
-                    .set_font_scale(settings.font_scale);
-                ui.global::<ThemeSettings>()
-                    .set_reduce_motion(settings.reduce_motion);
-            }
-        }
+    if config_path.exists()
+        && let Ok(content) = std::fs::read_to_string(&config_path)
+        && let Ok(settings) = toml::from_str::<AccessibilitySettings>(&content)
+    {
+        info!("Loaded accessibility settings from {:?}", config_path);
+        ui.global::<ThemeSettings>().set_mode(settings.theme_mode);
+        ui.global::<ThemeSettings>()
+            .set_font_scale(settings.font_scale);
+        ui.global::<ThemeSettings>()
+            .set_reduce_motion(settings.reduce_motion);
     }
 
     // Save accessibility settings when changed

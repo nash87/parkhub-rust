@@ -460,12 +460,13 @@ impl PasswordPolicy {
 
 /// Load password policy from DB settings.
 pub async fn load_password_policy(db: &crate::db::Database) -> PasswordPolicy {
-    let mut policy = PasswordPolicy::default();
     if let Ok(Some(val)) = db.get_setting("password_policy").await
-        && let Ok(p) = serde_json::from_str::<PasswordPolicy>(&val) {
-            policy = p;
-        }
-    policy
+        && let Ok(p) = serde_json::from_str::<PasswordPolicy>(&val)
+    {
+        p
+    } else {
+        PasswordPolicy::default()
+    }
 }
 
 /// Check a password against the stored password policy.

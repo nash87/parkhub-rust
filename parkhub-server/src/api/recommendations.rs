@@ -118,10 +118,10 @@ pub async fn get_recommendations(
 
     for lot in &lots {
         // Filter by lot_id if specified
-        if let Some(ref filter_lot) = query.lot_id {
-            if lot.id.to_string() != *filter_lot {
-                continue;
-            }
+        if let Some(ref filter_lot) = query.lot_id
+            && lot.id.to_string() != *filter_lot
+        {
+            continue;
         }
 
         let Ok(slots) = state.db.list_slots_by_lot(&lot.id.to_string()).await else {

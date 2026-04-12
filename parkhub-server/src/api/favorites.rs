@@ -111,13 +111,12 @@ pub async fn add_favorite(
         .db
         .list_favorites_by_user(&auth_user.user_id.to_string())
         .await
+        && existing.iter().any(|f| f.slot_id == req.slot_id)
     {
-        if existing.iter().any(|f| f.slot_id == req.slot_id) {
-            return (
-                StatusCode::CONFLICT,
-                Json(ApiResponse::error("DUPLICATE", "Slot already in favorites")),
-            );
-        }
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error("DUPLICATE", "Slot already in favorites")),
+        );
     }
 
     let fav = Favorite {

@@ -170,34 +170,33 @@ pub async fn admin_update_branding(
         }
     }
 
-    if let Some(ref name) = req.app_name {
-        if let Err(e) = state_guard.db.set_setting("branding_app_name", name).await {
-            tracing::error!("Failed to save branding_app_name: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(
-                    "SERVER_ERROR",
-                    "Failed to save branding",
-                )),
-            );
-        }
+    if let Some(ref name) = req.app_name
+        && let Err(e) = state_guard.db.set_setting("branding_app_name", name).await
+    {
+        tracing::error!("Failed to save branding_app_name: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save branding",
+            )),
+        );
     }
 
-    if let Some(ref color) = req.primary_color {
-        if let Err(e) = state_guard
+    if let Some(ref color) = req.primary_color
+        && let Err(e) = state_guard
             .db
             .set_setting("branding_primary_color", color)
             .await
-        {
-            tracing::error!("Failed to save branding_primary_color: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error(
-                    "SERVER_ERROR",
-                    "Failed to save branding",
-                )),
-            );
-        }
+    {
+        tracing::error!("Failed to save branding_primary_color: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save branding",
+            )),
+        );
     }
 
     let app_name = state_guard

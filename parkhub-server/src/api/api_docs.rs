@@ -177,19 +177,16 @@ fn generate_postman_collection() -> String {
                     }
 
                     // Add example body for POST/PUT methods
-                    if method == "post" || method == "put" {
-                        if let Some(rb) = details.get("requestBody") {
-                            if let Some(content) = rb.get("content") {
-                                if let Some(json_content) = content.get("application/json") {
-                                    if let Some(example) = json_content.get("example") {
-                                        request["body"] = serde_json::json!({
-                                            "mode": "raw",
-                                            "raw": serde_json::to_string_pretty(example).unwrap_or_default()
-                                        });
-                                    }
-                                }
-                            }
-                        }
+                    if (method == "post" || method == "put")
+                        && let Some(rb) = details.get("requestBody")
+                        && let Some(content) = rb.get("content")
+                        && let Some(json_content) = content.get("application/json")
+                        && let Some(example) = json_content.get("example")
+                    {
+                        request["body"] = serde_json::json!({
+                            "mode": "raw",
+                            "raw": serde_json::to_string_pretty(example).unwrap_or_default()
+                        });
                     }
 
                     let item = serde_json::json!({
