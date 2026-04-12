@@ -1,0 +1,115 @@
+name: Nightly Assurance
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22.12.0'
+
+jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Audit Cargo dependencies
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2024-0412 \
+            --ignore RUSTSEC-2024-0413 \
+            --ignore RUSTSEC-2024-0415 \
+            --ignore RUSTSEC-2024-0416 \
+            --ignore RUSTSEC-2024-0418 \
+            --ignore RUSTSEC-2024-0419 \
+            --ignore RUSTSEC-2024-0420 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2024-0370 \
+            --ignore RUSTSEC-2023-0071 \
+            --ignore RUSTSEC-2025-0057 \
+            --ignore RUSTSEC-2023-0019 \
+            --ignore RUSTSEC-2025-0141
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Audit npm dependencies
+        run: npm audit --prefix parkhub-web --package-lock-only --omit=dev --audit-level=high
+
+  full-e2e:
+    name: Full cross-browser E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build frontend
+        run: cd parkhub-web && npm ci && npm run build
+
+      - name: Build server
+        run: cargo build --release --locked --package parkhub-server --no-default-features --features headless,full
+
+      - name: Install Playwright browsers
+        run: npm ci && npx playwright install --with-deps chromium webkit
+
+      - name: Run full Playwright suite
+        env:
+          CI: true
+          DEMO_MODE: 'true'
+          PARKHUB_ADMIN_PASSWORD: demo
+          E2E_BASE_URL: http://localhost:8081
+        run: |
+          ./target/release/parkhub-server --headless --unattended --port 8081 &
+          server_pid=$!
+          trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 45); do
+            curl -sf http://localhost:8081/health && break || sleep 1
+          done
+
+          npx playwright test --project=chromium --retries=2
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-playwright-report
+          path: playwright-report/
+          retention-days: 7
