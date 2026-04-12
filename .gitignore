@@ -73,5 +73,6 @@ blob-report/
 
 # Local dev tooling (not for public repo)
 .aoe/
+.claude/
 .forge-operator/
 .fop/
