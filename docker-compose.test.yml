@@ -1,0 +1,88 @@
+# Test pipeline: build app, run integration + E2E + simulation
+# Usage: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parkhub-test
+    command: ["/app/parkhub-server", "--headless", "--unattended", "--data-dir", "/data", "--port", "8081"]
+    ports:
+      - "8081:8081"
+    environment:
+      - RUST_LOG=warn
+      - DEMO_MODE=true
+      - PARKHUB_ADMIN_PASSWORD=TestAdmin123!
+    volumes:
+      - test-data:/data
+    networks:
+      - test-net
+    healthcheck:
+      test: ["CMD", "/app/parkhub-server", "--health-check", "--port", "8081"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  test-runner:
+    image: node:22-slim
+    container_name: parkhub-test-runner
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+      - test-results:/app/playwright-report
+    environment:
+      - E2E_BASE_URL=http://app:8081
+      - CI=true
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - test-net
+    command: >
+      sh -c "
+        npm ci &&
+        npx playwright install --with-deps chromium &&
+        echo '=== Running E2E smoke ===' &&
+        npx playwright test e2e/api.spec.ts e2e/pages.spec.ts --project=chromium &&
+        echo '=== Running E2E a11y ===' &&
+        npx playwright test e2e/a11y.spec.ts --project=chromium &&
+        echo '=== All E2E tests passed ==='
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  k6:
+    image: grafana/k6:latest
+    container_name: parkhub-k6
+    volumes:
+      - ./tests/load:/scripts:ro
+    environment:
+      - K6_BASE_URL=http://app:8081
+      - ADMIN_PASSWORD=TestAdmin123!
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - test-net
+    command: run /scripts/smoke.js
+    profiles:
+      - load-test
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  test-net:
+    driver: bridge
+
+volumes:
+  test-data:
+  test-results:
