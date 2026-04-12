@@ -15,7 +15,6 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_TOOLCHAIN: '1.85'
   NODE_VERSION: '22.12.0'
 
 jobs:
@@ -46,9 +45,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -104,9 +100,6 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
