@@ -101,8 +101,9 @@ jobs:
           server_pid=$!
           trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
 
-          for i in $(seq 1 45); do
-            curl -sf http://localhost:8081/health && break || sleep 1
+          for _i in $(seq 1 45); do
+            if curl -sf http://localhost:8081/health; then break; fi
+            sleep 1
           done
 
           npx playwright test --project=chromium --retries=2
