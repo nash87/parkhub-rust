@@ -1,6 +1,6 @@
 # GDPR / DSGVO Compliance Guide — ParkHub Rust
 
-> **Version:** 3.3.0 | **Last updated:** 2026-03-22
+> **Version:** 3.3.0 | **Last updated:** 2026-04-12
 
 This guide is addressed to operators deploying ParkHub Rust within the European Union (EU)
 or the European Economic Area (EEA), where the General Data Protection Regulation
