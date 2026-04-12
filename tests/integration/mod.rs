@@ -1,0 +1,10 @@
+mod api_contract;
+mod auth_flow;
+mod booking_lifecycle;
+mod db_migration;
+mod email_templates;
+mod gdpr_compliance;
+mod multi_tenant;
+mod rate_limiting;
+mod recurring_booking;
+mod webhook_delivery;
