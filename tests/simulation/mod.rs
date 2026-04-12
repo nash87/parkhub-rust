@@ -40,8 +40,15 @@ pub async fn run_simulation(profile: &SimProfile) -> SimulationReport {
 async fn simulation_small_profile() {
     let report = run_simulation(&profiles::SMALL).await;
 
-    assert!(report.errors == 0, "Small simulation had {} errors", report.errors);
-    assert!(report.verification_passed, "Small simulation verification failed");
+    assert!(
+        report.errors == 0,
+        "Small simulation had {} errors",
+        report.errors
+    );
+    assert!(
+        report.verification_passed,
+        "Small simulation verification failed"
+    );
     assert_eq!(report.double_bookings, 0, "No double bookings allowed");
 
     // Print report
@@ -54,8 +61,15 @@ async fn simulation_small_profile() {
 async fn simulation_campus_profile() {
     let report = run_simulation(&profiles::CAMPUS).await;
 
-    assert!(report.errors == 0, "Campus simulation had {} errors", report.errors);
-    assert!(report.verification_passed, "Campus simulation verification failed");
+    assert!(
+        report.errors == 0,
+        "Campus simulation had {} errors",
+        report.errors
+    );
+    assert!(
+        report.verification_passed,
+        "Campus simulation verification failed"
+    );
     assert_eq!(report.double_bookings, 0);
 
     let json = serde_json::to_string_pretty(&report).unwrap();
@@ -67,8 +81,15 @@ async fn simulation_campus_profile() {
 async fn simulation_enterprise_profile() {
     let report = run_simulation(&profiles::ENTERPRISE).await;
 
-    assert!(report.errors == 0, "Enterprise simulation had {} errors", report.errors);
-    assert!(report.verification_passed, "Enterprise simulation verification failed");
+    assert!(
+        report.errors == 0,
+        "Enterprise simulation had {} errors",
+        report.errors
+    );
+    assert!(
+        report.verification_passed,
+        "Enterprise simulation verification failed"
+    );
     assert_eq!(report.double_bookings, 0);
 
     let json = serde_json::to_string_pretty(&report).unwrap();

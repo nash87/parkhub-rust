@@ -84,12 +84,8 @@ async fn booking_creates_data_for_confirmation_email() {
     let booking_id = create_test_booking(&srv, &user_token, &lot_id, &slot_id).await;
 
     // Verify booking data exists (which would feed the email template)
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/bookings/{booking_id}"),
-    )
-    .await;
+    let (status, body) =
+        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     assert_eq!(status, 200);
     assert!(body["data"]["id"].is_string());
     assert!(body["data"]["lot_id"].is_string());
@@ -125,12 +121,8 @@ async fn cancellation_produces_correct_booking_status() {
     assert!(resp.status().is_success());
 
     // Verify cancelled status (data that feeds the cancellation email)
-    let (status, body) = auth_get(
-        &srv,
-        &user_token,
-        &format!("/api/v1/bookings/{booking_id}"),
-    )
-    .await;
+    let (status, body) =
+        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     if status == 200 {
         assert_eq!(body["data"]["status"], "cancelled");
     }
@@ -215,9 +207,7 @@ async fn admin_email_settings_endpoint() {
         // Email settings should include SMTP configuration fields
         let data = &body["data"];
         assert!(
-            data["smtp_host"].is_string()
-                || data["smtp_enabled"].is_boolean()
-                || data.is_object(),
+            data["smtp_host"].is_string() || data["smtp_enabled"].is_boolean() || data.is_object(),
             "Email settings should contain SMTP config"
         );
     }
@@ -276,10 +266,7 @@ async fn user_notifications_after_booking() {
     let (status, body) = auth_get(&srv, &user_token, "/api/v1/notifications").await;
 
     if status == 200 {
-        assert!(
-            body["data"].is_array(),
-            "Notifications should be an array"
-        );
+        assert!(body["data"].is_array(), "Notifications should be an array");
     }
     // 404 = notifications feature not compiled
 }

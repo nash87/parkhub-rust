@@ -37,10 +37,8 @@ pub async fn verify_consistency(
     v.double_bookings_found = check_no_double_bookings(srv, ctx, results).await;
     if v.double_bookings_found > 0 {
         v.passed = false;
-        v.failures.push(format!(
-            "Found {} double-bookings",
-            v.double_bookings_found
-        ));
+        v.failures
+            .push(format!("Found {} double-bookings", v.double_bookings_found));
     }
 
     // ── 2. Audit trail ───────────────────────────────────────────────────────
@@ -53,11 +51,9 @@ pub async fn verify_consistency(
     }
 
     // ── 3. Cancellation count ────────────────────────────────────────────────
-    v.cancellation_count_matches =
-        check_cancellation_count(srv, ctx, results).await;
+    v.cancellation_count_matches = check_cancellation_count(srv, ctx, results).await;
     if !v.cancellation_count_matches {
-        v.failures
-            .push("Cancellation count mismatch".to_string());
+        v.failures.push("Cancellation count mismatch".to_string());
     }
 
     // ── 4. Recurring count ───────────────────────────────────────────────────
@@ -138,12 +134,9 @@ fn count_overlaps(bookings_value: &Value) -> usize {
                 let (s1, e1) = times[i];
                 let (s2, e2) = times[j];
                 // Simple string comparison works for ISO 8601 timestamps
-                if let (Some(s1s), Some(e1s), Some(s2s), Some(e2s)) = (
-                    s1.as_str(),
-                    e1.as_str(),
-                    s2.as_str(),
-                    e2.as_str(),
-                ) {
+                if let (Some(s1s), Some(e1s), Some(s2s), Some(e2s)) =
+                    (s1.as_str(), e1.as_str(), s2.as_str(), e2.as_str())
+                {
                     // Overlap: s1 < e2 AND s2 < e1
                     if s1s < e2s && s2s < e1s {
                         overlaps += 1;
@@ -191,12 +184,8 @@ async fn check_cancellation_count(
 
     for id in results.cancelled_ids.iter().take(sample_size) {
         // Check via admin endpoint
-        let (status, body) = auth_get(
-            srv,
-            &ctx.admin_token,
-            &format!("/api/v1/admin/bookings"),
-        )
-        .await;
+        let (status, body) =
+            auth_get(srv, &ctx.admin_token, &format!("/api/v1/admin/bookings")).await;
 
         if status == 200 {
             if let Some(bookings) = body["data"].as_array() {
@@ -242,11 +231,7 @@ async fn check_recurring_count(
 }
 
 /// Verify all waitlist entries are in a terminal state.
-async fn check_waitlist(
-    srv: &TestServer,
-    ctx: &SimContext,
-    results: &InjectionResults,
-) -> bool {
+async fn check_waitlist(srv: &TestServer, ctx: &SimContext, results: &InjectionResults) -> bool {
     if results.waitlist_entries == 0 {
         return true;
     }

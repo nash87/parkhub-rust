@@ -22,9 +22,15 @@ fn assert_success_envelope(body: &Value) {
 }
 
 fn assert_error_envelope(body: &Value) {
-    assert_eq!(body["success"], false, "Expected success=false, got: {body}");
+    assert_eq!(
+        body["success"], false,
+        "Expected success=false, got: {body}"
+    );
     let error = &body["error"];
-    assert!(error.is_object(), "Error response must contain 'error' object");
+    assert!(
+        error.is_object(),
+        "Error response must contain 'error' object"
+    );
     assert!(
         error.get("code").is_some(),
         "Error object must contain 'code'"
@@ -141,23 +147,17 @@ async fn login_success_response_shape() {
     assert_success_envelope(&body);
 
     let data = &body["data"];
-    assert!(data["user"].is_object(), "login data must contain user object");
     assert!(
-        data["user"]["id"].is_string(),
-        "user must have string id"
+        data["user"].is_object(),
+        "login data must contain user object"
     );
+    assert!(data["user"]["id"].is_string(), "user must have string id");
     assert!(
         data["user"]["username"].is_string(),
         "user must have username"
     );
-    assert!(
-        data["user"]["email"].is_string(),
-        "user must have email"
-    );
-    assert!(
-        data["user"]["role"].is_string(),
-        "user must have role"
-    );
+    assert!(data["user"]["email"].is_string(), "user must have email");
+    assert!(data["user"]["role"].is_string(), "user must have role");
     assert!(
         data["tokens"].is_object(),
         "login data must contain tokens object"
@@ -289,7 +289,8 @@ async fn create_booking_returns_booking_object() {
     assert!(!booking_id.is_empty(), "booking_id must be non-empty");
 
     // GET the booking
-    let (status, body) = auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
+    let (status, body) =
+        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
     assert_eq!(status, 200);
     assert_success_envelope(&body);
 

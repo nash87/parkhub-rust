@@ -7,8 +7,8 @@
 //! - Audit trail records the erasure event
 
 use crate::common::{
-    admin_login, auth_get, create_test_booking, create_test_lot,
-    create_test_slot, create_test_user, start_test_server,
+    admin_login, auth_get, create_test_booking, create_test_lot, create_test_slot,
+    create_test_user, start_test_server,
 };
 use serde_json::Value;
 
@@ -66,7 +66,10 @@ async fn gdpr_data_export_contains_user_data() {
         // Should include bookings
         assert!(
             data["bookings"].is_array()
-                || data.as_object().map(|m| m.contains_key("bookings")).unwrap_or(false),
+                || data
+                    .as_object()
+                    .map(|m| m.contains_key("bookings"))
+                    .unwrap_or(false),
             "Export must include bookings"
         );
     } else {
@@ -166,9 +169,7 @@ async fn gdpr_delete_account_removes_pii() {
             "Deleted user email should be anonymized, got: {email}"
         );
         assert!(
-            name.is_empty()
-                || name.contains("Deleted")
-                || name.contains("Anonymized"),
+            name.is_empty() || name.contains("Deleted") || name.contains("Anonymized"),
             "Deleted user name should be anonymized, got: {name}"
         );
     } else {
@@ -204,12 +205,7 @@ async fn gdpr_delete_preserves_anonymized_booking_records() {
         .unwrap();
 
     // Admin: check if booking still exists (AO section 147 requires retention)
-    let (status, body) = auth_get(
-        &srv,
-        &admin_token,
-        &format!("/api/v1/admin/bookings"),
-    )
-    .await;
+    let (status, body) = auth_get(&srv, &admin_token, &format!("/api/v1/admin/bookings")).await;
 
     if status == 200 {
         let bookings = body["data"].as_array().unwrap_or(&Vec::new()).clone();
@@ -339,6 +335,9 @@ async fn data_processing_map_endpoint() {
     if status == 200 {
         assert_eq!(body["success"], true);
     } else {
-        assert!(status == 404, "Data map: expected 200 or 404, got: {status}");
+        assert!(
+            status == 404,
+            "Data map: expected 200 or 404, got: {status}"
+        );
     }
 }

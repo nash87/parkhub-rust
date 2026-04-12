@@ -108,8 +108,7 @@ async fn rate_limit_response_contains_retry_after() {
             // Check for Retry-After or X-RateLimit-* headers
             let has_retry_after = resp.headers().contains_key("retry-after");
             let has_rate_limit_remaining = resp.headers().contains_key("x-ratelimit-remaining");
-            let has_rate_limit_after =
-                resp.headers().contains_key("x-retry-after");
+            let has_rate_limit_after = resp.headers().contains_key("x-retry-after");
 
             if has_retry_after || has_rate_limit_remaining || has_rate_limit_after {
                 _retry_after_found = true;
@@ -208,10 +207,7 @@ async fn forgot_password_rate_limit() {
         }
     }
 
-    assert!(
-        got_429,
-        "Forgot-password endpoint should be rate-limited"
-    );
+    assert!(got_429, "Forgot-password endpoint should be rate-limited");
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

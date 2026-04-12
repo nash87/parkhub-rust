@@ -104,7 +104,9 @@ async fn list_recurring_bookings_returns_created_ones() {
     assert_eq!(status, 200);
     let items = body["data"].as_array().unwrap();
     assert!(
-        items.iter().any(|r| r["id"].as_str() == Some(&recurring_id)),
+        items
+            .iter()
+            .any(|r| r["id"].as_str() == Some(&recurring_id)),
         "Created recurring booking should appear in list"
     );
 }
@@ -163,7 +165,9 @@ async fn delete_recurring_booking_removes_it() {
     assert_eq!(status, 200);
     let items = body["data"].as_array().unwrap();
     assert!(
-        !items.iter().any(|r| r["id"].as_str() == Some(&recurring_id)),
+        !items
+            .iter()
+            .any(|r| r["id"].as_str() == Some(&recurring_id)),
         "Deleted recurring booking should not appear in list"
     );
 }
@@ -277,7 +281,10 @@ async fn recurring_booking_has_correct_shape() {
     assert!(rb["id"].is_string(), "Must have id");
     assert!(rb["user_id"].is_string(), "Must have user_id");
     assert!(rb["lot_id"].is_string(), "Must have lot_id");
-    assert!(rb["days_of_week"].is_array(), "Must have days_of_week array");
+    assert!(
+        rb["days_of_week"].is_array(),
+        "Must have days_of_week array"
+    );
     assert!(rb["start_date"].is_string(), "Must have start_date");
     assert!(rb["start_time"].is_string(), "Must have start_time");
     assert!(rb["end_time"].is_string(), "Must have end_time");
