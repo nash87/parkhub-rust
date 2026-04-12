@@ -58,7 +58,9 @@ fn server_binary() -> PathBuf {
     panic!(
         "parkhub-server binary not found. Build with `cargo build -p parkhub-server` first.\n\
          Searched: {}, {}, {}",
-        debug.display(), release.display(), ws_debug.display()
+        debug.display(),
+        release.display(),
+        ws_debug.display()
     );
 }
 

@@ -184,13 +184,13 @@ async fn check_cancellation_count(
     // Check that cancelled bookings are actually marked cancelled (spot-check first ID)
     if let Some(id) = results.cancelled_ids.first() {
         // Check via admin endpoint
-        let (status, body) =
-            auth_get(srv, &ctx.admin_token, "/api/v1/admin/bookings").await;
+        let (status, body) = auth_get(srv, &ctx.admin_token, "/api/v1/admin/bookings").await;
 
         if status == 200 {
             if let Some(bookings) = body["data"].as_array() {
-                if let Some(bk) =
-                    bookings.iter().find(|b| b["id"].as_str() == Some(id.as_str()))
+                if let Some(bk) = bookings
+                    .iter()
+                    .find(|b| b["id"].as_str() == Some(id.as_str()))
                 {
                     let _is_cancelled = bk["status"].as_str() == Some("cancelled");
                 }
