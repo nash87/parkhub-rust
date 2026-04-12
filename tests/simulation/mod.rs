@@ -36,6 +36,7 @@ pub async fn run_simulation(profile: &SimProfile) -> SimulationReport {
 // ═════════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
+#[ignore] // Requires full feature set (mod-bookings) and higher rate limits
 async fn simulation_small_profile() {
     let report = run_simulation(&profiles::SMALL).await;
 

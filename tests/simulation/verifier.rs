@@ -8,7 +8,7 @@ use crate::common::{auth_get, TestServer};
 use crate::simulation::injector::{InjectionResults, SimContext};
 use crate::simulation::profiles::SimProfile;
 use serde_json::Value;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 /// Verification result.
 #[derive(Debug, Default)]
@@ -27,7 +27,7 @@ pub struct VerificationResult {
 pub async fn verify_consistency(
     srv: &TestServer,
     ctx: &SimContext,
-    profile: &SimProfile,
+    _profile: &SimProfile,
     results: &InjectionResults,
 ) -> VerificationResult {
     let mut v = VerificationResult::default();
@@ -80,7 +80,7 @@ pub async fn verify_consistency(
 async fn check_no_double_bookings(
     srv: &TestServer,
     ctx: &SimContext,
-    results: &InjectionResults,
+    _results: &InjectionResults,
 ) -> usize {
     let mut double_bookings = 0;
 
@@ -186,7 +186,7 @@ async fn check_cancellation_count(
     results: &InjectionResults,
 ) -> bool {
     // Check that cancelled bookings are actually marked cancelled
-    let mut verified_cancellations = 0;
+    let mut _verified_cancellations = 0;
     let sample_size = results.cancelled_ids.len().min(20); // Spot-check
 
     for id in results.cancelled_ids.iter().take(sample_size) {
@@ -202,7 +202,7 @@ async fn check_cancellation_count(
             if let Some(bookings) = body["data"].as_array() {
                 if let Some(bk) = bookings.iter().find(|b| b["id"].as_str() == Some(id)) {
                     if bk["status"].as_str() == Some("cancelled") {
-                        verified_cancellations += 1;
+                        _verified_cancellations += 1;
                     }
                 }
             }

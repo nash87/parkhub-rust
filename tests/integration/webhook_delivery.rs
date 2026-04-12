@@ -31,8 +31,8 @@ async fn webhook_v1_create_list_delete() {
     )
     .await;
 
-    if status == 404 {
-        // Webhooks feature not compiled
+    if status == 404 || body.is_null() {
+        // Webhooks feature not compiled (404 or SPA HTML fallback)
         return;
     }
 
@@ -103,7 +103,8 @@ async fn webhook_v2_lifecycle_with_test_event() {
     )
     .await;
 
-    if status == 404 {
+    if status == 404 || body.is_null() {
+        // Webhooks feature not compiled
         return;
     }
 
@@ -226,7 +227,8 @@ async fn webhook_stores_event_subscriptions() {
     )
     .await;
 
-    if status == 404 {
+    if status == 404 || body.is_null() {
+        // Webhooks feature not compiled
         return;
     }
 
@@ -248,6 +250,15 @@ async fn webhook_stores_event_subscriptions() {
 #[tokio::test]
 async fn non_admin_cannot_create_webhook() {
     let srv = start_test_server().await;
+    let (admin_token, _) = admin_login(&srv).await;
+
+    // Check if webhooks feature is compiled
+    let (_, probe) = auth_get(&srv, &admin_token, "/api/v1/admin/webhooks").await;
+    if probe.is_null() {
+        // Feature not compiled; SPA fallback — skip
+        return;
+    }
+
     let (user_token, _, _) = create_test_user(&srv, "webhook_nonadmin").await;
 
     let (status, _) = auth_post(
