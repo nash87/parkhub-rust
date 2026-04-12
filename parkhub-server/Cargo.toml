@@ -266,3 +266,15 @@ mod-admin-analytics = []
 tempfile = "3"
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
+# Integration test dependencies (used by ../tests/main.rs)
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full", "rt-multi-thread"] }
+
+[[test]]
+name = "integration"
+path = "../tests/main.rs"
+harness = true
