@@ -4,9 +4,9 @@
 //! SSRF validation (no private IPs, no localhost in production).
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use hmac::{Hmac, Mac};

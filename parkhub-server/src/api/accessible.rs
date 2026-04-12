@@ -6,9 +6,9 @@
 //! - `PUT  /api/v1/users/me/accessibility-needs` — update user accessibility needs
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use tokio::sync::RwLock;
 
 use parkhub_common::{ApiResponse, BookingStatus};
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;

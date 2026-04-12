@@ -4,19 +4,19 @@
 //! and visit date. Generates QR codes and sends email notifications.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use parkhub_common::models::{Visitor, VisitorStatus};
 use parkhub_common::ApiResponse;
+use parkhub_common::models::{Visitor, VisitorStatus};
 
 use super::settings::read_admin_setting;
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 /// Request body for pre-registering a visitor
 #[derive(Debug, Deserialize, utoipa::ToSchema)]

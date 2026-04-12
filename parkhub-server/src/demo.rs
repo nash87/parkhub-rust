@@ -4,7 +4,7 @@
 //! State is kept in-memory — ephemeral by design for free-tier hosting.
 //! Supports actual database reset and scheduled auto-reset every 6 hours.
 
-use axum::{extract::ConnectInfo, http::StatusCode, response::IntoResponse, Extension, Json};
+use axum::{Extension, Json, extract::ConnectInfo, http::StatusCode, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -385,10 +385,12 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn demo_state_disabled_by_default_when_env_not_set() {
         // Temporarily ensure DEMO_MODE is unset (guard against test-ordering effects).
         let original = std::env::var("DEMO_MODE").ok();
-        std::env::remove_var("DEMO_MODE");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("DEMO_MODE") };
 
         let state = DemoState::new();
         assert!(!state.enabled, "DemoState must default to disabled");
@@ -403,7 +405,8 @@ mod tests {
 
         // Restore original value so other tests are unaffected.
         if let Some(val) = original {
-            std::env::set_var("DEMO_MODE", val);
+            // SAFETY: single-threaded test or pre-spawn context
+            unsafe { std::env::set_var("DEMO_MODE", val) };
         }
     }
 

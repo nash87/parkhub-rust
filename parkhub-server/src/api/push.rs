@@ -1,6 +1,6 @@
 //! Web Push notification handlers: subscribe, unsubscribe, VAPID key.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;

@@ -1,9 +1,9 @@
 //! Guest booking handlers: create, admin list, admin cancel.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;
@@ -13,7 +13,7 @@ use parkhub_common::models::GuestBooking;
 use parkhub_common::{ApiResponse, BookingStatus};
 
 use super::settings::read_admin_setting;
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 /// Request body for creating a guest booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]

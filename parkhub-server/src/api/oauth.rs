@@ -11,10 +11,10 @@
 //! - `GET /api/v1/auth/oauth/github/callback`  — exchange code, create/link user
 
 use axum::{
-    extract::{Query, State},
-    http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Redirect, Response},
     Json,
+    extract::{Query, State},
+    http::{HeaderMap, StatusCode, header},
+    response::{IntoResponse, Redirect, Response},
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -26,7 +26,7 @@ use crate::audit::{AuditEntry, AuditEventType};
 use crate::db::Session;
 use crate::metrics;
 
-use super::{generate_access_token, hash_password_simple, SharedState};
+use super::{SharedState, generate_access_token, hash_password_simple};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -526,7 +526,9 @@ pub async fn oauth_github_callback(
         match fetch_github_primary_email(&client, &token_data.access_token).await {
             Some(e) => e,
             None => {
-                return oauth_error_response("Could not retrieve email from GitHub. Please make your email public or grant the user:email scope.");
+                return oauth_error_response(
+                    "Could not retrieve email from GitHub. Please make your email public or grant the user:email scope.",
+                );
             }
         }
     };

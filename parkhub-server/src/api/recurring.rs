@@ -1,9 +1,9 @@
 //! Recurring booking handlers: list, create, delete, update.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;

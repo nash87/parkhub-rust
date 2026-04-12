@@ -12,9 +12,9 @@
 //! - `PUT    /api/v1/admin/users/{id}/roles`    — assign roles to user
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

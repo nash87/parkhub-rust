@@ -80,7 +80,8 @@ async fn main() -> Result<()> {
     }
 
     // Force software renderer for compatibility (avoids OpenGL driver issues)
-    std::env::set_var("SLINT_BACKEND", "winit-software");
+    // SAFETY: single-threaded test or pre-spawn context
+    unsafe { std::env::set_var("SLINT_BACKEND", "winit-software") };
 
     // Initialize logging
     tracing_subscriber::fmt().with_env_filter("info").init();

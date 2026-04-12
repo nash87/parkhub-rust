@@ -2,10 +2,10 @@
 //! and German licence-plate city-code reference data.
 
 use axum::{
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{Path, State},
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use base64::Engine;
 use chrono::Utc;
@@ -16,7 +16,7 @@ use parkhub_common::{ApiResponse, Vehicle};
 use crate::audit::{AuditEntry, AuditEventType};
 use crate::requests::VehicleRequest;
 
-use super::{AuthUser, SharedState, MAX_PHOTO_BYTES};
+use super::{AuthUser, MAX_PHOTO_BYTES, SharedState};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Request types
@@ -679,8 +679,8 @@ static CITY_CODES: std::sync::LazyLock<std::collections::HashMap<&'static str, &
     security(("bearer_auth" = [])),
     responses((status = 200, description = "City code map"))
 )]
-pub async fn vehicle_city_codes(
-) -> Json<ApiResponse<std::collections::HashMap<&'static str, &'static str>>> {
+pub async fn vehicle_city_codes()
+-> Json<ApiResponse<std::collections::HashMap<&'static str, &'static str>>> {
     Json(ApiResponse::success(CITY_CODES.clone()))
 }
 

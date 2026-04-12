@@ -3,7 +3,7 @@
 //! Uses real HTTP requests via reqwest to create all entities.
 //! Respects rate limits and retries on 429.
 
-use crate::common::{admin_login, auth_delete, auth_post, TestServer};
+use crate::common::{TestServer, admin_login, auth_delete, auth_post};
 use crate::simulation::generator;
 use crate::simulation::profiles::SimProfile;
 use chrono::{Duration, Utc};
@@ -252,7 +252,7 @@ pub async fn inject_bookings(
 
         // Recurring bookings: create once on day 0 for qualifying users
         if day == 0 && profile.enable_recurring {
-            for (ref user_token, _, _) in &ctx.users {
+            for (user_token, _, _) in &ctx.users {
                 if !generator::is_recurring_user() {
                     continue;
                 }

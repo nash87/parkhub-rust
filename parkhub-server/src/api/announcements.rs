@@ -1,20 +1,20 @@
 //! Announcement handlers: public active list, admin CRUD.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use parkhub_common::models::{Announcement, AnnouncementSeverity};
 use parkhub_common::ApiResponse;
+use parkhub_common::models::{Announcement, AnnouncementSeverity};
 
 use crate::audit::{AuditEntry, AuditEventType};
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 /// `GET /api/v1/announcements/active` — public, return active non-expired announcements
 #[utoipa::path(get, path = "/api/v1/announcements/active", tag = "Public",

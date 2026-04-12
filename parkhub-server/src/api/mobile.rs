@@ -9,15 +9,15 @@
 //! - `GET /api/v1/mobile/active-booking` — current active booking with countdown
 
 use axum::{
+    Extension, Json,
     extract::{Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use parkhub_common::models::BookingStatus;
 use parkhub_common::ApiResponse;
+use parkhub_common::models::BookingStatus;
 
 use super::{AuthUser, SharedState};
 

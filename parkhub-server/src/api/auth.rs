@@ -1,10 +1,10 @@
 //! Authentication handlers: login, register, token refresh, password management.
 
 use axum::{
-    extract::State,
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
     Json,
+    extract::State,
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use chrono::{Duration, Utc};
 use serde::Deserialize;
@@ -22,7 +22,7 @@ use crate::email;
 use crate::metrics;
 
 use super::{
-    generate_access_token, hash_password, hash_password_simple, verify_password, SharedState,
+    SharedState, generate_access_token, hash_password, hash_password_simple, verify_password,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1082,9 +1082,11 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn test_build_auth_cookie_no_secure_on_localhost() {
         // APP_URL not set defaults to localhost
-        std::env::remove_var("APP_URL");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("APP_URL") };
         let cookie = build_auth_cookie("tok", 7200);
         assert!(!cookie.contains("Secure"));
     }

@@ -1,6 +1,6 @@
 //! Security features: 2FA/TOTP, password policy, login history, session management, API keys.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -9,7 +9,7 @@ use parkhub_common::ApiResponse;
 
 use crate::audit::{AuditEntry, AuditEventType};
 
-use super::{check_admin, generate_access_token, verify_password, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin, generate_access_token, verify_password};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 2FA / TOTP
@@ -1376,10 +1376,12 @@ mod tests {
             qr_code_base64: "iVBORw0KGgo=".to_string(),
         };
         let json = serde_json::to_value(&resp).unwrap();
-        assert!(json["secret"]
-            .as_str()
-            .unwrap()
-            .contains("JBSWY3DPEHPK3PXP"));
+        assert!(
+            json["secret"]
+                .as_str()
+                .unwrap()
+                .contains("JBSWY3DPEHPK3PXP")
+        );
         assert!(json["otpauth_uri"].as_str().unwrap().contains("otpauth://"));
     }
 

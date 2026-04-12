@@ -1,16 +1,16 @@
 //! Waitlist handlers: list, join, leave.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use parkhub_common::models::{WaitlistEntry, WaitlistStatus};
 use parkhub_common::ApiResponse;
+use parkhub_common::models::{WaitlistEntry, WaitlistStatus};
 
 use super::settings::read_admin_setting;
 use super::{AuthUser, SharedState};

@@ -10,9 +10,9 @@
 //! - `POST   /api/v1/admin/reports/schedules/{id}/send-now` — trigger immediate send
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

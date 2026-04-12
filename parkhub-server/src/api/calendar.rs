@@ -2,9 +2,9 @@
 //! and iCal subscription via personal tokens.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use std::fmt::Write as _;
 
 use parkhub_common::ApiResponse;
 
-use super::{generate_access_token, AuthUser, SharedState};
+use super::{AuthUser, SharedState, generate_access_token};
 
 /// Query params for calendar events
 #[derive(Debug, Deserialize)]

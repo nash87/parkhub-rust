@@ -65,8 +65,8 @@ impl From<&User> for AdminUserResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use parkhub_common::models::UserPreferences;
     use parkhub_common::UserRole;
+    use parkhub_common::models::UserPreferences;
     use uuid::Uuid;
 
     fn make_test_user(role: UserRole, is_active: bool) -> User {

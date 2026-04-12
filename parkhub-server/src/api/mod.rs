@@ -3,13 +3,13 @@
 //! `RESTful` API for the parking system.
 
 use axum::{
+    Extension, Json, Router,
     body::Body,
     extract::State,
-    http::{header, HeaderName, HeaderValue, Request, StatusCode},
+    http::{HeaderName, HeaderValue, Request, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
-    Extension, Json, Router,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -30,7 +30,7 @@ use crate::demo;
 use crate::metrics;
 #[cfg(feature = "full")]
 use crate::openapi::ApiDoc;
-use crate::rate_limit::{ip_rate_limit_middleware, EndpointRateLimiters};
+use crate::rate_limit::{EndpointRateLimiters, ip_rate_limit_middleware};
 use crate::static_files;
 
 /// Maximum allowed request body size: 4 MiB.
@@ -2215,8 +2215,8 @@ fn hash_password_sync(
     password: &str,
 ) -> Result<String, (StatusCode, Json<ApiResponse<LoginResponse>>)> {
     use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Algorithm, Argon2, Version,
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params());
@@ -2234,8 +2234,8 @@ fn hash_password_sync(
 
 fn hash_password_simple_sync(password: &str) -> anyhow::Result<String> {
     use argon2::{
-        password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
         Algorithm, Argon2, Version,
+        password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
     };
     let salt = SaltString::generate(&mut OsRng);
     Argon2::new(Algorithm::Argon2id, Version::V0x13, argon2_params())
@@ -2246,8 +2246,8 @@ fn hash_password_simple_sync(password: &str) -> anyhow::Result<String> {
 
 fn verify_password_sync(password: &str, hash: &str) -> bool {
     use argon2::{
-        password_hash::{PasswordHash, PasswordVerifier},
         Algorithm, Argon2, Version,
+        password_hash::{PasswordHash, PasswordVerifier},
     };
     let Ok(parsed_hash) = PasswordHash::new(hash) else {
         return false;

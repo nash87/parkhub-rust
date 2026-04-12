@@ -10,10 +10,10 @@
 //! - `GET /api/v1/admin/audit-log/export/download/{token}` — signed download
 
 use axum::{
-    extract::{Path, Query, State},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Extension, Json,
+    extract::{Path, Query, State},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ use uuid::Uuid;
 
 use parkhub_common::ApiResponse;
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 
 type SharedState = Arc<RwLock<crate::AppState>>;
 

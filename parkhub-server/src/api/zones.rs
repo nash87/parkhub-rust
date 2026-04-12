@@ -1,9 +1,9 @@
 //! Zone handlers: CRUD operations for parking lot zones.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::Deserialize;

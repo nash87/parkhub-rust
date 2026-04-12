@@ -1,13 +1,13 @@
 //! Notification handlers: list, mark read, mark all read.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 
-use parkhub_common::models::Notification;
 use parkhub_common::ApiResponse;
+use parkhub_common::models::Notification;
 
 use super::{AuthUser, SharedState};
 

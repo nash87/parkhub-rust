@@ -12,10 +12,10 @@
 //! - `DELETE /api/v1/admin/sso/{provider}`           — remove SSO provider
 
 use axum::{
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
     Extension, Json,
+    extract::{Path, State},
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ use crate::audit::{AuditEntry, AuditEventType};
 use crate::db::Session;
 use crate::metrics;
 
-use super::{generate_access_token, hash_password_simple, AuthUser, SharedState};
+use super::{AuthUser, SharedState, generate_access_token, hash_password_simple};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

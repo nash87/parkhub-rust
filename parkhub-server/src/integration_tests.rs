@@ -9,10 +9,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower::ServiceExt; // for `oneshot`
 
+use crate::AppState;
 use crate::api::create_router;
 use crate::config::ServerConfig;
 use crate::db::{Database, DatabaseConfig};
-use crate::AppState;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test helpers
@@ -75,8 +75,8 @@ fn router(state: Arc<RwLock<AppState>>) -> axum::Router {
 
 /// Hash a password using argon2 for test fixtures.
 fn hash_password_for_test(password: &str) -> String {
-    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
     use argon2::Argon2;
+    use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
     let salt = SaltString::generate(&mut OsRng);
     Argon2::default()
         .hash_password(password.as_bytes(), &salt)
@@ -216,10 +216,12 @@ async fn handshake_mismatched_protocol_returns_error() {
     assert_eq!(resp.status(), StatusCode::OK); // wrapper always 200
     let json = body_json(resp).await;
     assert_eq!(json["success"], false);
-    assert!(json["error"]["code"]
-        .as_str()
-        .unwrap()
-        .contains("PROTOCOL_MISMATCH"));
+    assert!(
+        json["error"]["code"]
+            .as_str()
+            .unwrap()
+            .contains("PROTOCOL_MISMATCH")
+    );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

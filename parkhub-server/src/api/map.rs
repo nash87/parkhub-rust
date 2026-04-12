@@ -1,9 +1,9 @@
 //! Map view handlers: lot markers with coordinates and live availability.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

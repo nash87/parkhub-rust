@@ -6,10 +6,10 @@
 //! - `POST /api/v1/admin/billing/allocate` — manual credit allocation per cost center
 
 use axum::{
-    extract::State,
-    http::{header, StatusCode},
-    response::IntoResponse,
     Extension, Json,
+    extract::State,
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ use tokio::sync::RwLock;
 
 use parkhub_common::{ApiResponse, BookingStatus};
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;

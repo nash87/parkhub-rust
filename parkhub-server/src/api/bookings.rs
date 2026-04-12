@@ -6,10 +6,10 @@
 #![allow(unused_imports)]
 
 use axum::{
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Extension, Json,
+    extract::{Path, State},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use chrono::{DateTime, Datelike, TimeDelta, Utc};
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ use crate::email;
 use crate::metrics;
 use crate::utils::html_escape;
 
-use super::{check_admin, read_admin_setting, AuthUser, SharedState, VAT_RATE};
+use super::{AuthUser, SharedState, VAT_RATE, check_admin, read_admin_setting};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOOKINGS

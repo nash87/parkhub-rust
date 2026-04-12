@@ -9,9 +9,9 @@
 //! - `GET /api/v1/absences/my` — user's absence history with approval status
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -338,7 +338,7 @@ pub async fn approve_absence(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Absence request not found")),
-            )
+            );
         }
     };
 
@@ -348,7 +348,7 @@ pub async fn approve_absence(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::error("SERVER_ERROR", "Corrupt request data")),
-            )
+            );
         }
     };
 
@@ -428,7 +428,7 @@ pub async fn reject_absence(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Absence request not found")),
-            )
+            );
         }
     };
 
@@ -438,7 +438,7 @@ pub async fn reject_absence(
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ApiResponse::error("SERVER_ERROR", "Corrupt request data")),
-            )
+            );
         }
     };
 

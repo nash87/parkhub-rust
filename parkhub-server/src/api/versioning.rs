@@ -11,12 +11,12 @@
 //! - `Sunset: <date>` on deprecated endpoints
 
 use axum::{
+    Json,
     body::Body,
     extract::State,
-    http::{header::HeaderName, HeaderValue, Request, StatusCode},
+    http::{HeaderValue, Request, StatusCode, header::HeaderName},
     middleware::Next,
     response::Response,
-    Json,
 };
 use serde::{Deserialize, Serialize};
 

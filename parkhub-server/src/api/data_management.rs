@@ -7,10 +7,10 @@
 //! - `GET  /api/v1/admin/export/bookings` — CSV export bookings (date range)
 
 use axum::{
-    extract::{Query, State},
-    http::{header, StatusCode},
-    response::IntoResponse,
     Extension, Json,
+    extract::{Query, State},
+    http::{StatusCode, header},
+    response::IntoResponse,
 };
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -23,7 +23,7 @@ use parkhub_common::{
     PricingInfo, PricingRate, SlotPosition, SlotStatus, SlotType, User, UserPreferences, UserRole,
 };
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -185,7 +185,7 @@ pub async fn import_users(
                 return (
                     StatusCode::BAD_REQUEST,
                     Json(ApiResponse::error("INVALID_JSON", e.to_string())),
-                )
+                );
             }
         }
     } else {
@@ -358,7 +358,7 @@ pub async fn import_lots(
                 return (
                     StatusCode::BAD_REQUEST,
                     Json(ApiResponse::error("INVALID_JSON", e.to_string())),
-                )
+                );
             }
         }
     } else {

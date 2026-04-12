@@ -9,9 +9,9 @@
 //! - `GET  /api/v1/zones/{id}/price`               — calculate price for a zone
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

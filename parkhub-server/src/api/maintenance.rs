@@ -7,9 +7,9 @@
 //! - `GET    /api/v1/maintenance/active` — current active maintenance (public)
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use uuid::Uuid;
 
 use parkhub_common::ApiResponse;
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -319,14 +319,14 @@ pub async fn update_maintenance(
                 return (
                     StatusCode::NOT_FOUND,
                     Json(ApiResponse::error("NOT_FOUND", "Maintenance not found")),
-                )
+                );
             }
         },
         _ => {
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Maintenance not found")),
-            )
+            );
         }
     };
 
@@ -394,7 +394,7 @@ pub async fn delete_maintenance(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Maintenance not found")),
-            )
+            );
         }
     }
 

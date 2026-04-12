@@ -1,7 +1,7 @@
 //! Extended admin features: bulk operations, advanced reporting, notification preferences,
 //! booking policies, and health check improvements.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Datelike, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +9,7 @@ use parkhub_common::{ApiResponse, BookingStatus, UserRole};
 
 use crate::audit::{AuditEntry, AuditEventType};
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BULK ADMIN OPERATIONS

@@ -4,10 +4,10 @@
 //! Supports optional AES-256-GCM encryption for data at rest.
 
 use aes_gcm::{
-    aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
+    aead::{Aead, KeyInit},
 };
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, NaiveDate, Utc};
 use pbkdf2::pbkdf2_hmac;
 use rand::RngCore;
@@ -2813,11 +2813,12 @@ mod tests {
         assert_eq!(deleted, 2);
 
         // user_id has none, other_user still has 1
-        assert!(db
-            .get_push_subscriptions_by_user(&user_id)
-            .await
-            .unwrap()
-            .is_empty());
+        assert!(
+            db.get_push_subscriptions_by_user(&user_id)
+                .await
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(
             db.get_push_subscriptions_by_user(&other_user)
                 .await
@@ -3152,16 +3153,18 @@ mod tests {
 
         // All new tables must be empty
         assert!(db.list_webhooks().await.unwrap().is_empty());
-        assert!(db
-            .list_zones_by_lot(&lot_id.to_string())
-            .await
-            .unwrap()
-            .is_empty());
-        assert!(db
-            .list_favorites_by_user(&fav.user_id.to_string())
-            .await
-            .unwrap()
-            .is_empty());
+        assert!(
+            db.list_zones_by_lot(&lot_id.to_string())
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            db.list_favorites_by_user(&fav.user_id.to_string())
+                .await
+                .unwrap()
+                .is_empty()
+        );
         assert!(db.list_audit_log(10).await.unwrap().is_empty());
     }
 
@@ -3223,16 +3226,18 @@ mod tests {
         db.save_parking_slot(&slot2).await.unwrap();
 
         // Both slots exist
-        assert!(db
-            .get_parking_slot(&slot1.id.to_string())
-            .await
-            .unwrap()
-            .is_some());
-        assert!(db
-            .get_parking_slot(&slot2.id.to_string())
-            .await
-            .unwrap()
-            .is_some());
+        assert!(
+            db.get_parking_slot(&slot1.id.to_string())
+                .await
+                .unwrap()
+                .is_some()
+        );
+        assert!(
+            db.get_parking_slot(&slot2.id.to_string())
+                .await
+                .unwrap()
+                .is_some()
+        );
         let by_lot = db.list_slots_by_lot(&lot_id.to_string()).await.unwrap();
         assert_eq!(by_lot.len(), 2);
 
@@ -3241,11 +3246,12 @@ mod tests {
         assert!(removed);
 
         // slot1 gone from primary table
-        assert!(db
-            .get_parking_slot(&slot1.id.to_string())
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_parking_slot(&slot1.id.to_string())
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         // slot1 gone from index (lot query returns only slot2)
         let by_lot = db.list_slots_by_lot(&lot_id.to_string()).await.unwrap();
@@ -3446,11 +3452,12 @@ mod tests {
         assert!(deleted);
         assert!(db.get_user(&user.id.to_string()).await.unwrap().is_none());
         assert!(db.get_user_by_username("alice").await.unwrap().is_none());
-        assert!(db
-            .get_user_by_email("alice@example.com")
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_user_by_email("alice@example.com")
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -3481,16 +3488,18 @@ mod tests {
 
         let fake_id = Uuid::new_v4().to_string();
         assert!(db.get_user(&fake_id).await.unwrap().is_none());
-        assert!(db
-            .get_user_by_username("nonexistent")
-            .await
-            .unwrap()
-            .is_none());
-        assert!(db
-            .get_user_by_email("nobody@nowhere.com")
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_user_by_username("nonexistent")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            db.get_user_by_email("nobody@nowhere.com")
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -3535,11 +3544,12 @@ mod tests {
         // Delete
         let deleted = db.delete_booking(&booking.id.to_string()).await.unwrap();
         assert!(deleted);
-        assert!(db
-            .get_booking(&booking.id.to_string())
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_booking(&booking.id.to_string())
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -3604,11 +3614,12 @@ mod tests {
         // Delete
         let deleted = db.delete_vehicle(&vehicle.id.to_string()).await.unwrap();
         assert!(deleted);
-        assert!(db
-            .get_vehicle(&vehicle.id.to_string())
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_vehicle(&vehicle.id.to_string())
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -3883,11 +3894,12 @@ mod tests {
         // Delete
         let deleted = db.delete_absence(&absence.id.to_string()).await.unwrap();
         assert!(deleted);
-        assert!(db
-            .list_absences_by_user(&user_id.to_string())
-            .await
-            .unwrap()
-            .is_empty());
+        assert!(
+            db.list_absences_by_user(&user_id.to_string())
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -4181,11 +4193,12 @@ mod tests {
         db.delete_favorite(&user_a.to_string(), &slot_id.to_string())
             .await
             .unwrap();
-        assert!(db
-            .list_favorites_by_user(&user_a.to_string())
-            .await
-            .unwrap()
-            .is_empty());
+        assert!(
+            db.list_favorites_by_user(&user_a.to_string())
+                .await
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(
             db.list_favorites_by_user(&user_b.to_string())
                 .await
@@ -4228,22 +4241,24 @@ mod tests {
 
         // Old username/email lookups return None
         assert!(db.get_user_by_username("alice").await.unwrap().is_none());
-        assert!(db
-            .get_user_by_email("alice@example.com")
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_user_by_email("alice@example.com")
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         // New anonymized username lookup works
         let by_name = db.get_user_by_username(&anon.username).await.unwrap();
         assert!(by_name.is_some());
 
         // Vehicle is deleted
-        assert!(db
-            .get_vehicle(&vehicle.id.to_string())
-            .await
-            .unwrap()
-            .is_none());
+        assert!(
+            db.get_vehicle(&vehicle.id.to_string())
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         // Booking still exists but license plate is scrubbed
         let scrubbed = db

@@ -3,9 +3,9 @@
 //! Extracted from mod.rs — Phase 3 API extraction.
 
 use axum::{
-    extract::State,
-    http::{header, StatusCode},
     Extension, Json,
+    extract::State,
+    http::{StatusCode, header},
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};

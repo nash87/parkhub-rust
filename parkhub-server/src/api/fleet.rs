@@ -5,9 +5,9 @@
 //! - `PUT  /api/v1/admin/fleet/:id/flag` — flag a vehicle
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, VehicleType};
 
-use super::{check_admin, AuthUser};
+use super::{AuthUser, check_admin};
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
@@ -288,7 +288,7 @@ pub async fn admin_fleet_flag(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Vehicle not found")),
-            )
+            );
         }
         Err(e) => {
             tracing::error!("Failed to get vehicle {id}: {e}");

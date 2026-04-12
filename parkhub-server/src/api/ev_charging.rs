@@ -4,20 +4,20 @@
 //! session history, and admin charger management.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use parkhub_common::ApiResponse;
 use parkhub_common::models::{
     ChargingSession, ChargingSessionStatus, ConnectorType, EvCharger, EvChargerStatus,
 };
-use parkhub_common::ApiResponse;
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 /// Request to start a charging session
 #[derive(Debug, Deserialize, utoipa::ToSchema)]

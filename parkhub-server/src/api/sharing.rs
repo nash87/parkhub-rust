@@ -9,9 +9,9 @@
 //! - `DELETE /api/v1/bookings/{id}/share`     — revoke share link
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};

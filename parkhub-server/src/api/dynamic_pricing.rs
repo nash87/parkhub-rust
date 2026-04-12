@@ -1,9 +1,9 @@
 //! Dynamic pricing handlers: occupancy-based surge/discount pricing per lot.
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 
 use parkhub_common::{ApiResponse, DynamicPriceResult, DynamicPricingRules};

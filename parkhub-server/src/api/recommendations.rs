@@ -7,18 +7,18 @@
 //! - distance_score (10%): proximity to entrance / accessibility match
 
 use axum::{
+    Extension, Json,
     extract::{Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use parkhub_common::models::{BookingStatus, SlotStatus};
 use parkhub_common::ApiResponse;
+use parkhub_common::models::{BookingStatus, SlotStatus};
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct RecommendationQuery {

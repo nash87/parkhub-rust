@@ -3,9 +3,9 @@
 //! Extracted from mod.rs — Phase 3 API extraction.
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{TimeDelta, Timelike, Utc};
 use serde::Serialize;
@@ -17,7 +17,7 @@ use parkhub_common::ApiResponse;
 
 use crate::AppState;
 
-use super::{check_admin, read_admin_setting, AuthUser};
+use super::{AuthUser, check_admin, read_admin_setting};
 
 type SharedState = Arc<RwLock<AppState>>;
 

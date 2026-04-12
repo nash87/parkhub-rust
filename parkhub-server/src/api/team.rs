@@ -1,6 +1,6 @@
 //! Team view handlers: team status today, team member list.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::Utc;
 use serde::Serialize;
 use uuid::Uuid;

@@ -7,9 +7,9 @@
 //! - `GET /api/v1/me/passes` — list all active passes for current user
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -140,7 +140,7 @@ pub async fn get_booking_pass(
             return (
                 StatusCode::NOT_FOUND,
                 Json(ApiResponse::error("NOT_FOUND", "Booking not found")),
-            )
+            );
         }
     };
 

@@ -1,13 +1,13 @@
 //! Admin settings, feature flags, and use-case theme configuration.
 
-use axum::{extract::State, http::StatusCode, Extension, Json};
+use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::Deserialize;
 
 use parkhub_common::ApiResponse;
 
 use crate::audit::{AuditEntry, AuditEventType};
 
-use super::{check_admin, AuthUser, SharedState};
+use super::{AuthUser, SharedState, check_admin};
 
 /// All admin settings with their default values.
 pub const ADMIN_SETTINGS: &[(&str, &str)] = &[
@@ -631,10 +631,12 @@ mod tests {
     fn use_case_theme_company_has_correct_key() {
         let theme = use_case_theme("company");
         assert_eq!(theme["key"], "company");
-        assert!(theme["terminology"]["user"]
-            .as_str()
-            .unwrap()
-            .contains("Employee"));
+        assert!(
+            theme["terminology"]["user"]
+                .as_str()
+                .unwrap()
+                .contains("Employee")
+        );
     }
 
     #[test]

@@ -4,9 +4,9 @@
 //! Extracted from mod.rs — Phase 3 API extraction.
 
 use axum::{
+    Extension, Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    Extension, Json,
 };
 use chrono::{Datelike, TimeDelta, Timelike, Utc};
 use parkhub_common::{ApiResponse, BookingStatus, PaginatedResponse, User, UserRole};
@@ -14,12 +14,12 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use crate::AppState;
 use crate::audit::{AuditEntry, AuditEventType};
 use crate::requests::PaginationParams;
-use crate::AppState;
 
 use super::admin::AdminUserResponse;
-use super::{check_admin, hash_password_simple, read_admin_setting, AuthUser};
+use super::{AuthUser, check_admin, hash_password_simple, read_admin_setting};
 
 type SharedState = Arc<RwLock<AppState>>;
 

@@ -9,10 +9,10 @@
 //! Payments are tracked in an in-memory `HashMap` (no persistence).
 
 use axum::{
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Extension, Json,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -310,10 +310,12 @@ mod tests {
 
     #[test]
     fn test_create_intent_request_missing_amount() {
-        assert!(serde_json::from_value::<CreatePaymentIntentRequest>(
-            serde_json::json!({"currency": "eur"})
-        )
-        .is_err());
+        assert!(
+            serde_json::from_value::<CreatePaymentIntentRequest>(
+                serde_json::json!({"currency": "eur"})
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -358,21 +360,27 @@ mod tests {
 
     // Env var tests consolidated into one to avoid parallel race conditions
     #[test]
+    #[allow(unsafe_code)]
     fn test_demo_mode_env_var() {
         // Must run sequentially — env vars are process-global
-        std::env::remove_var("DEMO_MODE");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("DEMO_MODE") };
         assert!(!is_demo_mode(), "should be disabled by default");
 
-        std::env::set_var("DEMO_MODE", "true");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("DEMO_MODE", "true") };
         assert!(is_demo_mode(), "should be enabled with 'true'");
 
-        std::env::set_var("DEMO_MODE", "1");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("DEMO_MODE", "1") };
         assert!(is_demo_mode(), "should be enabled with '1'");
 
-        std::env::set_var("DEMO_MODE", "false");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::set_var("DEMO_MODE", "false") };
         assert!(!is_demo_mode(), "should be disabled with 'false'");
 
-        std::env::remove_var("DEMO_MODE");
+        // SAFETY: single-threaded test or pre-spawn context
+        unsafe { std::env::remove_var("DEMO_MODE") };
     }
 
     #[tokio::test]

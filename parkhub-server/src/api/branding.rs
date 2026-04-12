@@ -6,11 +6,11 @@
 //!   - `branding_logo_base64`
 
 use axum::{
+    Extension,
     body::Body,
     extract::State,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{IntoResponse, Json, Response},
-    Extension,
 };
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
