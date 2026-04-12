@@ -211,11 +211,10 @@ impl JwtManager {
             })?;
 
         // Check revocation list if provided
-        if let Some(rl) = revocation_list {
-            if rl.is_revoked(&token_data.claims.jti) {
+        if let Some(rl) = revocation_list
+            && rl.is_revoked(&token_data.claims.jti) {
                 return Err(AppError::InvalidToken);
             }
-        }
 
         Ok(token_data.claims)
     }

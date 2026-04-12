@@ -120,8 +120,8 @@ pub async fn update_current_user(
     };
 
     // ── Input length validation (issue #115) ────────────────────────────────
-    if let Some(ref name) = req.name {
-        if name.len() > 100 {
+    if let Some(ref name) = req.name
+        && name.len() > 100 {
             return (
                 StatusCode::BAD_REQUEST,
                 Json(ApiResponse::error(
@@ -130,9 +130,8 @@ pub async fn update_current_user(
                 )),
             );
         }
-    }
-    if let Some(ref phone) = req.phone {
-        if phone.len() > 20 {
+    if let Some(ref phone) = req.phone
+        && phone.len() > 20 {
             return (
                 StatusCode::BAD_REQUEST,
                 Json(ApiResponse::error(
@@ -141,7 +140,6 @@ pub async fn update_current_user(
                 )),
             );
         }
-    }
 
     // Apply only the fields provided in the request
     if let Some(name) = req.name {

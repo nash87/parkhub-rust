@@ -88,12 +88,12 @@ pub async fn two_factor_setup(
 
     // Check if 2FA is already enabled
     let totp_key = format!("totp:{}", user.id);
-    if let Ok(Some(val)) = state_guard.db.get_setting(&totp_key).await {
-        if !val.is_empty() {
+    if let Ok(Some(val)) = state_guard.db.get_setting(&totp_key).await
+        && !val.is_empty() {
             // Check if it's enabled (not just pending)
             let enabled_key = format!("totp_enabled:{}", user.id);
-            if let Ok(Some(e)) = state_guard.db.get_setting(&enabled_key).await {
-                if e == "true" {
+            if let Ok(Some(e)) = state_guard.db.get_setting(&enabled_key).await
+                && e == "true" {
                     return (
                         StatusCode::CONFLICT,
                         Json(ApiResponse::error(
@@ -102,9 +102,7 @@ pub async fn two_factor_setup(
                         )),
                     );
                 }
-            }
         }
-    }
 
     // Generate TOTP secret
     let totp = match totp_rs::TOTP::new(
@@ -463,11 +461,10 @@ impl PasswordPolicy {
 /// Load password policy from DB settings.
 pub async fn load_password_policy(db: &crate::db::Database) -> PasswordPolicy {
     let mut policy = PasswordPolicy::default();
-    if let Ok(Some(val)) = db.get_setting("password_policy").await {
-        if let Ok(p) = serde_json::from_str::<PasswordPolicy>(&val) {
+    if let Ok(Some(val)) = db.get_setting("password_policy").await
+        && let Ok(p) = serde_json::from_str::<PasswordPolicy>(&val) {
             policy = p;
         }
-    }
     policy
 }
 
@@ -1093,11 +1090,10 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
                 continue;
             }
             // Check expiry
-            if let Some(expires_at) = key.expires_at {
-                if expires_at < Utc::now() {
+            if let Some(expires_at) = key.expires_at
+                && expires_at < Utc::now() {
                     continue;
                 }
-            }
             // Check prefix first (fast path)
             if !api_key.starts_with(&key.key_prefix) {
                 continue;

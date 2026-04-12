@@ -163,10 +163,10 @@ pub async fn health_check(State(health): State<Arc<AppHealth>>) -> Json<HealthRe
     // Memory check (warn if > 500MB)
     #[cfg(target_os = "linux")]
     {
-        if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
-            if let Some(line) = status.lines().find(|l| l.starts_with("VmRSS:")) {
-                if let Some(kb_str) = line.split_whitespace().nth(1) {
-                    if let Ok(kb) = kb_str.parse::<u64>() {
+        if let Ok(status) = std::fs::read_to_string("/proc/self/status")
+            && let Some(line) = status.lines().find(|l| l.starts_with("VmRSS:"))
+                && let Some(kb_str) = line.split_whitespace().nth(1)
+                    && let Ok(kb) = kb_str.parse::<u64>() {
                         let mb = kb / 1024;
                         let status = if mb > 500 {
                             HealthStatus::Degraded
@@ -185,9 +185,6 @@ pub async fn health_check(State(health): State<Arc<AppHealth>>) -> Json<HealthRe
                             response_time_ms: None,
                         });
                     }
-                }
-            }
-        }
     }
 
     let uptime = health.start_time.elapsed().as_secs();

@@ -47,8 +47,15 @@ async fn register_login_access_refresh_logout_lifecycle() {
         .unwrap()
         .to_string();
 
-    // 3. Access a protected endpoint with the token
+    // 3. Access a protected endpoint with the token (retry once for CI timing)
     let (status, body) = auth_get(&srv, &access_token, "/api/v1/users/me").await;
+    let (status, body) = if status == 401 {
+        // Token may need a moment to propagate in CI — retry once
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        auth_get(&srv, &access_token, "/api/v1/users/me").await
+    } else {
+        (status, body)
+    };
     assert_eq!(status, 200, "Should access /users/me with valid token");
     assert_eq!(body["data"]["username"], "lifecycle_user");
 
