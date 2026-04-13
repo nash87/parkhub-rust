@@ -538,6 +538,186 @@
   --dt-header-bg: rgba(26, 24, 21, 0.95);
 }
 
+/* ── Theme: Aurora ──────────────────────────────────────────────────────────
+   Northern lights inspired. Ethereal gradients, deep space backgrounds,
+   luminous accent glows. Inspired by 21st.dev cosmic design.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="aurora"] {
+  --dt-bg-primary: #f0f4ff;
+  --dt-bg-secondary: #f8faff;
+  --dt-bg-card: rgba(255, 255, 255, 0.85);
+  --dt-text-primary: #1e1b4b;
+  --dt-text-secondary: #6366a0;
+  --dt-border: rgba(139, 92, 246, 0.12);
+  --dt-border-subtle: rgba(139, 92, 246, 0.06);
+  --dt-card-shadow: 0 4px 24px rgba(139, 92, 246, 0.08), 0 0 0 1px rgba(139, 92, 246, 0.04);
+  --dt-card-radius: var(--radius-xl);
+  --dt-sidebar-bg: rgba(248, 250, 255, 0.9);
+  --dt-sidebar-blur: 20px;
+  --dt-sidebar-border: rgba(139, 92, 246, 0.1);
+  --dt-accent-gradient: linear-gradient(135deg, #8b5cf6, #06b6d4, #10b981);
+  --dt-input-bg: rgba(255, 255, 255, 0.9);
+  --dt-input-border: rgba(139, 92, 246, 0.2);
+  --dt-badge-radius: var(--radius-full);
+  --dt-nav-active-bg: rgba(139, 92, 246, 0.08);
+  --dt-nav-hover-bg: rgba(139, 92, 246, 0.04);
+  --dt-header-bg: rgba(240, 244, 255, 0.9);
+}
+
+[data-design-theme="aurora"].dark,
+.dark [data-design-theme="aurora"] {
+  --dt-bg-primary: #0c0a1d;
+  --dt-bg-secondary: #12102b;
+  --dt-bg-card: rgba(18, 16, 43, 0.8);
+  --dt-text-primary: #e0e7ff;
+  --dt-text-secondary: #818cf8;
+  --dt-border: rgba(139, 92, 246, 0.15);
+  --dt-border-subtle: rgba(139, 92, 246, 0.08);
+  --dt-card-shadow: 0 4px 24px rgba(139, 92, 246, 0.12), 0 0 40px rgba(6, 182, 212, 0.05);
+  --dt-sidebar-bg: rgba(12, 10, 29, 0.95);
+  --dt-sidebar-border: rgba(139, 92, 246, 0.12);
+  --dt-input-bg: rgba(18, 16, 43, 0.9);
+  --dt-input-border: rgba(139, 92, 246, 0.25);
+  --dt-nav-active-bg: rgba(139, 92, 246, 0.12);
+  --dt-nav-hover-bg: rgba(139, 92, 246, 0.06);
+  --dt-header-bg: rgba(12, 10, 29, 0.95);
+}
+
+/* ── Theme: Material You ───────────────────────────────────────────────────
+   Google Material Design 3 / Material You. Dynamic color, tonal surfaces,
+   rounded corners, elevation-based depth. Inspired by Android 14+.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="material"] {
+  --dt-bg-primary: #fef7ff;
+  --dt-bg-secondary: #fffbfe;
+  --dt-bg-card: #fffbfe;
+  --dt-text-primary: #1d1b20;
+  --dt-text-secondary: #49454f;
+  --dt-border: #e7e0ec;
+  --dt-border-subtle: #f3edf7;
+  --dt-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+  --dt-card-radius: var(--radius-2xl);
+  --dt-sidebar-bg: #fef7ff;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #e7e0ec;
+  --dt-accent-gradient: linear-gradient(135deg, #6750a4, #7f67be);
+  --dt-input-bg: #f3edf7;
+  --dt-input-border: #79747e;
+  --dt-badge-radius: var(--radius-full);
+  --dt-nav-active-bg: rgba(103, 80, 164, 0.12);
+  --dt-nav-hover-bg: rgba(103, 80, 164, 0.04);
+  --dt-header-bg: #fef7ff;
+}
+
+[data-design-theme="material"].dark,
+.dark [data-design-theme="material"] {
+  --dt-bg-primary: #141218;
+  --dt-bg-secondary: #1d1b20;
+  --dt-bg-card: #1d1b20;
+  --dt-text-primary: #e6e0e9;
+  --dt-text-secondary: #cac4d0;
+  --dt-border: #36343b;
+  --dt-border-subtle: #2b2930;
+  --dt-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --dt-sidebar-bg: #141218;
+  --dt-sidebar-border: #36343b;
+  --dt-input-bg: #36343b;
+  --dt-input-border: #79747e;
+  --dt-nav-active-bg: rgba(208, 188, 255, 0.12);
+  --dt-nav-hover-bg: rgba(208, 188, 255, 0.04);
+  --dt-header-bg: rgba(20, 18, 24, 0.95);
+}
+
+/* ── Theme: Midnight ───────────────────────────────────────────────────────
+   Vercel/Linear-inspired dark-first design. Pure black backgrounds,
+   subtle borders, monochrome with electric accent. Developer-grade.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="midnight"] {
+  --dt-bg-primary: #fafafa;
+  --dt-bg-secondary: #ffffff;
+  --dt-bg-card: #ffffff;
+  --dt-text-primary: #0a0a0a;
+  --dt-text-secondary: #737373;
+  --dt-border: #e5e5e5;
+  --dt-border-subtle: #f5f5f5;
+  --dt-card-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --dt-card-radius: var(--radius-lg);
+  --dt-sidebar-bg: #fafafa;
+  --dt-sidebar-blur: none;
+  --dt-sidebar-border: #e5e5e5;
+  --dt-accent-gradient: linear-gradient(135deg, #0a0a0a, #404040);
+  --dt-input-bg: #ffffff;
+  --dt-input-border: #d4d4d4;
+  --dt-badge-radius: var(--radius-md);
+  --dt-nav-active-bg: rgba(0, 0, 0, 0.04);
+  --dt-nav-hover-bg: rgba(0, 0, 0, 0.02);
+  --dt-header-bg: rgba(250, 250, 250, 0.8);
+}
+
+[data-design-theme="midnight"].dark,
+.dark [data-design-theme="midnight"] {
+  --dt-bg-primary: #000000;
+  --dt-bg-secondary: #0a0a0a;
+  --dt-bg-card: #0a0a0a;
+  --dt-text-primary: #ededed;
+  --dt-text-secondary: #a3a3a3;
+  --dt-border: #262626;
+  --dt-border-subtle: #171717;
+  --dt-card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --dt-sidebar-bg: #000000;
+  --dt-sidebar-border: #262626;
+  --dt-input-bg: #0a0a0a;
+  --dt-input-border: #404040;
+  --dt-nav-active-bg: rgba(255, 255, 255, 0.06);
+  --dt-nav-hover-bg: rgba(255, 255, 255, 0.03);
+  --dt-header-bg: rgba(0, 0, 0, 0.8);
+}
+
+/* ── Theme: Sakura ─────────────────────────────────────────────────────────
+   Cherry blossom inspired. Soft pinks, warm whites, gentle gradients.
+   Elegant and approachable. Inspired by Japanese aesthetic AI designs.
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-design-theme="sakura"] {
+  --dt-bg-primary: #fdf2f8;
+  --dt-bg-secondary: #fefafc;
+  --dt-bg-card: rgba(255, 255, 255, 0.85);
+  --dt-text-primary: #4a1942;
+  --dt-text-secondary: #9e5590;
+  --dt-border: rgba(236, 72, 153, 0.12);
+  --dt-border-subtle: rgba(236, 72, 153, 0.06);
+  --dt-card-shadow: 0 4px 20px rgba(236, 72, 153, 0.06);
+  --dt-card-radius: var(--radius-2xl);
+  --dt-sidebar-bg: rgba(253, 242, 248, 0.9);
+  --dt-sidebar-blur: 16px;
+  --dt-sidebar-border: rgba(236, 72, 153, 0.1);
+  --dt-accent-gradient: linear-gradient(135deg, #ec4899, #f472b6);
+  --dt-input-bg: rgba(255, 255, 255, 0.8);
+  --dt-input-border: rgba(236, 72, 153, 0.2);
+  --dt-badge-radius: var(--radius-full);
+  --dt-nav-active-bg: rgba(236, 72, 153, 0.08);
+  --dt-nav-hover-bg: rgba(236, 72, 153, 0.03);
+  --dt-header-bg: rgba(253, 242, 248, 0.9);
+}
+
+[data-design-theme="sakura"].dark,
+.dark [data-design-theme="sakura"] {
+  --dt-bg-primary: #1a0a14;
+  --dt-bg-secondary: #21101a;
+  --dt-bg-card: rgba(33, 16, 26, 0.85);
+  --dt-text-primary: #fce7f3;
+  --dt-text-secondary: #f9a8d4;
+  --dt-border: rgba(236, 72, 153, 0.15);
+  --dt-border-subtle: rgba(236, 72, 153, 0.08);
+  --dt-card-shadow: 0 4px 20px rgba(236, 72, 153, 0.1);
+  --dt-sidebar-bg: rgba(26, 10, 20, 0.95);
+  --dt-sidebar-border: rgba(236, 72, 153, 0.12);
+  --dt-input-bg: rgba(33, 16, 26, 0.9);
+  --dt-input-border: rgba(236, 72, 153, 0.25);
+  --dt-nav-active-bg: rgba(236, 72, 153, 0.12);
+  --dt-nav-hover-bg: rgba(236, 72, 153, 0.05);
+  --dt-header-bg: rgba(26, 10, 20, 0.95);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    Theme Application Layer
    Maps design-theme tokens onto existing semantic tokens so all existing

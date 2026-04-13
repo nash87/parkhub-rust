@@ -109,7 +109,7 @@ describe('SetupWizardPage', () => {
     expect(screen.getByTestId('input-floors')).toBeInTheDocument();
   });
 
-  it('shows 12 theme cards in step 4', async () => {
+  it('shows 16 theme cards in step 4', async () => {
     // Mock all fetch calls to succeed
     global.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve({ success: true, data: { completed: false, steps: [] } }),
@@ -145,7 +145,7 @@ describe('SetupWizardPage', () => {
     });
 
     const themeGrid = screen.getByTestId('theme-grid');
-    expect(themeGrid.children.length).toBe(12);
+    expect(themeGrid.children.length).toBe(16);
     expect(screen.getByTestId('theme-classic')).toBeInTheDocument();
     expect(screen.getByTestId('theme-neon')).toBeInTheDocument();
     expect(screen.getByTestId('theme-zen')).toBeInTheDocument();

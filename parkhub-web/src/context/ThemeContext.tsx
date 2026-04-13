@@ -7,7 +7,7 @@ type ColorMode = 'light' | 'dark' | 'system';
 
 // ── Design Themes ──
 
-export type DesignThemeId = 'classic' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm' | 'liquid' | 'mono' | 'ocean' | 'forest' | 'synthwave' | 'zen';
+export type DesignThemeId = 'classic' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm' | 'liquid' | 'mono' | 'ocean' | 'forest' | 'synthwave' | 'zen' | 'aurora' | 'material' | 'sakura' | 'midnight';
 
 export interface DesignThemeInfo {
   id: DesignThemeId;
@@ -141,6 +141,46 @@ export const DESIGN_THEMES: DesignThemeInfo[] = [
       dark: ['#1a1815', '#221f1b', '#87a68f', '#d4cfc8', '#33302b'],
     },
     tags: ['japanese', 'wabi-sabi', 'minimal', 'paper', 'zen'],
+  },
+  {
+    id: 'aurora',
+    name: 'Aurora',
+    description: 'Northern lights inspired. Ethereal gradients, cosmic depth.',
+    previewColors: {
+      light: ['#f0f4ff', '#f8faff', '#8b5cf6', '#1e1b4b', 'rgba(139,92,246,0.12)'],
+      dark: ['#0c0a1d', '#12102b', '#8b5cf6', '#e0e7ff', 'rgba(139,92,246,0.15)'],
+    },
+    tags: ['cosmic', 'gradient', 'ethereal', '21st.dev'],
+  },
+  {
+    id: 'material',
+    name: 'Material You',
+    description: 'Google Material Design 3. Dynamic color, tonal surfaces.',
+    previewColors: {
+      light: ['#fef7ff', '#fffbfe', '#6750a4', '#1d1b20', '#e7e0ec'],
+      dark: ['#141218', '#1d1b20', '#d0bcff', '#e6e0e9', '#36343b'],
+    },
+    tags: ['google', 'material', 'android', 'stitch'],
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    description: 'Vercel/Linear-inspired. Pure black, electric accents.',
+    previewColors: {
+      light: ['#fafafa', '#ffffff', '#0a0a0a', '#0a0a0a', '#e5e5e5'],
+      dark: ['#000000', '#0a0a0a', '#ededed', '#ededed', '#262626'],
+    },
+    tags: ['vercel', 'linear', 'developer', 'dark-first'],
+  },
+  {
+    id: 'sakura',
+    name: 'Sakura',
+    description: 'Cherry blossom. Soft pinks, warm whites, gentle gradients.',
+    previewColors: {
+      light: ['#fdf2f8', '#fefafc', '#ec4899', '#4a1942', 'rgba(236,72,153,0.12)'],
+      dark: ['#1a0a14', '#21101a', '#ec4899', '#fce7f3', 'rgba(236,72,153,0.15)'],
+    },
+    tags: ['pink', 'cherry-blossom', 'elegant', 'stitch'],
   },
 ];
 
