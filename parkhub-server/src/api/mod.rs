@@ -1458,11 +1458,23 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
 
     // Self-update system (always available for admin)
     protected_routes = protected_routes
-        .route("/api/v1/admin/updates/check", get(updates::check_for_updates))
+        .route(
+            "/api/v1/admin/updates/check",
+            get(updates::check_for_updates),
+        )
         .route("/api/v1/admin/updates/apply", post(updates::apply_update))
-        .route("/api/v1/admin/updates/history", get(updates::update_history))
-        .route("/api/v1/admin/updates/releases", get(updates::list_releases))
-        .route("/api/v1/admin/updates/rollback", post(updates::rollback_update));
+        .route(
+            "/api/v1/admin/updates/history",
+            get(updates::update_history),
+        )
+        .route(
+            "/api/v1/admin/updates/releases",
+            get(updates::list_releases),
+        )
+        .route(
+            "/api/v1/admin/updates/rollback",
+            post(updates::rollback_update),
+        );
 
     #[cfg(feature = "mod-accessible")]
     {

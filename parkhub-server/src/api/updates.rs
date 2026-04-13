@@ -60,7 +60,10 @@ pub async fn check_for_updates(
             tracing::error!("Failed to check GitHub releases: {e}");
             return (
                 StatusCode::BAD_GATEWAY,
-                Json(ApiResponse::error("UPSTREAM_ERROR", "Failed to reach GitHub")),
+                Json(ApiResponse::error(
+                    "UPSTREAM_ERROR",
+                    "Failed to reach GitHub",
+                )),
             );
         }
     };
@@ -68,7 +71,10 @@ pub async fn check_for_updates(
     if !github_res.status().is_success() {
         return (
             StatusCode::BAD_GATEWAY,
-            Json(ApiResponse::error("UPSTREAM_ERROR", "GitHub API returned an error")),
+            Json(ApiResponse::error(
+                "UPSTREAM_ERROR",
+                "GitHub API returned an error",
+            )),
         );
     }
 
@@ -163,11 +169,15 @@ pub async fn apply_update(
     let state_guard = state.read().await;
     let _ = state_guard
         .db
-        .set_setting("pending_update", &serde_json::json!({
-            "version": version,
-            "requested_at": chrono::Utc::now().to_rfc3339(),
-            "requested_by": auth_user.user_id.to_string(),
-        }).to_string())
+        .set_setting(
+            "pending_update",
+            &serde_json::json!({
+                "version": version,
+                "requested_at": chrono::Utc::now().to_rfc3339(),
+                "requested_by": auth_user.user_id.to_string(),
+            })
+            .to_string(),
+        )
         .await;
 
     (
@@ -193,10 +203,7 @@ pub async fn update_history(
         );
     }
 
-    let history: Vec<VersionHistoryEntry> = match state_guard
-        .db
-        .get_setting("update_history")
-        .await
+    let history: Vec<VersionHistoryEntry> = match state_guard.db.get_setting("update_history").await
     {
         Ok(Some(json_str)) => serde_json::from_str(&json_str).unwrap_or_default(),
         _ => Vec::new(),
@@ -262,15 +269,22 @@ pub async fn rollback_update(
     }
 
     let target = req.version.unwrap_or_else(|| "previous".to_string());
-    tracing::info!("Rollback requested: target={target} by user={}", auth_user.user_id);
+    tracing::info!(
+        "Rollback requested: target={target} by user={}",
+        auth_user.user_id
+    );
 
     let _ = state_guard
         .db
-        .set_setting("pending_rollback", &serde_json::json!({
-            "target_version": target,
-            "requested_at": chrono::Utc::now().to_rfc3339(),
-            "requested_by": auth_user.user_id.to_string(),
-        }).to_string())
+        .set_setting(
+            "pending_rollback",
+            &serde_json::json!({
+                "target_version": target,
+                "requested_at": chrono::Utc::now().to_rfc3339(),
+                "requested_by": auth_user.user_id.to_string(),
+            })
+            .to_string(),
+        )
         .await;
 
     (
