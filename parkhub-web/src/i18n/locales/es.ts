@@ -62,6 +62,8 @@ export default {
       checkin: 'Registro',
       swapRequests: 'Solicitudes de intercambio',
       guestPass: 'Pase de invitado',
+      leaderboard: 'Clasificación',
+      predictions: 'Predicciones',
       credits: 'Créditos',
       team: 'Equipo',
       calendar: 'Calendario',

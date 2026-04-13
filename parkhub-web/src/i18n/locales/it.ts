@@ -62,6 +62,8 @@ export default {
       checkin: 'Check-in',
       swapRequests: 'Richieste di scambio',
       guestPass: 'Pass ospite',
+      leaderboard: 'Classifica',
+      predictions: 'Previsioni',
       credits: 'Crediti',
       team: 'Team',
       calendar: 'Calendario',

@@ -82,6 +82,8 @@ const SwapRequestsPage = lazy(() => import('./views/SwapRequests'), 'SwapRequest
 const QRCheckInPage = lazy(() => import('./views/QRCheckIn'), 'QRCheckInPage');
 const GuestPassPage = lazy(() => import('./views/GuestPass'), 'GuestPassPage');
 const OccupancyHeatmapPage = lazy(() => import('./views/OccupancyHeatmap'), 'OccupancyHeatmapPage');
+const TeamLeaderboardPage = lazy(() => import('./views/TeamLeaderboard'), 'TeamLeaderboardPage');
+const OccupancyPredictionPage = lazy(() => import('./views/OccupancyPrediction'), 'OccupancyPredictionPage');
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -168,6 +170,8 @@ function AnimatedRoutes() {
           <Route path="swap-requests" element={<SuspenseRoute><SwapRequestsPage /></SuspenseRoute>} />
           <Route path="checkin" element={<SuspenseRoute><QRCheckInPage /></SuspenseRoute>} />
           <Route path="guest-pass" element={<SuspenseRoute><GuestPassPage /></SuspenseRoute>} />
+          <Route path="leaderboard" element={<SuspenseRoute><TeamLeaderboardPage /></SuspenseRoute>} />
+          <Route path="predict" element={<SuspenseRoute><OccupancyPredictionPage /></SuspenseRoute>} />
           <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
           <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
             <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
