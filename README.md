@@ -35,7 +35,23 @@
 
 ---
 
-## 🧭 Product Model
+## What's New in v4.8.0
+
+| Feature | Description |
+|---------|-------------|
+| **QR Check-In/Out** | Scan QR code at entrance, live elapsed timer, manual checkout |
+| **Swap Requests** | Trade parking spots between colleagues — offer, accept, decline |
+| **Guest Parking Pass** | Generate shareable QR passes for visitors with unique guest codes |
+| **Occupancy Heatmap** | 7x24 grid visualization of lot usage patterns (admin) |
+| **12 Design Themes** | Classic, Glass, Bento, Brutalist, Neon, Warm, Liquid, Mono, Ocean, Forest, Synthwave, Zen |
+| **Container Queries** | Self-responsive components that adapt to container, not viewport |
+| **Scroll Animations** | CSS scroll-driven reveal animations (zero JavaScript) |
+| **SEO Ready** | Open Graph, Twitter Card, JSON-LD structured data |
+| **10 Languages** | EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH — 100% coverage |
+
+---
+
+## Product Model
 
 ParkHub is one product with multiple runtimes. This Rust edition shares the same core product model as the PHP edition, while keeping a Rust-first deployment story: single binary, embedded storage, and local-first operation.
 
