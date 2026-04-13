@@ -230,14 +230,14 @@ describe('ThemeContext', () => {
     expect(screen.getByTestId('design-theme-name').textContent).toBe('Classic');
   });
 
-  it('exposes all 12 design themes', () => {
+  it('exposes all 16 design themes', () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
       </ThemeProvider>,
     );
 
-    expect(screen.getByTestId('design-themes-count').textContent).toBe('12');
+    expect(screen.getByTestId('design-themes-count').textContent).toBe('16');
   });
 
   it('setDesignTheme changes the active design theme', async () => {
@@ -332,7 +332,7 @@ describe('ThemeContext', () => {
     }
   });
 
-  it('DESIGN_THEMES contains all 12 themes', () => {
+  it('DESIGN_THEMES contains all 16 themes', () => {
     const ids = DESIGN_THEMES.map(t => t.id);
     expect(ids).toContain('classic');
     expect(ids).toContain('glass');
@@ -346,10 +346,10 @@ describe('ThemeContext', () => {
     expect(ids).toContain('forest');
     expect(ids).toContain('synthwave');
     expect(ids).toContain('zen');
-    expect(ids).toHaveLength(12);
+    expect(ids).toHaveLength(16);
   });
 
-  it('can switch to all 12 design themes', async () => {
+  it('can switch to all 16 design themes', async () => {
     const user = userEvent.setup();
 
     render(

@@ -21,6 +21,10 @@ const THEMES = [
   { id: 'forest', label: 'Forest', color: 'bg-emerald-600' },
   { id: 'synthwave', label: 'Synthwave', color: 'bg-purple-600' },
   { id: 'zen', label: 'Zen', color: 'bg-stone-500' },
+  { id: 'aurora', label: 'Aurora', color: 'bg-violet-500' },
+  { id: 'material', label: 'Material You', color: 'bg-indigo-500' },
+  { id: 'midnight', label: 'Midnight', color: 'bg-black' },
+  { id: 'sakura', label: 'Sakura', color: 'bg-pink-400' },
 ];
 
 const TIMEZONES = [
