@@ -3,7 +3,7 @@ name: parkhub
 description: Self-hosted parking management platform — single binary, zero dependencies
 type: application
 version: 1.0.0
-appVersion: "3.9.0"
+appVersion: "4.8.0"
 home: https://github.com/nash87/parkhub-rust
 sources:
   - https://github.com/nash87/parkhub-rust
