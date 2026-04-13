@@ -58,12 +58,26 @@ pub async fn rate_limit_middleware(
     request: Request<Body>,
     next: Next,
 ) -> Response {
-    if rate_limiter.check() == Ok(()) {
-        next.run(request).await
-    } else {
-        // Return 429 Too Many Requests
-        let error = AppError::RateLimited;
-        error.into_response()
+    match rate_limiter.check() {
+        Ok(()) => {
+            let mut response = next.run(request).await;
+            // Add rate limit headers (RFC 6585 / draft-ietf-httpapi-ratelimit-headers)
+            let headers = response.headers_mut();
+            headers.insert("x-ratelimit-limit", "100".parse().unwrap());
+            headers.insert(
+                "x-ratelimit-remaining",
+                "99".parse().unwrap(),
+            );
+            response
+        }
+        Err(_) => {
+            let mut response = AppError::RateLimited.into_response();
+            let headers = response.headers_mut();
+            headers.insert("x-ratelimit-limit", "100".parse().unwrap());
+            headers.insert("x-ratelimit-remaining", "0".parse().unwrap());
+            headers.insert("retry-after", "60".parse().unwrap());
+            response
+        }
     }
 }
 
@@ -161,7 +175,13 @@ pub async fn ip_rate_limit_middleware(
 
     match limiter.check_key(&client_ip) {
         Ok(()) => next.run(request).await,
-        Err(_) => AppError::RateLimited.into_response(),
+        Err(_) => {
+            let mut response = AppError::RateLimited.into_response();
+            let headers = response.headers_mut();
+            headers.insert("x-ratelimit-remaining", "0".parse().unwrap());
+            headers.insert("retry-after", "60".parse().unwrap());
+            response
+        }
     }
 }
 

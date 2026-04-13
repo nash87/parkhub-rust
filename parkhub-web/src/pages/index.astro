@@ -9,7 +9,32 @@ import '../styles/global.css';
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#0d9488" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#042f2e" media="(prefers-color-scheme: dark)" />
-    <meta name="description" content="ParkHub — Smart Parking Management" />
+    <meta name="description" content="ParkHub — Smart Parking Management. Book, manage and optimize parking with real-time occupancy, team scheduling, and GDPR-compliant analytics." />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ParkHub" />
+    <meta property="og:title" content="ParkHub — Smart Parking Management" />
+    <meta property="og:description" content="Book, manage and optimize parking with real-time occupancy, team scheduling, and GDPR-compliant analytics." />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:locale" content="en_US" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ParkHub — Smart Parking Management" />
+    <meta name="twitter:description" content="Book, manage and optimize parking with real-time occupancy, team scheduling, and GDPR-compliant analytics." />
+    <meta name="twitter:image" content="/og-image.svg" />
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ParkHub",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web, Docker, Linux, Windows",
+        "description": "Smart parking management with real-time occupancy, team scheduling, and GDPR-compliant analytics.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "featureList": ["Real-time occupancy", "Team booking", "Multi-language", "GDPR compliance", "PWA offline support"]
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="mobile-web-app-capable" content="yes" />
