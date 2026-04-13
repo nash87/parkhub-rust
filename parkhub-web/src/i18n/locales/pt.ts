@@ -80,6 +80,7 @@ export default {
       switchToLight: 'Mudar para modo claro',
       switchToDark: 'Mudar para modo escuro',
       skipToContent: 'Ir para o conteúdo',
+      updates: 'Atualizações',
     },
     dashboard: {
       greeting: 'Bom {{timeOfDay}}, {{name}}',

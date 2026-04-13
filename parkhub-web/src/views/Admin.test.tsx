@@ -63,6 +63,7 @@ vi.mock('@phosphor-icons/react', () => ({
   ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
   LockKey: (props: any) => <span data-testid="icon-lock-key" {...props} />,
   MapTrifold: (props: any) => <span data-testid="icon-map-trifold" {...props} />,
+  ArrowsClockwise: (props: any) => <span data-testid="icon-arrows-clockwise" {...props} />,
 }));
 
 import { AdminPage } from './Admin';

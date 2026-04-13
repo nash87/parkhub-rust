@@ -76,6 +76,7 @@ const AdminSSOPage = lazy(() => import('./views/AdminSSO'), 'AdminSSOPage');
 const AdminWebhooksPage = lazy(() => import('./views/AdminWebhooks'), 'AdminWebhooksPage');
 const AdminRolesPage = lazy(() => import('./views/AdminRoles'), 'AdminRolesPage');
 const AdminZonesPage = lazy(() => import('./views/AdminZones'), 'AdminZonesPage');
+const AdminUpdatesPage = lazy(() => import('./views/AdminUpdates'), 'AdminUpdatesPage');
 
 // New feature pages
 const SwapRequestsPage = lazy(() => import('./views/SwapRequests'), 'SwapRequestsPage');
@@ -199,6 +200,7 @@ function AnimatedRoutes() {
             <Route path="webhooks" element={<SuspenseRoute><AdminWebhooksPage /></SuspenseRoute>} />
             <Route path="roles" element={<SuspenseRoute><AdminRolesPage /></SuspenseRoute>} />
             <Route path="zones" element={<SuspenseRoute><AdminZonesPage /></SuspenseRoute>} />
+            <Route path="updates" element={<SuspenseRoute><AdminUpdatesPage /></SuspenseRoute>} />
             <Route path="heatmap" element={<SuspenseRoute><OccupancyHeatmapPage /></SuspenseRoute>} />
           </Route>
         </Route>
