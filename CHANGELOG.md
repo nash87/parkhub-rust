@@ -7,6 +7,33 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.9.0] - 2026-04-13
+
+### Added
+- **API Client Resilience**: Exponential backoff retry for transient errors (502/503/504/429), GET request deduplication, AbortController support
+- **Service Worker Update Prompt**: User-controlled update flow with toast notification instead of auto-`skipWaiting()` — prevents mid-session interruptions
+- **CSP Meta Tag**: Content-Security-Policy for static deployments (Render, CDN) with script, style, connect, frame restrictions
+- **React 19 `useOptimistic`**: Notifications view uses `useOptimistic` + `useTransition` for instant read toggle with auto-revert on failure
+- **CommandPalette ARIA**: Full WAI-ARIA 1.2 combobox pattern — `role="combobox"`, `aria-activedescendant`, `role="listbox"`, `role="option"`, `aria-selected`
+- **WebSocket Heartbeat**: 30s ping for dead connection detection, max retry cap (10) with `retriesExhausted` state and manual `reconnect()` callback
+- **ErrorBoundary Event**: Dispatches `app:error` custom event with structured error details for external monitoring integration
+- **SWUpdatePrompt component**: Animated toast UI for service worker update detection and reload
+- **Vitest Coverage Thresholds**: Enforced minimums (statements: 40%, branches: 30%, functions: 35%, lines: 40%) with `json-summary` reporter
+- 10 new Vitest tests (822 total): API retry/dedup/abort (5), CommandPalette ARIA (5)
+
+### Changed
+- TypeScript strict mode: added `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`
+- Server CSP header: added `'unsafe-inline'` for Astro compatibility + `base-uri`/`form-action` directives
+- Permissions-Policy: expanded to restrict camera, microphone, payment, USB, bluetooth, serial; geolocation allowed for self
+- DataTable: `role="grid"` → `role="table"`, added `role="columnheader"` + `scope="col"` + `role="row"` for screen readers
+- Updated npm deps: React 19.2.5, Astro 6.1.5, Vitest 4.1.4, i18next 26.0.4
+
+### Fixed
+- Framer Motion `layoutId` prop leaking to DOM in AdminGraphQL test mock
+- Service Worker auto-`skipWaiting()` causing mid-session reloads
+
+---
+
 ## [4.8.0] - 2026-04-13
 
 ### Added

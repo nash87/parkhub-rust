@@ -325,6 +325,6 @@ mod tests {
 
     #[test]
     fn test_current_version() {
-        assert_eq!(CURRENT_VERSION, "4.8.0");
+        assert_eq!(CURRENT_VERSION, "4.9.0");
     }
 }

@@ -61,7 +61,7 @@ vi.mock('../api/client', () => ({
 import { AdminUpdatesPage } from './AdminUpdates';
 
 const mockVersion = {
-  version: '4.8.0',
+  version: '4.9.0',
   build_hash: 'abc12345def',
   build_date: '2026-04-10T12:00:00Z',
   uptime_seconds: 86400,
@@ -71,7 +71,7 @@ const mockHistory = [
   {
     id: 'u1',
     from_version: '4.7.0',
-    to_version: '4.8.0',
+    to_version: '4.9.0',
     status: 'success',
     applied_at: '2026-04-10T12:00:00Z',
   },
@@ -104,7 +104,7 @@ function mockFetch(overrides: Record<string, any> = {}) {
     }
     if (url.includes('/updates/check')) {
       return Promise.resolve({
-        json: () => Promise.resolve(overrides.check ?? { success: true, data: { available: false, current_version: '4.8.0', latest_version: '4.8.0' } }),
+        json: () => Promise.resolve(overrides.check ?? { success: true, data: { available: false, current_version: '4.9.0', latest_version: '4.9.0' } }),
       } as Response);
     }
     if (url.includes('/updates/apply')) {
@@ -147,7 +147,7 @@ describe('AdminUpdatesPage', () => {
   it('displays the current version', async () => {
     render(<AdminUpdatesPage />);
     await waitFor(() => {
-      expect(screen.getByTestId('current-version')).toHaveTextContent('4.8.0');
+      expect(screen.getByTestId('current-version')).toHaveTextContent('4.9.0');
     });
   });
 
@@ -182,9 +182,9 @@ describe('AdminUpdatesPage', () => {
         success: true,
         data: {
           available: true,
-          latest_version: '4.9.0',
-          current_version: '4.8.0',
-          release_url: 'https://github.com/nash87/parkhub-rust/releases/v4.9.0',
+          latest_version: '4.10.0',
+          current_version: '4.9.0',
+          release_url: 'https://github.com/nash87/parkhub-rust/releases/v4.10.0',
           release_notes: 'Bug fixes and improvements',
           published_at: '2026-04-12T00:00:00Z',
         },
@@ -198,7 +198,7 @@ describe('AdminUpdatesPage', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('update-available')).toBeInTheDocument();
-      expect(screen.getByText('4.9.0')).toBeInTheDocument();
+      expect(screen.getByText('4.10.0')).toBeInTheDocument();
       expect(screen.getByText('Bug fixes and improvements')).toBeInTheDocument();
     });
   });

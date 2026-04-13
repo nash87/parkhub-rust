@@ -125,4 +125,47 @@ describe('CommandPalette', () => {
     render(<CommandPalette open={true} onClose={onClose} />);
     expect(screen.getByTestId('command-palette-input')).toBeInTheDocument();
   });
+
+  // ── ARIA Accessibility ──
+
+  it('input has combobox role with ARIA attributes', () => {
+    render(<CommandPalette open={true} onClose={onClose} />);
+    const input = screen.getByRole('combobox');
+    expect(input).toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(input).toHaveAttribute('aria-controls', 'command-palette-listbox');
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    expect(input).toHaveAttribute('aria-haspopup', 'listbox');
+  });
+
+  it('results list has listbox role', () => {
+    render(<CommandPalette open={true} onClose={onClose} />);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  it('list items have option role with aria-selected', () => {
+    render(<CommandPalette open={true} onClose={onClose} />);
+    const options = screen.getAllByRole('option');
+    expect(options.length).toBe(8);
+    // First item should be selected by default
+    expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    expect(options[1]).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('aria-activedescendant tracks selected option', () => {
+    render(<CommandPalette open={true} onClose={onClose} />);
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveAttribute('aria-activedescendant', 'command-option-0');
+  });
+
+  it('aria-expanded is false when no results', async () => {
+    const user = userEvent.setup();
+    render(<CommandPalette open={true} onClose={onClose} />);
+
+    const input = screen.getByRole('combobox');
+    await user.type(input, 'zzzzzz');
+
+    // One "no results" option still exists but no actual actions
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+  });
 });

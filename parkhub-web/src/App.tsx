@@ -42,6 +42,7 @@ const NotificationsPage = lazy(() => import('./views/Notifications'), 'Notificat
 const CalendarPage = lazy(() => import('./views/Calendar'), 'CalendarPage');
 const DemoOverlay = lazy(() => import('./components/DemoOverlay'), 'DemoOverlay');
 const InstallPrompt = lazy(() => import('./components/InstallPrompt'), 'InstallPrompt');
+const SWUpdatePrompt = lazy(() => import('./components/SWUpdatePrompt'), 'SWUpdatePrompt');
 
 // Admin pages
 const MapViewPage = lazy(() => import('./views/MapView'), 'MapViewPage');
@@ -231,6 +232,7 @@ export function App() {
           <AppRoutes />
           <Suspense fallback={null}><DemoOverlay /></Suspense>
           <Suspense fallback={null}><InstallPrompt /></Suspense>
+          <Suspense fallback={null}><SWUpdatePrompt /></Suspense>
           <Toaster
             position="bottom-center"
             toastOptions={{

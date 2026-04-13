@@ -198,12 +198,14 @@ pub async fn security_headers_middleware(request: Request<Body>, next: Next) -> 
         HeaderName::from_static("content-security-policy"),
         HeaderValue::from_static(
             "default-src 'self'; \
-             script-src 'self'; \
-             style-src 'self'; \
-             img-src 'self' data:; \
-             font-src 'self'; \
+             script-src 'self' 'unsafe-inline'; \
+             style-src 'self' 'unsafe-inline'; \
+             img-src 'self' data: blob:; \
+             font-src 'self' data:; \
              connect-src 'self' ws: wss:; \
-             frame-ancestors 'none'",
+             frame-ancestors 'none'; \
+             base-uri 'self'; \
+             form-action 'self'",
         ),
     );
     headers.insert(
@@ -212,7 +214,10 @@ pub async fn security_headers_middleware(request: Request<Body>, next: Next) -> 
     );
     headers.insert(
         HeaderName::from_static("permissions-policy"),
-        HeaderValue::from_static("geolocation=(), camera=(), microphone=()"),
+        HeaderValue::from_static(
+            "geolocation=(self), camera=(), microphone=(), \
+             payment=(), usb=(), bluetooth=(), serial=()",
+        ),
     );
     headers.insert(
         HeaderName::from_static("strict-transport-security"),

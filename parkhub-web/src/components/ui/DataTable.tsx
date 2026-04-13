@@ -112,16 +112,18 @@ export function DataTable<T>({
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className="w-full" role="grid">
+        <table className="w-full" role="table">
           <thead>
             {table.getHeaderGroups().map(hg => (
-              <tr key={hg.id} className="border-b border-surface-200 dark:border-surface-700">
+              <tr key={hg.id} role="row" className="border-b border-surface-200 dark:border-surface-700">
                 {hg.headers.map(header => {
                   const canSort = header.column.getCanSort();
                   const sorted = header.column.getIsSorted();
                   return (
                     <th
                       key={header.id}
+                      role="columnheader"
+                      scope="col"
                       className={`text-left px-5 py-3.5 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider ${
                         canSort ? 'cursor-pointer select-none hover:text-surface-700 dark:hover:text-surface-200 transition-colors' : ''
                       }`}

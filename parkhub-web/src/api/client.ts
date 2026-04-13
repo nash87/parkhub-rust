@@ -6,6 +6,11 @@ export interface ApiResponse<T> {
   error?: { code: string; message: string };
 }
 
+export interface RequestOptions extends Omit<RequestInit, 'signal'> {
+  signal?: AbortSignal;
+  retries?: number;
+}
+
 // In-memory token storage (XSS-safe: not in localStorage).
 // Used as fallback when httpOnly cookie is not available (API/mobile clients).
 let _inMemoryToken: string | null = null;
@@ -18,60 +23,113 @@ export function getInMemoryToken(): string | null {
   return _inMemoryToken;
 }
 
-async function request<T>(path: string, opts: RequestInit = {}): Promise<ApiResponse<T>> {
+// GET request deduplication — concurrent identical GETs share one in-flight promise
+const _inflightGets = new Map<string, Promise<ApiResponse<any>>>();
+
+const MAX_RETRIES = 2;
+const RETRY_BASE_MS = 300;
+
+function isTransientError(status: number): boolean {
+  return status === 502 || status === 503 || status === 504 || status === 429;
+}
+
+async function requestOnce<T>(path: string, opts: RequestInit): Promise<ApiResponse<T>> {
+  const res = await fetch(`${BASE_URL}${path}`, opts);
+
+  if (res.status === 401) {
+    _inMemoryToken = null;
+    window.dispatchEvent(new Event('auth:unauthorized'));
+    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
+  }
+
+  const json = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    return {
+      success: false,
+      data: null,
+      error: json?.error || { code: `HTTP_${res.status}`, message: res.statusText },
+    };
+  }
+
+  if (json && typeof json === 'object' && 'success' in json) {
+    return json;
+  }
+  return { success: true, data: json as T };
+}
+
+async function request<T>(path: string, opts: RequestOptions = {}): Promise<ApiResponse<T>> {
+  const { retries = MAX_RETRIES, signal, ...rest } = opts;
   const token = _inMemoryToken;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    // CSRF protection: required by backend for cookie-based auth
     'X-Requested-With': 'XMLHttpRequest',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(opts.headers as Record<string, string> || {}),
+    ...(rest.headers as Record<string, string> || {}),
   };
 
-  try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      ...opts,
-      headers,
-      credentials: 'include',  // Send httpOnly cookies automatically
-    });
+  const fetchOpts: RequestInit = {
+    ...rest,
+    headers,
+    credentials: 'include',
+    ...(signal ? { signal } : {}),
+  };
 
-    if (res.status === 401) {
-      _inMemoryToken = null;
-      // Notify AuthProvider so it can clear user state.
-      // ProtectedRoute handles the redirect via React Router — no hard
-      // page reload, which previously caused an infinite loop.
-      window.dispatchEvent(new Event('auth:unauthorized'));
-      return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
-    }
+  const method = (rest.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
 
-    const json = await res.json().catch(() => null);
-
-    if (!res.ok) {
-      return {
-        success: false,
-        data: null,
-        error: json?.error || { code: `HTTP_${res.status}`, message: res.statusText },
-      };
-    }
-
-    // Normalize: API may return { success, data } or raw data
-    if (json && typeof json === 'object' && 'success' in json) {
-      return json;
-    }
-    return { success: true, data: json as T };
-  } catch (e) {
-    return { success: false, data: null, error: { code: 'NETWORK', message: 'Network error' } };
+  // Deduplicate concurrent identical GET requests
+  if (isGet) {
+    const existing = _inflightGets.get(path);
+    if (existing) return existing as Promise<ApiResponse<T>>;
   }
+
+  const execute = async (): Promise<ApiResponse<T>> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const result = await requestOnce<T>(path, fetchOpts);
+
+        if (!result.success && result.error) {
+          const status = parseInt(result.error.code.replace('HTTP_', ''), 10);
+          if (isTransientError(status) && attempt < retries) {
+            await new Promise(r => setTimeout(r, RETRY_BASE_MS * 2 ** attempt));
+            continue;
+          }
+        }
+
+        return result;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          return { success: false, data: null, error: { code: 'ABORTED', message: 'Request aborted' } };
+        }
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, RETRY_BASE_MS * 2 ** attempt));
+          continue;
+        }
+        return { success: false, data: null, error: { code: 'NETWORK', message: 'Network error' } };
+      }
+    }
+    return { success: false, data: null, error: { code: 'NETWORK', message: 'Network error' } };
+  };
+
+  const promise = execute();
+
+  if (isGet) {
+    _inflightGets.set(path, promise);
+    promise.finally(() => _inflightGets.delete(path));
+  }
+
+  return promise;
 }
 
-async function requestBlob(path: string): Promise<Blob> {
+async function requestBlob(path: string, signal?: AbortSignal): Promise<Blob> {
   const token = _inMemoryToken;
   const headers: Record<string, string> = {
     'X-Requested-With': 'XMLHttpRequest',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-  const res = await fetch(`${BASE_URL}${path}`, { headers, credentials: 'include' });
+  const res = await fetch(`${BASE_URL}${path}`, { headers, credentials: 'include', ...(signal ? { signal } : {}) });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.blob();
 }

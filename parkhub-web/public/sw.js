@@ -26,7 +26,8 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
   );
-  self.skipWaiting();
+  // Don't skipWaiting automatically — let the client decide when to update
+  // via SKIP_WAITING message so users aren't interrupted mid-session.
 });
 
 // ── Activate ─────────────────────────────────────────────────────────────────
@@ -152,10 +153,13 @@ self.addEventListener('sync', (event) => {
   }
 });
 
-// Listen for manual sync trigger from client
+// Listen for messages from client
 self.addEventListener('message', (event) => {
   // Origin check: only accept messages from same-origin clients
   if (event.origin && event.origin !== self.location.origin) return;
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
   if (event.data?.type === 'REPLAY_SYNC_QUEUE') {
     replayMutationQueue().then(() => {
       event.source?.postMessage({ type: 'SYNC_COMPLETE' });

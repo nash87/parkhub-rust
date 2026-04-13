@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useOptimistic, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell, Warning, Info, CheckCircle, Check, SpinnerGap, ArrowClockwise,
@@ -28,11 +28,25 @@ function timeAgoFn(dateStr: string, t: (key: string, opts?: Record<string, unkno
   return t('timeAgo.daysAgo', { count: days });
 }
 
+type OptimisticAction = { type: 'read'; id: string } | { type: 'readAll' };
+
 export function NotificationsPage() {
   const { t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [markingAll, setMarkingAll] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  // React 19 useOptimistic: instantly reflects read state in UI,
+  // auto-reverts if the transition fails
+  const [optimisticNotifs, addOptimistic] = useOptimistic(
+    notifications,
+    (current: Notification[], action: OptimisticAction) => {
+      if (action.type === 'read') {
+        return current.map(n => n.id === action.id ? { ...n, read: true } : n);
+      }
+      return current.map(n => ({ ...n, read: true }));
+    },
+  );
 
   useEffect(() => { loadNotifications(); }, []);
 
@@ -46,26 +60,30 @@ export function NotificationsPage() {
     } finally { setLoading(false); }
   }
 
-  async function markAsRead(id: string) {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    try { await api.markNotificationRead(id); } catch {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
-    }
+  function markAsRead(id: string) {
+    startTransition(async () => {
+      addOptimistic({ type: 'read', id });
+      const res = await api.markNotificationRead(id);
+      if (res.success) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      }
+    });
   }
 
-  async function markAllAsRead() {
-    setMarkingAll(true);
-    try {
+  function markAllAsRead() {
+    startTransition(async () => {
+      addOptimistic({ type: 'readAll' });
       const res = await api.markAllNotificationsRead();
       if (res.success) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         toast.success(t('notifications.allMarkedRead'));
+      } else {
+        toast.error(t('common.error'));
       }
-    } catch { toast.error(t('common.error')); }
-    finally { setMarkingAll(false); }
+    });
   }
 
-  const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+  const unreadCount = useMemo(() => optimisticNotifs.filter(n => !n.read).length, [optimisticNotifs]);
 
   if (loading) return (
     <div className="space-y-6">
@@ -89,8 +107,8 @@ export function NotificationsPage() {
             <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
           </button>
           {unreadCount > 0 && (
-            <button onClick={markAllAsRead} disabled={markingAll} className="btn btn-primary">
-              {markingAll ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+            <button onClick={markAllAsRead} disabled={isPending} className="btn btn-primary">
+              {isPending ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
               {t('notifications.markAllRead')}
             </button>
           )}
@@ -98,7 +116,7 @@ export function NotificationsPage() {
       </div>
 
       {/* List */}
-      {notifications.length === 0 ? (
+      {optimisticNotifs.length === 0 ? (
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-12 text-center">
           <Bell weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
           <p className="text-surface-500 dark:text-surface-400">{t('notifications.empty')}</p>
@@ -106,7 +124,7 @@ export function NotificationsPage() {
       ) : (
         <div className="space-y-2" role="list" aria-label={t('notifications.title')}>
           <AnimatePresence>
-            {notifications.map(n => {
+            {optimisticNotifs.map(n => {
               const nType = resolveType(n.notification_type);
               const NIcon = notifIcon[nType] || Info;
               return (

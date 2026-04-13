@@ -22,6 +22,16 @@ export class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary]', error, errorInfo);
+
+    // Dispatch structured error event for external integrations (Sentry, etc.)
+    window.dispatchEvent(new CustomEvent('app:error', {
+      detail: {
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString(),
+      },
+    }));
   }
 
   handleReload = () => {
