@@ -2172,7 +2172,7 @@ use system::{
 /// Using a raw 256-bit random value is both simpler and more secure.
 pub fn generate_access_token() -> String {
     let mut bytes = [0u8; 32];
-    rand::RngCore::fill_bytes(&mut rand::rng(), &mut bytes);
+    rand::Rng::fill_bytes(&mut rand::rng(), &mut bytes);
     hex::encode(bytes)
 }
 

@@ -118,7 +118,7 @@ fn parse_role(role_str: &str) -> UserRole {
 /// Generate a random password of 16 URL-safe characters.
 fn generate_password() -> String {
     let mut bytes = [0u8; 12];
-    rand::RngCore::fill_bytes(&mut rand::rng(), &mut bytes);
+    rand::Rng::fill_bytes(&mut rand::rng(), &mut bytes);
     // base64url without padding — 16 chars
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
 }

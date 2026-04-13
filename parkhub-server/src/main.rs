@@ -294,7 +294,7 @@ async fn main() -> Result<()> {
             |h| h.to_string_lossy().to_string(),
         );
         let admin_password = std::env::var("PARKHUB_ADMIN_PASSWORD").unwrap_or_else(|_| {
-            use rand::Rng;
+            use rand::RngExt;
             let generated: String = rand::rng()
                 .sample_iter(&rand::distr::Alphanumeric)
                 .take(16)
@@ -333,7 +333,7 @@ async fn main() -> Result<()> {
             let mut config = ServerConfig::default();
             // Generate a random password or use env var
             let admin_password = std::env::var("PARKHUB_ADMIN_PASSWORD").unwrap_or_else(|_| {
-                use rand::Rng;
+                use rand::RngExt;
                 let generated: String = rand::rng()
                     .sample_iter(&rand::distr::Alphanumeric)
                     .take(16)
@@ -1699,7 +1699,7 @@ impl UsernameStyle {
 async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> Result<()> {
     use chrono::Utc;
     use parkhub_common::models::{User, UserPreferences, UserRole};
-    use rand::Rng;
+    use rand::RngExt;
     use uuid::Uuid;
 
     // GDPR-compliant fictional first names (common, not identifying real people)
@@ -2008,7 +2008,7 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
         DayHours, LotStatus, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PricingInfo,
         PricingRate, SlotFeature, SlotPosition, SlotStatus, SlotType,
     };
-    use rand::Rng;
+    use rand::RngExt;
     use uuid::Uuid;
 
     info!("Seeding demo data: 10 parking lots + 200 users...");
