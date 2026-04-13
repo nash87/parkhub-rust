@@ -184,6 +184,7 @@ pub mod team;
 pub mod tenants;
 #[cfg(feature = "mod-translations")]
 pub mod translations;
+pub mod updates;
 pub mod users;
 #[cfg(feature = "mod-vehicles")]
 pub mod vehicles;
