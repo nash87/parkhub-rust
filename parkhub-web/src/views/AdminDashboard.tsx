@@ -94,7 +94,7 @@ export function AdminDashboardPage() {
     saveLayout(newWidgets);
   }
 
-  const visibleWidgets = layout?.widgets.filter(w => w.visible) ?? [];
+  const visibleWidgets = (layout?.widgets ?? []).filter(w => w.visible);
 
   if (loading) return (
     <div className="space-y-4">
@@ -143,7 +143,7 @@ export function AdminDashboardPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {WIDGET_TYPES.map(wt => {
                 const Icon = widgetIcons[wt] || ChartBar;
-                const isActive = layout?.widgets.some(w => w.widget_type === wt && w.visible);
+                const isActive = (layout?.widgets ?? []).some(w => w.widget_type === wt && w.visible);
                 return (
                   <button key={wt} onClick={() => toggleWidget(wt)}
                     className={`flex items-center gap-2 p-3 rounded-lg border text-sm transition-colors ${

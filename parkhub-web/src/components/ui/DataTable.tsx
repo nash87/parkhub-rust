@@ -66,7 +66,7 @@ export function DataTable<T>({
   function handleExportCsv() {
     if (!exportFilename) return;
     const headerGroups = table.getHeaderGroups();
-    const visibleColumns = headerGroups[0]?.headers.filter(h => h.column.columnDef.header) ?? [];
+    const visibleColumns = (headerGroups[0]?.headers ?? []).filter(h => h.column.columnDef.header);
     const headerRow = visibleColumns
       .map(h => {
         const rendered = h.column.columnDef.header;
