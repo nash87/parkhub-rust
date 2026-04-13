@@ -1,54 +1,38 @@
-name: Publish Container Image
+name: Release Container
 
 on:
   push:
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
 concurrency:
-  group: container-${{ github.ref }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
+  attestations: write
   contents: read
+  id-token: write
+  packages: write
+  security-events: write
 
 env:
-  REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: ghcr.io
 
 jobs:
-  validate-tag:
-    name: Validate container release ref
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Require v* tag ref
-        run: |
-          if [[ ! "${GITHUB_REF}" =~ ^refs/tags/v ]]; then
-            echo "workflow_dispatch must target a v* tag ref"
-            exit 1
-          fi
-
-  build-and-push:
-    name: Build and Publish GHCR Image
-    needs: [validate-tag]
-    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+  publish:
+    name: Build, scan, and publish image
     runs-on: ubuntu-latest
     timeout-minutes: 90
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      attestations: write
-      id-token: write
+
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -60,34 +44,37 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
+      - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
-      - name: Build and push
-        id: build
+      - name: Build and push (amd64 only)
+        id: push
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=release-docker
+          cache-to: type=gha,scope=release-docker,mode=max
+          provenance: mode=max
+          sbom: true
 
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.35.0
         continue-on-error: true
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
@@ -99,23 +86,34 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
-      - name: Generate CycloneDX SBOM
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
-          format: cyclonedx
-          output: trivy-image-sbom.cdx.json
-
-      - name: Upload image SBOM
-        uses: actions/upload-artifact@v7
-        with:
-          name: container-sbom
-          path: trivy-image-sbom.cdx.json
-          retention-days: 30
-
-      - name: Attest published image
+      - name: Attest image provenance
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.build.outputs.digest }}
+          subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+  deploy-demo:
+    name: Deploy demo
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: demo
+    permissions: {}
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+
+    steps:
+      - name: Skip demo deploy when Render secrets are missing
+        if: env.RENDER_API_KEY == '' || env.RENDER_SERVICE_ID == ''
+        run: echo "Render demo deploy skipped because required secrets are not configured."
+
+      - name: Trigger Render deploy
+        if: env.RENDER_API_KEY != '' && env.RENDER_SERVICE_ID != ''
+        run: |
+          curl -fsS -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+            -H "Authorization: Bearer ${RENDER_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache":"do_not_clear"}'
