@@ -196,9 +196,10 @@ pub async fn setup_init(
 
     // Create sample data if requested
     if req.create_sample_data
-        && let Err(e) = crate::create_sample_parking_lot(&state_guard.db).await {
-            tracing::warn!("Failed to create sample data: {}", e);
-        }
+        && let Err(e) = crate::create_sample_parking_lot(&state_guard.db).await
+    {
+        tracing::warn!("Failed to create sample data: {}", e);
+    }
 
     // Mark setup as completed
     if let Err(e) = state_guard.db.mark_setup_completed().await {

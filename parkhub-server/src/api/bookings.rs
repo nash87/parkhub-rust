@@ -849,8 +849,7 @@ pub async fn cancel_booking(
 
             // Notify the earliest-queued user who has not yet been notified
             if let Some(entry) = waitlist.iter().find(|e| e.notified_at.is_none())
-                && let Ok(Some(wl_user)) =
-                    state_r.db.get_user(&entry.user_id.to_string()).await
+                && let Ok(Some(wl_user)) = state_r.db.get_user(&entry.user_id.to_string()).await
             {
                 let email_html = email::build_waitlist_slot_available_email(
                     &wl_user.name,

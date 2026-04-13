@@ -121,25 +121,27 @@ pub async fn update_current_user(
 
     // ── Input length validation (issue #115) ────────────────────────────────
     if let Some(ref name) = req.name
-        && name.len() > 100 {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_INPUT",
-                    "Name must be at most 100 characters",
-                )),
-            );
-        }
+        && name.len() > 100
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Name must be at most 100 characters",
+            )),
+        );
+    }
     if let Some(ref phone) = req.phone
-        && phone.len() > 20 {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "INVALID_INPUT",
-                    "Phone number must be at most 20 characters",
-                )),
-            );
-        }
+        && phone.len() > 20
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "Phone number must be at most 20 characters",
+            )),
+        );
+    }
 
     // Apply only the fields provided in the request
     if let Some(name) = req.name {

@@ -248,9 +248,10 @@ pub async fn admin_update_user_status(
 
     // Revoke all sessions when a user is disabled
     if !user.is_active
-        && let Err(e) = state_guard.db.delete_sessions_by_user(user.id).await {
-            tracing::error!("Failed to revoke sessions for disabled user {}: {}", id, e);
-        }
+        && let Err(e) = state_guard.db.delete_sessions_by_user(user.id).await
+    {
+        tracing::error!("Failed to revoke sessions for disabled user {}: {}", id, e);
+    }
 
     let event_type = if user.is_active {
         AuditEventType::UserActivated
@@ -1047,13 +1048,13 @@ pub async fn admin_update_auto_release(
             .db
             .set_setting("auto_release_enabled", &enabled.to_string())
             .await
-        {
-            tracing::error!("Failed to save auto_release_enabled: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to save setting")),
-            );
-        }
+    {
+        tracing::error!("Failed to save auto_release_enabled: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error("SERVER_ERROR", "Failed to save setting")),
+        );
+    }
 
     if let Some(minutes) = req.auto_release_minutes {
         if minutes < 1 {

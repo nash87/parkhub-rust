@@ -1024,7 +1024,7 @@ impl Database {
         drop(db);
         let removed = {
             let mut table = write_txn.open_table(PARKING_SLOTS)?;
-            
+
             table.remove(id)?.is_some()
         };
         if removed && !keys_to_remove.is_empty() {
@@ -1244,11 +1244,12 @@ impl Database {
             let result = table.remove(id)?;
             // Remove secondary index entry if booking was found
             if result.is_some()
-                && let Some(ref uid) = user_id_opt {
-                    let mut idx = write_txn.open_table(BOOKINGS_BY_USER)?;
-                    let idx_key = format!("{uid}:{id}");
-                    idx.remove(idx_key.as_str())?;
-                }
+                && let Some(ref uid) = user_id_opt
+            {
+                let mut idx = write_txn.open_table(BOOKINGS_BY_USER)?;
+                let idx_key = format!("{uid}:{id}");
+                idx.remove(idx_key.as_str())?;
+            }
             result.is_some()
         };
         write_txn.commit()?;
@@ -1959,21 +1960,25 @@ impl Database {
             let (_, value) = entry?;
             let tx: parkhub_common::models::CreditTransaction = self.deserialize(value.value())?;
             if let Some(uid) = user_id_filter
-                && tx.user_id != uid {
-                    continue;
-                }
+                && tx.user_id != uid
+            {
+                continue;
+            }
             if let Some(ref t) = type_filter
-                && &tx.transaction_type != t {
-                    continue;
-                }
+                && &tx.transaction_type != t
+            {
+                continue;
+            }
             if let Some(f) = from
-                && tx.created_at < f {
-                    continue;
-                }
+                && tx.created_at < f
+            {
+                continue;
+            }
             if let Some(t) = to
-                && tx.created_at > t {
-                    continue;
-                }
+                && tx.created_at > t
+            {
+                continue;
+            }
             transactions.push(tx);
         }
         transactions.sort_by(|a, b| b.created_at.cmp(&a.created_at));
