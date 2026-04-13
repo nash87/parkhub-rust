@@ -8,7 +8,17 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
-import { api, type Booking } from '../api/client';
+import { api, getInMemoryToken, type Booking } from '../api/client';
+
+function authHeaders(): Record<string, string> {
+  const token = getInMemoryToken();
+  return {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 import { stagger, fadeUp, modalVariants, modalTransition } from '../constants/animations';
 
 interface SwapRequest {
@@ -46,7 +56,7 @@ export function SwapRequestsPage() {
     setLoading(true);
     try {
       const [swapRes, bookingsRes] = await Promise.all([
-        fetch('/api/v1/swap-requests').then(r => r.json()),
+        fetch('/api/v1/swap-requests', { headers: authHeaders(), credentials: 'include' }).then(r => r.json()),
         api.getBookings(),
       ]);
       if (swapRes.success && swapRes.data) setRequests(swapRes.data);
@@ -62,7 +72,7 @@ export function SwapRequestsPage() {
   async function handleAccept(id: string) {
     setActing(id);
     try {
-      const res = await fetch(`/api/v1/swap-requests/${id}/accept`, { method: 'POST' }).then(r => r.json());
+      const res = await fetch(`/api/v1/swap-requests/${id}/accept`, { method: 'POST', headers: authHeaders(), credentials: 'include' }).then(r => r.json());
       if (res.success) {
         setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'accepted' } : r));
         toast.success(t('swap.accepted'));
@@ -78,7 +88,7 @@ export function SwapRequestsPage() {
   async function handleDecline(id: string) {
     setActing(id);
     try {
-      const res = await fetch(`/api/v1/swap-requests/${id}/decline`, { method: 'POST' }).then(r => r.json());
+      const res = await fetch(`/api/v1/swap-requests/${id}/decline`, { method: 'POST', headers: authHeaders(), credentials: 'include' }).then(r => r.json());
       if (res.success) {
         setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'declined' } : r));
         toast.success(t('swap.declined'));
@@ -97,7 +107,8 @@ export function SwapRequestsPage() {
     try {
       const res = await fetch(`/api/v1/bookings/${selectedBooking}/swap-request`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ target_booking_id: targetBookingId, message: swapMessage || null }),
       }).then(r => r.json());
       if (res.success) {

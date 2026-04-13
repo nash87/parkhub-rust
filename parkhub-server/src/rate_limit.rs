@@ -59,22 +59,10 @@ pub async fn rate_limit_middleware(
     next: Next,
 ) -> Response {
     match rate_limiter.check() {
-        Ok(()) => {
-            let mut response = next.run(request).await;
-            // Add rate limit headers (RFC 6585 / draft-ietf-httpapi-ratelimit-headers)
-            let headers = response.headers_mut();
-            headers.insert("x-ratelimit-limit", "100".parse().unwrap());
-            headers.insert(
-                "x-ratelimit-remaining",
-                "99".parse().unwrap(),
-            );
-            response
-        }
+        Ok(()) => next.run(request).await,
         Err(_) => {
             let mut response = AppError::RateLimited.into_response();
             let headers = response.headers_mut();
-            headers.insert("x-ratelimit-limit", "100".parse().unwrap());
-            headers.insert("x-ratelimit-remaining", "0".parse().unwrap());
             headers.insert("retry-after", "60".parse().unwrap());
             response
         }

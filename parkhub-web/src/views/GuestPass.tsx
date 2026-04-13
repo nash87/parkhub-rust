@@ -89,7 +89,7 @@ export function GuestPassPage() {
         credentials: 'include',
       }).then(r => r.json());
       if (res.success) setBookings(res.data || []);
-    } catch { /* ignore */ }
+    } catch { toast.error(t('common.error')); }
     setLoading(false);
   }, []);
 
@@ -100,7 +100,7 @@ export function GuestPassPage() {
         credentials: 'include',
       }).then(r => r.json());
       if (res.success) setLots(res.data || []);
-    } catch { /* ignore */ }
+    } catch { toast.error(t('common.error')); }
   }, []);
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export function GuestPassPage() {
           credentials: 'include',
         }).then(r => r.json());
         if (res.success) setSlots(res.data || []);
-      } catch { /* ignore */ }
+      } catch { toast.error(t('common.error')); }
     })();
   }, [form.lot_id]);
 
@@ -301,7 +301,7 @@ export function GuestPassPage() {
                   type="text"
                   value={form.guest_name}
                   onChange={e => setForm({ ...form, guest_name: e.target.value })}
-                  className="input-field"
+                  className="input"
                   required
                   data-testid="input-guest-name"
                 />
@@ -312,7 +312,7 @@ export function GuestPassPage() {
                   type="email"
                   value={form.guest_email}
                   onChange={e => setForm({ ...form, guest_email: e.target.value })}
-                  className="input-field"
+                  className="input"
                   data-testid="input-guest-email"
                 />
               </div>
@@ -321,7 +321,7 @@ export function GuestPassPage() {
                 <select
                   value={form.lot_id}
                   onChange={e => setForm({ ...form, lot_id: e.target.value, slot_id: '' })}
-                  className="input-field"
+                  className="input"
                   required
                   data-testid="select-lot"
                 >
@@ -336,7 +336,7 @@ export function GuestPassPage() {
                 <select
                   value={form.slot_id}
                   onChange={e => setForm({ ...form, slot_id: e.target.value })}
-                  className="input-field"
+                  className="input"
                   required
                   disabled={!form.lot_id}
                   data-testid="select-slot"
@@ -353,7 +353,7 @@ export function GuestPassPage() {
                   type="datetime-local"
                   value={form.start_time}
                   onChange={e => setForm({ ...form, start_time: e.target.value })}
-                  className="input-field"
+                  className="input"
                   required
                   data-testid="input-start-time"
                 />
@@ -364,14 +364,14 @@ export function GuestPassPage() {
                   type="datetime-local"
                   value={form.end_time}
                   onChange={e => setForm({ ...form, end_time: e.target.value })}
-                  className="input-field"
+                  className="input"
                   required
                   data-testid="input-end-time"
                 />
               </div>
               <div className="sm:col-span-2 flex justify-end gap-2">
-                <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); }} className="btn-secondary">{t('common.cancel')}</button>
-                <button type="submit" disabled={submitting} className="btn-primary" data-testid="submit-guest-btn">
+                <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); }} className="btn btn-secondary">{t('common.cancel')}</button>
+                <button type="submit" disabled={submitting} className="btn btn-primary" data-testid="submit-guest-btn">
                   {submitting ? <SpinnerGap size={16} className="animate-spin inline mr-1" /> : null}
                   {submitting ? t('guestBooking.creating') : t('common.save')}
                 </button>
