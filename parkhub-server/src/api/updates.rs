@@ -128,6 +128,18 @@ pub async fn apply_update(
     drop(state_guard);
 
     let target_version = req.version.unwrap_or_else(|| "latest".to_string());
+
+    // Validate version to prevent SSRF: must be "latest" or a valid semver (e.g. "4.9.0")
+    if target_version != "latest" && !is_valid_semver(&target_version) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_VERSION",
+                "Version must be 'latest' or a valid semver (e.g. 1.2.3)",
+            )),
+        );
+    }
+
     tracing::info!("Update requested: target={target_version}");
 
     let client = reqwest::Client::builder()
@@ -269,6 +281,17 @@ pub async fn rollback_update(
     }
 
     let target = req.version.unwrap_or_else(|| "previous".to_string());
+
+    // Validate version to prevent injection: must be "previous" or a valid semver
+    if target != "previous" && !is_valid_semver(&target) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_VERSION",
+                "Version must be 'previous' or a valid semver (e.g. 1.2.3)",
+            )),
+        );
+    }
     tracing::info!(
         "Rollback requested: target={target} by user={}",
         auth_user.user_id
@@ -295,6 +318,15 @@ pub async fn rollback_update(
             "message": "Rollback queued. Restart to apply.",
         }))),
     )
+}
+
+/// Validate that a version string is a valid semver: 1-3 dot-separated numeric segments.
+/// Rejects any characters that could be used for path traversal or URL manipulation.
+fn is_valid_semver(v: &str) -> bool {
+    let parts: Vec<&str> = v.split('.').collect();
+    !parts.is_empty()
+        && parts.len() <= 3
+        && parts.iter().all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn is_newer_version(current: &str, latest: &str) -> bool {
@@ -326,5 +358,22 @@ mod tests {
     #[test]
     fn test_current_version() {
         assert_eq!(CURRENT_VERSION, "4.9.0");
+    }
+
+    #[test]
+    fn test_valid_semver() {
+        assert!(is_valid_semver("4.8.0"));
+        assert!(is_valid_semver("1.0.0"));
+        assert!(is_valid_semver("0.1.2"));
+        assert!(is_valid_semver("4.9"));
+        assert!(is_valid_semver("5"));
+        // Reject path traversal, URL manipulation, and non-numeric input
+        assert!(!is_valid_semver(""));
+        assert!(!is_valid_semver("../../../etc/passwd"));
+        assert!(!is_valid_semver("1.0.0-beta"));
+        assert!(!is_valid_semver("1.0.0/../../evil"));
+        assert!(!is_valid_semver("latest"));
+        assert!(!is_valid_semver("v4.8.0"));
+        assert!(!is_valid_semver("1.0.0.0"));
     }
 }
