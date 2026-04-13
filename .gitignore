@@ -71,6 +71,10 @@ playwright-report/
 test-results/
 blob-report/
 
+# Coverage
+coverage/
+*.lcov
+
 # Local dev tooling (not for public repo)
 .aoe/
 .claude/
