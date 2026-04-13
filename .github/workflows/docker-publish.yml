@@ -65,8 +65,8 @@ jobs:
           platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=release-docker-v2
-          cache-to: type=gha,scope=release-docker-v2,mode=max
+          cache-from: type=gha,scope=release-docker-v3
+          cache-to: type=gha,scope=release-docker-v3,mode=max
           provenance: mode=max
           sbom: true
 
