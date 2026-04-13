@@ -51,6 +51,9 @@ RUN cargo chef cook --release --recipe-path recipe.json \
 # Stage 5: Build — compile the actual application
 # ---------------------------------------------------------------------------
 FROM deps AS builder
+# Re-copy root manifest so [workspace.lints] is present (cargo-chef strips it)
+COPY Cargo.toml Cargo.lock ./
+RUN sed -i '/"parkhub-client"/d' Cargo.toml
 # Copy real source (deps are already compiled)
 COPY parkhub-common/ ./parkhub-common/
 COPY parkhub-server/ ./parkhub-server/
@@ -60,8 +63,7 @@ COPY --from=web-builder /app/dist ./parkhub-web/dist/
 RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
     cargo build --release --package parkhub-server \
         --no-default-features --features headless && \
-    # Strip is in Cargo.toml profile.release, but ensure it
-    strip /app/target/release/parkhub-server || true
+    strip /app/target/release/parkhub-server
 
 # ---------------------------------------------------------------------------
 # Stage 6: Data-directory scaffold
