@@ -11,8 +11,7 @@ use super::{AuthUser, SharedState, check_admin};
 const GITHUB_REPO: &str = "nash87/parkhub-rust";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// Response from the update check endpoint.
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct UpdateCheckResponse {
     pub available: bool,
     pub current_version: String,
@@ -22,28 +21,33 @@ pub struct UpdateCheckResponse {
     pub published_at: String,
 }
 
-/// `GET /api/v1/admin/updates/check` — check GitHub for newer version.
-#[utoipa::path(
-    get,
-    path = "/api/v1/admin/updates/check",
-    tag = "Admin",
-    summary = "Check for updates",
-    description = "Checks GitHub Releases for a newer version of ParkHub.",
-    security(("bearer_auth" = []))
-)]
+#[derive(Debug, Deserialize)]
+pub struct ApplyUpdateRequest {
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VersionHistoryEntry {
+    pub version: String,
+    pub installed_at: String,
+    pub status: String,
+    pub release_notes: String,
+    pub installed_by: String,
+}
+
+/// Check GitHub for a newer version.
 pub async fn check_for_updates(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<UpdateCheckResponse>>) {
     let state_guard = state.read().await;
-    if !check_admin(&state_guard, &auth_user).await {
+    if check_admin(&state_guard, &auth_user).await.is_err() {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
         );
     }
 
-    // Query GitHub Releases API (no auth needed for public repos)
     let client = reqwest::Client::builder()
         .user_agent("ParkHub-Server")
         .build()
@@ -102,31 +106,14 @@ pub async fn check_for_updates(
     )
 }
 
-/// Request body for applying an update.
-#[derive(Debug, Deserialize)]
-pub struct ApplyUpdateRequest {
-    pub version: Option<String>,
-}
-
-/// `POST /api/v1/admin/updates/apply` — download and apply an update.
-///
-/// For the Rust binary: downloads the new release binary from GitHub,
-/// replaces the current binary, and signals for restart.
-#[utoipa::path(
-    post,
-    path = "/api/v1/admin/updates/apply",
-    tag = "Admin",
-    summary = "Apply update",
-    description = "Downloads and installs the latest ParkHub release from GitHub.",
-    security(("bearer_auth" = []))
-)]
+/// Download and apply an update.
 pub async fn apply_update(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<ApplyUpdateRequest>,
 ) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
     let state_guard = state.read().await;
-    if !check_admin(&state_guard, &auth_user).await {
+    if check_admin(&state_guard, &auth_user).await.is_err() {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
@@ -137,7 +124,6 @@ pub async fn apply_update(
     let target_version = req.version.unwrap_or_else(|| "latest".to_string());
     tracing::info!("Update requested: target={target_version}");
 
-    // Determine download URL
     let client = reqwest::Client::builder()
         .user_agent("ParkHub-Server")
         .build()
@@ -173,101 +159,40 @@ pub async fn apply_update(
         .trim_start_matches('v')
         .to_string();
 
-    // Find the Linux x64 asset
-    let assets = release["assets"].as_array();
-    let download_url = assets
-        .and_then(|a| {
-            a.iter().find_map(|asset| {
-                let name = asset["name"].as_str().unwrap_or("");
-                if name.contains("linux") && name.contains("x64") {
-                    asset["browser_download_url"].as_str().map(String::from)
-                } else {
-                    None
-                }
-            })
-        });
+    // Save update intent
+    let state_guard = state.read().await;
+    let _ = state_guard
+        .db
+        .set_setting("pending_update", &serde_json::json!({
+            "version": version,
+            "requested_at": chrono::Utc::now().to_rfc3339(),
+            "requested_by": auth_user.user_id.to_string(),
+        }).to_string())
+        .await;
 
-    match download_url {
-        Some(url) => {
-            // Log the update attempt (actual binary replacement would happen here)
-            tracing::info!("Update available: v{version} from {url}");
-
-            // Save update intent to settings for the next restart
-            let state_guard = state.read().await;
-            let _ = state_guard
-                .db
-                .set_setting("pending_update", &serde_json::json!({
-                    "version": version,
-                    "url": url,
-                    "requested_at": chrono::Utc::now().to_rfc3339(),
-                    "requested_by": auth_user.user_id.to_string(),
-                }).to_string())
-                .await;
-
-            (
-                StatusCode::OK,
-                Json(ApiResponse::success(serde_json::json!({
-                    "status": "update_queued",
-                    "version": version,
-                    "message": "Update downloaded. Restart the server to apply.",
-                }))),
-            )
-        }
-        None => (
-            StatusCode::NOT_FOUND,
-            Json(ApiResponse::error(
-                "NO_BINARY",
-                "No compatible binary found in release assets",
-            )),
-        ),
-    }
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "status": "update_queued",
+            "version": version,
+            "message": "Update queued. Restart to apply.",
+        }))),
+    )
 }
 
-/// Compare two semver strings. Returns true if `latest` is newer than `current`.
-fn is_newer_version(current: &str, latest: &str) -> bool {
-    let parse = |v: &str| -> (u32, u32, u32) {
-        let parts: Vec<&str> = v.split('.').collect();
-        (
-            parts.first().and_then(|s| s.parse().ok()).unwrap_or(0),
-            parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0),
-            parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0),
-        )
-    };
-    parse(latest) > parse(current)
-}
-
-/// Version history entry.
-#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct VersionHistoryEntry {
-    pub version: String,
-    pub installed_at: String,
-    pub status: String, // "success" | "failed" | "rolled_back"
-    pub release_notes: String,
-    pub installed_by: String,
-}
-
-/// `GET /api/v1/admin/updates/history` — list previous version updates.
-#[utoipa::path(
-    get,
-    path = "/api/v1/admin/updates/history",
-    tag = "Admin",
-    summary = "Update history",
-    description = "List previous version updates and rollbacks.",
-    security(("bearer_auth" = []))
-)]
+/// List previous version updates.
 pub async fn update_history(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<VersionHistoryEntry>>>) {
     let state_guard = state.read().await;
-    if !check_admin(&state_guard, &auth_user).await {
+    if check_admin(&state_guard, &auth_user).await.is_err() {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
         );
     }
 
-    // Read version history from settings
     let history: Vec<VersionHistoryEntry> = match state_guard
         .db
         .get_setting("update_history")
@@ -280,66 +205,13 @@ pub async fn update_history(
     (StatusCode::OK, Json(ApiResponse::success(history)))
 }
 
-/// `POST /api/v1/admin/updates/rollback` — revert to a previous version.
-#[utoipa::path(
-    post,
-    path = "/api/v1/admin/updates/rollback",
-    tag = "Admin",
-    summary = "Rollback to previous version",
-    description = "Reverts to the specified previous version.",
-    security(("bearer_auth" = []))
-)]
-pub async fn rollback_update(
-    State(state): State<SharedState>,
-    Extension(auth_user): Extension<AuthUser>,
-    Json(req): Json<ApplyUpdateRequest>,
-) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
-    let state_guard = state.read().await;
-    if !check_admin(&state_guard, &auth_user).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
-        );
-    }
-
-    let target = req.version.unwrap_or_else(|| "previous".to_string());
-    tracing::info!("Rollback requested: target={target} by user={}", auth_user.user_id);
-
-    // Record rollback intent
-    let _ = state_guard
-        .db
-        .set_setting("pending_rollback", &serde_json::json!({
-            "target_version": target,
-            "requested_at": chrono::Utc::now().to_rfc3339(),
-            "requested_by": auth_user.user_id.to_string(),
-        }).to_string())
-        .await;
-
-    (
-        StatusCode::OK,
-        Json(ApiResponse::success(serde_json::json!({
-            "status": "rollback_queued",
-            "target_version": target,
-            "message": "Rollback queued. Restart the server to apply.",
-        }))),
-    )
-}
-
-/// `GET /api/v1/admin/updates/releases` — list all available GitHub releases.
-#[utoipa::path(
-    get,
-    path = "/api/v1/admin/updates/releases",
-    tag = "Admin",
-    summary = "List available releases",
-    description = "Lists all available ParkHub releases from GitHub.",
-    security(("bearer_auth" = []))
-)]
+/// List all available GitHub releases.
 pub async fn list_releases(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
 ) -> (StatusCode, Json<ApiResponse<Vec<serde_json::Value>>>) {
     let state_guard = state.read().await;
-    if !check_admin(&state_guard, &auth_user).await {
+    if check_admin(&state_guard, &auth_user).await.is_err() {
         return (
             StatusCode::FORBIDDEN,
             Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
@@ -373,6 +245,54 @@ pub async fn list_releases(
     };
 
     (StatusCode::OK, Json(ApiResponse::success(releases)))
+}
+
+/// Revert to a previous version.
+pub async fn rollback_update(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<ApplyUpdateRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    let state_guard = state.read().await;
+    if check_admin(&state_guard, &auth_user).await.is_err() {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(ApiResponse::error("FORBIDDEN", "Admin access required")),
+        );
+    }
+
+    let target = req.version.unwrap_or_else(|| "previous".to_string());
+    tracing::info!("Rollback requested: target={target} by user={}", auth_user.user_id);
+
+    let _ = state_guard
+        .db
+        .set_setting("pending_rollback", &serde_json::json!({
+            "target_version": target,
+            "requested_at": chrono::Utc::now().to_rfc3339(),
+            "requested_by": auth_user.user_id.to_string(),
+        }).to_string())
+        .await;
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(serde_json::json!({
+            "status": "rollback_queued",
+            "target_version": target,
+            "message": "Rollback queued. Restart to apply.",
+        }))),
+    )
+}
+
+fn is_newer_version(current: &str, latest: &str) -> bool {
+    let parse = |v: &str| -> (u32, u32, u32) {
+        let parts: Vec<&str> = v.split('.').collect();
+        (
+            parts.first().and_then(|s| s.parse().ok()).unwrap_or(0),
+            parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0),
+            parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(0),
+        )
+    };
+    parse(latest) > parse(current)
 }
 
 #[cfg(test)]
