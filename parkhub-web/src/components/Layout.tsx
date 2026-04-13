@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
   GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star, Globe, CaretDown, MapPin,
-  ClockCounterClockwise, Swap, QrCode, UserPlus,
+  ClockCounterClockwise, Swap, QrCode, UserPlus, Trophy, Sparkle,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -30,6 +30,8 @@ const NAV_ITEMS = [
   { to: '/checkin', icon: QrCode, key: 'checkin' },
   { to: '/swap-requests', icon: Swap, key: 'swapRequests' },
   { to: '/guest-pass', icon: UserPlus, key: 'guestPass' },
+  { to: '/leaderboard', icon: Trophy, key: 'leaderboard' },
+  { to: '/predict', icon: Sparkle, key: 'predictions' },
   { to: '/credits', icon: Coins, key: 'credits' },
   { to: '/notifications', icon: Bell, key: 'notifications' },
   { to: '/translations', icon: Translate, key: 'translations' },

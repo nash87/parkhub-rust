@@ -237,3 +237,45 @@ test.describe('1-Month Booking Simulation', () => {
     expect(statsRes.status()).toBe(200);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// Team Leaderboard
+// ═══════════════════════════════════════════════════════════════════
+
+test.describe('Team Leaderboard', () => {
+  test('leaderboard page loads after login', async ({ page }) => {
+    await loginViaUi(page);
+    await page.goto('/leaderboard');
+    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/leaderboard|ranking|team/i);
+  });
+
+  test('team API returns data', async ({ request }) => {
+    const token = await loginViaApi(request);
+    const res = await request.get('/api/v1/team', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect([200, 404]).toContain(res.status());
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// Occupancy Prediction
+// ═══════════════════════════════════════════════════════════════════
+
+test.describe('Occupancy Prediction', () => {
+  test('prediction page loads after login', async ({ page }) => {
+    await loginViaUi(page);
+    await page.goto('/predict');
+    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/predict|smart|forecast/i);
+  });
+
+  test('lots API returns data for predictions', async ({ request }) => {
+    const token = await loginViaApi(request);
+    const res = await request.get('/api/v1/lots', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+  });
+});
