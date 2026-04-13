@@ -157,7 +157,7 @@ const fn default_true() -> bool {
 /// Generate a cryptographically random secret for HMAC signing.
 fn generate_secret() -> String {
     let mut bytes = [0u8; 32];
-    rand::RngCore::fill_bytes(&mut rand::rng(), &mut bytes);
+    rand::Rng::fill_bytes(&mut rand::rng(), &mut bytes);
     format!("whsec_{}", hex::encode(bytes))
 }
 

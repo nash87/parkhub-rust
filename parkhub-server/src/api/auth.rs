@@ -700,7 +700,7 @@ pub async fn forgot_password(
 
     // Generate a cryptographically random token (32 bytes, hex-encoded)
     let mut token_bytes = [0u8; 32];
-    rand::RngCore::fill_bytes(&mut rand::rng(), &mut token_bytes);
+    rand::Rng::fill_bytes(&mut rand::rng(), &mut token_bytes);
     let reset_token = hex::encode(token_bytes);
     let expires_at = Utc::now() + Duration::hours(1);
 

@@ -3,7 +3,7 @@
 //! Generates user names, emails, vehicle plates, and booking patterns
 //! with workday-heavy traffic and peak-hour surges.
 
-use rand::Rng;
+use rand::RngExt;
 
 /// Realistic German first names.
 const FIRST_NAMES: &[&str] = &[

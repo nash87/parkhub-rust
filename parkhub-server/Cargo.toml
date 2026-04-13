@@ -45,7 +45,7 @@ uuid.workspace = true
 rcgen.workspace = true
 rustls.workspace = true
 argon2 = { version = "0.5", features = ["std", "rand"] }
-rand_core = { version = "0.9", features = ["os_rng"] }  # updated from 0.6; getrandom renamed to os_rng in 0.9
+rand_core = "0.10"  # updated from 0.9; no feature flags in 0.10
 axum-server = { version = "0.8", features = ["tls-rustls"] }  # updated from 0.7 (matches axum 0.8)
 
 # Network discovery (mDNS/DNS-SD)
@@ -269,7 +269,7 @@ tower = { version = "0.5", features = ["util"] }
 # Integration test dependencies (used by ../tests/main.rs)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 chrono = { version = "0.4", features = ["serde"] }
-rand = "0.9"
+rand = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full", "rt-multi-thread"] }

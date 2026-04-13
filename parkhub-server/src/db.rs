@@ -10,8 +10,11 @@ use aes_gcm::{
 use anyhow::{Context, Result, anyhow};
 use chrono::{DateTime, NaiveDate, Utc};
 use pbkdf2::pbkdf2_hmac;
-use rand::RngCore;
-use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
+use rand::Rng;
+use redb::{
+    Database as RedbDatabase, ReadableDatabase, ReadableTable, ReadableTableMetadata,
+    TableDefinition,
+};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::path::PathBuf;
@@ -113,7 +116,7 @@ impl Session {
         // Use cryptographically random refresh token (not a UUID — UUIDs have
         // a fixed structure that reduces effective entropy).
         let mut rng_bytes = [0u8; 32];
-        rand::RngCore::fill_bytes(&mut rand::rng(), &mut rng_bytes);
+        rand::Rng::fill_bytes(&mut rand::rng(), &mut rng_bytes);
         let refresh_token = format!("rt_{}", hex::encode(rng_bytes));
         Self {
             user_id,
