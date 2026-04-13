@@ -188,7 +188,7 @@ full = [
     "mod-admin-analytics",
 ]
 gui = ["slint", "slint-build", "tray-icon"]
-headless = []
+headless = ["full"]
 mod-bookings = []
 mod-vehicles = []
 mod-absences = []
