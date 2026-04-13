@@ -77,6 +77,12 @@ const AdminWebhooksPage = lazy(() => import('./views/AdminWebhooks'), 'AdminWebh
 const AdminRolesPage = lazy(() => import('./views/AdminRoles'), 'AdminRolesPage');
 const AdminZonesPage = lazy(() => import('./views/AdminZones'), 'AdminZonesPage');
 
+// New feature pages
+const SwapRequestsPage = lazy(() => import('./views/SwapRequests'), 'SwapRequestsPage');
+const QRCheckInPage = lazy(() => import('./views/QRCheckIn'), 'QRCheckInPage');
+const GuestPassPage = lazy(() => import('./views/GuestPass'), 'GuestPassPage');
+const OccupancyHeatmapPage = lazy(() => import('./views/OccupancyHeatmap'), 'OccupancyHeatmapPage');
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return <LoadingSplash />;
@@ -159,6 +165,9 @@ function AnimatedRoutes() {
           <Route path="history" element={<SuspenseRoute><ParkingHistoryPage /></SuspenseRoute>} />
           <Route path="absence-approval" element={<SuspenseRoute><AbsenceApprovalPage /></SuspenseRoute>} />
           <Route path="map" element={<SuspenseRoute><MapViewPage /></SuspenseRoute>} />
+          <Route path="swap-requests" element={<SuspenseRoute><SwapRequestsPage /></SuspenseRoute>} />
+          <Route path="checkin" element={<SuspenseRoute><QRCheckInPage /></SuspenseRoute>} />
+          <Route path="guest-pass" element={<SuspenseRoute><GuestPassPage /></SuspenseRoute>} />
           <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
           <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
             <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
@@ -186,6 +195,7 @@ function AnimatedRoutes() {
             <Route path="webhooks" element={<SuspenseRoute><AdminWebhooksPage /></SuspenseRoute>} />
             <Route path="roles" element={<SuspenseRoute><AdminRolesPage /></SuspenseRoute>} />
             <Route path="zones" element={<SuspenseRoute><AdminZonesPage /></SuspenseRoute>} />
+            <Route path="heatmap" element={<SuspenseRoute><OccupancyHeatmapPage /></SuspenseRoute>} />
           </Route>
         </Route>
         <Route path="*" element={<SuspenseRoute><NotFoundPage /></SuspenseRoute>} />
