@@ -25,6 +25,7 @@ vi.mock('../api/client', () => ({
   api: {
     getBookings: (...args: any[]) => mockGetBookings(...args),
   },
+  getInMemoryToken: () => 'test-token',
 }));
 
 vi.mock('react-router-dom', () => ({

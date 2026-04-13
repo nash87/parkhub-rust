@@ -25,6 +25,7 @@ vi.mock('../api/client', () => ({
   api: {
     getBookings: (...args: any[]) => mockGetBookings(...args),
   },
+  getInMemoryToken: () => 'test-token',
 }));
 
 vi.mock('react-router-dom', () => ({
@@ -156,6 +157,7 @@ describe('QRCheckInPage', () => {
       }
       if (typeof url === 'string' && url.includes('/qr')) {
         return Promise.resolve({
+          ok: true,
           blob: () => Promise.resolve(mockQrBlob()),
         } as Response);
       }
@@ -186,6 +188,7 @@ describe('QRCheckInPage', () => {
       }
       if (typeof url === 'string' && url.includes('/qr')) {
         return Promise.resolve({
+          ok: true,
           blob: () => Promise.resolve(mockQrBlob()),
         } as Response);
       }
@@ -217,6 +220,7 @@ describe('QRCheckInPage', () => {
       }
       if (typeof url === 'string' && url.includes('/qr')) {
         return Promise.resolve({
+          ok: true,
           blob: () => Promise.resolve(mockQrBlob()),
         } as Response);
       }
@@ -253,6 +257,7 @@ describe('QRCheckInPage', () => {
       }
       if (typeof url === 'string' && url.includes('/qr')) {
         return Promise.resolve({
+          ok: true,
           blob: () => Promise.resolve(mockQrBlob()),
         } as Response);
       }
@@ -298,6 +303,7 @@ describe('QRCheckInPage', () => {
       }
       if (typeof url === 'string' && url.includes('/qr')) {
         return Promise.resolve({
+          ok: true,
           blob: () => Promise.resolve(mockQrBlob()),
         } as Response);
       }
