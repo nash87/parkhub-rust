@@ -326,7 +326,9 @@ fn is_valid_semver(v: &str) -> bool {
     let parts: Vec<&str> = v.split('.').collect();
     !parts.is_empty()
         && parts.len() <= 3
-        && parts.iter().all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()))
+        && parts
+            .iter()
+            .all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn is_newer_version(current: &str, latest: &str) -> bool {

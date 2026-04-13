@@ -94,31 +94,21 @@ export function OccupancyPredictionPage() {
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch lots once on mount
   useEffect(() => {
-    fetch('/api/v1/lots', { headers: authHeaders(), credentials: 'include' })
-      .then(r => r.json())
-      .then(lotsRes => {
+    Promise.all([
+      fetch('/api/v1/lots', { headers: authHeaders(), credentials: 'include' }).then(r => r.json()),
+      fetch('/api/v1/admin/stats', { headers: authHeaders(), credentials: 'include' }).then(r => r.json()),
+    ])
+      .then(([lotsRes, statsRes]) => {
         if (lotsRes?.data) {
           setLots(lotsRes.data);
           if (lotsRes.data.length > 0) setSelectedLot(lotsRes.data[0].id);
         }
-      })
-      .catch(() => { /* handled by empty state */ });
-  }, []);
-
-  // Re-fetch stats whenever selectedLot changes
-  useEffect(() => {
-    setLoading(true);
-    const params = selectedLot ? `?lot_id=${selectedLot}` : '';
-    fetch(`/api/v1/admin/stats${params}`, { headers: authHeaders(), credentials: 'include' })
-      .then(r => r.json())
-      .then(statsRes => {
         if (statsRes?.data) setAdminStats(statsRes.data);
       })
       .catch(() => { /* handled by empty state */ })
       .finally(() => setLoading(false));
-  }, [selectedLot]);
+  }, []);
 
   const predictions = useMemo<DayPrediction[]>(() => {
     const byDay = adminStats?.occupancy_by_day || {};
