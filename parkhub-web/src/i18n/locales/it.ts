@@ -56,6 +56,7 @@ export default {
       book: 'Prenota',
       bookings: 'Prenotazioni',
       vehicles: 'Veicoli',
+      favorites: 'Preferiti',
       absences: 'Assenze',
       history: 'Cronologia',
       credits: 'Crediti',

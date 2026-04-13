@@ -56,6 +56,7 @@ export default {
       book: 'Réserver',
       bookings: 'Réservations',
       vehicles: 'Véhicules',
+      favorites: 'Favoris',
       absences: 'Absences',
       history: 'Historique',
       credits: 'Crédits',
