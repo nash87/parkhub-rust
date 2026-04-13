@@ -165,26 +165,25 @@ pub async fn health_check(State(health): State<Arc<AppHealth>>) -> Json<HealthRe
     {
         if let Ok(status) = std::fs::read_to_string("/proc/self/status")
             && let Some(line) = status.lines().find(|l| l.starts_with("VmRSS:"))
-                && let Some(kb_str) = line.split_whitespace().nth(1)
-                    && let Ok(kb) = kb_str.parse::<u64>() {
-                        let mb = kb / 1024;
-                        let status = if mb > 500 {
-                            HealthStatus::Degraded
-                        } else {
-                            HealthStatus::Healthy
-                        };
-                        if status == HealthStatus::Degraded
-                            && overall_status == HealthStatus::Healthy
-                        {
-                            overall_status = HealthStatus::Degraded;
-                        }
-                        checks.push(ComponentHealth {
-                            name: "memory".to_string(),
-                            status,
-                            message: Some(format!("{mb} MB")),
-                            response_time_ms: None,
-                        });
-                    }
+            && let Some(kb_str) = line.split_whitespace().nth(1)
+            && let Ok(kb) = kb_str.parse::<u64>()
+        {
+            let mb = kb / 1024;
+            let status = if mb > 500 {
+                HealthStatus::Degraded
+            } else {
+                HealthStatus::Healthy
+            };
+            if status == HealthStatus::Degraded && overall_status == HealthStatus::Healthy {
+                overall_status = HealthStatus::Degraded;
+            }
+            checks.push(ComponentHealth {
+                name: "memory".to_string(),
+                status,
+                message: Some(format!("{mb} MB")),
+                response_time_ms: None,
+            });
+        }
     }
 
     let uptime = health.start_time.elapsed().as_secs();

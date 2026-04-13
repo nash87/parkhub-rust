@@ -937,15 +937,16 @@ pub async fn detailed_health_check(
     {
         if let Ok(status) = std::fs::read_to_string("/proc/self/status")
             && let Some(line) = status.lines().find(|l| l.starts_with("VmRSS:"))
-                && let Some(kb_str) = line.split_whitespace().nth(1)
-                    && let Ok(kb) = kb_str.parse::<u64>() {
-                        let mb = kb / 1024;
-                        components.push(HealthComponentInfo {
-                            name: "memory".to_string(),
-                            status: if mb < 500 { "healthy" } else { "warning" }.to_string(),
-                            message: Some(format!("{mb} MB RSS")),
-                        });
-                    }
+            && let Some(kb_str) = line.split_whitespace().nth(1)
+            && let Ok(kb) = kb_str.parse::<u64>()
+        {
+            let mb = kb / 1024;
+            components.push(HealthComponentInfo {
+                name: "memory".to_string(),
+                status: if mb < 500 { "healthy" } else { "warning" }.to_string(),
+                message: Some(format!("{mb} MB RSS")),
+            });
+        }
     }
 
     let overall = if db_healthy && disk_space_ok {

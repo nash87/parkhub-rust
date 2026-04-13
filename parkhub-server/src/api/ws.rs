@@ -272,9 +272,10 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
                     .unwrap_or(u32::MAX);
                     let snapshot = WsEvent::occupancy_update(&lot.id.to_string(), available, total);
                     if let Ok(json) = serde_json::to_string(&snapshot)
-                        && sender.send(Message::Text(json.into())).await.is_err() {
-                            return; // Client disconnected during snapshot
-                        }
+                        && sender.send(Message::Text(json.into())).await.is_err()
+                    {
+                        return; // Client disconnected during snapshot
+                    }
                 }
             }
         }

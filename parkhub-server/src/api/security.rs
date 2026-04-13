@@ -89,20 +89,22 @@ pub async fn two_factor_setup(
     // Check if 2FA is already enabled
     let totp_key = format!("totp:{}", user.id);
     if let Ok(Some(val)) = state_guard.db.get_setting(&totp_key).await
-        && !val.is_empty() {
-            // Check if it's enabled (not just pending)
-            let enabled_key = format!("totp_enabled:{}", user.id);
-            if let Ok(Some(e)) = state_guard.db.get_setting(&enabled_key).await
-                && e == "true" {
-                    return (
-                        StatusCode::CONFLICT,
-                        Json(ApiResponse::error(
-                            "2FA_ALREADY_ENABLED",
-                            "Two-factor authentication is already enabled",
-                        )),
-                    );
-                }
+        && !val.is_empty()
+    {
+        // Check if it's enabled (not just pending)
+        let enabled_key = format!("totp_enabled:{}", user.id);
+        if let Ok(Some(e)) = state_guard.db.get_setting(&enabled_key).await
+            && e == "true"
+        {
+            return (
+                StatusCode::CONFLICT,
+                Json(ApiResponse::error(
+                    "2FA_ALREADY_ENABLED",
+                    "Two-factor authentication is already enabled",
+                )),
+            );
         }
+    }
 
     // Generate TOTP secret
     let totp = match totp_rs::TOTP::new(
@@ -1092,9 +1094,10 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
             }
             // Check expiry
             if let Some(expires_at) = key.expires_at
-                && expires_at < Utc::now() {
-                    continue;
-                }
+                && expires_at < Utc::now()
+            {
+                continue;
+            }
             // Check prefix first (fast path)
             if !api_key.starts_with(&key.key_prefix) {
                 continue;
