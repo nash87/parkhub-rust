@@ -9,8 +9,18 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
-import { api, type Booking } from '../api/client';
+import { api, getInMemoryToken, type Booking } from '../api/client';
 import { stagger, fadeUp } from '../constants/animations';
+
+function authHeaders(): Record<string, string> {
+  const token = getInMemoryToken();
+  return {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 interface CheckInStatus {
   checked_in: boolean;
@@ -43,18 +53,21 @@ export function QRCheckInPage() {
         if (active) {
           setBooking(active);
           // Load check-in status
-          const statusRes = await fetch(`/api/v1/bookings/${active.id}/check-in`).then(r => r.json());
+          const statusRes = await fetch(`/api/v1/bookings/${active.id}/check-in`, { headers: authHeaders(), credentials: 'include' }).then(r => r.json());
           if (statusRes.success && statusRes.data) {
             setCheckInStatus(statusRes.data);
           } else {
             setCheckInStatus({ checked_in: false, checked_in_at: null, checked_out_at: null });
           }
-          // Load QR code
+          // Load QR code (check r.ok to avoid rendering error HTML as image)
           try {
-            const qrBlob = await fetch(`/api/v1/bookings/${active.id}/qr`).then(r => r.blob());
-            setQrUrl(URL.createObjectURL(qrBlob));
+            const qrRes = await fetch(`/api/v1/bookings/${active.id}/qr`, { headers: authHeaders(), credentials: 'include' });
+            if (qrRes.ok) {
+              const qrBlob = await qrRes.blob();
+              setQrUrl(URL.createObjectURL(qrBlob));
+            }
           } catch {
-            // QR not available
+            // QR endpoint may not be compiled — non-critical
           }
         } else {
           setBooking(null);
@@ -97,7 +110,8 @@ export function QRCheckInPage() {
     try {
       const res = await fetch(`/api/v1/bookings/${booking.id}/check-in`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
+        credentials: 'include',
       }).then(r => r.json());
       if (res.success) {
         toast.success(t('checkin.checkedIn'));
@@ -117,7 +131,8 @@ export function QRCheckInPage() {
     try {
       const res = await fetch(`/api/v1/bookings/${booking.id}/check-out`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
+        credentials: 'include',
       }).then(r => r.json());
       if (res.success) {
         toast.success(t('checkin.checkedOut'));

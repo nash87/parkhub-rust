@@ -10,7 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ## [4.8.0] - 2026-04-13
 
 ### Added
-- **QR Check-In/Out**: Scan QR code to check in at parking lot, live elapsed timer, auto-checkout
+- **QR Check-In/Out**: Scan QR code to check in at parking lot, live elapsed timer, manual checkout
 - **Swap Requests**: Offer and accept parking spot trades between colleagues
 - **Guest Parking Pass**: Generate shareable QR passes for visitors with unique guest codes
 - **Occupancy Heatmap**: 7x24 grid visualization of lot usage patterns (admin)
