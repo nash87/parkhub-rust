@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Lightning, UserCircle, Star, Sun, UsersThree, Car } from '@phosphor-icons/react';
+import { Trophy, Medal, Lightning, Star } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
