@@ -25,6 +25,8 @@ interface UseWebSocketOptions {
   autoReconnect?: boolean;
   reconnectDelay?: number;
   maxReconnectDelay?: number;
+  maxRetries?: number;
+  heartbeatInterval?: number;
   onEvent?: WsEventHandler;
   /** Auth token appended as `?token=...` query parameter. */
   token?: string;
@@ -35,6 +37,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     autoReconnect = true,
     reconnectDelay = 1000,
     maxReconnectDelay = 30_000,
+    maxRetries = 10,
+    heartbeatInterval = 30_000,
     onEvent,
     token,
   } = options;
@@ -42,9 +46,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const [connected, setConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WsEvent | null>(null);
   const [occupancy, setOccupancy] = useState<OccupancyMap>({});
+  const [retriesExhausted, setRetriesExhausted] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCount = useRef(0);
   const onEventRef = useRef(onEvent);
   const unmountedRef = useRef(false);
@@ -74,6 +80,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     ws.onopen = () => {
       setConnected(true);
       retryCount.current = 0;
+      setRetriesExhausted(false);
+
+      // Start heartbeat ping to detect dead connections
+      if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
+      heartbeatTimer.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, heartbeatInterval);
     };
 
     ws.onmessage = (msg) => {
@@ -105,7 +120,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     ws.onclose = () => {
       setConnected(false);
       wsRef.current = null;
+      if (heartbeatTimer.current) { clearInterval(heartbeatTimer.current); heartbeatTimer.current = null; }
       if (autoReconnect && !unmountedRef.current) {
+        if (retryCount.current >= maxRetries) {
+          setRetriesExhausted(true);
+          return;
+        }
         const delay = Math.min(reconnectDelay * Math.pow(2, retryCount.current), maxReconnectDelay);
         retryCount.current += 1;
         reconnectTimer.current = setTimeout(connect, delay);
@@ -115,15 +135,22 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     ws.onerror = () => {};
   }, [getWsUrl, autoReconnect, reconnectDelay, maxReconnectDelay]);
 
+  const reconnect = useCallback(() => {
+    retryCount.current = 0;
+    setRetriesExhausted(false);
+    connect();
+  }, [connect]);
+
   useEffect(() => {
     unmountedRef.current = false;
     connect();
     return () => {
       unmountedRef.current = true;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
       if (wsRef.current) { wsRef.current.close(); wsRef.current = null; }
     };
   }, [connect]);
 
-  return { connected, lastMessage, occupancy };
+  return { connected, lastMessage, occupancy, retriesExhausted, reconnect };
 }

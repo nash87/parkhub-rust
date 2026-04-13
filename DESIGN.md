@@ -1,6 +1,6 @@
 # ParkHub Design System
 
-> Version 4.8.0 — Tailwind CSS 4, OKLCH, View Transitions, Container Queries
+> Version 4.9.0 — Tailwind CSS 4, OKLCH, View Transitions, Container Queries
 
 ## Design Philosophy
 

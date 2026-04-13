@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.8.0-brightgreen.svg?style=flat-square" alt="v4.8.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.9.0-brightgreen.svg?style=flat-square" alt="v4.9.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.94%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.94+"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
@@ -35,19 +35,19 @@
 
 ---
 
-## What's New in v4.8.0
+## What's New in v4.9.0
 
 | Feature | Description |
 |---------|-------------|
-| **QR Check-In/Out** | Scan QR code at entrance, live elapsed timer, manual checkout |
-| **Swap Requests** | Trade parking spots between colleagues — offer, accept, decline |
-| **Guest Parking Pass** | Generate shareable QR passes for visitors with unique guest codes |
-| **Occupancy Heatmap** | 7x24 grid visualization of lot usage patterns (admin) |
-| **12 Design Themes** | Classic, Glass, Bento, Brutalist, Neon, Warm, Liquid, Mono, Ocean, Forest, Synthwave, Zen |
-| **Container Queries** | Self-responsive components that adapt to container, not viewport |
-| **Scroll Animations** | CSS scroll-driven reveal animations (zero JavaScript) |
-| **SEO Ready** | Open Graph, Twitter Card, JSON-LD structured data |
-| **10 Languages** | EN, DE, FR, ES, IT, PT, TR, PL, JA, ZH — 100% coverage |
+| **API Resilience** | Exponential backoff retry, GET deduplication, AbortController support |
+| **React 19 `useOptimistic`** | Instant UI feedback with auto-revert on failure (Notifications) |
+| **SW Update Prompt** | User-controlled service worker update with toast notification |
+| **CSP + Permissions-Policy** | Content-Security-Policy on both static builds and server headers |
+| **ARIA Accessibility** | CommandPalette: WAI-ARIA 1.2 combobox; DataTable: proper table roles |
+| **WebSocket Heartbeat** | 30s ping detection, retry cap, manual reconnect |
+| **TypeScript Strict** | `noUncheckedIndexedAccess` + `noFallthroughCasesInSwitch` |
+| **822 Vitest + 1796 Rust** | 10 new tests, coverage thresholds enforced |
+| **Deps Updated** | React 19.2.5, Astro 6.1.5, Vitest 4.1.4 |
 
 ---
 

@@ -33,7 +33,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: React.forwardRef(({ children, ...props }: any, ref: any) => (
+    div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, layoutId, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
     )),
   },

@@ -11,9 +11,15 @@ export default defineConfig({
     pool: 'threads',
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.*', 'src/test/**'],
+      thresholds: {
+        statements: 40,
+        branches: 30,
+        functions: 35,
+        lines: 40,
+      },
     },
   },
 });

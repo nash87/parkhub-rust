@@ -24,6 +24,9 @@ const ACTIONS: Action[] = [
   { labelKey: 'nav.team', path: '/team', icon: Users },
 ];
 
+const LISTBOX_ID = 'command-palette-listbox';
+const optionId = (index: number) => `command-option-${index}`;
+
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -70,19 +73,25 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               <div className="relative border-b border-surface-200/50 dark:border-surface-700/50 px-4 py-3">
                 <input ref={inputRef} type="text" placeholder={t('commandPalette.placeholder')} value={query}
                   onChange={e => setQuery(e.target.value)}
+                  role="combobox"
+                  aria-expanded={filtered.length > 0}
+                  aria-controls={LISTBOX_ID}
+                  aria-activedescendant={filtered.length > 0 ? optionId(selectedIndex) : undefined}
+                  aria-autocomplete="list"
+                  aria-haspopup="listbox"
                   className="w-full bg-transparent text-sm text-surface-900 dark:text-white placeholder:text-surface-400 outline-none"
                   data-testid="command-palette-input" />
                 <motion.div className="absolute bottom-0 left-0 right-0 h-[2px]"
                   style={{ background: 'linear-gradient(90deg, var(--color-primary-500), var(--color-accent-400), var(--color-primary-500))', backgroundSize: '200% 100%' }}
                   animate={{ backgroundPosition: ['0% 0%', '200% 0%'] }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }} />
               </div>
-              <ul className="max-h-64 overflow-y-auto py-1">
+              <ul id={LISTBOX_ID} role="listbox" aria-label={t('commandPalette.placeholder')} className="max-h-64 overflow-y-auto py-1">
                 {filtered.length === 0 && (
-                  <li className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">{t('commandPalette.noResults')}</li>
+                  <li role="option" aria-selected={false} className="px-4 py-3 text-sm text-surface-500 dark:text-surface-400">{t('commandPalette.noResults')}</li>
                 )}
                 {filtered.map((action, i) => (
-                  <li key={action.path}>
-                    <button onClick={() => go(action.path)}
+                  <li key={action.path} id={optionId(i)} role="option" aria-selected={i === selectedIndex}>
+                    <button onClick={() => go(action.path)} tabIndex={-1}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left transition-all ${
                         i === selectedIndex ? 'bg-primary-50/80 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300'
                         : 'text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800'
