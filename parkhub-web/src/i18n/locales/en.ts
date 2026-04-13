@@ -56,6 +56,7 @@ export default {
       book: 'Book',
       bookings: 'Bookings',
       vehicles: 'Vehicles',
+      favorites: 'Favorites',
       absences: 'Absences',
       history: 'History',
       credits: 'Credits',
