@@ -209,7 +209,7 @@ export function GuestPassPage() {
           </h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">{t('guestBooking.subtitle')}</p>
         </div>
-        <button onClick={() => { setShowForm(true); setCreatedPass(null); }} className="btn-primary flex items-center gap-2" data-testid="create-guest-btn">
+        <button onClick={() => { setShowForm(true); setCreatedPass(null); }} className="btn btn-primary flex items-center gap-2" data-testid="create-guest-btn">
           <UserPlus weight="bold" className="w-4 h-4" />
           {t('guestBooking.create')}
         </button>
@@ -279,7 +279,7 @@ export function GuestPassPage() {
                     </button>
                   </div>
                 </div>
-                <button onClick={() => sharePass(createdPass)} className="btn-secondary flex items-center gap-2 mt-2" data-testid="share-pass-btn">
+                <button onClick={() => sharePass(createdPass)} className="btn btn-secondary flex items-center gap-2 mt-2" data-testid="share-pass-btn">
                   <ShareNetwork size={16} />
                   {t('guestBooking.share')}
                 </button>
