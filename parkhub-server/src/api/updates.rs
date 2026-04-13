@@ -12,7 +12,7 @@ const GITHUB_REPO: &str = "nash87/parkhub-rust";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Response from the update check endpoint.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct UpdateCheckResponse {
     pub available: bool,
     pub current_version: String,
@@ -237,7 +237,7 @@ fn is_newer_version(current: &str, latest: &str) -> bool {
 }
 
 /// Version history entry.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct VersionHistoryEntry {
     pub version: String,
     pub installed_at: String,
