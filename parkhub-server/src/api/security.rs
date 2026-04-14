@@ -107,13 +107,14 @@ pub async fn two_factor_setup(
     }
 
     // Generate TOTP secret
+    let issuer = state_guard.config.server_name.clone();
     let totp = match totp_rs::TOTP::new(
-        totp_rs::Algorithm::SHA1,
+        totp_rs::Algorithm::SHA256,
         6,
         1,
         30,
         totp_rs::Secret::generate_secret().to_bytes().unwrap(),
-        Some("ParkHub".to_string()),
+        Some(issuer),
         user.email.clone(),
     ) {
         Ok(t) => t,
@@ -228,13 +229,14 @@ pub async fn two_factor_verify(
         }
     };
 
+    let issuer = state_guard.config.server_name.clone();
     let totp = match totp_rs::TOTP::new(
-        totp_rs::Algorithm::SHA1,
+        totp_rs::Algorithm::SHA256,
         6,
         1,
         30,
         secret_bytes,
-        Some("ParkHub".to_string()),
+        Some(issuer),
         user.email.clone(),
     ) {
         Ok(t) => t,
@@ -390,13 +392,14 @@ pub async fn verify_2fa_code(
         return false;
     };
 
+    let issuer = state.config.server_name.clone();
     let Ok(totp) = totp_rs::TOTP::new(
-        totp_rs::Algorithm::SHA1,
+        totp_rs::Algorithm::SHA256,
         6,
         1,
         30,
         secret_bytes,
-        Some("ParkHub".to_string()),
+        Some(issuer),
         email.to_string(),
     ) else {
         return false;

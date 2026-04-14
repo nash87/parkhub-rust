@@ -10,20 +10,25 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode};
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration as StdDuration, Instant};
 use uuid::Uuid;
 
 use crate::error::AppError;
 
+/// Maximum age of a revocation entry before it is garbage-collected.
+/// Entries older than this are pruned on the next `is_revoked` call.
+const REVOCATION_TTL: StdDuration = StdDuration::from_secs(3600);
+
 /// In-memory token revocation list.
 ///
-/// Stores revoked JWT IDs (`jti`) so that even unexpired tokens can be
-/// invalidated (e.g. on logout or password change). Callers share this via
-/// `Arc<TokenRevocationList>`.
+/// Stores revoked JWT IDs (`jti`) alongside the [`Instant`] they were revoked
+/// so that stale entries are automatically pruned, preventing unbounded memory
+/// growth. Callers share this via `Arc<TokenRevocationList>`.
 #[derive(Debug, Default)]
 pub struct TokenRevocationList {
-    revoked: Mutex<HashSet<String>>,
+    revoked: Mutex<HashMap<String, Instant>>,
 }
 
 impl TokenRevocationList {
@@ -33,16 +38,22 @@ impl TokenRevocationList {
 
     /// Revoke a token by its `jti` claim.
     pub fn revoke(&self, jti: &str) {
-        if let Ok(mut set) = self.revoked.lock() {
-            set.insert(jti.to_string());
+        if let Ok(mut map) = self.revoked.lock() {
+            map.insert(jti.to_string(), Instant::now());
         }
     }
 
     /// Returns `true` if the given `jti` has been revoked.
+    ///
+    /// Opportunistically prunes entries older than [`REVOCATION_TTL`].
     pub fn is_revoked(&self, jti: &str) -> bool {
         self.revoked
             .lock()
-            .map(|set| set.contains(jti))
+            .map(|mut map| {
+                // Prune expired entries
+                map.retain(|_, ts| ts.elapsed() < REVOCATION_TTL);
+                map.contains_key(jti)
+            })
             .unwrap_or(false)
     }
 }

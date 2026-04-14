@@ -39,7 +39,7 @@ pub const AUTH_COOKIE_NAME: &str = "parkhub_token";
 pub(super) fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
     let secure_flag = std::env::var("APP_URL")
         .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
-        .unwrap_or(false);
+        .unwrap_or(true);
 
     let mut cookie = format!(
         "{AUTH_COOKIE_NAME}={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={max_age_secs}"
