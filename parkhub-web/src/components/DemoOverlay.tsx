@@ -21,7 +21,7 @@ function formatCountdown(isoString: string): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export function DemoOverlay() {
+export function DemoOverlay({ reloadPage = () => window.location.reload() }: { reloadPage?: () => void } = {}) {
   const { t } = useTranslation();
   const [demo, setDemo] = useState<DemoStatus | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -48,7 +48,7 @@ export function DemoOverlay() {
           setDemo(res.data);
           setLocalTimer(res.data.timer_seconds);
           if (res.data.reset) {
-            window.location.reload();
+            reloadPage();
           }
         }
       }).catch(() => {});
@@ -57,7 +57,7 @@ export function DemoOverlay() {
     fetchStatus();
     const interval = setInterval(fetchStatus, 15000);
     return () => clearInterval(interval);
-  }, [enabled]);
+  }, [enabled, reloadPage]);
 
   // Local countdown + relative time refresh (only when expanded)
   useEffect(() => {

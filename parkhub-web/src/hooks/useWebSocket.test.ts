@@ -4,12 +4,14 @@ import { useWebSocket, type WsEvent } from './useWebSocket';
 
 class MockWebSocket {
   static instances: MockWebSocket[] = [];
+  static OPEN = 1;
   url: string;
   onopen: (() => void) | null = null;
   onmessage: ((msg: { data: string }) => void) | null = null;
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
   readyState = 0;
+  send = vi.fn();
   close = vi.fn(() => { this.readyState = 3; });
   constructor(url: string) {
     this.url = url;
@@ -163,5 +165,81 @@ describe('useWebSocket', () => {
     act(() => vi.advanceTimersByTime(10_000));
     // Only original instance, no reconnect attempts
     expect(MockWebSocket.instances).toHaveLength(1);
+  });
+
+  it('sends heartbeat pings while the socket is open', () => {
+    renderHook(() => useWebSocket({ autoReconnect: false, heartbeatInterval: 1000 }));
+    const ws = MockWebSocket.instances[0];
+
+    act(() => ws.simulateOpen());
+    act(() => vi.advanceTimersByTime(1000));
+
+    expect(ws.send).toHaveBeenCalledWith(JSON.stringify({ type: 'ping' }));
+  });
+
+  it('stops heartbeat pings after the socket closes', () => {
+    renderHook(() => useWebSocket({ autoReconnect: false, heartbeatInterval: 1000 }));
+    const ws = MockWebSocket.instances[0];
+
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateClose());
+    act(() => vi.advanceTimersByTime(5000));
+
+    expect(ws.send).not.toHaveBeenCalled();
+  });
+
+  it('ignores occupancy updates with invalid lot ids', () => {
+    const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
+    const ws = MockWebSocket.instances[0];
+
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateMessage({
+      event: 'occupancy_changed',
+      data: { lot_id: '../etc/passwd', available: 9, total: 10 },
+      timestamp: '2026-03-21T10:00:00Z',
+    }));
+
+    expect(result.current.occupancy).toEqual({});
+  });
+
+  it('marks retries as exhausted after hitting max retries', () => {
+    const { result } = renderHook(() =>
+      useWebSocket({ reconnectDelay: 100, maxRetries: 0 })
+    );
+    const ws = MockWebSocket.instances[0];
+
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateClose());
+
+    expect(result.current.connected).toBe(false);
+    expect(result.current.retriesExhausted).toBe(true);
+    expect(MockWebSocket.instances).toHaveLength(1);
+  });
+
+  it('reconnect resets exhausted state and creates a fresh socket', () => {
+    const { result } = renderHook(() =>
+      useWebSocket({ reconnectDelay: 100, maxRetries: 0 })
+    );
+    const ws = MockWebSocket.instances[0];
+
+    act(() => ws.simulateOpen());
+    act(() => ws.simulateClose());
+    expect(result.current.retriesExhausted).toBe(true);
+
+    act(() => result.current.reconnect());
+
+    expect(result.current.retriesExhausted).toBe(false);
+    expect(MockWebSocket.instances).toHaveLength(2);
+  });
+
+  it('closes an existing socket before reconnecting manually', () => {
+    const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
+    const ws = MockWebSocket.instances[0];
+
+    act(() => ws.simulateOpen());
+    act(() => result.current.reconnect());
+
+    expect(ws.close).toHaveBeenCalled();
+    expect(MockWebSocket.instances).toHaveLength(2);
   });
 });

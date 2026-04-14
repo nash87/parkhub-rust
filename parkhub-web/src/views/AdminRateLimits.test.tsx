@@ -47,6 +47,11 @@ vi.mock('@phosphor-icons/react', () => ({
   Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
+const mockToastError = vi.fn();
+vi.mock('react-hot-toast', () => ({
+  default: { error: (...args: any[]) => mockToastError(...args) },
+}));
+
 import { AdminRateLimitsPage } from './AdminRateLimits';
 
 const sampleStats = {
@@ -118,6 +123,15 @@ describe('AdminRateLimitsPage', () => {
     render(<AdminRateLimitsPage />);
     await waitFor(() => {
       expect(screen.getByText('No blocked requests')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error toast when API throws', async () => {
+    mockToastError.mockClear();
+    mockGetRateLimitStats.mockRejectedValueOnce(new Error('boom'));
+    render(<AdminRateLimitsPage />);
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
     });
   });
 });

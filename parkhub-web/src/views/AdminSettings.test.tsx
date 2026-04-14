@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ── Mocks ──
@@ -219,6 +219,116 @@ describe('AdminSettingsPage', () => {
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Failed to load settings');
+    });
+  });
+
+  it('shows generic error toast when save throws', async () => {
+    const user = userEvent.setup();
+    mockAdminGetSettings.mockResolvedValue({ success: true, data: {} });
+    mockAdminUpdateSettings.mockRejectedValue(new Error('save failed'));
+
+    render(<AdminSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('System Settings')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /Save Settings/ }));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Failed to save settings');
+    });
+  });
+
+  it('updates select and numeric fields in both columns before saving', async () => {
+    mockAdminGetSettings.mockResolvedValue({
+      success: true,
+      data: {
+        use_case: 'company',
+        max_bookings_per_day: '3',
+        auto_release_minutes: '30',
+        license_plate_mode: 'optional',
+      },
+    });
+    mockAdminUpdateSettings.mockResolvedValue({ success: true });
+
+    render(<AdminSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Company')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Use Case'), { target: { value: 'rental' } });
+    fireEvent.change(screen.getByLabelText('Max Bookings per Day'), { target: { value: '7' } });
+    fireEvent.change(screen.getByLabelText('Auto-release after (minutes)'), { target: { value: '45' } });
+    fireEvent.change(screen.getByLabelText('License Plate Mode'), { target: { value: 'required' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Save Settings/ }));
+
+    await waitFor(() => {
+      expect(mockAdminUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({
+        use_case: 'rental',
+        max_bookings_per_day: '7',
+        auto_release_minutes: '45',
+        license_plate_mode: 'required',
+      }));
+    });
+  });
+
+  it('shows credits per booking field when credits are enabled', async () => {
+    const user = userEvent.setup();
+    mockAdminGetSettings.mockResolvedValue({
+      success: true,
+      data: { credits_enabled: 'false' },
+    });
+
+    render(<AdminSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Enable Credits')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText('Credits per Booking')).not.toBeInTheDocument();
+
+    const creditsToggle = screen.getByText('Enable Credits')
+      .closest('div.flex')!
+      .querySelector('[role="switch"]') as HTMLElement;
+    await user.click(creditsToggle);
+
+    expect(screen.getByLabelText('Credits per Booking')).toBeInTheDocument();
+  });
+
+  it('updates waitlist and credits settings before saving', async () => {
+    const user = userEvent.setup();
+    mockAdminGetSettings.mockResolvedValue({ success: true, data: {} });
+    mockAdminUpdateSettings.mockResolvedValue({ success: true });
+
+    render(<AdminSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Enable Waitlist')).toBeInTheDocument();
+    });
+
+    const waitlistToggle = screen.getByText('Enable Waitlist')
+      .closest('div.flex')!
+      .querySelector('[role="switch"]') as HTMLElement;
+    const creditsToggle = screen.getByText('Enable Credits')
+      .closest('div.flex')!
+      .querySelector('[role="switch"]') as HTMLElement;
+
+    await user.click(waitlistToggle);
+    await user.click(creditsToggle);
+    await user.clear(screen.getByLabelText('Credits per Booking'));
+    await user.type(screen.getByLabelText('Credits per Booking'), '4');
+
+    await user.click(screen.getByRole('button', { name: /Save Settings/ }));
+
+    await waitFor(() => {
+      expect(mockAdminUpdateSettings).toHaveBeenCalledWith(expect.objectContaining({
+        waitlist_enabled: 'false',
+        credits_enabled: 'true',
+        credits_per_booking: '4',
+      }));
     });
   });
 });

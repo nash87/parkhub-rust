@@ -62,6 +62,18 @@ describe('AdminScheduledReportsPage', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('scheduledReports.nameRequired'));
   });
 
+  it('validates empty recipients', async () => {
+    const user = userEvent.setup();
+    render(<AdminScheduledReportsPage />);
+
+    await waitFor(() => expect(screen.getByTestId('create-schedule-btn')).toBeInTheDocument());
+    await user.click(screen.getByTestId('create-schedule-btn'));
+    await user.type(screen.getByTestId('form-name'), 'Monthly overview');
+    await user.click(screen.getByTestId('form-save-btn'));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('scheduledReports.recipientsRequired'));
+  });
+
   // Form validation and creation are covered via the edit flow and validates empty name test
 
   it('edits schedule', async () => {
@@ -113,7 +125,45 @@ describe('AdminScheduledReportsPage', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 
-  // Save error is covered by the validates empty name test path
+  it('handles save error', async () => {
+    const user = userEvent.setup();
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'POST') return Promise.reject(new Error('net'));
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
+    }) as any;
+
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => expect(screen.getByTestId('create-schedule-btn')).toBeInTheDocument());
+    await user.click(screen.getByTestId('create-schedule-btn'));
+    await user.type(screen.getByTestId('form-name'), 'Ops Report');
+    await user.type(screen.getByTestId('form-recipients'), 'ops@example.com');
+    await user.click(screen.getByTestId('form-save-btn'));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('common.error'));
+  });
+
+  it('handles unsuccessful load responses without crashing', async () => {
+    globalThis.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: false }) } as Response)) as any;
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => expect(screen.getByTestId('schedules-empty')).toBeInTheDocument());
+  });
+
+  it('does not show success toast when send-now response is unsuccessful', async () => {
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (url.includes('send-now')) return Promise.resolve({ json: () => Promise.resolve({ success: false }) } as Response);
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
+    }) as any;
+    render(<AdminScheduledReportsPage />);
+
+    await waitFor(() => expect(screen.getAllByTestId('send-now-btn').length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]);
+
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/v1/admin/reports/schedules/s1/send-now',
+      { method: 'POST' }
+    ));
+    expect(toast.success).not.toHaveBeenCalledWith('scheduledReports.sentNow');
+  });
 
   it('handles delete error', async () => {
     globalThis.fetch = vi.fn((url: string, opts?: any) => {

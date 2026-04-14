@@ -11,9 +11,12 @@ export default defineConfig({
     pool: 'threads',
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov', 'json-summary'],
+      reporter: ['text', 'lcov', 'json-summary', 'json'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.*', 'src/test/**'],
+      reportsDirectory: './coverage',
+      cleanOnRerun: false,
+      clean: false,
       thresholds: {
         statements: 40,
         branches: 30,

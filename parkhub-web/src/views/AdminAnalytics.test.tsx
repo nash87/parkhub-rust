@@ -151,6 +151,23 @@ describe('AdminAnalyticsPage', () => {
     });
   });
 
+  it('handles empty data series (MiniBarChart returns null)', async () => {
+    const emptyData = {
+      data: {
+        ...mockData.data,
+        daily_bookings: [],
+        daily_revenue: [],
+        peak_hours: [],
+        user_growth: [],
+      },
+    };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(emptyData),
+    });
+    render(<AdminAnalyticsPage />);
+    await waitFor(() => expect(screen.getByText('Total Bookings')).toBeTruthy());
+  });
+
   it('CSV export does nothing when no data', async () => {
     global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
     const createObjectURL = vi.fn();

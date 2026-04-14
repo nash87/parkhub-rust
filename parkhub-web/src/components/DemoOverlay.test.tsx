@@ -86,7 +86,7 @@ describe('formatCountdown', () => {
 // ── Integration tests for DemoOverlay component ──
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const mockGetDemoConfig = vi.fn();
@@ -162,6 +162,7 @@ describe('DemoOverlay component', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it('renders nothing when demo mode is disabled', async () => {
@@ -285,14 +286,20 @@ describe('DemoOverlay component', () => {
   });
 
   it('shows last reset and next reset info', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-19T12:00:00Z'));
     mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
     mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
-    render(<DemoOverlay />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Last reset')).toBeInTheDocument();
-      expect(screen.getByText('Next reset')).toBeInTheDocument();
+    await act(async () => {
+      render(<DemoOverlay />);
+      await Promise.resolve();
+      await Promise.resolve();
     });
+
+    expect(screen.getByText('Last reset')).toBeInTheDocument();
+    expect(screen.getByText('Next reset')).toBeInTheDocument();
+    expect(screen.getByText('1m ago')).toBeInTheDocument();
+    expect(screen.getByText('2h 0m')).toBeInTheDocument();
   });
 
   it('does not show last/next reset when they are null', async () => {
@@ -339,9 +346,10 @@ describe('DemoOverlay component', () => {
     mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
     mockGetDemoStatus.mockRejectedValue(new Error('net'));
     const { container } = render(<DemoOverlay />);
-    await waitFor(() => expect(mockGetDemoStatus).toHaveBeenCalled());
-    // demo state is still null
-    expect(container.querySelector('.glass-card')).toBeNull();
+    await waitFor(() => expect(mockGetDemoConfig).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(container.querySelector('.glass-card')).toBeNull();
+    });
   });
 
   it('defaults to collapsed on small screens', async () => {
@@ -354,5 +362,40 @@ describe('DemoOverlay component', () => {
     // Should be collapsed (no vote button visible)
     expect(screen.queryByText('Vote to Reset')).not.toBeInTheDocument();
   });
-});
 
+  it('reloads when the backend signals a reset', async () => {
+    const reloadPage = vi.fn();
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({
+      success: true,
+      data: { ...DEMO_STATUS, reset: true },
+    });
+
+    render(<DemoOverlay reloadPage={reloadPage} />);
+
+    await waitFor(() => {
+      expect(reloadPage).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('updates the local countdown every second while expanded', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-19T12:00:00Z'));
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+
+    render(<DemoOverlay />);
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByText('30:00')).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+
+    expect(screen.getByText((_, element) => element?.textContent === '29:59')).toBeInTheDocument();
+  });
+});

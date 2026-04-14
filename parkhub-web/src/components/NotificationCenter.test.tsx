@@ -579,4 +579,18 @@ describe('NotificationCenter', () => {
     expect(afterCalls).toBeGreaterThan(initialCalls);
     vi.useRealTimers();
   });
+
+  it('formats timeAgo as "just now" for very recent notifications', async () => {
+    const justNowItem = {
+      ...sampleNotifications[0],
+      id: 'now',
+      created_at: new Date(Date.now() - 5 * 1000).toISOString(),
+    };
+    global.fetch = mockFetch({ items: [justNowItem] });
+    render(<NotificationCenter />);
+    fireEvent.click(screen.getByLabelText('Notifications'));
+    await waitFor(() => {
+      expect(screen.getByText('Just now')).toBeInTheDocument();
+    });
+  });
 });

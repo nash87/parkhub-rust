@@ -305,15 +305,77 @@ describe('VisitorsPage - extended', () => {
   });
 
   it('shows validation error when required fields missing', async () => {
-    const mockToast = vi.fn();
     const toast = await import('react-hot-toast');
+    const errSpy = vi.spyOn(toast.default, 'error');
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     fireEvent.click(screen.getByText('Register Visitor'));
     await waitFor(() => screen.getByText('Register a Visitor'));
-    // Submit without filling fields
+    // Submit form directly bypassing HTML required validation
+    const form = document.querySelector('form');
+    if (form) fireEvent.submit(form);
+    await waitFor(() => {
+      expect(errSpy).toHaveBeenCalledWith('Please fill required fields');
+    });
+    errSpy.mockRestore();
+  });
+
+  it('shows error when registration server returns failure', async () => {
+    const toast = await import('react-hot-toast');
+    const errSpy = vi.spyOn(toast.default, 'error');
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/visitors/register')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Server fail' } }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
+    }) as any;
+
+    render(<VisitorsPage />);
+    await waitFor(() => screen.getByText('Alice Smith'));
+    fireEvent.click(screen.getByText('Register Visitor'));
+    await waitFor(() => screen.getByText('Register a Visitor'));
+
+    const form = screen.getByText('Register a Visitor').closest('div')!;
+    const textInputs = form.querySelectorAll('input[type="text"]');
+    const emailInput = form.querySelector('input[type="email"]');
+    const dateInput = form.querySelector('input[type="datetime-local"]');
+    fireEvent.change(textInputs[0], { target: { value: 'X' } });
+    if (emailInput) fireEvent.change(emailInput, { target: { value: 'x@x.com' } });
+    if (dateInput) fireEvent.change(dateInput, { target: { value: '2026-04-20T10:00' } });
     fireEvent.click(screen.getByText('Save'));
-    // The form has HTML required attributes, but the custom validation also fires
+    await waitFor(() => {
+      expect(errSpy).toHaveBeenCalledWith('Server fail');
+    });
+    errSpy.mockRestore();
+  });
+
+  it('catches network errors during registration', async () => {
+    const toast = await import('react-hot-toast');
+    const errSpy = vi.spyOn(toast.default, 'error');
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/visitors/register')) {
+        return Promise.reject(new Error('boom'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
+    }) as any;
+
+    render(<VisitorsPage />);
+    await waitFor(() => screen.getByText('Alice Smith'));
+    fireEvent.click(screen.getByText('Register Visitor'));
+    await waitFor(() => screen.getByText('Register a Visitor'));
+
+    const form = screen.getByText('Register a Visitor').closest('div')!;
+    const textInputs = form.querySelectorAll('input[type="text"]');
+    const emailInput = form.querySelector('input[type="email"]');
+    const dateInput = form.querySelector('input[type="datetime-local"]');
+    fireEvent.change(textInputs[0], { target: { value: 'X' } });
+    if (emailInput) fireEvent.change(emailInput, { target: { value: 'x@x.com' } });
+    if (dateInput) fireEvent.change(dateInput, { target: { value: '2026-04-20T10:00' } });
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => {
+      expect(errSpy).toHaveBeenCalled();
+    });
+    errSpy.mockRestore();
   });
 
   it('cancels registration form', async () => {

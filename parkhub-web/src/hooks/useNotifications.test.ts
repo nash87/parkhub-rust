@@ -158,4 +158,14 @@ describe('useNotifications', () => {
     await act(async () => { await result.current.unsubscribe(); });
     await waitFor(() => expect(result.current.error).toBe('Unknown error'));
   });
+
+  it('subscribe is a no-op when not supported', async () => {
+    // Remove PushManager so supported is false
+    delete (globalThis as any).PushManager;
+    const { result } = renderHook(() => useNotifications());
+    await waitFor(() => expect(result.current.supported).toBe(false));
+    await act(async () => { await result.current.subscribe(); });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.subscribed).toBe(false);
+  });
 });

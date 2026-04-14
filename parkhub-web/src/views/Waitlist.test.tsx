@@ -171,6 +171,17 @@ describe('WaitlistPage', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Expired'));
   });
 
+  it('accept network error', async () => {
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'POST' && url.includes('/accept')) return Promise.reject(new Error('net'));
+      if (url.includes('/waitlist')) return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { entries: offeredEntries } }) } as Response);
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: lots }) } as Response);
+    }) as any;
+    render(<WaitlistPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('waitlistExt.accept')));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
   it('decline network error', async () => {
     globalThis.fetch = vi.fn((url: string, opts?: any) => {
       if (opts?.method === 'POST' && url.includes('/decline')) return Promise.reject(new Error('net'));

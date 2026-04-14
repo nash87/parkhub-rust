@@ -125,4 +125,32 @@ describe('SSOButtons', () => {
       expect(container.innerHTML).toBe('');
     });
   });
+
+  it('logs error when SSO login fetch fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mockFetch = vi.fn();
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              providers: [{ slug: 'okta', display_name: 'Okta', enabled: true }],
+            },
+          }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      });
+
+    globalThis.fetch = mockFetch;
+    render(<SSOButtons />);
+    await waitFor(() => expect(screen.getByText('Continue with Okta')).toBeDefined());
+    fireEvent.click(screen.getByText('Continue with Okta'));
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled();
+    });
+    consoleErrorSpy.mockRestore();
+  });
 });

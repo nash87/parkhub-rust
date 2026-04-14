@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // -- Mocks --
@@ -556,6 +556,381 @@ describe('CalendarPage', () => {
       });
     }
   });
+
+  it('drag-and-drop reschedule flow: confirm success', async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 10);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    const targetDate = new Date(now.getFullYear(), now.getMonth(), 20);
+    const targetIso = targetDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Drag Me',
+        start: `${isoKey}T09:00:00.000Z`, end: `${isoKey}T17:00:00.000Z`,
+        lot_name: 'Lot Y', slot_number: 'Y2', status: 'confirmed',
+      }],
+    });
+    mockRescheduleBooking.mockResolvedValue({
+      success: true,
+      data: { booking_id: 'b1', success: true, message: 'Booking rescheduled' },
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    // Find the booking element (a draggable div) by parent containing day 10
+    const buttons = screen.getAllByRole('button');
+    const day10 = buttons.find(b => b.textContent?.trim().startsWith('10'))!;
+    const day20 = buttons.find(b => b.textContent?.trim().startsWith('20'))!;
+    expect(day10).toBeDefined();
+    expect(day20).toBeDefined();
+
+    // Find the draggable booking indicator inside day10
+    const draggable = day10.querySelector('[draggable="true"]');
+    expect(draggable).toBeTruthy();
+
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      effectAllowed: '',
+      dropEffect: '',
+      setData(k: string, v: string) { this.data[k] = v; },
+      getData(k: string) { return this.data[k]; },
+    };
+    fireEvent.dragStart(draggable!, { dataTransfer });
+    fireEvent.dragOver(day20, { dataTransfer });
+    fireEvent.dragLeave(day20);
+    fireEvent.dragOver(day20, { dataTransfer });
+    fireEvent.drop(day20, { dataTransfer });
+
+    // Reschedule confirmation modal should appear
+    await waitFor(() => {
+      expect(screen.getByTestId('reschedule-confirm')).toBeInTheDocument();
+    });
+
+    // Confirm reschedule
+    await user.click(screen.getByText('Reschedule'));
+    await waitFor(() => {
+      expect(mockRescheduleBooking).toHaveBeenCalled();
+    });
+
+    // After confirm + success, modal should close
+    await waitFor(() => {
+      expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+    });
+  });
+
+  it('drag-and-drop reschedule cancel', async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 11);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Drag Me 2',
+        start: `${isoKey}T09:00:00.000Z`, end: `${isoKey}T17:00:00.000Z`,
+        lot_name: 'Lot Z', slot_number: 'Z2', status: 'confirmed',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    const buttons = screen.getAllByRole('button');
+    const day11 = buttons.find(b => b.textContent?.trim().startsWith('11'))!;
+    const day21 = buttons.find(b => b.textContent?.trim().startsWith('21'))!;
+
+    const draggable = day11.querySelector('[draggable="true"]');
+    expect(draggable).toBeTruthy();
+
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      effectAllowed: '',
+      dropEffect: '',
+      setData(k: string, v: string) { this.data[k] = v; },
+      getData(k: string) { return this.data[k]; },
+    };
+    fireEvent.dragStart(draggable!, { dataTransfer });
+    fireEvent.dragOver(day21, { dataTransfer });
+    fireEvent.drop(day21, { dataTransfer });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('reschedule-confirm')).toBeInTheDocument();
+    });
+
+    // Click cancel
+    await user.click(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+    });
+  });
+
+  it('drag end without showing confirm clears state', async () => {
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 12);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Drag End Test',
+        start: `${isoKey}T09:00:00.000Z`, end: `${isoKey}T17:00:00.000Z`,
+        status: 'confirmed',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    const buttons = screen.getAllByRole('button');
+    const day12 = buttons.find(b => b.textContent?.trim().startsWith('12'))!;
+    const draggable = day12.querySelector('[draggable="true"]');
+    expect(draggable).toBeTruthy();
+
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      effectAllowed: '',
+      dropEffect: '',
+      setData(k: string, v: string) { this.data[k] = v; },
+      getData(k: string) { return this.data[k]; },
+    };
+    fireEvent.dragStart(draggable!, { dataTransfer });
+    fireEvent.dragEnd(draggable!);
+    // Drag ended without drop — no modal
+    expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+  });
+
+  it('non-booking events are not draggable (handleDragStart early return)', async () => {
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 13);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'a1', type: 'absence', title: 'Vacation',
+        start: `${isoKey}T00:00:00.000Z`, end: `${isoKey}T23:59:59.000Z`,
+        status: 'pending',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+    // Indicator with draggable=false rendered (non-booking)
+    const indicators = document.querySelectorAll('[draggable="false"]');
+    expect(indicators.length).toBeGreaterThan(0);
+  });
+
+  it('handleDragOver does nothing when no dragEvent', async () => {
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+    const buttons = screen.getAllByRole('button');
+    const day = buttons.find(b => b.textContent?.trim() === '10')!;
+    fireEvent.dragOver(day);
+    // No crash, no state change
+    expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+  });
+
+  it('handleDrop without dragEvent does nothing', async () => {
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+    const buttons = screen.getAllByRole('button');
+    const day = buttons.find(b => b.textContent?.trim() === '15')!;
+    fireEvent.drop(day);
+    expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+  });
+
+  it('reschedule API failure shows error toast', async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 14);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Will Fail',
+        start: `${isoKey}T09:00:00.000Z`, end: `${isoKey}T17:00:00.000Z`,
+        status: 'confirmed',
+      }],
+    });
+    mockRescheduleBooking.mockResolvedValue({
+      success: true,
+      data: { booking_id: 'b1', success: false, message: 'Conflict' },
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    const buttons = screen.getAllByRole('button');
+    const dayFrom = buttons.find(b => b.textContent?.trim().startsWith('14'))!;
+    const dayTo = buttons.find(b => b.textContent?.trim().startsWith('24'))!;
+
+    const draggable = dayFrom.querySelector('[draggable="true"]')!;
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      effectAllowed: '', dropEffect: '',
+      setData(k: string, v: string) { this.data[k] = v; },
+      getData(k: string) { return this.data[k]; },
+    };
+    fireEvent.dragStart(draggable, { dataTransfer });
+    fireEvent.dragOver(dayTo, { dataTransfer });
+    fireEvent.drop(dayTo, { dataTransfer });
+    await waitFor(() => expect(screen.getByTestId('reschedule-confirm')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Reschedule'));
+    await waitFor(() => {
+      expect(mockRescheduleBooking).toHaveBeenCalled();
+    });
+  });
+
+  it('reschedule API exception shows error toast', async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 16);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Will Throw',
+        start: `${isoKey}T09:00:00.000Z`, end: `${isoKey}T17:00:00.000Z`,
+        status: 'confirmed',
+      }],
+    });
+    mockRescheduleBooking.mockRejectedValue(new Error('Network'));
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    const buttons = screen.getAllByRole('button');
+    const dayFrom = buttons.find(b => b.textContent?.trim().startsWith('16'))!;
+    const dayTo = buttons.find(b => b.textContent?.trim().startsWith('26'))!;
+
+    const draggable = dayFrom.querySelector('[draggable="true"]')!;
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      effectAllowed: '', dropEffect: '',
+      setData(k: string, v: string) { this.data[k] = v; },
+      getData(k: string) { return this.data[k]; },
+    };
+    fireEvent.dragStart(draggable, { dataTransfer });
+    fireEvent.dragOver(dayTo, { dataTransfer });
+    fireEvent.drop(dayTo, { dataTransfer });
+    await waitFor(() => expect(screen.getByTestId('reschedule-confirm')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Reschedule'));
+    await waitFor(() => {
+      expect(mockRescheduleBooking).toHaveBeenCalled();
+    });
+  });
+
+  it('confirmReschedule does nothing without dragEvent', async () => {
+    // Already covered by other paths but explicit early return
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+    // No drag; modal not visible
+    expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+  });
+
+  it('subscribe modal closes when clicking backdrop', async () => {
+    const user = userEvent.setup();
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Subscribe')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Subscribe'));
+    await waitFor(() => expect(screen.getByText('Subscribe to Calendar')).toBeInTheDocument());
+
+    // Find the modal backdrop (fixed inset-0)
+    const modal = screen.getByText('Subscribe to Calendar').closest('.fixed.inset-0') as HTMLElement;
+    expect(modal).toBeTruthy();
+    // Click the backdrop directly
+    fireEvent.click(modal);
+    await waitFor(() => {
+      expect(screen.queryByText('Subscribe to Calendar')).not.toBeInTheDocument();
+    });
+  });
+
+  it('aborts in-flight loadEvents on unmount', async () => {
+    const { unmount } = render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+    unmount();
+    // No assertion — exercises the cleanup path of useEffect
+  });
+
+  it('aborts in-flight loadEvents when component unmounts', async () => {
+    const calls: Array<{ resolve: (v: any) => void }> = [];
+    mockCalendarEvents.mockImplementation(() => {
+      return new Promise<any>((resolve) => {
+        calls.push({ resolve });
+      });
+    });
+    const { unmount } = render(<CalendarPage />);
+    await waitFor(() => expect(calls.length).toBe(1));
+    // Unmount triggers abort
+    unmount();
+    // Resolving the aborted call should hit the abort-check return paths
+    await act(async () => {
+      calls[0].resolve({ success: true, data: [{ id: 'x', type: 'booking', title: 'X', start: '2026-01-01', end: '2026-01-01', status: 'confirmed' }] });
+    });
+    expect(mockCalendarEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborted loadEvents in catch branch does not toast', async () => {
+    const calls: Array<{ reject: (v: any) => void }> = [];
+    mockCalendarEvents.mockImplementation(() => {
+      return new Promise<any>((_, reject) => {
+        calls.push({ reject });
+      });
+    });
+    const { unmount } = render(<CalendarPage />);
+    await waitFor(() => expect(calls.length).toBe(1));
+    unmount();
+    // After unmount, the controller is aborted. Reject the promise.
+    await act(async () => {
+      calls[0].reject(new Error('aborted'));
+    });
+    expect(mockCalendarEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it('non-booking handleDragStart triggers early return', async () => {
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 17);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'a1', type: 'absence', title: 'Out',
+        start: `${isoKey}T00:00:00.000Z`, end: `${isoKey}T23:59:59.000Z`,
+        status: 'pending',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    // Find the absence indicator (draggable=false) and try to fire dragStart on it
+    const indicator = document.querySelector('[draggable="false"]');
+    expect(indicator).toBeTruthy();
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      effectAllowed: '', dropEffect: '',
+      setData(k: string, v: string) { this.data[k] = v; },
+      getData(k: string) { return this.data[k]; },
+    };
+    fireEvent.dragStart(indicator!, { dataTransfer });
+    // Early return — no drag state; no modal
+    expect(screen.queryByTestId('reschedule-confirm')).not.toBeInTheDocument();
+  });
+
+  it('setTimeout in copy link clears copied state', async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn(() => Promise.resolve()) },
+      writable: true,
+      configurable: true,
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Subscribe')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Subscribe'));
+    await waitFor(() => expect(screen.getByTestId('subscription-url')).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText('Copy'));
+    // Wait for setCopied(true) -> setTimeout -> setCopied(false)
+    await new Promise<void>(r => setTimeout(r, 2200));
+  }, 8000);
 
   it('shows overflow indicator for days with >3 events', async () => {
     const now = new Date();

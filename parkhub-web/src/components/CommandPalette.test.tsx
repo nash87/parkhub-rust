@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ── Mocks ──
@@ -167,5 +167,30 @@ describe('CommandPalette', () => {
 
     // One "no results" option still exists but no actual actions
     expect(input).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('closes on Escape', () => {
+    render(<CommandPalette open={true} onClose={onClose} />);
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('updates the active option with arrow keys and selects with Enter', () => {
+    render(<CommandPalette open={true} onClose={onClose} />);
+
+    const input = screen.getByRole('combobox');
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'command-option-1');
+
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'command-option-0');
+
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(onClose).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/book');
   });
 });

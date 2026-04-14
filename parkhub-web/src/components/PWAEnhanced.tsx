@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { WifiSlash, ArrowDown, House, CalendarBlank, Car, User } from '@phosphor-icons/react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -150,10 +150,17 @@ export function BottomNavBar() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Pull-to-refresh gesture for mobile. */
-export function PullToRefresh({ children }: { children: React.ReactNode }) {
+export function PullToRefresh({
+  children,
+  onRefresh = () => window.location.reload(),
+}: {
+  children: React.ReactNode;
+  onRefresh?: () => void;
+}) {
   const { t } = useTranslation();
   const [pulling, setPulling] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
+  const pullDistanceRef = useRef(0);
   const threshold = 80;
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -162,24 +169,27 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       const handleTouchMove = (moveEvent: TouchEvent) => {
         const diff = moveEvent.touches[0].clientY - startY;
         if (diff > 0 && window.scrollY === 0) {
+          const nextDistance = Math.min(diff, threshold * 1.5);
           setPulling(true);
-          setPullDistance(Math.min(diff, threshold * 1.5));
+          setPullDistance(nextDistance);
+          pullDistanceRef.current = nextDistance;
           moveEvent.preventDefault();
         }
       };
       const handleTouchEnd = () => {
-        if (pullDistance >= threshold) {
-          window.location.reload();
+        if (pullDistanceRef.current >= threshold) {
+          onRefresh();
         }
         setPulling(false);
         setPullDistance(0);
+        pullDistanceRef.current = 0;
         document.removeEventListener('touchmove', handleTouchMove);
         document.removeEventListener('touchend', handleTouchEnd);
       };
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
       document.addEventListener('touchend', handleTouchEnd);
     }
-  }, [pullDistance, threshold]);
+  }, [onRefresh, threshold]);
 
   return (
     <div onTouchStart={handleTouchStart}>

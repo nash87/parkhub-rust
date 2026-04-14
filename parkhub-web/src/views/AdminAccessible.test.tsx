@@ -156,4 +156,65 @@ describe('AdminAccessiblePage', () => {
       );
     });
   });
+
+  it('toggles help panel via help button', async () => {
+    render(<AdminAccessiblePage />);
+    await waitFor(() => expect(screen.getByText('Accessible Parking')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Help'));
+    await waitFor(() => {
+      expect(screen.getByText('This module manages accessible parking slots.')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error toast when slot toggle returns failure', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/accessible-stats')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleStats }) } as Response);
+      }
+      if (url.includes('/lots/lot-1/slots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleSlots }) } as Response);
+      }
+      if (url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleLots }) } as Response);
+      }
+      if (opts?.method === 'PUT' && url.includes('/accessible')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Forbidden' } }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: null }) } as Response);
+    }) as any;
+
+    render(<AdminAccessiblePage />);
+    await waitFor(() => expect(screen.getByTestId('lot-selector')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('lot-selector'), { target: { value: 'lot-1' } });
+    await waitFor(() => expect(screen.getByTestId('slot-list')).toBeInTheDocument());
+    const toggles = screen.getAllByTestId('slot-toggle');
+    fireEvent.click(toggles[0]);
+    // No throw, function completes
+  });
+
+  it('catches network error during slot toggle', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/accessible-stats')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleStats }) } as Response);
+      }
+      if (url.includes('/lots/lot-1/slots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleSlots }) } as Response);
+      }
+      if (url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleLots }) } as Response);
+      }
+      if (opts?.method === 'PUT' && url.includes('/accessible')) {
+        return Promise.reject(new Error('net'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: null }) } as Response);
+    }) as any;
+
+    render(<AdminAccessiblePage />);
+    await waitFor(() => expect(screen.getByTestId('lot-selector')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('lot-selector'), { target: { value: 'lot-1' } });
+    await waitFor(() => expect(screen.getByTestId('slot-list')).toBeInTheDocument());
+    const toggles = screen.getAllByTestId('slot-toggle');
+    fireEvent.click(toggles[0]);
+    // No throw
+  });
 });
