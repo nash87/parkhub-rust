@@ -3,10 +3,13 @@
 //! Self-service: operators configure their own Stripe keys via admin settings.
 //! When keys are not configured, endpoints return `501 Not Implemented`.
 
-use axum::{Extension, Json, extract::State, http::StatusCode};
+use axum::{Extension, Json, body::Bytes, extract::State, http::HeaderMap, http::StatusCode};
 use chrono::{DateTime, Utc};
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
 use std::sync::Arc;
+use subtle::ConstantTimeEq;
 use tokio::sync::RwLock;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -153,6 +156,68 @@ fn is_stripe_configured() -> bool {
         .unwrap_or(false)
 }
 
+/// Maximum age of a webhook event before it is rejected (replay protection).
+const WEBHOOK_TOLERANCE_SECS: i64 = 300; // 5 minutes
+
+/// Verify a Stripe webhook signature.
+///
+/// Stripe signs webhooks with `HMAC-SHA256(key=whsec, msg="{timestamp}.{body}")`.
+/// The `Stripe-Signature` header carries `t=<unix_ts>,v1=<hex_sig>[,v1=<hex_sig>...]`.
+///
+/// Returns `Ok(())` on success, or an error string describing the failure.
+fn verify_stripe_signature(
+    sig_header: &str,
+    body: &[u8],
+    secret: &str,
+) -> Result<(), &'static str> {
+    // Parse header: t=<ts>,v1=<sig>[,v1=<sig>]
+    let mut timestamp: Option<&str> = None;
+    let mut signatures: Vec<&str> = Vec::new();
+
+    for part in sig_header.split(',') {
+        let part = part.trim();
+        if let Some(ts) = part.strip_prefix("t=") {
+            timestamp = Some(ts);
+        } else if let Some(sig) = part.strip_prefix("v1=") {
+            signatures.push(sig);
+        }
+    }
+
+    let timestamp = timestamp.ok_or("missing timestamp in Stripe-Signature")?;
+    if signatures.is_empty() {
+        return Err("missing v1 signature in Stripe-Signature");
+    }
+
+    // Replay protection: reject events older than tolerance
+    let ts: i64 = timestamp
+        .parse()
+        .map_err(|_| "invalid timestamp in Stripe-Signature")?;
+    let now = Utc::now().timestamp();
+    if (now - ts).abs() > WEBHOOK_TOLERANCE_SECS {
+        return Err("webhook timestamp outside tolerance window");
+    }
+
+    // Compute expected signature: HMAC-SHA256(secret, "{timestamp}.{body}")
+    let mut mac =
+        Hmac::<Sha256>::new_from_slice(secret.as_bytes()).map_err(|_| "invalid webhook secret")?;
+    mac.update(timestamp.as_bytes());
+    mac.update(b".");
+    mac.update(body);
+    let expected = hex::encode(mac.finalize().into_bytes());
+
+    // Constant-time comparison against all provided v1 signatures
+    let expected_bytes = expected.as_bytes();
+    let matched = signatures
+        .iter()
+        .any(|sig| expected_bytes.ct_eq(sig.as_bytes()).into());
+
+    if matched {
+        Ok(())
+    } else {
+        Err("webhook signature mismatch")
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Handlers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -232,24 +297,81 @@ pub async fn create_checkout(
 
 /// `POST /api/v1/payments/webhook` — handle Stripe webhook events.
 ///
-/// Processes `checkout.session.completed` events to fulfill credit purchases.
-/// In production, the webhook signature should be verified using the webhook secret.
+/// Verifies the `Stripe-Signature` header using `STRIPE_WEBHOOK_SECRET`, then
+/// processes `checkout.session.completed` events to fulfill credit purchases.
 #[utoipa::path(
     post,
     path = "/api/v1/payments/webhook",
     tag = "Stripe",
     summary = "Stripe webhook handler",
-    description = "Receives Stripe webhook events. Processes checkout completions to grant credits.",
+    description = "Receives Stripe webhook events. Verifies signature, then processes checkout completions to grant credits.",
     request_body = WebhookEvent,
     responses(
         (status = 200, description = "Event processed"),
-        (status = 400, description = "Invalid event"),
+        (status = 400, description = "Invalid event or signature verification failed"),
     )
 )]
 pub async fn stripe_webhook(
+    headers: HeaderMap,
     Extension(store): Extension<CheckoutStore>,
-    Json(event): Json<WebhookEvent>,
+    body: Bytes,
 ) -> (StatusCode, Json<ApiResponse<()>>) {
+    // ── Signature verification ──────────────────────────────────────────
+    let webhook_secret = match std::env::var("STRIPE_WEBHOOK_SECRET") {
+        Ok(s) if !s.is_empty() => s,
+        _ => {
+            tracing::error!("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "WEBHOOK_SECRET_MISSING",
+                    "webhook secret not configured",
+                )),
+            );
+        }
+    };
+
+    let sig_header = match headers
+        .get("stripe-signature")
+        .and_then(|v| v.to_str().ok())
+    {
+        Some(h) => h,
+        None => {
+            tracing::warn!("Webhook received without Stripe-Signature header");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "SIGNATURE_MISSING",
+                    "missing Stripe-Signature header",
+                )),
+            );
+        }
+    };
+
+    if let Err(reason) = verify_stripe_signature(sig_header, &body, &webhook_secret) {
+        tracing::warn!("Stripe webhook signature verification failed: {reason}");
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error("SIGNATURE_INVALID", reason)),
+        );
+    }
+
+    // ── Deserialize after verification ──────────────────────────────────
+    let event: WebhookEvent = match serde_json::from_slice(&body) {
+        Ok(e) => e,
+        Err(err) => {
+            tracing::warn!("Failed to parse webhook body: {err}");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "INVALID_BODY",
+                    "failed to parse webhook event",
+                )),
+            );
+        }
+    };
+
+    // ── Event dispatch ──────────────────────────────────────────────────
     match event.event_type.as_str() {
         "checkout.session.completed" => {
             let session_id = &event.data.object.id;
@@ -548,5 +670,86 @@ mod tests {
         // SAFETY: single-threaded test or pre-spawn context
         unsafe { std::env::remove_var("STRIPE_SECRET_KEY") };
         assert!(!is_stripe_configured());
+    }
+
+    // ── Webhook signature verification tests ────────────────────────────
+
+    /// Build a valid Stripe-Signature header for testing.
+    fn make_stripe_signature(body: &[u8], secret: &str, timestamp: i64) -> String {
+        use hmac::Mac;
+        let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+        mac.update(timestamp.to_string().as_bytes());
+        mac.update(b".");
+        mac.update(body);
+        let sig = hex::encode(mac.finalize().into_bytes());
+        format!("t={timestamp},v1={sig}")
+    }
+
+    #[test]
+    fn test_verify_valid_signature() {
+        let secret = "whsec_test_secret";
+        let body = b"{\"type\":\"checkout.session.completed\"}";
+        let ts = Utc::now().timestamp();
+        let header = make_stripe_signature(body, secret, ts);
+
+        assert!(verify_stripe_signature(&header, body, secret).is_ok());
+    }
+
+    #[test]
+    fn test_verify_wrong_secret_rejected() {
+        let body = b"{\"type\":\"test\"}";
+        let ts = Utc::now().timestamp();
+        let header = make_stripe_signature(body, "whsec_correct", ts);
+
+        let result = verify_stripe_signature(&header, body, "whsec_wrong");
+        assert_eq!(result, Err("webhook signature mismatch"));
+    }
+
+    #[test]
+    fn test_verify_tampered_body_rejected() {
+        let secret = "whsec_test";
+        let body = b"original";
+        let ts = Utc::now().timestamp();
+        let header = make_stripe_signature(body, secret, ts);
+
+        let result = verify_stripe_signature(&header, b"tampered", secret);
+        assert_eq!(result, Err("webhook signature mismatch"));
+    }
+
+    #[test]
+    fn test_verify_expired_timestamp_rejected() {
+        let secret = "whsec_test";
+        let body = b"body";
+        let old_ts = Utc::now().timestamp() - 600; // 10 minutes ago
+        let header = make_stripe_signature(body, secret, old_ts);
+
+        let result = verify_stripe_signature(&header, body, secret);
+        assert_eq!(result, Err("webhook timestamp outside tolerance window"));
+    }
+
+    #[test]
+    fn test_verify_missing_timestamp() {
+        let result = verify_stripe_signature("v1=abc123", b"body", "secret");
+        assert_eq!(result, Err("missing timestamp in Stripe-Signature"));
+    }
+
+    #[test]
+    fn test_verify_missing_signature() {
+        let ts = Utc::now().timestamp();
+        let result = verify_stripe_signature(&format!("t={ts}"), b"body", "secret");
+        assert_eq!(result, Err("missing v1 signature in Stripe-Signature"));
+    }
+
+    #[test]
+    fn test_verify_multiple_v1_signatures() {
+        let secret = "whsec_multi";
+        let body = b"multi-sig-body";
+        let ts = Utc::now().timestamp();
+        // Build header with a wrong sig first, then the correct one
+        let correct = make_stripe_signature(body, secret, ts);
+        let v1_correct = correct.split(",v1=").nth(1).unwrap();
+        let header = format!("t={ts},v1=deadbeef,v1={v1_correct}");
+
+        assert!(verify_stripe_signature(&header, body, secret).is_ok());
     }
 }
