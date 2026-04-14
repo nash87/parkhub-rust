@@ -512,4 +512,22 @@ describe('AdminUpdatesPage', () => {
       expect(screen.getByTestId('update-error')).toBeInTheDocument();
     });
   });
+
+  it('formatUptime handles hours-only range', async () => {
+    // 3720 seconds = 0d 1h 2m → should show "1h 2m"
+    global.fetch = mockFetch({
+      version: { success: true, data: { ...mockVersion, uptime_seconds: 3720 } },
+    });
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByText('1h 2m')).toBeInTheDocument());
+  });
+
+  it('formatUptime handles minutes-only range', async () => {
+    // 120 seconds = 0d 0h 2m → should show "2m"
+    global.fetch = mockFetch({
+      version: { success: true, data: { ...mockVersion, uptime_seconds: 120 } },
+    });
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByText('2m')).toBeInTheDocument());
+  });
 });

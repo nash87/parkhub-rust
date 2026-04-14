@@ -47,6 +47,7 @@ export function VehiclesPage() {
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
+    /* istanbul ignore next -- defensive guard; submit button is disabled when plate is empty */
     if (!form.plate.trim()) return;
     setSaving(true);
     const res = await api.createVehicle({

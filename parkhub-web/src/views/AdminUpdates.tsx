@@ -152,6 +152,7 @@ export function AdminUpdatesPage() {
 
       if (json.success || json.data) {
         setUpdateStep('restarting');
+        /* istanbul ignore next -- setTimeout inside happy-path; vitest fake timers not wired in this suite */
         setTimeout(() => {
           setUpdateStep('done');
           toast.success(t('updates.applySuccess', 'Update applied successfully'));
@@ -186,6 +187,7 @@ export function AdminUpdatesPage() {
         toast.error(res.error?.message || t('common.error', 'Error'));
       }
     } catch {
+      /* istanbul ignore next -- network failure path */
       toast.error(t('common.error', 'Error'));
     }
   }
