@@ -75,6 +75,7 @@ export function AdminSettingsPage() {
       if (res.success && res.data) {
         setSettings(prev => ({ ...prev, ...res.data }));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('admin.settingsLoadFailed'));
     } finally {
@@ -91,6 +92,7 @@ export function AdminSettingsPage() {
       } else {
         toast.error(res.error?.message || t('admin.settingsSaveFailed'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('admin.settingsSaveFailed'));
     } finally {

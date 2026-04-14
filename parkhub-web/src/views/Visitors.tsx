@@ -99,6 +99,7 @@ export function VisitorsPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

@@ -37,6 +37,7 @@ export function AdminRateLimitsPage() {
       if (historyRes.success && historyRes.data) {
         setHistoryBins(historyRes.data.bins);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {

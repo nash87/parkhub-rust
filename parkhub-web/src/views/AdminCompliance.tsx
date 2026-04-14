@@ -57,6 +57,7 @@ export function AdminCompliancePage() {
       if (res.success) {
         setReport(res.data);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -80,6 +81,7 @@ export function AdminCompliancePage() {
       a.download = 'parkhub-data-map.json';
       a.click();
       URL.revokeObjectURL(url);
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

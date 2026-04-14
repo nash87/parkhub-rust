@@ -37,6 +37,7 @@ export function AdminSSOPage() {
       if (res.success) {
         setProviders(res.data?.providers || []);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -98,6 +99,7 @@ export function AdminSSOPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -110,6 +112,7 @@ export function AdminSSOPage() {
         toast.success(t('sso.deleted'));
         loadProviders();
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

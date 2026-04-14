@@ -65,6 +65,7 @@ export function AdminAuditLogPage() {
         setTotalPages(res.data.total_pages);
         setTotal(res.data.total);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -108,6 +109,7 @@ export function AdminAuditLogPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {

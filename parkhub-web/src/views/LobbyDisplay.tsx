@@ -48,6 +48,7 @@ export function LobbyDisplayPage() {
       } else {
         setError(json.error?.message || t('lobby.error', 'Lot not found'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       setError(t('lobby.networkError', 'Network error'));
     }

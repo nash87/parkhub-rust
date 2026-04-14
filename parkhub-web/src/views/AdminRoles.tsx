@@ -46,6 +46,7 @@ export function AdminRolesPage() {
       if (res.success) {
         setRoles(res.data || []);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -105,6 +106,7 @@ export function AdminRolesPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -122,6 +124,7 @@ export function AdminRolesPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

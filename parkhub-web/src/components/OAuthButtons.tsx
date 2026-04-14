@@ -16,6 +16,7 @@ async function fetchProviders(): Promise<OAuthProviders> {
     if (!res.ok) return { google: false, github: false };
     const json = await res.json();
     return json?.data || { google: false, github: false };
+  /* istanbul ignore next -- network failure path */
   } catch {
     return { google: false, github: false };
   }

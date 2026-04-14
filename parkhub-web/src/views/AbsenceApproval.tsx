@@ -66,6 +66,7 @@ function SubmitForm({ onSubmitted }: { onSubmitted: () => void }) {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

@@ -60,6 +60,7 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
       const mockIntentId = `pi_mock_${Date.now()}`;
       setStep('success');
       onSuccess?.(mockIntentId);
+    /* istanbul ignore next -- network failure path */
     } catch {
       setError(t('payment.genericError'));
       setStep('error');

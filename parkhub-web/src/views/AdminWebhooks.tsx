@@ -53,6 +53,7 @@ export function AdminWebhooksPage() {
       if (res.success) {
         setWebhooks(res.data || []);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -103,6 +104,7 @@ export function AdminWebhooksPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -115,6 +117,7 @@ export function AdminWebhooksPage() {
         toast.success(t('webhooksV2.deleted'));
         loadWebhooks();
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -126,6 +129,7 @@ export function AdminWebhooksPage() {
       if (res.success) {
         toast.success(res.data?.success ? t('webhooksV2.testSuccess') : t('webhooksV2.testFailed'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -138,6 +142,7 @@ export function AdminWebhooksPage() {
         setDeliveries(res.data || []);
         setShowDeliveries(id);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

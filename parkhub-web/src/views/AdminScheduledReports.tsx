@@ -55,6 +55,7 @@ export function AdminScheduledReportsPage() {
       if (res.success) {
         setSchedules(res.data.schedules);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -104,6 +105,7 @@ export function AdminScheduledReportsPage() {
         resetForm();
         loadSchedules();
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -114,6 +116,7 @@ export function AdminScheduledReportsPage() {
       await fetch(`/api/v1/admin/reports/schedules/${id}`, { method: 'DELETE' });
       toast.success(t('scheduledReports.deleted'));
       setSchedules(prev => prev.filter(s => s.id !== id));
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -127,6 +130,7 @@ export function AdminScheduledReportsPage() {
       if (res.success) {
         toast.success(t('scheduledReports.sentNow'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

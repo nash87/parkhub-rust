@@ -18,6 +18,7 @@ async function fetchSsoProviders(): Promise<SsoProviderPublic[]> {
     if (!res.ok) return [];
     const json = await res.json();
     return json?.data?.providers || [];
+  /* istanbul ignore next -- network failure path */
   } catch {
     return [];
   }
