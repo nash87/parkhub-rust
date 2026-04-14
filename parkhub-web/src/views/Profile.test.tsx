@@ -730,4 +730,5 @@ describe('ProfilePage', () => {
       expect(mockToastError).toHaveBeenCalledWith('Fehler');
     });
   });
+
 });
