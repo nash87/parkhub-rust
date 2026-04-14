@@ -58,6 +58,26 @@ vi.mock('react-i18next', () => ({
         'dashboard.wsBookingCreated': 'New booking created',
         'dashboard.wsBookingCancelled': 'A booking was cancelled',
         'dashboard.wsOccupancyChanged': 'Occupancy updated',
+        'dashboard.totalBookings': 'Total Bookings',
+        'dashboard.weeklyActivityTitle': 'Weekly Activity',
+        'dashboard.weeklyActivitySubtitle': 'Booking volume',
+        'dashboard.period7d': '7 Days',
+        'dashboard.period30d': '30 Days',
+        'dashboard.liveSensorFeed': 'Live Sensor Feed',
+        'dashboard.sensorFeedSubtitle': 'Real-time gate status',
+        'dashboard.recentActivity': 'Recent Activity',
+        'dashboard.noActivity': 'No recent activity yet',
+        'dashboard.unknownVehicle': 'Unknown vehicle',
+        'dashboard.entranceGateA': 'Entrance Gate A',
+        'dashboard.entranceGateB': 'Entrance Gate B',
+        'dashboard.exitGate': 'Exit Gate',
+        'dashboard.colVehicleOwner': 'Vehicle / Location',
+        'dashboard.colSlot': 'Slot No.',
+        'dashboard.colCheckIn': 'Check-In Time',
+        'dashboard.colDuration': 'Duration',
+        'dashboard.colStatus': 'Status',
+        'dashboard.statistics': 'Statistics',
+        'dashboard.loadingDashboard': 'Loading dashboard',
       };
       return map[key] || key;
     },
@@ -82,6 +102,57 @@ vi.mock('@phosphor-icons/react', () => ({
   ArrowRight: (props: any) => <span data-testid="icon-arrow-right" {...props} />,
   TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
   MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  ChartLine: (props: any) => <span data-testid="icon-chart-line" {...props} />,
+  Gauge: (props: any) => <span data-testid="icon-gauge" {...props} />,
+  CurrencyDollar: (props: any) => <span data-testid="icon-dollar" {...props} />,
+  Timer: (props: any) => <span data-testid="icon-timer" {...props} />,
+  ArrowUp: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
+  ArrowDown: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
+  CircleDashed: (props: any) => <span data-testid="icon-circle-dashed" {...props} />,
+}));
+
+vi.mock('../components/KineticObservatory', () => ({
+  KpiCard: ({ label, value, live, delta }: any) => (
+    <div data-testid={`kpi-${String(label).toLowerCase().replace(/\s+/g, '-')}`}>
+      <span>{label}</span>
+      <span data-testid="kpi-value">{value}</span>
+      {live && <span data-testid="live-badge">Live</span>}
+      {delta && <span data-testid="delta-badge">{delta.value}{delta.suffix || '%'}</span>}
+    </div>
+  ),
+  TrendCard: ({ title, subtitle, periods, activePeriod, onPeriodChange }: any) => (
+    <section data-testid="trend-card">
+      <h3>{title}</h3>
+      {subtitle && <p>{subtitle}</p>}
+      {periods?.map((p: any) => (
+        <button key={p.key} onClick={() => onPeriodChange?.(p.key)} aria-pressed={activePeriod === p.key}>
+          {p.label}
+        </button>
+      ))}
+    </section>
+  ),
+  SensorFeedCard: ({ title, sensors }: any) => (
+    <section data-testid="sensor-feed-card">
+      <h3>{title}</h3>
+      <ul>
+        {sensors?.map((s: any) => (
+          <li key={s.name} data-testid={`sensor-${s.name.toLowerCase().replace(/\s+/g, '-')}`}>
+            {s.name} — {s.status}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ),
+  RecentActivityCard: ({ title, rows, emptyText }: any) => (
+    <section data-testid="recent-activity-card">
+      <h3>{title}</h3>
+      {rows?.length === 0 ? <p>{emptyText}</p> : (
+        <table data-testid="recent-activity-table">
+          {rows?.map((r: any) => <tr key={r.id} data-testid={`activity-row-${r.id}`}><td>{r.vehicle}</td></tr>)}
+        </table>
+      )}
+    </section>
+  ),
 }));
 
 vi.mock('../components/Skeleton', () => ({
@@ -152,7 +223,7 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Credits Left')).toBeInTheDocument();
     // "This Month" appears as stat card label and chart section heading
     expect(screen.getAllByText('This Month').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Next Booking')).toBeInTheDocument();
+    expect(screen.getByText(/Total Bookings/i)).toBeInTheDocument();
   });
 
   it('shows empty state when no active bookings', async () => {
@@ -197,7 +268,7 @@ describe('DashboardPage', () => {
     // Slot number appears in both the badge and inline
     expect(screen.getAllByText('A1').length).toBeGreaterThanOrEqual(1);
     // Vehicle plate is inside a div with other text, use regex
-    expect(screen.getByText(/M-AB 123/)).toBeInTheDocument();
+    expect(screen.getAllByText(/M-AB 123/).length).toBeGreaterThan(0);
     // Active status badge
     expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
   });
