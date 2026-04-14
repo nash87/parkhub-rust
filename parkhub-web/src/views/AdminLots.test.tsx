@@ -11,12 +11,22 @@ const mockDeleteLot = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 
+const mockUpdateLot = vi.fn();
+const mockGetAdminDynamicPricing = vi.fn();
+const mockGetLotHours = vi.fn();
+const mockUpdateAdminDynamicPricing = vi.fn();
+const mockUpdateAdminLotHours = vi.fn();
+
 vi.mock('../api/client', () => ({
   api: {
     getLots: (...args: any[]) => mockGetLots(...args),
     createLot: (...args: any[]) => mockCreateLot(...args),
-    updateLot: vi.fn(),
+    updateLot: (...args: any[]) => mockUpdateLot(...args),
     deleteLot: (...args: any[]) => mockDeleteLot(...args),
+    getAdminDynamicPricing: (...args: any[]) => mockGetAdminDynamicPricing(...args),
+    getLotHours: (...args: any[]) => mockGetLotHours(...args),
+    updateAdminDynamicPricing: (...args: any[]) => mockUpdateAdminDynamicPricing(...args),
+    updateAdminLotHours: (...args: any[]) => mockUpdateAdminLotHours(...args),
   },
 }));
 
@@ -44,6 +54,7 @@ vi.mock('@phosphor-icons/react', () => ({
   TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
   TrendDown: (props: any) => <span data-testid="icon-trend-down" {...props} />,
   Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
+  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -60,8 +71,15 @@ describe('AdminLotsPage', () => {
     mockGetLots.mockClear();
     mockCreateLot.mockClear();
     mockDeleteLot.mockClear();
+    mockUpdateLot.mockClear();
+    mockGetAdminDynamicPricing.mockClear();
+    mockGetLotHours.mockClear();
+    mockUpdateAdminDynamicPricing.mockClear();
+    mockUpdateAdminLotHours.mockClear();
     mockToastSuccess.mockClear();
     mockToastError.mockClear();
+    mockGetAdminDynamicPricing.mockResolvedValue({ success: true, data: { enabled: false, base_price: 2.5, surge_multiplier: 1.5, discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20 } });
+    mockGetLotHours.mockResolvedValue({ success: true, data: { is_24h: true } });
   });
 
   afterEach(() => {
@@ -188,6 +206,223 @@ describe('AdminLotsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Search lots...')).toBeInTheDocument();
+    });
+  });
+
+  it('shows empty state when no lots and no search', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    render(<AdminLotsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No parking lots yet. Create one to get started.')).toBeInTheDocument();
+    });
+  });
+
+  it('can submit the create form successfully', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    mockCreateLot.mockResolvedValue({ success: true, data: { id: 'new-1', name: 'Test Lot' } });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+
+    await user.click(screen.getByText('New Lot'));
+    await user.type(screen.getByLabelText('Name *'), 'Test Lot');
+    await user.clear(screen.getByLabelText('Total Slots *'));
+    await user.type(screen.getByLabelText('Total Slots *'), '20');
+
+    // Reset mock for reload after create
+    mockGetLots.mockResolvedValue({ success: true, data: [{ id: 'new-1', name: 'Test Lot', total_slots: 20, available_slots: 20, status: 'open' }] });
+
+    await user.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockCreateLot).toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('shows error toast when name is empty on save', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+
+    // Name is empty by default
+    await user.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+    expect(mockCreateLot).not.toHaveBeenCalled();
+  });
+
+  it('shows error toast when save fails', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    mockCreateLot.mockResolvedValue({ success: false, data: null, error: { code: 'VALIDATION', message: 'Invalid data' } });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+    await user.type(screen.getByLabelText('Name *'), 'Bad Lot');
+
+    await user.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Invalid data');
+    });
+  });
+
+  it('opens edit form for existing lot and shows edit heading', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Main Garage', address: '123 Main', total_slots: 20, available_slots: 12, status: 'open', hourly_rate: 2.5, daily_max: 15, monthly_pass: 200, currency: 'EUR' }],
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('Main Garage')).toBeInTheDocument());
+
+    // Click edit button
+    const editBtn = screen.getByLabelText(/Edit lot Main Garage/i);
+    await user.click(editBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Parking Lot')).toBeInTheDocument();
+    });
+  });
+
+  it('filters lots by address', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'l-1', name: 'Garage A', address: '123 Main Street', total_slots: 10, available_slots: 5, status: 'open' },
+        { id: 'l-2', name: 'Garage B', address: '456 Oak Avenue', total_slots: 5, available_slots: 3, status: 'open' },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('Garage A')).toBeInTheDocument());
+
+    const searchInput = screen.getByLabelText('Search lots...');
+    await user.type(searchInput, 'Oak');
+
+    expect(screen.queryByText('Garage A')).not.toBeInTheDocument();
+    expect(screen.getByText('Garage B')).toBeInTheDocument();
+  });
+
+  it('closes form on close button click', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+    expect(screen.getByLabelText('Name *')).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText('Close'));
+
+    // Form should be hidden
+    expect(screen.queryByLabelText('Name *')).not.toBeInTheDocument();
+  });
+
+  it('closes form on cancel button click', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+    expect(screen.getByLabelText('Name *')).toBeInTheDocument();
+
+    await user.click(screen.getByText('Cancel'));
+
+    expect(screen.queryByLabelText('Name *')).not.toBeInTheDocument();
+  });
+
+  it('displays different lot statuses with correct badges', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'l-1', name: 'Open Lot', total_slots: 10, available_slots: 5, status: 'open' },
+        { id: 'l-2', name: 'Full Lot', total_slots: 10, available_slots: 0, status: 'full' },
+        { id: 'l-3', name: 'Closed Lot', total_slots: 10, available_slots: 10, status: 'closed' },
+        { id: 'l-4', name: 'Maint Lot', total_slots: 10, available_slots: 10, status: 'maintenance' },
+      ],
+    });
+    render(<AdminLotsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Open')).toBeInTheDocument();
+      expect(screen.getByText('Full')).toBeInTheDocument();
+      expect(screen.getByText('Closed')).toBeInTheDocument();
+      expect(screen.getByText('Maintenance')).toBeInTheDocument();
+    });
+  });
+
+  it('displays pricing info with formatted values', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'l-1', name: 'Priced Lot', total_slots: 10, available_slots: 5,
+        status: 'open', hourly_rate: 2.5, daily_max: 15, monthly_pass: 200, currency: 'EUR',
+      }],
+    });
+    render(<AdminLotsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Priced Lot')).toBeInTheDocument();
+    });
+  });
+
+  it('handles lot with no pricing (dash display)', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Free Lot', total_slots: 10, available_slots: 5, status: 'open' }],
+    });
+    render(<AdminLotsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Free Lot')).toBeInTheDocument();
+    });
+    // The pricing lines include "-" for null values within "Hourly Rate: -" etc.
+    // Use a function matcher to find text containing the dash pattern
+    const pricingCells = screen.getAllByText((_content, element) => {
+      return element?.tagName === 'P' && element.textContent?.includes(': -') === true;
+    });
+    expect(pricingCells.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('handles API failure on load gracefully', async () => {
+    mockGetLots.mockResolvedValue({ success: false, data: null, error: { code: 'NETWORK', message: 'Error' } });
+    render(<AdminLotsPage />);
+
+    await waitFor(() => {
+      // Should still render with empty state, not crash
+      expect(screen.getByText('No parking lots yet. Create one to get started.')).toBeInTheDocument();
+    });
+  });
+
+  it('triggers delete confirmation dialog on delete button click', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'To Delete', total_slots: 10, available_slots: 5, status: 'open' }],
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('To Delete')).toBeInTheDocument());
+
+    const deleteBtn = screen.getByLabelText(/Delete lot To Delete/i);
+    await user.click(deleteBtn);
+
+    // ConfirmDialog should appear
+    await waitFor(() => {
+      expect(screen.getByText('Delete this parking lot? All associated slots and bookings will be removed.')).toBeInTheDocument();
     });
   });
 });

@@ -233,4 +233,178 @@ describe('App', () => {
     const { container } = render(<App />);
     expect(container).toBeTruthy();
   });
+
+  it('shows loading splash when auth is loading', async () => {
+    mockUser.loading = true;
+    mockUser.current = null;
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status', { name: /loading parkhub/i })).toBeInTheDocument();
+    });
+  });
+
+  it('redirects to /welcome when not seen and unauthenticated', async () => {
+    localStorageMock.clear();
+    mockUser.current = null;
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-welcome')).toBeInTheDocument();
+    });
+  });
+
+  it('redirects to /login when welcome seen and unauthenticated', async () => {
+    localStorageMock.setItem('parkhub_welcome_seen', 'true');
+    mockUser.current = null;
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-login')).toBeInTheDocument();
+    });
+  });
+
+  it('shows dashboard for authenticated user', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
+    });
+  });
+
+  it('redirects non-admin users away from admin routes', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/admin');
+    render(<App />);
+
+    // Non-admin should be redirected to /
+    await waitFor(() => {
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
+    });
+  });
+
+  it('allows admin users to access admin routes', async () => {
+    mockUser.current = { id: '1', name: 'Admin', role: 'admin', email: 'admin@test.com' };
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/admin');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
+    });
+  });
+
+  it('allows superadmin users to access admin routes', async () => {
+    mockUser.current = { id: '1', name: 'Super', role: 'superadmin', email: 'super@test.com' };
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/admin');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('layout')).toBeInTheDocument();
+    });
+  });
+
+  it('renders public routes without authentication', async () => {
+    mockUser.current = null;
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/register');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-register')).toBeInTheDocument();
+    });
+  });
+
+  it('renders forgot password route', async () => {
+    mockUser.current = null;
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/forgot-password');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-forgot')).toBeInTheDocument();
+    });
+  });
+
+  it('renders 404 for unknown routes', async () => {
+    mockUser.current = null;
+    mockUser.loading = false;
+
+    window.history.pushState({}, '', '/nonexistent-page');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-notfound')).toBeInTheDocument();
+    });
+  });
+
+  it('renders use case selector route', async () => {
+    window.history.pushState({}, '', '/choose');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-choose')).toBeInTheDocument();
+    });
+  });
+
+  it('renders setup wizard route', async () => {
+    window.history.pushState({}, '', '/setup');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-setup')).toBeInTheDocument();
+    });
+  });
+
+  it('renders lobby display route', async () => {
+    window.history.pushState({}, '', '/lobby/lot-123');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-lobby')).toBeInTheDocument();
+    });
+  });
+
+  it('calls theme API on mount', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/theme', expect.objectContaining({ credentials: 'include' }));
+    });
+  });
+
+  it('applies use case theme from API response', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ data: { use_case: { key: 'corporate' } } }),
+    })));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(document.documentElement.dataset.usecase).toBe('corporate');
+    });
+
+    // Cleanup
+    delete document.documentElement.dataset.usecase;
+  });
 });

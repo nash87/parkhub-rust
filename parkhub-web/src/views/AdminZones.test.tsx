@@ -147,4 +147,38 @@ describe('AdminZonesPage', () => {
       expect(screen.getByText('Parking Zones')).toBeDefined();
     });
   });
+
+  it('shows description for zones that have one', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Ground floor')).toBeDefined();
+    });
+  });
+
+  it('shows max capacity values', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('100')).toBeDefined();
+      expect(screen.getByText('20')).toBeDefined();
+    });
+  });
+
+  it('renders zone names from API response', async () => {
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Economy Section')).toBeDefined();
+    });
+  });
 });

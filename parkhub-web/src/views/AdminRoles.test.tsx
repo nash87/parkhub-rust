@@ -202,4 +202,71 @@ describe('AdminRolesPage', () => {
       expect(screen.getByText('Roles & Permissions')).toBeDefined();
     });
   });
+
+  it('shows role descriptions', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleRoles }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Full system access')).toBeDefined();
+      expect(screen.getByText('Read-only access')).toBeDefined();
+      expect(screen.getByText('Custom test role')).toBeDefined();
+    });
+  });
+
+  it('shows custom role in list', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleRoles }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('custom_role')).toBeDefined();
+    });
+  });
+
+  it('shows help tooltip', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [] }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => expect(screen.getByTitle('Help')).toBeDefined());
+    fireEvent.click(screen.getByTitle('Help'));
+    await waitFor(() => {
+      expect(screen.getByText('Define roles with granular permissions to control access.')).toBeDefined();
+    });
+  });
+
+  it('shows create role button', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleRoles }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Create Role')).toBeDefined();
+    });
+  });
+
+  it('shows all permission options in create form', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [] }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => {
+      fireEvent.click(screen.getByText('Create Role'));
+      expect(screen.getByText('Manage Settings')).toBeDefined();
+      expect(screen.getByText('Manage Plugins')).toBeDefined();
+      expect(screen.getByText('Manage Bookings')).toBeDefined();
+    });
+  });
 });

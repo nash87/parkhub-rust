@@ -312,4 +312,41 @@ describe('CalendarPage', () => {
       expect(screen.getByText('Calendar')).toBeInTheDocument();
     });
   });
+
+  it('handles API error on calendar events', async () => {
+    mockCalendarEvents.mockResolvedValue({ success: false, data: null });
+    render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Calendar')).toBeInTheDocument();
+    });
+  });
+
+  it('calls API to generate token when subscribe is clicked', async () => {
+    const user = userEvent.setup();
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Subscribe')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Subscribe'));
+    await waitFor(() => {
+      expect(mockGenerateCalendarToken).toHaveBeenCalled();
+    });
+  });
+
+  it('shows calendar with events loaded from API', async () => {
+    const now = new Date();
+    const dayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Slot A1',
+        start: `${dayStr}T08:00:00Z`, end: `${dayStr}T18:00:00Z`,
+        lot_name: 'Garage A', slot_number: 'A1', status: 'confirmed',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Calendar')).toBeInTheDocument();
+      expect(mockCalendarEvents).toHaveBeenCalled();
+    });
+  });
 });

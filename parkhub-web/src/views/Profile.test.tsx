@@ -331,4 +331,110 @@ describe('ProfilePage', () => {
     expect(options).toContain('visual');
     expect(options).toContain('hearing');
   });
+
+  it('shows password validation hint when typing short password', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    // Expand the password section
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-new')).toBeInTheDocument());
+
+    // Type a short password
+    await user.type(document.getElementById('pw-new')!, 'short');
+
+    // Should show minimum chars hint
+    await waitFor(() => {
+      expect(screen.getByText('Mind. 8 Zeichen')).toBeInTheDocument();
+    });
+  });
+
+  it('shows password mismatch hint when passwords differ', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-new')).toBeInTheDocument());
+
+    await user.type(document.getElementById('pw-new')!, 'newpass123');
+    await user.type(document.getElementById('pw-confirm')!, 'different1');
+
+    await waitFor(() => {
+      expect(screen.getByText('Passwörter stimmen nicht überein')).toBeInTheDocument();
+    });
+  });
+
+  it('changes password successfully', async () => {
+    mockChangePassword.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-current')).toBeInTheDocument());
+
+    await user.type(document.getElementById('pw-current')!, 'oldpass123');
+    await user.type(document.getElementById('pw-new')!, 'newpass123');
+    await user.type(document.getElementById('pw-confirm')!, 'newpass123');
+
+    // The submit button should now be enabled
+    const submitBtns = screen.getAllByText('Passwort ändern');
+    // Click the button that is NOT the section toggle (the one inside the expanded section)
+    const formSubmit = submitBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') === null);
+    if (formSubmit) await user.click(formSubmit);
+
+    await waitFor(() => {
+      expect(mockChangePassword).toHaveBeenCalledWith('oldpass123', 'newpass123', 'newpass123');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Passwort geändert');
+    });
+  });
+
+  it('renders 2FA setup component', () => {
+    render(<ProfilePage />);
+    expect(screen.getByTestId('2fa-setup')).toBeInTheDocument();
+  });
+
+  it('renders notification preferences component', () => {
+    render(<ProfilePage />);
+    expect(screen.getByTestId('notification-prefs')).toBeInTheDocument();
+  });
+
+  it('renders login history component', () => {
+    render(<ProfilePage />);
+    expect(screen.getByTestId('login-history')).toBeInTheDocument();
+  });
+
+  it('renders theme section component', () => {
+    render(<ProfilePage />);
+    expect(screen.getByTestId('theme-section')).toBeInTheDocument();
+  });
+
+  it('displays user role badge', () => {
+    render(<ProfilePage />);
+    expect(screen.getByText('Admin')).toBeInTheDocument();
+  });
+
+  it('handles stat load with zero values', async () => {
+    mockGetUserStats.mockResolvedValue({
+      success: true,
+      data: {
+        total_bookings: 0,
+        bookings_this_month: 0,
+        homeoffice_days_this_month: 0,
+        avg_duration_minutes: 0,
+      },
+    });
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it('handles stat load failure gracefully', async () => {
+    mockGetUserStats.mockResolvedValue({ success: false, data: null });
+    render(<ProfilePage />);
+    // Should not crash — stats section should still render
+    await waitFor(() => {
+      expect(screen.getByText('Buchungen (Monat)')).toBeInTheDocument();
+    });
+  });
 });

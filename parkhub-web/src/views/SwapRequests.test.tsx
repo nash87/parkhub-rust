@@ -239,4 +239,75 @@ describe('SwapRequestsPage', () => {
       );
     });
   });
+
+  it('shows slot numbers', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('A3', { exact: false })).toBeInTheDocument();
+      expect(screen.getByText('B7', { exact: false })).toBeInTheDocument();
+    });
+  });
+
+  it('shows Your Slot and Their Slot labels', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Your Slot')).toBeInTheDocument();
+      expect(screen.getByText('Their Slot')).toBeInTheDocument();
+    });
+  });
+
+  it('shows create modal fields correctly', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Swap Requests')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('New Swap'));
+    await waitFor(() => {
+      expect(screen.getByTestId('swap-modal')).toBeInTheDocument();
+      expect(screen.getByText('Your Booking')).toBeInTheDocument();
+      expect(screen.getByText('Target Booking ID')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show accept/decline for accepted requests', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/v1/swap-requests') && !url.includes('/accept') && !url.includes('/decline')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            data: [{
+              ...sampleSwapRequests[0],
+              status: 'accepted',
+            }],
+          }),
+        } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: {} }) } as Response);
+    });
+
+    render(<SwapRequestsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Accepted')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Accept')).not.toBeInTheDocument();
+    expect(screen.queryByText('Decline')).not.toBeInTheDocument();
+  });
+
+  it('shows refresh button', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Refresh')).toBeInTheDocument();
+    });
+  });
+
+  it('refreshes data when clicking refresh', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Refresh')).toBeInTheDocument());
+
+    const fetchCountBefore = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    fireEvent.click(screen.getByText('Refresh'));
+
+    await waitFor(() => {
+      expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(fetchCountBefore);
+    });
+  });
 });

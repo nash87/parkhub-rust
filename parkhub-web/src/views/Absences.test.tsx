@@ -253,4 +253,83 @@ describe('AbsencesPage', () => {
     expect(screen.getByText('Bis')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Notiz (optional)')).toBeInTheDocument();
   });
+
+  it('deletes an absence and shows toast', async () => {
+    const futureDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    mockListAbsences.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'abs-1', user_id: 'u-1', absence_type: 'vacation',
+        start_date: futureDate, end_date: futureDate,
+        source: 'manual', created_at: '2026-03-01T00:00:00Z',
+      }],
+    });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    mockDeleteAbsence.mockResolvedValue({ success: true, data: null });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Urlaub').length).toBeGreaterThanOrEqual(2);
+    });
+
+    // Find and click the delete button
+    const deleteBtn = screen.getByTestId('icon-trash').closest('button');
+    if (deleteBtn) await user.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(mockDeleteAbsence).toHaveBeenCalledWith('abs-1');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Abwesenheit gelöscht');
+    });
+  });
+
+  it('shows pattern weekday buttons', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({
+      success: true,
+      data: [{ user_id: 'u-1', absence_type: 'homeoffice', weekdays: [1, 3] }],
+    });
+    render(<AbsencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mo')).toBeInTheDocument();
+      expect(screen.getByText('Fr')).toBeInTheDocument();
+    });
+  });
+
+  it('handles API error on absence load gracefully', async () => {
+    mockListAbsences.mockResolvedValue({ success: false, data: null });
+    mockGetAbsencePattern.mockResolvedValue({ success: false, data: null });
+    render(<AbsencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Abwesenheiten')).toBeInTheDocument();
+    });
+  });
+
+  it('renders calendar and pattern sections after loading', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    render(<AbsencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Abwesenheiten')).toBeInTheDocument();
+      expect(screen.getByText('Homeoffice-Muster')).toBeInTheDocument();
+      expect(screen.getByText('Anstehend')).toBeInTheDocument();
+    });
+  });
+
+  it('shows all absence type labels in legend', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    render(<AbsencesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Homeoffice')).toBeInTheDocument();
+      expect(screen.getByText('Urlaub')).toBeInTheDocument();
+      expect(screen.getByText('Krank')).toBeInTheDocument();
+      expect(screen.getByText('Dienstreise')).toBeInTheDocument();
+      expect(screen.getByText('Sonstiges')).toBeInTheDocument();
+    });
+  });
 });

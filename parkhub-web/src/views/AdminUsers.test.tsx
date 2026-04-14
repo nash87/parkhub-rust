@@ -294,4 +294,202 @@ describe('AdminUsersPage', () => {
     await vi.runAllTimersAsync();
     await waitFor(() => expect(screen.getByText(`(${sampleUsers.length})`)).toBeInTheDocument());
   });
+
+  it('opens role editor on edit pencil click', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    // Click the edit role button for Alice
+    const editBtns = screen.getAllByLabelText(/Edit Role/i);
+    await user.click(editBtns[0]);
+
+    // A select dropdown should appear
+    await waitFor(() => {
+      const selects = screen.getAllByRole('combobox');
+      expect(selects.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('saves role change and shows success toast', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUserRole.mockResolvedValue({ success: true, data: { id: '1', role: 'admin' } });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByLabelText(/Edit Role/i);
+    await user.click(editBtns[0]);
+
+    // Click save button
+    const saveBtn = screen.getByLabelText('Save');
+    await user.click(saveBtn);
+
+    await waitFor(() => {
+      expect(mockAdminUpdateUserRole).toHaveBeenCalledWith('1', 'user');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Role updated');
+    });
+  });
+
+  it('shows error toast when role update fails', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUserRole.mockResolvedValue({ success: false, data: null, error: { code: 'FORBIDDEN', message: 'Not allowed' } });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByLabelText(/Edit Role/i);
+    await user.click(editBtns[0]);
+    await user.click(screen.getByLabelText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Not allowed');
+    });
+  });
+
+  it('cancels role editing on cancel click', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByLabelText(/Edit Role/i);
+    await user.click(editBtns[0]);
+
+    // Cancel button should be visible
+    const cancelBtn = screen.getByLabelText('Cancel');
+    await user.click(cancelBtn);
+
+    // Role selector should disappear
+    await waitFor(() => {
+      const roleSelectors = screen.queryAllByRole('combobox');
+      // Only the bulk action selector might remain
+      expect(roleSelectors.length).toBeLessThanOrEqual(1);
+    });
+  });
+
+  it('toggles user active status', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUser.mockResolvedValue({ success: true, data: { id: '1', is_active: false } });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    // Click deactivate for Alice (active user)
+    const deactivateBtn = screen.getByLabelText(/Deactivate Alice Smith/i);
+    await user.click(deactivateBtn);
+
+    await waitFor(() => {
+      expect(mockAdminUpdateUser).toHaveBeenCalledWith('1', { is_active: false });
+      expect(mockToastSuccess).toHaveBeenCalledWith('User deactivated');
+    });
+  });
+
+  it('shows error toast when toggle active fails', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUser.mockResolvedValue({ success: false, data: null, error: { code: 'ERROR', message: 'Cannot deactivate' } });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const deactivateBtn = screen.getByLabelText(/Deactivate Alice Smith/i);
+    await user.click(deactivateBtn);
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Cannot deactivate');
+    });
+  });
+
+  it('opens grant credits panel when coins button is clicked', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const grantBtns = screen.getAllByLabelText(/Grant Credits Alice/i);
+    await user.click(grantBtns[0]);
+
+    await waitFor(() => {
+      // The panel header
+      expect(screen.getAllByText(/Grant Credits/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByLabelText('Amount')).toBeInTheDocument();
+    });
+  });
+
+  it('grants credits successfully', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminGrantCredits.mockResolvedValue({ success: true, data: null });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const grantBtns = screen.getAllByLabelText(/Grant Credits/i);
+    await user.click(grantBtns[0]);
+
+    await waitFor(() => expect(screen.getByLabelText('Amount')).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText('Amount'), '10');
+    await user.type(screen.getByLabelText('Description'), 'Bonus');
+    await user.click(screen.getByText('Grant'));
+
+    await waitFor(() => {
+      expect(mockAdminGrantCredits).toHaveBeenCalledWith('1', 10, 'Bonus');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Credits granted');
+    });
+  });
+
+  it('shows error toast when grant credits fails', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminGrantCredits.mockResolvedValue({ success: false, data: null, error: { code: 'ERROR', message: 'Insufficient' } });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const grantBtns = screen.getAllByLabelText(/Grant Credits/i);
+    await user.click(grantBtns[0]);
+    await user.type(screen.getByLabelText('Amount'), '10');
+    await user.click(screen.getByText('Grant'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Insufficient');
+    });
+  });
+
+  it('handles API failure on initial load', async () => {
+    mockAdminUsers.mockResolvedValue({ success: false, data: null });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.queryByTestId('icon-spinner')).not.toBeInTheDocument());
+    // Should show no users found
+    expect(screen.getByText('No users found.')).toBeInTheDocument();
+  });
+
+  it('displays role badges for different roles', async () => {
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+    expect(screen.getByText('user')).toBeInTheDocument();
+    expect(screen.getByText('admin')).toBeInTheDocument();
+    expect(screen.getByText('superadmin')).toBeInTheDocument();
+  });
+
+  it('displays active/inactive status badges', async () => {
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Inactive').length).toBeGreaterThanOrEqual(1);
+  });
 });
