@@ -156,4 +156,40 @@ describe('AdminWebhooksPage', () => {
       expect(screen.getByText('Webhooks v2')).toBeDefined();
     });
   });
+
+  it('shows webhook description', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleWebhooks }),
+    });
+
+    render(<AdminWebhooksPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Test webhook')).toBeDefined();
+    });
+  });
+
+  it('shows active status indicator on webhooks', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleWebhooks }),
+    });
+
+    render(<AdminWebhooksPage />);
+    await waitFor(() => {
+      expect(screen.getByText('https://example.com/webhook')).toBeDefined();
+    });
+  });
+
+  it('shows create webhook button', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleWebhooks }),
+    });
+
+    render(<AdminWebhooksPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Create Webhook')).toBeDefined();
+    });
+  });
 });

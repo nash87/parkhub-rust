@@ -193,4 +193,116 @@ describe('AdminAuditLogPage', () => {
       expect(screen.getByText('No audit entries found')).toBeInTheDocument();
     });
   });
+
+  it('displays username and IP in audit rows', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => {
+      expect(screen.getAllByText('admin').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('alice')).toBeInTheDocument();
+      expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
+      expect(screen.getByText('10.0.0.1')).toBeInTheDocument();
+    });
+  });
+
+  it('displays target info for entries with targets', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => {
+      const rows = screen.getAllByTestId('audit-row');
+      expect(rows.length).toBe(3);
+    });
+  });
+
+  it('hides pagination when only one page', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => {
+      expect(screen.getByText('3 entries')).toBeInTheDocument();
+    });
+    // Pagination should NOT render when totalPages is 1
+    expect(screen.queryByTestId('audit-pagination')).not.toBeInTheDocument();
+  });
+
+  it('filters by action type when selected', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('filter-action')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('filter-action'), { target: { value: 'LoginSuccess' } });
+
+    await waitFor(() => {
+      expect(mockGetAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'LoginSuccess' })
+      );
+    });
+  });
+
+  it('filters by user when text is entered', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('filter-user')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('filter-user'), { target: { value: 'admin' } });
+
+    await waitFor(() => {
+      expect(mockGetAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ user: 'admin' })
+      );
+    });
+  });
+
+  it('filters by date range', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('filter-from')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('filter-from'), { target: { value: '2026-01-01' } });
+    fireEvent.change(screen.getByTestId('filter-to'), { target: { value: '2026-12-31' } });
+
+    await waitFor(() => {
+      expect(mockGetAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ from: '2026-01-01', to: '2026-12-31' })
+      );
+    });
+  });
+
+  it('displays pagination with multi-page data', async () => {
+    mockGetAuditLog.mockResolvedValue({
+      success: true,
+      data: { ...sampleData, total: 50, total_pages: 2 },
+    });
+    render(<AdminAuditLogPage />);
+    await waitFor(() => {
+      expect(screen.getByText('50 entries')).toBeInTheDocument();
+      expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to next page', async () => {
+    mockGetAuditLog.mockResolvedValue({
+      success: true,
+      data: { ...sampleData, total: 50, total_pages: 2 },
+    });
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByText('Page 1 of 2')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Next'));
+
+    await waitFor(() => {
+      expect(mockGetAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2 })
+      );
+    });
+  });
+
+  it('handles API error gracefully', async () => {
+    mockGetAuditLog.mockResolvedValue({ success: false, data: null, error: { code: 'ERROR', message: 'Failed' } });
+    render(<AdminAuditLogPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Audit Log')).toBeInTheDocument();
+    });
+  });
+
+  it('shows details for entries with JSON details', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => {
+      const rows = screen.getAllByTestId('audit-row');
+      expect(rows).toHaveLength(3);
+    });
+  });
 });

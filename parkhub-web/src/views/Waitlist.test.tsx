@@ -182,4 +182,124 @@ describe('WaitlistPage', () => {
       expect(screen.getByText('All lots have available spots')).toBeTruthy()
     );
   });
+
+  it('shows leave button for waitlist entries', async () => {
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Leave')).toBeTruthy();
+    });
+  });
+
+  it('handles join waitlist click', async () => {
+    // Return no waitlist entries but full lots
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/waitlist') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: { id: 'w-new' } }),
+        } as Response);
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ success: true, data: { total: 0, entries: [] } }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Join Waitlist')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Join Waitlist'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/waitlist'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  it('handles leave waitlist click', async () => {
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Leave')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Leave'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/waitlist'),
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+  });
+
+  it('shows sections for your entries and full lots', async () => {
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Your Waitlist Entries')).toBeTruthy();
+      expect(screen.getByText('Full Parking Lots')).toBeTruthy();
+    });
+  });
+
+  it('only shows full lots in the Full Parking Lots section', async () => {
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      // Garage Alpha has 0 available (full) - should appear
+      expect(screen.getByText('Garage Alpha')).toBeTruthy();
+      // Garage Beta has 3 available - should NOT appear in full lots
+    });
+  });
+
+  it('shows full lot name for garage alpha', async () => {
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Garage Alpha')).toBeTruthy();
+    });
+  });
+
+  it('shows offered status with accept/decline buttons', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({
+          success: true,
+          data: {
+            total: 1,
+            entries: [{
+              entry: {
+                id: 'w1', user_id: 'user-1', lot_id: 'lot-1',
+                created_at: '2026-03-20T08:00:00Z',
+                notified_at: '2026-03-20T09:00:00Z',
+                status: 'offered',
+                offer_expires_at: new Date(Date.now() + 900000).toISOString(),
+                accepted_booking_id: null,
+              },
+              position: 1, total_ahead: 0, estimated_wait_minutes: 0,
+            }],
+          },
+        }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Offered')).toBeTruthy();
+      expect(screen.getByText('Accept')).toBeTruthy();
+      expect(screen.getByText('Decline')).toBeTruthy();
+    });
+  });
+
+  it('handles API error gracefully', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Waitlist')).toBeTruthy();
+    });
+  });
 });

@@ -167,4 +167,74 @@ describe('AdminDashboardPage', () => {
       expect(mockGetWidgetData).toHaveBeenCalled();
     });
   });
+
+  it('hides non-visible widgets', async () => {
+    render(<AdminDashboardPage />);
+    await waitFor(() => {
+      // recent_bookings is visible: false in sample layout
+      expect(screen.queryByText('Recent Bookings')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles API error on layout load', async () => {
+    mockGetWidgetLayout.mockRejectedValue(new Error('Network error'));
+    render(<AdminDashboardPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Widgets')).toBeInTheDocument();
+    });
+  });
+
+  it('handles null layout', async () => {
+    mockGetWidgetLayout.mockResolvedValue({ success: false, data: null });
+    render(<AdminDashboardPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Dashboard Widgets')).toBeInTheDocument();
+    });
+  });
+
+  it('toggles help tooltip', async () => {
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByTitle('Help')).toBeInTheDocument());
+
+    // Open help
+    await user.click(screen.getByTitle('Help'));
+    expect(screen.getByText('Customize your dashboard by adding, removing, and rearranging widgets')).toBeInTheDocument();
+
+    // Close help
+    await user.click(screen.getByTitle('Help'));
+    await waitFor(() => {
+      expect(screen.queryByText('Customize your dashboard by adding, removing, and rearranging widgets')).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes widget catalog on second customize click', async () => {
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Customize')).toBeInTheDocument());
+
+    // Open catalog
+    await user.click(screen.getByText('Customize'));
+    await waitFor(() => expect(screen.getByText('Widget Catalog')).toBeInTheDocument());
+
+    // Close catalog
+    await user.click(screen.getByText('Customize'));
+    await waitFor(() => {
+      expect(screen.queryByText('Widget Catalog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows all widget type options in catalog', async () => {
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Customize')).toBeInTheDocument());
+    await user.click(screen.getByText('Customize'));
+    await waitFor(() => {
+      expect(screen.getByText('Widget Catalog')).toBeInTheDocument();
+      expect(screen.getByText('Booking Heatmap')).toBeInTheDocument();
+      expect(screen.getByText('Active Alerts')).toBeInTheDocument();
+      expect(screen.getByText('Maintenance Status')).toBeInTheDocument();
+      expect(screen.getByText('EV Charging Status')).toBeInTheDocument();
+    });
+  });
 });

@@ -198,4 +198,76 @@ describe('GuestPassPage', () => {
       expect(screen.getByTestId('cancel-gb-1')).toBeInTheDocument();
     });
   });
+
+  it('does not show cancel button for expired bookings', async () => {
+    render(<GuestPassPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Bob Visitor')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('cancel-gb-2')).not.toBeInTheDocument();
+  });
+
+  it('renders guest page with subtitle', async () => {
+    render(<GuestPassPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Create and manage guest parking passes')).toBeTruthy();
+    });
+  });
+
+  it('shows correct form fields in create form', async () => {
+    render(<GuestPassPage />);
+    await waitFor(() => screen.getByText('Alice Guest'));
+    fireEvent.click(screen.getByTestId('create-guest-btn'));
+
+    expect(screen.getByTestId('input-guest-name')).toBeInTheDocument();
+    expect(screen.getByTestId('select-lot')).toBeInTheDocument();
+  });
+
+  it('shows lot options in create form', async () => {
+    render(<GuestPassPage />);
+    await waitFor(() => screen.getByText('Alice Guest'));
+    fireEvent.click(screen.getByTestId('create-guest-btn'));
+
+    const lotSelect = screen.getByTestId('select-lot') as HTMLSelectElement;
+    const options = Array.from(lotSelect.options).map(o => o.text);
+    expect(options).toContain('HQ Garage');
+    expect(options).toContain('Annex Lot');
+  });
+
+  it('handles cancel guest booking', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/bookings/guest') && opts?.method === 'DELETE') {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: null }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/api/v1/bookings/guest')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleBookings }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/api/v1/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleLots }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+
+    render(<GuestPassPage />);
+    await waitFor(() => expect(screen.getByTestId('cancel-gb-1')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('cancel-gb-1'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/bookings/guest/gb-1'),
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+  });
+
+  it('handles API error on guest bookings load', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ json: () => Promise.resolve({ success: false, data: null }) } as Response)
+    );
+    render(<GuestPassPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('guest-pass-page')).toBeInTheDocument();
+    });
+  });
 });
