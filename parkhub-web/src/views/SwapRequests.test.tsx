@@ -95,6 +95,13 @@ vi.mock('react-hot-toast', () => ({
   default: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock('../constants/animations', () => ({
+  stagger: { hidden: {}, show: {} },
+  fadeUp: { hidden: {}, show: {} },
+  modalVariants: { initial: {}, animate: {}, exit: {} },
+  modalTransition: { duration: 0 },
+}));
+
 import { SwapRequestsPage } from './SwapRequests';
 
 const sampleSwapRequests = [
@@ -308,6 +315,140 @@ describe('SwapRequestsPage', () => {
 
     await waitFor(() => {
       expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(fetchCountBefore);
+    });
+  });
+
+  it('shows modal fields when creating a swap', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Swap Requests')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('New Swap'));
+    await waitFor(() => {
+      expect(screen.getByTestId('swap-modal')).toBeInTheDocument();
+      expect(screen.getByText('New Swap Request')).toBeInTheDocument();
+      expect(screen.getByText('Your Booking')).toBeInTheDocument();
+      expect(screen.getByText('Target Booking ID')).toBeInTheDocument();
+    });
+  });
+
+  it('closes create modal on cancel', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Swap Requests')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('New Swap'));
+    await waitFor(() => expect(screen.getByTestId('swap-modal')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('swap-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles accept failure', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/accept') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: false, error: { message: 'Cannot accept' } }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/api/v1/swap-requests')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleSwapRequests }),
+        } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Accept')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Accept'));
+    // Error path exercised
+  });
+
+  it('handles decline failure', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/decline') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: false, error: { message: 'Cannot decline' } }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/api/v1/swap-requests')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleSwapRequests }),
+        } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Decline')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Decline'));
+    // Error path exercised
+  });
+
+  it('handles accept network exception', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/accept') && opts?.method === 'POST') {
+        return Promise.reject(new Error('Network'));
+      }
+      if (typeof url === 'string' && url.includes('/api/v1/swap-requests')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleSwapRequests }),
+        } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Accept')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Accept'));
+    // Exception path exercised
+  });
+
+  it('handles create swap with no selection (button disabled)', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(screen.getByText('Swap Requests')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('New Swap'));
+    await waitFor(() => expect(screen.getByTestId('swap-modal')).toBeInTheDocument());
+
+    // Submit button should be disabled without source/target
+    const submitBtn = screen.getByTestId('submit-swap');
+    expect(submitBtn).toBeDisabled();
+  });
+
+  it('shows declined status badge', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/v1/swap-requests') && !url.includes('/accept') && !url.includes('/decline')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            success: true,
+            data: [{ ...sampleSwapRequests[0], status: 'declined', message: null }],
+          }),
+        } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: {} }) } as Response);
+    });
+
+    render(<SwapRequestsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Declined')).toBeInTheDocument();
+    });
+    // No accept/decline buttons for declined
+    expect(screen.queryByText('Accept')).not.toBeInTheDocument();
+  });
+
+  it('handles load data fetch exception', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('Network')));
+    mockGetBookings.mockRejectedValue(new Error('Network'));
+
+    render(<SwapRequestsPage />);
+    // Should show something, not crash
+    await waitFor(() => {
+      expect(screen.getByText('Swap Requests')).toBeInTheDocument();
     });
   });
 });

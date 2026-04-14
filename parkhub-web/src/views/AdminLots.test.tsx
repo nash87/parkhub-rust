@@ -64,6 +64,18 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
+vi.mock('../components/ui/ConfirmDialog', () => ({
+  ConfirmDialog: ({ open, onConfirm, onCancel, title, message }: any) =>
+    open ? (
+      <div data-testid="confirm-dialog">
+        <p>{title}</p>
+        <p>{message}</p>
+        <button onClick={onConfirm}>Confirm</button>
+        <button onClick={onCancel}>CancelConfirm</button>
+      </div>
+    ) : null,
+}));
+
 import { AdminLotsPage } from './AdminLots';
 
 describe('AdminLotsPage', () => {
@@ -423,6 +435,159 @@ describe('AdminLotsPage', () => {
     // ConfirmDialog should appear
     await waitFor(() => {
       expect(screen.getByText('Delete this parking lot? All associated slots and bookings will be removed.')).toBeInTheDocument();
+    });
+  });
+
+  it('validates empty name on save', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+    // Name is empty by default, just save
+    await user.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+    expect(mockCreateLot).not.toHaveBeenCalled();
+  });
+
+  it('validates negative pricing on save', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+    await user.type(screen.getByLabelText('Name *'), 'Bad Price Lot');
+    await user.type(screen.getByLabelText('Hourly Rate'), '-5');
+    await user.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('edits a lot and saves with dynamic pricing and hours', async () => {
+    const lotData = {
+      id: 'l-1', name: 'Main Garage', address: '123 Main', total_slots: 20, available_slots: 12,
+      status: 'open', hourly_rate: 2.5, daily_max: 15, monthly_pass: 200, currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockUpdateLot.mockResolvedValue({ success: true, data: lotData });
+    mockUpdateAdminDynamicPricing.mockResolvedValue({ success: true });
+    mockUpdateAdminLotHours.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('Main Garage')).toBeInTheDocument());
+
+    const editBtn = screen.getByLabelText(/Edit lot Main Garage/i);
+    await user.click(editBtn);
+
+    await waitFor(() => expect(screen.getByText('Edit Parking Lot')).toBeInTheDocument());
+
+    // Change name
+    const nameInput = screen.getByLabelText('Name *');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Updated Garage');
+
+    // Click save
+    await user.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockUpdateLot).toHaveBeenCalledWith('l-1', expect.objectContaining({ name: 'Updated Garage' }));
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('deletes a lot successfully after confirm', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'To Delete', total_slots: 10, available_slots: 5, status: 'open' }],
+    });
+    mockDeleteLot.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('To Delete')).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText(/Delete lot To Delete/i));
+    await waitFor(() => expect(screen.getByText(/Delete this parking lot/)).toBeInTheDocument());
+
+    // The ConfirmDialog is mocked -- click Confirm
+    await user.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockDeleteLot).toHaveBeenCalledWith('l-1');
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('shows error toast on delete failure', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Fail Delete', total_slots: 10, available_slots: 5, status: 'open' }],
+    });
+    mockDeleteLot.mockResolvedValue({ success: false, error: { message: 'Cannot delete' } });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('Fail Delete')).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText(/Delete lot Fail Delete/i));
+    await waitFor(() => expect(screen.getByText(/Delete this parking lot/)).toBeInTheDocument());
+
+    await user.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Cannot delete');
+    });
+  });
+
+  it('shows dynamic pricing section when editing', async () => {
+    const lotData = {
+      id: 'l-1', name: 'DP Lot', address: '', total_slots: 10, available_slots: 5,
+      status: 'open', hourly_rate: 2.5, daily_max: 15, monthly_pass: 200, currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockGetAdminDynamicPricing.mockResolvedValue({
+      success: true,
+      data: { enabled: true, base_price: 3.0, surge_multiplier: 2.0, discount_multiplier: 0.7, surge_threshold: 90, discount_threshold: 10 },
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('DP Lot')).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText(/Edit lot DP Lot/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Dynamic Pricing')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error toast when dynamic pricing save fails during lot update', async () => {
+    const lotData = {
+      id: 'l-1', name: 'DP Fail', address: '', total_slots: 10, available_slots: 5,
+      status: 'open', hourly_rate: 2.5, currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockUpdateLot.mockResolvedValue({ success: true, data: lotData });
+    mockUpdateAdminDynamicPricing.mockResolvedValue({ success: false });
+    mockUpdateAdminLotHours.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('DP Fail')).toBeInTheDocument());
+    await user.click(screen.getByLabelText(/Edit lot DP Fail/i));
+    await waitFor(() => expect(screen.getByText('Edit Parking Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
     });
   });
 });

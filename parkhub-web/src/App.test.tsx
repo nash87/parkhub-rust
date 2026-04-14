@@ -407,4 +407,72 @@ describe('App', () => {
     // Cleanup
     delete document.documentElement.dataset.usecase;
   });
+
+  it('handles theme API returning no use_case key', async () => {
+    delete document.documentElement.dataset.usecase;
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ data: {} }),
+    })));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/theme', expect.objectContaining({ credentials: 'include' }));
+    });
+    // Should not crash — no dataset.usecase set when no key returned
+    // The dataset may or may not still be set from a prior test in same process,
+    // but the key should NOT have been set by this response
+    expect(document.documentElement.dataset.usecase).not.toBe('corporate');
+  });
+
+  it('handles theme API returning null response', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(null),
+    })));
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalled();
+    });
+  });
+
+  it('handles theme API network failure gracefully', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network error'))));
+
+    render(<App />);
+
+    // Should not crash
+    const { container } = render(<App />);
+    expect(container).toBeTruthy();
+  });
+
+  it('renders choose/use-case-selector route', async () => {
+    window.history.pushState({}, '', '/choose');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-choose')).toBeInTheDocument();
+    });
+  });
+
+  it('renders login route directly', async () => {
+    window.history.pushState({}, '', '/login');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-login')).toBeInTheDocument();
+    });
+  });
+
+  it('renders welcome route directly', async () => {
+    window.history.pushState({}, '', '/welcome');
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('page-welcome')).toBeInTheDocument();
+    });
+  });
 });

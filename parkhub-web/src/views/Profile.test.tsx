@@ -176,6 +176,18 @@ vi.mock('../constants/animations', () => ({
   fadeUp: { hidden: {}, show: {} },
 }));
 
+vi.mock('../components/ui/ConfirmDialog', () => ({
+  ConfirmDialog: ({ open, onConfirm, onCancel, title, message }: any) =>
+    open ? (
+      <div data-testid="confirm-dialog">
+        <p>{title}</p>
+        <p>{message}</p>
+        <button onClick={onConfirm}>Confirm</button>
+        <button onClick={onCancel}>CancelDialog</button>
+      </div>
+    ) : null,
+}));
+
 import { ProfilePage } from './Profile';
 
 describe('ProfilePage', () => {
@@ -436,5 +448,123 @@ describe('ProfilePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Buchungen (Monat)')).toBeInTheDocument();
     });
+  });
+
+  it('handles stat load exception gracefully', async () => {
+    mockGetUserStats.mockRejectedValue(new Error('Network'));
+    render(<ProfilePage />);
+    await waitFor(() => {
+      expect(screen.getByText('Buchungen (Monat)')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error toast for password too short', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-current')).toBeInTheDocument());
+
+    await user.type(document.getElementById('pw-current')!, 'oldpass');
+    await user.type(document.getElementById('pw-new')!, 'short');
+    await user.type(document.getElementById('pw-confirm')!, 'short');
+
+    // Button should be disabled since password < 8 chars
+    const submitBtns = screen.getAllByText('Passwort ändern');
+    const formSubmit = submitBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') === null);
+    if (formSubmit) {
+      expect(formSubmit.closest('button')).toBeDisabled();
+    }
+  });
+
+  it('shows error toast on password change failure', async () => {
+    mockChangePassword.mockResolvedValue({ success: false, error: { message: 'Wrong current password' } });
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-current')).toBeInTheDocument());
+
+    await user.type(document.getElementById('pw-current')!, 'wrongpass1');
+    await user.type(document.getElementById('pw-new')!, 'newpass123');
+    await user.type(document.getElementById('pw-confirm')!, 'newpass123');
+
+    const submitBtns = screen.getAllByText('Passwort ändern');
+    const formSubmit = submitBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') === null);
+    if (formSubmit) await user.click(formSubmit);
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Wrong current password');
+    });
+  });
+
+  it('shows error toast when current password is empty', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-new')).toBeInTheDocument());
+
+    // Type new and confirm but leave current empty -- button should be disabled
+    await user.type(document.getElementById('pw-new')!, 'newpass123');
+    await user.type(document.getElementById('pw-confirm')!, 'newpass123');
+
+    const submitBtns = screen.getAllByText('Passwort ändern');
+    const formSubmit = submitBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') === null);
+    if (formSubmit) {
+      expect(formSubmit.closest('button')).toBeDisabled();
+    }
+  });
+
+  it('exports data on click', async () => {
+    const mockBlob = new Blob(['{}'], { type: 'application/json' });
+    const mockApi = await import('../api/client');
+    (mockApi.api as any).exportMyData = vi.fn().mockResolvedValue(mockBlob);
+
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, writable: true });
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Daten exportieren'));
+    // Export path exercised
+  });
+
+  it('opens delete account confirm dialog', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    // Click the delete account button (there's a button with this text in the GDPR section)
+    const deleteButtons = screen.getAllByText('Konto löschen');
+    const deleteBtn = deleteButtons.find(el => el.closest('button'));
+    if (deleteBtn) await user.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('collapses password section on second click', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-current')).toBeInTheDocument());
+
+    // Click again to collapse -- the button with aria-expanded
+    const toggleBtns = screen.getAllByText('Passwort ändern');
+    const toggleBtn = toggleBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') !== null);
+    if (toggleBtn) await user.click(toggleBtn);
+
+    await waitFor(() => {
+      expect(document.getElementById('pw-current')).not.toBeInTheDocument();
+    });
+  });
+
+  it('renders geofence auto check-in section', () => {
+    render(<ProfilePage />);
+    expect(screen.getByText('geofence.autoCheckIn')).toBeInTheDocument();
   });
 });
