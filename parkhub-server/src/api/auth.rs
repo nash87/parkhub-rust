@@ -1117,12 +1117,12 @@ mod tests {
 
     #[test]
     #[allow(unsafe_code)]
-    fn test_build_auth_cookie_no_secure_on_localhost() {
-        // APP_URL not set defaults to localhost
+    fn test_build_auth_cookie_secure_by_default() {
+        // When APP_URL is unset, cookies default to Secure (fail-safe)
         // SAFETY: single-threaded test or pre-spawn context
         unsafe { std::env::remove_var("APP_URL") };
         let cookie = build_auth_cookie("tok", 7200);
-        assert!(!cookie.contains("Secure"));
+        assert!(cookie.contains("Secure"));
     }
 
     #[test]
