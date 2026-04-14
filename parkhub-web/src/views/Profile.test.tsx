@@ -567,4 +567,168 @@ describe('ProfilePage', () => {
     render(<ProfilePage />);
     expect(screen.getByText('geofence.autoCheckIn')).toBeInTheDocument();
   });
+
+  it('export data failure shows error toast', async () => {
+    const mockApi = await import('../api/client');
+    (mockApi.api as any).exportMyData = vi.fn().mockRejectedValue(new Error('Export failed'));
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Daten exportieren'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Export fehlgeschlagen');
+    });
+  });
+
+  it('delete account action calls API and logs out on success', async () => {
+    const mockApi = await import('../api/client');
+    (mockApi.api as any).deleteMyAccount = vi.fn().mockResolvedValue({ success: true });
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const deleteButtons = screen.getAllByText('Konto löschen');
+    const deleteBtn = deleteButtons.find(el => el.closest('button'));
+    if (deleteBtn) await user.click(deleteBtn);
+
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('Konto gelöscht');
+      expect(mockLogout).toHaveBeenCalled();
+    });
+  });
+
+  it('delete account failure shows error toast', async () => {
+    const mockApi = await import('../api/client');
+    (mockApi.api as any).deleteMyAccount = vi.fn().mockResolvedValue({ success: false, error: { message: 'Cannot delete' } });
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const deleteButtons = screen.getAllByText('Konto löschen');
+    const deleteBtn = deleteButtons.find(el => el.closest('button'));
+    if (deleteBtn) await user.click(deleteBtn);
+
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+    await user.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Cannot delete');
+    });
+  });
+
+  it('delete account exception shows error toast', async () => {
+    const mockApi = await import('../api/client');
+    (mockApi.api as any).deleteMyAccount = vi.fn().mockRejectedValue(new Error('Network'));
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const deleteButtons = screen.getAllByText('Konto löschen');
+    const deleteBtn = deleteButtons.find(el => el.closest('button'));
+    if (deleteBtn) await user.click(deleteBtn);
+
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+    await user.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Löschen fehlgeschlagen');
+    });
+  });
+
+  it('accessibility needs change success', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: true }),
+    })));
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const selector = screen.getByTestId('accessibility-selector');
+    await user.selectOptions(selector, 'wheelchair');
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('accessibility needs change failure', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      json: () => Promise.resolve({ success: false, error: { message: 'Failed' } }),
+    })));
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const selector = screen.getByTestId('accessibility-selector');
+    await user.selectOptions(selector, 'visual');
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Failed');
+    });
+  });
+
+  it('accessibility needs change network error', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network'))));
+
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const selector = screen.getByTestId('accessibility-selector');
+    await user.selectOptions(selector, 'hearing');
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('geofence toggle saves to localStorage and shows toast', async () => {
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const checkbox = screen.getByRole('checkbox');
+    await user.click(checkbox);
+
+    expect(localStorage.getItem('parkhub_geofence_auto')).toBe('true');
+    expect(mockToastSuccess).toHaveBeenCalled();
+  });
+
+  it('save profile failure without error message shows default', async () => {
+    mockUpdateMe.mockResolvedValue({ success: false });
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Bearbeiten'));
+    await user.click(screen.getByText('Speichern'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Fehler');
+    });
+  });
+
+  it('password change failure without error message shows default', async () => {
+    mockChangePassword.mockResolvedValue({ success: false });
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(screen.getByText('Passwort ändern'));
+    await waitFor(() => expect(document.getElementById('pw-current')).toBeInTheDocument());
+
+    await user.type(document.getElementById('pw-current')!, 'oldpass12');
+    await user.type(document.getElementById('pw-new')!, 'newpass123');
+    await user.type(document.getElementById('pw-confirm')!, 'newpass123');
+
+    const submitBtns = screen.getAllByText('Passwort ändern');
+    const formSubmit = submitBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') === null);
+    if (formSubmit) await user.click(formSubmit);
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Fehler');
+    });
+  });
 });

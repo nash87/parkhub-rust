@@ -57,9 +57,28 @@ vi.mock('@tanstack/react-table', () => ({
 }));
 
 vi.mock('../components/ui/DataTable', () => ({
-  DataTable: ({ data, emptyMessage }: any) => (
+  DataTable: ({ data, columns, emptyMessage }: any) => (
     <div data-testid="data-table">
-      {data.length === 0 ? <p>{emptyMessage}</p> : <p>{data.length} items</p>}
+      {data.length === 0 ? <p>{emptyMessage}</p> : (
+        <div>
+          <p>{data.length} items</p>
+          {data.map((row: any) => (
+            <div key={row.id} data-testid={`proposal-row-${row.id}`}>
+              {columns.map((col: any, i: number) => {
+                if (col.id === 'actions' && col.cell) {
+                  const info = { row: { original: row } };
+                  return <span key={i}>{col.cell(info)}</span>;
+                }
+                if (col.cell && col.accessorKey) {
+                  const info = { getValue: () => row[col.accessorKey], row: { original: row } };
+                  return <span key={i}>{col.cell(info)}</span>;
+                }
+                return null;
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   ),
 }));
@@ -497,5 +516,158 @@ describe('AdminTranslationsPage', () => {
     mockGetProposals.mockResolvedValue({ success: true, data: [approvedNoReviewer] });
     render(<AdminTranslationsPage />);
     await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+  });
+
+  it('opens review panel by clicking approve action on pending proposal', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    // Click the approve button (CheckCircle) for the pending proposal
+    const approveBtn = screen.getByLabelText('Approve nav.dashboard');
+    await user.click(approveBtn);
+
+    // Review panel should be visible
+    await waitFor(() => {
+      expect(screen.getByText('Review Proposal')).toBeInTheDocument();
+    });
+  });
+
+  it('opens review panel by clicking reject action on pending proposal', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    const rejectBtn = screen.getByLabelText('Reject nav.dashboard');
+    await user.click(rejectBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Review Proposal')).toBeInTheDocument();
+    });
+  });
+
+  it('opens review detail panel by clicking eye action', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    const detailBtn = screen.getByLabelText('Review Detail nav.dashboard');
+    await user.click(detailBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Review Proposal')).toBeInTheDocument();
+      // The key appears both in the table row and the review panel
+      expect(screen.getAllByText('nav.dashboard').length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('submits review approval from review panel', async () => {
+    const user = userEvent.setup();
+    mockReviewProposal.mockResolvedValue({ success: true, data: { ...MOCK_PROPOSALS[0], status: 'approved' } });
+
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    // Open review panel
+    await user.click(screen.getByLabelText('Approve nav.dashboard'));
+    await waitFor(() => expect(screen.getByText('Review Proposal')).toBeInTheDocument());
+
+    // Type a comment
+    const commentInput = screen.getByPlaceholderText('Optional comment');
+    await user.type(commentInput, 'Looks good');
+
+    // Click approve in the review panel
+    await user.click(screen.getByText('Approve'));
+
+    await waitFor(() => {
+      expect(mockReviewProposal).toHaveBeenCalledWith('p-1', { status: 'approved', comment: 'Looks good' });
+      expect(mockToastSuccess).toHaveBeenCalledWith('Approved!');
+    });
+  });
+
+  it('submits review rejection from review panel', async () => {
+    const user = userEvent.setup();
+    mockReviewProposal.mockResolvedValue({ success: true, data: { ...MOCK_PROPOSALS[0], status: 'rejected' } });
+
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    await user.click(screen.getByLabelText('Reject nav.dashboard'));
+    await waitFor(() => expect(screen.getByText('Review Proposal')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Reject'));
+
+    await waitFor(() => {
+      expect(mockReviewProposal).toHaveBeenCalledWith('p-1', { status: 'rejected', comment: undefined });
+      expect(mockToastSuccess).toHaveBeenCalledWith('Rejected');
+    });
+  });
+
+  it('shows error on review failure', async () => {
+    const user = userEvent.setup();
+    mockReviewProposal.mockResolvedValue({ success: false, error: { message: 'Denied' } });
+
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    await user.click(screen.getByLabelText('Approve nav.dashboard'));
+    await waitFor(() => expect(screen.getByText('Review Proposal')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Approve'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Denied');
+    });
+  });
+
+  it('closes review panel via close button', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    await user.click(screen.getByLabelText('Approve nav.dashboard'));
+    await waitFor(() => expect(screen.getByText('Review Proposal')).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText('Close'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Review Proposal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes review panel via cancel button', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    await user.click(screen.getByLabelText('Approve nav.dashboard'));
+    await waitFor(() => expect(screen.getByText('Review Proposal')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Review Proposal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows context when proposal has context', async () => {
+    const user = userEvent.setup();
+    const withContext = { ...MOCK_PROPOSALS[0], context: 'Used in main navigation' };
+    mockGetProposals.mockResolvedValue({ success: true, data: [withContext, MOCK_PROPOSALS[1]] });
+
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    await user.click(screen.getByLabelText('Review Detail nav.dashboard'));
+    await waitFor(() => {
+      expect(screen.getByText('Used in main navigation')).toBeInTheDocument();
+    });
+  });
+
+  it('shows reviewer name for approved proposals in actions column', async () => {
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    // The approved proposal (p-2) should show reviewer name "Admin"
+    expect(screen.getByText('Admin')).toBeInTheDocument();
   });
 });

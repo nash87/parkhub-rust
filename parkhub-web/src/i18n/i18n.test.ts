@@ -147,3 +147,60 @@ describe('i18n translations', () => {
     expect(codes).toEqual(['en', 'de', 'fr', 'es', 'it', 'pt', 'tr', 'pl', 'ja', 'zh']);
   });
 });
+
+describe('loadTranslationOverrides', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fetches overrides and applies them', async () => {
+    const mod = await import('./index');
+    const addResourceSpy = vi.spyOn(mod.default, 'addResource');
+
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ data: [{ language: 'en', key: 'test.key', value: 'Override' }] }),
+    })));
+
+    await mod.loadTranslationOverrides();
+    expect(addResourceSpy).toHaveBeenCalledWith('en', 'translation', 'test.key', 'Override');
+    addResourceSpy.mockRestore();
+  });
+
+  it('handles array response format', async () => {
+    const mod = await import('./index');
+    const addResourceSpy = vi.spyOn(mod.default, 'addResource');
+
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([{ language: 'de', key: 'nav.home', value: 'Startseite' }]),
+    })));
+
+    await mod.loadTranslationOverrides();
+    expect(addResourceSpy).toHaveBeenCalledWith('de', 'translation', 'nav.home', 'Startseite');
+    addResourceSpy.mockRestore();
+  });
+
+  it('does nothing when response is not ok', async () => {
+    const mod = await import('./index');
+    const addResourceSpy = vi.spyOn(mod.default, 'addResource');
+
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false })));
+
+    await mod.loadTranslationOverrides();
+    expect(addResourceSpy).not.toHaveBeenCalled();
+    addResourceSpy.mockRestore();
+  });
+
+  it('silently catches fetch errors', async () => {
+    const mod = await import('./index');
+
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network'))));
+
+    // Should not throw
+    await mod.loadTranslationOverrides();
+  });
+});
