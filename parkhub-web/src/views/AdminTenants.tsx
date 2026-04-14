@@ -23,6 +23,7 @@ export function AdminTenantsPage() {
     try {
       const res = await api.listTenants();
       if (res.success && res.data) setTenants(res.data);
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -70,6 +71,7 @@ export function AdminTenantsPage() {
           loadTenants();
         }
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {

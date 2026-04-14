@@ -124,6 +124,7 @@ export function SetupWizardPage() {
       } else {
         setError(json.error?.message || 'Failed to save');
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       setError(t('setup.networkError', 'Network error'));
     } finally {

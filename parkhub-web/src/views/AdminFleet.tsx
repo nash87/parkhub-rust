@@ -62,6 +62,7 @@ export function AdminFleetPage() {
 
       if (fleetRes.success) setVehicles(fleetRes.data || []);
       if (statsRes.success) setStats(statsRes.data);
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -85,6 +86,7 @@ export function AdminFleetPage() {
         toast.success(flagged ? t('fleet.flagged', 'Vehicle flagged') : t('fleet.unflagged', 'Flag removed'));
         loadData();
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

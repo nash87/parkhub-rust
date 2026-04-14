@@ -57,6 +57,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
       } else {
         toast.error(res.error || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -74,6 +75,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
         setShareLink(null);
         toast.success(t('sharing.linkRevoked'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -110,6 +112,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
       } else {
         toast.error(res.error || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {

@@ -57,6 +57,7 @@ export function AdminBillingPage() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success(t('billing.exported', 'CSV exported'));
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

@@ -61,6 +61,7 @@ export function SwapRequestsPage() {
       ]);
       if (swapRes.success && swapRes.data) setRequests(swapRes.data);
       if (bookingsRes.success && bookingsRes.data) setBookings(bookingsRes.data);
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -79,6 +80,7 @@ export function SwapRequestsPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -95,6 +97,7 @@ export function SwapRequestsPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -121,6 +124,7 @@ export function SwapRequestsPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

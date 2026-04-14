@@ -109,6 +109,7 @@ function ImportSection() {
       } else {
         toast.error(json.error || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {

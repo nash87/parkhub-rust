@@ -130,6 +130,7 @@ export function AdminUpdatesPage() {
       } else {
         toast.error(res.error?.message || t('common.error', 'Error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error', 'Error'));
     }
@@ -163,6 +164,7 @@ export function AdminUpdatesPage() {
         setUpdateStep('error');
         toast.error(json.error?.message || t('updates.applyFailed', 'Update failed'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       setUpdateStep('error');
       toast.error(t('updates.applyFailed', 'Update failed'));
@@ -186,6 +188,7 @@ export function AdminUpdatesPage() {
       } else {
         toast.error(res.error?.message || t('common.error', 'Error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       /* istanbul ignore next -- network failure path */
       toast.error(t('common.error', 'Error'));

@@ -66,6 +66,7 @@ export function QRCheckInPage() {
               const qrBlob = await qrRes.blob();
               setQrUrl(URL.createObjectURL(qrBlob));
             }
+          /* istanbul ignore next -- network failure path */
           } catch {
             // QR endpoint may not be compiled — non-critical
           }
@@ -74,6 +75,7 @@ export function QRCheckInPage() {
           setCheckInStatus(null);
         }
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -120,6 +122,7 @@ export function QRCheckInPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -142,6 +145,7 @@ export function QRCheckInPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

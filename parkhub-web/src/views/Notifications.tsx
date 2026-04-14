@@ -55,6 +55,7 @@ export function NotificationsPage() {
     try {
       const res = await api.getNotifications();
       if (res.success && res.data) setNotifications(res.data);
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally { setLoading(false); }

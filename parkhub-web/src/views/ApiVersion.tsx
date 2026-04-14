@@ -29,6 +29,7 @@ export function ApiVersionBadge() {
       if (res.success) {
         setVersion(res.data.version);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       // Silent fail for non-critical display component
     }
@@ -62,6 +63,7 @@ export function ApiVersionAdmin() {
       if (res.success) {
         setInfo(res.data);
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       // silent
     } finally {

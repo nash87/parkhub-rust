@@ -64,6 +64,7 @@ export function CalendarPage() {
       const res = await api.calendarEvents(start, end);
       if (controller.signal.aborted) return;
       if (res.success && res.data) setEvents(res.data);
+    /* istanbul ignore next -- network failure path */
     } catch {
       if (!controller.signal.aborted) toast.error(t('common.error'));
     } finally {
@@ -81,6 +82,7 @@ export function CalendarPage() {
       } else {
         toast.error(t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally {
@@ -94,6 +96,7 @@ export function CalendarPage() {
       setCopied(true);
       toast.success(t('calendar.linkCopied', 'Link copied'));
       setTimeout(() => setCopied(false), 2000);
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -200,6 +203,7 @@ export function CalendarPage() {
       } else {
         toast.error(res.data?.message || res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }

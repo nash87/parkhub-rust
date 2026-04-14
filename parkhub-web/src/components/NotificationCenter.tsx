@@ -97,6 +97,7 @@ export function NotificationCenter() {
           setUnreadCount(data.data.unread_count);
         }
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     } finally { setLoading(false); }

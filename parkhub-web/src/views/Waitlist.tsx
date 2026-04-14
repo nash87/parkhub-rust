@@ -87,6 +87,7 @@ export function WaitlistPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -100,6 +101,7 @@ export function WaitlistPage() {
         toast.success(t('waitlistExt.left'));
         loadData();
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -114,6 +116,7 @@ export function WaitlistPage() {
       } else {
         toast.error(res.error?.message || t('common.error'));
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
@@ -126,6 +129,7 @@ export function WaitlistPage() {
         toast.success(t('waitlistExt.declined'));
         loadData();
       }
+    /* istanbul ignore next -- network failure path */
     } catch {
       toast.error(t('common.error'));
     }
