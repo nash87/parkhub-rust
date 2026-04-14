@@ -195,6 +195,27 @@ describe('AdminBillingPage', () => {
     });
   });
 
+  it('switches back to cost-center tab from department', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url.includes('/by-cost-center')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleCcData }) } as Response);
+      }
+      if (url.includes('/by-department')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminBillingPage />);
+    await waitFor(() => expect(screen.getByTestId('billing-tabs')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('By Department'));
+    fireEvent.click(screen.getByText('By Cost Center'));
+    await waitFor(() => {
+      expect(screen.getByText('Cost Center Billing')).toBeInTheDocument();
+    });
+  });
+
   it('CSV export error shows error toast', async () => {
     const mockToast = vi.fn();
     const toast = await import('react-hot-toast');

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 // -- Mocks --
 
@@ -63,6 +64,8 @@ vi.mock('react-hot-toast', () => ({
     error: vi.fn(),
   },
 }));
+
+import toast from 'react-hot-toast';
 
 vi.mock('../constants/animations', () => ({
   stagger: { hidden: {}, show: {} },
@@ -142,5 +145,73 @@ describe('FavoritesPage', () => {
     expect(screen.getByText('Occupied')).toBeInTheDocument();
     // Favorite count
     expect(screen.getByText('2 favorites')).toBeInTheDocument();
+  });
+
+  it('removes a favorite successfully', async () => {
+    const user = userEvent.setup();
+    mockGetFavorites.mockResolvedValue({
+      success: true,
+      data: [
+        { user_id: 'u-1', slot_id: 's-1', lot_id: 'l-1', created_at: '2026-03-20T10:00:00Z' },
+      ],
+    });
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Garage Alpha', total_slots: 20, available_slots: 10, status: 'open' }],
+    });
+    mockGetLotSlots.mockResolvedValue({
+      success: true,
+      data: [{ id: 's-1', slot_number: 'A1', status: 'available', lot_id: 'l-1' }],
+    });
+    mockRemoveFavorite.mockResolvedValue({ success: true });
+
+    render(<FavoritesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Slot A1/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText('Remove A1'));
+
+    await waitFor(() => {
+      expect(mockRemoveFavorite).toHaveBeenCalledWith('s-1');
+      expect(screen.getByText('No favorites yet')).toBeInTheDocument();
+    });
+
+    expect(toast.success).toHaveBeenCalledWith('Favorite removed');
+  });
+
+  it('shows an error toast when removing a favorite fails', async () => {
+    const user = userEvent.setup();
+    mockGetFavorites.mockResolvedValue({
+      success: true,
+      data: [
+        { user_id: 'u-1', slot_id: 's-1', lot_id: 'l-1', created_at: '2026-03-20T10:00:00Z' },
+      ],
+    });
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Garage Alpha', total_slots: 20, available_slots: 10, status: 'open' }],
+    });
+    mockGetLotSlots.mockResolvedValue({
+      success: true,
+      data: [{ id: 's-1', slot_number: 'A1', status: 'occupied', lot_id: 'l-1' }],
+    });
+    mockRemoveFavorite.mockResolvedValue({ success: false, error: { message: 'Remove failed' } });
+
+    render(<FavoritesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Slot A1/)).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText('Remove A1'));
+
+    await waitFor(() => {
+      expect(mockRemoveFavorite).toHaveBeenCalledWith('s-1');
+    });
+
+    expect(toast.error).toHaveBeenCalledWith('Remove failed');
+    expect(screen.getByText(/Slot A1/)).toBeInTheDocument();
   });
 });

@@ -231,4 +231,21 @@ describe('AdminFeaturesPage', () => {
     const dashLink = screen.getByText('Dashboard').closest('a');
     expect(dashLink).toHaveAttribute('href', '/');
   });
+
+  it('clears saved state after timeout', async () => {
+    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+    const user = userEvent.setup();
+    render(<AdminFeaturesPage />);
+    const toggles = screen.getAllByRole('button').filter(
+      btn => btn.getAttribute('aria-label')?.startsWith('features.modules.')
+    );
+    await user.click(toggles[0]);
+    await user.click(screen.getByText('Save Changes'));
+    expect(mockToastSuccess).toHaveBeenCalled();
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 2000);
+    // Manually invoke the timeout callback
+    const timeoutCall = setTimeoutSpy.mock.calls.find(c => c[1] === 2000);
+    if (timeoutCall) (timeoutCall[0] as Function)();
+    setTimeoutSpy.mockRestore();
+  });
 });

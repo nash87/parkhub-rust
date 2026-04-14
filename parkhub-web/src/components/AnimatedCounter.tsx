@@ -39,7 +39,11 @@ export function AnimatedCounter({
     }
 
     rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
+    return () => {
+      if (typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
   }, [value, duration]);
 
   return <span className={className}>{display}</span>;

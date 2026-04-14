@@ -73,13 +73,14 @@ describe('AdminAnnouncementsPage', () => {
   });
 
   it('creates announcement', async () => {
-    const user = userEvent.setup();
     render(<AdminAnnouncementsPage />);
-    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
-    await user.type(screen.getByPlaceholderText('admin.announcementTitle'), 'Test Title');
-    await user.type(screen.getByPlaceholderText('admin.announcementMessage'), 'Test Message');
+    await waitFor(() => expect(screen.getByText('admin.newAnnouncement')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('admin.newAnnouncement'));
+    await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
+    fireEvent.change(screen.getByPlaceholderText('admin.announcementTitle'), { target: { value: 'Test Title' } });
+    fireEvent.change(screen.getByPlaceholderText('admin.announcementMessage'), { target: { value: 'Test Message' } });
     const saveBtn = screen.getAllByText('admin.create').find(el => el.closest('button')?.className.includes('btn-primary'));
-    if (saveBtn) await user.click(saveBtn);
+    if (saveBtn) fireEvent.click(saveBtn);
     await waitFor(() => expect(mockCreateAnnouncement).toHaveBeenCalled());
     expect(toast.success).toHaveBeenCalledWith('admin.announcementCreated');
   });
@@ -167,5 +168,46 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('New Feature')).toBeInTheDocument());
     // a2 is inactive with expired date
+  });
+
+  it('cancels delete confirmation dialog', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
+    fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]);
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('CancelDel'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('changes expires_at field when editing', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
+    const expiresInput = document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
+    if (expiresInput) {
+      fireEvent.change(expiresInput, { target: { value: '2027-01-01T12:00' } });
+      expect(expiresInput.value).toBe('2027-01-01T12:00');
+    }
+  });
+
+  it('closes form when deleting the announcement currently being edited', async () => {
+    mockDeleteAnnouncement.mockResolvedValue({ success: true });
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
+    // Edit the first announcement
+    const editBtns = screen.getAllByLabelText(/common.edit/);
+    fireEvent.click(editBtns[0]);
+    await waitFor(() => expect(screen.getByDisplayValue('Maintenance')).toBeInTheDocument());
+    // Delete it
+    const delBtns = screen.getAllByLabelText(/common.delete/);
+    fireEvent.click(delBtns[0]);
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('ConfirmDel'));
+    await waitFor(() => expect(mockDeleteAnnouncement).toHaveBeenCalled());
+    // Form should be closed
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('Maintenance')).not.toBeInTheDocument();
+    });
   });
 });

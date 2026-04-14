@@ -1170,6 +1170,16 @@ describe('API client', () => {
     expect(r2.success).toBe(true);
   });
 
+  it('returns getDemoStatus as-is when response is unsuccessful', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ success: false, error: 'fail' }),
+    });
+    const r = await api.getDemoStatus();
+    expect(r.success).toBe(false);
+  });
+
   it('calls voteDemoReset', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,

@@ -189,4 +189,12 @@ describe('ParkingPass', () => {
     // date-fns is mocked to always return '08:00', rendered as "08:00 — 08:00"
     expect(screen.getByText(/08:00/)).toBeInTheDocument();
   });
+
+  it('handles re-mount with different booking id', async () => {
+    const { rerender, unmount } = render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    await waitFor(() => expect(screen.getByAltText('QR code parking pass')).toBeInTheDocument());
+    rerender(<ParkingPass booking={{ ...mockBooking, id: 'different-id' }} onClose={mockOnClose} />);
+    await waitFor(() => expect(screen.getByAltText('QR code parking pass')).toBeInTheDocument());
+    unmount();
+  });
 });

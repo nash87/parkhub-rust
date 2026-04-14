@@ -19,7 +19,7 @@ vi.hoisted(() => {
 });
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ── Mocks ──
@@ -713,19 +713,18 @@ describe('ProfilePage', () => {
 
   it('password change failure without error message shows default', async () => {
     mockChangePassword.mockResolvedValue({ success: false });
-    const user = userEvent.setup();
     render(<ProfilePage />);
 
-    await user.click(screen.getByText('Passwort ändern'));
+    fireEvent.click(screen.getByText('Passwort ändern'));
     await waitFor(() => expect(document.getElementById('pw-current')).toBeInTheDocument());
 
-    await user.type(document.getElementById('pw-current')!, 'oldpass12');
-    await user.type(document.getElementById('pw-new')!, 'newpass123');
-    await user.type(document.getElementById('pw-confirm')!, 'newpass123');
+    fireEvent.change(document.getElementById('pw-current')!, { target: { value: 'oldpass12' } });
+    fireEvent.change(document.getElementById('pw-new')!, { target: { value: 'newpass123' } });
+    fireEvent.change(document.getElementById('pw-confirm')!, { target: { value: 'newpass123' } });
 
     const submitBtns = screen.getAllByText('Passwort ändern');
     const formSubmit = submitBtns.find(btn => btn.closest('button')?.getAttribute('aria-expanded') === null);
-    if (formSubmit) await user.click(formSubmit);
+    if (formSubmit) fireEvent.click(formSubmit);
 
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Fehler');

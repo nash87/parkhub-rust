@@ -110,6 +110,28 @@ describe('SWUpdatePrompt', () => {
     expect(screen.queryByText('A new version is available')).not.toBeInTheDocument();
   });
 
+  it('does nothing when navigator.serviceWorker is missing', () => {
+    delete (navigator as any).serviceWorker;
+    const { container } = render(<SWUpdatePrompt />);
+    expect(container).toBeTruthy();
+  });
+
+  it('reloads page when controllerchange fires', async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload: vi.fn() },
+    });
+
+    render(<SWUpdatePrompt />);
+    expect(controllerChangeListeners.length).toBeGreaterThan(0);
+    act(() => { controllerChangeListeners[0](); });
+    act(() => { controllerChangeListeners[0](); });
+    expect(window.location.reload).toHaveBeenCalledTimes(1);
+
+    Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
+  });
+
   it('shows banner when updatefound fires and new worker is installed', async () => {
     let updateFoundHandler: () => void = () => {};
     let stateChangeHandler: (this: any) => void = () => {};

@@ -137,6 +137,17 @@ describe('ParkingPassPage', () => {
     await waitFor(() => expect(screen.getByText('No active parking passes')).toBeTruthy());
   });
 
+  it('closes full-screen pass after clicking close button', async () => {
+    render(<ParkingPassPage />);
+    await waitFor(() => screen.getByText('Garage Alpha'));
+    fireEvent.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => screen.getByText('Digital Parking Pass'));
+    fireEvent.click(screen.getByText('Close'));
+    await waitFor(() => {
+      expect(screen.queryByText('Digital Parking Pass')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows status badges', async () => {
     render(<ParkingPassPage />);
     await waitFor(() => {

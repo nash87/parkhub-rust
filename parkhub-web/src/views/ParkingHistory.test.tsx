@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 // ── Mocks ──
 
@@ -193,6 +194,86 @@ describe('ParkingHistoryPage', () => {
       });
       expect(mockGetBookingStats).toHaveBeenCalled();
       expect(mockGetLots).toHaveBeenCalled();
+    });
+  });
+
+  it('falls back to a dash when busiest day is missing', async () => {
+    mockGetBookingStats.mockResolvedValue({
+      success: true,
+      data: { ...makeStats(), busiest_day: '' },
+    });
+
+    render(<ParkingHistoryPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+  });
+
+  it('updates filters and requests new history data', async () => {
+    const user = userEvent.setup();
+    render(<ParkingHistoryPage />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Filter by lot')).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText('Filter by lot'), 'lot-1');
+    await user.type(screen.getByLabelText('From date'), '2026-03-01');
+    await user.type(screen.getByLabelText('To date'), '2026-03-10');
+
+    await waitFor(() => {
+      expect(mockGetBookingHistory).toHaveBeenLastCalledWith({
+        lot_id: 'lot-1',
+        from: new Date('2026-03-01').toISOString(),
+        to: new Date('2026-03-10T23:59:59').toISOString(),
+        page: 1,
+        per_page: 10,
+      });
+    });
+  });
+
+  it('supports pagination controls', async () => {
+    const user = userEvent.setup();
+    mockGetBookingHistory.mockResolvedValue({
+      success: true,
+      data: {
+        items: [makeBooking('b1')],
+        page: 1,
+        per_page: 10,
+        total: 25,
+        total_pages: 3,
+      },
+    });
+
+    render(<ParkingHistoryPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('1-10 of 25')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText('Next page'));
+
+    await waitFor(() => {
+      expect(mockGetBookingHistory).toHaveBeenLastCalledWith({
+        lot_id: undefined,
+        from: undefined,
+        to: undefined,
+        page: 2,
+        per_page: 10,
+      });
+    });
+
+    await user.click(screen.getByLabelText('Previous page'));
+
+    await waitFor(() => {
+      expect(mockGetBookingHistory).toHaveBeenLastCalledWith({
+        lot_id: undefined,
+        from: undefined,
+        to: undefined,
+        page: 1,
+        per_page: 10,
+      });
     });
   });
 });

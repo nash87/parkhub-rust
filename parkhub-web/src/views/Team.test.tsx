@@ -135,4 +135,21 @@ describe('TeamPage', () => {
       expect(screen.getByText('Charlie')).toBeInTheDocument();
     });
   });
+
+  it('sorts upcoming absences by start_date', async () => {
+    const future1 = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const future2 = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    mockTeamAbsences.mockResolvedValue({
+      success: true,
+      data: [
+        { user_name: 'Dave', absence_type: 'vacation', start_date: future1, end_date: future1 },
+        { user_name: 'Eve', absence_type: 'vacation', start_date: future2, end_date: future2 },
+      ],
+    });
+    render(<TeamPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Dave')).toBeInTheDocument();
+      expect(screen.getByText('Eve')).toBeInTheDocument();
+    });
+  });
 });

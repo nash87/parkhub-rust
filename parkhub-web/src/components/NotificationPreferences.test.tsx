@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ── Hoisted API mocks ──
@@ -255,5 +255,66 @@ describe('NotificationPreferencesComponent', () => {
     });
 
     expect(screen.getByText('Enable push notifications')).toBeInTheDocument();
+  });
+
+  it('updates push, sms, and whatsapp toggles before saving', async () => {
+    const user = userEvent.setup();
+    mockGetNotificationPreferences.mockResolvedValue({ success: true, data: defaultPrefs });
+    mockUpdateNotificationPreferences.mockResolvedValue({ success: true, data: defaultPrefs });
+
+    render(<NotificationPreferencesComponent />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading preferences...')).not.toBeInTheDocument();
+    });
+
+    const switches = screen.getAllByRole('switch');
+
+    await user.click(switches[3]); // push_enabled
+    fireEvent.click(switches[4]); // sms_booking_confirm
+    fireEvent.click(switches[5]); // sms_booking_reminder
+    fireEvent.click(switches[6]); // sms_booking_cancelled
+    fireEvent.click(switches[7]); // whatsapp_booking_confirm
+    fireEvent.click(switches[8]); // whatsapp_booking_reminder
+    fireEvent.click(switches[9]); // whatsapp_booking_cancelled
+
+    await user.click(screen.getByText('Save Preferences'));
+
+    await waitFor(() => {
+      expect(mockUpdateNotificationPreferences).toHaveBeenCalledWith(expect.objectContaining({
+        push_enabled: false,
+        sms_booking_confirm: true,
+        sms_booking_reminder: true,
+        sms_booking_cancelled: true,
+        whatsapp_booking_confirm: true,
+        whatsapp_booking_reminder: true,
+        whatsapp_booking_cancelled: true,
+      }));
+    });
+  });
+
+  it('updates all email toggles before saving', async () => {
+    const user = userEvent.setup();
+    mockGetNotificationPreferences.mockResolvedValue({ success: true, data: defaultPrefs });
+    mockUpdateNotificationPreferences.mockResolvedValue({ success: true, data: defaultPrefs });
+
+    render(<NotificationPreferencesComponent />);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading preferences...')).not.toBeInTheDocument();
+    });
+
+    const switches = screen.getAllByRole('switch');
+    await user.click(switches[1]);
+    await user.click(switches[2]);
+
+    await user.click(screen.getByText('Save Preferences'));
+
+    await waitFor(() => {
+      expect(mockUpdateNotificationPreferences).toHaveBeenCalledWith(expect.objectContaining({
+        email_booking_reminder: false,
+        email_swap_request: false,
+      }));
+    });
   });
 });

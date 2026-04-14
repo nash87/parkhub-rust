@@ -287,6 +287,33 @@ describe('TwoFactorSetupComponent', () => {
     expect(screen.getByText('Two-Factor Authentication')).toBeInTheDocument();
   });
 
+  it('shows error when verify API returns failure', async () => {
+    const user = userEvent.setup();
+    mockGet2FAStatus.mockResolvedValue({ success: true, data: { enabled: false } });
+    mockSetup2FA.mockResolvedValue({
+      success: true,
+      data: { secret: 'ABC', otpauth_uri: 'otpauth://totp/test', qr_code_base64: 'abc' },
+    });
+    mockVerify2FA.mockResolvedValue({ success: false, error: { message: 'Bad code' } });
+    render(<TwoFactorSetupComponent />);
+    await waitFor(() => expect(screen.getByText('Enable')).toBeInTheDocument());
+    await user.click(screen.getByText('Enable'));
+    await waitFor(() => expect(screen.getByPlaceholderText('Enter 6-digit code')).toBeInTheDocument());
+    await user.type(screen.getByPlaceholderText('Enter 6-digit code'), '123456');
+    await user.click(screen.getByText('Verify'));
+    await waitFor(() => expect(mockToast.error).toHaveBeenCalledWith('Bad code'));
+  });
+
+  it('shows error when 2FA setup fails', async () => {
+    const user = userEvent.setup();
+    mockGet2FAStatus.mockResolvedValue({ success: true, data: { enabled: false } });
+    mockSetup2FA.mockResolvedValue({ success: false, error: { message: 'Setup fail' } });
+    render(<TwoFactorSetupComponent />);
+    await waitFor(() => expect(screen.getByText('Enable')).toBeInTheDocument());
+    await user.click(screen.getByText('Enable'));
+    await waitFor(() => expect(mockToast.error).toHaveBeenCalledWith('Setup fail'));
+  });
+
   it('code input only accepts digits', async () => {
     const user = userEvent.setup();
     mockGet2FAStatus.mockResolvedValue({ success: true, data: { enabled: false } });

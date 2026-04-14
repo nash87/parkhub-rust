@@ -201,6 +201,61 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user').textContent).toBe('null');
   });
 
+  it('clears user on auth:unauthorized event', async () => {
+    mockMe.mockResolvedValue({
+      success: true,
+      data: { id: '1', username: 'alice', email: 'alice@test.com', name: 'Alice', role: 'user' },
+    });
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user').textContent).toBe('alice');
+    });
+
+    window.dispatchEvent(new Event('auth:unauthorized'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user').textContent).toBe('null');
+    });
+  });
+
+  it('refreshUser updates user from API', async () => {
+    const user = userEvent.setup();
+    mockMe.mockResolvedValueOnce({
+      success: true,
+      data: { id: '1', username: 'alice', email: 'a@b.com', name: 'Alice', role: 'user' },
+    });
+
+    function RefreshConsumer() {
+      const { refreshUser, user: u } = useAuth();
+      return (
+        <div>
+          <span data-testid="cur">{u ? u.username : 'none'}</span>
+          <button data-testid="refresh" onClick={refreshUser}>Refresh</button>
+        </div>
+      );
+    }
+
+    render(
+      <AuthProvider>
+        <RefreshConsumer />
+      </AuthProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('cur').textContent).toBe('alice'));
+    mockMe.mockResolvedValueOnce({
+      success: true,
+      data: { id: '1', username: 'alice2', email: 'a@b.com', name: 'Alice', role: 'user' },
+    });
+    await user.click(screen.getByTestId('refresh'));
+    await waitFor(() => expect(screen.getByTestId('cur').textContent).toBe('alice2'));
+  });
+
   it('login returns generic error when API gives no message', async () => {
     const user = userEvent.setup();
     mockLogin.mockResolvedValue({

@@ -192,6 +192,22 @@ describe('AdminDashboardPage', () => {
     });
   });
 
+  it('toggleWidget is a no-op when layout is null', async () => {
+    const user = userEvent.setup();
+    mockGetWidgetLayout.mockResolvedValue({ success: false, data: null });
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Customize')).toBeInTheDocument());
+    // Open catalog
+    await user.click(screen.getByText('Customize'));
+    // Click any widget toggle button - should not throw
+    const widgetButtons = screen.getAllByRole('button').filter(b => b.className.includes('rounded-lg border'));
+    if (widgetButtons.length > 0) {
+      await user.click(widgetButtons[0]);
+    }
+    // Layout still null, no errors
+    expect(mockSaveWidgetLayout).not.toHaveBeenCalled();
+  });
+
   it('toggles help tooltip', async () => {
     const user = userEvent.setup();
     render(<AdminDashboardPage />);

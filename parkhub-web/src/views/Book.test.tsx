@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // ── Mocks ──
@@ -17,13 +17,14 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
+const mockGetDynamicPrice = vi.fn();
 vi.mock('../api/client', () => ({
   api: {
     getLots: (...args: any[]) => mockGetLots(...args),
     getLotSlots: (...args: any[]) => mockGetLotSlots(...args),
     getVehicles: (...args: any[]) => mockGetVehicles(...args),
     createBooking: (...args: any[]) => mockCreateBooking(...args),
-    getDynamicPrice: vi.fn().mockResolvedValue({ price: 5.0, multiplier: 1.0, reason: 'normal' }),
+    getDynamicPrice: (...args: any[]) => mockGetDynamicPrice(...args),
     getOperatingHours: vi.fn().mockResolvedValue({ hours: [] }),
   },
 }));
@@ -145,8 +146,10 @@ describe('BookPage', () => {
     mockGetLotSlots.mockClear();
     mockGetVehicles.mockClear();
     mockCreateBooking.mockClear();
+    mockGetDynamicPrice.mockClear();
     mockToastSuccess.mockClear();
     mockToastError.mockClear();
+    mockGetDynamicPrice.mockResolvedValue({ success: false, data: null });
   });
 
   afterEach(() => {
@@ -202,7 +205,6 @@ describe('BookPage', () => {
   });
 
   it('clicking a lot advances to step 2 and loads slots', async () => {
-    const user = userEvent.setup();
     const lot = makeLot();
     const slots = [makeSlot(), makeSlot({ id: 'slot-2', slot_number: 'A2', status: 'occupied' })];
 
@@ -216,7 +218,7 @@ describe('BookPage', () => {
       expect(screen.getByText('Garage Alpha')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText('Garage Alpha'));
+    fireEvent.click(screen.getByText('Garage Alpha'));
 
     await waitFor(() => {
       expect(screen.getByText('Select a slot')).toBeInTheDocument();
@@ -718,5 +720,301 @@ describe('BookPage', () => {
     await user.click(screen.getByText('A1'));
     await user.click(screen.getByText('Continue'));
     await waitFor(() => expect(screen.getByText('€10.00')).toBeInTheDocument());
+  });
+
+  it('shows dynamic pricing when available with surge tier', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+    mockGetDynamicPrice.mockResolvedValue({
+      success: true,
+      data: {
+        dynamic_pricing_active: true,
+        current_price: 4.5,
+        base_price: 2.5,
+        tier: 'surge',
+        currency: '€',
+      },
+    });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText(/4.50/)).toBeInTheDocument());
+  });
+
+  it('shows dynamic pricing with discount tier', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+    mockGetDynamicPrice.mockResolvedValue({
+      success: true,
+      data: {
+        dynamic_pricing_active: true,
+        current_price: 1.5,
+        base_price: 2.5,
+        tier: 'discount',
+        currency: '€',
+      },
+    });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText(/1.50/)).toBeInTheDocument());
+  });
+
+  it('shows dynamic pricing with normal tier (no badge)', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+    mockGetDynamicPrice.mockResolvedValue({
+      success: true,
+      data: {
+        dynamic_pricing_active: true,
+        current_price: 2.5,
+        base_price: 2.5,
+        tier: 'normal',
+        currency: '€',
+      },
+    });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText(/2.50/)).toBeInTheDocument());
+  });
+
+  it('isLotOpenNow: lot is 24h shows openNow', async () => {
+    const lot = makeLot({ operating_hours: { is_24h: true } as any });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    // 24h: no operating-hours badge rendered (`!lot.operating_hours.is_24h` is false)
+    expect(screen.queryByText('Open now')).not.toBeInTheDocument();
+  });
+
+  it('isLotOpenNow: lot with operating hours - currently open shows openNow badge', async () => {
+    const now = new Date();
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()];
+    const lot = makeLot({
+      operating_hours: {
+        is_24h: false,
+        [dayName]: { open: '00:00', close: '23:59', closed: false },
+      } as any,
+    });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+  });
+
+  it('isLotOpenNow: lot with closed-day operating hours shows closedNow', async () => {
+    const now = new Date();
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()];
+    const lot = makeLot({
+      operating_hours: {
+        is_24h: false,
+        [dayName]: { open: '08:00', close: '17:00', closed: true },
+      } as any,
+    });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+  });
+
+  it('isLotOpenNow: lot with overnight hours (closes after midnight)', async () => {
+    const now = new Date();
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()];
+    const lot = makeLot({
+      operating_hours: {
+        is_24h: false,
+        [dayName]: { open: '20:00', close: '04:00', closed: false },
+      } as any,
+    });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+  });
+
+  it('isLotOpenNow: lot with no day hours specified', async () => {
+    const lot = makeLot({
+      operating_hours: { is_24h: false } as any,
+    });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+  });
+
+  it('vehicle dropdown shows all vehicles with make/model', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    const vehicle = makeVehicle();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [vehicle] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
+    // Select dropdown shows the vehicle
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(select).toBeInTheDocument();
+  });
+
+  it('clicking recommendation calls onSelect with matching lot', async () => {
+    const user = userEvent.setup();
+    const recData = [
+      { slot_id: 's1', slot_number: 42, lot_id: 'lot-1', lot_name: 'HQ', floor_name: 'G', score: 90, reasons: [], reason_badges: ['your_usual_spot'] },
+    ];
+    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [makeSlot()] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Your usual spot')).toBeInTheDocument());
+    // Click the recommendation card (parent button of the badge)
+    const recBtn = screen.getByText(/HQ - Slot 42/).closest('button');
+    expect(recBtn).toBeTruthy();
+    await user.click(recBtn!);
+    // Should advance to step 2
+    await waitFor(() => expect(screen.getByText('Select a slot')).toBeInTheDocument());
+  });
+
+  it('clicking recommendation with no matching lot does nothing', async () => {
+    const recData = [
+      { slot_id: 's1', slot_number: 42, lot_id: 'lot-unknown', lot_name: 'HQ', floor_name: 'G', score: 90, reasons: [], reason_badges: ['your_usual_spot'] },
+    ];
+    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText(/HQ - Slot 42/)).toBeInTheDocument());
+    fireEvent.click(screen.getByText(/HQ - Slot 42/).closest('button')!);
+    expect(screen.getByText('Choose a parking lot')).toBeInTheDocument();
+  });
+
+  it('recommendations fetch failure handles gracefully', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('Network')));
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+  });
+
+  it('recommendations success false hides section', async () => {
+    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: false }) } as Response));
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    expect(screen.queryByText('Recommended for you')).not.toBeInTheDocument();
+  });
+
+  it('recommendations with unknown badge type uses fallback', async () => {
+    const recData = [
+      { slot_id: 's1', slot_number: 1, lot_id: 'lot-1', lot_name: 'X', floor_name: 'G', score: 80, reasons: [], reason_badges: ['unknown_badge'] },
+    ];
+    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('unknown_badge')).toBeInTheDocument());
+  });
+
+  it('typing into start time input fires onStartDateChange', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [makeSlot()] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByLabelText(/Start time/)).toBeInTheDocument());
+
+    const input = screen.getByLabelText(/Start time/) as HTMLInputElement;
+    // Fire native change event
+    input.focus();
+    await user.clear(input);
+    await user.type(input, '2026-12-31T10:00');
+  });
+
+  it('changing vehicle selection fires onVehicleChange', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const v1 = makeVehicle({ id: 'v-1', plate: 'A1', is_default: true });
+    const v2 = makeVehicle({ id: 'v-2', plate: 'B2', is_default: false });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [v1, v2] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [makeSlot()] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
+
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    await user.selectOptions(select, 'v-2');
+    expect(select.value).toBe('v-2');
+  });
+
+  it('shows loading skeletons in step 2 while slots are loading', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    // Slots load returns a never-resolving promise to keep loading state
+    mockGetLotSlots.mockReturnValue(new Promise(() => {}));
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('Select a slot')).toBeInTheDocument());
+    // 12 skeleton placeholders rendered
+  });
+
+  it('vehicle option without make shows just the plate', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    const vehicle = makeVehicle({ make: undefined as any, model: undefined as any });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [vehicle] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
+  });
+
+  it('vehicle option with make and no model handles undefined gracefully', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    const vehicle = makeVehicle({ model: undefined as any });
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [vehicle] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
   });
 });

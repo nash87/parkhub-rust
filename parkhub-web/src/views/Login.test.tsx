@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 
 const mockNavigate = vi.fn();
 const mockLogin = vi.fn();
+let mockUser: any = null;
 
 vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: any) => <a href={to} {...props}>{children}</a>,
@@ -16,7 +17,7 @@ vi.mock('react-router-dom', () => ({
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
     login: mockLogin,
-    user: null,
+    user: mockUser,
     loading: false,
     logout: vi.fn(),
     refreshUser: vi.fn(),
@@ -208,5 +209,25 @@ describe('LoginPage', () => {
   it('renders the version badge', () => {
     render(<LoginPage />);
     expect(screen.getByText(/ParkHub v\d+\.\d+/)).toBeInTheDocument();
+  });
+
+  it('navigates to / when user already logged in', () => {
+    mockUser = { id: 'u1', email: 'a@b.com' };
+    try {
+      render(<LoginPage />);
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+    } finally {
+      mockUser = null;
+    }
+  });
+
+  it('autofills demo credentials when demo hint clicked', async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+    // Find demo hint button (clickable element triggering autofillDemo)
+    const demoHint = screen.getByText('Use admin/demo to log in');
+    await user.click(demoHint);
+    expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('admin@parkhub.test');
+    expect((screen.getByLabelText('Password') as HTMLInputElement).value).toBe('demo');
   });
 });

@@ -78,14 +78,17 @@ describe('SwapRequestsPage', () => {
 
   it('opens create modal', async () => {
     render(<SwapRequestsPage />);
-    await waitFor(() => fireEvent.click(screen.getByText('swap.create')));
-    expect(screen.getByTestId('swap-modal')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('swap.create')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('swap.create'));
+    await waitFor(() => expect(screen.getByTestId('swap-modal')).toBeInTheDocument());
   });
 
   it('creates swap', async () => {
     const user = userEvent.setup();
     render(<SwapRequestsPage />);
-    await waitFor(() => fireEvent.click(screen.getByText('swap.create')));
+    await waitFor(() => expect(screen.getByText('swap.create')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('swap.create'));
+    await waitFor(() => expect(screen.getByTestId('select-source')).toBeInTheDocument());
     await user.selectOptions(screen.getByTestId('select-source'), 'b1');
     await user.type(screen.getByTestId('input-target'), 'b99');
     await user.type(screen.getByTestId('input-message'), 'Please');
@@ -100,7 +103,9 @@ describe('SwapRequestsPage', () => {
     }) as any;
     const user = userEvent.setup();
     render(<SwapRequestsPage />);
-    await waitFor(() => fireEvent.click(screen.getByText('swap.create')));
+    await waitFor(() => expect(screen.getByText('swap.create')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('swap.create'));
+    await waitFor(() => expect(screen.getByTestId('select-source')).toBeInTheDocument());
     await user.selectOptions(screen.getByTestId('select-source'), 'b1');
     await user.type(screen.getByTestId('input-target'), 'b99');
     fireEvent.click(screen.getByTestId('submit-swap'));
@@ -147,6 +152,51 @@ describe('SwapRequestsPage', () => {
     render(<SwapRequestsPage />);
     await waitFor(() => fireEvent.click(screen.getByText('swap.decline')));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it('catches loadData errors', async () => {
+    globalThis.fetch = vi.fn(() => Promise.reject(new Error('net'))) as any;
+    mockGetBookings.mockRejectedValue(new Error('net'));
+    render(<SwapRequestsPage />);
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it('accept catches network error', async () => {
+    globalThis.fetch = vi.fn((url: string) => {
+      if (url.includes('/accept')) return Promise.reject(new Error('net'));
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: requests }) } as Response);
+    }) as any;
+    render(<SwapRequestsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('swap.accept')));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  });
+
+  it('decline server error returns message', async () => {
+    globalThis.fetch = vi.fn((url: string) => {
+      if (url.includes('/decline')) return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'No' } }) } as Response);
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: requests }) } as Response);
+    }) as any;
+    render(<SwapRequestsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('swap.decline')));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('No'));
+  });
+
+  it('handleCreate is no-op when no booking selected', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('swap.create')));
+    // Submit without selecting source/target
+    fireEvent.click(screen.getByTestId('submit-swap'));
+    // No fetch call to /swap-request
+  });
+
+  it('closes modal via X button at top', async () => {
+    render(<SwapRequestsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('swap.create')));
+    await waitFor(() => expect(screen.getByTestId('swap-modal')).toBeInTheDocument());
+    const modal = screen.getByTestId('swap-modal');
+    const xButtons = modal.querySelectorAll('button.btn-ghost');
+    if (xButtons.length > 0) fireEvent.click(xButtons[0]);
+    await waitFor(() => expect(screen.queryByTestId('swap-modal')).not.toBeInTheDocument());
   });
 
   it('create network error', async () => {

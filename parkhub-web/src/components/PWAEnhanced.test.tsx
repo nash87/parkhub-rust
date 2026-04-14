@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+const { mockNavigate, mockLocation } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockLocation: { pathname: '/' },
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -23,8 +29,8 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/' }),
+  useNavigate: () => mockNavigate,
+  useLocation: () => mockLocation,
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
@@ -39,6 +45,11 @@ vi.mock('@phosphor-icons/react', () => ({
 import { OfflineIndicator, CachedBookingCard, BottomNavBar, PullToRefresh } from './PWAEnhanced';
 
 describe('OfflineIndicator', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockLocation.pathname = '/';
+  });
+
   it('does not render when online', () => {
     Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
     const { container } = render(<OfflineIndicator />);
@@ -55,6 +66,8 @@ describe('OfflineIndicator', () => {
 describe('CachedBookingCard', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockNavigate.mockReset();
+    mockLocation.pathname = '/';
     localStorage.clear();
   });
 
@@ -89,6 +102,11 @@ describe('CachedBookingCard', () => {
 });
 
 describe('BottomNavBar', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockLocation.pathname = '/';
+  });
+
   it('renders all navigation tabs', () => {
     render(<BottomNavBar />);
     expect(screen.getByText('Dashboard')).toBeDefined();
@@ -103,9 +121,30 @@ describe('BottomNavBar', () => {
     const buttons = screen.getAllByRole('button');
     expect(buttons.length).toBe(5);
   });
+
+  it('navigates when a tab is clicked', async () => {
+    const user = userEvent.setup();
+    render(<BottomNavBar />);
+
+    await user.click(screen.getByLabelText('Vehicles'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/vehicles');
+  });
+
+  it('marks nested booking routes as active', () => {
+    mockLocation.pathname = '/bookings/today';
+    render(<BottomNavBar />);
+
+    expect(screen.getByLabelText('Bookings')).toHaveAttribute('aria-current', 'page');
+  });
 });
 
 describe('PullToRefresh', () => {
+  beforeEach(() => {
+    mockNavigate.mockReset();
+    mockLocation.pathname = '/';
+  });
+
   it('renders children', () => {
     render(
       <PullToRefresh>
@@ -128,6 +167,34 @@ describe('PullToRefresh', () => {
       touches: [{ clientY: 0 }],
     });
     expect(screen.getByText('Touch Content')).toBeDefined();
+  });
+
+  it('shows release state and reloads after crossing the threshold', async () => {
+    const onRefresh = vi.fn();
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+
+    const { container } = render(
+      <PullToRefresh onRefresh={onRefresh}>
+        <div>Refreshable Content</div>
+      </PullToRefresh>
+    );
+
+    const wrapper = container.firstChild as HTMLElement;
+    fireEvent.touchStart(wrapper, {
+      touches: [{ clientY: 0 }],
+    });
+
+    fireEvent.touchMove(document, {
+      touches: [{ clientY: 120 }],
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Release to refresh')).toBeInTheDocument();
+    });
+
+    fireEvent.touchEnd(document);
+
+    expect(onRefresh).toHaveBeenCalledOnce();
   });
 });
 

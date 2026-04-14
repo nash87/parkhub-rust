@@ -310,6 +310,19 @@ describe('AbsenceApprovalPage', () => {
     expect(typeSelect).toHaveValue('sick');
   });
 
+  it('switches back to my-requests tab after clicking pending queue', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: sampleMyRequests });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+    fireEvent.click(screen.getByText('My Requests'));
+    await waitFor(() => {
+      expect(screen.queryByText('Bob')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows admin pending queue when admin tab clicked', async () => {
     mockMyAbsenceRequests.mockResolvedValue({ success: true, data: sampleMyRequests });
     mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });

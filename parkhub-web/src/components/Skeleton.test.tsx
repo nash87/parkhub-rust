@@ -6,6 +6,7 @@ import {
   SkeletonAvatar,
   SkeletonCard,
   SkeletonTable,
+  SkeletonContainer,
   DashboardSkeleton,
   BookingsSkeleton,
   VehiclesSkeleton,
@@ -161,6 +162,26 @@ describe('BookingsSkeleton', () => {
     const filterGrid = container.querySelector('.grid.grid-cols-1.sm\\:grid-cols-2') as HTMLElement;
     expect(filterGrid).toBeTruthy();
     expect(filterGrid.children.length).toBe(2);
+  });
+});
+
+describe('SkeletonContainer', () => {
+  it('renders skeleton when loading is true', () => {
+    const { getByText } = render(
+      <SkeletonContainer loading={true} skeleton={<div>loading</div>}>
+        <div>content</div>
+      </SkeletonContainer>,
+    );
+    expect(getByText('loading')).toBeTruthy();
+  });
+
+  it('renders children when loading is false', () => {
+    const { getByText } = render(
+      <SkeletonContainer loading={false} skeleton={<div>loading</div>}>
+        <div>content</div>
+      </SkeletonContainer>,
+    );
+    expect(getByText('content')).toBeTruthy();
   });
 });
 
