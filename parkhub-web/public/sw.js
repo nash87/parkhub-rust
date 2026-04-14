@@ -5,7 +5,7 @@ const STATIC_CACHE = `parkhub-static-${CACHE_VERSION}`;
 const API_CACHE = `parkhub-api-${CACHE_VERSION}`;
 const OFFLINE_PAGE = '/offline.html';
 
-const PRECACHE_URLS = ['/', '/favicon.svg', '/icons/icon.svg', OFFLINE_PAGE];
+const PRECACHE_URLS = ['/', '/favicon.svg', OFFLINE_PAGE];
 
 // API paths eligible for stale-while-revalidate caching
 const CACHEABLE_API_PATHS = [
@@ -94,8 +94,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-72.png',
+    icon: '/favicon.svg',
+    badge: '/favicon.svg',
     tag: data.event_type || 'general',
     renotify: true,
     data: {
