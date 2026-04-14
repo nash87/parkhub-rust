@@ -575,6 +575,9 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     let rate_limiters = EndpointRateLimiters::new();
     let global_limiter = rate_limiters.general.clone();
 
+    // 2FA temporary token store — shared between login and 2FA login routes
+    let two_fa_store = security::TwoFactorTempTokenStore::new();
+
     // Rate-limited auth routes — each sub-router gets its own per-IP limiter applied
     // via route_layer so only that specific route is affected.
 
@@ -582,8 +585,18 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     let login_limiter = rate_limiters.login.clone();
     let login_route = Router::new()
         .route("/api/v1/auth/login", post(login))
+        .layer(Extension(two_fa_store.clone()))
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(login_limiter.clone(), req, next)
+        }));
+
+    // POST /api/v1/auth/2fa/login — 5 requests per minute per IP (same as login)
+    let two_fa_login_limiter = rate_limiters.login.clone();
+    let two_fa_login_route = Router::new()
+        .route("/api/v1/auth/2fa/login", post(security::two_factor_login))
+        .layer(Extension(two_fa_store))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(two_fa_login_limiter.clone(), req, next)
         }));
 
     // POST /api/v1/auth/register — 3 requests per minute per IP
@@ -1871,6 +1884,7 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     let mut router = Router::new()
         .merge(public_routes)
         .merge(login_route)
+        .merge(two_fa_login_route)
         .merge(register_route)
         .merge(forgot_route)
         .merge(refresh_route)

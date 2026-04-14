@@ -1,13 +1,14 @@
 //! Authentication handlers: login, register, token refresh, password management.
 
 use axum::{
-    Json,
+    Extension, Json,
     extract::State,
     http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
 use chrono::{Duration, Utc};
 use serde::Deserialize;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use parkhub_common::{
@@ -21,6 +22,7 @@ use crate::db::Session;
 use crate::email;
 use crate::metrics;
 
+use super::security::{TwoFactorRequiredResponse, TwoFactorTempTokenStore, is_2fa_enabled};
 use super::{
     SharedState, generate_access_token, hash_password, hash_password_simple, verify_password,
 };
@@ -56,7 +58,7 @@ fn build_clear_auth_cookie() -> String {
 }
 
 /// Attach a `Set-Cookie` header to an existing `(StatusCode, Json<...>)` response.
-fn with_auth_cookie<T: serde::Serialize>(
+pub(super) fn with_auth_cookie<T: serde::Serialize>(
     status: StatusCode,
     body: Json<T>,
     cookie_value: &str,
@@ -109,9 +111,10 @@ struct PasswordResetToken {
         (status = 403, description = "Account disabled"),
     )
 )]
-#[tracing::instrument(skip(state, request), fields(username = %request.username))]
+#[tracing::instrument(skip(state, temp_token_store, request), fields(username = %request.username))]
 pub async fn login(
     State(state): State<SharedState>,
+    Extension(temp_token_store): Extension<Arc<TwoFactorTempTokenStore>>,
     Json(request): Json<LoginRequest>,
 ) -> Response {
     // ── Input length validation (issue #115) ────────────────────────────────
@@ -204,9 +207,40 @@ pub async fn login(
             .into_response();
     }
 
-    // Create session using configured timeout (converted from minutes to hours, minimum 1h)
+    // ── 2FA enforcement ────────────────────────────────────────────────────────
+    // If the user has 2FA enabled, issue a short-lived temp token instead of a
+    // full session. The client must complete the flow via POST /api/v1/auth/2fa/login.
     let session_hours = i64::from(state_guard.config.session_timeout_minutes).max(60) / 60;
     let role_str = format!("{:?}", user.role).to_lowercase();
+
+    if is_2fa_enabled(&state_guard, user.id).await {
+        let temp_token = generate_access_token();
+        temp_token_store.insert(
+            &temp_token,
+            user.id,
+            &user.username,
+            &user.email,
+            &role_str,
+            session_hours,
+        );
+
+        AuditEntry::new(AuditEventType::LoginSuccess)
+            .user(user.id, &user.username)
+            .detail("2FA required — temp token issued")
+            .log();
+        drop(state_guard);
+
+        return (
+            StatusCode::OK,
+            Json(ApiResponse::success(TwoFactorRequiredResponse {
+                requires_2fa: true,
+                temp_token,
+            })),
+        )
+            .into_response();
+    }
+
+    // ── Normal login (no 2FA) ──────────────────────────────────────────────────
     let session = Session::new(user.id, session_hours, &user.username, &role_str);
     let access_token = generate_access_token();
 

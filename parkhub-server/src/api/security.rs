@@ -53,13 +53,209 @@ pub struct TwoFactorStatusResponse {
 }
 
 /// Login response extension when 2FA is required.
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TwoFactorLoginRequest {
     /// Temporary token from initial login
     pub temp_token: String,
     /// The 6-digit TOTP code
     pub code: String,
+}
+
+/// Response when 2FA is required during login.
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct TwoFactorRequiredResponse {
+    /// Indicates the client must complete 2FA
+    pub requires_2fa: bool,
+    /// Short-lived token to pass to the 2FA login endpoint
+    pub temp_token: String,
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2FA Temporary Token Store
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Maximum age of a 2FA temp token before it expires.
+const TEMP_TOKEN_TTL: StdDuration = StdDuration::from_secs(300); // 5 minutes
+
+/// Entry stored for each pending 2FA login.
+#[derive(Debug, Clone)]
+struct TempTokenEntry {
+    user_id: Uuid,
+    username: String,
+    email: String,
+    role: String,
+    session_hours: i64,
+    created_at: Instant,
+}
+
+/// In-memory store for 2FA temporary tokens.
+///
+/// Keyed by the temp token string. Entries are pruned on each lookup.
+/// Structurally mirrors [`crate::jwt::TokenRevocationList`].
+#[derive(Debug, Default)]
+pub struct TwoFactorTempTokenStore {
+    tokens: Mutex<HashMap<String, TempTokenEntry>>,
+}
+
+impl TwoFactorTempTokenStore {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    /// Insert a temp token for a user who needs to complete 2FA.
+    pub fn insert(
+        &self,
+        token: &str,
+        user_id: Uuid,
+        username: &str,
+        email: &str,
+        role: &str,
+        session_hours: i64,
+    ) {
+        if let Ok(mut map) = self.tokens.lock() {
+            // Prune expired entries opportunistically
+            map.retain(|_, e| e.created_at.elapsed() < TEMP_TOKEN_TTL);
+            map.insert(
+                token.to_string(),
+                TempTokenEntry {
+                    user_id,
+                    username: username.to_string(),
+                    email: email.to_string(),
+                    role: role.to_string(),
+                    session_hours,
+                    created_at: Instant::now(),
+                },
+            );
+        }
+    }
+
+    /// Consume (take) a temp token if it exists and hasn't expired.
+    /// Returns the entry and removes it from the store so it can only be used once.
+    fn take(&self, token: &str) -> Option<TempTokenEntry> {
+        self.tokens.lock().ok().and_then(|mut map| {
+            map.retain(|_, e| e.created_at.elapsed() < TEMP_TOKEN_TTL);
+            map.remove(token)
+        })
+    }
+}
+
+/// `POST /api/v1/auth/2fa/login` — Complete login with a 2FA code.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/2fa/login",
+    tag = "Authentication",
+    summary = "Complete 2FA login",
+    description = "Validates a TOTP code against a temporary token issued during initial login. Returns full session tokens on success.",
+    request_body = TwoFactorLoginRequest,
+    responses(
+        (status = 200, description = "Login successful"),
+        (status = 401, description = "Invalid or expired temp token / invalid TOTP code"),
+    )
+)]
+#[tracing::instrument(skip(state, store, request))]
+pub async fn two_factor_login(
+    State(state): State<SharedState>,
+    Extension(store): Extension<Arc<TwoFactorTempTokenStore>>,
+    Json(request): Json<TwoFactorLoginRequest>,
+) -> Response {
+    use axum::response::IntoResponse;
+
+    // Consume the temp token (single-use)
+    let entry = match store.take(&request.temp_token) {
+        Some(e) => e,
+        None => {
+            metrics::record_auth_event("2fa_login", false);
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApiResponse::<LoginResponse>::error(
+                    "INVALID_TEMP_TOKEN",
+                    "Temporary token is invalid or expired",
+                )),
+            )
+                .into_response();
+        }
+    };
+
+    let state_guard = state.read().await;
+
+    // Verify the TOTP code
+    if !verify_2fa_code(&state_guard, entry.user_id, &entry.email, &request.code).await {
+        AuditEntry::new(AuditEventType::LoginFailed)
+            .user(entry.user_id, &entry.username)
+            .error("Invalid 2FA code")
+            .log();
+        metrics::record_auth_event("2fa_login", false);
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(ApiResponse::<LoginResponse>::error(
+                "INVALID_2FA_CODE",
+                "The verification code is invalid or expired",
+            )),
+        )
+            .into_response();
+    }
+
+    // 2FA passed — issue full session (same path as normal login success)
+    let session = Session::new(
+        entry.user_id,
+        entry.session_hours,
+        &entry.username,
+        &entry.role,
+    );
+    let access_token = generate_access_token();
+
+    if let Err(e) = state_guard.db.save_session(&access_token, &session).await {
+        tracing::error!("Failed to save session after 2FA: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::<LoginResponse>::error(
+                "SERVER_ERROR",
+                "Failed to create session",
+            )),
+        )
+            .into_response();
+    }
+
+    // Fetch user for response (strip password hash)
+    let mut response_user = match state_guard.db.get_user(&entry.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        _ => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<LoginResponse>::error(
+                    "SERVER_ERROR",
+                    "Failed to load user",
+                )),
+            )
+                .into_response();
+        }
+    };
+    response_user.password_hash = String::new();
+
+    let audit = AuditEntry::new(AuditEventType::LoginSuccess)
+        .user(entry.user_id, &entry.username)
+        .detail("2FA verified")
+        .log();
+    audit.persist(&state_guard.db).await;
+    drop(state_guard);
+    metrics::record_auth_event("2fa_login", true);
+
+    let cookie_max_age = entry.session_hours * 3600;
+    let cookie = build_auth_cookie(&access_token, cookie_max_age);
+
+    with_auth_cookie(
+        StatusCode::OK,
+        Json(ApiResponse::success(LoginResponse {
+            user: response_user,
+            tokens: AuthTokens {
+                access_token,
+                refresh_token: session.refresh_token,
+                expires_at: session.expires_at,
+                token_type: "Bearer".to_string(),
+            },
+        })),
+        &cookie,
+    )
 }
 
 /// `POST /api/v1/auth/2fa/setup` — Generate TOTP secret and QR code for enrollment.
@@ -381,7 +577,6 @@ pub async fn is_2fa_enabled(state: &crate::AppState, user_id: Uuid) -> bool {
 }
 
 /// Verify a TOTP code for a user during login.
-#[allow(dead_code)]
 pub async fn verify_2fa_code(
     state: &crate::AppState,
     user_id: Uuid,
