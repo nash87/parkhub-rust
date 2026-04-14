@@ -217,4 +217,251 @@ describe('AbsenceApprovalPage', () => {
       expect(screen.getByText('1')).toBeInTheDocument();
     });
   });
+
+  it('shows loading state', async () => {
+    mockMyAbsenceRequests.mockReturnValue(new Promise(() => {})); // never resolves
+    render(<AbsenceApprovalPage />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('submits absence request successfully', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockSubmitAbsenceRequest.mockResolvedValue({ success: true });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
+
+    // Fill start date
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
+    fireEvent.change(dateInputs[1], { target: { value: '2026-05-05' } });
+
+    // Fill reason
+    const textarea = screen.getByPlaceholderText('Why do you need this absence?');
+    fireEvent.change(textarea, { target: { value: 'Vacation trip' } });
+
+    // Submit
+    fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));
+    await waitFor(() => {
+      expect(mockSubmitAbsenceRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          absence_type: 'vacation',
+          start_date: '2026-05-01',
+          end_date: '2026-05-05',
+          reason: 'Vacation trip',
+        }),
+      );
+      expect(mockToastSuccess).toHaveBeenCalledWith('Request submitted');
+    });
+  });
+
+  it('shows validation error when submitting with empty fields', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
+
+    // Submit without filling anything
+    fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Please fill all fields');
+    });
+  });
+
+  it('handles submit request failure', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockSubmitAbsenceRequest.mockResolvedValue({ success: false, error: { message: 'Server error' } });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
+
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
+    fireEvent.change(dateInputs[1], { target: { value: '2026-05-05' } });
+    fireEvent.change(screen.getByPlaceholderText('Why do you need this absence?'), { target: { value: 'Reason' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Server error');
+    });
+  });
+
+  it('handles submit request network error', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockSubmitAbsenceRequest.mockRejectedValue(new Error('Network'));
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
+
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
+    fireEvent.change(dateInputs[1], { target: { value: '2026-05-05' } });
+    fireEvent.change(screen.getByPlaceholderText('Why do you need this absence?'), { target: { value: 'Reason' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('changes absence type in submit form', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
+
+    const typeSelect = screen.getByDisplayValue('Vacation');
+    fireEvent.change(typeSelect, { target: { value: 'sick' } });
+    expect(typeSelect).toHaveValue('sick');
+  });
+
+  it('shows admin pending queue when admin tab clicked', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: sampleMyRequests });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => {
+      expect(screen.getByText('Bob')).toBeInTheDocument();
+      expect(screen.getByText('WFH day')).toBeInTheDocument();
+    });
+  });
+
+  it('shows no-pending message when admin queue is empty', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: sampleMyRequests });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => {
+      expect(screen.getByText('No pending requests')).toBeInTheDocument();
+    });
+  });
+
+  it('approves a pending request', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockApproveAbsenceRequest.mockResolvedValue({ success: true });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    fireEvent.click(screen.getByText('Approve'));
+    await waitFor(() => {
+      expect(mockApproveAbsenceRequest).toHaveBeenCalledWith('r3', undefined);
+      expect(mockToastSuccess).toHaveBeenCalledWith('Request approved');
+    });
+  });
+
+  it('approves with a comment', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockApproveAbsenceRequest.mockResolvedValue({ success: true });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    const commentInput = screen.getByPlaceholderText('Comment (optional)');
+    fireEvent.change(commentInput, { target: { value: 'Sure, approved!' } });
+    fireEvent.click(screen.getByText('Approve'));
+    await waitFor(() => {
+      expect(mockApproveAbsenceRequest).toHaveBeenCalledWith('r3', 'Sure, approved!');
+    });
+  });
+
+  it('rejects a pending request with reason', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockRejectAbsenceRequest.mockResolvedValue({ success: true });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    const commentInput = screen.getByPlaceholderText('Comment (optional)');
+    fireEvent.change(commentInput, { target: { value: 'Too many absences' } });
+    fireEvent.click(screen.getByText('Reject'));
+    await waitFor(() => {
+      expect(mockRejectAbsenceRequest).toHaveBeenCalledWith('r3', 'Too many absences');
+      expect(mockToastSuccess).toHaveBeenCalledWith('Request rejected');
+    });
+  });
+
+  it('requires reason when rejecting', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    // Reject without entering a comment
+    fireEvent.click(screen.getByText('Reject'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Rejection reason is required');
+    });
+  });
+
+  it('handles approve failure', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockApproveAbsenceRequest.mockResolvedValue({ success: false, error: { message: 'Approve failed' } });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    fireEvent.click(screen.getByText('Approve'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Approve failed');
+    });
+  });
+
+  it('handles reject failure', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockRejectAbsenceRequest.mockResolvedValue({ success: false, error: { message: 'Reject failed' } });
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    const commentInput = screen.getByPlaceholderText('Comment (optional)');
+    fireEvent.change(commentInput, { target: { value: 'No' } });
+    fireEvent.click(screen.getByText('Reject'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Reject failed');
+    });
+  });
+
+  it('handles approve network error', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockApproveAbsenceRequest.mockRejectedValue(new Error('Network'));
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    fireEvent.click(screen.getByText('Approve'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('handles reject network error', async () => {
+    mockMyAbsenceRequests.mockResolvedValue({ success: true, data: [] });
+    mockPendingAbsenceRequests.mockResolvedValue({ success: true, data: samplePendingRequests });
+    mockRejectAbsenceRequest.mockRejectedValue(new Error('Network'));
+    render(<AbsenceApprovalPage />);
+    await waitFor(() => screen.getByText('Pending Queue'));
+    fireEvent.click(screen.getByText('Pending Queue'));
+    await waitFor(() => screen.getByText('Bob'));
+
+    const commentInput = screen.getByPlaceholderText('Comment (optional)');
+    fireEvent.change(commentInput, { target: { value: 'No' } });
+    fireEvent.click(screen.getByText('Reject'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
 });

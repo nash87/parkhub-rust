@@ -59,8 +59,13 @@ vi.mock('@phosphor-icons/react', () => ({
   ToggleRight: (props: any) => <span data-testid="icon-toggle-on" {...props} />,
 }));
 
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
 vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
+  default: {
+    success: (...args: any[]) => mockToastSuccess(...args),
+    error: (...args: any[]) => mockToastError(...args),
+  },
 }));
 
 import { AdminScheduledReportsPage } from './AdminScheduledReports';
@@ -173,5 +178,163 @@ describe('AdminScheduledReportsPage', () => {
       expect(editBtns).toHaveLength(2);
       expect(deleteBtns).toHaveLength(2);
     });
+  });
+
+  it('shows empty state when no schedules', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules: [] } }) } as Response)
+    ) as any;
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('schedules-empty')).toBeInTheDocument();
+      expect(screen.getByText('No schedules configured')).toBeInTheDocument();
+    });
+  });
+
+  it('shows enabled/disabled toggle icons', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('enabled-icon')).toBeInTheDocument(); // sched-001 is enabled
+      expect(screen.getByTestId('disabled-icon')).toBeInTheDocument(); // sched-002 is disabled
+    });
+  });
+
+  it('shows last_sent_at for schedule that has been sent', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/Last sent/)).toBeInTheDocument();
+    });
+  });
+
+
+  it('cancels form via cancel button', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => expect(screen.getByTestId('create-schedule-btn')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('create-schedule-btn'));
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-form')).toBeInTheDocument();
+      expect(screen.getByTestId('form-name')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('form-cancel-btn'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('schedule-form')).not.toBeInTheDocument();
+    });
+  });
+
+  it('opens edit form with pre-filled data', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => screen.getAllByTestId('edit-btn'));
+
+    fireEvent.click(screen.getAllByTestId('edit-btn')[0]);
+    await waitFor(() => {
+      expect(screen.getByTestId('schedule-form')).toBeInTheDocument();
+      expect(screen.getByTestId('form-name')).toHaveValue('Daily Occupancy Digest');
+      expect(screen.getByTestId('form-type')).toHaveValue('occupancy_summary');
+      expect(screen.getByTestId('form-frequency')).toHaveValue('daily');
+      expect(screen.getByTestId('form-recipients')).toHaveValue('admin@parkhub.test');
+    });
+  });
+
+
+  it('deletes a schedule', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => screen.getAllByTestId('delete-btn'));
+
+    fireEvent.click(screen.getAllByTestId('delete-btn')[0]);
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/reports/schedules/sched-001',
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+      expect(mockToastSuccess).toHaveBeenCalledWith('Schedule deleted');
+    });
+  });
+
+  it('sends report now', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => screen.getAllByTestId('send-now-btn'));
+
+    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]);
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/reports/schedules/sched-001/send-now',
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(mockToastSuccess).toHaveBeenCalledWith('Report sent');
+    });
+  });
+
+  it('handles delete error', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (!opts?.method || opts?.method === 'GET') {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleSchedules }) } as Response);
+      }
+      if (opts?.method === 'DELETE') {
+        return Promise.reject(new Error('Delete failed'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => screen.getAllByTestId('delete-btn'));
+    fireEvent.click(screen.getAllByTestId('delete-btn')[0]);
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('handles send-now error', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (!opts?.method || opts?.method === 'GET') {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleSchedules }) } as Response);
+      }
+      if (url.includes('send-now')) {
+        return Promise.reject(new Error('Send failed'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => screen.getAllByTestId('send-now-btn'));
+    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]);
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('handles load error', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('Load error'))) as any;
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('shows recipients list on schedule cards', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId('schedule-card')).toHaveLength(2);
+    });
+    // Check that recipients text appears (may be in "Recipients: admin@parkhub.test")
+    const cards = screen.getAllByTestId('schedule-card');
+    expect(cards[0].textContent).toContain('admin@parkhub.test');
+    expect(cards[1].textContent).toContain('finance@parkhub.test');
+  });
+
+  it('shows report type and frequency badges', async () => {
+    render(<AdminScheduledReportsPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Occupancy Summary')).toBeInTheDocument();
+      expect(screen.getByText('Revenue Report')).toBeInTheDocument();
+      expect(screen.getByText('Daily')).toBeInTheDocument();
+      expect(screen.getByText('Weekly')).toBeInTheDocument();
+    });
+  });
+
+  it('shows loading spinner initially', () => {
+    global.fetch = vi.fn(() => new Promise(() => {})) as any;
+    render(<AdminScheduledReportsPage />);
+    expect(document.querySelector('.animate-spin')).toBeInTheDocument();
   });
 });

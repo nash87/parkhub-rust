@@ -146,4 +146,47 @@ describe('DemoOverlay component', () => {
     vi.doUnmock('framer-motion');
     vi.doUnmock('@phosphor-icons/react');
   });
+
+  it('renders nothing when getDemoConfig throws', async () => {
+    vi.doMock('../api/client', () => ({
+      api: {
+        getDemoConfig: vi.fn().mockRejectedValue(new Error('Network')),
+        getDemoStatus: vi.fn().mockResolvedValue({ success: false, data: null }),
+        voteDemoReset: vi.fn(),
+      },
+    }));
+    vi.doMock('react-i18next', () => ({
+      useTranslation: () => ({ t: (key: string, fallback?: string) => fallback || key }),
+    }));
+    vi.doMock('framer-motion', () => ({
+      motion: {
+        div: ({ children, ...props }: any) => {
+          const { initial, animate, exit, transition, whileHover, whileTap, ...rest } = props;
+          return <div {...rest}>{children}</div>;
+        },
+      },
+      AnimatePresence: ({ children }: any) => <>{children}</>,
+    }));
+    vi.doMock('@phosphor-icons/react', () => ({
+      Sparkle: () => <span data-testid="icon-sparkle" />,
+      Eye: () => <span data-testid="icon-eye" />,
+      Timer: () => <span data-testid="icon-timer" />,
+      ArrowsClockwise: () => <span data-testid="icon-reset" />,
+      CaretDown: () => <span data-testid="icon-caret-down" />,
+      CaretUp: () => <span data-testid="icon-caret-up" />,
+    }));
+
+    const React = await import('react');
+    const { render } = await import('@testing-library/react');
+    const { DemoOverlay } = await import('./DemoOverlay');
+    const { container } = render(<DemoOverlay />);
+    await vi.runAllTimersAsync();
+    expect(container.innerHTML).toBe('');
+
+    vi.doUnmock('../api/client');
+    vi.doUnmock('react-i18next');
+    vi.doUnmock('framer-motion');
+    vi.doUnmock('@phosphor-icons/react');
+  });
 });
+
