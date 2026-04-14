@@ -83,110 +83,276 @@ describe('formatCountdown', () => {
   });
 });
 
-// ── Integration test for DemoOverlay component rendering ──
-// We mock the API and verify the component renders its key elements.
+// ── Integration tests for DemoOverlay component ──
+
+import React from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+const mockGetDemoConfig = vi.fn();
+const mockGetDemoStatus = vi.fn();
+const mockVoteDemoReset = vi.fn();
+
+vi.mock('../api/client', () => ({
+  api: {
+    getDemoConfig: (...a: any[]) => mockGetDemoConfig(...a),
+    getDemoStatus: (...a: any[]) => mockGetDemoStatus(...a),
+    voteDemoReset: (...a: any[]) => mockVoteDemoReset(...a),
+  },
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallbackOrOpts?: any, opts?: any) => {
+      const map: Record<string, string> = {
+        'demo.badge': 'DEMO',
+        'demo.voteReset': 'Vote to Reset',
+        'demo.resetting': 'Resetting...',
+        'demo.lastReset': 'Last reset',
+        'demo.nextReset': 'Next reset',
+      };
+      if (key === 'demo.votesNeeded') {
+        const o = (typeof fallbackOrOpts === 'object' ? fallbackOrOpts : opts) || {};
+        return `${o.current ?? 0}/${o.needed ?? 0}`;
+      }
+      return map[key] || (typeof fallbackOrOpts === 'string' ? fallbackOrOpts : key);
+    },
+  }),
+}));
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: React.forwardRef(({ children, initial, animate, exit, transition, ...props }: any, ref: any) => (
+      <div ref={ref} {...props}>{children}</div>
+    )),
+  },
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+}));
+
+vi.mock('@phosphor-icons/react', () => ({
+  Sparkle: (props: any) => <span data-testid="icon-sparkle" {...props} />,
+  Eye: (props: any) => <span data-testid="icon-eye" {...props} />,
+  Timer: (props: any) => <span data-testid="icon-timer" {...props} />,
+  ArrowsClockwise: (props: any) => <span data-testid="icon-refresh" {...props} />,
+  CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
+  CaretUp: (props: any) => <span data-testid="icon-caret-up" {...props} />,
+}));
+
+import { DemoOverlay } from './DemoOverlay';
+
+const DEMO_STATUS = {
+  timer_seconds: 1800,
+  viewers: 5,
+  votes: 2,
+  vote_threshold: 5,
+  has_voted: false,
+  reset_in_progress: false,
+  reset: false,
+  last_reset_at: '2026-03-19T11:59:00Z',
+  next_scheduled_reset: '2026-03-19T14:00:00Z',
+};
 
 describe('DemoOverlay component', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-03-19T12:00:00Z'));
+    mockGetDemoConfig.mockClear();
+    mockGetDemoStatus.mockClear();
+    mockVoteDemoReset.mockClear();
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true });
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   it('renders nothing when demo mode is disabled', async () => {
-    // Mock the api module
-    vi.doMock('../api/client', () => ({
-      api: {
-        getDemoConfig: vi.fn().mockResolvedValue({ success: true, data: { demo_mode: false } }),
-        getDemoStatus: vi.fn().mockResolvedValue({ success: false, data: null }),
-        voteDemoReset: vi.fn(),
-      },
-    }));
-
-    // Mock dependencies
-    vi.doMock('react-i18next', () => ({
-      useTranslation: () => ({ t: (key: string, fallback?: string) => fallback || key }),
-    }));
-    vi.doMock('framer-motion', () => ({
-      motion: {
-        div: ({ children, ...props }: any) => {
-          const { initial, animate, exit, transition, whileHover, whileTap, ...rest } = props;
-          return <div {...rest}>{children}</div>;
-        },
-      },
-      AnimatePresence: ({ children }: any) => <>{children}</>,
-    }));
-    vi.doMock('@phosphor-icons/react', () => ({
-      Sparkle: () => <span data-testid="icon-sparkle" />,
-      Eye: () => <span data-testid="icon-eye" />,
-      Timer: () => <span data-testid="icon-timer" />,
-      ArrowsClockwise: () => <span data-testid="icon-reset" />,
-      CaretDown: () => <span data-testid="icon-caret-down" />,
-      CaretUp: () => <span data-testid="icon-caret-up" />,
-    }));
-
-    const React = await import('react');
-    const { render } = await import('@testing-library/react');
-    const { DemoOverlay } = await import('./DemoOverlay');
-
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: false } });
     const { container } = render(<DemoOverlay />);
-
-    // Wait for the useEffect to run
-    await vi.runAllTimersAsync();
-
-    // Should render nothing since demo_mode is false
+    await waitFor(() => expect(mockGetDemoConfig).toHaveBeenCalled());
     expect(container.innerHTML).toBe('');
-
-    vi.doUnmock('../api/client');
-    vi.doUnmock('react-i18next');
-    vi.doUnmock('framer-motion');
-    vi.doUnmock('@phosphor-icons/react');
   });
 
-  it('renders nothing when getDemoConfig throws', async () => {
-    vi.doMock('../api/client', () => ({
-      api: {
-        getDemoConfig: vi.fn().mockRejectedValue(new Error('Network')),
-        getDemoStatus: vi.fn().mockResolvedValue({ success: false, data: null }),
-        voteDemoReset: vi.fn(),
-      },
-    }));
-    vi.doMock('react-i18next', () => ({
-      useTranslation: () => ({ t: (key: string, fallback?: string) => fallback || key }),
-    }));
-    vi.doMock('framer-motion', () => ({
-      motion: {
-        div: ({ children, ...props }: any) => {
-          const { initial, animate, exit, transition, whileHover, whileTap, ...rest } = props;
-          return <div {...rest}>{children}</div>;
-        },
-      },
-      AnimatePresence: ({ children }: any) => <>{children}</>,
-    }));
-    vi.doMock('@phosphor-icons/react', () => ({
-      Sparkle: () => <span data-testid="icon-sparkle" />,
-      Eye: () => <span data-testid="icon-eye" />,
-      Timer: () => <span data-testid="icon-timer" />,
-      ArrowsClockwise: () => <span data-testid="icon-reset" />,
-      CaretDown: () => <span data-testid="icon-caret-down" />,
-      CaretUp: () => <span data-testid="icon-caret-up" />,
-    }));
-
-    const React = await import('react');
-    const { render } = await import('@testing-library/react');
-    const { DemoOverlay } = await import('./DemoOverlay');
+  it('renders nothing when getDemoConfig fails', async () => {
+    mockGetDemoConfig.mockRejectedValue(new Error('fail'));
     const { container } = render(<DemoOverlay />);
-    await vi.runAllTimersAsync();
+    await waitFor(() => expect(mockGetDemoConfig).toHaveBeenCalled());
     expect(container.innerHTML).toBe('');
+  });
 
-    vi.doUnmock('../api/client');
-    vi.doUnmock('react-i18next');
-    vi.doUnmock('framer-motion');
-    vi.doUnmock('@phosphor-icons/react');
+  it('renders nothing when getDemoConfig returns success=false', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: false });
+    const { container } = render(<DemoOverlay />);
+    await waitFor(() => expect(mockGetDemoConfig).toHaveBeenCalled());
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('renders the overlay when demo mode is enabled and status loaded', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('DEMO')).toBeInTheDocument();
+    });
+  });
+
+  it('shows timer formatted as MM:SS', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      // 1800s = 30:00
+      expect(screen.getByText('30:00')).toBeInTheDocument();
+    });
+  });
+
+  it('shows viewer count', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('5')).toBeInTheDocument();
+    });
+  });
+
+  it('toggles collapse state', async () => {
+    const user = userEvent.setup();
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    render(<DemoOverlay />);
+
+    await waitFor(() => expect(screen.getByText('Vote to Reset')).toBeInTheDocument());
+
+    // Click to collapse
+    const toggleBtn = screen.getByRole('button', { expanded: true });
+    await user.click(toggleBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Vote to Reset')).not.toBeInTheDocument();
+    });
+
+    // Click to expand again
+    const collapsedBtn = screen.getByRole('button', { expanded: false });
+    await user.click(collapsedBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Vote to Reset')).toBeInTheDocument();
+    });
+  });
+
+  it('handles vote button click and updates state optimistically', async () => {
+    const user = userEvent.setup();
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    mockVoteDemoReset.mockResolvedValue({ success: true });
+    render(<DemoOverlay />);
+
+    await waitFor(() => expect(screen.getByText('Vote to Reset')).toBeInTheDocument());
+    await user.click(screen.getByText('Vote to Reset'));
+
+    await waitFor(() => {
+      expect(mockVoteDemoReset).toHaveBeenCalled();
+    });
+  });
+
+  it('disables vote when already voted', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({
+      success: true,
+      data: { ...DEMO_STATUS, has_voted: true },
+    });
+    render(<DemoOverlay />);
+
+    await waitFor(() => expect(screen.getByText('DEMO')).toBeInTheDocument());
+    // The vote button should be disabled
+    const btns = screen.getAllByRole('button');
+    const disabledBtns = btns.filter(b => b.hasAttribute('disabled'));
+    expect(disabledBtns.length).toBeGreaterThan(0);
+  });
+
+  it('shows Resetting... when reset is in progress', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({
+      success: true,
+      data: { ...DEMO_STATUS, reset_in_progress: true },
+    });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Resetting...')).toBeInTheDocument();
+    });
+  });
+
+  it('shows last reset and next reset info', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Last reset')).toBeInTheDocument();
+      expect(screen.getByText('Next reset')).toBeInTheDocument();
+    });
+  });
+
+  it('does not show last/next reset when they are null', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({
+      success: true,
+      data: { ...DEMO_STATUS, last_reset_at: null, next_scheduled_reset: null },
+    });
+    render(<DemoOverlay />);
+
+    await waitFor(() => expect(screen.getByText('DEMO')).toBeInTheDocument());
+    expect(screen.queryByText('Last reset')).not.toBeInTheDocument();
+    expect(screen.queryByText('Next reset')).not.toBeInTheDocument();
+  });
+
+  it('applies red color for low timer (<300s)', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({
+      success: true,
+      data: { ...DEMO_STATUS, timer_seconds: 120 },
+    });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      const timer = screen.getByText('02:00');
+      expect(timer.className).toContain('text-red-500');
+    });
+  });
+
+  it('handles vote_threshold of 0 without division by zero', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({
+      success: true,
+      data: { ...DEMO_STATUS, vote_threshold: 0, votes: 0 },
+    });
+    render(<DemoOverlay />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+  });
+
+  it('renders nothing when status fetch fails', async () => {
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockRejectedValue(new Error('net'));
+    const { container } = render(<DemoOverlay />);
+    await waitFor(() => expect(mockGetDemoStatus).toHaveBeenCalled());
+    // demo state is still null
+    expect(container.querySelector('.glass-card')).toBeNull();
+  });
+
+  it('defaults to collapsed on small screens', async () => {
+    Object.defineProperty(window, 'innerWidth', { value: 400, writable: true, configurable: true });
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    render(<DemoOverlay />);
+
+    await waitFor(() => expect(screen.getByText('DEMO')).toBeInTheDocument());
+    // Should be collapsed (no vote button visible)
+    expect(screen.queryByText('Vote to Reset')).not.toBeInTheDocument();
   });
 });
 

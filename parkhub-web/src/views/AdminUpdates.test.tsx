@@ -253,4 +253,263 @@ describe('AdminUpdatesPage', () => {
       expect(settingsCalls.length).toBeGreaterThan(0);
     });
   });
+
+  it('switches channel to beta', async () => {
+    const fetchMock = mockFetch();
+    global.fetch = fetchMock;
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('channel-beta')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('channel-beta'));
+
+    await waitFor(() => {
+      const settingsCalls = fetchMock.mock.calls.filter(
+        ([url, opts]: [string, any]) => url.includes('/admin/settings') && opts?.method === 'POST'
+      );
+      const betaCall = settingsCalls.find(([_, opts]: any) => {
+        const body = JSON.parse(opts.body);
+        return body.update_channel === 'beta';
+      });
+      expect(betaCall).toBeTruthy();
+    });
+  });
+
+  it('applies update and shows progress state', async () => {
+    global.fetch = mockFetch({
+      check: {
+        success: true,
+        data: {
+          available: true,
+          latest_version: '5.0.0',
+          current_version: '4.9.0',
+          release_url: 'https://example.com',
+          release_notes: 'Major release',
+          published_at: '2026-04-14T00:00:00Z',
+        },
+      },
+    });
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('check-btn'));
+    await waitFor(() => expect(screen.getByTestId('update-available')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('apply-btn'));
+
+    // Should show progress at some point during the update
+    await waitFor(() => {
+      // Either still in progress or already done/errored
+      const progress = screen.queryByTestId('update-progress');
+      const success = screen.queryByTestId('update-success');
+      expect(progress || success).toBeTruthy();
+    });
+  });
+
+  it('shows error state when apply fails', async () => {
+    global.fetch = mockFetch({
+      check: {
+        success: true,
+        data: {
+          available: true,
+          latest_version: '5.0.0',
+          current_version: '4.9.0',
+          release_url: '',
+          release_notes: '',
+          published_at: '',
+        },
+      },
+      apply: { success: false, error: { message: 'Deploy failed' } },
+    });
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('check-btn'));
+    await waitFor(() => expect(screen.getByTestId('update-available')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('apply-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('update-error')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when check update API fails', async () => {
+    global.fetch = mockFetch({
+      check: { success: false, error: { message: 'Server error' } },
+    });
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('check-btn'));
+
+    // Should handle gracefully without crashing
+    await waitFor(() => {
+      expect(screen.getByTestId('check-btn')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error when check update throws', async () => {
+    const fetchMock = mockFetch();
+    // Override check to throw
+    fetchMock.mockImplementation((url: string) => {
+      if (url.includes('/updates/check')) return Promise.reject(new Error('Network'));
+      return mockFetch()(url);
+    });
+    global.fetch = fetchMock;
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('check-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('check-btn')).not.toBeDisabled();
+    });
+  });
+
+  it('displays uptime from version info', async () => {
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      // 86400 seconds = 1d 0h 0m
+      expect(screen.getByText('1d 0h 0m')).toBeInTheDocument();
+    });
+  });
+
+  it('shows build hash and date', async () => {
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      // build_hash abc12345def -> first 8 chars = abc12345
+      const buildText = screen.getByText(/abc12345/);
+      expect(buildText).toBeInTheDocument();
+    });
+  });
+
+  it('handles version info without optional fields', async () => {
+    global.fetch = mockFetch({
+      version: { success: true, data: { version: '1.0.0' } },
+    });
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('current-version')).toHaveTextContent('1.0.0');
+    });
+  });
+
+  it('renders status badges for history entries', async () => {
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      const badges = screen.getAllByTestId('status-badge');
+      expect(badges).toHaveLength(2);
+      expect(badges[0]).toHaveTextContent('Success');
+      expect(badges[1]).toHaveTextContent('Failed');
+    });
+  });
+
+  it('toggles auto-update off after on', async () => {
+    global.fetch = mockFetch({
+      settings: { success: true, data: { auto_update: true, update_channel: 'stable' } },
+    });
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('auto-update-toggle')).toHaveAttribute('aria-checked', 'true');
+    });
+
+    fireEvent.click(screen.getByTestId('auto-update-toggle'));
+    await waitFor(() => {
+      expect(screen.getByTestId('auto-update-toggle')).toHaveAttribute('aria-checked', 'false');
+    });
+  });
+
+  it('handles auto-update toggle API error', async () => {
+    const fetchMock = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/admin/settings') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: false, error: { message: 'Fail' } }),
+        } as Response);
+      }
+      return mockFetch()(url, opts);
+    });
+    global.fetch = fetchMock;
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('auto-update-toggle')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('auto-update-toggle'));
+
+    // Should not crash
+    await waitFor(() => {
+      expect(screen.getByTestId('auto-update-toggle')).toBeInTheDocument();
+    });
+  });
+
+  it('shows release URL link and published date when available', async () => {
+    global.fetch = mockFetch({
+      check: {
+        success: true,
+        data: {
+          available: true,
+          latest_version: '5.0.0',
+          current_version: '4.9.0',
+          release_url: 'https://example.com/release',
+          release_notes: 'Notes here',
+          published_at: '2026-04-14T00:00:00Z',
+        },
+      },
+    });
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('check-btn'));
+
+    await waitFor(() => {
+      // viewRelease falls back to default string 'View release'
+      expect(screen.getByText('View release')).toBeInTheDocument();
+      expect(screen.getByText('Notes here')).toBeInTheDocument();
+    });
+  });
+
+  it('shows channel description for stable vs beta', async () => {
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      // channelStableDesc falls back to default 'Recommended. Receives tested...'
+      expect(screen.getByText(/Recommended/)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('channel-beta'));
+    await waitFor(() => {
+      expect(screen.getByText(/Early access/)).toBeInTheDocument();
+    });
+  });
+
+  it('handles apply update network error', async () => {
+    const fetchMock = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/updates/apply')) return Promise.reject(new Error('Network'));
+      return mockFetch({
+        check: {
+          success: true,
+          data: {
+            available: true, latest_version: '5.0.0', current_version: '4.9.0',
+            release_url: '', release_notes: '', published_at: '',
+          },
+        },
+      })(url, opts);
+    });
+    global.fetch = fetchMock;
+
+    render(<AdminUpdatesPage />);
+    await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('check-btn'));
+    await waitFor(() => expect(screen.getByTestId('update-available')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('apply-btn'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('update-error')).toBeInTheDocument();
+    });
+  });
 });

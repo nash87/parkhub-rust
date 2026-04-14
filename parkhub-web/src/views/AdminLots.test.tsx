@@ -590,4 +590,166 @@ describe('AdminLotsPage', () => {
       expect(mockToastError).toHaveBeenCalled();
     });
   });
+
+  it('shows error toast when operating hours save fails during lot update', async () => {
+    const lotData = {
+      id: 'l-1', name: 'OH Fail', address: '', total_slots: 10, available_slots: 5,
+      status: 'open', hourly_rate: 2.5, currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockUpdateLot.mockResolvedValue({ success: true, data: lotData });
+    mockUpdateAdminDynamicPricing.mockResolvedValue({ success: true });
+    mockUpdateAdminLotHours.mockResolvedValue({ success: false });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('OH Fail')).toBeInTheDocument());
+    await user.click(screen.getByLabelText(/Edit lot OH Fail/i));
+    await waitFor(() => expect(screen.getByText('Edit Parking Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('total_slots input defaults to 10', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+    const slotsInput = screen.getByLabelText('Total Slots *') as HTMLInputElement;
+    expect(slotsInput.value).toBe('10');
+  });
+
+  it('handles edit lot when dynamic pricing fetch fails (uses defaults)', async () => {
+    const lotData = {
+      id: 'l-1', name: 'No DP', address: '', total_slots: 10, available_slots: 5,
+      status: 'open', currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockGetAdminDynamicPricing.mockResolvedValue({ success: false });
+    mockGetLotHours.mockResolvedValue({ success: false });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('No DP')).toBeInTheDocument());
+    await user.click(screen.getByLabelText(/Edit lot No DP/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Parking Lot')).toBeInTheDocument();
+      expect(screen.getByText('Dynamic Pricing')).toBeInTheDocument();
+    });
+  });
+
+  it('cancel confirm dialog does not delete lot', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Keep Me', total_slots: 10, available_slots: 5, status: 'open' }],
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('Keep Me')).toBeInTheDocument());
+    await user.click(screen.getByLabelText(/Delete lot Keep Me/i));
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+
+    await user.click(screen.getByText('CancelConfirm'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument();
+    });
+    expect(mockDeleteLot).not.toHaveBeenCalled();
+  });
+
+  it('changes status buttons in create form', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+
+    // Click 'Closed' status
+    await user.click(screen.getByText('Closed'));
+    // Click 'Full' status
+    await user.click(screen.getByText('Full'));
+    // Should not crash
+    expect(screen.getByText('Full')).toBeInTheDocument();
+  });
+
+  it('creates lot with all pricing fields', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    mockCreateLot.mockResolvedValue({ success: true, data: { id: 'new-1' } });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+
+    await user.type(screen.getByLabelText('Name *'), 'Full Lot');
+    await user.type(screen.getByLabelText('Address'), '123 Street');
+    await user.type(screen.getByLabelText('Hourly Rate'), '2.50');
+    await user.type(screen.getByLabelText('Daily Max'), '15');
+    await user.type(screen.getByLabelText('Monthly Pass'), '200');
+
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    await user.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockCreateLot).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Full Lot',
+        address: '123 Street',
+        hourly_rate: 2.5,
+        daily_max: 15,
+        monthly_pass: 200,
+        currency: 'EUR',
+      }));
+    });
+  });
+
+  it('handles unknown lot status in table (falls back to open)', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [{ id: 'l-1', name: 'Unknown Status', total_slots: 10, available_slots: 5, status: 'unknown' }],
+    });
+    render(<AdminLotsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Unknown Status')).toBeInTheDocument();
+      // Falls back to 'open' config
+      expect(screen.getByText('Open')).toBeInTheDocument();
+    });
+  });
+
+  it('closes form if currently editing lot is deleted', async () => {
+    const lotData = {
+      id: 'l-1', name: 'Edit Delete', address: '', total_slots: 10, available_slots: 5,
+      status: 'open',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockGetAdminDynamicPricing.mockResolvedValue({ success: false });
+    mockGetLotHours.mockResolvedValue({ success: false });
+    mockDeleteLot.mockResolvedValue({ success: true });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('Edit Delete')).toBeInTheDocument());
+
+    // Open edit form
+    await user.click(screen.getByLabelText(/Edit lot Edit Delete/i));
+    await waitFor(() => expect(screen.getByText('Edit Parking Lot')).toBeInTheDocument());
+
+    // Delete the lot
+    await user.click(screen.getByLabelText(/Delete lot Edit Delete/i));
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    await user.click(screen.getByText('Confirm'));
+
+    await waitFor(() => {
+      expect(mockDeleteLot).toHaveBeenCalledWith('l-1');
+    });
+  });
 });
