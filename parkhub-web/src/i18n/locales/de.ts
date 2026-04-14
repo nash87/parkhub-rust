@@ -984,6 +984,10 @@ export default {
         forest: 'Wald',
         synthwave: 'Synthwave',
         zen: 'Zen',
+        aurora: 'Aurora',
+        material: 'Material You',
+        midnight: 'Midnight',
+        sakura: 'Sakura',
       },
       descriptions: {
         classic: 'Sauber, professionell. Der originale ParkHub-Look.',
@@ -998,6 +1002,10 @@ export default {
         forest: 'Naturinspirierte Grüntöne. Nachhaltig und geerdet.',
         synthwave: '80er-Retro-Futurismus mit Neon-Lila-Pink-Glühen.',
         zen: 'Wabi-Sabi japanischer Minimalismus. Papier-Texturen, Tusche-Subtilität.',
+        aurora: 'Nordlicht-inspiriert. Ätherische Verläufe, kosmische Tiefe.',
+        material: 'Google Material Design 3. Dynamische Farben, tonale Oberflächen.',
+        midnight: 'Vercel/Linear-inspiriert. Pures Schwarz, elektrische Akzente.',
+        sakura: 'Kirschblüte. Sanftes Rosa, warmes Weiß, zarte Verläufe.',
       },
     },
     payment: {
@@ -1209,6 +1217,8 @@ export default {
     pwa: { offlineMessage: "Sie sind offline. Einige Funktionen sind moeglicherweise nicht verfuegbar.", nextBooking: "Ihre naechste Buchung", mobileNav: "Mobile Navigation", pullToRefresh: "Zum Aktualisieren ziehen", releaseToRefresh: "Loslassen zum Aktualisieren", installTitle: "ParkHub installieren", installDescription: "ParkHub zum Startbildschirm hinzufuegen", installButton: "Installieren", installDismiss: "Nicht jetzt" },
     notificationCenter: { title: "Benachrichtigungszentrale", bellTooltip: "Benachrichtigungszentrale oeffnen", help: "Ihre Benachrichtigungszentrale — Buchungsbestaetigungen, Erinnerungen, Wartelistenangebote, Wartungswarnungen und Systemankuendigungen. Klicken Sie auf eine Benachrichtigung, um zur entsprechenden Seite zu navigieren.", helpLabel: "Hilfe", markAllRead: "Alle als gelesen markieren", markRead: "Als gelesen markieren", deleteOne: "Benachrichtigung loeschen", deleted: "Benachrichtigung geloescht", empty: "Noch keine Benachrichtigungen", viewAll: "Alle Benachrichtigungen anzeigen", today: "Heute", yesterday: "Gestern", filter: { all: "Alle", unread: "Ungelesen", read: "Gelesen" }, types: { booking_confirmed: "Buchung bestaetigt", booking_cancelled: "Buchung storniert", booking_reminder: "Buchungserinnerung", waitlist_offer: "Wartelistenangebot", maintenance_alert: "Wartungswarnung", system_announcement: "Systemankuendigung", payment_received: "Zahlung eingegangen", visitor_arrived: "Besucher angekommen" } },
     mobileBooking: { title: "Schnellbuchung", subtitle: "Parken mit einem Tipp buchen", help: "Wischen Sie durch verfuegbare Parkplaetze in Ihrer Naehe, waehlen Sie ein Zeitfenster und bestaetigen Sie sofort.", helpLabel: "Hilfe", nearbyLots: "Parkplaetze in der Naehe", noNearbyLots: "Keine Parkplaetze in der Naehe", searchRadius: "Suchradius", quickBook: "Schnellbuchung", booking: "Buche...", selectSlot: "Zeitfenster waehlen", activeBooking: "Aktive Buchung", noActiveBooking: "Keine aktive Buchung", countdown: "Verbleibende Zeit", expiresIn: "Laeuft ab in {{time}}", lotDistance: "{{distance}} entfernt", availableSlots: "{{count}} Plaetze frei", booked: "Buchung bestaetigt!", swipeHint: "Wischen zum Durchsuchen" },
+    guestBooking: { title: 'Gastausweis', subtitle: 'Gast-Parkausweise erstellen und verwalten', create: 'Neuer Gastausweis', existing: 'Gastausweise', empty: 'Noch keine Gastausweise', formTitle: 'Gastausweis erstellen', guestName: 'Gastname', guestEmail: 'Gast-E-Mail', lot: 'Parkplatz', slot: 'Stellplatz', selectLot: 'Parkplatz waehlen', selectSlot: 'Stellplatz waehlen', startTime: 'Startzeit', endTime: 'Endzeit', creating: 'Wird erstellt...', created: 'Gastausweis erstellt', cancelled: 'Gastausweis storniert', cancel: 'Ausweis stornieren', passCreated: 'Gastausweis erstellt', shareInstructions: 'Teilen Sie diesen Ausweis mit Ihrem Gast', dateRange: 'Datum & Zeit', code: 'Zugangscode', codeCopied: 'Code in Zwischenablage kopiert', share: 'Teilen', shareTitle: 'Gast-Parkausweis', shareText: 'Hier ist Ihr Gast-Parkausweis fuer {{name}}. Zugangscode: {{code}}', linkCopied: 'Link in Zwischenablage kopiert', requiredFields: 'Bitte alle Pflichtfelder ausfuellen', status: { active: 'Aktiv', expired: 'Abgelaufen', cancelled: 'Storniert' } },
+    swap: { title: 'Tausch-Anfragen', subtitle: 'Parkplatz-Tausch anfragen und verwalten', create: 'Neuer Tausch', createTitle: 'Tausch-Anfrage erstellen', empty: 'Noch keine Tausch-Anfragen', emptyHint: 'Erstellen Sie eine Tausch-Anfrage, um Stellplaetze mit Kollegen zu tauschen', yourSlot: 'Ihr Stellplatz', theirSlot: 'Deren Stellplatz', yourBooking: 'Ihre Buchung', selectBooking: 'Buchung waehlen', targetBookingId: 'Ziel-Buchungs-ID', targetPlaceholder: 'Buchungs-ID zum Tauschen eingeben', messageLabel: 'Nachricht', messagePlaceholder: 'Optionale Nachricht fuer die andere Partei', send: 'Anfrage senden', created: 'Tausch-Anfrage gesendet', accepted: 'Tausch-Anfrage akzeptiert', declined: 'Tausch-Anfrage abgelehnt', accept: 'Akzeptieren', decline: 'Ablehnen', status: { pending: 'Ausstehend', accepted: 'Akzeptiert', declined: 'Abgelehnt' } },
     webhookDashboard: { title: "Webhook-Zustellungen", subtitle: "Webhook-Zustellungsleistung ueberwachen", help: "Verfolgen Sie Webhook-Zustellungsverlauf, Erfolgsraten, Antwortzeiten und wiederholen Sie fehlgeschlagene Zustellungen.", helpLabel: "Hilfe", deliveryTimeline: "Zustellungszeitlinie", successRate: "Erfolgsrate", avgResponseTime: "Durchschn. Antwortzeit", topErrors: "Haeufigste Fehler", replay: "Wiederholen", replaying: "Wiederholen...", replayed: "Zustellung wiederholt", replayFailed: "Wiederholung fehlgeschlagen", noDeliveries: "Noch keine Zustellungen", stats: "Statistiken", totalDeliveries: "Zustellungen gesamt", successCount: "Erfolgreich", failureCount: "Fehlgeschlagen", responseTime: "{{ms}}ms", statusCode: "Status {{code}}" },
   },
 };

@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { CommandPalette } from './CommandPalette';
 import { NotificationCenter } from './NotificationCenter';
 import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
@@ -105,6 +106,7 @@ export function Layout() {
   );
 
   useKeyboardShortcuts({ onToggleCommandPalette: toggleCommandPalette });
+  usePageTitle();
 
   useEffect(() => {
     const token = getInMemoryToken();
