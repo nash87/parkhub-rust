@@ -258,4 +258,57 @@ describe('NotificationsPage', () => {
       expect(screen.getByText('Notifications')).toBeInTheDocument();
     });
   });
+
+  it('shows error toast when loadNotifications throws', async () => {
+    mockGetNotifications.mockRejectedValue(new Error('boom'));
+    render(<NotificationsPage />);
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('shows error toast when markAllAsRead fails', async () => {
+    const user = userEvent.setup();
+    mockGetNotifications.mockResolvedValue({
+      success: true,
+      data: [{ id: 'n1', title: 'Test', message: 'm', type: 'info', read: false, created_at: new Date().toISOString() }],
+    });
+    mockMarkAllRead.mockResolvedValue({ success: false, error: { message: 'fail' } });
+    render(<NotificationsPage />);
+    await waitFor(() => expect(screen.getByText('Test')).toBeInTheDocument());
+    const markAllBtn = screen.getByRole('button', { name: /mark all/i });
+    await user.click(markAllBtn);
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('renders success-type notification with success icon color', async () => {
+    mockGetNotifications.mockResolvedValue({
+      success: true,
+      data: [{ id: 'n1', title: 'Paid', message: 'Your payment succeeded', type: 'success', read: false, created_at: new Date().toISOString() }],
+    });
+    render(<NotificationsPage />);
+    await waitFor(() => expect(screen.getByText('Paid')).toBeInTheDocument());
+    expect(screen.getByText('Your payment succeeded')).toBeInTheDocument();
+  });
+
+  it('renders notification ages — minutes, hours, days buckets', async () => {
+    const now = Date.now();
+    mockGetNotifications.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'n1', title: 'Fresh', message: 'Just now', type: 'info', read: false, created_at: new Date(now - 10_000).toISOString() },
+        { id: 'n2', title: 'Old minutes', message: 'minutes ago', type: 'info', read: false, created_at: new Date(now - 5 * 60_000).toISOString() },
+        { id: 'n3', title: 'Hours back', message: 'hours ago', type: 'info', read: false, created_at: new Date(now - 3 * 3600_000).toISOString() },
+        { id: 'n4', title: 'Days back', message: 'days ago', type: 'info', read: false, created_at: new Date(now - 2 * 24 * 3600_000).toISOString() },
+      ],
+    });
+    render(<NotificationsPage />);
+    await waitFor(() => expect(screen.getByText('Fresh')).toBeInTheDocument());
+    // All four timeline buckets resolved without throwing — the different branches of timeAgoFn ran
+    expect(screen.getByText('Old minutes')).toBeInTheDocument();
+    expect(screen.getByText('Hours back')).toBeInTheDocument();
+    expect(screen.getByText('Days back')).toBeInTheDocument();
+  });
 });
