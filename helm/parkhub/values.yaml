@@ -95,7 +95,7 @@ config:
     host: ""
     port: 587
     user: ""
-    password: "CHANGEME"  # override at deploy time
+    password: ""  # REQUIRED if smtp.host is set — override at deploy time (--set secrets.smtp.password=...)
     from: "noreply@parkhub.local"
 
   # Stripe
