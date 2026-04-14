@@ -1,14 +1,20 @@
 //! Security features: 2FA/TOTP, password policy, login history, session management, API keys.
 
-use axum::{Extension, Json, extract::State, http::StatusCode};
+use axum::{Extension, Json, extract::State, http::StatusCode, response::Response};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration as StdDuration, Instant};
 use uuid::Uuid;
 
-use parkhub_common::ApiResponse;
+use parkhub_common::{ApiResponse, AuthTokens, LoginResponse};
 
 use crate::audit::{AuditEntry, AuditEventType};
+use crate::db::Session;
+use crate::metrics;
 
+use super::auth::{build_auth_cookie, with_auth_cookie};
 use super::{AuthUser, SharedState, check_admin, generate_access_token, verify_password};
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -967,6 +973,13 @@ pub async fn create_api_key(
         );
     }
 
+    // Maintain reverse index for O(1) lookup by prefix
+    let index_key = format!("api_key_idx:{}", key_prefix);
+    let _ = state_guard
+        .db
+        .set_setting(&index_key, &auth_user.user_id.to_string())
+        .await;
+
     AuditEntry::new(AuditEventType::UserUpdated)
         .user(auth_user.user_id, "")
         .detail(&format!("API key created: {}", req.name))
@@ -1053,6 +1066,7 @@ pub async fn revoke_api_key(
     match found {
         Some(key) => {
             let name = key.name.clone();
+            let prefix = key.key_prefix.clone();
             key.is_active = false;
             let json = serde_json::to_string(&keys).unwrap_or_default();
             if let Err(e) = state_guard.db.set_setting(&keys_key, &json).await {
@@ -1062,6 +1076,9 @@ pub async fn revoke_api_key(
                     Json(ApiResponse::error("SERVER_ERROR", "Failed to revoke key")),
                 );
             }
+            // Clear reverse index entry (empty value = deleted)
+            let index_key = format!("api_key_idx:{prefix}");
+            let _ = state_guard.db.set_setting(&index_key, "").await;
             AuditEntry::new(AuditEventType::UserUpdated)
                 .user(auth_user.user_id, "")
                 .detail(&format!("API key revoked: {name}"))
@@ -1077,9 +1094,45 @@ pub async fn revoke_api_key(
 
 /// Validate an API key from the `X-API-Key` header.
 /// Returns the user_id if valid.
+///
+/// Uses a reverse index (`api_key_idx:{prefix}` → `user_id`) for O(1) lookup
+/// instead of scanning all users. Falls back to full scan if index miss.
 pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option<Uuid> {
-    // API keys are stored per-user; scan all users' keys
-    // This is acceptable for moderate scale; for high-scale, a separate index table would be needed.
+    // Fast path: use reverse index by key prefix (first 12 chars)
+    if api_key.len() >= 12 {
+        let prefix = &api_key[..12];
+        let index_key = format!("api_key_idx:{prefix}");
+        if let Ok(Some(user_id_str)) = db.get_setting(&index_key).await
+            && !user_id_str.is_empty()
+        {
+            if let Ok(user_id) = user_id_str.parse::<Uuid>() {
+                // Found candidate user — verify the key against their stored keys
+                let keys_key = format!("api_keys:{user_id}");
+                let keys: Vec<ApiKey> = match db.get_setting(&keys_key).await {
+                    Ok(Some(val)) => serde_json::from_str(&val).unwrap_or_default(),
+                    _ => return None,
+                };
+                for key in &keys {
+                    if !key.is_active {
+                        continue;
+                    }
+                    if let Some(expires_at) = key.expires_at {
+                        if expires_at < Utc::now() {
+                            continue;
+                        }
+                    }
+                    if !api_key.starts_with(&key.key_prefix) {
+                        continue;
+                    }
+                    if super::verify_password(api_key, &key.key_hash).await {
+                        return Some(user_id);
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback: full scan for keys created before the index existed
     let Ok(users) = db.list_users().await else {
         return None;
     };
@@ -1095,18 +1148,18 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
             if !key.is_active {
                 continue;
             }
-            // Check expiry
-            if let Some(expires_at) = key.expires_at
-                && expires_at < Utc::now()
-            {
-                continue;
+            if let Some(expires_at) = key.expires_at {
+                if expires_at < Utc::now() {
+                    continue;
+                }
             }
-            // Check prefix first (fast path)
             if !api_key.starts_with(&key.key_prefix) {
                 continue;
             }
-            // Verify the full key against hash
             if super::verify_password(api_key, &key.key_hash).await {
+                // Backfill the index for future lookups
+                let index_key = format!("api_key_idx:{}", key.key_prefix);
+                let _ = db.set_setting(&index_key, &user.id.to_string()).await;
                 return Some(user.id);
             }
         }
