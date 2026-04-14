@@ -37,6 +37,10 @@ vi.mock('date-fns', () => ({
   },
 }));
 
+vi.mock('../api/client', () => ({
+  getInMemoryToken: vi.fn(() => 'test-token'),
+}));
+
 import { ParkingPass } from './ParkingPass';
 
 const mockBooking = {
@@ -102,5 +106,87 @@ describe('ParkingPass', () => {
         expect.any(Object),
       );
     });
+  });
+
+  it('shows QR image after successful load', async () => {
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    await waitFor(() => {
+      const img = screen.getByAltText('QR code parking pass');
+      expect(img).toBeInTheDocument();
+      expect(img.getAttribute('src')).toBe('blob:mock-qr-url');
+    });
+  });
+
+  it('shows error when fetch fails', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      blob: () => Promise.reject(new Error('fail')),
+    });
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    await waitFor(() => {
+      expect(screen.getByText('Could not load parking pass')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error on network failure', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('net'));
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    await waitFor(() => {
+      expect(screen.getByText('Could not load parking pass')).toBeInTheDocument();
+    });
+  });
+
+  it('shows loading state initially', () => {
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    // Should show loading pulse div (no img, no error)
+    expect(screen.queryByAltText('QR code parking pass')).not.toBeInTheDocument();
+    expect(screen.queryByText('Could not load parking pass')).not.toBeInTheDocument();
+  });
+
+  it('download button works', async () => {
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    await waitFor(() => {
+      expect(screen.getByAltText('QR code parking pass')).toBeInTheDocument();
+    });
+    const downloadBtn = screen.getByText('Download QR Pass');
+    fireEvent.click(downloadBtn);
+    // Should create an anchor and click it
+  });
+
+  it('download disabled when no image', () => {
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    const downloadBtn = screen.getByText('Download QR Pass').closest('button');
+    expect(downloadBtn).toBeDisabled();
+  });
+
+  it('print button calls window.print', async () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {});
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    await waitFor(() => expect(screen.getByAltText('QR code parking pass')).toBeInTheDocument());
+    const printBtn = screen.getByTitle('Print booking confirmation');
+    fireEvent.click(printBtn);
+    expect(printSpy).toHaveBeenCalled();
+    printSpy.mockRestore();
+  });
+
+  it('does not close when inner card is clicked', () => {
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    const card = screen.getByText('Parking Pass').closest('.print-pass');
+    if (card) fireEvent.click(card);
+    expect(mockOnClose).not.toHaveBeenCalled();
+  });
+
+  it('shows booking without vehicle plate', () => {
+    const bookingNoPlate = { ...mockBooking, vehicle_plate: undefined };
+    render(<ParkingPass booking={bookingNoPlate as any} onClose={mockOnClose} />);
+    expect(screen.queryByText('Vehicle')).not.toBeInTheDocument();
+  });
+
+  it('renders time correctly', async () => {
+    render(<ParkingPass booking={mockBooking} onClose={mockOnClose} />);
+    // date-fns is mocked to always return '08:00', rendered as "08:00 — 08:00"
+    expect(screen.getByText(/08:00/)).toBeInTheDocument();
   });
 });

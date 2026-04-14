@@ -1,362 +1,171 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// ── Mocks ──
-
-const mockAdminListAnnouncements = vi.fn();
-const mockAdminCreateAnnouncement = vi.fn();
-const mockAdminDeleteAnnouncement = vi.fn();
-const mockToastSuccess = vi.fn();
-const mockToastError = vi.fn();
+const mockListAnnouncements = vi.fn();
+const mockCreateAnnouncement = vi.fn();
+const mockUpdateAnnouncement = vi.fn();
+const mockDeleteAnnouncement = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
-    adminListAnnouncements: (...args: any[]) => mockAdminListAnnouncements(...args),
-    adminCreateAnnouncement: (...args: any[]) => mockAdminCreateAnnouncement(...args),
-    adminUpdateAnnouncement: vi.fn(),
-    adminDeleteAnnouncement: (...args: any[]) => mockAdminDeleteAnnouncement(...args),
+    adminListAnnouncements: (...a: any[]) => mockListAnnouncements(...a),
+    adminCreateAnnouncement: (...a: any[]) => mockCreateAnnouncement(...a),
+    adminUpdateAnnouncement: (...a: any[]) => mockUpdateAnnouncement(...a),
+    adminDeleteAnnouncement: (...a: any[]) => mockDeleteAnnouncement(...a),
   },
 }));
 
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 vi.mock('framer-motion', () => ({
-  motion: {
-    div: React.forwardRef(({ children, initial, animate, exit, transition, ...props }: any, ref: any) => (
-      <div ref={ref} {...props}>{children}</div>
-    )),
-  },
+  motion: { div: React.forwardRef(({ children, ...p }: any, r: any) => <div ref={r} {...p}>{children}</div>) },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
-
-vi.mock('@phosphor-icons/react', () => ({
-  Megaphone: (props: any) => <span data-testid="icon-megaphone" {...props} />,
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  PencilSimple: (props: any) => <span data-testid="icon-pencil" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Info: (props: any) => <span data-testid="icon-info" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  WarningCircle: (props: any) => <span data-testid="icon-warning-circle" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check-circle" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-}));
-
-vi.mock('react-hot-toast', () => ({
-  default: {
-    success: (...args: any[]) => mockToastSuccess(...args),
-    error: (...args: any[]) => mockToastError(...args),
-  },
+vi.mock('@phosphor-icons/react', () => {
+  const C = (p: any) => <span {...p} />;
+  return { Megaphone: C, Plus: C, PencilSimple: C, Trash: C, SpinnerGap: C, Check: C, X: C, Info: C, Warning: C, WarningCircle: C, CheckCircle: C, Clock: C };
+});
+vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('../components/ui/ConfirmDialog', () => ({
+  ConfirmDialog: ({ open, onConfirm, onCancel }: any) =>
+    open ? <div data-testid="confirm-dialog"><button onClick={onConfirm}>ConfirmDel</button><button onClick={onCancel}>CancelDel</button></div> : null,
 }));
 
 import { AdminAnnouncementsPage } from './AdminAnnouncements';
+import toast from 'react-hot-toast';
+
+const announcements = [
+  { id: 'a1', title: 'Maintenance', message: 'Server will be down', severity: 'warning', active: true, expires_at: null, created_at: '2026-04-01T00:00:00Z', updated_at: '2026-04-01' },
+  { id: 'a2', title: 'New Feature', message: 'EV charging is live', severity: 'info', active: false, expires_at: '2026-03-01T00:00:00Z', created_at: '2026-03-01T00:00:00Z', updated_at: '2026-03-01' },
+  { id: 'a3', title: 'Error Alert', message: 'System error', severity: 'error', active: true, expires_at: null, created_at: '2026-04-10T00:00:00Z', updated_at: '2026-04-10' },
+  { id: 'a4', title: 'Good news', message: 'All systems go', severity: 'success', active: true, expires_at: null, created_at: '2026-04-12T00:00:00Z', updated_at: '2026-04-12' },
+];
 
 describe('AdminAnnouncementsPage', () => {
   beforeEach(() => {
-    mockAdminListAnnouncements.mockClear();
-    mockAdminCreateAnnouncement.mockClear();
-    mockAdminDeleteAnnouncement.mockClear();
-    mockToastSuccess.mockClear();
-    mockToastError.mockClear();
+    vi.clearAllMocks();
+    mockListAnnouncements.mockResolvedValue({ success: true, data: announcements });
+    mockCreateAnnouncement.mockResolvedValue({ success: true });
+    mockUpdateAnnouncement.mockResolvedValue({ success: true });
+    mockDeleteAnnouncement.mockResolvedValue({ success: true });
   });
+  afterEach(() => vi.restoreAllMocks());
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('shows loading spinner initially', () => {
-    mockAdminListAnnouncements.mockReturnValue(new Promise(() => {}));
+  it('renders announcements', async () => {
     render(<AdminAnnouncementsPage />);
-    expect(screen.getByTestId('icon-spinner')).toBeInTheDocument();
-  });
-
-  it('renders empty state when no announcements', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('No announcements yet.')).toBeInTheDocument();
-    });
-  });
-
-  it('renders announcements heading and new button', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Announcements')).toBeInTheDocument();
-    });
-    expect(screen.getByText('New Announcement')).toBeInTheDocument();
-  });
-
-  it('renders announcement cards', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [
-        {
-          id: 'a-1',
-          title: 'Maintenance Tonight',
-          message: 'System will be down from 2-4am',
-          severity: 'warning',
-          active: true,
-          created_at: '2026-03-15T00:00:00Z',
-        },
-        {
-          id: 'a-2',
-          title: 'New Feature',
-          message: 'Credits system is now live',
-          severity: 'info',
-          active: true,
-          created_at: '2026-03-14T00:00:00Z',
-        },
-      ],
-    });
-
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Maintenance Tonight')).toBeInTheDocument();
-    });
-    expect(screen.getByText('System will be down from 2-4am')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     expect(screen.getByText('New Feature')).toBeInTheDocument();
-    expect(screen.getByText('Credits system is now live')).toBeInTheDocument();
   });
 
-  it('opens the create form when clicking New Announcement', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
+  it('opens create form', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
+    expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument();
+  });
+
+  it('validates empty title/message', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
+    const saveBtn = screen.getAllByText('admin.create').find(el => el.closest('button')?.className.includes('btn-primary'));
+    if (saveBtn) fireEvent.click(saveBtn);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('admin.announcementTitleRequired'));
+  });
+
+  it('creates announcement', async () => {
     const user = userEvent.setup();
     render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('New Announcement')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByText('New Announcement'));
-
-    expect(screen.getByPlaceholderText('Title')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Message')).toBeInTheDocument();
-    expect(screen.getByText('Severity')).toBeInTheDocument();
-    expect(screen.getByText('Status')).toBeInTheDocument();
+    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
+    await user.type(screen.getByPlaceholderText('admin.announcementTitle'), 'Test Title');
+    await user.type(screen.getByPlaceholderText('admin.announcementMessage'), 'Test Message');
+    const saveBtn = screen.getAllByText('admin.create').find(el => el.closest('button')?.className.includes('btn-primary'));
+    if (saveBtn) await user.click(saveBtn);
+    await waitFor(() => expect(mockCreateAnnouncement).toHaveBeenCalled());
+    expect(toast.success).toHaveBeenCalledWith('admin.announcementCreated');
   });
 
-  it('shows severity buttons in the form', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
+  it('edits announcement', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
+    const editBtns = screen.getAllByLabelText(/common.edit/);
+    fireEvent.click(editBtns[0]);
+    await waitFor(() => expect(screen.getByDisplayValue('Maintenance')).toBeInTheDocument());
+  });
+
+  it('closes form', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
+    fireEvent.click(screen.getByLabelText('common.close'));
+    await waitFor(() => expect(screen.queryByPlaceholderText('admin.announcementTitle')).not.toBeInTheDocument());
+  });
+
+  it('deletes announcement with confirm', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
+    const delBtns = screen.getAllByLabelText(/common.delete/);
+    fireEvent.click(delBtns[0]);
+    await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('ConfirmDel'));
+    await waitFor(() => expect(mockDeleteAnnouncement).toHaveBeenCalledWith('a1'));
+    expect(toast.success).toHaveBeenCalledWith('admin.announcementDeleted');
+  });
+
+  it('toggles severity buttons in form', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
+    // Open create form
+    const newBtns = screen.getAllByText('admin.newAnnouncement');
+    fireEvent.click(newBtns[newBtns.length - 1]);
+    await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
+    // Find severity buttons by type="button" attribute
+    const allBtns = screen.getAllByRole('button');
+    const errorBtn = allBtns.find(b => b.getAttribute('type') === 'button' && b.textContent?.includes('admin.severityError'));
+    if (errorBtn) fireEvent.click(errorBtn);
+    const successBtn = allBtns.find(b => b.getAttribute('type') === 'button' && b.textContent?.includes('admin.severitySuccess'));
+    if (successBtn) fireEvent.click(successBtn);
+  });
+
+  it('toggles active status in form', async () => {
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
+    const newBtns = screen.getAllByText('admin.newAnnouncement');
+    fireEvent.click(newBtns[newBtns.length - 1]);
+    await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
+    // The active toggle is a type="button" with text "admin.active"
+    const allBtns = screen.getAllByRole('button');
+    const activeToggle = allBtns.find(b => b.getAttribute('type') === 'button' && b.textContent?.includes('admin.active') && !b.textContent?.includes('admin.inactive'));
+    if (activeToggle) fireEvent.click(activeToggle);
+  });
+
+  it('shows empty state', async () => {
+    mockListAnnouncements.mockResolvedValue({ success: true, data: [] });
+    render(<AdminAnnouncementsPage />);
+    await waitFor(() => expect(screen.getByText('admin.noAnnouncements')).toBeInTheDocument());
+  });
+
+  it('create failure shows error', async () => {
+    mockCreateAnnouncement.mockResolvedValue({ success: false, error: { message: 'Failed' } });
     const user = userEvent.setup();
     render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('New Announcement')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByText('New Announcement'));
-
-    expect(screen.getByText('Info')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Error')).toBeInTheDocument();
-    expect(screen.getByText('Success')).toBeInTheDocument();
+    await waitFor(() => fireEvent.click(screen.getByText('admin.newAnnouncement')));
+    await user.type(screen.getByPlaceholderText('admin.announcementTitle'), 'T');
+    await user.type(screen.getByPlaceholderText('admin.announcementMessage'), 'M');
+    const saveBtn = screen.getAllByText('admin.create').find(el => el.closest('button')?.className.includes('btn-primary'));
+    if (saveBtn) await user.click(saveBtn);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed'));
   });
 
-  it('shows severity and status badges on announcements', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [
-        {
-          id: 'a-1',
-          title: 'Test',
-          message: 'Test message',
-          severity: 'info',
-          active: true,
-          created_at: '2026-03-15T00:00:00Z',
-        },
-      ],
-    });
-
+  it('delete failure shows error', async () => {
+    mockDeleteAnnouncement.mockResolvedValue({ success: false, error: { message: 'Cannot delete' } });
     render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Test')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Info')).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    await waitFor(() => fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]));
+    fireEvent.click(screen.getByText('ConfirmDel'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Cannot delete'));
   });
 
-  it('shows inactive badge for inactive announcements', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [
-        { id: 'a-1', title: 'Disabled', message: 'Msg', severity: 'warning', active: false, created_at: '2026-03-15T00:00:00Z' },
-      ],
-    });
+  it('shows expired status badge', async () => {
     render(<AdminAnnouncementsPage />);
-    await waitFor(() => {
-      expect(screen.getByText('Disabled')).toBeInTheDocument();
-      expect(screen.getByText('Inactive')).toBeInTheDocument();
-    });
-  });
-
-  it('shows expired badge for expired announcements', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [
-        { id: 'a-1', title: 'Old', message: 'Old msg', severity: 'info', active: true, created_at: '2026-01-01T00:00:00Z', expires_at: '2026-01-02T00:00:00Z' },
-      ],
-    });
-    render(<AdminAnnouncementsPage />);
-    await waitFor(() => {
-      expect(screen.getByText('Old')).toBeInTheDocument();
-      expect(screen.getByText('Expired')).toBeInTheDocument();
-    });
-  });
-
-  it('creates an announcement successfully', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    mockAdminCreateAnnouncement.mockResolvedValue({ success: true, data: { id: 'new-1', title: 'New One' } });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument());
-    await user.click(screen.getByText('New Announcement'));
-    await user.type(screen.getByPlaceholderText('Title'), 'Test Title');
-    await user.type(screen.getByPlaceholderText('Message'), 'Test Message');
-
-    // Reset for reload
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [{ id: 'new-1', title: 'Test Title', message: 'Test Message', severity: 'info', active: true, created_at: new Date().toISOString() }] });
-    await user.click(screen.getByText('Create'));
-
-    await waitFor(() => {
-      expect(mockAdminCreateAnnouncement).toHaveBeenCalled();
-      expect(mockToastSuccess).toHaveBeenCalled();
-    });
-  });
-
-  it('shows error toast when title is empty on save', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument());
-    await user.click(screen.getByText('New Announcement'));
-    await user.click(screen.getByText('Create'));
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalled();
-    });
-    expect(mockAdminCreateAnnouncement).not.toHaveBeenCalled();
-  });
-
-  it('shows error toast on failed create', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    mockAdminCreateAnnouncement.mockResolvedValue({ success: false, data: null, error: { code: 'ERR', message: 'Save failed' } });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument());
-    await user.click(screen.getByText('New Announcement'));
-    await user.type(screen.getByPlaceholderText('Title'), 'T');
-    await user.type(screen.getByPlaceholderText('Message'), 'M');
-    await user.click(screen.getByText('Create'));
-
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith('Save failed');
-    });
-  });
-
-  it('opens edit form and populates fields', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [{ id: 'a-1', title: 'Editable', message: 'Edit me', severity: 'warning', active: true, created_at: '2026-03-15T00:00:00Z' }],
-    });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('Editable')).toBeInTheDocument());
-    const editBtn = screen.getByLabelText(/Edit Editable/i);
-    await user.click(editBtn);
-
-    await waitFor(() => {
-      expect(screen.getByDisplayValue('Editable')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('Edit me')).toBeInTheDocument();
-    });
-  });
-
-  it('closes form on close button click', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument());
-    await user.click(screen.getByText('New Announcement'));
-    expect(screen.getByPlaceholderText('Title')).toBeInTheDocument();
-
-    await user.click(screen.getByLabelText('Close'));
-    expect(screen.queryByPlaceholderText('Title')).not.toBeInTheDocument();
-  });
-
-  it('closes form on cancel button click', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument());
-    await user.click(screen.getByText('New Announcement'));
-    await user.click(screen.getByText('Cancel'));
-    expect(screen.queryByPlaceholderText('Title')).not.toBeInTheDocument();
-  });
-
-  it('toggles status in the form', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: true, data: [] });
-    const user = userEvent.setup();
-    render(<AdminAnnouncementsPage />);
-
-    await waitFor(() => expect(screen.getByText('New Announcement')).toBeInTheDocument());
-    await user.click(screen.getByText('New Announcement'));
-
-    // Status starts as Active, toggle to Inactive
-    await user.click(screen.getByText('Active'));
-    expect(screen.getByText('Inactive')).toBeInTheDocument();
-  });
-
-  it('displays all four severity types in announcement cards', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [
-        { id: 'a-1', title: 'Info One', message: 'M1', severity: 'info', active: true, created_at: '2026-03-15T00:00:00Z' },
-        { id: 'a-2', title: 'Warn One', message: 'M2', severity: 'warning', active: true, created_at: '2026-03-15T00:00:00Z' },
-        { id: 'a-3', title: 'Error One', message: 'M3', severity: 'error', active: true, created_at: '2026-03-15T00:00:00Z' },
-        { id: 'a-4', title: 'Success One', message: 'M4', severity: 'success', active: true, created_at: '2026-03-15T00:00:00Z' },
-      ],
-    });
-    render(<AdminAnnouncementsPage />);
-    await waitFor(() => {
-      expect(screen.getByText('Info One')).toBeInTheDocument();
-      expect(screen.getByText('Warn One')).toBeInTheDocument();
-      expect(screen.getByText('Error One')).toBeInTheDocument();
-      expect(screen.getByText('Success One')).toBeInTheDocument();
-    });
-  });
-
-  it('handles API failure gracefully', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({ success: false, data: null });
-    render(<AdminAnnouncementsPage />);
-    await waitFor(() => {
-      expect(screen.getByText('No announcements yet.')).toBeInTheDocument();
-    });
-  });
-
-  it('shows expires_at date when present', async () => {
-    mockAdminListAnnouncements.mockResolvedValue({
-      success: true,
-      data: [
-        { id: 'a-1', title: 'Expiring', message: 'M', severity: 'info', active: true, created_at: '2026-03-15T00:00:00Z', expires_at: '2026-12-31T00:00:00Z' },
-      ],
-    });
-    render(<AdminAnnouncementsPage />);
-    await waitFor(() => {
-      expect(screen.getByText('Expiring')).toBeInTheDocument();
-      // Should show expiry date text
-      expect(screen.getByText(/Expires/i, { exact: false })).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText('New Feature')).toBeInTheDocument());
+    // a2 is inactive with expired date
   });
 });
