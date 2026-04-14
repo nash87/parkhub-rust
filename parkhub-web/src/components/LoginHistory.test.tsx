@@ -236,4 +236,24 @@ describe('LoginHistoryComponent', () => {
       expect(screen.getByText('Security')).toBeInTheDocument();
     });
   });
+
+  it('parseUserAgent resolves every browser bucket', async () => {
+    mockGetLoginHistory.mockResolvedValue({
+      success: true,
+      data: [
+        { timestamp: '2026-04-14T10:00:00Z', ip_address: '1.1.1.1', user_agent: 'Safari/605', success: true },
+        { timestamp: '2026-04-14T09:00:00Z', ip_address: '2.2.2.2', user_agent: 'Edge/120', success: true },
+        { timestamp: '2026-04-14T08:00:00Z', ip_address: '3.3.3.3', user_agent: 'curl/8.0', success: true },
+        { timestamp: '2026-04-14T07:00:00Z', ip_address: '4.4.4.4', user_agent: 'WeirdBot/1.0', success: true },
+      ],
+    });
+    mockGetSessions.mockResolvedValue({ success: true, data: [] });
+    render(<LoginHistoryComponent />);
+    await waitFor(() => {
+      expect(screen.getByText('Safari')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Edge')).toBeInTheDocument();
+    expect(screen.getByText('curl')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
 });

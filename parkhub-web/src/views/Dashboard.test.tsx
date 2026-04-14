@@ -255,4 +255,19 @@ describe('DashboardPage', () => {
     });
     expect(screen.getByText('Bookings').closest('a')).toHaveAttribute('href', '/bookings');
   });
+
+  it('websocket handler routes all three event types without throwing', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetUserStats.mockResolvedValue({ success: true, data: null });
+    let captured: ((e: any) => void) | undefined;
+    mockUseWebSocket.mockImplementation((opts: any) => {
+      captured = opts?.onEvent;
+      return { connected: false, lastMessage: null, occupancy: {} };
+    });
+    render(<DashboardPage />);
+    await waitFor(() => expect(screen.getByText(/Good/)).toBeInTheDocument());
+    expect(() => captured?.({ event: 'booking_created', lot_id: 'l1' })).not.toThrow();
+    expect(() => captured?.({ event: 'booking_cancelled', lot_id: 'l1' })).not.toThrow();
+    expect(() => captured?.({ event: 'occupancy_changed', lot_id: 'l1', occupancy: 5 })).not.toThrow();
+  });
 });
