@@ -105,6 +105,7 @@ export function QRCheckInPage() {
   }, [qrUrl]);
 
   async function handleCheckIn() {
+    /* istanbul ignore next -- defensive guard; UI only renders this button when booking exists */
     if (!booking) return;
     setActing(true);
     try {
@@ -126,6 +127,7 @@ export function QRCheckInPage() {
   }
 
   async function handleCheckOut() {
+    /* istanbul ignore next -- defensive guard; UI only renders this button when booking exists */
     if (!booking) return;
     setActing(true);
     try {

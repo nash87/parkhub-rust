@@ -218,4 +218,47 @@ describe('GuestPassPage', () => {
     // slot dropdown should be disabled
     expect(screen.getByTestId('select-slot')).toBeDisabled();
   });
+
+  it('loadBookings fetch rejection shows error toast', async () => {
+    globalThis.fetch = vi.fn(() => Promise.reject(new Error('network down'))) as any;
+    render(<GuestPassPage />);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('common.error'));
+  });
+
+  it('handleSubmit fetch rejection shows error toast', async () => {
+    const user = userEvent.setup();
+    const callOrder: string[] = [];
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'POST') {
+        callOrder.push('POST');
+        return Promise.reject(new Error('submit fail'));
+      }
+      if (url.includes('/slots')) return Promise.resolve({ json: () => Promise.resolve({ success: true, data: slots }) } as Response);
+      if (url.includes('/lots')) return Promise.resolve({ json: () => Promise.resolve({ success: true, data: lots }) } as Response);
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    }) as any;
+    render(<GuestPassPage />);
+    await waitFor(() => fireEvent.click(screen.getByTestId('create-guest-btn')));
+    await user.type(screen.getByTestId('input-guest-name'), 'X');
+    await user.selectOptions(screen.getByTestId('select-lot'), 'l1');
+    await waitFor(() => expect(screen.getByTestId('select-slot')).not.toBeDisabled());
+    await user.selectOptions(screen.getByTestId('select-slot'), 's1');
+    fireEvent.change(screen.getByTestId('input-start-time'), { target: { value: '2026-04-12T08:00' } });
+    fireEvent.change(screen.getByTestId('input-end-time'), { target: { value: '2026-04-12T17:00' } });
+    fireEvent.click(screen.getByTestId('submit-guest-btn'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('common.error'));
+  });
+
+  it('handleCancel fetch rejection shows error toast', async () => {
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'DELETE') return Promise.reject(new Error('cancel fail'));
+      if (url.includes('/bookings/guest')) return Promise.resolve({ json: () => Promise.resolve({ success: true, data: guestBookings }) } as Response);
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    }) as any;
+    render(<GuestPassPage />);
+    await waitFor(() => expect(screen.getByText('Alice')).toBeInTheDocument());
+    const cancelBtn = screen.getByTestId('cancel-g1');
+    fireEvent.click(cancelBtn);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('common.error'));
+  });
 });

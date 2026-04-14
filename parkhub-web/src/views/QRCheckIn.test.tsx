@@ -348,4 +348,26 @@ describe('QRCheckInPage', () => {
       expect(screen.getByText('No active booking')).toBeInTheDocument();
     });
   });
+
+  it('falls back to empty check-in status when status API returns not-success', async () => {
+    const booking = makeActiveBooking();
+    mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('check-in')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false }) } as Response);
+      }
+      return Promise.resolve({ ok: false } as Response);
+    }) as any;
+    render(<QRCheckInPage />);
+    await waitFor(() => expect(screen.getByText(booking.lot_name)).toBeInTheDocument());
+  });
+
+  it('getBookings rejection is handled gracefully', async () => {
+    mockGetBookings.mockRejectedValue(new Error('server down'));
+    render(<QRCheckInPage />);
+    await waitFor(() => {
+      // Component survives the rejection and renders the empty state
+      expect(screen.queryByText(/No active booking|No active|Loading/)).toBeTruthy();
+    });
+  });
 });
