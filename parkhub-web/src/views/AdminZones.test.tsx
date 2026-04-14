@@ -44,8 +44,14 @@ vi.mock('@phosphor-icons/react', () => ({
   Tag: (props: any) => <span data-testid="icon-tag" {...props} />,
 }));
 
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+
 vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
+  default: {
+    success: (...a: any[]) => mockToastSuccess(...a),
+    error: (...a: any[]) => mockToastError(...a),
+  },
 }));
 
 import { AdminZonesPage } from './AdminZones';
@@ -81,6 +87,8 @@ const sampleZones = [
 describe('AdminZonesPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockToastSuccess.mockClear();
+    mockToastError.mockClear();
   });
 
   it('renders title and subtitle', async () => {
@@ -180,5 +188,173 @@ describe('AdminZonesPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Economy Section')).toBeDefined();
     });
+  });
+
+  it('toggles help tooltip on click', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Parking Zones')).toBeInTheDocument());
+
+    // Click help button
+    const helpBtn = screen.getByTitle('Help');
+    await user.click(helpBtn);
+    expect(screen.getByText('Configure pricing tiers for zones to manage pricing automatically.')).toBeInTheDocument();
+
+    // Click again to hide
+    await user.click(helpBtn);
+    await waitFor(() => {
+      expect(screen.queryByText('Configure pricing tiers for zones to manage pricing automatically.')).not.toBeInTheDocument();
+    });
+  });
+
+  it('opens edit form when edit button is clicked', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByTitle('Edit Pricing');
+    await user.click(editBtns[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Tier')).toBeInTheDocument();
+      expect(screen.getByText('Multiplier')).toBeInTheDocument();
+      expect(screen.getByText('Max Capacity')).toBeInTheDocument();
+    });
+  });
+
+  it('saves zone pricing successfully', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    // Use mockImplementation to handle any number of calls
+    const lotsResp = { ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) };
+    const zonesResp = { ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) };
+    const putResp = { ok: true, json: () => Promise.resolve({ success: true }) };
+
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'PUT') return Promise.resolve(putResp);
+      if (typeof url === 'string' && url.includes('/zones/pricing')) return Promise.resolve(zonesResp);
+      return Promise.resolve(lotsResp);
+    });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByTitle('Edit Pricing');
+    await user.click(editBtns[0]);
+
+    await waitFor(() => expect(screen.getByText('Save')).toBeInTheDocument());
+    await user.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastSuccess).toHaveBeenCalledWith('Pricing updated');
+    });
+  });
+
+  it('shows error on save pricing failure', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    const lotsResp = { ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) };
+    const zonesResp = { ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) };
+
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'PUT') return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: false, error: { message: 'Invalid' } }) });
+      if (typeof url === 'string' && url.includes('/zones/pricing')) return Promise.resolve(zonesResp);
+      return Promise.resolve(lotsResp);
+    });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByTitle('Edit Pricing');
+    await user.click(editBtns[0]);
+
+    await user.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Invalid');
+    });
+  });
+
+  it('cancels edit form', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByTitle('Edit Pricing');
+    await user.click(editBtns[0]);
+
+    await waitFor(() => expect(screen.getByText('Cancel')).toBeInTheDocument());
+    await user.click(screen.getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Multiplier')).not.toBeInTheDocument();
+    });
+  });
+
+  it('selects different tier in edit form', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByTitle('Edit Pricing');
+    await user.click(editBtns[0]);
+
+    await waitFor(() => expect(screen.getByText('PREMIUM')).toBeInTheDocument());
+    await user.click(screen.getByText('PREMIUM'));
+    // Should not crash, tier should be selected
+  });
+
+  it('handles zones without max_capacity', async () => {
+    const zonesNoCapacity = [{
+      ...sampleZones[0],
+      max_capacity: null,
+    }];
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: zonesNoCapacity }) });
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+    // Capacity bar should not be rendered
+    expect(screen.queryByText('Capacity')).not.toBeInTheDocument();
+  });
+
+  it('handles save pricing network error', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) })
+      .mockRejectedValueOnce(new Error('Network'));
+
+    render(<AdminZonesPage />);
+    await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByTitle('Edit Pricing');
+    await user.click(editBtns[0]);
+    await user.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('shows loading state', () => {
+    globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    render(<AdminZonesPage />);
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
   });
 });

@@ -427,4 +427,75 @@ describe('AdminTranslationsPage', () => {
       expect(screen.queryByText('Approve All')).not.toBeInTheDocument();
     });
   });
+
+  it('search with no results shows empty in data table', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+
+    const searchInput = screen.getByLabelText('Search proposals...');
+    await user.type(searchInput, 'zzzznonexistent');
+
+    // Filtered list should be empty -> DataTable mock shows "No proposals"
+    await waitFor(() => {
+      expect(screen.getByText('No proposals')).toBeInTheDocument();
+    });
+  });
+
+  it('filter changes back to pending and reloads', async () => {
+    const user = userEvent.setup();
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalledWith('pending'));
+
+    const select = screen.getByLabelText('Filter status');
+    await user.selectOptions(select, 'all');
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalledWith(undefined));
+
+    await user.selectOptions(select, 'pending');
+    await waitFor(() => {
+      expect(mockGetProposals).toHaveBeenCalledWith('pending');
+    });
+  });
+
+  it('handles proposals with empty current_value', async () => {
+    const emptyCurrentProposal = {
+      ...MOCK_PROPOSALS[0],
+      current_value: '',
+    };
+    mockGetProposals.mockResolvedValue({ success: true, data: [emptyCurrentProposal] });
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+  });
+
+  it('handles proposals with negative net score', async () => {
+    const negativeScoreProposal = {
+      ...MOCK_PROPOSALS[0],
+      votes_for: 1,
+      votes_against: 5,
+    };
+    mockGetProposals.mockResolvedValue({ success: true, data: [negativeScoreProposal] });
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+  });
+
+  it('handles proposals with zero net score', async () => {
+    const zeroScoreProposal = {
+      ...MOCK_PROPOSALS[0],
+      votes_for: 3,
+      votes_against: 3,
+    };
+    mockGetProposals.mockResolvedValue({ success: true, data: [zeroScoreProposal] });
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+  });
+
+  it('handles proposal without reviewer_name for non-pending status', async () => {
+    const approvedNoReviewer = {
+      ...MOCK_PROPOSALS[1],
+      reviewer_name: undefined,
+    };
+    mockGetProposals.mockResolvedValue({ success: true, data: [approvedNoReviewer] });
+    render(<AdminTranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+  });
 });
