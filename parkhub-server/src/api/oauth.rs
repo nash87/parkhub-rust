@@ -188,7 +188,7 @@ const OAUTH_STATE_MAX_AGE: u32 = 600;
 fn build_oauth_state_cookie(state_nonce: &str) -> String {
     let secure_flag = std::env::var("APP_URL")
         .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
-        .unwrap_or(false);
+        .unwrap_or(true);
     let mut cookie = format!(
         "{OAUTH_STATE_COOKIE}={state_nonce}; HttpOnly; SameSite=Lax; Path=/api/v1/auth/oauth; Max-Age={OAUTH_STATE_MAX_AGE}"
     );
@@ -273,7 +273,7 @@ pub async fn oauth_google_redirect() -> Response {
         )
             .into_response();
     };
-    let state_nonce = Uuid::new_v4().to_string();
+    let state_nonce = generate_access_token();
     let cookie = build_oauth_state_cookie(&state_nonce);
     let mut resp = Redirect::temporary(&google_auth_url(&config, &state_nonce)).into_response();
     if let Ok(hv) = header::HeaderValue::from_str(&cookie) {
@@ -414,7 +414,7 @@ pub async fn oauth_github_redirect() -> Response {
         )
             .into_response();
     };
-    let state_nonce = Uuid::new_v4().to_string();
+    let state_nonce = generate_access_token();
     let cookie = build_oauth_state_cookie(&state_nonce);
     let mut resp = Redirect::temporary(&github_auth_url(&config, &state_nonce)).into_response();
     if let Ok(hv) = header::HeaderValue::from_str(&cookie) {
