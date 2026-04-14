@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -46,6 +46,10 @@ vi.mock('@phosphor-icons/react', () => ({
   MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
   Flag: (props: any) => <span data-testid="icon-flag" {...props} />,
   Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
+}));
+
+vi.mock('react-hot-toast', () => ({
+  default: { success: vi.fn(), error: vi.fn() },
 }));
 
 import { AdminFleetPage } from './AdminFleet';
@@ -126,6 +130,152 @@ describe('AdminFleetPage', () => {
     render(<AdminFleetPage />);
     await waitFor(() => {
       expect(screen.getByText('No vehicles found')).toBeInTheDocument();
+    });
+  });
+
+  it('flags an unflagged vehicle', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => screen.getAllByTestId('fleet-row'));
+
+    const flagBtns = screen.getAllByTestId('flag-btn');
+    // First vehicle (alice's Tesla) is not flagged
+    fireEvent.click(flagBtns[0]);
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/fleet/v1/flag',
+        expect.objectContaining({
+          method: 'PUT',
+          body: expect.stringContaining('"flagged":true'),
+        }),
+      );
+    });
+  });
+
+  it('unflags a flagged vehicle', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => screen.getAllByTestId('fleet-row'));
+
+    const flagBtns = screen.getAllByTestId('flag-btn');
+    // Second vehicle (bob's BMW) is flagged
+    fireEvent.click(flagBtns[1]);
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/fleet/v2/flag',
+        expect.objectContaining({
+          method: 'PUT',
+          body: expect.stringContaining('"flagged":false'),
+        }),
+      );
+    });
+  });
+
+  it('handles flag error', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    let callCount = 0;
+    global.fetch = vi.fn((url: string) => {
+      callCount++;
+      if (url.includes('/stats')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleStats }) } as Response);
+      }
+      if (url.includes('/flag')) {
+        return Promise.reject(new Error('Flag failed'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleFleet }) } as Response);
+    }) as any;
+
+    render(<AdminFleetPage />);
+    await waitFor(() => screen.getAllByTestId('flag-btn'));
+    fireEvent.click(screen.getAllByTestId('flag-btn')[0]);
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('filters by type dropdown', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => screen.getByTestId('fleet-type-filter'));
+
+    fireEvent.change(screen.getByTestId('fleet-type-filter'), { target: { value: 'electric' } });
+    // The loadData useCallback depends on typeFilter, so changing it triggers re-fetch
+    await waitFor(() => {
+      const calls = (global.fetch as any).mock.calls;
+      const matchingCalls = calls.filter((c: any[]) => typeof c[0] === 'string' && c[0].includes('type=electric'));
+      expect(matchingCalls.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('searches on Enter key', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => screen.getByTestId('fleet-search'));
+
+    const searchInput = screen.getByTestId('fleet-search');
+    fireEvent.change(searchInput, { target: { value: 'Tesla' } });
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+    // The keyDown handler calls loadData() directly, and search state change also triggers useEffect
+    await waitFor(() => {
+      const calls = (global.fetch as any).mock.calls;
+      const matchingCalls = calls.filter((c: any[]) => typeof c[0] === 'string' && c[0].includes('search=Tesla'));
+      expect(matchingCalls.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows flagged vehicle with flag icon and unflag button text', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => {
+      // Bob's car is flagged
+      const flagBtns = screen.getAllByTestId('flag-btn');
+      expect(flagBtns[1].textContent).toContain('Unflag');
+      expect(flagBtns[0].textContent).toContain('Flag');
+    });
+  });
+
+  it('shows vehicle details (make, model, plate, owner)', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => {
+      expect(screen.getByText('AB-123')).toBeInTheDocument();
+      expect(screen.getByText('CD-456')).toBeInTheDocument();
+      expect(screen.getByText('alice')).toBeInTheDocument();
+      expect(screen.getByText('bob')).toBeInTheDocument();
+      expect(screen.getByText('Tesla Model 3')).toBeInTheDocument();
+      expect(screen.getByText('BMW 3er')).toBeInTheDocument();
+    });
+  });
+
+  it('shows electric ratio percentage', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => {
+      expect(screen.getByText('50%')).toBeInTheDocument();
+    });
+  });
+
+  it('handles fetch error on initial load', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    global.fetch = vi.fn(() => Promise.reject(new Error('Network'))) as any;
+    render(<AdminFleetPage />);
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('shows loading skeleton initially', () => {
+    global.fetch = vi.fn(() => new Promise(() => {})) as any; // never resolves
+    render(<AdminFleetPage />);
+    expect(document.querySelector('.skeleton')).toBeInTheDocument();
+  });
+
+  it('shows bookings count for vehicles', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => {
+      expect(screen.getByText('5')).toBeInTheDocument(); // v1 bookings_count
+    });
+  });
+
+  it('shows last used date for vehicles', async () => {
+    render(<AdminFleetPage />);
+    await waitFor(() => {
+      // v1 has last_used, v2 does not
+      const rows = screen.getAllByTestId('fleet-row');
+      expect(rows[1].textContent).toContain('-'); // no last_used
     });
   });
 });

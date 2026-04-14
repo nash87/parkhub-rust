@@ -49,6 +49,10 @@ vi.mock('@phosphor-icons/react', () => ({
   Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
+vi.mock('react-hot-toast', () => ({
+  default: { success: vi.fn(), error: vi.fn() },
+}));
+
 import { AdminMaintenancePage } from './AdminMaintenance';
 
 const sampleWindows = [
@@ -159,5 +163,268 @@ describe('AdminMaintenancePage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('active-banner')).toBeInTheDocument();
     });
+  });
+
+  it('shows help text when help button clicked', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByText('Maintenance Scheduling'));
+    const helpBtns = document.querySelectorAll('[data-testid="icon-question"]');
+    const helpBtn = helpBtns[0]?.closest('button');
+    if (helpBtn) fireEvent.click(helpBtn);
+    expect(screen.getByText('Schedule maintenance windows.')).toBeInTheDocument();
+  });
+
+  it('submits create form successfully', async () => {
+    vi.mock('react-hot-toast', () => ({
+      default: { success: vi.fn(), error: vi.fn() },
+    }));
+
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByTestId('create-btn'));
+    fireEvent.click(screen.getByTestId('create-btn'));
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+
+    // Fill form
+    fireEvent.change(screen.getByTestId('form-lot'), { target: { value: 'lot-1' } });
+    fireEvent.change(screen.getByTestId('form-reason'), { target: { value: 'Test maintenance' } });
+    fireEvent.change(screen.getByTestId('form-start'), { target: { value: '2026-05-01T08:00' } });
+    fireEvent.change(screen.getByTestId('form-end'), { target: { value: '2026-05-01T12:00' } });
+
+    fireEvent.click(screen.getByTestId('form-submit'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/maintenance',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('Test maintenance'),
+        }),
+      );
+    });
+  });
+
+  it('shows validation error when required fields are missing', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByTestId('create-btn'));
+    fireEvent.click(screen.getByTestId('create-btn'));
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+
+    // Submit without filling anything
+    fireEvent.click(screen.getByTestId('form-submit'));
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  it('opens edit form with pre-filled data', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getAllByTestId('maintenance-row'));
+
+    // Click edit on first row
+    const editBtns = document.querySelectorAll('[data-testid="icon-pencil"]');
+    const firstEditBtn = editBtns[0]?.closest('button');
+    if (firstEditBtn) fireEvent.click(firstEditBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('maintenance-form')).toBeInTheDocument();
+      expect(screen.getByTestId('form-lot')).toHaveValue('lot-1');
+      expect(screen.getByTestId('form-reason')).toHaveValue('Elevator repair');
+    });
+  });
+
+  it('submits edit form with PUT method', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getAllByTestId('maintenance-row'));
+
+    const editBtns = document.querySelectorAll('[data-testid="icon-pencil"]');
+    const firstEditBtn = editBtns[0]?.closest('button');
+    if (firstEditBtn) fireEvent.click(firstEditBtn);
+
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+    fireEvent.change(screen.getByTestId('form-reason'), { target: { value: 'Updated reason' } });
+    fireEvent.click(screen.getByTestId('form-submit'));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/maintenance/m1',
+        expect.objectContaining({ method: 'PUT' }),
+      );
+    });
+  });
+
+  it('deletes a maintenance window', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getAllByTestId('maintenance-row'));
+
+    const trashBtns = document.querySelectorAll('[data-testid="icon-trash"]');
+    const firstTrashBtn = trashBtns[0]?.closest('button');
+    if (firstTrashBtn) fireEvent.click(firstTrashBtn);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/maintenance/m1',
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+  });
+
+  it('cancels create form', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByTestId('create-btn'));
+    fireEvent.click(screen.getByTestId('create-btn'));
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+
+    fireEvent.click(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('maintenance-form')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles submit error from API', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/maintenance/active')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (url.includes('/admin/maintenance') && !opts?.method) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleWindows }) } as Response);
+      }
+      if (url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleLots }) } as Response);
+      }
+      if (opts?.method === 'POST') {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Overlap' } }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByTestId('create-btn'));
+    fireEvent.click(screen.getByTestId('create-btn'));
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+
+    fireEvent.change(screen.getByTestId('form-lot'), { target: { value: 'lot-1' } });
+    fireEvent.change(screen.getByTestId('form-reason'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('form-start'), { target: { value: '2026-05-01T08:00' } });
+    fireEvent.change(screen.getByTestId('form-end'), { target: { value: '2026-05-01T12:00' } });
+    fireEvent.click(screen.getByTestId('form-submit'));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Overlap');
+    });
+  });
+
+  it('handles submit network error', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/maintenance/active')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (url.includes('/admin/maintenance') && !opts?.method) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleWindows }) } as Response);
+      }
+      if (url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleLots }) } as Response);
+      }
+      if (opts?.method === 'POST') {
+        return Promise.reject(new Error('Network'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByTestId('create-btn'));
+    fireEvent.click(screen.getByTestId('create-btn'));
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+
+    fireEvent.change(screen.getByTestId('form-lot'), { target: { value: 'lot-1' } });
+    fireEvent.change(screen.getByTestId('form-reason'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByTestId('form-start'), { target: { value: '2026-05-01T08:00' } });
+    fireEvent.change(screen.getByTestId('form-end'), { target: { value: '2026-05-01T12:00' } });
+    fireEvent.click(screen.getByTestId('form-submit'));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Error');
+    });
+  });
+
+  it('handles delete error', async () => {
+    const toast = (await import('react-hot-toast')).default;
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (url.includes('/maintenance/active')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (url.includes('/admin/maintenance') && !opts?.method) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleWindows }) } as Response);
+      }
+      if (url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleLots }) } as Response);
+      }
+      if (opts?.method === 'DELETE') {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Cannot delete' } }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getAllByTestId('maintenance-row'));
+
+    const trashBtns = document.querySelectorAll('[data-testid="icon-trash"]');
+    const firstTrashBtn = trashBtns[0]?.closest('button');
+    if (firstTrashBtn) fireEvent.click(firstTrashBtn);
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Cannot delete');
+    });
+  });
+
+  it('submits with specific slot IDs when all_slots unchecked', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => screen.getByTestId('create-btn'));
+    fireEvent.click(screen.getByTestId('create-btn'));
+    await waitFor(() => screen.getByTestId('maintenance-form'));
+
+    fireEvent.change(screen.getByTestId('form-lot'), { target: { value: 'lot-1' } });
+    fireEvent.change(screen.getByTestId('form-reason'), { target: { value: 'Slot repair' } });
+    fireEvent.change(screen.getByTestId('form-start'), { target: { value: '2026-05-01T08:00' } });
+    fireEvent.change(screen.getByTestId('form-end'), { target: { value: '2026-05-01T12:00' } });
+
+    // Uncheck all_slots
+    const checkbox = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    fireEvent.click(checkbox);
+
+    // Slot IDs input should appear
+    await waitFor(() => {
+      const slotInput = screen.getByPlaceholderText('s1, s2, s3');
+      fireEvent.change(slotInput, { target: { value: 'slot-a, slot-b' } });
+    });
+
+    fireEvent.click(screen.getByTestId('form-submit'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/maintenance',
+        expect.objectContaining({
+          body: expect.stringContaining('slot-a'),
+        }),
+      );
+    });
+  });
+
+  it('shows slot count for specific slot windows', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => {
+      // sampleWindows[1] has specific slots with 2 slot_ids
+      expect(screen.getByText(/2 slots/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows "all slots" for windows affecting all', async () => {
+    render(<AdminMaintenancePage />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId('maintenance-row')).toHaveLength(2);
+    });
+    // Check the text content includes "all slots"
+    const rows = screen.getAllByTestId('maintenance-row');
+    expect(rows[0].textContent).toContain('All slots');
   });
 });
