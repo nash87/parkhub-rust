@@ -574,4 +574,149 @@ describe('BookPage', () => {
     // frequency: 40%, availability: 30%, price: 20%, distance: 10%
     expect(40 + 30 + 20 + 10).toBe(100);
   });
+
+  it('shows full label when lot has zero available slots', async () => {
+    const fullLot = makeLot({ available_slots: 0, name: 'Full Garage' });
+    mockGetLots.mockResolvedValue({ success: true, data: [fullLot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Full')).toBeInTheDocument();
+    });
+  });
+
+  it('shows error toast when slots fail to load', async () => {
+    const user = userEvent.setup();
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: false, data: null });
+
+    render(<BookPage />);
+
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Something went wrong');
+    });
+  });
+
+  it('shows generic error on booking failure without INSUFFICIENT_CREDITS', async () => {
+    const user = userEvent.setup();
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [makeSlot()] });
+    mockCreateBooking.mockResolvedValue({ success: false, data: null, error: { code: 'OTHER', message: 'Server error' } });
+
+    render(<BookPage />);
+
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
+    await user.click(screen.getByText('A1'));
+    await user.click(screen.getByText('Continue'));
+    await waitFor(() => expect(screen.getByText('Confirm Booking')).toBeInTheDocument());
+    await user.click(screen.getByText('Confirm Booking'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Server error');
+    });
+  });
+
+  it('shows slot type icons', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slots = [
+      makeSlot({ id: 's1', slot_number: 'E1', status: 'available', slot_type: 'electric' }),
+      makeSlot({ id: 's2', slot_number: 'H1', status: 'available', slot_type: 'handicap' }),
+      makeSlot({ id: 's3', slot_number: 'N1', status: 'available', is_accessible: true }),
+    ];
+
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: slots });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+
+    await waitFor(() => {
+      expect(screen.getByText('E1')).toBeInTheDocument();
+      expect(screen.getByText('H1')).toBeInTheDocument();
+      expect(screen.getByText('N1')).toBeInTheDocument();
+    });
+  });
+
+  it('shows no available slots message', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [makeSlot({ status: 'occupied' })] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+
+    await waitFor(() => expect(screen.getByText('No available slots')).toBeInTheDocument());
+  });
+
+  it('shows lot without address', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot({ address: undefined })] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    expect(screen.queryByText('123 Main St')).not.toBeInTheDocument();
+  });
+
+  it('shows lot without hourly rate', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot({ hourly_rate: undefined })] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    expect(screen.queryByText(/\/h/)).not.toBeInTheDocument();
+  });
+
+  it('confirm shows vehicle info', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot();
+    const slot = makeSlot();
+    const vehicle = makeVehicle();
+
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [vehicle] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
+    await user.click(screen.getByText('A1'));
+    await user.click(screen.getByText('Continue'));
+    await waitFor(() => expect(screen.getByText('Confirm Booking')).toBeInTheDocument());
+    // Should show vehicle info
+    expect(screen.getByText('M-AB-123 (BMW)')).toBeInTheDocument();
+  });
+
+  it('confirm shows estimated cost', async () => {
+    const user = userEvent.setup();
+    const lot = makeLot({ hourly_rate: 5.0 });
+    const slot = makeSlot();
+
+    mockGetLots.mockResolvedValue({ success: true, data: [lot] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [slot] });
+
+    render(<BookPage />);
+    await waitFor(() => expect(screen.getByText('Garage Alpha')).toBeInTheDocument());
+    await user.click(screen.getByText('Garage Alpha'));
+    await waitFor(() => expect(screen.getByText('A1')).toBeInTheDocument());
+    await user.click(screen.getByText('A1'));
+    await user.click(screen.getByText('Continue'));
+    await waitFor(() => expect(screen.getByText('€10.00')).toBeInTheDocument());
+  });
 });

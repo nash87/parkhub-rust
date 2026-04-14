@@ -47,6 +47,11 @@ vi.mock('@phosphor-icons/react', () => ({
   XCircle: (props: any) => <span data-testid="icon-x" {...props} />,
 }));
 
+const mockToastError = vi.fn();
+vi.mock('react-hot-toast', () => ({
+  default: { success: vi.fn(), error: (...a: any[]) => mockToastError(...a) },
+}));
+
 import { AdminCompliancePage } from './AdminCompliance';
 
 const sampleReport = {
@@ -135,5 +140,82 @@ describe('AdminCompliancePage', () => {
       expect(screen.getByText('Data Protection Officer')).toBeInTheDocument();
       expect(screen.getByText('Data Portability')).toBeInTheDocument();
     });
+  });
+
+  it('clicks download PDF', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<AdminCompliancePage />);
+    await waitFor(() => fireEvent.click(screen.getByTestId('download-pdf')));
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('/pdf'), '_blank');
+    openSpy.mockRestore();
+  });
+
+  it('clicks download audit JSON', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<AdminCompliancePage />);
+    await waitFor(() => fireEvent.click(screen.getByTestId('download-audit-json')));
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('format=json'), '_blank');
+    openSpy.mockRestore();
+  });
+
+  it('clicks download audit CSV', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    render(<AdminCompliancePage />);
+    await waitFor(() => fireEvent.click(screen.getByTestId('download-audit-csv')));
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('format=csv'), '_blank');
+    openSpy.mockRestore();
+  });
+
+  it('downloads data map', async () => {
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, writable: true });
+    render(<AdminCompliancePage />);
+    await waitFor(() => fireEvent.click(screen.getByTestId('download-datamap')));
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalled());
+  });
+
+  it('download data map error', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url.includes('/data-map')) return Promise.reject(new Error('net'));
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleReport }) } as Response);
+    }) as any;
+    render(<AdminCompliancePage />);
+    await waitFor(() => fireEvent.click(screen.getByTestId('download-datamap')));
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+  });
+
+  it('load error shows toast', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('net'))) as any;
+    render(<AdminCompliancePage />);
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+  });
+
+  it('returns null when no report', async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ json: () => Promise.resolve({ success: false, data: null }) } as Response)
+    ) as any;
+    const { container } = render(<AdminCompliancePage />);
+    await waitFor(() => {
+      // Should not render main content since report is null
+      expect(container.querySelector('[data-testid="compliance-stats"]')).toBeNull();
+    });
+  });
+
+  it('shows non_compliant check with icon', async () => {
+    const reportWithNonCompliant = {
+      ...sampleReport,
+      overall_status: 'non_compliant',
+      checks: [
+        ...sampleReport.checks,
+        { id: 'nc1', category: 'Security', name: 'Audit Logging', description: 'Audit', status: 'non_compliant', details: 'Missing', recommendation: 'Enable audit logging' },
+      ],
+    };
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ json: () => Promise.resolve({ success: true, data: reportWithNonCompliant }) } as Response)
+    ) as any;
+    render(<AdminCompliancePage />);
+    await waitFor(() => expect(screen.getByText(/Enable audit logging/)).toBeInTheDocument());
   });
 });

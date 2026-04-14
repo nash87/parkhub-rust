@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -113,5 +113,81 @@ describe('PullToRefresh', () => {
       </PullToRefresh>
     );
     expect(screen.getByText('Content')).toBeDefined();
+  });
+
+  it('handles touch events', () => {
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
+    const { container } = render(
+      <PullToRefresh>
+        <div>Touch Content</div>
+      </PullToRefresh>
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    // Simulate touch start
+    fireEvent.touchStart(wrapper, {
+      touches: [{ clientY: 0 }],
+    });
+    expect(screen.getByText('Touch Content')).toBeDefined();
+  });
+});
+
+describe('OfflineIndicator - events', () => {
+  it('responds to offline/online events', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
+    render(<OfflineIndicator />);
+    // Go offline
+    await act(() => { window.dispatchEvent(new Event('offline')); });
+    expect(screen.getByText('You are offline. Some features may be unavailable.')).toBeDefined();
+    // Go back online
+    await act(() => { window.dispatchEvent(new Event('online')); });
+    expect(screen.queryByText('You are offline. Some features may be unavailable.')).toBeNull();
+  });
+});
+
+describe('CachedBookingCard - online data refresh', () => {
+  it('fetches offline data when online', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        data: {
+          next_booking: { id: 'b-2', lot_name: 'Lot X', slot_label: 'B-2', date: '2026-04-20', start_time: '09:00', end_time: '18:00' },
+        },
+      }),
+    });
+    render(<CachedBookingCard />);
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/pwa/offline-data');
+    });
+  });
+
+  it('handles invalid cached data gracefully', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, writable: true });
+    localStorage.setItem('parkhub_offline_data', 'not json');
+    const { container } = render(<CachedBookingCard />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('handles offline data without next_booking', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, writable: true });
+    localStorage.setItem('parkhub_offline_data', JSON.stringify({}));
+    const { container } = render(<CachedBookingCard />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('handles fetch error for offline data', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('net'));
+    render(<CachedBookingCard />);
+    // Should not crash
+  });
+});
+
+describe('BottomNavBar - active state', () => {
+  it('marks current path as active', () => {
+    render(<BottomNavBar />);
+    const dashBtn = screen.getByLabelText('Dashboard');
+    expect(dashBtn.getAttribute('aria-current')).toBe('page');
   });
 });

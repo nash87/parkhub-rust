@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -53,6 +53,12 @@ vi.mock('@phosphor-icons/react', () => ({
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 'user-1', role: 'admin' } }),
+}));
+
+const mockToastSuccess = vi.fn();
+const mockToastError = vi.fn();
+vi.mock('react-hot-toast', () => ({
+  default: { success: (...a: any[]) => mockToastSuccess(...a), error: (...a: any[]) => mockToastError(...a) },
 }));
 
 import { EVChargingPage, AdminChargersPage } from './EVCharging';
@@ -126,5 +132,238 @@ describe('AdminChargersPage', () => {
       expect(screen.getByText('8')).toBeTruthy();
       expect(screen.getByText('1501 kWh')).toBeTruthy();
     });
+  });
+
+  it('shows help text on admin page', async () => {
+    render(<AdminChargersPage />);
+    await waitFor(() => expect(screen.getByText('Charger Management')).toBeTruthy());
+    const helpBtn = screen.getByLabelText('Help');
+    fireEvent.click(helpBtn);
+    await waitFor(() => expect(screen.getByText('About EV Charging')).toBeTruthy());
+  });
+});
+
+describe('EVChargingPage - extended', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('shows empty chargers state', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Main Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('No chargers available')).toBeTruthy());
+  });
+
+  it('shows help text', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Main Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('EV Charging')).toBeTruthy());
+    const helpBtn = screen.getByLabelText('Help');
+    fireEvent.click(helpBtn);
+    await waitFor(() => expect(screen.getByText('About EV Charging')).toBeTruthy());
+  });
+
+  it('starts charging', async () => {
+    const mockFetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/start')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [
+          { id: 'ch1', lot_id: 'lot-1', label: 'C1', connector_type: 'ccs', power_kw: 50, status: 'available', location_hint: null },
+        ] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Main Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    global.fetch = mockFetch;
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Start Charging')).toBeTruthy());
+    fireEvent.click(screen.getByText('Start Charging'));
+    await waitFor(() => expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/start'), expect.anything()));
+  });
+
+  it('start charging failure', async () => {
+
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/start')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Busy' } }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [
+          { id: 'ch1', lot_id: 'lot-1', label: 'C1', connector_type: 'ccs', power_kw: 50, status: 'available', location_hint: null },
+        ] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Start Charging')).toBeTruthy());
+    fireEvent.click(screen.getByText('Start Charging'));
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Busy'));
+  });
+
+  it('start charging network error', async () => {
+
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/start')) {
+        return Promise.reject(new Error('net'));
+      }
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [
+          { id: 'ch1', lot_id: 'lot-1', label: 'C1', connector_type: 'ccs', power_kw: 50, status: 'available', location_hint: null },
+        ] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Start Charging')).toBeTruthy());
+    fireEvent.click(screen.getByText('Start Charging'));
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Error'));
+  });
+
+  it('stops charging with active session', async () => {
+    const sessions = [{ id: 'ses1', charger_id: 'ch1', user_id: 'u1', start_time: '2026-04-10T08:00:00Z', end_time: null, kwh_consumed: 5.5, status: 'active' }];
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/stop')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sessions }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [
+          { id: 'ch1', lot_id: 'lot-1', label: 'Charger A1', connector_type: 'ccs', power_kw: 50, status: 'in_use', location_hint: null },
+        ] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Main' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Stop Charging')).toBeTruthy());
+    expect(screen.getByText(/Charging since/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Stop Charging'));
+  });
+
+  it('stop charging failure', async () => {
+
+    const sessions = [{ id: 'ses1', charger_id: 'ch1', user_id: 'u1', start_time: '2026-04-10T08:00:00Z', end_time: null, kwh_consumed: 5, status: 'active' }];
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/stop')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Cannot stop' } }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sessions }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [
+          { id: 'ch1', lot_id: 'lot-1', label: 'C1', connector_type: 'type2', power_kw: 22, status: 'in_use', location_hint: 'Floor 2' },
+        ] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Stop Charging')).toBeTruthy());
+    fireEvent.click(screen.getByText('Stop Charging'));
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Cannot stop'));
+  });
+
+  it('shows session history', async () => {
+    const sessions = [
+      { id: 'ses1', charger_id: 'ch1', user_id: 'u1', start_time: '2026-04-08T08:00:00Z', end_time: '2026-04-08T10:00:00Z', kwh_consumed: 15.3, status: 'completed' },
+    ];
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sessions }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Session History')).toBeTruthy());
+    expect(screen.getByText('15.3 kWh')).toBeTruthy();
+  });
+
+  it('lot selector changes chargers', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Lot 1' }, { id: 'lot-2', name: 'Lot 2' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('EV Charging')).toBeTruthy());
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'lot-2' } });
+    // Verify that chargers get reloaded (fetch called multiple times)
+    await waitFor(() => {
+      const fetchCalls = (global.fetch as any).mock.calls.map((c: any) => c[0]);
+      expect(fetchCalls.some((url: string) => url.includes('lot-2'))).toBe(true);
+    });
+  });
+
+  it('shows location hint when present', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (typeof url === 'string' && url.includes('/chargers/sessions')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/chargers')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [
+          { id: 'ch1', lot_id: 'lot-1', label: 'C1', connector_type: 'ccs', power_kw: 50, status: 'available', location_hint: 'Near entrance' },
+        ] }) } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/lots')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [{ id: 'lot-1', name: 'Lot' }] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+    });
+    render(<EVChargingPage />);
+    await waitFor(() => expect(screen.getByText('Near entrance')).toBeTruthy());
   });
 });
