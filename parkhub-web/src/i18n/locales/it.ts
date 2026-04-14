@@ -886,6 +886,10 @@ export default {
         forest: 'Foresta',
         synthwave: 'Synthwave',
         zen: 'Zen',
+        aurora: 'Aurora',
+        material: 'Material You',
+        midnight: 'Mezzanotte',
+        sakura: 'Sakura',
       },
       descriptions: {
         classic: 'Pulito e professionale. Il look originale di ParkHub.',
@@ -900,6 +904,10 @@ export default {
         forest: 'Verdi organici ispirati alla natura. Radicato e sostenibile.',
         synthwave: 'Retro-futurismo anni \'80 con neon viola-rosa.',
         zen: 'Minimalismo giapponese wabi-sabi. Texture di carta, sottigliezza d\'inchiostro.',
+        aurora: 'Ispirato all aurora boreale. Sfumature eteree, profondita cosmica.',
+        material: 'Google Material Design 3. Colore dinamico, superfici tonali.',
+        midnight: 'Ispirato a Vercel/Linear. Nero puro, accenti elettrici.',
+        sakura: 'Fiore di ciliegio. Rosa delicato, bianchi caldi, sfumature morbide.',
       },
     },
     payment: {
@@ -973,6 +981,8 @@ export default {
     pwa: { offlineMessage: "Sei offline. Alcune funzionalita potrebbero non essere disponibili.", nextBooking: "La tua prossima prenotazione", mobileNav: "Navigazione mobile", pullToRefresh: "Trascina per aggiornare", releaseToRefresh: "Rilascia per aggiornare", installTitle: "Installa ParkHub", installDescription: "Aggiungi ParkHub alla schermata iniziale", installButton: "Installa", installDismiss: "Non ora" },
     notificationCenter: { title: "Centro Notifiche", bellTooltip: "Apri centro notifiche", help: "Il tuo centro notifiche — conferme prenotazione, promemoria, offerte lista d attesa, avvisi manutenzione e annunci. Clicca per navigare.", helpLabel: "Aiuto", markAllRead: "Segna tutto letto", markRead: "Segna letto", deleteOne: "Elimina", deleted: "Notifica eliminata", empty: "Nessuna notifica", viewAll: "Vedi tutte", today: "Oggi", yesterday: "Ieri", filter: { all: "Tutte", unread: "Non lette", read: "Lette" }, types: { booking_confirmed: "Prenotazione confermata", booking_cancelled: "Prenotazione annullata", booking_reminder: "Promemoria", waitlist_offer: "Offerta lista d attesa", maintenance_alert: "Avviso manutenzione", system_announcement: "Annuncio di sistema", payment_received: "Pagamento ricevuto", visitor_arrived: "Visitatore arrivato" } },
     mobileBooking: { title: "Prenotazione Rapida", subtitle: "Prenota con un tocco", help: "Scorri i parcheggi vicini, seleziona un orario e conferma.", helpLabel: "Aiuto", nearbyLots: "Parcheggi vicini", noNearbyLots: "Nessun parcheggio", searchRadius: "Raggio", quickBook: "Prenota", booking: "Prenotando...", selectSlot: "Scegli orario", activeBooking: "Prenotazione attiva", noActiveBooking: "Nessuna", countdown: "Tempo rimanente", expiresIn: "Scade tra {{time}}", lotDistance: "A {{distance}}", availableSlots: "{{count}} posti", booked: "Confermata!", swipeHint: "Scorri per esplorare" },
+    guestBooking: { title: 'Pass Ospite', subtitle: 'Crea e gestisci pass parcheggio ospite', create: 'Nuovo Pass', existing: 'Pass Ospiti', empty: 'Nessun pass ospite', formTitle: 'Crea Pass Ospite', guestName: 'Nome ospite', guestEmail: 'Email ospite', lot: 'Parcheggio', slot: 'Posto', selectLot: 'Seleziona parcheggio', selectSlot: 'Seleziona posto', startTime: 'Ora inizio', endTime: 'Ora fine', creating: 'Creazione...', created: 'Pass creato', cancelled: 'Pass annullato', cancel: 'Annulla', passCreated: 'Pass Creato', shareInstructions: 'Condividi questo pass con il tuo ospite', dateRange: 'Data e ora', code: 'Codice di accesso', codeCopied: 'Codice copiato', share: 'Condividi', shareTitle: 'Pass Parcheggio', shareText: 'Ecco il pass per {{name}}. Codice: {{code}}', linkCopied: 'Link copiato', requiredFields: 'Compilare tutti i campi', status: { active: 'Attivo', expired: 'Scaduto', cancelled: 'Annullato' } },
+    swap: { title: 'Richieste di Scambio', subtitle: 'Richiedi e gestisci scambi di posti', create: 'Nuovo Scambio', createTitle: 'Crea Richiesta', empty: 'Nessuna richiesta', emptyHint: 'Crea una richiesta per scambiare posti', yourSlot: 'Il Tuo Posto', theirSlot: 'Il Loro Posto', yourBooking: 'La Tua Prenotazione', selectBooking: 'Seleziona prenotazione', targetBookingId: 'ID prenotazione', targetPlaceholder: 'Inserisci l ID', messageLabel: 'Messaggio', messagePlaceholder: 'Messaggio opzionale', send: 'Invia', created: 'Richiesta inviata', accepted: 'Richiesta accettata', declined: 'Richiesta rifiutata', accept: 'Accetta', decline: 'Rifiuta', status: { pending: 'In attesa', accepted: 'Accettata', declined: 'Rifiutata' } },
     webhookDashboard: { title: "Consegne Webhook", subtitle: "Prestazioni di consegna", help: "Monitora cronologia, tassi di successo, tempi di risposta e rigioca consegne fallite.", helpLabel: "Aiuto", deliveryTimeline: "Cronologia", successRate: "Tasso successo", avgResponseTime: "Tempo medio", topErrors: "Errori frequenti", replay: "Rigioca", replaying: "Rigiocando...", replayed: "Rigiocata", replayFailed: "Fallito", noDeliveries: "Nessuna consegna", stats: "Statistiche", totalDeliveries: "Totale", successCount: "Riuscite", failureCount: "Fallite", responseTime: "{{ms}}ms", statusCode: "Stato {{code}}" },
   },
 };

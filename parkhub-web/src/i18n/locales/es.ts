@@ -886,6 +886,10 @@ export default {
         forest: 'Bosque',
         synthwave: 'Synthwave',
         zen: 'Zen',
+        aurora: 'Aurora',
+        material: 'Material You',
+        midnight: 'Medianoche',
+        sakura: 'Sakura',
       },
       descriptions: {
         classic: 'Sobrio y profesional. El look original de ParkHub.',
@@ -900,6 +904,10 @@ export default {
         forest: 'Verdes orgánicos inspirados en la naturaleza. Arraigado y sostenible.',
         synthwave: 'Retro-futurismo de los 80 con neón púrpura-rosa.',
         zen: 'Minimalismo japonés wabi-sabi. Texturas de papel, sutileza de tinta.',
+        aurora: 'Inspirado en auroras boreales. Degradados etéreos, profundidad cósmica.',
+        material: 'Google Material Design 3. Color dinámico, superficies tonales.',
+        midnight: 'Inspirado en Vercel/Linear. Negro puro, acentos eléctricos.',
+        sakura: 'Flor de cerezo. Rosa suave, blancos cálidos, degradados delicados.',
       },
     },
     payment: {
@@ -996,6 +1004,8 @@ export default {
     pwa: { offlineMessage: "No tienes conexion. Algunas funciones pueden no estar disponibles.", nextBooking: "Tu proxima reserva", mobileNav: "Navegacion movil", pullToRefresh: "Desliza para actualizar", releaseToRefresh: "Suelta para actualizar", installTitle: "Instalar ParkHub", installDescription: "Agrega ParkHub a tu pantalla de inicio", installButton: "Instalar", installDismiss: "Ahora no" },
     notificationCenter: { title: "Centro de Notificaciones", bellTooltip: "Abrir centro de notificaciones", help: "Tu centro de notificaciones — confirmaciones, recordatorios, ofertas de lista de espera, alertas y anuncios. Haz clic para navegar.", helpLabel: "Ayuda", markAllRead: "Marcar todo leido", markRead: "Marcar leido", deleteOne: "Eliminar", deleted: "Notificacion eliminada", empty: "Sin notificaciones", viewAll: "Ver todas", today: "Hoy", yesterday: "Ayer", filter: { all: "Todas", unread: "No leidas", read: "Leidas" }, types: { booking_confirmed: "Reserva confirmada", booking_cancelled: "Reserva cancelada", booking_reminder: "Recordatorio", waitlist_offer: "Oferta de espera", maintenance_alert: "Alerta mantenimiento", system_announcement: "Anuncio del sistema", payment_received: "Pago recibido", visitor_arrived: "Visitante llego" } },
     mobileBooking: { title: "Reserva Rapida", subtitle: "Reserva en un toque", help: "Desliza por estacionamientos cercanos, elige un horario y confirma.", helpLabel: "Ayuda", nearbyLots: "Estacionamientos cercanos", noNearbyLots: "Ninguno encontrado", searchRadius: "Radio", quickBook: "Reservar", booking: "Reservando...", selectSlot: "Elegir horario", activeBooking: "Reserva activa", noActiveBooking: "Ninguna", countdown: "Tiempo restante", expiresIn: "Expira en {{time}}", lotDistance: "A {{distance}}", availableSlots: "{{count}} lugares", booked: "Confirmada!", swipeHint: "Desliza para explorar" },
+    guestBooking: { title: 'Pase de Invitado', subtitle: 'Crear y gestionar pases de estacionamiento para invitados', create: 'Nuevo Pase', existing: 'Pases de Invitado', empty: 'Sin pases de invitado', formTitle: 'Crear Pase de Invitado', guestName: 'Nombre del invitado', guestEmail: 'Email del invitado', lot: 'Estacionamiento', slot: 'Plaza', selectLot: 'Seleccionar estacionamiento', selectSlot: 'Seleccionar plaza', startTime: 'Hora de inicio', endTime: 'Hora de fin', creating: 'Creando...', created: 'Pase creado', cancelled: 'Pase cancelado', cancel: 'Cancelar pase', passCreated: 'Pase Creado', shareInstructions: 'Comparte este pase con tu invitado', dateRange: 'Fecha y hora', code: 'Codigo de acceso', codeCopied: 'Codigo copiado', share: 'Compartir', shareTitle: 'Pase de Estacionamiento', shareText: 'Aqui esta tu pase para {{name}}. Codigo: {{code}}', linkCopied: 'Enlace copiado', requiredFields: 'Complete todos los campos obligatorios', status: { active: 'Activo', expired: 'Expirado', cancelled: 'Cancelado' } },
+    swap: { title: 'Solicitudes de Intercambio', subtitle: 'Solicitar y gestionar intercambios de plazas', create: 'Nuevo Intercambio', createTitle: 'Crear Solicitud', empty: 'Sin solicitudes', emptyHint: 'Crea una solicitud para intercambiar plazas con un colega', yourSlot: 'Tu Plaza', theirSlot: 'Su Plaza', yourBooking: 'Tu Reserva', selectBooking: 'Seleccionar reserva', targetBookingId: 'ID de reserva destino', targetPlaceholder: 'Ingresa el ID de la reserva', messageLabel: 'Mensaje', messagePlaceholder: 'Mensaje opcional', send: 'Enviar', created: 'Solicitud enviada', accepted: 'Solicitud aceptada', declined: 'Solicitud rechazada', accept: 'Aceptar', decline: 'Rechazar', status: { pending: 'Pendiente', accepted: 'Aceptada', declined: 'Rechazada' } },
     webhookDashboard: { title: "Entregas Webhook", subtitle: "Rendimiento de entregas", help: "Rastrea historial, tasas de exito, tiempos de respuesta y reintenta entregas fallidas.", helpLabel: "Ayuda", deliveryTimeline: "Cronologia", successRate: "Tasa de exito", avgResponseTime: "Tiempo promedio", topErrors: "Errores frecuentes", replay: "Reintentar", replaying: "Reintentando...", replayed: "Reintentada", replayFailed: "Fallo", noDeliveries: "Sin entregas", stats: "Estadisticas", totalDeliveries: "Total", successCount: "Exitosas", failureCount: "Fallidas", responseTime: "{{ms}}ms", statusCode: "Estado {{code}}" },
   },
 };

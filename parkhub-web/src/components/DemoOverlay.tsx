@@ -25,7 +25,7 @@ export function DemoOverlay() {
   const { t } = useTranslation();
   const [demo, setDemo] = useState<DemoStatus | null>(null);
   const [enabled, setEnabled] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 640);
   const [localTimer, setLocalTimer] = useState(0);
   const [, setTick] = useState(0); // force re-render for relative times
 
@@ -100,7 +100,7 @@ export function DemoOverlay() {
     <motion.div
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-3 left-1/2 -translate-x-1/2 z-50 max-sm:scale-90 max-sm:origin-top"
+      className="fixed top-3 left-1/2 -translate-x-1/2 z-40 max-sm:top-auto max-sm:bottom-20 max-sm:left-auto max-sm:right-3 max-sm:translate-x-0 max-sm:scale-90 max-sm:origin-bottom-right"
     >
       <div className="glass-card shadow-xl">
         <button
