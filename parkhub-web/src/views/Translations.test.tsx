@@ -323,6 +323,97 @@ describe('TranslationsPage', () => {
     });
   });
 
+  it('vote down sends downvote', async () => {
+    const user = userEvent.setup();
+    mockGetProposals.mockResolvedValue({ success: true, data: [
+      { id: 'p1', language: 'en', key: 'nav.home', current_value: 'Home', proposed_value: 'Start',
+        proposer_name: 'Alice', proposer_id: 'u-2', created_at: '2025-01-01', status: 'pending',
+        votes_for: 1, votes_against: 0, user_vote: null, context: null },
+    ]});
+    mockVoteOnProposal.mockResolvedValue({ success: true, data: {
+      id: 'p1', language: 'en', key: 'nav.home', current_value: 'Home', proposed_value: 'Start',
+      proposer_name: 'Alice', proposer_id: 'u-2', created_at: '2025-01-01', status: 'pending',
+      votes_for: 1, votes_against: 1, user_vote: 'down', context: null,
+    }});
+    const { TranslationsPage } = await import('./Translations');
+    render(<TranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    const voteDown = screen.getByLabelText('Vote against');
+    await user.click(voteDown);
+    expect(mockVoteOnProposal).toHaveBeenCalledWith('p1', 'down');
+  });
+
+  it('empty key+value propose is rejected silently', async () => {
+    const user = userEvent.setup();
+    mockGetProposals.mockResolvedValue({ success: true, data: [] });
+    const { TranslationsPage } = await import('./Translations');
+    render(<TranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    await user.click(screen.getByText('Propose Change'));
+    // Submit with empty key and value — handlePropose early-returns
+    const submit = screen.getByRole('button', { name: /Submit/i });
+    expect(submit).toBeDisabled();
+  });
+
+  it('search filters proposals by key, value, and current_value', async () => {
+    const user = userEvent.setup();
+    mockGetProposals.mockResolvedValue({ success: true, data: [
+      { id: 'p1', language: 'en', key: 'nav.home', current_value: 'Home', proposed_value: 'Start',
+        proposer_name: 'Alice', proposer_id: 'u-2', created_at: '2025-01-01', status: 'pending',
+        votes_for: 0, votes_against: 0, user_vote: null, context: null },
+      { id: 'p2', language: 'en', key: 'btn.save', current_value: 'Save', proposed_value: 'Speichern',
+        proposer_name: 'Bob', proposer_id: 'u-3', created_at: '2025-01-01', status: 'pending',
+        votes_for: 0, votes_against: 0, user_vote: null, context: null },
+    ]});
+    const { TranslationsPage } = await import('./Translations');
+    render(<TranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    const searchInput = screen.getByPlaceholderText('Search keys...');
+    await user.type(searchInput, 'save');
+    // Only btn.save proposal should remain
+    await waitFor(() => {
+      expect(screen.queryByText(/nav\.home/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('language selector switches selectedLang', async () => {
+    const user = userEvent.setup();
+    mockGetProposals.mockResolvedValue({ success: true, data: [] });
+    const { TranslationsPage } = await import('./Translations');
+    render(<TranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    const langSelect = screen.getByLabelText('Select language');
+    await user.selectOptions(langSelect, 'de');
+    expect((langSelect as HTMLSelectElement).value).toBe('de');
+  });
+
+  it('context input accepts text in propose modal', async () => {
+    const user = userEvent.setup();
+    mockGetProposals.mockResolvedValue({ success: true, data: [] });
+    const { TranslationsPage } = await import('./Translations');
+    render(<TranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    await user.click(screen.getByText('Propose Change'));
+    const contextInput = screen.getByLabelText(/context/i);
+    await user.type(contextInput, 'used in main nav');
+    expect((contextInput as HTMLInputElement).value).toBe('used in main nav');
+  });
+
+  it('close button dismisses propose modal', async () => {
+    const user = userEvent.setup();
+    mockGetProposals.mockResolvedValue({ success: true, data: [] });
+    const { TranslationsPage } = await import('./Translations');
+    render(<TranslationsPage />);
+    await waitFor(() => expect(mockGetProposals).toHaveBeenCalled());
+    await user.click(screen.getByText('Propose Change'));
+    expect(screen.getByText('New Proposal')).toBeInTheDocument();
+    const closeBtn = screen.getByRole('button', { name: 'Close' });
+    await user.click(closeBtn);
+    await waitFor(() => {
+      expect(screen.queryByText('New Proposal')).not.toBeInTheDocument();
+    });
+  });
+
   it('suggest change from browse tab opens propose form with pre-filled key', async () => {
     const user = userEvent.setup();
     render(<TranslationsPage />);
