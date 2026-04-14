@@ -16,6 +16,7 @@ import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
 import { languages } from '../i18n/index';
+import { getInMemoryToken } from '../api/client';
 
 const NAV_ITEMS = [
   { to: '/', icon: House, key: 'dashboard', end: true },
@@ -106,8 +107,16 @@ export function Layout() {
   useKeyboardShortcuts({ onToggleCommandPalette: toggleCommandPalette });
 
   useEffect(() => {
-    fetch('/api/v1/notifications/unread-count')
-      .then(r => r.json())
+    const token = getInMemoryToken();
+    if (!token) return;
+    fetch('/api/v1/notifications/unread-count', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      credentials: 'include',
+    })
+      .then(r => { if (!r.ok) return null; return r.json(); })
       .then(res => { if (res?.data?.count !== undefined) setUnreadCount(res.data.count); })
       .catch(() => {});
   }, [location.pathname]);
@@ -335,6 +344,9 @@ export function Layout() {
           <div className="lg:hidden"><Breadcrumb /></div>
           <Outlet />
         </main>
+        <footer className="py-3 text-center text-xs text-surface-400 dark:text-surface-600 border-t border-surface-200/40 dark:border-surface-800/40">
+          ParkHub v4.9.0
+        </footer>
       </div>
 
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />

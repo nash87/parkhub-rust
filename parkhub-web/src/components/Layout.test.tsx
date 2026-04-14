@@ -78,6 +78,10 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('../api/client', () => ({
+  getInMemoryToken: () => 'test-token',
+}));
+
 vi.mock('framer-motion', () => ({
   motion: {
     div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, layoutId, ...props }: any, ref: any) => (
@@ -254,6 +258,13 @@ describe('Layout', () => {
 
     await user.click(screen.getByText('Dark Mode'));
     expect(mockSetTheme).toHaveBeenCalledWith('dark');
+  });
+
+  it('renders a footer landmark', () => {
+    render(<Layout />);
+    const footer = document.querySelector('footer');
+    expect(footer).toBeInTheDocument();
+    expect(footer?.textContent).toContain('ParkHub');
   });
 
   it('falls back to username when name is not set', () => {
