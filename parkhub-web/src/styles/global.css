@@ -78,6 +78,9 @@
    ──────────────────────────────────────────────────────────────────── */
 
 :root {
+  /* Classic defaults — overridden per-theme via [data-design-theme="..."] in themes.css
+     and by `.dark` below. The body reads var(--theme-bg) so every theme that sets
+     --dt-bg-primary automatically propagates via the mapping aliases at the bottom. */
   --theme-bg: var(--color-surface-50);
   --theme-bg-subtle: white;
   --theme-bg-muted: var(--color-surface-100);
@@ -94,6 +97,29 @@
   --glass-border: rgba(255, 255, 255, 0.3);
   --glass-blur: 12px;
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Theme-token bridge ────────────────────────────────────────────────
+   Forward the per-theme --dt-* tokens (defined in themes.css under
+   [data-design-theme="X"] and .dark[data-design-theme="X"]) into the
+   generic --theme-* tokens the body and most components read from.
+
+   Specificity matters: we need to beat .dark (0,1,0). Using
+   :root[data-design-theme] (0,1,1) and :root.dark[data-design-theme]
+   (0,2,1) ensures both light and dark branches win over the plain
+   .dark{} fallback above.
+   ──────────────────────────────────────────────────────────────────── */
+:root[data-design-theme],
+:root.dark[data-design-theme] {
+  --theme-bg: var(--dt-bg-primary, var(--color-surface-50));
+  --theme-bg-subtle: var(--dt-bg-secondary, white);
+  --theme-bg-muted: var(--dt-bg-secondary, var(--color-surface-100));
+  --theme-text: var(--dt-text-primary, var(--color-surface-900));
+  --theme-text-muted: var(--dt-text-secondary, var(--color-surface-500));
+  --theme-border: var(--dt-border, var(--color-surface-200));
+  --theme-border-subtle: var(--dt-border-subtle, var(--color-surface-100));
+  --theme-card-bg: var(--dt-bg-card, white);
+  --theme-card-border: var(--dt-border, var(--color-surface-200));
 }
 
 .dark {
