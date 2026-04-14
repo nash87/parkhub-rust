@@ -1299,29 +1299,28 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
         let index_key = format!("api_key_idx:{prefix}");
         if let Ok(Some(user_id_str)) = db.get_setting(&index_key).await
             && !user_id_str.is_empty()
+            && let Ok(user_id) = user_id_str.parse::<Uuid>()
         {
-            if let Ok(user_id) = user_id_str.parse::<Uuid>() {
-                // Found candidate user — verify the key against their stored keys
-                let keys_key = format!("api_keys:{user_id}");
-                let keys: Vec<ApiKey> = match db.get_setting(&keys_key).await {
-                    Ok(Some(val)) => serde_json::from_str(&val).unwrap_or_default(),
-                    _ => return None,
-                };
-                for key in &keys {
-                    if !key.is_active {
-                        continue;
-                    }
-                    if let Some(expires_at) = key.expires_at {
-                        if expires_at < Utc::now() {
-                            continue;
-                        }
-                    }
-                    if !api_key.starts_with(&key.key_prefix) {
-                        continue;
-                    }
-                    if super::verify_password(api_key, &key.key_hash).await {
-                        return Some(user_id);
-                    }
+            // Found candidate user — verify the key against their stored keys
+            let keys_key = format!("api_keys:{user_id}");
+            let keys: Vec<ApiKey> = match db.get_setting(&keys_key).await {
+                Ok(Some(val)) => serde_json::from_str(&val).unwrap_or_default(),
+                _ => return None,
+            };
+            for key in &keys {
+                if !key.is_active {
+                    continue;
+                }
+                if let Some(expires_at) = key.expires_at
+                    && expires_at < Utc::now()
+                {
+                    continue;
+                }
+                if !api_key.starts_with(&key.key_prefix) {
+                    continue;
+                }
+                if super::verify_password(api_key, &key.key_hash).await {
+                    return Some(user_id);
                 }
             }
         }
@@ -1343,10 +1342,10 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
             if !key.is_active {
                 continue;
             }
-            if let Some(expires_at) = key.expires_at {
-                if expires_at < Utc::now() {
-                    continue;
-                }
+            if let Some(expires_at) = key.expires_at
+                && expires_at < Utc::now()
+            {
+                continue;
             }
             if !api_key.starts_with(&key.key_prefix) {
                 continue;
