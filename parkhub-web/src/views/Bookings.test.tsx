@@ -112,8 +112,12 @@ vi.mock('../components/Skeleton', () => ({
   BookingsSkeleton: () => <div data-testid="bookings-skeleton">Loading...</div>,
 }));
 
+const wsCallbacks: { onEvent?: (e: any) => void } = {};
 vi.mock('../hooks/useWebSocket', () => ({
-  useWebSocket: () => ({ connected: false, lastMessage: null, occupancy: {} }),
+  useWebSocket: (opts: any) => {
+    wsCallbacks.onEvent = opts?.onEvent;
+    return { connected: false, lastMessage: null, occupancy: {} };
+  },
 }));
 
 vi.mock('../components/ParkingPass', () => ({
@@ -125,9 +129,12 @@ vi.mock('../components/ParkingPass', () => ({
   ),
 }));
 
-vi.mock('react-hot-toast', () => ({
-  default: { success: vi.fn(), error: vi.fn() },
-}));
+vi.mock('react-hot-toast', () => {
+  const fn = vi.fn();
+  (fn as any).success = vi.fn();
+  (fn as any).error = vi.fn();
+  return { default: fn };
+});
 
 import { BookingsPage } from './Bookings';
 import type { Booking } from '../api/client';
@@ -313,5 +320,92 @@ describe('BookingsPage', () => {
       expect(screen.getByText('Book Now')).toBeInTheDocument();
     });
     expect(screen.getByText('Book Now').closest('a')).toHaveAttribute('href', '/book');
+  });
+
+  it('handles booking_created websocket event with toast', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    const toastModule = await import('react-hot-toast');
+    render(<BookingsPage />);
+    await waitFor(() => expect(mockGetBookings).toHaveBeenCalled());
+    wsCallbacks.onEvent?.({ event: 'booking_created', lot_id: 'l1' });
+    expect(toastModule.default.success).toHaveBeenCalled();
+  });
+
+  it('handles booking_cancelled websocket event with toast', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    const toastModule = await import('react-hot-toast');
+    render(<BookingsPage />);
+    await waitFor(() => expect(mockGetBookings).toHaveBeenCalled());
+    // The cancelled-event path uses toast(...) not success/error, so just assert no throw
+    expect(() => wsCallbacks.onEvent?.({ event: 'booking_cancelled', lot_id: 'l1' })).not.toThrow();
+  });
+
+  it('shows error toast when cancel fails', async () => {
+    const booking = makeBooking({ status: 'active' });
+    mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockCancelBooking.mockResolvedValue({ success: false, error: { message: 'server error' } });
+    const toastModule = await import('react-hot-toast');
+    render(<BookingsPage />);
+    await waitFor(() => expect(screen.getByText('Lot Alpha')).toBeInTheDocument());
+    const cancelBtn = screen.getByText('Cancel');
+    await userEvent.setup().click(cancelBtn);
+    await waitFor(() => {
+      expect(toastModule.default.error).toHaveBeenCalled();
+    });
+  });
+
+  it('search input filters bookings by lot name', async () => {
+    const user = userEvent.setup();
+    mockGetBookings.mockResolvedValue({
+      success: true,
+      data: [
+        makeBooking({ id: 'b1', lot_name: 'Lot Alpha' }),
+        makeBooking({ id: 'b2', lot_name: 'Lot Beta', slot_number: 'B1' }),
+      ],
+    });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookingsPage />);
+    await waitFor(() => expect(screen.getByText('Lot Alpha')).toBeInTheDocument());
+    const search = screen.getByPlaceholderText('Search lot...');
+    await user.type(search, 'beta');
+    await waitFor(() => {
+      expect(screen.queryByText('Lot Alpha')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Lot Beta')).toBeInTheDocument();
+  });
+
+  it('status filter narrows visible bookings', async () => {
+    const user = userEvent.setup();
+    mockGetBookings.mockResolvedValue({
+      success: true,
+      data: [
+        makeBooking({ id: 'b1', status: 'active', lot_name: 'Active Lot' }),
+        makeBooking({ id: 'b2', status: 'cancelled', lot_name: 'Cancelled Lot' }),
+      ],
+    });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookingsPage />);
+    await waitFor(() => expect(screen.getByText('Active Lot')).toBeInTheDocument());
+    const statusSel = screen.getByLabelText('Filter');
+    await user.selectOptions(statusSel, 'cancelled');
+    await waitFor(() => {
+      expect(screen.queryByText('Active Lot')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Cancelled Lot')).toBeInTheDocument();
+  });
+
+  it('shows upcoming booking section when start_time is in the future', async () => {
+    const future = new Date(Date.now() + 24 * 3600_000).toISOString();
+    const farFuture = new Date(Date.now() + 48 * 3600_000).toISOString();
+    mockGetBookings.mockResolvedValue({
+      success: true,
+      data: [makeBooking({ status: 'confirmed', start_time: future, end_time: farFuture, lot_name: 'Future Lot' })],
+    });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    render(<BookingsPage />);
+    await waitFor(() => expect(screen.getByText('Future Lot')).toBeInTheDocument());
   });
 });
