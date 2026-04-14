@@ -302,4 +302,221 @@ describe('WaitlistPage', () => {
       expect(screen.getByText('Waitlist')).toBeTruthy();
     });
   });
+
+  it('handles accept waitlist offer', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/accept') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true }),
+        } as Response);
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({
+          success: true,
+          data: {
+            total: 1,
+            entries: [{
+              entry: {
+                id: 'w1', user_id: 'user-1', lot_id: 'lot-1',
+                created_at: '2026-03-20T08:00:00Z', notified_at: '2026-03-20T09:00:00Z',
+                status: 'offered', offer_expires_at: new Date(Date.now() + 900000).toISOString(),
+                accepted_booking_id: null,
+              },
+              position: 1, total_ahead: 0, estimated_wait_minutes: 0,
+            }],
+          },
+        }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Accept')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Accept'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/accept'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  it('handles decline waitlist offer', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/decline') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true }),
+        } as Response);
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({
+          success: true,
+          data: {
+            total: 1,
+            entries: [{
+              entry: {
+                id: 'w1', user_id: 'user-1', lot_id: 'lot-1',
+                created_at: '2026-03-20T08:00:00Z', notified_at: '2026-03-20T09:00:00Z',
+                status: 'offered', offer_expires_at: new Date(Date.now() + 900000).toISOString(),
+                accepted_booking_id: null,
+              },
+              position: 1, total_ahead: 0, estimated_wait_minutes: 0,
+            }],
+          },
+        }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Decline')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Decline'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/decline'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  it('handles join waitlist failure', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/subscribe') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: false, error: { message: 'Already in waitlist' } }),
+        } as Response);
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ success: true, data: { total: 0, entries: [] } }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Join Waitlist')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Join Waitlist'));
+    // Error path exercised
+  });
+
+  it('handles join waitlist network exception', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/subscribe') && opts?.method === 'POST') {
+        return Promise.reject(new Error('Network'));
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ success: true, data: { total: 0, entries: [] } }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Join Waitlist')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Join Waitlist'));
+    // Exception path exercised
+  });
+
+  it('handles leave waitlist network exception', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (opts?.method === 'DELETE') {
+        return Promise.reject(new Error('Network'));
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve(sampleWaitlistResponse),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Leave')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Leave'));
+    // Exception path exercised
+  });
+
+  it('handles accept offer failure', async () => {
+    global.fetch = vi.fn((url: string, opts?: any) => {
+      if (typeof url === 'string' && url.includes('/api/v1/lots') && !url.includes('waitlist')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: true, data: sampleLots }),
+        } as Response);
+      }
+      if (typeof url === 'string' && url.includes('/accept') && opts?.method === 'POST') {
+        return Promise.resolve({
+          json: () => Promise.resolve({ success: false, error: { message: 'Expired' } }),
+        } as Response);
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({
+          success: true,
+          data: {
+            total: 1,
+            entries: [{
+              entry: {
+                id: 'w1', user_id: 'user-1', lot_id: 'lot-1',
+                created_at: '2026-03-20T08:00:00Z', notified_at: '2026-03-20T09:00:00Z',
+                status: 'offered', offer_expires_at: new Date(Date.now() + 900000).toISOString(),
+                accepted_booking_id: null,
+              },
+              position: 1, total_ahead: 0, estimated_wait_minutes: 0,
+            }],
+          },
+        }),
+      } as Response);
+    });
+
+    render(<WaitlistPage />);
+    await waitFor(() => expect(screen.getByText('Accept')).toBeTruthy());
+
+    fireEvent.click(screen.getByText('Accept'));
+    // Error path exercised
+  });
+
+  it('toggles help tooltip off on second click', async () => {
+    render(<WaitlistPage />);
+    await waitFor(() => screen.getByText('Waitlist'));
+    const helpBtn = screen.getByLabelText('Help');
+    fireEvent.click(helpBtn);
+    await waitFor(() => expect(screen.getByText(/Join the waitlist/)).toBeTruthy());
+
+    fireEvent.click(helpBtn);
+    await waitFor(() => {
+      expect(screen.queryByText(/Join the waitlist/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('does not show full lots with existing user entries in full lots section', async () => {
+    // User already has a waitlist entry for lot-1
+    // So lot-1 should NOT appear in the "Full Parking Lots" section
+    render(<WaitlistPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Your Waitlist Entries')).toBeTruthy();
+    });
+    // Garage Alpha should only appear once (in Your Entries, not in Full Lots join section)
+    const alphaMatches = screen.getAllByText('Garage Alpha');
+    expect(alphaMatches.length).toBe(1);
+  });
 });

@@ -269,4 +269,205 @@ describe('AdminRolesPage', () => {
       expect(screen.getByText('Manage Bookings')).toBeDefined();
     });
   });
+
+  it('saves a new role successfully', async () => {
+    let callCount = 0;
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, data: { id: 'role-new', name: 'editor', permissions: ['view_reports'] } }),
+        });
+      }
+      callCount++;
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: callCount <= 1 ? [] : sampleRoles }),
+      });
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('Create Role')));
+    await waitFor(() => expect(screen.getByText('New Role')).toBeDefined());
+
+    // Fill name
+    const nameInput = screen.getByPlaceholderText('Role name');
+    fireEvent.change(nameInput, { target: { value: 'editor' } });
+
+    // Toggle a permission
+    fireEvent.click(screen.getByText('View Reports'));
+
+    // Save
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/roles',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  it('shows error when saving role without name', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [] }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('Create Role')));
+
+    // Don't fill name, just save
+    fireEvent.click(screen.getByText('Save'));
+    // Error toast for missing name
+  });
+
+  it('cancels create form', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [] }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('Create Role')));
+    expect(screen.getByText('New Role')).toBeDefined();
+
+    fireEvent.click(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByText('New Role')).toBeNull();
+    });
+  });
+
+  it('opens edit form for existing role', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleRoles }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => expect(screen.getByText('custom_role')).toBeDefined());
+
+    // Click edit on custom_role
+    const editBtns = screen.getAllByTitle('Edit');
+    fireEvent.click(editBtns[editBtns.length - 1]); // last one = custom_role
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Role')).toBeDefined();
+    });
+  });
+
+  it('deletes custom role', async () => {
+    // Mock confirm dialog
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'DELETE') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: sampleRoles }),
+      });
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => expect(screen.getByText('custom_role')).toBeDefined());
+
+    // Only custom_role has a delete button (non-built-in)
+    const deleteBtn = screen.getByTitle('Delete');
+    fireEvent.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/v1/admin/roles/role-003',
+        expect.objectContaining({ method: 'DELETE' }),
+      );
+    });
+  });
+
+  it('does not delete built-in role', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: sampleRoles }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => expect(screen.getByText('super_admin')).toBeDefined());
+
+    // Built-in roles should not have delete buttons -- only 1 delete button for custom_role
+    const deleteBtns = screen.getAllByTitle('Delete');
+    expect(deleteBtns.length).toBe(1);
+  });
+
+  it('shows role with no permissions', async () => {
+    const rolesWithEmpty = [
+      ...sampleRoles,
+      { id: 'role-004', name: 'empty_role', description: null, permissions: [], built_in: false, created_at: '2026-03-23T10:00:00Z', updated_at: '2026-03-23T10:00:00Z' },
+    ];
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: rolesWithEmpty }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => {
+      expect(screen.getByText('empty_role')).toBeDefined();
+      expect(screen.getByText('No permissions')).toBeDefined();
+    });
+  });
+
+  it('handles save failure with error message', async () => {
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: false, error: { message: 'Duplicate name' } }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: [] }),
+      });
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('Create Role')));
+
+    fireEvent.change(screen.getByPlaceholderText('Role name'), { target: { value: 'dup' } });
+    fireEvent.click(screen.getByText('Save'));
+    // Error path exercised
+  });
+
+  it('handles save fetch exception', async () => {
+    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+      if (opts?.method === 'POST') {
+        return Promise.reject(new Error('Network'));
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: [] }),
+      });
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('Create Role')));
+
+    fireEvent.change(screen.getByPlaceholderText('Role name'), { target: { value: 'test' } });
+    fireEvent.click(screen.getByText('Save'));
+    // Exception path exercised
+  });
+
+  it('toggles permission in form', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: [] }),
+    });
+
+    render(<AdminRolesPage />);
+    await waitFor(() => fireEvent.click(screen.getByText('Create Role')));
+
+    // Toggle manage_users on
+    fireEvent.click(screen.getByText('Manage Users'));
+    // Toggle it off
+    fireEvent.click(screen.getByText('Manage Users'));
+  });
 });

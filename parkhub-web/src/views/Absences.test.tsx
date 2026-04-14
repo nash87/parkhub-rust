@@ -332,4 +332,179 @@ describe('AbsencesPage', () => {
       expect(screen.getByText('Sonstiges')).toBeInTheDocument();
     });
   });
+
+  it('navigates to previous month', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getByText('Abwesenheiten')).toBeInTheDocument());
+
+    const now = new Date();
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevLabel = prevMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    await user.click(screen.getByLabelText('Previous month'));
+    await waitFor(() => {
+      expect(screen.getByText(prevLabel)).toBeInTheDocument();
+    });
+  });
+
+  it('navigates to next month', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getByText('Abwesenheiten')).toBeInTheDocument());
+
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextLabel = nextMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    await user.click(screen.getByLabelText('Next month'));
+    await waitFor(() => {
+      expect(screen.getByText(nextLabel)).toBeInTheDocument();
+    });
+  });
+
+  it('expands and shows pattern weekday buttons', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({
+      success: true,
+      data: [{ user_id: 'u-1', absence_type: 'homeoffice', weekdays: [0, 2] }],
+    });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getByText('Homeoffice-Muster')).toBeInTheDocument());
+
+    // Click to expand pattern
+    await user.click(screen.getByText('Homeoffice-Muster'));
+    await waitFor(() => {
+      expect(screen.getByText('Wähle deine festen Homeoffice-Tage')).toBeInTheDocument();
+    });
+  });
+
+  it('toggles pattern weekday and saves', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({
+      success: true,
+      data: [{ user_id: 'u-1', absence_type: 'homeoffice', weekdays: [0] }],
+    });
+    mockSetAbsencePattern.mockResolvedValue({
+      success: true,
+      data: { user_id: 'u-1', absence_type: 'homeoffice', weekdays: [0, 2] },
+    });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getByText('Homeoffice-Muster')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Homeoffice-Muster'));
+    await waitFor(() => expect(screen.getByText('Wähle deine festen Homeoffice-Tage')).toBeInTheDocument());
+
+    // Click Wednesday (index 2) to add it
+    const wedBtn = screen.getByLabelText(/Mi inactive/i);
+    await user.click(wedBtn);
+
+    await waitFor(() => {
+      expect(mockSetAbsencePattern).toHaveBeenCalledWith('homeoffice', [0, 2]);
+    });
+  });
+
+  it('creates absence via quick today button', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    mockCreateAbsence.mockResolvedValue({
+      success: true,
+      data: { id: 'abs-new', user_id: 'u-1', absence_type: 'homeoffice', start_date: '2026-04-14', end_date: '2026-04-14', source: 'manual', created_at: '2026-04-14T00:00:00Z' },
+    });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getAllByText('Eintragen').length).toBeGreaterThan(0));
+
+    const addButton = screen.getAllByText('Eintragen')[0].closest('button');
+    await user.click(addButton!);
+
+    await waitFor(() => expect(screen.getAllByText('Heute').length).toBeGreaterThanOrEqual(2));
+
+    // Click the quick today button inside the modal (the one with class btn-secondary)
+    const heuteButtons = screen.getAllByText('Heute');
+    const quickTodayBtn = heuteButtons.find(el => el.closest('button')?.className.includes('btn-secondary'));
+    if (quickTodayBtn) await user.click(quickTodayBtn);
+
+    // Click submit
+    const submitBtns = screen.getAllByText('Eintragen');
+    const submitBtn = submitBtns[submitBtns.length - 1].closest('button');
+    if (submitBtn && !submitBtn.disabled) await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockCreateAbsence).toHaveBeenCalled();
+    });
+  });
+
+  it('shows error toast when create absence fails', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    mockCreateAbsence.mockResolvedValue({ success: false, error: { message: 'Overlap' } });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getAllByText('Eintragen').length).toBeGreaterThan(0));
+
+    const addButton = screen.getAllByText('Eintragen')[0].closest('button');
+    await user.click(addButton!);
+    await waitFor(() => expect(screen.getAllByText('Heute').length).toBeGreaterThanOrEqual(2));
+
+    // Click the quick today button inside the modal
+    const heuteButtons = screen.getAllByText('Heute');
+    const quickTodayBtn = heuteButtons.find(el => el.closest('button')?.className.includes('btn-secondary'));
+    if (quickTodayBtn) await user.click(quickTodayBtn);
+
+    // Submit
+    const submitBtns = screen.getAllByText('Eintragen');
+    const submitBtn = submitBtns[submitBtns.length - 1].closest('button');
+    if (submitBtn && !submitBtn.disabled) await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith('Overlap');
+    });
+  });
+
+  it('renders date range for multi-day entries', async () => {
+    const futureDate1 = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const futureDate2 = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    mockListAbsences.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'abs-1', user_id: 'u-1', absence_type: 'vacation',
+        start_date: futureDate1, end_date: futureDate2,
+        source: 'manual', created_at: '2026-03-01T00:00:00Z',
+      }],
+    });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+
+    render(<AbsencesPage />);
+    await waitFor(() => {
+      // Should show dash between start and end dates
+      const urlaub = screen.getAllByText('Urlaub');
+      expect(urlaub.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it('go to today button resets calendar', async () => {
+    mockListAbsences.mockResolvedValue({ success: true, data: [] });
+    mockGetAbsencePattern.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AbsencesPage />);
+    await waitFor(() => expect(screen.getByText('Abwesenheiten')).toBeInTheDocument());
+
+    // Navigate to next month first
+    await user.click(screen.getByLabelText('Next month'));
+    // Then click Today
+    await user.click(screen.getByText('Heute'));
+
+    const now = new Date();
+    const label = new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    await waitFor(() => {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    });
+  });
 });

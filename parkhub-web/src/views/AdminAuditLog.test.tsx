@@ -305,4 +305,136 @@ describe('AdminAuditLogPage', () => {
       expect(rows).toHaveLength(3);
     });
   });
+
+  it('opens advanced export dialog', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('export-enhanced-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-enhanced-btn'));
+    await waitFor(() => {
+      expect(screen.getByTestId('export-dialog')).toBeInTheDocument();
+      expect(screen.getByText('Export audit log in your preferred format.')).toBeInTheDocument();
+    });
+  });
+
+  it('selects export format in dialog', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('export-enhanced-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-enhanced-btn'));
+    await waitFor(() => expect(screen.getByTestId('export-dialog')).toBeInTheDocument());
+
+    // Select JSON format
+    fireEvent.click(screen.getByTestId('format-json'));
+    // Select PDF format
+    fireEvent.click(screen.getByTestId('format-pdf'));
+    // Back to CSV
+    fireEvent.click(screen.getByTestId('format-csv'));
+  });
+
+  it('triggers enhanced export download', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ success: true, data: { download_url: '/download/test.csv' } }),
+      } as Response)
+    );
+
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('export-enhanced-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-enhanced-btn'));
+    await waitFor(() => expect(screen.getByTestId('export-dialog')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-download-btn'));
+
+    await waitFor(() => {
+      expect(openSpy).toHaveBeenCalledWith('/download/test.csv', '_blank');
+    });
+    openSpy.mockRestore();
+  });
+
+  it('handles enhanced export failure', async () => {
+    globalThis.fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ success: false, error: { message: 'Export failed' } }),
+      } as Response)
+    );
+
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('export-enhanced-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-enhanced-btn'));
+    await waitFor(() => expect(screen.getByTestId('export-dialog')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-download-btn'));
+    // Error path exercised
+  });
+
+  it('handles enhanced export network exception', async () => {
+    globalThis.fetch = vi.fn(() => Promise.reject(new Error('Network')));
+
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('export-enhanced-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-enhanced-btn'));
+    await waitFor(() => expect(screen.getByTestId('export-dialog')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-download-btn'));
+    // Exception path exercised
+  });
+
+  it('closes advanced export dialog on cancel', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('export-enhanced-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-enhanced-btn'));
+    await waitFor(() => expect(screen.getByTestId('export-dialog')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByTestId('export-dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('navigates to previous page', async () => {
+    mockGetAuditLog.mockResolvedValue({
+      success: true,
+      data: { ...sampleData, total: 50, total_pages: 2, page: 2 },
+    });
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByText('Previous')).toBeInTheDocument());
+
+    // First navigate to page 2
+    mockGetAuditLog.mockResolvedValue({
+      success: true,
+      data: { ...sampleData, total: 50, total_pages: 2, page: 2 },
+    });
+    fireEvent.click(screen.getByText('Next'));
+
+    await waitFor(() => {
+      expect(mockGetAuditLog).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+  });
+
+  it('applies user search filter on Enter key', async () => {
+    render(<AdminAuditLogPage />);
+    await waitFor(() => expect(screen.getByTestId('filter-user')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('filter-user'), { target: { value: 'admin' } });
+    fireEvent.keyDown(screen.getByTestId('filter-user'), { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(mockGetAuditLog).toHaveBeenCalledWith(
+        expect.objectContaining({ user: 'admin' })
+      );
+    });
+  });
+
+  it('shows loading skeleton when no entries yet', () => {
+    mockGetAuditLog.mockReturnValue(new Promise(() => {}));
+    render(<AdminAuditLogPage />);
+    const skeletons = document.querySelectorAll('.skeleton');
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
 });

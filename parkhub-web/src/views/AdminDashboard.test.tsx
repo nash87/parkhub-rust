@@ -237,4 +237,88 @@ describe('AdminDashboardPage', () => {
       expect(screen.getByText('EV Charging Status')).toBeInTheDocument();
     });
   });
+
+  it('toggles widget visibility from catalog', async () => {
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Customize')).toBeInTheDocument());
+    await user.click(screen.getByText('Customize'));
+    await waitFor(() => expect(screen.getByText('Widget Catalog')).toBeInTheDocument());
+
+    // Click Active Alerts (not currently in layout) to add it
+    await user.click(screen.getByText('Active Alerts'));
+
+    await waitFor(() => {
+      expect(mockSaveWidgetLayout).toHaveBeenCalled();
+    });
+  });
+
+  it('removes a widget from the grid', async () => {
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Occupancy Chart')).toBeInTheDocument());
+
+    // Click remove button on a widget
+    const removeBtns = screen.getAllByTitle('Remove');
+    await user.click(removeBtns[0]);
+
+    await waitFor(() => {
+      expect(mockSaveWidgetLayout).toHaveBeenCalled();
+    });
+  });
+
+  it('handles save layout error', async () => {
+    mockSaveWidgetLayout.mockRejectedValue(new Error('Network'));
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Customize')).toBeInTheDocument());
+    await user.click(screen.getByText('Customize'));
+    await waitFor(() => expect(screen.getByText('Widget Catalog')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Booking Heatmap'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('handles save layout API failure', async () => {
+    mockSaveWidgetLayout.mockResolvedValue({ success: false });
+    const user = userEvent.setup();
+    render(<AdminDashboardPage />);
+    await waitFor(() => expect(screen.getByText('Customize')).toBeInTheDocument());
+    await user.click(screen.getByText('Customize'));
+    await waitFor(() => expect(screen.getByText('Widget Catalog')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Booking Heatmap'));
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('displays widget data when loaded', async () => {
+    render(<AdminDashboardPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Occupancy Chart')).toBeInTheDocument();
+    });
+    // Widget data should load -- pre element with JSON
+    await waitFor(() => {
+      expect(mockGetWidgetData).toHaveBeenCalled();
+    });
+  });
+
+  it('handles widget data load failure gracefully', async () => {
+    mockGetWidgetData.mockRejectedValue(new Error('Failed'));
+    render(<AdminDashboardPage />);
+    await waitFor(() => {
+      expect(screen.getByText('Occupancy Chart')).toBeInTheDocument();
+    });
+    // Should not crash -- shows skeleton
+  });
+
+  it('loading state shows skeleton', () => {
+    mockGetWidgetLayout.mockReturnValue(new Promise(() => {}));
+    render(<AdminDashboardPage />);
+    const skeletons = document.querySelectorAll('.skeleton');
+    expect(skeletons.length).toBeGreaterThan(0);
+  });
 });

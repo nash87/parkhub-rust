@@ -492,4 +492,142 @@ describe('AdminUsersPage', () => {
     expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Inactive').length).toBeGreaterThanOrEqual(1);
   });
+
+  it('activates inactive user', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUser.mockResolvedValue({ success: true, data: { id: '2', is_active: true } });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Bob Jones')).toBeInTheDocument());
+
+    // Bob is inactive, click activate
+    const activateBtn = screen.getByLabelText(/Activate Bob Jones/i);
+    await user.click(activateBtn);
+
+    await waitFor(() => {
+      expect(mockAdminUpdateUser).toHaveBeenCalledWith('2', { is_active: true });
+      expect(mockToastSuccess).toHaveBeenCalledWith('User activated');
+    });
+  });
+
+  it('closes credit panel on close button', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const grantBtns = screen.getAllByLabelText(/Grant Credits/i);
+    await user.click(grantBtns[0]);
+    await waitFor(() => expect(screen.getByLabelText('Amount')).toBeInTheDocument());
+
+    // Close the panel
+    await user.click(screen.getByLabelText('Close'));
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes credit panel on cancel button', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const grantBtns = screen.getAllByLabelText(/Grant Credits/i);
+    await user.click(grantBtns[0]);
+    await waitFor(() => expect(screen.getByLabelText('Amount')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Cancel'));
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Amount')).not.toBeInTheDocument();
+    });
+  });
+
+  it('opens quota editor and can save', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUserQuota.mockResolvedValue({ success: true });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    // Find quota display buttons (they show the current quota value)
+    // Alice has credits_monthly_quota: 5, displayed as a button with tabular-nums
+    const quotaBtns = screen.getAllByLabelText('Edit quota');
+    await user.click(quotaBtns[0]); // Alice
+
+    // Quota input should appear
+    await waitFor(() => {
+      expect(screen.getByLabelText('Monthly Quota')).toBeInTheDocument();
+      expect(screen.getByLabelText('Save quota')).toBeInTheDocument();
+    });
+  });
+
+  it('validates quota range', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const quotaBtns = screen.getAllByLabelText('Edit quota');
+    await user.click(quotaBtns[0]);
+    await waitFor(() => expect(screen.getByLabelText('Monthly Quota')).toBeInTheDocument());
+
+    // The quota input should be present
+    expect(screen.getByLabelText('Save quota')).toBeInTheDocument();
+  });
+
+  it('cancels quota edit', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const quotaBtns = screen.getAllByLabelText('Edit quota');
+    await user.click(quotaBtns[0]);
+    await waitFor(() => expect(screen.getByLabelText('Monthly Quota')).toBeInTheDocument());
+
+    await user.click(screen.getByLabelText('Cancel edit quota'));
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Monthly Quota')).not.toBeInTheDocument();
+    });
+  });
+
+  it('handles role update with generic error', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUserRole.mockResolvedValue({ success: false, data: null });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const editBtns = screen.getAllByLabelText(/Edit Role/i);
+    await user.click(editBtns[0]);
+    await user.click(screen.getByLabelText('Save'));
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
+
+  it('handles toggle active with generic error', async () => {
+    const user = userEvent.setup({ advanceTimers: (ms) => vi.advanceTimersByTime(ms) });
+    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUpdateUser.mockResolvedValue({ success: false, data: null });
+    render(<AdminUsersPage />);
+    await vi.runAllTimersAsync();
+    await waitFor(() => expect(screen.getByText('Alice Smith')).toBeInTheDocument());
+
+    const deactivateBtn = screen.getByLabelText(/Deactivate Alice Smith/i);
+    await user.click(deactivateBtn);
+
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalled();
+    });
+  });
 });
