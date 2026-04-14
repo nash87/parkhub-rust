@@ -4,7 +4,7 @@
 Self-hosted parking management platform for enterprises, universities, and residential complexes. Ships as a single Rust binary with an embedded React 19 frontend. Features booking management, GDPR/DSGVO compliance (Art. 15/17), Bitwarden-level encryption at rest, mDNS LAN discovery, and a comprehensive admin dashboard. Open source (MIT), live demo on Render.
 
 ## Tech Stack
-- Rust (edition 2021), Axum 0.8, Tokio
+- Rust (edition 2024), Axum 0.8, Tokio
 - Workspace: parkhub-common, parkhub-server, parkhub-client
 - redb 2 (embedded single-file database, optional AES-256-GCM encryption)
 - React 19 + TypeScript + Tailwind CSS (embedded SPA, built via parkhub-web)
@@ -14,11 +14,11 @@ Self-hosted parking management platform for enterprises, universities, and resid
 
 ## Build
 ```sh
-# Server (headless, no GUI — for Docker/server deployments)
-cargo build --release --package parkhub-server --no-default-features --features headless
+# Default build (pure MIT, headless, no GUI — for Docker/server deployments)
+cargo build --release --package parkhub-server
 
-# Full build (includes Slint GUI for Windows/desktop)
-cargo build --release
+# Optional desktop GUI build (pulls Slint, GPL-3.0)
+cargo build --release --package parkhub-server --features gui
 
 # React frontend (must be built before server if modifying frontend)
 cd parkhub-web && npm install && npm run build

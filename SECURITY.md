@@ -2,12 +2,21 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-|---------|--------------------|
-| 2.2.x   | Yes                |
-| 2.1.x   | Yes                |
-| 2.0.x   | Security fixes only |
-| < 2.0   | No                 |
+| Version | Supported              |
+|---------|------------------------|
+| 4.9.x   | Yes (current)          |
+| 4.8.x   | Security fixes only    |
+| < 4.8   | No                     |
+
+## Known Accepted Advisories
+
+The following advisories are known and accepted with documented mitigations. They are
+silenced in `deny.toml` with rationale comments. See `deny.toml` for the canonical list.
+
+| Advisory ID         | Crate     | Severity | Status   | Rationale |
+|---------------------|-----------|----------|----------|-----------|
+| RUSTSEC-2023-0071   | rsa       | Medium   | Accepted | Marvin Attack in the `rsa` crate. ParkHub pulls this transitively via `web-push` for VAPID JWT signing. ParkHub uses HS256 (HMAC) signed JWTs only, never RSA-signed JWTs, so the timing side-channel is not reachable in our usage. We will upgrade as soon as `web-push` releases a non-RSA dependency path. |
+| RUSTSEC unmaintained: gtk-rs family | gtk, gdk, glib, etc. | Informational | Accepted | Pulled transitively by `tray-icon` (only enabled under the optional `gui` feature). The default `headless` build does not include any gtk-rs code. |
 
 ## Reporting a Vulnerability
 

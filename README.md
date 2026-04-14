@@ -94,8 +94,15 @@ chmod +x parkhub-server
 
 ```bash
 git clone https://github.com/nash87/parkhub-rust.git && cd parkhub-rust
-cargo build --release --package parkhub-server --no-default-features --features headless
+# Default build is pure MIT and headless (no GUI):
+cargo build --release --package parkhub-server
 ./target/release/parkhub-server --headless --unattended --port 8080
+```
+
+To build the optional desktop GUI (pulls Slint, which is GPL-3.0 — see [LICENSES.md](LICENSES.md)):
+
+```bash
+cargo build --release --package parkhub-server --features gui
 ```
 
 **[Live Demo](https://parkhub-rust-demo.onrender.com)** | Login: `admin@parkhub.test` / `demo` | (auto-resets every 6 hours)
@@ -189,7 +196,7 @@ cargo build --release --package parkhub-server --no-default-features --features 
 
 | Layer | Technology |
 |-------|-----------|
-| **Language** | [Rust](https://www.rust-lang.org/) 1.94+ (edition 2021) |
+| **Language** | [Rust](https://www.rust-lang.org/) 1.94+ (edition 2024) |
 | **HTTP Framework** | [Axum](https://github.com/tokio-rs/axum) 0.8 + [Tokio](https://tokio.rs/) async runtime |
 | **Database** | [redb](https://github.com/cberner/redb) 2 — embedded pure-Rust key-value store |
 | **Encryption** | AES-256-GCM at rest · Argon2id passwords · rustls TLS 1.3 |
@@ -362,4 +369,8 @@ Contributions are very welcome! Here's how to get started:
 
 MIT — see [LICENSE](LICENSE).
 
-The default build includes [Slint](https://slint.dev/) for the desktop GUI (GPL-3.0 community edition). Server/Docker builds use `--features headless` and are purely MIT. See [LICENSES.md](LICENSES.md) for the full dependency license inventory.
+The **default build** (`cargo build`) is pure MIT and uses the `headless` feature — no GPL dependencies. Server/Docker images and the binaries published to GitHub Releases are all built this way.
+
+The **optional `gui` feature** (`cargo build --features gui`) pulls [Slint](https://slint.dev/) (GPL-3.0 community edition or commercial license) for the desktop tray client. Binaries built with this feature are GPL-3.0.
+
+See [LICENSES.md](LICENSES.md) and [LICENSE-THIRD-PARTY.md](LICENSE-THIRD-PARTY.md) for the full dependency license inventory.

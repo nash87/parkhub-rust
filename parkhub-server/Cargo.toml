@@ -138,7 +138,7 @@ windows-sys = { version = "0.61", features = [
 ] }
 
 [features]
-default = ["gui", "full"]
+default = ["headless"]
 full = [
     "mod-bookings", "mod-vehicles", "mod-absences", "mod-branding",
     "mod-import", "mod-qr", "mod-pwa", "mod-payments", "mod-webhooks",
