@@ -1,0 +1,25 @@
+ParkHub Rust
+Copyright (c) 2025-2026 ParkHub Contributors
+
+Licensed under the MIT License (see LICENSE).
+
+This product includes software developed by third parties. A complete
+dependency inventory with licenses is generated from Cargo.lock and
+maintained in LICENSES.md.
+
+Notable redistributed works requiring attribution:
+
+  printpdf (Apache-2.0 / MIT)
+    https://github.com/fschutt/printpdf
+
+  governor (MIT)
+    https://github.com/antifuchs/governor
+
+  rcgen (MIT / Apache-2.0)
+    https://github.com/rustls/rcgen
+
+The optional "gui" cargo feature pulls Slint (GPL-3.0-only or
+commercial). A default `cargo build` does NOT include Slint; the
+out-of-the-box binary is MIT-licensed and free of copyleft deps.
+
+See LICENSES.md for the full inventory.
