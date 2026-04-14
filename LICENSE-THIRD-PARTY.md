@@ -9,9 +9,17 @@ licenses to ensure compatibility with open-source distribution.
 
 ## License Compatibility Summary
 
-All production dependencies use permissive licenses (MIT, Apache-2.0, BSD-3-Clause).
-No GPL, LGPL, or other copyleft licenses are present in the dependency tree.
-This project is fully compatible with MIT distribution of both source and binaries.
+The **default cargo build** (`cargo build`) is pure MIT — no GPL dependencies. It uses
+the `headless` feature, which builds the HTTP API server and all functional modules
+without any GUI code.
+
+The **optional `gui` feature** (`cargo build --features gui`) pulls in [Slint](https://slint.dev/)
+(GPL-3.0-only or commercial license) and `tray-icon` (which depends on gtk-rs crates).
+When the `gui` feature is enabled, the resulting binary is GPL-3.0 — you must comply
+with GPL-3.0 terms or obtain a Slint commercial license.
+
+See [LICENSES.md](LICENSES.md) for the full inventory of every transitive dependency
+and its license.
 
 ---
 
@@ -137,9 +145,12 @@ npx license-checker --summary
 
 | Category | Status |
 |----------|--------|
-| Rust runtime dependencies | All MIT or MIT/Apache-2.0 dual -- fully compatible |
+| Rust runtime dependencies (default `headless` build) | All MIT or MIT/Apache-2.0 dual -- pure MIT |
+| Rust runtime dependencies (optional `gui` feature) | Includes Slint (GPL-3.0-only) and gtk-rs (MIT) -- resulting binary is GPL-3.0 |
 | npm runtime dependencies | All MIT -- fully compatible |
 | npm dev dependencies | MIT + Apache-2.0 -- fully compatible |
 
-**This project is fully cleared for open-source MIT release.** No copyleft dependencies
-are present in the production build.
+**The default cargo build is fully cleared for open-source MIT release.** Enabling the
+optional `gui` feature changes the binary license to GPL-3.0 (or requires a commercial
+Slint license). See [LICENSES.md](LICENSES.md) for the canonical full dependency
+inventory.
