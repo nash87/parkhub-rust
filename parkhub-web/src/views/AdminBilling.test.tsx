@@ -132,4 +132,100 @@ describe('AdminBillingPage', () => {
       expect(screen.getByText('No billing data')).toBeInTheDocument();
     });
   });
+
+  it('handles CSV export click', async () => {
+    const mockBlob = new Blob(['csv data'], { type: 'text/csv' });
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, writable: true });
+
+    render(<AdminBillingPage />);
+    await waitFor(() => expect(screen.getByTestId('export-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-btn'));
+
+    await waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalled();
+      expect(revokeObjectURL).toHaveBeenCalled();
+    });
+  });
+
+  it('shows help text on help button click', async () => {
+    render(<AdminBillingPage />);
+    await waitFor(() => expect(screen.getByTestId('icon-question')).toBeInTheDocument());
+
+    const helpBtn = screen.getByTestId('icon-question').closest('button')!;
+    fireEvent.click(helpBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('This module provides billing analytics.')).toBeInTheDocument();
+    });
+  });
+
+  it('toggles help text off on second click', async () => {
+    render(<AdminBillingPage />);
+    await waitFor(() => expect(screen.getByTestId('icon-question')).toBeInTheDocument());
+
+    const helpBtn = screen.getByTestId('icon-question').closest('button')!;
+    fireEvent.click(helpBtn);
+    expect(screen.getByText('This module provides billing analytics.')).toBeInTheDocument();
+
+    fireEvent.click(helpBtn);
+    expect(screen.queryByText('This module provides billing analytics.')).not.toBeInTheDocument();
+  });
+
+  it('shows empty state in department tab', async () => {
+    global.fetch = vi.fn((url: string) => {
+      if (url.includes('/by-cost-center')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleCcData }) } as Response);
+      }
+      if (url.includes('/by-department')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminBillingPage />);
+    await waitFor(() => expect(screen.getByTestId('billing-tabs')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('By Department'));
+    await waitFor(() => {
+      expect(screen.getByText('No billing data')).toBeInTheDocument();
+    });
+  });
+
+  it('CSV export error shows error toast', async () => {
+    const mockToast = vi.fn();
+    const toast = await import('react-hot-toast');
+    (toast.default as any).error = mockToast;
+
+    global.fetch = vi.fn((url: string) => {
+      if (url.includes('/by-cost-center') || url.includes('/by-department')) {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response);
+      }
+      if (url.includes('/export')) {
+        return Promise.reject(new Error('Export failed'));
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
+    }) as any;
+
+    render(<AdminBillingPage />);
+    await waitFor(() => expect(screen.getByTestId('export-btn')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('export-btn'));
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalled();
+    });
+  });
+
+  it('handles network error in data loading', async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error('Network'))) as any;
+
+    render(<AdminBillingPage />);
+    // Should still render after error
+    await waitFor(() => {
+      expect(screen.getByText('Cost Center Billing')).toBeInTheDocument();
+    });
+  });
 });

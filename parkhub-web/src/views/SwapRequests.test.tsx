@@ -156,7 +156,9 @@ describe('SwapRequestsPage', () => {
     }) as any;
     const user = userEvent.setup();
     render(<SwapRequestsPage />);
-    await waitFor(() => fireEvent.click(screen.getByText('swap.create')));
+    await waitFor(() => expect(screen.getByText('swap.create')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('swap.create'));
+    await waitFor(() => expect(screen.getByTestId('select-source')).toBeInTheDocument());
     await user.selectOptions(screen.getByTestId('select-source'), 'b1');
     await user.type(screen.getByTestId('input-target'), 'b99');
     fireEvent.click(screen.getByTestId('submit-swap'));

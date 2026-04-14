@@ -162,4 +162,173 @@ describe('SetupWizardPage', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
   });
+
+  it('back button is disabled on step 1', async () => {
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('wizard-back')).toBeInTheDocument());
+    expect(screen.getByTestId('wizard-back')).toBeDisabled();
+  });
+
+  it('back button navigates to previous step', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-step-2')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId('wizard-back'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-1')).toBeInTheDocument());
+  });
+
+  it('step 2 validates lot name is required', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-step-2')).toBeInTheDocument());
+
+    // Don't fill lot name, click next
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-error')).toBeInTheDocument();
+      expect(screen.getByText('Lot name is required')).toBeInTheDocument();
+    });
+  });
+
+  it('step 3 shows invite textarea and submits', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    // Step 1
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-2')).toBeInTheDocument());
+
+    // Step 2
+    fireEvent.change(screen.getByTestId('input-lot-name'), { target: { value: 'Garage' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-3')).toBeInTheDocument());
+
+    // Fill invite emails
+    fireEvent.change(screen.getByTestId('input-invite-emails'), { target: { value: 'alice@company.com, bob@company.com' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => expect(screen.getByTestId('wizard-step-4')).toBeInTheDocument());
+  });
+
+  it('step 4 complete setup navigates to home', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    // Step 1
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-2')).toBeInTheDocument());
+
+    // Step 2
+    fireEvent.change(screen.getByTestId('input-lot-name'), { target: { value: 'Garage' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-3')).toBeInTheDocument());
+
+    // Step 3
+    fireEvent.click(screen.getByTestId('wizard-next'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-4')).toBeInTheDocument());
+
+    // Step 4 - select theme and complete
+    fireEvent.click(screen.getByTestId('theme-neon'));
+    expect(screen.getByText('Complete Setup')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+    });
+  });
+
+  it('network error shows error message', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ json: () => Promise.resolve({ success: true, data: { completed: false } }) })
+      .mockRejectedValue(new Error('Network error'));
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-error')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
+  });
+
+  it('API failure shows error message', async () => {
+    global.fetch = vi.fn()
+      .mockResolvedValueOnce({ json: () => Promise.resolve({ success: true, data: { completed: false } }) })
+      .mockResolvedValue({ json: () => Promise.resolve({ success: false, error: { message: 'Server error' } }) });
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('wizard-error')).toBeInTheDocument();
+      expect(screen.getByText('Server error')).toBeInTheDocument();
+    });
+  });
+
+  it('logo upload triggers file reader', async () => {
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-logo')).toBeInTheDocument());
+
+    const file = new File(['test'], 'logo.png', { type: 'image/png' });
+    const input = screen.getByTestId('input-logo');
+    fireEvent.change(input, { target: { files: [file] } });
+
+    // FileReader should process the file
+    await waitFor(() => {
+      // Just verify no crash
+      expect(screen.getByTestId('wizard-step-1')).toBeInTheDocument();
+    });
+  });
+
+  it('step 2 floor and slots per floor controls work', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    render(<SetupWizardPage />);
+    await waitFor(() => expect(screen.getByTestId('input-company-name')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('input-company-name'), { target: { value: 'TestCorp' } });
+    fireEvent.click(screen.getByTestId('wizard-next'));
+    await waitFor(() => expect(screen.getByTestId('wizard-step-2')).toBeInTheDocument());
+
+    fireEvent.change(screen.getByTestId('input-floors'), { target: { value: '3' } });
+    fireEvent.change(screen.getByTestId('input-slots-per-floor'), { target: { value: '20' } });
+
+    expect(screen.getByText('Total: 60 slots')).toBeInTheDocument();
+  });
 });

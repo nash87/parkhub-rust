@@ -114,4 +114,54 @@ describe('AdminAnalyticsPage', () => {
       expect(screen.getByText('Failed to load analytics data')).toBeTruthy()
     );
   });
+
+  it('exports CSV when clicking export button', async () => {
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: revokeObjectURL, writable: true });
+
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(mockData),
+    });
+    const { fireEvent } = await import('@testing-library/react');
+    render(<AdminAnalyticsPage />);
+    await waitFor(() => expect(screen.getByText('Total Bookings')).toBeTruthy());
+
+    const csvBtn = screen.getByText('CSV');
+    fireEvent.click(csvBtn);
+
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it('changes date range when clicking range buttons', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(mockData),
+    });
+    const { fireEvent } = await import('@testing-library/react');
+    render(<AdminAnalyticsPage />);
+
+    const btn90 = screen.getByText('90d');
+    fireEvent.click(btn90);
+
+    // Should refetch with new range
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledTimes(2); // initial + range change
+    });
+  });
+
+  it('CSV export does nothing when no data', async () => {
+    global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
+    const createObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });
+
+    const { fireEvent } = await import('@testing-library/react');
+    render(<AdminAnalyticsPage />);
+
+    const csvBtn = screen.getByText('CSV');
+    fireEvent.click(csvBtn);
+
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
 });

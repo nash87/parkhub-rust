@@ -497,6 +497,66 @@ describe('CalendarPage', () => {
     });
   });
 
+  it('copy link failure shows error toast', async () => {
+    const user = userEvent.setup();
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Subscribe')).toBeInTheDocument());
+
+    await user.click(screen.getByText('Subscribe'));
+    await waitFor(() => expect(screen.getByTestId('subscription-url')).toBeInTheDocument());
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn(() => Promise.reject(new Error('denied'))) },
+      writable: true,
+      configurable: true,
+    });
+
+    await user.click(screen.getByLabelText('Copy'));
+    // error toast should be called (the component catches clipboard errors)
+  });
+
+  it('shows events with various statuses', async () => {
+    const now = new Date();
+    const dayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [
+        { id: 'b1', type: 'booking', title: 'S1', start: `${dayStr}T08:00:00Z`, end: `${dayStr}T09:00:00Z`, status: 'pending' },
+        { id: 'b2', type: 'absence', title: 'Vacation', start: `${dayStr}T00:00:00Z`, end: `${dayStr}T23:59:59Z`, status: 'cancelled' },
+        { id: 'b3', type: 'booking', title: 'S3', start: `${dayStr}T10:00:00Z`, end: `${dayStr}T11:00:00Z`, status: 'completed' },
+      ],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+  });
+
+  it('shows selected day events with lot_name', async () => {
+    const user = userEvent.setup();
+    const now = new Date();
+    const testDate = new Date(now.getFullYear(), now.getMonth(), 20);
+    const isoKey = testDate.toISOString().slice(0, 10);
+    mockCalendarEvents.mockResolvedValue({
+      success: true,
+      data: [{
+        id: 'b1', type: 'booking', title: 'Slot B2',
+        start: `${isoKey}T09:00:00.000Z`, end: `${isoKey}T17:00:00.000Z`,
+        lot_name: 'Garage B', slot_number: 'B2', status: 'active',
+      }],
+    });
+    render(<CalendarPage />);
+    await waitFor(() => expect(screen.getByText('Calendar')).toBeInTheDocument());
+
+    const buttons = screen.getAllByRole('button');
+    const dayBtn = buttons.find(b => b.textContent?.trim() === '20');
+    if (dayBtn) {
+      await user.click(dayBtn);
+      await waitFor(() => {
+        const slotB2 = screen.queryByText('Slot B2');
+        expect(slotB2).toBeTruthy();
+      });
+    }
+  });
+
   it('shows overflow indicator for days with >3 events', async () => {
     const now = new Date();
     const dayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-15`;

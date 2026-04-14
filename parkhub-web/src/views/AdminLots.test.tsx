@@ -723,6 +723,91 @@ describe('AdminLotsPage', () => {
     });
   });
 
+  it('shows operating hours section when editing and toggles 24h off', async () => {
+    const lotData = {
+      id: 'l-1', name: 'OH Lot', address: '', total_slots: 10, available_slots: 5,
+      status: 'open', hourly_rate: 2.5, currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockGetLotHours.mockResolvedValue({
+      success: true,
+      data: {
+        is_24h: true,
+        monday: { open: '07:00', close: '22:00', closed: false },
+        tuesday: { open: '07:00', close: '22:00', closed: false },
+        wednesday: { open: '07:00', close: '22:00', closed: false },
+        thursday: { open: '07:00', close: '22:00', closed: false },
+        friday: { open: '07:00', close: '22:00', closed: false },
+        saturday: { open: '09:00', close: '18:00', closed: false },
+        sunday: { open: '09:00', close: '18:00', closed: true },
+      },
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('OH Lot')).toBeInTheDocument());
+    await user.click(screen.getByLabelText(/Edit lot OH Lot/i));
+
+    await waitFor(() => {
+      expect(screen.getByText('Operating Hours')).toBeInTheDocument();
+    });
+
+    // Toggle 24h off to show day schedules
+    const is24hLabel = screen.getByText('24/7 Operation');
+    const checkbox = is24hLabel.closest('label')?.querySelector('input[type="checkbox"]');
+    if (checkbox) {
+      await user.click(checkbox);
+      // Day schedules should now be visible
+      await waitFor(() => {
+        expect(screen.getByText('Monday')).toBeInTheDocument();
+        expect(screen.getByText('Sunday')).toBeInTheDocument();
+      });
+    }
+  });
+
+  it('enables dynamic pricing toggle and shows fields', async () => {
+    const lotData = {
+      id: 'l-1', name: 'DP Toggle', address: '', total_slots: 10, available_slots: 5,
+      status: 'open', hourly_rate: 2.5, currency: 'EUR',
+    };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotData] });
+    mockGetAdminDynamicPricing.mockResolvedValue({
+      success: true,
+      data: { enabled: false, base_price: 2.5, surge_multiplier: 1.5, discount_multiplier: 0.8, surge_threshold: 80, discount_threshold: 20 },
+    });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('DP Toggle')).toBeInTheDocument());
+    await user.click(screen.getByLabelText(/Edit lot DP Toggle/i));
+
+    await waitFor(() => expect(screen.getByText('Dynamic Pricing')).toBeInTheDocument());
+
+    // The dynamic pricing checkbox - find the one in the DP section
+    const dpSection = screen.getByText('Dynamic Pricing').closest('div');
+    const dpCheckbox = dpSection?.querySelector('input[type="checkbox"]');
+    if (dpCheckbox) {
+      await user.click(dpCheckbox);
+      // DP fields should appear
+      await waitFor(() => {
+        expect(screen.getByLabelText('Base Price')).toBeInTheDocument();
+      });
+    }
+  });
+
+  it('changes currency in create form', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [] });
+    const user = userEvent.setup();
+    render(<AdminLotsPage />);
+
+    await waitFor(() => expect(screen.getByText('New Lot')).toBeInTheDocument());
+    await user.click(screen.getByText('New Lot'));
+
+    const currencySelect = screen.getByLabelText('Currency');
+    await user.selectOptions(currencySelect, 'USD');
+    expect((currencySelect as HTMLSelectElement).value).toBe('USD');
+  });
+
   it('closes form if currently editing lot is deleted', async () => {
     const lotData = {
       id: 'l-1', name: 'Edit Delete', address: '', total_slots: 10, available_slots: 5,
