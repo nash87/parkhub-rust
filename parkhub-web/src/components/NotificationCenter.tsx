@@ -7,28 +7,7 @@ import {
   CurrencyDollar, UserPlus, Check, Trash, Question, FunnelSimple,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
-
-interface CenterNotification {
-  id: string;
-  notification_type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  action_url: string | null;
-  icon: string;
-  severity: string;
-  type_label: string;
-  created_at: string;
-  date_group: string;
-}
-
-interface PaginatedResponse {
-  items: CenterNotification[];
-  total: number;
-  page: number;
-  per_page: number;
-  unread_count: number;
-}
+import { api, getInMemoryToken, type CenterNotification } from '../api/client';
 
 const TYPE_ICONS: Record<string, typeof Bell> = {
   'check-circle': CheckCircle,
@@ -71,36 +50,26 @@ export function NotificationCenter() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   const fetchUnreadCount = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('parkhub_token');
-      const res = await fetch('/api/v1/notifications/unread-count', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) setUnreadCount(data.data.count);
-      }
-    } catch { /* silent */ }
+    // Skip when no auth token is in memory. After a hard page reload the
+    // in-memory token is empty until AuthProvider's /users/me call finishes,
+    // and firing unauthenticated polls produces a 401 flood in the console
+    // on every route change.
+    if (!getInMemoryToken()) return;
+    const res = await api.getNotificationUnreadCount();
+    if (res.success && res.data) setUnreadCount(res.data.count);
   }, []);
 
   const fetchNotifications = useCallback(async () => {
+    if (!getInMemoryToken()) return;
     setLoading(true);
-    try {
-      const token = localStorage.getItem('parkhub_token');
-      const res = await fetch(`/api/v1/notifications/center?filter=${filter}&per_page=50`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setNotifications(data.data.items);
-          setUnreadCount(data.data.unread_count);
-        }
-      }
-    /* istanbul ignore next -- network failure path */
-    } catch {
+    const res = await api.getNotificationCenter(filter, 50);
+    if (res.success && res.data) {
+      setNotifications(res.data.items);
+      setUnreadCount(res.data.unread_count);
+    } else if (res.error) {
       toast.error(t('common.error'));
-    } finally { setLoading(false); }
+    }
+    setLoading(false);
   }, [filter, t]);
 
   useEffect(() => { fetchUnreadCount(); const iv = setInterval(fetchUnreadCount, 30000); return () => clearInterval(iv); }, [fetchUnreadCount]);
@@ -116,36 +85,31 @@ export function NotificationCenter() {
   }, [open]);
 
   async function markAllRead() {
-    try {
-      const token = localStorage.getItem('parkhub_token');
-      await fetch('/api/v1/notifications/center/read-all', {
-        method: 'PUT', headers: { Authorization: `Bearer ${token}` },
-      });
+    const res = await api.markAllNotificationCenterRead();
+    if (res.success) {
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
-    } catch { toast.error(t('common.error')); }
+    } else {
+      toast.error(t('common.error'));
+    }
   }
 
   async function markRead(id: string) {
-    try {
-      const token = localStorage.getItem('parkhub_token');
-      await fetch(`/api/v1/notifications/${id}/read`, {
-        method: 'PUT', headers: { Authorization: `Bearer ${token}` },
-      });
+    const res = await api.markNotificationCenterRead(id);
+    if (res.success) {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch { /* silent */ }
+    }
   }
 
   async function deleteNotification(id: string) {
-    try {
-      const token = localStorage.getItem('parkhub_token');
-      await fetch(`/api/v1/notifications/center/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-      });
+    const res = await api.deleteNotificationCenter(id);
+    if (res.success) {
       setNotifications(prev => prev.filter(n => n.id !== id));
       toast.success(t('notificationCenter.deleted'));
-    } catch { toast.error(t('common.error')); }
+    } else {
+      toast.error(t('common.error'));
+    }
   }
 
   function handleClick(n: CenterNotification) {
