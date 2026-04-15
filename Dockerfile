@@ -82,8 +82,10 @@ RUN mkdir -p /data && chown 65532:65532 /data
 # debian13 (trixie) matches rust:1.94-slim's base image, so OpenSSL
 # symbol versions align between build and runtime. Using debian12
 # caused `libssl.so.3: version OPENSSL_3.2.0 not found` at startup.
+# Digest-pinned for reproducibility and to satisfy CodeQL DS-0001
+# (':latest' tag used).
 # ---------------------------------------------------------------------------
-FROM gcr.io/distroless/cc-debian13 AS runtime
+FROM gcr.io/distroless/cc-debian13@sha256:9d412062635760e6aaf0f73809c3c6ea60f389d4986713fe153667e95c6b7b72 AS runtime
 
 WORKDIR /app
 
