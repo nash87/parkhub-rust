@@ -61,10 +61,14 @@ jobs:
       - name: Audit npm dependencies
         run: npm audit --prefix parkhub-web --package-lock-only --omit=dev --audit-level=high
 
-  full-e2e:
-    name: Full cross-browser E2E
+  # Build the Rust server + frontend assets exactly once, then hand the
+  # compiled binary off to the matrix of Playwright shards below.
+  # Without this split every shard would re-run `cargo build --release`
+  # (~10 min per shard), which is brutal at 12 parallel shards.
+  build-server:
+    name: Build server binary
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
 
@@ -87,10 +91,74 @@ jobs:
       - name: Build server
         run: cargo build --release --locked --package parkhub-server --no-default-features --features headless,full
 
-      - name: Install Playwright browsers
-        run: npm ci && npx playwright install --with-deps chromium webkit
+      - name: Upload server binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: parkhub-server-binary
+          path: target/release/parkhub-server
+          retention-days: 1
+          if-no-files-found: error
 
-      - name: Run full Playwright suite
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: parkhub-web-dist
+          path: parkhub-web/dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  full-e2e:
+    name: Full cross-browser E2E
+    needs: [build-server]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # Four shards × three projects = 12 parallel jobs. Each shard
+    # downloads the pre-built server binary instead of recompiling.
+    # fail-fast: false keeps one shard's failure from cancelling its
+    # siblings — nightlies want the full signal, not the first red.
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, mobile-chrome, mobile-safari]
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # Install the root package-lock (which ships Playwright) — the
+      # nightly exercises the root playwright.config.ts + /e2e tests
+      # that point at localhost:8081, not the parkhub-web smoke config
+      # that hits the Render demo URL.
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Download server binary
+        uses: actions/download-artifact@v6
+        with:
+          name: parkhub-server-binary
+          path: target/release
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v6
+        with:
+          name: parkhub-web-dist
+          path: parkhub-web/dist
+
+      - name: Make server binary executable
+        run: chmod +x target/release/parkhub-server
+
+      - name: Run Playwright shard ${{ matrix.shard }}/4 on ${{ matrix.project }}
         env:
           CI: true
           DEMO_MODE: 'true'
@@ -98,7 +166,8 @@ jobs:
           PARKHUB_DISABLE_RATE_LIMITS: 'true'
           E2E_BASE_URL: http://localhost:8081
         run: |
-          ./target/release/parkhub-server --headless --unattended --port 8081 &
+          ./target/release/parkhub-server --headless --unattended --port 8081 \
+            > "/tmp/parkhub-nightly-${{ matrix.project }}-${{ matrix.shard }}.log" 2>&1 &
           server_pid=$!
           trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
 
@@ -107,12 +176,24 @@ jobs:
             sleep 1
           done
 
-          npx playwright test --project=chromium
+          npx playwright test \
+            --project="${{ matrix.project }}" \
+            --shard="${{ matrix.shard }}/4"
 
-      - name: Upload Playwright report
+      - name: Upload Playwright report (${{ matrix.project }} shard ${{ matrix.shard }})
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: nightly-playwright-report
+          name: nightly-playwright-report-${{ matrix.project }}-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload server log (${{ matrix.project }} shard ${{ matrix.shard }})
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-server-log-${{ matrix.project }}-${{ matrix.shard }}
+          path: /tmp/parkhub-nightly-${{ matrix.project }}-${{ matrix.shard }}.log
+          retention-days: 7
+          if-no-files-found: ignore
