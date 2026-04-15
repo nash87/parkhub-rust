@@ -9,7 +9,7 @@ const pages = [
 for (const { name, path } of pages) {
   test(`visual: ${name} matches baseline`, async ({ page }) => {
     await page.goto(path);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveScreenshot(`${name}.png`, {
       maxDiffPixelRatio: 0.01,
       threshold: 0.2,

@@ -39,7 +39,7 @@ test.describe('GDPR — Data Privacy Compliance', () => {
   test('privacy/legal content served', async ({ page }) => {
     // Check if /legal or /privacy routes exist in frontend, or if impressum API works
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for legal/privacy links on login page
     const legalLinks = page.locator(

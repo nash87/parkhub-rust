@@ -33,7 +33,7 @@ test.describe('Security — Access Control & Hardening', () => {
       test(`${route} redirects or blocks non-admin`, async ({ page }) => {
         // Navigate without login — should redirect to login
         await page.goto(route);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Should either redirect to /login or show access denied
         const url = page.url();

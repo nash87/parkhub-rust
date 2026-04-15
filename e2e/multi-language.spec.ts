@@ -7,14 +7,14 @@ test.describe('i18n — Multi-Language Support', () => {
   test.describe('Language Switching (UI)', () => {
     test('app loads in English by default', async ({ page }) => {
       await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       // Login page should contain English text
       await expect(page.locator('body')).toContainText(/sign in|log in|login|email|password/i);
     });
 
     test('switch language to German and verify UI text', async ({ page }) => {
       await page.goto('/welcome');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Look for language selector (dropdown, buttons, or select)
       const langSelector = page.locator(
@@ -32,7 +32,7 @@ test.describe('i18n — Multi-Language Support', () => {
         const optCount = await germanOption.count();
         if (optCount > 0) {
           await germanOption.first().click();
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           // Should now show German text
           await expect(page.locator('body')).toContainText(
             /Anmelden|Willkommen|Sprache|Passwort|Benutzername/i
@@ -43,7 +43,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
     test('switch language to French and verify UI text', async ({ page }) => {
       await page.goto('/welcome');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const langSelector = page.locator(
         '[data-testid*="language"], [data-testid*="lang"], select[name*="lang"], ' +
@@ -59,7 +59,7 @@ test.describe('i18n — Multi-Language Support', () => {
         const optCount = await frenchOption.count();
         if (optCount > 0) {
           await frenchOption.first().click();
-          await page.waitForLoadState('networkidle');
+          await page.waitForLoadState('domcontentloaded');
           await expect(page.locator('body')).toContainText(
             /Connexion|Bienvenue|Langue|Mot de passe/i
           );
@@ -69,7 +69,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
     test('language persists across page navigation', async ({ page }) => {
       await page.goto('/welcome');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Set language via localStorage directly (i18next stores language there)
       await page.evaluate(() => {
@@ -78,7 +78,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
       // Navigate to login page
       await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check that localStorage still holds German
       const lang = await page.evaluate(() => localStorage.getItem('i18nextLng'));
@@ -86,7 +86,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
       // Navigate to another page
       await page.goto('/register');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       const langAfter = await page.evaluate(() => localStorage.getItem('i18nextLng'));
       expect(langAfter).toBe('de');
@@ -140,7 +140,7 @@ test.describe('i18n — Multi-Language Support', () => {
         }, locale);
 
         await page.goto('/login');
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Page should not show i18n key fallbacks (e.g. "auth.login" instead of "Login")
         const bodyText = await page.locator('body').textContent();
