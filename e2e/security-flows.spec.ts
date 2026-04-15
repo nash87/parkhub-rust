@@ -31,11 +31,19 @@ test.describe('Security — Access Control & Hardening', () => {
   test.describe('Admin routes blocked for regular users (UI)', () => {
     for (const route of ADMIN_ROUTES) {
       test(`${route} redirects or blocks non-admin`, async ({ page }) => {
-        // Navigate without login — should redirect to login
+        // Navigate without login. ProtectedRoute is client-side, so after
+        // Astro ships the SPA shell the React router decides to redirect to
+        // /login or /welcome. waitForURL blocks until that navigation runs
+        // (or the URL resolves to access-denied text in the body).
         await page.goto(route);
-        await page.waitForLoadState('domcontentloaded');
+        try {
+          await page.waitForURL(/\/(login|welcome)/, { timeout: 5000 });
+        } catch {
+          // Fall through — either the redirect didn't happen or the page
+          // rendered a blocked/forbidden message in place. The assertion
+          // below handles both cases.
+        }
 
-        // Should either redirect to /login or show access denied
         const url = page.url();
         const body = await page.locator('body').textContent();
         const isBlocked =
