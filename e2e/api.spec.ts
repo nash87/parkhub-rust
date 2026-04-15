@@ -111,10 +111,21 @@ test.describe('API — Admin Endpoints (authenticated)', () => {
 
 test.describe('API — Content Types', () => {
   test('health endpoint returns JSON', async ({ request }) => {
-    // Rust exposes /health/live (JSON) + /health (text "ok");
-    // PHP exposes /api/v1/health/live (JSON). Probe all three and
-    // take the first that returns JSON.
-    const paths = ['/api/v1/health/live', '/health/live', '/api/v1/health'];
+    // Backends disagree on what "health" means:
+    //   Rust  /health            → text/plain "ok"
+    //   Rust  /health/live       → 200 with empty body (no Content-Type)
+    //   Rust  /health/ready      → JSON
+    //   PHP   /api/v1/health     → JSON
+    //   PHP   /api/v1/health/live → JSON
+    // Use the "ready" / "status" endpoints that both advertise JSON
+    // responses, and fall back to /api/v1/system/version which is
+    // always JSON on both backends.
+    const paths = [
+      '/api/v1/health',
+      '/health/ready',
+      '/api/v1/system/version',
+      '/api/v1/health/live',
+    ];
     let jsonCt = '';
     for (const path of paths) {
       const res = await request.get(path);
