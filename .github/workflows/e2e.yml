@@ -72,6 +72,7 @@ jobs:
         env:
           DEMO_MODE: 'true'
           PARKHUB_ADMIN_PASSWORD: 'demo'
+          PARKHUB_DISABLE_RATE_LIMITS: 'true'
 
       - name: Install Playwright dependencies
         run: npm ci

@@ -197,29 +197,41 @@ pub struct EndpointRateLimiters {
 
 impl EndpointRateLimiters {
     pub fn new() -> Self {
+        // `PARKHUB_DISABLE_RATE_LIMITS=true` raises every per-IP limiter to an
+        // effectively-infinite budget (100_000 / minute). Only intended for
+        // E2E test runs and local dev — never set in production.
+        let disable_limits = std::env::var("PARKHUB_DISABLE_RATE_LIMITS")
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(false);
+        let rpm = |normal: u32| if disable_limits { 100_000 } else { normal };
+        let period = |normal: u32, secs: u64| -> (u32, Duration) {
+            if disable_limits {
+                (100_000, Duration::from_secs(60))
+            } else {
+                (normal, Duration::from_secs(secs))
+            }
+        };
+
+        let (forgot_n, forgot_p) = period(3, 15 * 60);
+        let (reset_n, reset_p) = period(5, 15 * 60);
+
         Self {
-            // 5 login attempts per minute per IP
-            login: per_ip::create_ip_rate_limiter(5),
+            // 5 login attempts per minute per IP (normal) / unlimited in test mode
+            login: per_ip::create_ip_rate_limiter(rpm(5)),
             // 3 registrations per minute per IP
-            register: per_ip::create_ip_rate_limiter(3),
+            register: per_ip::create_ip_rate_limiter(rpm(3)),
             // 10 token-refresh requests per minute per IP
-            token_refresh: per_ip::create_ip_rate_limiter(10),
+            token_refresh: per_ip::create_ip_rate_limiter(rpm(10)),
             // 3 forgot-password requests per 15 minutes per IP
-            forgot_password: per_ip::create_ip_rate_limiter_with_period(
-                3,
-                Duration::from_secs(15 * 60),
-            ),
+            forgot_password: per_ip::create_ip_rate_limiter_with_period(forgot_n, forgot_p),
             // 5 password-reset submissions per 15 minutes per IP
-            password_reset: per_ip::create_ip_rate_limiter_with_period(
-                5,
-                Duration::from_secs(15 * 60),
-            ),
+            password_reset: per_ip::create_ip_rate_limiter_with_period(reset_n, reset_p),
             // 3 demo vote/reset per minute per IP
-            demo: per_ip::create_ip_rate_limiter(3),
+            demo: per_ip::create_ip_rate_limiter(rpm(3)),
             // 10 QR pass requests per minute per IP
-            qr_pass: per_ip::create_ip_rate_limiter(10),
+            qr_pass: per_ip::create_ip_rate_limiter(rpm(10)),
             // 10 lobby display requests per minute per IP
-            lobby_display: per_ip::create_ip_rate_limiter(10),
+            lobby_display: per_ip::create_ip_rate_limiter(rpm(10)),
             // 100 requests per second globally
             general: create_rate_limiter(&RateLimitConfig::default()),
         }
