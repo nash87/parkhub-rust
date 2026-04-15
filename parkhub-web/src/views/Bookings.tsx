@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useOptimistic, useTransition } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,21 @@ export function BookingsPage() {
   const [searchLot, setSearchLot] = useState('');
   const [passBooking, setPassBooking] = useState<Booking | null>(null);
 
+  // React 19 useOptimistic: the UI flips to cancelled the instant the user
+  // clicks, server round-trip happens behind it, React auto-reverts if the
+  // mutation fails. Every list that renders `bookings` should use
+  // `optimisticBookings` instead so it reflects pending actions too.
+  const [optimisticBookings, applyOptimistic] = useOptimistic(
+    bookings,
+    (state: Booking[], action: { type: 'cancel'; id: string }) => {
+      if (action.type === 'cancel') {
+        return state.map((b) => (b.id === action.id ? { ...b, status: 'cancelled' } : b));
+      }
+      return state;
+    },
+  );
+  const [, startTransition] = useTransition();
+
   const handleWsEvent = useCallback((event: WsEvent) => {
     if (event.event === 'booking_created') {
       toast.success(t('bookings.wsNewBooking', 'Someone booked a spot in this lot'));
@@ -52,9 +67,16 @@ export function BookingsPage() {
 
   async function handleCancel(id: string) {
     setCancelling(id);
+    // useOptimistic + startTransition: the list flips instantly, then we
+    // fire the real mutation. On success we commit to real state; on
+    // failure the optimistic update rolls back automatically when the
+    // transition ends without a setBookings() call.
+    startTransition(() => applyOptimistic({ type: 'cancel', id }));
     const res = await api.cancelBooking(id);
     if (res.success) {
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)),
+      );
       toast.success(t('bookings.cancelled'));
     } else {
       toast.error(t('bookings.cancelFailed'));
@@ -62,11 +84,11 @@ export function BookingsPage() {
     setCancelling(null);
   }
 
-  const filtered = useMemo(() => bookings.filter(b => {
+  const filtered = useMemo(() => optimisticBookings.filter(b => {
     if (filterStatus !== 'all' && b.status !== filterStatus) return false;
     if (searchLot && !b.lot_name.toLowerCase().includes(searchLot.toLowerCase())) return false;
     return true;
-  }), [bookings, filterStatus, searchLot]);
+  }), [optimisticBookings, filterStatus, searchLot]);
 
   const isActiveOrConfirmed = (s: string) => s === 'active' || s === 'confirmed';
   const now = Date.now();
