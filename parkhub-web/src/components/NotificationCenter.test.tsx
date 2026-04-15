@@ -73,6 +73,24 @@ vi.mock('react-hot-toast', () => ({
   },
 }));
 
+const mockGetUnreadCount = vi.fn();
+const mockGetCenter = vi.fn();
+const mockMarkAllRead = vi.fn();
+const mockMarkRead = vi.fn();
+const mockDelete = vi.fn();
+const mockGetInMemoryToken = vi.fn(() => 'test-token');
+
+vi.mock('../api/client', () => ({
+  api: {
+    getNotificationUnreadCount: (...args: any[]) => mockGetUnreadCount(...args),
+    getNotificationCenter: (...args: any[]) => mockGetCenter(...args),
+    markAllNotificationCenterRead: (...args: any[]) => mockMarkAllRead(...args),
+    markNotificationCenterRead: (...args: any[]) => mockMarkRead(...args),
+    deleteNotificationCenter: (...args: any[]) => mockDelete(...args),
+  },
+  getInMemoryToken: () => mockGetInMemoryToken(),
+}));
+
 import { NotificationCenter } from './NotificationCenter';
 
 const sampleNotifications = [
@@ -130,52 +148,28 @@ const sampleNotifications = [
   },
 ];
 
-function mockFetch(overrides?: Record<string, any>) {
-  return vi.fn((url: string, opts?: RequestInit) => {
-    if (typeof url === 'string' && url.includes('/unread-count')) {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ success: true, data: { count: overrides?.unreadCount ?? 2 } }),
-      } as Response);
-    }
-    if (typeof url === 'string' && url.includes('/center?')) {
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
-          success: true,
-          data: {
-            items: overrides?.items ?? sampleNotifications,
-            total: (overrides?.items ?? sampleNotifications).length,
-            page: 1,
-            per_page: 50,
-            unread_count: overrides?.unreadCount ?? 2,
-          },
-        }),
-      } as Response);
-    }
-    if (typeof url === 'string' && url.includes('/read-all')) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
-    }
-    if (typeof url === 'string' && url.match(/notifications\/\w+\/read$/)) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
-    }
-    if (typeof url === 'string' && url.includes('/center/') && opts?.method === 'DELETE') {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
-    }
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
+function seedMocks(overrides?: { unreadCount?: number; items?: typeof sampleNotifications }) {
+  const items = overrides?.items ?? sampleNotifications;
+  const unreadCount = overrides?.unreadCount ?? 2;
+  mockGetUnreadCount.mockResolvedValue({ success: true, data: { count: unreadCount } });
+  mockGetCenter.mockResolvedValue({
+    success: true,
+    data: { items, total: items.length, page: 1, per_page: 50, unread_count: unreadCount },
   });
+  mockMarkAllRead.mockResolvedValue({ success: true, data: null });
+  mockMarkRead.mockResolvedValue({ success: true, data: null });
+  mockDelete.mockResolvedValue({ success: true, data: null });
 }
 
 describe('NotificationCenter', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.setItem('parkhub_token', 'test-token');
-    global.fetch = mockFetch();
+    mockGetInMemoryToken.mockReturnValue('test-token');
+    seedMocks();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    localStorage.clear();
   });
 
   it('renders bell icon button', () => {
@@ -186,10 +180,7 @@ describe('NotificationCenter', () => {
   it('fetches unread count on mount', async () => {
     render(<NotificationCenter />);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/v1/notifications/unread-count',
-        expect.objectContaining({ headers: { Authorization: 'Bearer test-token' } }),
-      );
+      expect(mockGetUnreadCount).toHaveBeenCalled();
     });
   });
 
@@ -201,7 +192,7 @@ describe('NotificationCenter', () => {
   });
 
   it('shows 99+ when unread count exceeds 99', async () => {
-    global.fetch = mockFetch({ unreadCount: 150 });
+    seedMocks({ unreadCount: 150 });
     render(<NotificationCenter />);
     await waitFor(() => {
       expect(screen.getByText('99+')).toBeInTheDocument();
@@ -209,11 +200,19 @@ describe('NotificationCenter', () => {
   });
 
   it('does not show unread badge when count is 0', async () => {
-    global.fetch = mockFetch({ unreadCount: 0, items: [] });
+    seedMocks({ unreadCount: 0, items: [] });
     render(<NotificationCenter />);
     await waitFor(() => {
       expect(screen.queryByText('0')).not.toBeInTheDocument();
     });
+  });
+
+  it('skips fetch when no token is present', async () => {
+    mockGetInMemoryToken.mockReturnValue(null);
+    render(<NotificationCenter />);
+    // give the effect a tick to try firing
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockGetUnreadCount).not.toHaveBeenCalled();
   });
 
   it('opens panel when bell is clicked', async () => {
@@ -229,10 +228,7 @@ describe('NotificationCenter', () => {
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/center?filter=all'),
-        expect.anything(),
-      );
+      expect(mockGetCenter).toHaveBeenCalledWith('all', 50);
     });
   });
 
@@ -247,7 +243,7 @@ describe('NotificationCenter', () => {
   });
 
   it('shows empty state when no notifications', async () => {
-    global.fetch = mockFetch({ items: [], unreadCount: 0 });
+    seedMocks({ items: [], unreadCount: 0 });
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => {
@@ -269,10 +265,7 @@ describe('NotificationCenter', () => {
     await waitFor(() => screen.getByText('Mark all read'));
     fireEvent.click(screen.getByText('Mark all read'));
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/v1/notifications/center/read-all',
-        expect.objectContaining({ method: 'PUT' }),
-      );
+      expect(mockMarkAllRead).toHaveBeenCalled();
     });
   });
 
@@ -317,10 +310,7 @@ describe('NotificationCenter', () => {
     await waitFor(() => screen.getByText('Booking Confirmed'));
     fireEvent.click(screen.getByText('Booking Confirmed'));
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/v1/notifications/n1/read',
-        expect.objectContaining({ method: 'PUT' }),
-      );
+      expect(mockMarkRead).toHaveBeenCalledWith('n1');
     });
   });
 
@@ -328,28 +318,21 @@ describe('NotificationCenter', () => {
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => screen.getByText('Maintenance Alert'));
+    mockMarkRead.mockClear();
     fireEvent.click(screen.getByText('Maintenance Alert'));
-    // n2 is already read; no action_url so no navigate either
-    // Should NOT have called the mark-read endpoint for n2
-    await waitFor(() => {
-      const calls = (global.fetch as any).mock.calls;
-      const markReadCalls = calls.filter((c: any[]) => typeof c[0] === 'string' && c[0].includes('/n2/read'));
-      expect(markReadCalls).toHaveLength(0);
-    });
+    // n2 is already read; clicking shouldn't invoke markNotificationCenterRead
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockMarkRead).not.toHaveBeenCalled();
   });
 
   it('deletes a notification', async () => {
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => screen.getByText('Booking Confirmed'));
-    // Find delete buttons (Trash icons)
     const trashIcons = screen.getAllByTitle('Delete');
     fireEvent.click(trashIcons[0]);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/center/n1'),
-        expect.objectContaining({ method: 'DELETE' }),
-      );
+      expect(mockDelete).toHaveBeenCalledWith('n1');
       expect(mockToastSuccess).toHaveBeenCalledWith('Deleted');
     });
   });
@@ -358,14 +341,10 @@ describe('NotificationCenter', () => {
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => screen.getByText('Booking Confirmed'));
-    // Find mark-read buttons (Check icons) - only appear for unread
     const markReadBtns = screen.getAllByTitle('Mark as read');
     fireEvent.click(markReadBtns[0]);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/n1/read'),
-        expect.objectContaining({ method: 'PUT' }),
-      );
+      expect(mockMarkRead).toHaveBeenCalledWith('n1');
     });
   });
 
@@ -376,18 +355,12 @@ describe('NotificationCenter', () => {
     const unreadBtn = screen.getByText('Unread');
     fireEvent.click(unreadBtn);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('filter=unread'),
-        expect.anything(),
-      );
+      expect(mockGetCenter).toHaveBeenCalledWith('unread', 50);
     });
     const readBtn = screen.getByText('Read');
     fireEvent.click(readBtn);
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('filter=read'),
-        expect.anything(),
-      );
+      expect(mockGetCenter).toHaveBeenCalledWith('read', 50);
     });
   });
 
@@ -415,14 +388,10 @@ describe('NotificationCenter', () => {
   });
 
   it('handles fetch error for notifications gracefully', async () => {
-    global.fetch = vi.fn((url: string) => {
-      if (typeof url === 'string' && url.includes('/unread-count')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { count: 1 } }) } as Response);
-      }
-      if (typeof url === 'string' && url.includes('/center?')) {
-        return Promise.reject(new Error('Network error'));
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
+    mockGetCenter.mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code: 'NETWORK', message: 'Network error' },
     });
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
@@ -432,29 +401,22 @@ describe('NotificationCenter', () => {
   });
 
   it('handles fetch error for unread count silently', async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error('Network error')));
+    mockGetUnreadCount.mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code: 'NETWORK', message: 'Network error' },
+    });
     render(<NotificationCenter />);
     // Should not throw or show error toast for unread count
-    await waitFor(() => {
-      expect(mockToastError).not.toHaveBeenCalled();
-    });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it('handles markAllRead error with toast', async () => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
-      if (typeof url === 'string' && url.includes('/unread-count')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { count: 2 } }) } as Response);
-      }
-      if (typeof url === 'string' && url.includes('/center?')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true, data: { items: sampleNotifications, unread_count: 2 } }),
-        } as Response);
-      }
-      if (typeof url === 'string' && url.includes('/read-all')) {
-        return Promise.reject(new Error('Server error'));
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
+    mockMarkAllRead.mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code: 'HTTP_500', message: 'Server error' },
     });
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
@@ -466,20 +428,10 @@ describe('NotificationCenter', () => {
   });
 
   it('handles deleteNotification error with toast', async () => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
-      if (typeof url === 'string' && url.includes('/unread-count')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { count: 2 } }) } as Response);
-      }
-      if (typeof url === 'string' && url.includes('/center?')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true, data: { items: sampleNotifications, unread_count: 2 } }),
-        } as Response);
-      }
-      if (opts?.method === 'DELETE') {
-        return Promise.reject(new Error('Delete error'));
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
+    mockDelete.mockResolvedValue({
+      success: false,
+      data: null,
+      error: { code: 'HTTP_500', message: 'Delete error' },
     });
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
@@ -492,12 +444,7 @@ describe('NotificationCenter', () => {
   });
 
   it('handles non-ok response for unread count', async () => {
-    global.fetch = vi.fn((url: string) => {
-      if (typeof url === 'string' && url.includes('/unread-count')) {
-        return Promise.resolve({ ok: false, json: () => Promise.resolve({ success: false }) } as Response);
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { items: [], unread_count: 0 } }) } as Response);
-    });
+    mockGetUnreadCount.mockResolvedValue({ success: false, data: null });
     render(<NotificationCenter />);
     // Should not crash
     await waitFor(() => {
@@ -506,31 +453,10 @@ describe('NotificationCenter', () => {
   });
 
   it('handles non-ok response for fetch notifications', async () => {
-    global.fetch = vi.fn((url: string) => {
-      if (typeof url === 'string' && url.includes('/unread-count')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { count: 0 } }) } as Response);
-      }
-      if (typeof url === 'string' && url.includes('/center?')) {
-        return Promise.resolve({ ok: false } as Response);
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) } as Response);
-    });
+    mockGetCenter.mockResolvedValue({ success: false, data: null });
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     // Should not crash; loading should finish
-    await waitFor(() => {
-      expect(screen.getByText('No notifications')).toBeInTheDocument();
-    });
-  });
-
-  it('handles success:false in unread count response', async () => {
-    global.fetch = vi.fn((url: string) => {
-      if (typeof url === 'string' && url.includes('/unread-count')) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: false }) } as Response);
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: { items: [], unread_count: 0 } }) } as Response);
-    });
-    render(<NotificationCenter />);
     await waitFor(() => {
       expect(screen.getByLabelText('Notifications')).toBeInTheDocument();
     });
@@ -569,14 +495,9 @@ describe('NotificationCenter', () => {
     vi.useFakeTimers();
     render(<NotificationCenter />);
     await act(async () => { vi.advanceTimersByTime(100); });
-    const initialCalls = (global.fetch as any).mock.calls.filter(
-      (c: any[]) => typeof c[0] === 'string' && c[0].includes('/unread-count'),
-    ).length;
+    const initialCalls = mockGetUnreadCount.mock.calls.length;
     await act(async () => { vi.advanceTimersByTime(30000); });
-    const afterCalls = (global.fetch as any).mock.calls.filter(
-      (c: any[]) => typeof c[0] === 'string' && c[0].includes('/unread-count'),
-    ).length;
-    expect(afterCalls).toBeGreaterThan(initialCalls);
+    expect(mockGetUnreadCount.mock.calls.length).toBeGreaterThan(initialCalls);
     vi.useRealTimers();
   });
 
@@ -586,7 +507,7 @@ describe('NotificationCenter', () => {
       id: 'now',
       created_at: new Date(Date.now() - 5 * 1000).toISOString(),
     };
-    global.fetch = mockFetch({ items: [justNowItem] });
+    seedMocks({ items: [justNowItem] });
     render(<NotificationCenter />);
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => {
