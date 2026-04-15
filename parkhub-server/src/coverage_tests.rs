@@ -2471,7 +2471,7 @@ async fn test_user_preferences_update() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-async fn test_nonexistent_route_returns_fallback() {
+async fn test_nonexistent_api_route_returns_404_json() {
     let state = test_state().await;
     let app = router(state);
 
@@ -2484,7 +2484,36 @@ async fn test_nonexistent_route_returns_fallback() {
         .await
         .unwrap();
 
-    // Router has a fallback handler that serves the SPA (200), not 404
+    // Unknown /api/* routes must NOT fall through to the SPA HTML handler —
+    // they return a structured 404 so API clients get a clean error instead
+    // of a JSON parse failure on a 200 response.
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    let content_type = resp
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    assert!(
+        content_type.contains("application/json"),
+        "expected application/json, got {content_type}"
+    );
+}
+
+#[tokio::test]
+async fn test_nonexistent_spa_route_returns_index_html() {
+    let state = test_state().await;
+    let app = router(state);
+
+    // Non-API paths without a dot (e.g. deep links into the React router)
+    // still fall through to index.html so client-side routing works.
+    let resp = app
+        .oneshot(
+            Request::get("/some/react/route")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
