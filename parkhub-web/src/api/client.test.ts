@@ -1311,7 +1311,10 @@ describe('API client', () => {
     expect(callCount).toBe(2);
   });
 
-  it('does not retry 401 errors', async () => {
+  it('attempts one transparent token refresh on 401, then gives up', async () => {
+    // Both the original request and the refresh attempt return 401 —
+    // client should try /auth/refresh exactly once, then surface
+    // UNAUTHORIZED. That's 2 fetches total.
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false, status: 401, statusText: 'Unauthorized',
       json: () => Promise.resolve({ error: { code: 'UNAUTHORIZED', message: 'Expired' } }),
@@ -1319,7 +1322,9 @@ describe('API client', () => {
     const result = await api.getLots();
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('UNAUTHORIZED');
-    expect(globalThis.fetch).toHaveBeenCalledOnce();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+    const refreshCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    expect(String(refreshCall[0])).toContain('/auth/refresh');
   });
 
   it('handles AbortError specifically', async () => {

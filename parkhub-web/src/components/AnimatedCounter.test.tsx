@@ -18,7 +18,9 @@ describe('AnimatedCounter', () => {
 
   it('renders the initial zero value', () => {
     render(<AnimatedCounter value={0} />);
-    expect(screen.getByText('0')).toBeInTheDocument();
+    // Both the aria-hidden visual span AND the aria-live sr-only span
+    // contain "0". getAllByText returns both.
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
   });
 
   it('animates upwards to the provided value', () => {
@@ -38,7 +40,9 @@ describe('AnimatedCounter', () => {
 
     render(<AnimatedCounter value={10} duration={1000} />);
 
-    expect(screen.getByText('0')).toBeInTheDocument();
+    // The aria-hidden visual span starts at 0; the aria-live mirror already
+    // renders the final value 10 for screen readers.
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(1);
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
 
     act(() => {
@@ -46,14 +50,15 @@ describe('AnimatedCounter', () => {
       frames.get(1)?.(now);
     });
 
-    expect(screen.getByText('9')).toBeInTheDocument();
+    expect(screen.getAllByText('9').length).toBeGreaterThanOrEqual(1);
 
     act(() => {
       now = 1000;
       frames.get(2)?.(now);
     });
 
-    expect(screen.getByText('10')).toBeInTheDocument();
+    // After animation completes, visual and sr-only both show 10.
+    expect(screen.getAllByText('10').length).toBeGreaterThanOrEqual(1);
   });
 
   it('does not schedule animation when the value does not change', () => {

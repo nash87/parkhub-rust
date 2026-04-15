@@ -33,12 +33,64 @@ function isTransientError(status: number): boolean {
   return status === 502 || status === 503 || status === 504 || status === 429;
 }
 
+// Single-flight token refresh. All concurrent 401s share one refresh call
+// so we don't stampede the refresh endpoint with dozens of parallel POSTs.
+let _inflightRefresh: Promise<boolean> | null = null;
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (_inflightRefresh) return _inflightRefresh;
+
+  _inflightRefresh = (async () => {
+    try {
+      const token = _inMemoryToken;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      const res = await fetch(`${BASE_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+      });
+      if (!res.ok) return false;
+      const body = (await res.json().catch(() => null)) as
+        | {
+            success?: boolean;
+            data?: {
+              tokens?: { access_token?: string };
+              access_token?: string;
+            };
+          }
+        | null;
+      const next =
+        body?.data?.tokens?.access_token ?? body?.data?.access_token ?? null;
+      if (next) {
+        _inMemoryToken = next;
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      _inflightRefresh = null;
+    }
+  })();
+
+  return _inflightRefresh;
+}
+
 async function requestOnce<T>(path: string, opts: RequestInit): Promise<ApiResponse<T>> {
   const res = await fetch(`${BASE_URL}${path}`, opts);
 
-  if (res.status === 401) {
-    _inMemoryToken = null;
-    window.dispatchEvent(new Event('auth:unauthorized'));
+  // 401 on /auth/login is a wrong-password, not a session expiration — don't
+  // wipe auth state or dispatch the global unauth event mid-login form.
+  // 401 on /auth/refresh means the refresh token is also expired; hard-fail
+  // there so the outer loop doesn't try to refresh its own refresh.
+  const isLoginPath = path.includes('/auth/login');
+  const isRefreshPath = path.includes('/auth/refresh');
+  if (res.status === 401 && !isLoginPath && !isRefreshPath) {
     return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
   }
 
@@ -85,10 +137,37 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<ApiR
     if (existing) return existing as Promise<ApiResponse<T>>;
   }
 
+  const isAuthFlowPath = path.includes('/auth/login') || path.includes('/auth/refresh');
+
   const execute = async (): Promise<ApiResponse<T>> => {
+    let refreshedOnce = false;
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const result = await requestOnce<T>(path, fetchOpts);
+
+        // Transparent token refresh on 401. Only attempt once per request
+        // and only for non-auth paths. On success, rebuild fetchOpts with
+        // the new token and retry the original call.
+        if (
+          !result.success &&
+          result.error?.code === 'UNAUTHORIZED' &&
+          !isAuthFlowPath &&
+          !refreshedOnce
+        ) {
+          refreshedOnce = true;
+          const refreshed = await attemptTokenRefresh();
+          if (refreshed) {
+            const refreshedToken = _inMemoryToken;
+            if (refreshedToken) {
+              (fetchOpts.headers as Record<string, string>).Authorization = `Bearer ${refreshedToken}`;
+            }
+            continue;
+          }
+          // Refresh failed — signal unauth normally.
+          _inMemoryToken = null;
+          window.dispatchEvent(new Event('auth:unauthorized'));
+          return result;
+        }
 
         if (!result.success && result.error) {
           const status = parseInt(result.error.code.replace('HTTP_', ''), 10);
