@@ -311,6 +311,11 @@ async fn main() -> Result<()> {
         config.encryption_enabled = false; // Disable encryption for unattended setup
         config.enable_tls = false; // Disable TLS for easier initial setup
         config.generate_dummy_users = true;
+        // Disable mDNS in headless/container mode. On Render (and any other
+        // managed container host) the UDP 5353 socket confuses the proxy
+        // port-detection, and LAN discovery is pointless without a LAN.
+        // Users who actually want mDNS can enable it in their config.toml.
+        config.enable_mdns = false;
         config.save(&config_path)?;
         info!("Default config saved. Admin user: admin");
         config
