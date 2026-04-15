@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginViaApi, loginViaUi, DEMO_ADMIN, ADMIN_ROUTES, ADMIN_API_ENDPOINTS } from './helpers';
 
-const BASE = process.env.E2E_BASE_URL || 'http://localhost:8081';
+const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
 test.describe('Security — Access Control & Hardening', () => {
   // ── Authentication: No Token → 401 ──
@@ -31,19 +31,11 @@ test.describe('Security — Access Control & Hardening', () => {
   test.describe('Admin routes blocked for regular users (UI)', () => {
     for (const route of ADMIN_ROUTES) {
       test(`${route} redirects or blocks non-admin`, async ({ page }) => {
-        // Navigate without login. ProtectedRoute is client-side, so after
-        // Astro ships the SPA shell the React router decides to redirect to
-        // /login or /welcome. waitForURL blocks until that navigation runs
-        // (or the URL resolves to access-denied text in the body).
+        // Navigate without login — should redirect to login
         await page.goto(route);
-        try {
-          await page.waitForURL(/\/(login|welcome)/, { timeout: 5000 });
-        } catch {
-          // Fall through — either the redirect didn't happen or the page
-          // rendered a blocked/forbidden message in place. The assertion
-          // below handles both cases.
-        }
+        await page.waitForLoadState('networkidle');
 
+        // Should either redirect to /login or show access denied
         const url = page.url();
         const body = await page.locator('body').textContent();
         const isBlocked =
@@ -137,7 +129,7 @@ test.describe('Security — Access Control & Hardening', () => {
 
   test.describe('Security Headers', () => {
     test('response includes security headers', async ({ request }) => {
-      const res = await request.get('/health');
+      const res = await request.get('/api/v1/health');
       const headers = res.headers();
 
       // X-Content-Type-Options should be nosniff
@@ -156,14 +148,14 @@ test.describe('Security — Access Control & Hardening', () => {
 
     test('API responses are JSON content type', async ({ request }) => {
       const res = await request.post('/api/v1/auth/login', {
-        data: { username: 'invalid', password: 'invalid' },
+        data: { email: 'invalid@test.com', password: 'invalid' },
       });
       const ct = res.headers()['content-type'] ?? '';
       expect(ct).toContain('application/json');
     });
 
     test('HSTS header present on HTTPS', async ({ request }) => {
-      const res = await request.get('/health');
+      const res = await request.get('/api/v1/health');
       const headers = res.headers();
       // HSTS may only be present on HTTPS connections
       // On HTTP, it's acceptable to not have it
@@ -193,9 +185,12 @@ test.describe('Security — Access Control & Hardening', () => {
     });
 
     test('login with wrong password returns 401', async ({ request }) => {
+      // PHP expects `username`, Rust accepts either — send both so the
+      // request makes it past validation and actually checks credentials.
       const res = await request.post('/api/v1/auth/login', {
         data: {
-          username: DEMO_ADMIN.username,
+          username: DEMO_ADMIN.email,
+          email: DEMO_ADMIN.email,
           password: 'wrong-password-12345',
         },
       });
@@ -204,7 +199,7 @@ test.describe('Security — Access Control & Hardening', () => {
 
     test('login with empty credentials returns 400 or 401', async ({ request }) => {
       const res = await request.post('/api/v1/auth/login', {
-        data: { username: '', password: '' },
+        data: { email: '', password: '' },
       });
       expect([400, 401, 422]).toContain(res.status());
     });
@@ -214,21 +209,33 @@ test.describe('Security — Access Control & Hardening', () => {
 
   test.describe('Rate Limiting', () => {
     test('rapid login attempts are eventually rate-limited', async ({ request }) => {
-      const results: number[] = [];
+      // CI runs with PARKHUB_DISABLE_RATE_LIMITS=true (a Playwright suite
+      // funnels every test through /auth/login from the same IP; without
+      // the bypass the suite falls off a cliff at attempt #6). Skip the
+      // test when the backend advertises the bypass rather than failing.
+      const probe = await request.post('/api/v1/auth/login', {
+        data: { username: 'nobody@test.invalid', email: 'nobody@test.invalid', password: 'x' },
+      });
+      const limitHeader = probe.headers()['x-ratelimit-limit'];
+      if (limitHeader && parseInt(limitHeader, 10) > 1000) {
+        test.skip(true, `Rate limits disabled (limit=${limitHeader}); skipping rate-limit test`);
+        return;
+      }
 
-      // Send 10 rapid login attempts with bad credentials
+      const results: number[] = [];
       for (let i = 0; i < 10; i++) {
         const res = await request.post('/api/v1/auth/login', {
-          data: { username: 'nonexistent', password: `wrong-${i}` },
+          data: {
+            username: 'nonexistent@test.com',
+            email: 'nonexistent@test.com',
+            password: `wrong-${i}`,
+          },
         });
         results.push(res.status());
       }
 
-      // At least some should be 401 (bad creds), and eventually 429 (rate limited)
       const has401 = results.includes(401);
       const has429 = results.includes(429);
-
-      // We expect either rate limiting kicked in, or all returned 401
       expect(has401 || has429).toBe(true);
     });
   });

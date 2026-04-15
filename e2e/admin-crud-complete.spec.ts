@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginViaApi, loginViaUi, DEMO_ADMIN } from './helpers';
 
-const BASE = process.env.E2E_BASE_URL || 'http://localhost:8081';
+const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
 test.describe('Admin CRUD — Complete Lifecycle', () => {
   let token: string;
@@ -18,7 +18,7 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
     let createdLotId: string;
 
     test('create a parking lot', async ({ request }) => {
-      const res = await request.post('/api/v1/lots', {
+      const res = await request.post('/api/v1/admin/lots', {
         headers: { Authorization: `Bearer ${token}` },
         data: {
           name: `E2E Test Lot ${Date.now()}`,
@@ -28,21 +28,15 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
         },
       });
 
-      // 200 or 201 for creation; skip gracefully if this runtime refuses
-      if (![200, 201].includes(res.status())) {
+      // 200 or 201 for creation
+      if ([200, 201].includes(res.status())) {
+        const body = await res.json();
+        createdLotId = body.data?.id ?? body.id;
+        expect(createdLotId).toBeTruthy();
+      } else {
+        // Some setups may not allow direct lot creation via admin API
         test.skip(true, `Lot creation returned ${res.status()}`);
-        return;
       }
-      // Content-type might be HTML if the SPA fallback intercepted the
-      // call in older builds; guard the JSON parse so the error is clear.
-      const contentType = res.headers()['content-type'] ?? '';
-      if (!contentType.includes('application/json')) {
-        test.skip(true, `Lot creation returned non-JSON body (${contentType})`);
-        return;
-      }
-      const body = await res.json();
-      createdLotId = body.data?.id ?? body.id;
-      expect(createdLotId).toBeTruthy();
     });
 
     test('verify lot appears in list', async ({ request }) => {
@@ -62,18 +56,10 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
         return;
       }
 
-      // Rust exposes PUT /api/v1/lots/{id}; PHP exposes /admin/lots/{id}.
-      // Try the non-admin path first, fall back to admin path.
-      let res = await request.put(`/api/v1/lots/${createdLotId}`, {
+      const res = await request.put(`/api/v1/admin/lots/${createdLotId}`, {
         headers: { Authorization: `Bearer ${token}` },
         data: { name: `E2E Updated Lot ${Date.now()}` },
       });
-      if (res.status() === 404) {
-        res = await request.put(`/api/v1/admin/lots/${createdLotId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-          data: { name: `E2E Updated Lot ${Date.now()}` },
-        });
-      }
       expect([200, 204]).toContain(res.status());
     });
 
@@ -83,14 +69,9 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
         return;
       }
 
-      let res = await request.delete(`/api/v1/lots/${createdLotId}`, {
+      const res = await request.delete(`/api/v1/admin/lots/${createdLotId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status() === 404) {
-        res = await request.delete(`/api/v1/admin/lots/${createdLotId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
       expect([200, 204]).toContain(res.status());
     });
   });
@@ -122,18 +103,21 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
 
     test('verify announcement visible via API', async ({ request }) => {
       // Rust exposes /api/v1/announcements/active (public) and
-      // /api/v1/admin/announcements (admin list). PHP uses /announcements.
-      // Try admin list first; if it 404s, fall back to the public active feed.
-      let res = await request.get('/api/v1/admin/announcements', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.status() === 404) {
-        res = await request.get('/api/v1/announcements/active', {
+      // /api/v1/admin/announcements (admin list); PHP exposes the same
+      // two. There is no bare /api/v1/announcements on either backend.
+      const endpoints = [
+        '/api/v1/admin/announcements',
+        '/api/v1/announcements/active',
+      ];
+      let res;
+      for (const path of endpoints) {
+        res = await request.get(path, {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (res.status() === 200) break;
       }
-      expect(res.status()).toBe(200);
-      const body = await res.json();
+      expect(res!.status()).toBe(200);
+      const body = await res!.json();
       // Accept bare array, {data: [...]}, or {data: {items: [...]}}
       const announcements =
         body?.data?.items ?? body?.data ?? body;
@@ -201,10 +185,7 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      // Rust returns PaginatedResponse {items, page, per_page, total, total_pages};
-      // PHP returns {data: [...]} or a bare array. Unwrap all three shapes.
-      const users =
-        body?.data?.items ?? body?.data ?? body?.items ?? body;
+      const users = body.data ?? body;
       expect(Array.isArray(users)).toBe(true);
       expect(users.length).toBeGreaterThan(0);
     });
@@ -214,6 +195,7 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const listBody = await listRes.json();
+      // Rust paginated envelope {items}, PHP flat array, or bare {data: []}.
       const users: Array<{ id: string }> =
         listBody?.data?.items ?? listBody?.data ?? listBody?.items ?? listBody ?? [];
 
@@ -226,11 +208,11 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
       const res = await request.get(`/api/v1/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Rust server only exposes DELETE /admin/users/{id}; PHP side supports
-      // GET. Skip the test gracefully when the runtime returns 404 rather
-      // than asserting a shape that only exists on one backend.
-      if (res.status() === 404) {
-        test.skip(true, 'Backend does not expose GET /admin/users/{id}');
+      // PHP only exposes PUT/DELETE on /admin/users/{id} (→ 405), Rust only
+      // DELETE (→ 404/405). Skip gracefully rather than insisting on a
+      // detail endpoint that neither backend implements.
+      if (res.status() === 404 || res.status() === 405) {
+        test.skip(true, `Backend does not expose GET /admin/users/{id} (status ${res.status()})`);
         return;
       }
       expect(res.status()).toBe(200);
@@ -302,35 +284,35 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
     test('admin dashboard loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).not.toBeEmpty();
     });
 
     test('admin users page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/users');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).toContainText(/user|admin|manage/i);
     });
 
     test('admin lots page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/lots');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).toContainText(/lot|parking|manage/i);
     });
 
     test('admin settings page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/settings');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).toContainText(/setting|config|general/i);
     });
 
     test('admin reports page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/reports');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
       await expect(page.locator('body')).not.toBeEmpty();
     });
   });
