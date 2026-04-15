@@ -7,6 +7,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.10.0] - 2026-04-15
+
+### Added
+- **Kinetic Observatory dashboard**: new `KpiCard`, `TrendCard`, `SensorFeedCard`, `RecentActivityCard` component kit in `parkhub-web/src/components/KineticObservatory.tsx`, with a 4-KPI row, a line-chart trend card, a pulsing sensor feed, and a responsive activity table. `DashboardPage` rewired to compose the kit; new i18n keys (`dashboard.totalBookings`, `weeklyActivityTitle`, `liveSensorFeed`, `recentActivity`, etc.) added for all 10 languages.
+
+### Changed
+- **Docker runtime**: pinned to `gcr.io/distroless/cc-debian13@sha256:9d41206...` so builder (`rust:1.94-slim` → Debian 13) and runtime agree on `libssl.so.3` symbol versions. The previous `distroless/cc-debian12` base shipped OpenSSL 3.0 and crashed at startup with `OPENSSL_3.2.0 not found`.
+- **Container build**: dropped `linux/arm64` from `Release Container` workflow — Render only runs amd64, and QEMU arm64 emulation pushed the Rust + cargo-chef build past the 90-minute job timeout. Builds now complete in ~5 minutes.
+- **E2E tests**: replaced `waitForLoadState('networkidle')` with `domcontentloaded` across all specs and cut CI retries from 2 to 1. `networkidle` is explicitly discouraged by Playwright and was the root cause of the 45-minute E2E job timeout (tests accumulated 30-second page-load timeouts that compounded through retries).
+
+### Fixed
+- **`/data` ownership in final image**: `COPY --from=data-setup /data /data` silently discarded the busybox `chown 65532:65532` because Docker COPY defaults to root:root unless `--chown` is passed. Added `--chown=65532:65532` so the distroless `nonroot` user can actually write `config.toml` and `parkhub.redb`.
+- **Render service config drift**: the `parkhub-rust-demo` service had a stale `dockerCommand = /app/docker-entrypoint.sh` left over from a pre-distroless iteration of the image. Cleared via the Render API so the Dockerfile `CMD` takes effect.
+- **CodeQL dismissals**: `DS-0001` (`:latest` tag) resolved by digest-pinning the runtime; `rust/hard-coded-cryptographic-value` alerts on `parkhub-server/src/api/stripe.rs:690,702` dismissed as test fixtures (`whsec_test_secret`, `whsec_correct`, `whsec_wrong` — only referenced in `#[test]` functions).
+
+---
+
 ## [4.9.0] - 2026-04-13
 
 ### Added
