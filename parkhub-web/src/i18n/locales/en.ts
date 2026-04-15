@@ -54,6 +54,7 @@ export default {
     nav: {
       dashboard: 'Dashboard',
       book: 'Book',
+      bookSpot: 'Book a Spot',
       bookings: 'Bookings',
       vehicles: 'Vehicles',
       favorites: 'Favorites',
@@ -81,6 +82,11 @@ export default {
       switchToDark: 'Switch to dark mode',
       skipToContent: 'Skip to content',
       updates: 'Updates',
+      sections: {
+        core: 'Essentials',
+        fleet: 'Fleet',
+        settings: 'Settings',
+      },
     },
     dashboard: {
       greeting: 'Good {{timeOfDay}}, {{name}}',
@@ -100,6 +106,10 @@ export default {
       bookNow: 'Book a parking spot now',
       loadingDashboard: 'Loading dashboard',
       statistics: 'Statistics',
+      emptyBookingsTitle: 'No active bookings yet',
+      emptyBookingsSubtitle: 'Reserve a spot and it will show up right here.',
+      emptyBookingsPrimary: 'Book your first spot',
+      emptyBookingsSecondary: 'Open command palette',
     },
     bookings: {
       title: 'My Bookings',
@@ -129,6 +139,9 @@ export default {
       invoice: 'Invoice',
       loading: 'Loading bookings...',
       insufficientCredits: 'Not enough credits to book',
+      emptyActiveTitle: 'No active bookings yet',
+      emptyActiveSubtitle: 'Book a parking spot and it will live here until you check out.',
+      emptyActiveSecondary: 'Open command palette',
     },
     pass: {
       title: 'Parking Pass',

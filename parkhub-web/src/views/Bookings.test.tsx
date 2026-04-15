@@ -49,6 +49,9 @@ vi.mock('react-i18next', () => ({
         'bookings.noUpcoming': 'No upcoming bookings',
         'bookings.noPast': 'No past bookings',
         'bookings.bookNow': 'Book Now',
+        'bookings.emptyActiveTitle': 'No active bookings yet',
+        'bookings.emptyActiveSubtitle': 'Book a parking spot and it will live here until you check out.',
+        'bookings.emptyActiveSecondary': 'Open command palette',
         'bookings.cancelBtn': 'Cancel',
         'bookings.cancelled': 'Booking cancelled',
         'bookings.cancelFailed': 'Cancel failed',
@@ -183,10 +186,28 @@ describe('BookingsPage', () => {
     render(<BookingsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('No active bookings')).toBeInTheDocument();
+      // Active empty state now uses the onboarding headline
+      expect(screen.getByText('No active bookings yet')).toBeInTheDocument();
     });
+    // Upcoming/past still use the plain text variant
     expect(screen.getByText('No upcoming bookings')).toBeInTheDocument();
     expect(screen.getByText('No past bookings')).toBeInTheDocument();
+  });
+
+  it('renders rich onboarding empty state for the active section', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No active bookings yet')).toBeInTheDocument();
+    });
+    // Onboarding subtitle + secondary ghost button
+    expect(
+      screen.getByText('Book a parking spot and it will live here until you check out.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Open command palette')).toBeInTheDocument();
   });
 
   it('renders booking cards with lot name and slot', async () => {

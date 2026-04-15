@@ -46,6 +46,10 @@ vi.mock('react-i18next', () => ({
         'dashboard.nextBooking': 'Next Booking',
         'dashboard.noActiveBookings': 'No active bookings',
         'dashboard.bookSpot': 'Book a Spot',
+        'dashboard.emptyBookingsTitle': 'No active bookings yet',
+        'dashboard.emptyBookingsSubtitle': 'Reserve a spot and it will show up right here.',
+        'dashboard.emptyBookingsPrimary': 'Book your first spot',
+        'dashboard.emptyBookingsSecondary': 'Open command palette',
         'dashboard.quickActions': 'Quick Actions',
         'dashboard.myVehicles': 'My Vehicles',
         'dashboard.viewBookings': 'View Bookings',
@@ -233,10 +237,17 @@ describe('DashboardPage', () => {
     render(<DashboardPage />);
 
     await waitFor(() => {
-      // "No active bookings" appears in both empty booking list and empty chart section
-      expect(screen.getAllByText('No active bookings').length).toBeGreaterThanOrEqual(1);
+      // New onboarding empty state: headline + subtitle + primary CTA + secondary ghost button
+      expect(screen.getByText('No active bookings yet')).toBeInTheDocument();
     });
-    // "Book a Spot" appears both in empty state and quick actions
+    expect(
+      screen.getByText('Reserve a spot and it will show up right here.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Book your first spot')).toBeInTheDocument();
+    expect(screen.getByText('Open command palette')).toBeInTheDocument();
+    // Primary CTA links to /book
+    expect(screen.getByText('Book your first spot').closest('a')).toHaveAttribute('href', '/book');
+    // Quick actions still render the "Book a Spot" action card
     expect(screen.getAllByText('Book a Spot').length).toBeGreaterThanOrEqual(1);
   });
 

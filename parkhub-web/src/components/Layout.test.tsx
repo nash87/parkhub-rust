@@ -76,6 +76,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         'nav.dashboard': 'Dashboard',
+        'nav.bookSpot': 'Book a Spot',
         'nav.bookings': 'Bookings',
         'nav.vehicles': 'Vehicles',
         'nav.favorites': 'Favorites',
@@ -84,11 +85,19 @@ vi.mock('react-i18next', () => ({
         'nav.calendar': 'Calendar',
         'nav.map': 'Map',
         'nav.history': 'History',
+        'nav.checkin': 'Check In',
+        'nav.swapRequests': 'Swap Requests',
+        'nav.guestPass': 'Guest Pass',
+        'nav.leaderboard': 'Leaderboard',
+        'nav.predictions': 'Predictions',
         'nav.credits': 'Credits',
         'nav.notifications': 'Notifications',
         'nav.profile': 'Profile',
         'nav.admin': 'Admin',
         'nav.translations': 'Translations',
+        'nav.sections.core': 'Essentials',
+        'nav.sections.fleet': 'Fleet',
+        'nav.sections.settings': 'Settings',
         'nav.lightMode': 'Light Mode',
         'nav.darkMode': 'Dark Mode',
         'nav.logout': 'Log Out',
@@ -238,11 +247,13 @@ describe('Layout', () => {
       ok: true,
       json: () => Promise.resolve({ data: { count: 0 } }),
     })));
+    window.localStorage.clear();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    window.localStorage.clear();
   });
 
   it('renders the ParkHub logo text', () => {
@@ -252,17 +263,62 @@ describe('Layout', () => {
     expect(logos.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders all navigation items in the desktop sidebar', () => {
+  it('renders all navigation items in the desktop sidebar', async () => {
+    const user = userEvent.setup();
     render(<Layout />);
+    // Core section (always visible)
     expect(screen.getAllByText('Dashboard').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Bookings').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Book a Spot').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Vehicles').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Absences').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Team').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Calendar').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Credits').length).toBeGreaterThanOrEqual(1);
+    // Fleet section (default open)
+    expect(screen.getAllByText('Absences').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Team').length).toBeGreaterThanOrEqual(1);
+    // Settings section (default closed) — expand before asserting contents
+    const settingsHeaders = screen.getAllByRole('button', { name: /Settings/ });
+    // Expand both desktop and mobile collapsed Settings headers
+    for (const btn of settingsHeaders) await user.click(btn);
     expect(screen.getAllByText('Notifications').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Profile').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders the 3 sidebar sections with collapsible Fleet and Settings', async () => {
+    const user = userEvent.setup();
+    render(<Layout />);
+    // Section headers rendered in both desktop and mobile sidebars
+    expect(screen.getAllByText('Essentials').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Fleet').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Settings').length).toBeGreaterThanOrEqual(1);
+
+    // Fleet defaults open — a fleet item is visible
+    expect(screen.getAllByText('Favorites').length).toBeGreaterThanOrEqual(1);
+    // Settings defaults closed — Profile is not yet in the DOM
+    expect(screen.queryByText('Profile')).not.toBeInTheDocument();
+
+    // Toggle Settings open
+    const settingsHeaders = screen.getAllByRole('button', { name: /Settings/ });
+    const firstSettings = settingsHeaders[0];
+    if (!firstSettings) throw new Error('Settings header not found');
+    await user.click(firstSettings);
+    expect(screen.getAllByText('Profile').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('persists collapsed section state in localStorage', async () => {
+    const user = userEvent.setup();
+    render(<Layout />);
+    const settingsHeaders = screen.getAllByRole('button', { name: /Settings/ });
+    const firstSettings = settingsHeaders[0];
+    if (!firstSettings) throw new Error('Settings header not found');
+    await user.click(firstSettings);
+    expect(window.localStorage.getItem('parkhub_sidebar_settings_open')).toBe('true');
+
+    const fleetHeaders = screen.getAllByRole('button', { name: /Fleet/ });
+    const firstFleet = fleetHeaders[0];
+    if (!firstFleet) throw new Error('Fleet header not found');
+    await user.click(firstFleet);
+    expect(window.localStorage.getItem('parkhub_sidebar_fleet_open')).toBe('false');
   });
 
   it('renders the Outlet for page content', () => {

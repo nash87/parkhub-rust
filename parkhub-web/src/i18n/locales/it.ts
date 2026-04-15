@@ -54,6 +54,7 @@ export default {
     nav: {
       dashboard: 'Dashboard',
       book: 'Prenota',
+      bookSpot: 'Prenota un posto',
       bookings: 'Prenotazioni',
       vehicles: 'Veicoli',
       favorites: 'Preferiti',
@@ -81,6 +82,11 @@ export default {
       switchToDark: 'Passa alla modalità scura',
       skipToContent: 'Vai al contenuto',
       updates: 'Aggiornamenti',
+      sections: {
+        core: 'Essenziali',
+        fleet: 'Flotta',
+        settings: 'Impostazioni',
+      },
     },
     dashboard: {
       greeting: 'Buon{{timeOfDay}}, {{name}}',
@@ -100,6 +106,10 @@ export default {
       bookNow: 'Prenota un posto auto adesso',
       loadingDashboard: 'Caricamento dashboard',
       statistics: 'Statistiche',
+      emptyBookingsTitle: 'Ancora nessuna prenotazione attiva',
+      emptyBookingsSubtitle: 'Prenota un posto e comparirà qui.',
+      emptyBookingsPrimary: 'Prenota il tuo primo posto',
+      emptyBookingsSecondary: 'Apri la palette dei comandi',
     },
     bookings: {
       title: 'Le mie prenotazioni',
@@ -129,6 +139,9 @@ export default {
       invoice: 'Fattura',
       loading: 'Caricamento prenotazioni...',
       insufficientCredits: 'Crediti insufficienti per prenotare',
+      emptyActiveTitle: 'Ancora nessuna prenotazione attiva',
+      emptyActiveSubtitle: 'Prenota un posto e resterà qui fino al check-out.',
+      emptyActiveSecondary: 'Apri la palette dei comandi',
     },
     pass: {
       title: 'Pass parcheggio',

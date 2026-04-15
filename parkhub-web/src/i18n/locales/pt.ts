@@ -54,6 +54,7 @@ export default {
     nav: {
       dashboard: 'Painel',
       book: 'Reservar',
+      bookSpot: 'Reservar uma vaga',
       bookings: 'Reservas',
       vehicles: 'Veículos',
       favorites: 'Favoritos',
@@ -81,6 +82,11 @@ export default {
       switchToDark: 'Mudar para modo escuro',
       skipToContent: 'Ir para o conteúdo',
       updates: 'Atualizações',
+      sections: {
+        core: 'Essenciais',
+        fleet: 'Frota',
+        settings: 'Definições',
+      },
     },
     dashboard: {
       greeting: 'Bom {{timeOfDay}}, {{name}}',
@@ -100,6 +106,10 @@ export default {
       bookNow: 'Reserve uma vaga de estacionamento agora',
       loadingDashboard: 'A carregar painel',
       statistics: 'Estatísticas',
+      emptyBookingsTitle: 'Ainda sem reservas ativas',
+      emptyBookingsSubtitle: 'Reserve uma vaga e ela aparecerá aqui.',
+      emptyBookingsPrimary: 'Reservar a sua primeira vaga',
+      emptyBookingsSecondary: 'Abrir paleta de comandos',
     },
     bookings: {
       title: 'As minhas reservas',
@@ -129,6 +139,9 @@ export default {
       invoice: 'Fatura',
       loading: 'A carregar reservas...',
       insufficientCredits: 'Créditos insuficientes para reservar',
+      emptyActiveTitle: 'Ainda sem reservas ativas',
+      emptyActiveSubtitle: 'Reserve uma vaga e ela ficará aqui até ao check-out.',
+      emptyActiveSecondary: 'Abrir paleta de comandos',
     },
     pass: {
       title: 'Passe de estacionamento',
