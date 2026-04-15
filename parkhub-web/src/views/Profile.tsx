@@ -215,14 +215,9 @@ export function ProfilePage() {
           defaultValue=""
           onChange={async (e) => {
             try {
-              const res = await fetch('/api/v1/users/me/accessibility-needs', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessibility_needs: e.target.value || 'none' }),
-              });
-              const data = await res.json();
-              if (data.success) toast.success(t('accessible.updated', 'Accessibility needs updated'));
-              else toast.error(data.error?.message || t('common.error'));
+              const res = await api.setAccessibilityNeeds(e.target.value || 'none');
+              if (res.success) toast.success(t('accessible.updated', 'Accessibility needs updated'));
+              else toast.error(res.error?.message || t('common.error'));
             } catch { toast.error(t('common.error')); }
           }}
         >

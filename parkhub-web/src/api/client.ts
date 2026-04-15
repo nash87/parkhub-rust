@@ -157,6 +157,24 @@ export const api = {
   updateMe: (data: Partial<User>) =>
     request<User>('/api/v1/users/me', { method: 'PUT', body: JSON.stringify(data) }),
 
+  setAccessibilityNeeds: (accessibility_needs: string) =>
+    request<User>('/api/v1/users/me/accessibility-needs', {
+      method: 'PUT',
+      body: JSON.stringify({ accessibility_needs }),
+    }),
+
+  getBookingRecommendations: () =>
+    request<Array<{
+      slot_id: string;
+      slot_number: number;
+      lot_id: string;
+      lot_name: string;
+      floor_name: string;
+      score: number;
+      reasons: string[];
+      reason_badges: string[];
+    }>>('/api/v1/bookings/recommendations'),
+
   changePassword: (current_password: string, password: string, password_confirmation: string) =>
     request('/api/v1/users/me/password', {
       method: 'PUT', body: JSON.stringify({ current_password, password, password_confirmation }),

@@ -245,9 +245,11 @@ function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onS
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/v1/bookings/recommendations')
-      .then(r => r.json())
-      .then(res => { if (res.success) setRecs(res.data || []); })
+    api
+      .getBookingRecommendations()
+      .then((res) => {
+        if (res.success && res.data) setRecs(res.data);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
