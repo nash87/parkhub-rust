@@ -26,6 +26,20 @@ pub async fn static_handler(uri: Uri) -> impl IntoResponse {
         return serve_file(path, file);
     }
 
+    // Never hand API paths to the SPA fallback. If an /api/* route reaches
+    // this point it means the axum router didn't match it, so the correct
+    // answer is 404 (JSON), not index.html with status 200. Returning the
+    // SPA HTML would cause API clients to hit a JSON parse error on a 200
+    // response, which hides real routing bugs.
+    if path.starts_with("api/") || path == "api" {
+        return (
+            StatusCode::NOT_FOUND,
+            [(header::CONTENT_TYPE, "application/json")],
+            r#"{"success":false,"error":{"code":"NOT_FOUND","message":"API route not found"}}"#,
+        )
+            .into_response();
+    }
+
     // For SPA routing, serve index.html for non-asset paths
     if (!path.contains('.') || path.is_empty())
         && let Some(file) = WebAssets::get("index.html")

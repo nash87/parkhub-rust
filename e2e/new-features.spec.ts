@@ -9,7 +9,7 @@ test.describe('QR Check-In/Out', () => {
   test('check-in page loads after login', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/checkin');
-    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/check.?in|qr|scan/i);
+    await expect(page.locator('h1, h2, [class*="heading"]').first()).toContainText(/check.?in|qr|scan/i);
   });
 
   test('QR code endpoint returns image or 404 for booking', async ({ request }) => {
@@ -51,7 +51,7 @@ test.describe('Swap Requests', () => {
   test('swap requests page loads after login', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/swap-requests');
-    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/swap/i);
+    await expect(page.locator('h1, h2, [class*="heading"]').first()).toContainText(/swap/i);
   });
 
   test('GET /api/v1/swap-requests returns array', async ({ request }) => {
@@ -75,7 +75,7 @@ test.describe('Guest Parking Pass', () => {
   test('guest pass page loads after login', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/guest-pass');
-    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/guest|visitor/i);
+    await expect(page.locator('h1, h2, [class*="heading"]').first()).toContainText(/guest|visitor/i);
   });
 
   test('GET /api/v1/bookings/guest returns array', async ({ request }) => {
@@ -246,7 +246,7 @@ test.describe('Team Leaderboard', () => {
   test('leaderboard page loads after login', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/leaderboard');
-    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/leaderboard|ranking|team/i);
+    await expect(page.locator('h1, h2, [class*="heading"]').first()).toContainText(/leaderboard|ranking|team/i);
   });
 
   test('team API responds', async ({ request }) => {
@@ -267,7 +267,7 @@ test.describe('Occupancy Prediction', () => {
   test('prediction page loads after login', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/predict');
-    await expect(page.locator('h1, h2, [class*="heading"]')).toContainText(/predict|smart|forecast/i);
+    await expect(page.locator('h1, h2, [class*="heading"]').first()).toContainText(/predict|smart|forecast/i);
   });
 
   test('lots API returns data for predictions', async ({ request }) => {

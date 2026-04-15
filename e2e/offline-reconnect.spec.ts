@@ -17,12 +17,16 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
     // Wait a moment for offline detection
     await page.waitForTimeout(2000);
 
-    // Check for offline indicator in the UI
+    // Check for offline indicator in the UI. Split out the text-matching
+    // variant because Playwright's `text=` engine can't be mixed into a
+    // plain CSS selector list.
     const offlineIndicator = page.locator(
       '[data-testid*="offline"], .offline-indicator, .offline-banner, ' +
-      'text=/offline/i, [aria-label*="offline" i], .connection-status'
+      '[aria-label*="offline" i], .connection-status'
     );
-    const offlineCount = await offlineIndicator.count();
+    const offlineTextLocator = page.getByText(/offline/i);
+    const offlineCount =
+      (await offlineIndicator.count()) + (await offlineTextLocator.count());
 
     // Also check if the browser's offline page or a custom offline page loaded
     const pageContent = await page.locator('body').textContent();
