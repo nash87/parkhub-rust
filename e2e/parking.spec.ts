@@ -96,7 +96,8 @@ test.describe('Parking — Admin', () => {
     });
     expect(res.status()).toBe(200);
     const body = await res.json();
-    const users = body.data ?? body;
+    // Rust PaginatedResponse vs PHP plain array.
+    const users = body?.data?.items ?? body?.data ?? body?.items ?? body;
     expect(Array.isArray(users)).toBe(true);
   });
 

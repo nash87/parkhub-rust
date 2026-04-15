@@ -69,8 +69,10 @@ test.describe('Pages — Admin Routes (after admin login)', () => {
 test.describe('Pages — Redirects', () => {
   test('/ without auth redirects to /login or /welcome', async ({ page }) => {
     await page.goto('/');
-    const url = page.url();
-    expect(url).toMatch(/\/(login|welcome)/);
+    // AuthProvider shows LoadingSplash on mount until /api/v1/users/me
+    // resolves, so URL rewrites to /login or /welcome only AFTER the
+    // unauth check returns. Wait for the redirect before reading URL.
+    await page.waitForURL(/\/(login|welcome)/, { timeout: 10_000 });
   });
 
   test('unknown route shows 404 page', async ({ page }) => {

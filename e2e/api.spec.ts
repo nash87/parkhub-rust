@@ -111,7 +111,9 @@ test.describe('API — Admin Endpoints (authenticated)', () => {
 
 test.describe('API — Content Types', () => {
   test('health endpoint returns JSON', async ({ request }) => {
-    const res = await request.get('/health');
+    // Rust exposes /health, PHP exposes /api/v1/health — try both.
+    let res = await request.get('/api/v1/health/live');
+    if (res.status() === 404) res = await request.get('/health');
     const ct = res.headers()['content-type'] ?? '';
     expect(ct).toContain('application/json');
   });
@@ -119,8 +121,19 @@ test.describe('API — Content Types', () => {
   test('modules endpoint returns JSON array', async ({ request }) => {
     const res = await request.get('/api/v1/modules');
     const body = await res.json();
-    // Response is either an array or wrapped in { data: [...] }
-    const modules = Array.isArray(body) ? body : body.data;
-    expect(Array.isArray(modules)).toBe(true);
+    // Both backends wrap the module list differently: Rust returns
+    // {modules: {...}}, PHP returns {data: {modules: {...}}}, older
+    // Rust builds returned a bare array. Flatten all shapes to the
+    // catalog itself (object of name→bool or array of names).
+    let data = Array.isArray(body) ? body : body.data ?? body;
+    if (data && typeof data === 'object' && !Array.isArray(data) && 'modules' in data) {
+      data = (data as Record<string, unknown>).modules;
+    }
+    const count = Array.isArray(data)
+      ? data.length
+      : data && typeof data === 'object'
+        ? Object.keys(data as Record<string, unknown>).length
+        : 0;
+    expect(count).toBeGreaterThan(0);
   });
 });
