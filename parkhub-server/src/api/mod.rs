@@ -252,7 +252,10 @@ use favorites::{add_favorite, list_favorites, remove_favorite};
 #[cfg(feature = "mod-geofence")]
 use geofence::{admin_set_geofence, geofence_check_in, get_lot_geofence};
 #[cfg(feature = "mod-guest")]
-use guest::{admin_cancel_guest_booking, admin_list_guest_bookings, create_guest_booking};
+use guest::{
+    admin_cancel_guest_booking, admin_list_guest_bookings, create_guest_booking,
+    list_user_guest_bookings,
+};
 #[cfg(feature = "mod-history")]
 use history::{booking_history, booking_stats};
 #[cfg(feature = "mod-import")]
@@ -1696,9 +1699,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
 
     #[cfg(feature = "mod-guest")]
     {
-        // Guest bookings
+        // Guest bookings. The same /bookings/guest path serves GET (list the
+        // current user's own passes — used by the GuestPass page on mount)
+        // and POST (create a new pass). Register both on one router entry
+        // or they race and the later insert wins.
         protected_routes = protected_routes
-            .route("/api/v1/bookings/guest", post(create_guest_booking))
+            .route(
+                "/api/v1/bookings/guest",
+                get(list_user_guest_bookings).post(create_guest_booking),
+            )
             .route(
                 "/api/v1/admin/guest-bookings",
                 get(admin_list_guest_bookings),
