@@ -1,8 +1,17 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Sparkle, Eye, Timer, ArrowsClockwise, CaretDown, CaretUp } from '@phosphor-icons/react';
 import { api, type DemoStatus } from '../api/client';
+
+// Module-level stable identity for the default reloadPage. Previously this
+// was an inline arrow in the component signature, so React created a fresh
+// function identity on every render; the useEffect that depends on it
+// re-fired every render, clearing the 15s interval and immediately calling
+// fetchStatus() again. Combined with the 1-second setTick below, that
+// produced 1+ call/sec of /api/v1/demo/status (≈100/sec under E2E) and
+// Playwright's networkidle auto-wait never stabilized.
+const defaultReloadPage = () => window.location.reload();
 
 function formatRelativeTime(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -21,13 +30,18 @@ function formatCountdown(isoString: string): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export function DemoOverlay({ reloadPage = () => window.location.reload() }: { reloadPage?: () => void } = {}) {
+export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: () => void } = {}) {
   const { t } = useTranslation();
   const [demo, setDemo] = useState<DemoStatus | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [collapsed, setCollapsed] = useState(() => window.innerWidth < 640);
   const [localTimer, setLocalTimer] = useState(0);
   const [, setTick] = useState(0); // force re-render for relative times
+
+  // Stash reloadPage in a ref so the poll effect only re-fires when
+  // `enabled` flips, not on every parent render.
+  const reloadPageRef = useRef(reloadPage);
+  reloadPageRef.current = reloadPage;
 
   // Check if demo mode is enabled
   useEffect(() => {
@@ -38,7 +52,7 @@ export function DemoOverlay({ reloadPage = () => window.location.reload() }: { r
     }).catch(() => {});
   }, []);
 
-  // Poll demo status
+  // Poll demo status — 15 second interval, re-fires only on enabled changes.
   useEffect(() => {
     if (!enabled) return;
 
@@ -48,7 +62,7 @@ export function DemoOverlay({ reloadPage = () => window.location.reload() }: { r
           setDemo(res.data);
           setLocalTimer(res.data.timer_seconds);
           if (res.data.reset) {
-            reloadPage();
+            reloadPageRef.current();
           }
         }
       }).catch(() => {});
@@ -57,7 +71,7 @@ export function DemoOverlay({ reloadPage = () => window.location.reload() }: { r
     fetchStatus();
     const interval = setInterval(fetchStatus, 15000);
     return () => clearInterval(interval);
-  }, [enabled, reloadPage]);
+  }, [enabled]);
 
   // Local countdown + relative time refresh (only when expanded)
   useEffect(() => {
