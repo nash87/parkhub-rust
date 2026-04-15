@@ -20,7 +20,7 @@ async fn webhook_v1_create_list_delete() {
     let (status, body) = auth_post(
         &srv,
         &token,
-        "/api/v1/admin/webhooks",
+        "/api/v1/admin/webhooks-v2",
         &serde_json::json!({
             "url": "https://httpbin.org/post",
             "events": ["booking.created", "booking.cancelled"],
@@ -48,7 +48,7 @@ async fn webhook_v1_create_list_delete() {
     );
 
     // List webhooks
-    let (status, body) = auth_get(&srv, &token, "/api/v1/admin/webhooks").await;
+    let (status, body) = auth_get(&srv, &token, "/api/v1/admin/webhooks-v2").await;
     assert_eq!(status, 200);
     let hooks = body["data"].as_array().unwrap();
     assert!(
@@ -60,7 +60,7 @@ async fn webhook_v1_create_list_delete() {
     let (status, _) = auth_delete(
         &srv,
         &token,
-        &format!("/api/v1/admin/webhooks/{webhook_id}"),
+        &format!("/api/v1/admin/webhooks-v2/{webhook_id}"),
     )
     .await;
     assert!(
@@ -69,7 +69,7 @@ async fn webhook_v1_create_list_delete() {
     );
 
     // Verify it's gone
-    let (status, body) = auth_get(&srv, &token, "/api/v1/admin/webhooks").await;
+    let (status, body) = auth_get(&srv, &token, "/api/v1/admin/webhooks-v2").await;
     assert_eq!(status, 200);
     let hooks = body["data"].as_array().unwrap();
     assert!(
@@ -91,7 +91,7 @@ async fn webhook_v2_lifecycle_with_test_event() {
     let (status, body) = auth_post(
         &srv,
         &token,
-        "/api/v1/admin/webhooks",
+        "/api/v1/admin/webhooks-v2",
         &serde_json::json!({
             "url": "https://httpbin.org/post",
             "events": ["booking.created"],
@@ -116,7 +116,7 @@ async fn webhook_v2_lifecycle_with_test_event() {
     let (status, body) = auth_post(
         &srv,
         &token,
-        &format!("/api/v1/admin/webhooks/{webhook_id}/test"),
+        &format!("/api/v1/admin/webhooks-v2/{webhook_id}/test"),
         &serde_json::json!({}),
     )
     .await;
@@ -130,7 +130,7 @@ async fn webhook_v2_lifecycle_with_test_event() {
     let (status, body) = auth_get(
         &srv,
         &token,
-        &format!("/api/v1/admin/webhooks/{webhook_id}/deliveries"),
+        &format!("/api/v1/admin/webhooks-v2/{webhook_id}/deliveries"),
     )
     .await;
 
@@ -143,7 +143,7 @@ async fn webhook_v2_lifecycle_with_test_event() {
     let _ = auth_delete(
         &srv,
         &token,
-        &format!("/api/v1/admin/webhooks/{webhook_id}"),
+        &format!("/api/v1/admin/webhooks-v2/{webhook_id}"),
     )
     .await;
 }
@@ -162,7 +162,7 @@ async fn webhook_secret_is_cryptographically_random() {
         let (status, body) = auth_post(
             &srv,
             &token,
-            "/api/v1/admin/webhooks",
+            "/api/v1/admin/webhooks-v2",
             &serde_json::json!({
                 "url": format!("https://httpbin.org/post/{i}"),
                 "events": ["booking.created"],
@@ -213,7 +213,7 @@ async fn webhook_stores_event_subscriptions() {
     let (status, body) = auth_post(
         &srv,
         &token,
-        "/api/v1/admin/webhooks",
+        "/api/v1/admin/webhooks-v2",
         &serde_json::json!({
             "url": "https://httpbin.org/post",
             "events": events,
@@ -252,7 +252,7 @@ async fn non_admin_cannot_create_webhook() {
     let (admin_token, _) = admin_login(&srv).await;
 
     // Check if webhooks feature is compiled
-    let (_, probe) = auth_get(&srv, &admin_token, "/api/v1/admin/webhooks").await;
+    let (_, probe) = auth_get(&srv, &admin_token, "/api/v1/admin/webhooks-v2").await;
     if probe.is_null() {
         // Feature not compiled; SPA fallback — skip
         return;
@@ -263,7 +263,7 @@ async fn non_admin_cannot_create_webhook() {
     let (status, _) = auth_post(
         &srv,
         &user_token,
-        "/api/v1/admin/webhooks",
+        "/api/v1/admin/webhooks-v2",
         &serde_json::json!({
             "url": "https://httpbin.org/post",
             "events": ["booking.created"],
