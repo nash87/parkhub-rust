@@ -104,51 +104,97 @@ export function SkeletonTable({ rows = 3, className = '' }: SkeletonTableProps) 
 
 /* ── Composite skeletons for specific views ─────────────────────────── */
 
-/** Dashboard page skeleton: greeting + 4 stat cards + booking list + quick actions */
+/** Dashboard page skeleton — matches the Kinetic Observatory layout
+ *  (greeting → 4-KPI row → 2/3 trend + 1/3 sensor feed → 2/3 active
+ *  bookings + 1/3 quick actions → recent activity table) so there's
+ *  zero layout shift when the real content swaps in. */
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-8">
-      {/* Greeting */}
-      <SkeletonText width="w-72" className="h-8" />
+    <div className="space-y-6">
+      {/* Greeting card with gradient placeholder */}
+      <div className="relative overflow-hidden rounded-2xl px-6 py-5 bg-gradient-to-r from-surface-200/30 via-surface-200/15 to-transparent dark:from-surface-800/30 dark:via-surface-800/15">
+        <div className="flex items-center gap-3">
+          <div className="h-8 skeleton rounded-lg w-72" />
+        </div>
+      </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="skeleton rounded-2xl p-5 h-28">
+      {/* 4-KPI row — matches KpiCard grid exactly */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className="card relative overflow-hidden p-5 h-[128px]"
+          >
             <div className="flex items-start justify-between">
-              <div className="space-y-3">
-                <div className="h-3 bg-surface-300/40 dark:bg-surface-600/40 rounded w-20" />
-                <div className="h-7 bg-surface-300/40 dark:bg-surface-600/40 rounded w-12" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 skeleton rounded-lg" />
+                <div className="h-3 skeleton rounded w-20" />
               </div>
-              <div className="w-10 h-10 bg-surface-300/40 dark:bg-surface-600/40 rounded-xl" />
+              <div className="h-6 skeleton rounded-full w-12" />
             </div>
+            <div className="mt-4 h-10 skeleton rounded-lg w-20" />
           </div>
         ))}
       </div>
 
-      {/* Active bookings + Quick actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Booking list */}
-        <div className="lg:col-span-2 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
+      {/* Trend card (2/3) + Sensor feed (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 card p-6 h-[280px]">
+          <div className="flex items-center justify-between mb-4">
+            <div className="space-y-2">
+              <div className="h-5 skeleton rounded-lg w-40" />
+              <div className="h-3 skeleton rounded-lg w-56" />
+            </div>
+            <div className="flex gap-2">
+              <div className="h-7 skeleton rounded-lg w-16" />
+              <div className="h-7 skeleton rounded-lg w-20" />
+            </div>
+          </div>
+          <div className="h-40 skeleton rounded-xl" />
+        </div>
+        <div className="card p-6 h-[280px]">
+          <div className="space-y-2 mb-4">
+            <div className="h-5 skeleton rounded-lg w-36" />
+            <div className="h-3 skeleton rounded-lg w-44" />
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-2 h-2 skeleton rounded-full" />
+                <div className="h-4 skeleton rounded-lg flex-1" />
+                <div className="h-5 skeleton rounded-full w-14" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Active bookings (2/3) + Quick actions (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="h-5 skeleton rounded-lg w-40" />
             <div className="h-4 skeleton rounded-lg w-20" />
           </div>
           <SkeletonTable rows={3} />
         </div>
-
-        {/* Quick actions */}
-        <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
+        <div className="card p-6">
           <div className="h-5 skeleton rounded-lg w-32 mb-4" />
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map(i => (
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex items-center gap-3 p-3">
-                <div className="w-10 h-10 skeleton rounded-xl shrink-0" />
+                <div className="w-4 h-4 skeleton rounded shrink-0" />
                 <div className="h-4 skeleton rounded-lg flex-1" />
               </div>
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Recent activity table */}
+      <div className="card p-6">
+        <div className="h-5 skeleton rounded-lg w-40 mb-4" />
+        <SkeletonTable rows={5} />
       </div>
     </div>
   );
