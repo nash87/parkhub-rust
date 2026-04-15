@@ -430,9 +430,16 @@ test.describe('Full Admin Workflow', () => {
   });
 
   test('health check detailed', async ({ request }) => {
+    // Rust exposes detailed health under /health/detailed (no /api/v1
+    // prefix). PHP keeps /api/v1/admin/health and /api/v1/health/info.
     const res = await tryEndpoints(
       request,
-      ['/api/v1/admin/health', '/api/v1/health/detailed', '/api/v1/health/info'],
+      [
+        '/api/v1/admin/health',
+        '/api/v1/health/detailed',
+        '/api/v1/health/info',
+        '/health/detailed',
+      ],
       { headers: { Authorization: `Bearer ${token}` } },
     );
     expect(res.status()).toBe(200);

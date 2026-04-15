@@ -111,11 +111,21 @@ test.describe('API — Admin Endpoints (authenticated)', () => {
 
 test.describe('API — Content Types', () => {
   test('health endpoint returns JSON', async ({ request }) => {
-    // Rust exposes /health, PHP exposes /api/v1/health — try both.
-    let res = await request.get('/api/v1/health/live');
-    if (res.status() === 404) res = await request.get('/health');
-    const ct = res.headers()['content-type'] ?? '';
-    expect(ct).toContain('application/json');
+    // Rust exposes /health/live (JSON) + /health (text "ok");
+    // PHP exposes /api/v1/health/live (JSON). Probe all three and
+    // take the first that returns JSON.
+    const paths = ['/api/v1/health/live', '/health/live', '/api/v1/health'];
+    let jsonCt = '';
+    for (const path of paths) {
+      const res = await request.get(path);
+      if (res.status() !== 200) continue;
+      const ct = res.headers()['content-type'] ?? '';
+      if (ct.includes('application/json')) {
+        jsonCt = ct;
+        break;
+      }
+    }
+    expect(jsonCt).toContain('application/json');
   });
 
   test('modules endpoint returns JSON array', async ({ request }) => {
