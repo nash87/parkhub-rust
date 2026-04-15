@@ -106,7 +106,7 @@ jobs:
             sleep 1
           done
 
-          npx playwright test --project=chromium --retries=2
+          npx playwright test --project=chromium
 
       - name: Upload Playwright report
         if: always()
