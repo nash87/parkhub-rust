@@ -1389,7 +1389,16 @@ async fn test_booking_max_per_day_limit_enforced() {
             .expect("set max_bookings_per_day");
     }
 
-    let start_time = chrono::Utc::now() + TimeDelta::hours(1);
+    // Anchor to tomorrow 09:00 UTC so both bookings are guaranteed to land
+    // on the same calendar day regardless of when the test runs. Using
+    // `Utc::now() + 1h` was flaky after ~22:30 UTC because the second
+    // booking (start + 90 min) would cross midnight and count against a
+    // different day, bypassing the max-per-day check entirely.
+    let tomorrow = (chrono::Utc::now() + TimeDelta::days(1)).date_naive();
+    let start_time = tomorrow
+        .and_hms_opt(9, 0, 0)
+        .expect("09:00 is a valid time")
+        .and_utc();
 
     // First booking should succeed
     {
