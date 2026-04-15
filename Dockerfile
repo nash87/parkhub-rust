@@ -78,8 +78,12 @@ RUN mkdir -p /data && chown 65532:65532 /data
 # Stage 7: Runtime — distroless/cc for minimal attack surface
 # No shell, no package manager, no wget — just glibc + libstdc++ + ca-certs.
 # Demo seeding and health checks are handled by the binary itself.
+#
+# debian13 (trixie) matches rust:1.94-slim's base image, so OpenSSL
+# symbol versions align between build and runtime. Using debian12
+# caused `libssl.so.3: version OPENSSL_3.2.0 not found` at startup.
 # ---------------------------------------------------------------------------
-FROM gcr.io/distroless/cc-debian12 AS runtime
+FROM gcr.io/distroless/cc-debian13 AS runtime
 
 WORKDIR /app
 
