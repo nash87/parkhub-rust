@@ -95,6 +95,7 @@ jobs:
           CI: true
           DEMO_MODE: 'true'
           PARKHUB_ADMIN_PASSWORD: demo
+          PARKHUB_DISABLE_RATE_LIMITS: 'true'
           E2E_BASE_URL: http://localhost:8081
         run: |
           ./target/release/parkhub-server --headless --unattended --port 8081 &
