@@ -90,8 +90,11 @@ WORKDIR /app
 # Copy binary
 COPY --from=builder --chown=65532:65532 /app/target/release/parkhub-server /app/parkhub-server
 
-# Copy pre-created /data directory (owned by nonroot UID 65532)
-COPY --from=data-setup /data /data
+# Copy pre-created /data directory (owned by nonroot UID 65532).
+# --chown is required: COPY --from defaults to root:root regardless of
+# the source stage's ownership, so the busybox chown above would be
+# discarded without this flag.
+COPY --from=data-setup --chown=65532:65532 /data /data
 
 # Drop to non-root (distroless built-in nonroot user)
 USER 65532:65532
