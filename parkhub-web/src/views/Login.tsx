@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -37,10 +37,13 @@ export function LoginPage() {
     defaultValues: { username: '', password: '' },
   });
 
-  if (user) {
-    navigate('/', { replace: true });
-    return null;
-  }
+  // Redirect through an effect — calling navigate() during render triggers
+  // a React 19 warning and can cause a double-mount under StrictMode.
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   async function onSubmit(data: LoginForm) {
     setServerError(null);
