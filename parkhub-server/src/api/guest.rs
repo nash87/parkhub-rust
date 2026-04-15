@@ -100,6 +100,44 @@ pub async fn create_guest_booking(
     )
 }
 
+/// `GET /api/v1/bookings/guest` — list the current user's guest bookings
+///
+/// The GuestPass page calls this on mount. Without the endpoint the Rust
+/// server returned 405 (only POST was registered) and the list sat empty.
+#[utoipa::path(
+    get,
+    path = "/api/v1/bookings/guest",
+    tag = "Bookings",
+    summary = "List my guest bookings",
+    description = "Return the guest bookings created by the current user.",
+    security(("bearer_auth" = []))
+)]
+pub async fn list_user_guest_bookings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Vec<GuestBooking>>>) {
+    let state_guard = state.read().await;
+    match state_guard.db.list_guest_bookings().await {
+        Ok(bookings) => {
+            let mine: Vec<GuestBooking> = bookings
+                .into_iter()
+                .filter(|b| b.created_by == auth_user.user_id)
+                .collect();
+            (StatusCode::OK, Json(ApiResponse::success(mine)))
+        }
+        Err(e) => {
+            tracing::error!("Failed to list user guest bookings: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to list guest bookings",
+                )),
+            )
+        }
+    }
+}
+
 /// `GET /api/v1/admin/guest-bookings` — admin: list all guest bookings
 #[utoipa::path(
     get,
