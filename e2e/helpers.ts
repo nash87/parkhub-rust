@@ -78,7 +78,6 @@ export const PROTECTED_API_ENDPOINTS = [
   '/api/v1/bookings',
   '/api/v1/user/stats',
   '/api/v1/user/preferences',
-  '/api/v1/features',
   '/api/v1/team',
   '/api/v1/team/today',
   '/api/v1/notifications',

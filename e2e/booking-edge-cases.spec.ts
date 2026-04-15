@@ -169,7 +169,7 @@ test.describe('Booking — Edge Cases', () => {
   // ── Credits Integration ──
 
   test('credits balance is available', async ({ request }) => {
-    const res = await request.get('/api/v1/credits', {
+    const res = await request.get('/api/v1/user/credits', {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(res.status()).toBe(200);

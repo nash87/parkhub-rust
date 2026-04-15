@@ -294,12 +294,15 @@ test.describe('DevTools — Security Headers', () => {
 test.describe('DevTools — Interactions', () => {
   test('login form is submittable', async ({ page }) => {
     await page.goto('/login');
-    const emailInput = page.getByLabel(/email/i);
-    const passwordInput = page.getByLabel(/password/i);
-    const submitBtn = page.getByRole('button', { name: /sign in|log in|login/i });
+    // Rust uses a username field, PHP uses email — match either.
+    const userField = page
+      .locator('input[name="username"], input[type="email"], input[name="email"]')
+      .first();
+    const passwordField = page.locator('input[type="password"], input[name="password"]').first();
+    const submitBtn = page.getByRole('button', { name: /sign in|log in|login/i }).first();
 
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
+    await expect(userField).toBeVisible();
+    await expect(passwordField).toBeVisible();
     await expect(submitBtn).toBeEnabled();
   });
 
