@@ -366,6 +366,20 @@ export const api = {
   markNotificationRead: (id: string) => request<void>(`/api/v1/notifications/${id}/read`, { method: 'POST' }),
   markAllNotificationsRead: () => request<void>('/api/v1/notifications/read-all', { method: 'POST' }),
 
+  // ── Notification Center (enriched feed used by the bell dropdown) ──
+  getNotificationUnreadCount: () =>
+    request<{ count: number }>('/api/v1/notifications/unread-count'),
+  getNotificationCenter: (filter: 'all' | 'unread' | 'read' = 'all', perPage = 50) =>
+    request<NotificationCenterPage>(
+      `/api/v1/notifications/center?filter=${filter}&per_page=${perPage}`,
+    ),
+  markAllNotificationCenterRead: () =>
+    request<void>('/api/v1/notifications/center/read-all', { method: 'PUT' }),
+  markNotificationCenterRead: (id: string) =>
+    request<void>(`/api/v1/notifications/${id}/read`, { method: 'PUT' }),
+  deleteNotificationCenter: (id: string) =>
+    request<void>(`/api/v1/notifications/center/${id}`, { method: 'DELETE' }),
+
   // ── Calendar ──
   calendarEvents: (start: string, end: string) =>
     request<CalendarEvent[]>(`/api/v1/calendar/events?start=${start}&end=${end}`),
@@ -818,6 +832,28 @@ export interface Notification {
   notification_type: string;
   read: boolean;
   created_at: string;
+}
+
+export interface CenterNotification {
+  id: string;
+  notification_type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  action_url: string | null;
+  icon: string;
+  severity: string;
+  type_label: string;
+  created_at: string;
+  date_group: string;
+}
+
+export interface NotificationCenterPage {
+  items: CenterNotification[];
+  total: number;
+  page: number;
+  per_page: number;
+  unread_count: number;
 }
 
 export interface CalendarEvent {
