@@ -34,11 +34,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Set up QEMU (for arm64 emulation)
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -61,17 +56,17 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      - name: Build and push (multi-arch)
+      - name: Build and push
         id: push
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=release-docker-v3
-          cache-to: type=gha,scope=release-docker-v3,mode=max
+          cache-from: type=gha,scope=release-docker-amd64
+          cache-to: type=gha,scope=release-docker-amd64,mode=max
           provenance: mode=max
           sbom: true
 
