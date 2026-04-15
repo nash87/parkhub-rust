@@ -101,6 +101,7 @@ describe('AdminScheduledReportsPage', () => {
   it('cancel form', async () => {
     render(<AdminScheduledReportsPage />);
     await waitFor(() => fireEvent.click(screen.getByTestId('create-schedule-btn')));
+    await waitFor(() => expect(screen.getByTestId('form-cancel-btn')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('form-cancel-btn'));
     await waitFor(() => expect(screen.queryByTestId('schedule-form')).not.toBeInTheDocument());
   });
