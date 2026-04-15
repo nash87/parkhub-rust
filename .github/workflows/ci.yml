@@ -23,7 +23,6 @@ jobs:
     name: Workflow Lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -71,7 +70,6 @@ jobs:
     name: Cargo Clippy (headless)
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -146,7 +144,6 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    continue-on-error: true
     needs: [test]
     steps:
       - uses: actions/checkout@v6
