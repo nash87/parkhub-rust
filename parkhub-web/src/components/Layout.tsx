@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
   GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star, Globe, CaretDown, MapPin,
-  ClockCounterClockwise, Swap, QrCode, UserPlus, Trophy, Sparkle,
+  ClockCounterClockwise, Swap, QrCode, UserPlus, Trophy, Sparkle, CalendarPlus,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -19,26 +19,248 @@ import { NotificationBadge } from './ui/NotificationBadge';
 import { languages } from '../i18n/index';
 import { getInMemoryToken } from '../api/client';
 
-const NAV_ITEMS = [
-  { to: '/', icon: House, key: 'dashboard', end: true },
-  { to: '/bookings', icon: CalendarCheck, key: 'bookings' },
-  { to: '/vehicles', icon: Car, key: 'vehicles' },
-  { to: '/favorites', icon: Star, key: 'favorites' },
-  { to: '/absences', icon: CalendarX, key: 'absences' },
-  { to: '/team', icon: Users, key: 'team' },
-  { to: '/calendar', icon: Calendar, key: 'calendar' },
-  { to: '/map', icon: MapPin, key: 'map' },
-  { to: '/history', icon: ClockCounterClockwise, key: 'history' },
-  { to: '/checkin', icon: QrCode, key: 'checkin' },
-  { to: '/swap-requests', icon: Swap, key: 'swapRequests' },
-  { to: '/guest-pass', icon: UserPlus, key: 'guestPass' },
-  { to: '/leaderboard', icon: Trophy, key: 'leaderboard' },
-  { to: '/predict', icon: Sparkle, key: 'predictions' },
-  { to: '/credits', icon: Coins, key: 'credits' },
-  { to: '/notifications', icon: Bell, key: 'notifications' },
-  { to: '/translations', icon: Translate, key: 'translations' },
-  { to: '/profile', icon: UserCircle, key: 'profile' },
+type NavItem = {
+  to: string;
+  icon: React.ElementType;
+  key: string;
+  end?: boolean;
+};
+
+type NavSection = {
+  id: 'core' | 'fleet' | 'settings';
+  labelKey: string;
+  defaultOpen: boolean;
+  collapsible: boolean;
+  items: readonly NavItem[];
+};
+
+// 3-section layout. Core is always visible. Fleet defaults open. Settings defaults closed.
+// Routes, icons, and per-item i18n keys are preserved from the previous flat list.
+const NAV_SECTIONS: readonly NavSection[] = [
+  {
+    id: 'core',
+    labelKey: 'nav.sections.core',
+    defaultOpen: true,
+    collapsible: false,
+    items: [
+      { to: '/', icon: House, key: 'dashboard', end: true },
+      { to: '/bookings', icon: CalendarCheck, key: 'bookings' },
+      { to: '/book', icon: CalendarPlus, key: 'bookSpot' },
+      { to: '/vehicles', icon: Car, key: 'vehicles' },
+      { to: '/calendar', icon: Calendar, key: 'calendar' },
+      { to: '/credits', icon: Coins, key: 'credits' },
+    ],
+  },
+  {
+    id: 'fleet',
+    labelKey: 'nav.sections.fleet',
+    defaultOpen: true,
+    collapsible: true,
+    items: [
+      { to: '/favorites', icon: Star, key: 'favorites' },
+      { to: '/absences', icon: CalendarX, key: 'absences' },
+      { to: '/team', icon: Users, key: 'team' },
+      { to: '/leaderboard', icon: Trophy, key: 'leaderboard' },
+      { to: '/map', icon: MapPin, key: 'map' },
+      { to: '/history', icon: ClockCounterClockwise, key: 'history' },
+      { to: '/swap-requests', icon: Swap, key: 'swapRequests' },
+      { to: '/guest-pass', icon: UserPlus, key: 'guestPass' },
+      { to: '/checkin', icon: QrCode, key: 'checkin' },
+      { to: '/predict', icon: Sparkle, key: 'predictions' },
+    ],
+  },
+  {
+    id: 'settings',
+    labelKey: 'nav.sections.settings',
+    defaultOpen: false,
+    collapsible: true,
+    items: [
+      { to: '/notifications', icon: Bell, key: 'notifications' },
+      { to: '/translations', icon: Translate, key: 'translations' },
+      { to: '/profile', icon: UserCircle, key: 'profile' },
+    ],
+  },
 ] as const;
+
+const SECTION_STORAGE_PREFIX = 'parkhub_sidebar_';
+const SECTION_STORAGE_SUFFIX = '_open';
+const sectionStorageKey = (id: NavSection['id']) =>
+  `${SECTION_STORAGE_PREFIX}${id}${SECTION_STORAGE_SUFFIX}`;
+
+// Section spring matches the rest of the UI (stiffness 300, damping 30).
+const SECTION_SPRING = { type: 'spring', stiffness: 300, damping: 30 } as const;
+
+function readInitialSectionState(): Record<NavSection['id'], boolean> {
+  const initial: Record<NavSection['id'], boolean> = {
+    core: true,
+    fleet: true,
+    settings: false,
+  };
+  if (typeof window === 'undefined') return initial;
+  for (const section of NAV_SECTIONS) {
+    initial[section.id] = section.defaultOpen;
+    if (!section.collapsible) continue;
+    try {
+      const stored = window.localStorage.getItem(sectionStorageKey(section.id));
+      if (stored === 'true') initial[section.id] = true;
+      else if (stored === 'false') initial[section.id] = false;
+    } catch {
+      /* localStorage unavailable — ignore */
+    }
+  }
+  return initial;
+}
+
+interface SidebarNavProps {
+  variant: 'desktop' | 'mobile';
+  openSections: Record<NavSection['id'], boolean>;
+  onToggleSection: (id: NavSection['id']) => void;
+  onItemClick?: () => void;
+  unreadCount: number;
+  location: { pathname: string };
+  t: (key: string) => string;
+  isAdmin: boolean;
+}
+
+function SidebarNav({
+  variant,
+  openSections,
+  onToggleSection,
+  onItemClick,
+  unreadCount,
+  location,
+  t,
+  isAdmin,
+}: SidebarNavProps) {
+  const isDesktop = variant === 'desktop';
+  const itemPadding = isDesktop ? 'px-3 py-2' : 'px-3 py-2.5';
+
+  const renderItem = (item: NavItem) => (
+    <NavLink
+      key={item.key}
+      to={item.to}
+      end={item.end}
+      onClick={onItemClick}
+      aria-current={
+        location.pathname === item.to ||
+        (item.to !== '/' && location.pathname.startsWith(item.to))
+          ? 'page'
+          : undefined
+      }
+      className={({ isActive }) =>
+        `relative flex items-center gap-3 ${itemPadding} text-sm font-medium rounded-lg transition-all ${
+          isActive
+            ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
+            : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {isActive && isDesktop && (
+            <motion.div
+              layoutId="nav-indicator"
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full bg-gradient-to-b from-primary-500 to-primary-400"
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            />
+          )}
+          <span className="relative">
+            <item.icon weight="fill" className="w-5 h-5" />
+            {item.key === 'notifications' && <NotificationBadge count={unreadCount} />}
+          </span>
+          {t(`nav.${item.key}`)}
+        </>
+      )}
+    </NavLink>
+  );
+
+  return (
+    <nav className="flex-1 space-y-3" aria-label={isDesktop ? 'Main navigation' : undefined}>
+      {NAV_SECTIONS.map((section, sectionIndex) => {
+        const open = openSections[section.id];
+        const collapsible = section.collapsible;
+        const sectionLabel = t(section.labelKey);
+        const regionId = `sidebar-section-${variant}-${section.id}`;
+
+        const header = collapsible ? (
+          <button
+            type="button"
+            onClick={() => onToggleSection(section.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onToggleSection(section.id);
+              }
+            }}
+            aria-expanded={open}
+            aria-controls={regionId}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+          >
+            <motion.div
+              animate={{ rotate: open ? 90 : 0 }}
+              transition={SECTION_SPRING}
+              className="inline-flex"
+            >
+              <CaretDown weight="bold" className="w-3 h-3 -rotate-90" />
+            </motion.div>
+            <span className="flex-1 text-left">{sectionLabel}</span>
+          </button>
+        ) : (
+          <div
+            className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500"
+            aria-hidden={sectionIndex === 0 && !isDesktop ? undefined : undefined}
+          >
+            {sectionLabel}
+          </div>
+        );
+
+        return (
+          <div key={section.id} className="space-y-0.5">
+            {header}
+            <AnimatePresence initial={false}>
+              {open && (
+                <motion.div
+                  key="section-body"
+                  id={regionId}
+                  initial={collapsible ? { height: 0, opacity: 0 } : false}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={SECTION_SPRING}
+                  className="overflow-hidden"
+                  role="group"
+                  aria-label={sectionLabel}
+                >
+                  <div className="space-y-0.5 pt-0.5">
+                    {section.items.map(renderItem)}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
+
+      {isAdmin && (
+        <div className="space-y-0.5 pt-1">
+          <NavLink
+            to="/admin"
+            onClick={onItemClick}
+            className={({ isActive }) =>
+              `relative flex items-center gap-3 ${itemPadding} text-sm font-medium rounded-lg transition-all ${
+                isActive
+                  ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
+                  : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
+              }`
+            }
+          >
+            <GearSix weight="fill" className="w-5 h-5" />
+            {t('nav.admin')}
+          </NavLink>
+        </div>
+      )}
+    </nav>
+  );
+}
 
 function LanguageSelector() {
   const { i18n } = useTranslation();
@@ -99,6 +321,21 @@ export function Layout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [themeSwitcherOpen, setThemeSwitcherOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [openSections, setOpenSections] = useState<Record<NavSection['id'], boolean>>(
+    () => readInitialSectionState(),
+  );
+
+  const toggleSection = useCallback((id: NavSection['id']) => {
+    setOpenSections(prev => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        window.localStorage.setItem(sectionStorageKey(id), String(next[id]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const toggleCommandPalette = useCallback(
     () => setCommandPaletteOpen(prev => !prev),
@@ -107,6 +344,16 @@ export function Layout() {
 
   useKeyboardShortcuts({ onToggleCommandPalette: toggleCommandPalette });
   usePageTitle();
+
+  // Global "open command palette" event so pages (e.g. empty states) can
+  // request the palette without drilling props or lifting state.
+  useEffect(() => {
+    function openFromEvent() {
+      setCommandPaletteOpen(true);
+    }
+    window.addEventListener('parkhub:open-command-palette', openFromEvent);
+    return () => window.removeEventListener('parkhub:open-command-palette', openFromEvent);
+  }, []);
 
   useEffect(() => {
     const token = getInMemoryToken();
@@ -128,6 +375,11 @@ export function Layout() {
     navigate('/welcome');
   }
 
+  const isAdmin = useMemo(
+    () => !!(user?.role && ['admin', 'superadmin'].includes(user.role)),
+    [user?.role],
+  );
+
   return (
     <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 flex">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">{t('nav.skipToContent')}</a>
@@ -141,56 +393,17 @@ export function Layout() {
           <span className="text-xl font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>ParkHub</span>
         </div>
 
-        <nav className="flex-1 space-y-0.5">
-          {NAV_ITEMS.map(item => (
-            <NavLink
-              key={item.key}
-              to={item.to}
-              end={item.end}
-              aria-current={location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to)) ? 'page' : undefined}
-              className={({ isActive }) =>
-                `relative flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                  isActive
-                    ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
-                    : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <motion.div
-                      layoutId="nav-indicator"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full bg-gradient-to-b from-primary-500 to-primary-400"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative">
-                    <item.icon weight="fill" className="w-5 h-5" />
-                    {item.key === 'notifications' && <NotificationBadge count={unreadCount} />}
-                  </span>
-                  {t(`nav.${item.key}`)}
-                </>
-              )}
-            </NavLink>
-          ))}
-
-          {user?.role && ['admin', 'superadmin'].includes(user.role) && (
-            <NavLink
-              to="/admin"
-              className={({ isActive }) =>
-                `relative flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                  isActive
-                    ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
-                    : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
-                }`
-              }
-            >
-              <GearSix weight="fill" className="w-5 h-5" />
-              {t('nav.admin')}
-            </NavLink>
-          )}
-        </nav>
+        <div className="flex-1 overflow-y-auto -mx-1 px-1">
+          <SidebarNav
+            variant="desktop"
+            openSections={openSections}
+            onToggleSection={toggleSection}
+            unreadCount={unreadCount}
+            location={location}
+            t={t}
+            isAdmin={isAdmin}
+          />
+        </div>
 
         <LanguageSelector />
 
@@ -276,7 +489,7 @@ export function Layout() {
                 onDragEnd={(_e, info) => {
                   if (info.offset.x < -80 || info.velocity.x < -300) setSidebarOpen(false);
                 }}
-                className="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-surface-900/90 backdrop-blur-2xl z-50 p-4 lg:hidden touch-pan-y"
+                className="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-surface-900/90 backdrop-blur-2xl z-50 p-4 lg:hidden touch-pan-y flex flex-col"
                 role="dialog"
                 aria-label="Navigation menu"
               >
@@ -291,43 +504,18 @@ export function Layout() {
                     <X weight="bold" className="w-5 h-5" />
                   </button>
                 </div>
-                <nav className="space-y-0.5">
-                  {NAV_ITEMS.map(item => (
-                    <NavLink
-                      key={item.key}
-                      to={item.to}
-                      end={item.end}
-                      onClick={() => setSidebarOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                          isActive
-                            ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
-                            : 'text-surface-600 dark:text-surface-400'
-                        }`
-                      }
-                    >
-                      <item.icon weight="fill" className="w-5 h-5" />
-                      {t(`nav.${item.key}`)}
-                    </NavLink>
-                  ))}
-
-                  {user?.role && ['admin', 'superadmin'].includes(user.role) && (
-                    <NavLink
-                      to="/admin"
-                      onClick={() => setSidebarOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                          isActive
-                            ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
-                            : 'text-surface-600 dark:text-surface-400'
-                        }`
-                      }
-                    >
-                      <GearSix weight="fill" className="w-5 h-5" />
-                      {t('nav.admin')}
-                    </NavLink>
-                  )}
-                </nav>
+                <div className="flex-1 overflow-y-auto -mx-1 px-1 pb-16">
+                  <SidebarNav
+                    variant="mobile"
+                    openSections={openSections}
+                    onToggleSection={toggleSection}
+                    onItemClick={() => setSidebarOpen(false)}
+                    unreadCount={unreadCount}
+                    location={location}
+                    t={t}
+                    isAdmin={isAdmin}
+                  />
+                </div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 w-full rounded-lg hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-all">
                     <SignOut weight="bold" className="w-5 h-5" /> {t('nav.logout')}

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Clock, Car, X, SpinnerGap,
   ArrowClockwise, Warning,
-  MagnifyingGlass, Funnel, QrCode, FilePdf,
+  MagnifyingGlass, Funnel, QrCode, FilePdf, CalendarPlus,
 } from '@phosphor-icons/react';
 import type { TFunction } from 'react-i18next';
 import { api, type Booking, type Vehicle } from '../api/client';
@@ -214,12 +214,39 @@ interface EmptyProps {
 }
 
 function Empty({ text, showAction, t }: EmptyProps) {
+  if (showAction) {
+    return (
+      <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-8 flex flex-col items-center text-center">
+        <div
+          className="w-16 h-16 rounded-full bg-primary-500/10 ring-1 ring-primary-500/20 flex items-center justify-center mb-4"
+          aria-hidden="true"
+        >
+          <CalendarPlus weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+        </div>
+        <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-1">
+          {t('bookings.emptyActiveTitle')}
+        </h3>
+        <p className="text-sm text-surface-500 dark:text-surface-400 max-w-xs mb-5 leading-relaxed">
+          {t('bookings.emptyActiveSubtitle')}
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <Link to="/book" className="btn btn-primary">{t('bookings.bookNow')}</Link>
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('parkhub:open-command-palette'));
+            }}
+            className="btn btn-ghost text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white"
+          >
+            {t('bookings.emptyActiveSecondary')}
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl p-8 text-left">
-      <p className="text-sm text-surface-500 dark:text-surface-400 mb-3">{text}</p>
-      {showAction && (
-        <Link to="/book" className="btn btn-primary btn-sm">{t('bookings.bookNow')}</Link>
-      )}
+      <p className="text-sm text-surface-500 dark:text-surface-400">{text}</p>
     </div>
   );
 }

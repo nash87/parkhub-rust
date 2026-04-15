@@ -242,9 +242,31 @@ export function DashboardPage() {
           </div>
 
           {activeBookings.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-surface-500 dark:text-surface-400 mb-4">{t('dashboard.noActiveBookings')}</p>
-              <Link to="/book" className="btn btn-primary">{t('dashboard.bookSpot')}</Link>
+            <div className="py-10 px-4 flex flex-col items-center text-center">
+              <div
+                className="w-16 h-16 rounded-full bg-primary-500/10 dark:bg-primary-500/10 ring-1 ring-primary-500/20 flex items-center justify-center mb-4"
+                aria-hidden="true"
+              >
+                <CalendarPlus weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+              </div>
+              <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '-0.01em' }}>
+                {t('dashboard.emptyBookingsTitle')}
+              </h3>
+              <p className="text-sm text-surface-500 dark:text-surface-400 max-w-xs mb-5 leading-relaxed">
+                {t('dashboard.emptyBookingsSubtitle')}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Link to="/book" className="btn btn-primary">{t('dashboard.emptyBookingsPrimary')}</Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('parkhub:open-command-palette'));
+                  }}
+                  className="btn btn-ghost text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white"
+                >
+                  {t('dashboard.emptyBookingsSecondary')}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-2">

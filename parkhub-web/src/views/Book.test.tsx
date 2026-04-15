@@ -18,6 +18,7 @@ vi.mock('react-router-dom', () => ({
 }));
 
 const mockGetDynamicPrice = vi.fn();
+const mockGetBookingRecommendations = vi.fn().mockResolvedValue({ success: true, data: [] });
 vi.mock('../api/client', () => ({
   api: {
     getLots: (...args: any[]) => mockGetLots(...args),
@@ -26,6 +27,7 @@ vi.mock('../api/client', () => ({
     createBooking: (...args: any[]) => mockCreateBooking(...args),
     getDynamicPrice: (...args: any[]) => mockGetDynamicPrice(...args),
     getOperatingHours: vi.fn().mockResolvedValue({ hours: [] }),
+    getBookingRecommendations: (...args: any[]) => mockGetBookingRecommendations(...args),
   },
 }));
 
@@ -544,7 +546,7 @@ describe('BookPage', () => {
     const recData = [
       { slot_id: 's1', slot_number: 42, lot_id: 'lot-1', lot_name: 'HQ Lot', floor_name: 'G', score: 90, reasons: ['Used 5 times'], reason_badges: ['your_usual_spot', 'available_now'] },
     ];
-    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetBookingRecommendations.mockResolvedValueOnce({ success: true, data: recData });
 
     render(<BookPage />);
     await waitFor(() => {
@@ -878,7 +880,7 @@ describe('BookPage', () => {
     const recData = [
       { slot_id: 's1', slot_number: 42, lot_id: 'lot-1', lot_name: 'HQ', floor_name: 'G', score: 90, reasons: [], reason_badges: ['your_usual_spot'] },
     ];
-    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetBookingRecommendations.mockResolvedValueOnce({ success: true, data: recData });
     mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
     mockGetLotSlots.mockResolvedValue({ success: true, data: [makeSlot()] });
@@ -897,7 +899,7 @@ describe('BookPage', () => {
     const recData = [
       { slot_id: 's1', slot_number: 42, lot_id: 'lot-unknown', lot_name: 'HQ', floor_name: 'G', score: 90, reasons: [], reason_badges: ['your_usual_spot'] },
     ];
-    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetBookingRecommendations.mockResolvedValueOnce({ success: true, data: recData });
     mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
 
@@ -908,7 +910,7 @@ describe('BookPage', () => {
   });
 
   it('recommendations fetch failure handles gracefully', async () => {
-    global.fetch = vi.fn(() => Promise.reject(new Error('Network')));
+    mockGetBookingRecommendations.mockRejectedValueOnce(new Error("Network"));
     mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
     render(<BookPage />);
@@ -916,7 +918,7 @@ describe('BookPage', () => {
   });
 
   it('recommendations success false hides section', async () => {
-    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: false }) } as Response));
+    mockGetBookingRecommendations.mockResolvedValueOnce({ success: false, data: null });
     mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
     render(<BookPage />);
@@ -928,7 +930,7 @@ describe('BookPage', () => {
     const recData = [
       { slot_id: 's1', slot_number: 1, lot_id: 'lot-1', lot_name: 'X', floor_name: 'G', score: 80, reasons: [], reason_badges: ['unknown_badge'] },
     ];
-    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, data: recData }) } as Response));
+    mockGetBookingRecommendations.mockResolvedValueOnce({ success: true, data: recData });
     mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
     render(<BookPage />);

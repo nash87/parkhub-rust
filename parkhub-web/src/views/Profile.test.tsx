@@ -62,6 +62,7 @@ vi.mock('../context/AuthContext', () => ({
   }),
 }));
 
+const mockSetAccessibilityNeeds = vi.fn().mockResolvedValue({ success: true });
 vi.mock('../api/client', () => ({
   api: {
     getUserStats: (...args: any[]) => mockGetUserStats(...args),
@@ -76,6 +77,7 @@ vi.mock('../api/client', () => ({
     setup2FA: vi.fn().mockResolvedValue({ success: true, data: { secret: 'ABCD', qr_url: 'otpauth://test' } }),
     verify2FA: vi.fn().mockResolvedValue({ success: true }),
     disable2FA: vi.fn().mockResolvedValue({ success: true }),
+    setAccessibilityNeeds: (...args: any[]) => mockSetAccessibilityNeeds(...args),
   },
 }));
 
@@ -642,9 +644,7 @@ describe('ProfilePage', () => {
   });
 
   it('accessibility needs change success', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
-      json: () => Promise.resolve({ success: true }),
-    })));
+    mockSetAccessibilityNeeds.mockResolvedValueOnce({ success: true });
 
     const user = userEvent.setup();
     render(<ProfilePage />);
@@ -653,14 +653,16 @@ describe('ProfilePage', () => {
     await user.selectOptions(selector, 'wheelchair');
 
     await waitFor(() => {
+      expect(mockSetAccessibilityNeeds).toHaveBeenCalledWith('wheelchair');
       expect(mockToastSuccess).toHaveBeenCalled();
     });
   });
 
   it('accessibility needs change failure', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
-      json: () => Promise.resolve({ success: false, error: { message: 'Failed' } }),
-    })));
+    mockSetAccessibilityNeeds.mockResolvedValueOnce({
+      success: false,
+      error: { message: 'Failed' },
+    });
 
     const user = userEvent.setup();
     render(<ProfilePage />);
@@ -674,7 +676,7 @@ describe('ProfilePage', () => {
   });
 
   it('accessibility needs change network error', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network'))));
+    mockSetAccessibilityNeeds.mockRejectedValueOnce(new Error('Network'));
 
     const user = userEvent.setup();
     render(<ProfilePage />);

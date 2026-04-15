@@ -54,6 +54,7 @@ export default {
     nav: {
       dashboard: 'Dashboard',
       book: 'Buchen',
+      bookSpot: 'Platz buchen',
       bookings: 'Buchungen',
       vehicles: 'Fahrzeuge',
       favorites: 'Favoriten',
@@ -81,6 +82,11 @@ export default {
       switchToDark: 'Zum dunklen Modus wechseln',
       skipToContent: 'Zum Inhalt springen',
       updates: 'Aktualisierungen',
+      sections: {
+        core: 'Grundlagen',
+        fleet: 'Flotte',
+        settings: 'Einstellungen',
+      },
     },
     dashboard: {
       greeting: 'Guten {{timeOfDay}}, {{name}}',
@@ -100,6 +106,10 @@ export default {
       bookNow: 'Jetzt einen Parkplatz buchen',
       loadingDashboard: 'Dashboard wird geladen',
       statistics: 'Statistiken',
+      emptyBookingsTitle: 'Noch keine aktiven Buchungen',
+      emptyBookingsSubtitle: 'Reservieren Sie einen Platz und er erscheint direkt hier.',
+      emptyBookingsPrimary: 'Ersten Platz buchen',
+      emptyBookingsSecondary: 'Befehlspalette öffnen',
     },
     bookings: {
       title: 'Meine Buchungen',
@@ -129,6 +139,9 @@ export default {
       invoice: 'Rechnung',
       loading: 'Buchungen werden geladen...',
       insufficientCredits: 'Nicht genug Credits zum Buchen',
+      emptyActiveTitle: 'Noch keine aktiven Buchungen',
+      emptyActiveSubtitle: 'Buchen Sie einen Parkplatz und er erscheint hier bis zum Auschecken.',
+      emptyActiveSecondary: 'Befehlspalette öffnen',
     },
     pass: {
       title: 'Parkausweis',

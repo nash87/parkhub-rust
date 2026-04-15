@@ -54,6 +54,7 @@ export default {
     nav: {
       dashboard: 'Panel',
       book: 'Reservar',
+      bookSpot: 'Reservar una plaza',
       bookings: 'Reservas',
       vehicles: 'Vehículos',
       favorites: 'Favoritos',
@@ -81,6 +82,11 @@ export default {
       switchToDark: 'Cambiar a modo oscuro',
       skipToContent: 'Ir al contenido',
       updates: 'Actualizaciones',
+      sections: {
+        core: 'Esenciales',
+        fleet: 'Flota',
+        settings: 'Ajustes',
+      },
     },
     dashboard: {
       greeting: 'Buenos {{timeOfDay}}, {{name}}',
@@ -100,6 +106,10 @@ export default {
       bookNow: 'Reserva una plaza de aparcamiento ahora',
       loadingDashboard: 'Cargando panel',
       statistics: 'Estadísticas',
+      emptyBookingsTitle: 'Aún no hay reservas activas',
+      emptyBookingsSubtitle: 'Reserva una plaza y aparecerá justo aquí.',
+      emptyBookingsPrimary: 'Reservar tu primera plaza',
+      emptyBookingsSecondary: 'Abrir paleta de comandos',
     },
     bookings: {
       title: 'Mis reservas',
@@ -129,6 +139,9 @@ export default {
       invoice: 'Factura',
       loading: 'Cargando reservas...',
       insufficientCredits: 'Créditos insuficientes para reservar',
+      emptyActiveTitle: 'Aún no hay reservas activas',
+      emptyActiveSubtitle: 'Reserva una plaza y vivirá aquí hasta que la cierres.',
+      emptyActiveSecondary: 'Abrir paleta de comandos',
     },
     pass: {
       title: 'Pase de aparcamiento',
