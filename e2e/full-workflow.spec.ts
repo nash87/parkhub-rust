@@ -330,7 +330,7 @@ test.describe('Theme UI Switching (Browser)', () => {
     await page.locator('input[type="password"], input[name="password"]').first().fill(DEMO_ADMIN.password);
     await page.click('button[type="submit"]');
     await page.waitForURL('**/(dashboard|/)');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for theme switcher FAB (palette icon button)
     const fab = page.locator('[aria-label*="theme" i], [data-testid*="theme"]');

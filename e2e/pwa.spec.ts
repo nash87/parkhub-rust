@@ -17,7 +17,7 @@ test.describe('PWA — Progressive Web App', () => {
 
   test('service worker registered', async ({ page }) => {
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check if SW is registered via the page
     const hasSW = await page.evaluate(async () => {
