@@ -148,7 +148,11 @@ test.describe('Security — Access Control & Hardening', () => {
 
     test('API responses are JSON content type', async ({ request }) => {
       const res = await request.post('/api/v1/auth/login', {
-        data: { email: 'invalid@test.com', password: 'invalid' },
+        data: {
+          username: 'invalid@test.com',
+          email: 'invalid@test.com',
+          password: 'invalid',
+        },
       });
       const ct = res.headers()['content-type'] ?? '';
       expect(ct).toContain('application/json');

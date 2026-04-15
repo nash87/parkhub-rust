@@ -185,7 +185,10 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
       });
       expect(res.status()).toBe(200);
       const body = await res.json();
-      const users = body.data ?? body;
+      // Rust returns PaginatedResponse {items, total, ...};
+      // PHP returns {data: [...]} or a bare array. Unwrap all shapes.
+      const users =
+        body?.data?.items ?? body?.data ?? body?.items ?? body;
       expect(Array.isArray(users)).toBe(true);
       expect(users.length).toBeGreaterThan(0);
     });
