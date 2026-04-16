@@ -41,17 +41,17 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake libfontconfig1-dev
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -80,7 +80,7 @@ jobs:
           tar -czvf parkhub-linux-x64.tar.gz parkhub-linux-x64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: parkhub-linux-x64
           path: parkhub-linux-x64.tar.gz
@@ -96,10 +96,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - name: Install OpenSSL (vcpkg)
         run: |
@@ -108,7 +108,7 @@ jobs:
           echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -139,7 +139,7 @@ jobs:
           Compress-Archive -Path parkhub-windows-x64 -DestinationPath parkhub-windows-x64.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: parkhub-windows-x64
           path: parkhub-windows-x64.zip
@@ -157,12 +157,12 @@ jobs:
       id-token: write
     steps:
       - name: Download Linux artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: parkhub-linux-x64
 
       - name: Download Windows artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: true
         with:
           name: parkhub-windows-x64
@@ -171,14 +171,14 @@ jobs:
         run: sha256sum parkhub-linux-x64.tar.gz parkhub-windows-x64.zip > checksums.txt 2>/dev/null || sha256sum parkhub-linux-x64.tar.gz > checksums.txt
 
       - name: Attest release artifacts
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-path: |
             parkhub-linux-x64.tar.gz
             checksums.txt
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
           fail_on_unmatched_files: false
           files: |
