@@ -800,10 +800,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     }
     #[cfg(feature = "mod-pwa")]
     {
-        // PWA manifest and service worker (no auth)
-        public_routes = public_routes
-            .route("/manifest.json", get(pwa::pwa_manifest))
-            .route("/sw.js", get(pwa::service_worker));
+        // PWA manifest (no auth). /sw.js is intentionally NOT served here —
+        // the static file handler serves the Astro-built enhanced service
+        // worker from parkhub-web/dist/sw.js (stale-while-revalidate API
+        // cache, background sync, push notifications, offline page).
+        public_routes = public_routes.route("/manifest.json", get(pwa::pwa_manifest));
     }
     #[cfg(feature = "mod-enhanced-pwa")]
     {

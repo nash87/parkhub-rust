@@ -144,13 +144,13 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
 
       - name: Download server binary
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: parkhub-server-binary
           path: target/release
 
       - name: Download frontend dist
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: parkhub-web-dist
           path: parkhub-web/dist
