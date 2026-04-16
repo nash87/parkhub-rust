@@ -208,12 +208,11 @@ fn bypass_requested() -> bool {
 
     #[cfg(not(feature = "e2e-bypass"))]
     {
-        if raw.is_some() {
-            panic!(
-                "PARKHUB_DISABLE_RATE_LIMITS is set but this binary was not built \
-                 with the `e2e-bypass` cargo feature. Refusing to start."
-            );
-        }
+        assert!(
+            raw.is_none(),
+            "PARKHUB_DISABLE_RATE_LIMITS is set but this binary was not built \
+             with the `e2e-bypass` cargo feature. Refusing to start."
+        );
         false
     }
 

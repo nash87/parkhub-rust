@@ -7,8 +7,13 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use chrono::{TimeDelta, Timelike, Utc};
+use image::Luma;
+use qrcode::QrCode;
 use serde::Serialize;
+use std::io::Cursor;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use uuid::Uuid;
@@ -22,29 +27,32 @@ use super::{AuthUser, check_admin, read_admin_setting};
 type SharedState = Arc<RwLock<AppState>>;
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QR CODE GENERATION (EXTERNAL SERVICE)
+// QR CODE GENERATION (LOCAL)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// QR code response with URLs for generating a QR code externally.
+/// QR code response: an inline data URL plus the plain lot booking URL.
+///
+/// The `qr_url` field is a `data:image/png;base64,…` URL rendered in-process
+/// via the `qrcode` + `image` crates so that self-hosted deployments never
+/// leak visitor intent to a third-party QR service.
 #[derive(Debug, Serialize)]
 pub struct LotQrResponse {
-    /// URL to an external QR code image service.
-    /// NOTE: Uses api.qrserver.com. For privacy-sensitive deployments,
-    /// operators should generate QR codes locally.
+    /// `data:image/png;base64,…` URL. Suitable for `<img src={qr_url}>`.
     qr_url: String,
     /// The lot's booking page URL that the QR code encodes.
     lot_url: String,
 }
 
-/// `GET /api/v1/lots/{id}/qr` — generate a QR code URL for a parking lot.
+/// `GET /api/v1/lots/{id}/qr` — generate a QR code for a parking lot locally.
 ///
-/// Returns a URL pointing to an external QR API (api.qrserver.com) that renders
-/// a QR code linking to the lot's booking page.
+/// Encodes the lot's booking URL as a 300×300 PNG in memory and returns it as
+/// a `data:image/png;base64,…` data URL alongside the plain booking URL. No
+/// external services are contacted.
 #[utoipa::path(get, path = "/api/v1/lots/{id}/qr", tag = "Lots",
-    summary = "Generate QR code URL for a lot",
-    description = "Returns a URL to an external QR service encoding the lot's booking page.",
+    summary = "Generate QR code for a lot (local)",
+    description = "Returns a `data:image/png;base64,…` URL with a QR code encoding the lot's booking page. Generated locally via the `qrcode` + `image` crates — no external service.",
     security(("bearer_auth" = [])), params(("id" = String, Path, description = "Lot UUID")),
-    responses((status = 200, description = "QR URLs"), (status = 404, description = "Lot not found"))
+    responses((status = 200, description = "QR data URL + lot URL"), (status = 404, description = "Lot not found"), (status = 500, description = "QR generation failed"))
 )]
 pub async fn lot_qr_code(
     State(state): State<SharedState>,
@@ -79,17 +87,42 @@ pub async fn lot_qr_code(
         base_url
     };
 
+    drop(state_guard);
+
     let lot_url = format!("{base_url}/book?lot={id}");
-    let encoded = url::form_urlencoded::Serializer::new(String::new())
-        .append_pair("data", &lot_url)
-        .append_pair("size", "256x256")
-        .finish();
-    let qr_url = format!("https://api.qrserver.com/v1/create-qr-code/?{encoded}");
+
+    let qr_url = match render_qr_data_url(&lot_url) {
+        Ok(url) => url,
+        Err(e) => {
+            tracing::error!("Lot QR generation failed: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "QR generation failed")),
+            );
+        }
+    };
 
     (
         StatusCode::OK,
         Json(ApiResponse::success(LotQrResponse { qr_url, lot_url })),
     )
+}
+
+/// Render `payload` as a `data:image/png;base64,…` URL at 300×300.
+fn render_qr_data_url(payload: &str) -> Result<String, String> {
+    let code = QrCode::new(payload.as_bytes()).map_err(|e| format!("qr encode failed: {e}"))?;
+    let image = code.render::<Luma<u8>>().min_dimensions(300, 300).build();
+
+    let mut png_bytes: Vec<u8> = Vec::new();
+    let mut cursor = Cursor::new(&mut png_bytes);
+    image
+        .write_to(&mut cursor, image::ImageFormat::Png)
+        .map_err(|e| format!("png encode failed: {e}"))?;
+
+    Ok(format!(
+        "data:image/png;base64,{}",
+        BASE64_STANDARD.encode(&png_bytes)
+    ))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -269,9 +302,28 @@ pub async fn admin_dashboard_charts(
 mod tests {
     use super::*;
 
-    // ── LotQrResponse struct ─────────────────────────────────────────────────
-    // LotQrResponse has private fields so we exercise it through the public API
-    // by verifying that the struct is serialisable via the DashboardCharts path.
+    #[test]
+    fn render_qr_data_url_produces_png_data_uri() {
+        let url = render_qr_data_url("https://parkhub.local/book?lot=abc123")
+            .expect("QR generation should succeed for a sane URL");
+        assert!(
+            url.starts_with("data:image/png;base64,"),
+            "expected data URL, got {}",
+            &url[..url.len().min(40)]
+        );
+        // PNG magic number (bytes 0x89 0x50 0x4E 0x47) base64-encodes with
+        // the prefix "iVBOR", so any valid PNG data URL starts with it.
+        let b64 = url.strip_prefix("data:image/png;base64,").unwrap();
+        assert!(b64.starts_with("iVBOR"), "payload is not a PNG");
+    }
+
+    #[test]
+    fn render_qr_data_url_is_offline() {
+        // Guard against a regression to an external QR service: if rendering
+        // ever reaches the network this test will fail in offline CI.
+        render_qr_data_url("offline-sanity-check")
+            .expect("local QR rendering must not require network");
+    }
 
     #[test]
     fn test_bookings_by_day_serialization() {
