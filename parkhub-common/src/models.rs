@@ -423,7 +423,7 @@ pub struct Vehicle {
 }
 
 /// Vehicle type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum VehicleType {
     #[default]
@@ -436,9 +436,10 @@ pub enum VehicleType {
     Electric,
 }
 
-/// Powertrain / fuel type — drives the CO2 emission factor used by the
-/// `/api/v1/bookings/co2-summary` endpoint. Values mirror the DEFRA 2024
-/// and UBA (Umweltbundesamt) per-km emission tables; see
+/// Powertrain / fuel type driving the CO2 emission factor per booking.
+///
+/// Used by `/api/v1/bookings/co2-summary`; values mirror the DEFRA 2024 and
+/// UBA (Umweltbundesamt) per-km emission tables. See
 /// `parkhub-server/src/api/co2.rs`.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]

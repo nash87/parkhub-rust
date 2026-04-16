@@ -13,6 +13,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E (`.github/workflows/e2e.yml`) and nightly (`.github/workflows/nightly.yml`) builds opt in explicitly by passing `--features headless,full,e2e-bypass`.
 
 ### Changed
+- **Lot QR codes are now rendered locally**: `GET /api/v1/lots/{id}/qr` used to return a URL pointing at `api.qrserver.com`, which leaked the operator's `base_url` plus lot IDs to a third-party service and broke the self-hosted privacy claim for air-gapped deployments. The handler now uses the `qrcode` + `image` crates (already present for booking QRs) to render a 300×300 PNG in memory and returns it as a `data:image/png;base64,…` URL in the existing `qr_url` field — same call site in the frontend, zero network calls at runtime. Two new unit tests lock down the PNG output shape and assert no-network behavior.
 - `cargo fmt --all` applied; restores green fmt check on CI after the two previous feature commits landed unformatted.
 
 ---
