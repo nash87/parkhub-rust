@@ -17,8 +17,8 @@
 //! Endpoint: `GET /api/v1/bookings/co2-summary?from=ISO&to=ISO[&lot_id=UUID]`
 
 use axum::{
-    extract::{Query, State},
     Extension, Json,
+    extract::{Query, State},
 };
 use chrono::{DateTime, Duration, Utc};
 use parkhub_common::{ApiResponse, FuelType, VehicleType};
@@ -31,15 +31,18 @@ use super::{AuthUser, SharedState};
 /// `Unknown` falls back to `Gasoline` so under-reported vehicles at least
 /// surface a real cost rather than masquerading as zero.
 pub(crate) const fn emission_factor(vehicle: VehicleType, fuel: FuelType) -> f64 {
-    let suv_multiplier = if matches!(vehicle, VehicleType::Suv | VehicleType::Truck | VehicleType::Van) {
+    let suv_multiplier = if matches!(
+        vehicle,
+        VehicleType::Suv | VehicleType::Truck | VehicleType::Van
+    ) {
         1.30
     } else {
         1.00
     };
     let base = match fuel {
-        FuelType::Electric => 50.0,        // EU grid mix 2024
-        FuelType::Hydrogen => 95.0,        // green H2 estimate (incl. well-to-tank)
-        FuelType::PluginHybrid => 95.0,    // real-world utility factor adjusted
+        FuelType::Electric => 50.0,     // EU grid mix 2024
+        FuelType::Hydrogen => 95.0,     // green H2 estimate (incl. well-to-tank)
+        FuelType::PluginHybrid => 95.0, // real-world utility factor adjusted
         FuelType::Hybrid => 130.0,
         FuelType::Diesel => 180.0,
         FuelType::Gasoline | FuelType::Unknown => 210.0,
@@ -115,7 +118,10 @@ pub async fn co2_summary(
     let total_km = scoped.len() as f64 * ASSUMED_KM_PER_BOOKING;
     let emitted_g: f64 = scoped
         .iter()
-        .map(|b| emission_factor(b.vehicle.vehicle_type.clone(), b.vehicle.fuel_type) * ASSUMED_KM_PER_BOOKING)
+        .map(|b| {
+            emission_factor(b.vehicle.vehicle_type.clone(), b.vehicle.fuel_type)
+                * ASSUMED_KM_PER_BOOKING
+        })
         .sum();
     let counterfactual_g = scoped.len() as f64 * BASELINE_G_PER_KM * ASSUMED_KM_PER_BOOKING;
     let saved_g = (counterfactual_g - emitted_g).max(0.0);

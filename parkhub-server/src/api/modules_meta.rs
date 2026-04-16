@@ -13,8 +13,8 @@
 //! constants. Everything an admin sees about modules is locally sourced.
 
 use axum::{
-    extract::{Path, State},
     Json,
+    extract::{Path, State},
 };
 use parkhub_common::ApiResponse;
 use serde::Serialize;
@@ -224,7 +224,10 @@ mod tests {
 
     #[test]
     fn registry_has_entries() {
-        assert!(all_modules().len() >= 50, "registry should describe all known modules");
+        assert!(
+            all_modules().len() >= 50,
+            "registry should describe all known modules"
+        );
     }
 
     #[test]
@@ -260,7 +263,11 @@ mod tests {
     fn ui_routes_look_absolute() {
         for m in all_modules() {
             if let Some(r) = m.ui_route {
-                assert!(r.starts_with('/'), "ui_route of '{}' must start with '/'", m.name);
+                assert!(
+                    r.starts_with('/'),
+                    "ui_route of '{}' must start with '/'",
+                    m.name
+                );
             }
         }
     }
@@ -270,7 +277,8 @@ mod tests {
         for m in all_modules() {
             for k in m.config_keys {
                 assert!(
-                    k.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'),
+                    k.chars()
+                        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'),
                     "config key '{}' of module '{}' is not snake_case",
                     k,
                     m.name

@@ -8,8 +8,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use base64::Engine;
-use parkhub_common::FuelType;
 use chrono::Utc;
+use parkhub_common::FuelType;
 use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, Vehicle};
