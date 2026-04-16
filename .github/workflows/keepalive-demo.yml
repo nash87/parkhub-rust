@@ -1,0 +1,34 @@
+name: Keepalive Demo
+
+# Prevent Render free-tier spin-down (15-min idle threshold).
+# Ping the public health endpoint every 10 minutes so the service
+# stays warm during business hours — first visitor never sees the
+# 30-60s cold-start penalty.
+
+on:
+  schedule:
+    - cron: '*/10 5-22 * * *'  # every 10 min, 05:00-22:59 UTC (06-23 CET / 07-00 CEST)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      URL: https://parkhub-rust-demo.onrender.com/health/ready
+    steps:
+      - name: Warm up Render demo
+        run: |
+          set -e
+          echo "Pinging $URL"
+          code=$(curl -sk -o /tmp/body -w "%{http_code}" -m 60 "$URL")
+          echo "HTTP $code"
+          cat /tmp/body
+          echo
+          if [ "$code" != "200" ]; then
+            echo "Non-200 response — service may be in a deploy rollout"
+            exit 1
+          fi
