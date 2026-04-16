@@ -164,6 +164,13 @@ pub struct VehicleRequest {
     #[serde(default)]
     pub vehicle_type: Option<String>,
 
+    /// Powertrain / fuel type — feeds CO2 accounting. One of
+    /// `unknown`, `gasoline`, `diesel`, `hybrid`, `plugin_hybrid`,
+    /// `electric`, `hydrogen`. Omit for legacy clients; server defaults
+    /// to `unknown`.
+    #[serde(default)]
+    pub fuel_type: Option<String>,
+
     /// Set as default vehicle
     #[serde(default)]
     pub is_default: bool,
@@ -846,6 +853,7 @@ mod tests {
             model: Some("X5".to_string()),
             color: Some("Black".to_string()),
             vehicle_type: Some("suv".to_string()),
+            fuel_type: None,
             is_default: true,
         };
         assert!(req.validate().is_ok());
@@ -859,6 +867,8 @@ mod tests {
             model: None,
             color: None,
             vehicle_type: None,
+
+            fuel_type: None,
             is_default: false,
         };
         assert!(req.validate().is_err());
@@ -1108,6 +1118,8 @@ mod tests {
             model: None,
             color: None,
             vehicle_type: None,
+
+            fuel_type: None,
             is_default: false,
         };
         assert!(req.validate().is_err());
@@ -1121,6 +1133,8 @@ mod tests {
             model: None,
             color: Some("x".repeat(31)),
             vehicle_type: None,
+
+            fuel_type: None,
             is_default: false,
         };
         assert!(req.validate().is_err());

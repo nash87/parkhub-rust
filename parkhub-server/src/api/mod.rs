@@ -80,6 +80,8 @@ pub mod auth;
 pub mod billing;
 #[cfg(feature = "mod-bookings")]
 pub mod bookings;
+#[cfg(feature = "mod-bookings")]
+pub mod co2;
 #[cfg(feature = "mod-branding")]
 pub mod branding;
 #[cfg(feature = "mod-calendar")]
@@ -1216,7 +1218,8 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     {
         protected_routes = protected_routes
             .route("/api/v1/bookings/history", get(booking_history))
-            .route("/api/v1/bookings/stats", get(booking_stats));
+            .route("/api/v1/bookings/stats", get(booking_stats))
+            .route("/api/v1/bookings/co2-summary", get(co2::co2_summary));
     }
 
     #[cfg(feature = "mod-geofence")]
