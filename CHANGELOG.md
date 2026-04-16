@@ -9,6 +9,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Legal templates for BFSG + EU AI Act** in `legal/`:
+  - `bfsg-barrierefreiheit-template.md` — Accessibility Statement template per § 14 BFSG (in force since 2025-06-28), covering EN 301 549 / WCAG 2.1 AA scope, current a11y features, feedback path, Schlichtungsstelle BGG + Bundesfachstelle contact details.
+  - `ai-act-transparency-template.md` — AI Act Art. 50 transparency template for the planned Occupancy Forecast (T-1717) + optional Dashboard narrative module. Classifies them as limited-risk (not high-risk Annex III), documents data basis, confidence intervals, opt-out, 90-day inference logging.
+- Both templates are mirrored from `parkhub-php/legal/` so a single source stays in sync across the two implementations.
+
 ### Security
 - **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E (`.github/workflows/e2e.yml`) and nightly (`.github/workflows/nightly.yml`) builds opt in explicitly by passing `--features headless,full,e2e-bypass`.
 
