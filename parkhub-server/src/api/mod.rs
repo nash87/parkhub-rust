@@ -80,15 +80,14 @@ pub mod auth;
 pub mod billing;
 #[cfg(feature = "mod-bookings")]
 pub mod bookings;
-#[cfg(feature = "mod-bookings")]
-pub mod co2;
-pub mod modules_meta;
 #[cfg(feature = "mod-branding")]
 pub mod branding;
 #[cfg(feature = "mod-calendar")]
 pub mod calendar;
 #[cfg(feature = "mod-calendar-drag")]
 pub mod calendar_drag;
+#[cfg(feature = "mod-bookings")]
+pub mod co2;
 #[cfg(feature = "mod-compliance")]
 pub mod compliance;
 #[cfg(feature = "mod-credits")]
@@ -130,6 +129,7 @@ pub mod map;
 pub mod misc;
 #[cfg(feature = "mod-mobile")]
 pub mod mobile;
+pub mod modules_meta;
 #[cfg(feature = "mod-notification-center")]
 pub mod notification_center;
 #[cfg(feature = "mod-notifications")]
