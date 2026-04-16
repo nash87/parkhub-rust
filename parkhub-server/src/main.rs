@@ -1618,13 +1618,17 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
         last_login: None,
         preferences: UserPreferences::default(),
         is_active: true,
-        credits_balance: 0,
-        credits_monthly_quota: 0,
-        credits_last_refilled: None,
+        // Give the admin a real monthly credits allowance so the dashboard
+        // KPI row shows something useful on first login instead of a row
+        // of zeros — the seeded demo users get rand(5..41), this mirrors
+        // the generous end of that range for the principal account.
+        credits_balance: 40,
+        credits_monthly_quota: 40,
+        credits_last_refilled: Some(Utc::now()),
         tenant_id: None,
         accessibility_needs: None,
         cost_center: None,
-        department: None,
+        department: Some("IT".to_string()),
     };
 
     db.save_user(&admin_user).await?;
