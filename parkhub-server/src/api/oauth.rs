@@ -324,7 +324,10 @@ pub async fn oauth_google_callback(
     );
 
     // Exchange authorization code for access token
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .unwrap_or_default();
     let token_res = client
         .post("https://oauth2.googleapis.com/token")
         .form(&[
@@ -465,7 +468,10 @@ pub async fn oauth_github_callback(
     );
 
     // Exchange code for access token
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .unwrap_or_default();
     let token_res = client
         .post("https://github.com/login/oauth/access_token")
         .header("Accept", "application/json")

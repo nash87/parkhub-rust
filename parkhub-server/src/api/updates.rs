@@ -50,6 +50,7 @@ pub async fn check_for_updates(
 
     let client = reqwest::Client::builder()
         .user_agent("ParkHub-Server")
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .unwrap_or_default();
 
@@ -144,6 +145,7 @@ pub async fn apply_update(
 
     let client = reqwest::Client::builder()
         .user_agent("ParkHub-Server")
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .unwrap_or_default();
 
@@ -239,6 +241,7 @@ pub async fn list_releases(
 
     let client = reqwest::Client::builder()
         .user_agent("ParkHub-Server")
+        .timeout(std::time::Duration::from_secs(15))
         .build()
         .unwrap_or_default();
 
