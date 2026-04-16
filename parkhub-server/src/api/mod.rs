@@ -807,13 +807,14 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // mod-pwa retirement note above.
     #[cfg(feature = "mod-enhanced-pwa")]
     {
-        // Enhanced PWA: dynamic manifest and enhanced service worker
-        public_routes = public_routes
-            .route(
-                "/api/v1/pwa/manifest",
-                get(enhanced_pwa::pwa_dynamic_manifest),
-            )
-            .route("/sw-v2.js", get(enhanced_pwa::enhanced_service_worker));
+        // Enhanced PWA: dynamic manifest with branding + offline booking data.
+        // The /sw-v2.js route was retired — the frontend registers /sw.js
+        // (the Astro-built SW in parkhub-web/dist) and that ships a richer
+        // offline strategy than the inline stub that sw-v2 used to serve.
+        public_routes = public_routes.route(
+            "/api/v1/pwa/manifest",
+            get(enhanced_pwa::pwa_dynamic_manifest),
+        );
     }
     #[cfg(feature = "mod-branding")]
     {
