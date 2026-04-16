@@ -215,24 +215,31 @@ test.describe('Concurrent Users — Booking Conflict Detection', () => {
     const pageA = await contextA.newPage();
     const pageB = await contextB.newPage();
 
-    // Both users navigate to the same lot page
+    // Both users navigate to the same lot page. /book is protected, so
+    // an unauthenticated visit redirects to /login or /welcome after
+    // React hydrates. Wait for the body to carry any of the expected
+    // terms before asserting — a bare `domcontentloaded` can read the
+    // empty pre-hydration shell.
     await pageA.goto('/book');
     await pageB.goto('/book');
 
-    await pageA.waitForLoadState('domcontentloaded');
-    await pageB.waitForLoadState('domcontentloaded');
+    const settled = (page: typeof pageA) =>
+      page.waitForFunction(
+        () => /book|lot|park|slot|reserve|login|welcome/i.test(
+          document.body?.textContent ?? '',
+        ),
+        { timeout: 10_000 },
+      );
+    await Promise.all([settled(pageA), settled(pageB)]);
 
-    // Both should see the booking page
     const bodyA = await pageA.locator('body').textContent();
     const bodyB = await pageB.locator('body').textContent();
 
     expect(bodyA).toBeTruthy();
     expect(bodyB).toBeTruthy();
 
-    // Both pages should show similar content (same lot data)
-    // This is a basic consistency check — both should see the booking form
-    const hasBookingContentA = /book|lot|park|slot|reserve|login/i.test(bodyA ?? '');
-    const hasBookingContentB = /book|lot|park|slot|reserve|login/i.test(bodyB ?? '');
+    const hasBookingContentA = /book|lot|park|slot|reserve|login|welcome/i.test(bodyA ?? '');
+    const hasBookingContentB = /book|lot|park|slot|reserve|login|welcome/i.test(bodyB ?? '');
 
     expect(hasBookingContentA).toBe(true);
     expect(hasBookingContentB).toBe(true);

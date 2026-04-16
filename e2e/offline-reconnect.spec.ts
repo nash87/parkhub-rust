@@ -91,7 +91,15 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
     // Navigate to a page that fetches data
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+
+    // Wait for the authenticated React shell to actually render content
+    // after hydration + the first API round-trip. A bare `domcontentloaded`
+    // catches the empty pre-hydration shell and makes the "body length > 50"
+    // assertion flaky whenever the shell reads first.
+    await page.waitForFunction(
+      () => (document.body?.textContent ?? '').length > 50,
+      { timeout: 10_000 },
+    ).catch(() => { /* swallow: assertion below surfaces the real issue */ });
 
     // Page should load successfully now
     expect(page.url()).not.toContain('offline');
