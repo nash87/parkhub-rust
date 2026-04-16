@@ -9,8 +9,10 @@ import { registerRoute, preloadRoutesIdle } from './lib/routePreload';
 import './i18n';
 import { loadTranslationOverrides } from './i18n';
 
-// Eagerly loaded shell
-import { Layout } from './components/Layout';
+// Eagerly loaded shell (ErrorBoundary must load synchronously to catch
+// errors during lazy-chunk fetch). Layout carries the nav+icon payload
+// and is only needed after auth, so it's lazy — unauthenticated users
+// (login, welcome, register) never pay its ~150KB cost in the main chunk.
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy helper — wraps named exports for React.lazy and auto-registers
@@ -23,6 +25,9 @@ function lazy<T extends Record<string, React.ComponentType>>(
   if (path) registerRoute(path, loader);
   return React.lazy(() => loader().then(m => ({ default: m[name] as React.ComponentType })));
 }
+
+// Authenticated shell (lazy — only fetched after ProtectedRoute resolves)
+const Layout = lazy(() => import('./components/Layout'), 'Layout');
 
 // Auth pages (small, on critical path for unauthenticated users)
 const WelcomePage = lazy(() => import('./views/Welcome'), 'WelcomePage', '/welcome');
@@ -169,7 +174,7 @@ function ViewTransitionRoutes() {
       <Route path="/choose" element={<SuspenseRoute><UseCaseSelectorPage /></SuspenseRoute>} />
       <Route path="/lobby/:lotId" element={<SuspenseRoute><LobbyDisplayPage /></SuspenseRoute>} />
       <Route path="/setup" element={<SuspenseRoute><SetupWizardPage /></SuspenseRoute>} />
-      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route path="/" element={<ProtectedRoute><SuspenseRoute><Layout /></SuspenseRoute></ProtectedRoute>}>
         <Route index element={<SuspenseRoute><DashboardPage /></SuspenseRoute>} />
         <Route path="book" element={<SuspenseRoute><BookPage /></SuspenseRoute>} />
         <Route path="bookings" element={<SuspenseRoute><BookingsPage /></SuspenseRoute>} />
