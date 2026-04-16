@@ -224,6 +224,18 @@ pub async fn security_headers_middleware(request: Request<Body>, next: Next) -> 
         HeaderName::from_static("strict-transport-security"),
         HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
     );
+    // Site isolation: COOP prevents cross-origin windows from sharing a
+    // browsing context group (blocks window.opener attacks), CORP keeps
+    // this origin's resources from being embedded cross-origin. Both are
+    // safe for a standalone app — we don't embed or get embedded.
+    headers.insert(
+        HeaderName::from_static("cross-origin-opener-policy"),
+        HeaderValue::from_static("same-origin"),
+    );
+    headers.insert(
+        HeaderName::from_static("cross-origin-resource-policy"),
+        HeaderValue::from_static("same-origin"),
+    );
 
     response
 }
