@@ -40,6 +40,18 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      # rust_embed needs `parkhub-web/dist/` to exist at compile time,
+      # so build the frontend before cargo compiles static_files.rs.
+      - name: Build frontend (rust_embed source)
+        run: cd parkhub-web && npm ci && npm run build
+
       - name: Build server
         run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless'
 
