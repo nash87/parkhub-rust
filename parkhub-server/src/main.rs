@@ -247,6 +247,34 @@ async fn main() -> Result<()> {
         };
     }
 
+    // Error tracking — opts in via SENTRY_DSN. Works with GlitchTip self-
+    // hosted (Sentry-protocol compatible) or Sentry.io; the SDK sends panics
+    // + manually-reported errors + transaction traces. _guard MUST stay
+    // alive for the entire process so the background uploader flushes on
+    // shutdown. When SENTRY_DSN is empty/unset the SDK is a no-op.
+    let _sentry_guard = std::env::var("SENTRY_DSN")
+        .ok()
+        .filter(|dsn| !dsn.is_empty())
+        .map(|dsn| {
+            sentry::init((
+                dsn,
+                sentry::ClientOptions {
+                    release: sentry::release_name!(),
+                    environment: std::env::var("SENTRY_ENVIRONMENT")
+                        .ok()
+                        .map(Into::into)
+                        .or_else(|| Some("production".into())),
+                    traces_sample_rate: std::env::var("SENTRY_TRACES_SAMPLE_RATE")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(0.05),
+                    attach_stacktrace: true,
+                    send_default_pii: false,
+                    ..Default::default()
+                },
+            ))
+        });
+
     // Initialize logging based on debug flag
     let log_filter = if cli.debug {
         "debug,parkhub_server=trace"

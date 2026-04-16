@@ -55,6 +55,11 @@ mdns-sd.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 
+# Error tracking — Sentry-compatible (works with GlitchTip self-hosted too).
+# No-op when SENTRY_DSN env var is unset, so dev builds pay zero cost.
+sentry = { version = "0.35", default-features = false, features = ["backtrace", "contexts", "panic", "reqwest", "rustls", "tracing"] }
+sentry-tower = { version = "0.35", features = ["http"] }
+
 # Error handling
 thiserror.workspace = true
 anyhow.workspace = true
