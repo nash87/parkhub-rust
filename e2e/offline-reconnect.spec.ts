@@ -4,7 +4,7 @@ import { loginViaUi } from './helpers';
 test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('offline indicator shown when network is lost', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Go offline by aborting all network requests
     await context.route('**/*', (route) => route.abort('internetdisconnected'));
@@ -45,7 +45,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('graceful error when creating booking while offline', async ({ page, context }) => {
     await loginViaUi(page);
     await page.goto('/book');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Go offline
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -80,7 +80,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
   test('reconnection restores functionality', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Go offline
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -91,7 +91,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
     // Navigate to a page that fetches data
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Page should load successfully now
     expect(page.url()).not.toContain('offline');
@@ -110,7 +110,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
     }
 
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check if service worker is registered
     const swRegistered = await page.evaluate(async () => {
@@ -133,7 +133,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('pages still load from cache when offline', async ({ page, context }) => {
     // First visit to populate cache
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Go offline (block only API, allow cached static assets through SW)
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));

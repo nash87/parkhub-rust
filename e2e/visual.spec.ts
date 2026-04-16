@@ -14,7 +14,7 @@ const pages = [
 // while surviving renderer drift.
 for (const { name, path } of pages) {
   test(`visual: ${name} matches baseline`, async ({ page }) => {
-    await page.goto(path, { waitUntil: 'networkidle' });
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
     await page.addStyleTag({
       content: '*, *::before, *::after { animation: none !important; transition: none !important; }',
     });
