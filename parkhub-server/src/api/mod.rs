@@ -82,6 +82,7 @@ pub mod billing;
 pub mod bookings;
 #[cfg(feature = "mod-bookings")]
 pub mod co2;
+pub mod modules_meta;
 #[cfg(feature = "mod-branding")]
 pub mod branding;
 #[cfg(feature = "mod-calendar")]
@@ -669,6 +670,15 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         .route("/api/v1/legal/impressum", get(get_impressum))
         // Module feature flags — public (compile-time feature introspection)
         .route("/api/v1/modules", get(list_module_features))
+        // Enriched module metadata (category, description, config keys,
+        // UI deep-links, dependencies) — feeds the admin Modules
+        // Dashboard and the Command Palette's auto-registered module
+        // commands. Public because the flat `/api/v1/modules` already is.
+        .route("/api/v1/modules/info", get(modules_meta::list_modules_info))
+        .route(
+            "/api/v1/modules/info/{name}",
+            get(modules_meta::get_module_info),
+        )
         // Setup wizard — only works before initial setup is completed
         .route("/api/v1/setup/status", get(setup::setup_status))
         .route("/api/v1/setup", post(setup::setup_init))
