@@ -194,67 +194,6 @@ pub async fn pwa_offline_data(
     }))
 }
 
-/// Enhanced service worker with offline caching strategy.
-pub async fn enhanced_service_worker() -> impl IntoResponse {
-    let sw_js = r#"const CACHE_NAME = 'parkhub-v2';
-const STATIC_ASSETS = ['/', '/manifest.json'];
-const API_CACHE = 'parkhub-api-v1';
-
-// Install: cache static assets
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-  );
-});
-
-// Activate: clean old caches
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME && k !== API_CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
-});
-
-// Fetch: network-first for API, cache-first for static
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  const url = new URL(e.request.url);
-
-  if (url.pathname.startsWith('/api/')) {
-    // Network-first for API calls
-    e.respondWith(
-      fetch(e.request)
-        .then(resp => {
-          if (resp.ok && url.pathname.includes('/pwa/offline-data')) {
-            const clone = resp.clone();
-            caches.open(API_CACHE).then(cache => cache.put(e.request, clone));
-          }
-          return resp;
-        })
-        .catch(() => caches.match(e.request))
-    );
-  } else {
-    // Cache-first for static assets
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request))
-    );
-  }
-});
-
-// Background sync for offline bookings (future)
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-"#;
-
-    ([(header::CONTENT_TYPE, "application/javascript")], sw_js)
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
