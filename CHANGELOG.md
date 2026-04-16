@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.12.0] - 2026-04-16
+
+### Added
+- **`object-src 'none'`** in the Content-Security-Policy header — blocks legacy `<object>` / `<embed>` plugin content from loading, killing a Flash-era XSS/clickjacking class. Parity with parkhub-php.
+- **`Cross-Origin-Opener-Policy: same-origin`** and **`Cross-Origin-Resource-Policy: same-origin`** site-isolation headers. COOP blocks `window.opener` cross-origin access tricks; CORP stops responses from being embedded cross-origin. Both safe for a standalone app.
+- **`scripts/locale-coverage.mjs`** + `npm run i18n:coverage`: enumerates every leaf key under en.translation and reports missing keys per locale. All ten files currently ship at 100% (1,543 keys each); the script guards future feature work against en-only key regressions.
+
+### Changed
+- **Pre-auth critical path trimmed by ~150 KB** via `React.lazy` on the Layout shell. Layout hosts 25+ Phosphor icons + sidebar/header chrome and only renders inside the ProtectedRoute tree — unauthenticated visitors on /login, /welcome, /register no longer pay for it in the main chunk.
+- **Non-English locales now lazy-load**. Nine of the ten locale TS files (~7,000 lines total) moved behind `import.meta.glob` with `partialBundledLanguages=true`; en stays bundled as the synchronous fallback. After init, the detected primary + secondary Accept-Language chunks hydrate in the background and trigger a localized re-render. ~450 KB raw JS saved per user.
+- **Net live critical-path bundle dropped from ~740 KB to 127 KB raw / 41 KB brotli** on the Render demo — an 83% reduction vs v4.11.0.
+- **Admin user on first setup now carries a real 40/40 credits allowance** with `credits_last_refilled = now`; previously it was 0/0 and the KPI row on the demo admin dashboard read a row of zeros on first login. Also fills `department = "IT"` so the admin row is not the only one without a department in the admin panel user list.
+
+### Fixed
+- **`e2e/*.spec.ts`**: replaced 28 `waitForLoadState('networkidle')` + `goto({waitUntil: 'networkidle'})` call sites with `'domcontentloaded'`. `networkidle` has been discouraged by Playwright since 1.x because modern apps run continuous background traffic that keeps the 500 ms idle timer from ever firing. v4.10.0 started the migration; this commit finishes it.
+
+---
+
 ## [4.11.0] - 2026-04-16
 
 ### Added
