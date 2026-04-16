@@ -47,8 +47,13 @@ jobs:
           npm ci
           npm run build
 
-      - name: Build server (headless)
-        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless'
+      - name: Build server (headless + e2e-bypass)
+        # `e2e-bypass` enables the compile-time gate that lets
+        # PARKHUB_DISABLE_RATE_LIMITS actually disable limiters. Production
+        # Docker images are built WITHOUT this feature, so a stray env var
+        # in prod will panic at startup instead of silently bypassing auth
+        # brute-force protection.
+        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass'
 
       - name: Start server in background
         shell: bash

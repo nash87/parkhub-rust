@@ -189,6 +189,11 @@ full = [
 ]
 gui = ["slint", "slint-build", "tray-icon"]
 headless = ["full"]
+# Opt-in compile-time bypass for rate limits — enabled ONLY by E2E / nightly CI
+# builds, never in production Docker images or release binaries.
+# When disabled, PARKHUB_DISABLE_RATE_LIMITS is ignored and its presence at
+# startup panics so a misconfigured production deployment fails loudly.
+e2e-bypass = []
 mod-bookings = []
 mod-vehicles = []
 mod-absences = []
