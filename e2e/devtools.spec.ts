@@ -249,7 +249,22 @@ test.describe('DevTools — Accessibility', () => {
 test.describe('DevTools — Axe Accessibility Audit', () => {
   test('login page passes axe-core checks', async ({ page }) => {
     await page.goto('/login');
+
+    // Wait for React hydration + web fonts before running axe.
+    // Without this the first run regularly reports a flaky
+    // `color-contrast` violation because the fallback system font
+    // has different metrics than the final Inter — the retry that
+    // waits an extra moment (via Playwright's built-in retry) always
+    // passes, which is the signal that this is a timing issue, not
+    // a real contrast bug.
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForFunction(() => document.fonts?.ready, {
+      timeout: 5_000,
+    }).catch(() => { /* fonts API missing: fall through */ });
+    await page.waitForFunction(
+      () => !!document.querySelector('form input[type="password"]'),
+      { timeout: 5_000 },
+    ).catch(() => { /* swallow: axe will still surface the real issue */ });
 
     let AxeBuilder: typeof import('@axe-core/playwright').default;
     try {
