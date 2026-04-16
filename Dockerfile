@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Frontend build (Astro/Vite)
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS web-builder
+FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS web-builder
 WORKDIR /app
 COPY parkhub-web/package*.json ./
 RUN npm ci
@@ -17,7 +17,7 @@ RUN DOCKER=1 npm run build
 # ---------------------------------------------------------------------------
 # Stage 2: Cargo chef — prepare dependency recipe
 # ---------------------------------------------------------------------------
-FROM rust:1.94-slim AS chef
+FROM rust:1.94-slim@sha256:cf09adf8c3ebaba10779e5c23ff7fe4df4cccdab8a91f199b0c142c53fef3e1a AS chef
 RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config libssl-dev cmake make perl clang curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -71,7 +71,7 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
 # copy the empty directory tree into the final image.
 # UID 65532 is the built-in "nonroot" user in gcr.io/distroless/cc-debian12.
 # ---------------------------------------------------------------------------
-FROM busybox:1.37.0 AS data-setup
+FROM busybox:1.37.0@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681e7cf6c83d5e AS data-setup
 RUN mkdir -p /data && chown 65532:65532 /data
 
 # ---------------------------------------------------------------------------
