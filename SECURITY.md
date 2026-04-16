@@ -11,12 +11,27 @@
 ## Known Accepted Advisories
 
 The following advisories are known and accepted with documented mitigations. They are
-silenced in `deny.toml` with rationale comments. See `deny.toml` for the canonical list.
+silenced in `deny.toml` with rationale comments and mirrored in the nightly
+`cargo audit --ignore …` list in `.github/workflows/nightly.yml`. See `deny.toml`
+for the canonical list. Every entry below is re-evaluated when touched or
+whenever the upstream crate ships a fix.
 
-| Advisory ID         | Crate     | Severity | Status   | Rationale |
-|---------------------|-----------|----------|----------|-----------|
-| RUSTSEC-2023-0071   | rsa       | Medium   | Accepted | Marvin Attack in the `rsa` crate. ParkHub pulls this transitively via `web-push` for VAPID JWT signing. ParkHub uses HS256 (HMAC) signed JWTs only, never RSA-signed JWTs, so the timing side-channel is not reachable in our usage. We will upgrade as soon as `web-push` releases a non-RSA dependency path. |
-| RUSTSEC unmaintained: gtk-rs family | gtk, gdk, glib, etc. | Informational | Accepted | Pulled transitively by `tray-icon` (only enabled under the optional `gui` feature). The default `headless` build does not include any gtk-rs code. |
+| Advisory ID        | Crate              | Severity        | Rationale |
+|--------------------|--------------------|-----------------|-----------|
+| RUSTSEC-2023-0019  | kuchiki            | Unmaintained    | Pulled transitively via `printpdf` HTML rendering. No current maintained fork with a compatible API; invoice renderer is server-side only and never sees attacker-controlled HTML. |
+| RUSTSEC-2023-0071  | rsa                | Medium (Marvin) | Pulled transitively via `web-push` (VAPID JWT signing). ParkHub uses HS256 HMAC JWTs only — the timing side-channel is not reachable from our usage. Tracked: upgrade as soon as `web-push` ships an RSA-free path. |
+| RUSTSEC-2024-0370  | proc-macro-error   | Unmaintained    | Build-time-only crate pulled by `zeroize_derive`. No runtime exposure; replace on next `zeroize` minor that drops the dep. |
+| RUSTSEC-2024-0384  | instant            | Unmaintained    | Transitive via `web-push → isahc`. No maintained upgrade path; `instant` has no known vulnerabilities, just a maintenance flag. |
+| RUSTSEC-2024-0412  | atk (gtk-rs)       | Unmaintained    | Only pulled under the optional `gui` feature via `tray-icon`. The default `headless` build excludes all gtk-rs code entirely. |
+| RUSTSEC-2024-0413  | gdk (gtk-rs)       | Unmaintained    | Same as RUSTSEC-2024-0412 — `gui` feature only. |
+| RUSTSEC-2024-0415  | gdk-pixbuf (gtk-rs)| Unmaintained    | Same as RUSTSEC-2024-0412 — `gui` feature only. |
+| RUSTSEC-2024-0416  | gdk-sys (gtk-rs)   | Unmaintained    | Same as RUSTSEC-2024-0412 — `gui` feature only. |
+| RUSTSEC-2024-0418  | gtk (gtk-rs)       | Unmaintained    | Same as RUSTSEC-2024-0412 — `gui` feature only. |
+| RUSTSEC-2024-0419  | gtk-sys (gtk-rs)   | Unmaintained    | Same as RUSTSEC-2024-0412 — `gui` feature only. |
+| RUSTSEC-2024-0420  | gtk3-macros        | Unmaintained    | Same as RUSTSEC-2024-0412 — `gui` feature only. |
+| RUSTSEC-2024-0436  | paste              | Unmaintained    | Build-time macro crate used by `wayland-sys`; itself has no runtime footprint. |
+| RUSTSEC-2025-0057  | fxhash             | Unmaintained    | Transitive via `selectors` (HTML parser). Replaced by `rustc-hash` upstream; we pick it up automatically when the dependency tree moves. |
+| RUSTSEC-2026-0097  | rand 0.9.2         | Unsoundness     | Only triggers with a custom `log` logger that reads `thread_rng` during its own logging; we use `tracing`, not `log`, so the faulty code path is never executed. |
 
 ## Reporting a Vulnerability
 
