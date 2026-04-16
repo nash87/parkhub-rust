@@ -7,6 +7,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [4.11.0] - 2026-04-16
+
+### Added
+- **Keepalive cron** (`.github/workflows/keepalive-demo.yml`): pings the Render demo's `/health/ready` every 10 minutes between 05-22 UTC so the free-tier 15-minute idle spin-down never drops a cold 30-60 s wake-up on the first visitor of the day.
+
+### Changed
+- **Astro** `6.1.6 → 6.1.7` in `parkhub-web/`. Parity with parkhub-php, npm audit clean.
+- **Docker FROM digest-pinning** for supply-chain hardening: `node:22-alpine`, `rust:1.94-slim`, and `busybox:1.37.0` now all carry immutable `@sha256:…` references alongside the already-pinned distroless runtime. Dependabot's `docker` ecosystem block refreshes these on its weekly cycle.
+- **`busybox:latest` → `busybox:1.37.0`** in the `data-setup` stage. Tag-only `:latest` is an anti-pattern that rotates silently across rebuilds.
+- **`actions/download-artifact`** bumped `v6 → v8` on the two straggler steps in `nightly.yml`; the rest of the matrix was already on v8.
+- **Repo metadata**: README gains Astro 6 + Tailwind CSS 4 badges; GitHub description and topics list Astro explicitly.
+
+### Fixed
+- **Service worker shadowing**: `parkhub-server/src/api/pwa.rs` registered an inline 10-line handler at `/sw.js` that shadowed the 361-line Astro-built SW in `parkhub-web/dist/sw.js`. Every navigation hit origin — no API stale-while-revalidate, no background-sync mutation queue, no push notifications, no offline page. Retired the inline handler so the static file handler serves the enhanced SW; the live demo now responds with `CACHE_VERSION = '<build-sha>'` instead of the `parkhub-v1` stub.
+- **Manifest shadowing**: `pwa::pwa_manifest` returned a 7-field minimal manifest that shadowed the Astro-built 17-field manifest (`description`, `screenshots` wide + narrow, `shortcuts`, `categories`, `id`, `scope`, `lang`, `dir`, `prefer_related_applications`, …). Retired the entire `api::pwa` module; `enhanced_pwa::pwa_dynamic_manifest` on `/api/v1/pwa/manifest` remains for branding-aware callers that want the narrower shape.
+- **`/sw-v2.js` dead route**: the frontend only registers `/sw.js`, so the 60-line `enhanced_service_worker()` handler on `/sw-v2.js` was never fetched. Removed, along with the unused tests it shipped with.
+
+---
+
 ## [4.10.0] - 2026-04-15
 
 ### Added
