@@ -18,6 +18,7 @@ import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
 import { languages } from '../i18n/index';
 import { getInMemoryToken } from '../api/client';
+import { preloadRoute } from '../lib/routePreload';
 
 type NavItem = {
   to: string;
@@ -141,6 +142,8 @@ function SidebarNav({
       to={item.to}
       end={item.end}
       onClick={onItemClick}
+      onMouseEnter={() => preloadRoute(item.to)}
+      onFocus={() => preloadRoute(item.to)}
       aria-current={
         location.pathname === item.to ||
         (item.to !== '/' && location.pathname.startsWith(item.to))
