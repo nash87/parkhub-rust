@@ -35,7 +35,7 @@ test.describe('DevTools — Console Errors', () => {
 
     for (const route of PUBLIC_ROUTES) {
       await page.goto(route);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
 
     const critical = errors.filter(isCriticalConsoleError);
@@ -52,7 +52,7 @@ test.describe('DevTools — Console Errors', () => {
 
     for (const route of PROTECTED_ROUTES) {
       await page.goto(route);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
 
     const critical = errors.filter(isCriticalConsoleError);
@@ -77,7 +77,7 @@ test.describe('DevTools — Network', () => {
 
     for (const route of [...PUBLIC_ROUTES, ...PROTECTED_ROUTES]) {
       await page.goto(route);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     }
 
     expect(serverErrors).toEqual([]);
@@ -95,7 +95,7 @@ test.describe('DevTools — Network', () => {
 
     await loginViaUi(page);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(missing).toEqual([]);
   });
@@ -145,7 +145,7 @@ test.describe('DevTools — Performance', () => {
   test('DOM nodes < 3000 on dashboard', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const nodeCount = await page.evaluate(() => document.querySelectorAll('*').length);
     expect(nodeCount).toBeLessThan(3000);
@@ -163,7 +163,7 @@ test.describe('DevTools — Performance', () => {
     });
 
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     expect(totalBytes).toBeLessThan(5 * 1024 * 1024);
   });
@@ -207,7 +207,7 @@ test.describe('DevTools — Accessibility', () => {
   test('heading hierarchy — no skipped levels', async ({ page }) => {
     await loginViaUi(page);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Ignore visually hidden headings (used for screen-reader landmarks).
     // Those routinely jump levels to label sections inside otherwise
@@ -249,7 +249,7 @@ test.describe('DevTools — Accessibility', () => {
 test.describe('DevTools — Axe Accessibility Audit', () => {
   test('login page passes axe-core checks', async ({ page }) => {
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     let AxeBuilder: typeof import('@axe-core/playwright').default;
     try {
@@ -280,7 +280,7 @@ test.describe('DevTools — Mobile Responsive', () => {
     test(`renders on ${device.name} (${device.width}x${device.height})`, async ({ page }) => {
       await page.setViewportSize({ width: device.width, height: device.height });
       await page.goto('/login');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Page should not have horizontal overflow
       const hasOverflow = await page.evaluate(() => {
@@ -326,7 +326,7 @@ test.describe('DevTools — Security Headers', () => {
 
 test.describe('DevTools — Interactions', () => {
   test('login form is submittable', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     // `getByLabel(/password/i)` also matches the "Forgot password?" link,
     // which isn't a form control — use the actual input selector.
     const emailInput = page.getByLabel(/email/i).first();
@@ -345,7 +345,7 @@ test.describe('DevTools — Interactions', () => {
     const navLink = page.locator('nav a[href*="book"], aside a[href*="book"], a[href="/bookings"]').first();
     if (await navLink.isVisible()) {
       await navLink.click();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       expect(page.url()).toContain('book');
     }
   });

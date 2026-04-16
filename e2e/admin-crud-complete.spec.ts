@@ -287,35 +287,35 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
     test('admin dashboard loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('body')).not.toBeEmpty();
     });
 
     test('admin users page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/users');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('body')).toContainText(/user|admin|manage/i);
     });
 
     test('admin lots page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/lots');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('body')).toContainText(/lot|parking|manage/i);
     });
 
     test('admin settings page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('body')).toContainText(/setting|config|general/i);
     });
 
     test('admin reports page loads', async ({ page }) => {
       await loginViaUi(page);
       await page.goto('/admin/reports');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await expect(page.locator('body')).not.toBeEmpty();
     });
   });

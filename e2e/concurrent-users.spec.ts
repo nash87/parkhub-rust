@@ -219,8 +219,8 @@ test.describe('Concurrent Users — Booking Conflict Detection', () => {
     await pageA.goto('/book');
     await pageB.goto('/book');
 
-    await pageA.waitForLoadState('networkidle');
-    await pageB.waitForLoadState('networkidle');
+    await pageA.waitForLoadState('domcontentloaded');
+    await pageB.waitForLoadState('domcontentloaded');
 
     // Both should see the booking page
     const bodyA = await pageA.locator('body').textContent();

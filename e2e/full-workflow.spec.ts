@@ -448,12 +448,12 @@ test.describe('Full Admin Workflow', () => {
 
 test.describe('Theme UI Switching (Browser)', () => {
   test('theme switcher FAB is visible after login', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.getByLabel(/email/i).first().fill(DEMO_ADMIN.email);
     await page.locator('input[type="password"]').first().fill(DEMO_ADMIN.password);
     await page.getByRole('button', { name: /sign in|log in|login/i }).click();
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Locating the theme switcher is best-effort — it may be behind a menu
     // or hidden on narrow viewports. Just assert the query doesn't throw.
