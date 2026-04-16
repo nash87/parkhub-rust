@@ -1,0 +1,80 @@
+name: OpenAPI Drift
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'parkhub-server/**'
+      - 'parkhub-common/**'
+      - 'docs/openapi/**'
+      - 'scripts/dump-openapi.sh'
+      - 'scripts/diff-openapi.sh'
+      - '.github/workflows/openapi-drift.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: openapi-drift-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  DEMO_MODE: 'true'
+  PARKHUB_ADMIN_PASSWORD: demo
+
+jobs:
+  drift:
+    name: utoipa spec drift check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Build server
+        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless'
+
+      - name: Start server in background
+        shell: bash
+        run: |
+          mkdir -p /tmp/parkhub-drift-db
+          ./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db > /tmp/parkhub-drift.log 2>&1 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          READY=0
+          for _i in $(seq 1 45); do
+            if curl -sf http://localhost:18181/health > /dev/null 2>&1; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy in time'
+            tail -n 50 /tmp/parkhub-drift.log
+            exit 1
+          fi
+
+      - name: Regenerate Rust OpenAPI snapshot
+        run: ./scripts/dump-openapi.sh 18181
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true
+
+      - name: Fail if snapshot drifted
+        run: |
+          if ! git diff --exit-code docs/openapi/rust.json; then
+            echo "::error::docs/openapi/rust.json is out of sync with the code."
+            echo "Run ./scripts/dump-openapi.sh locally (against a running server on 18181) and commit the updated snapshot."
+            exit 1
+          fi
+          echo "Rust OpenAPI snapshot matches the current code."
