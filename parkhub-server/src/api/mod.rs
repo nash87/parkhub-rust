@@ -150,8 +150,11 @@ pub mod plugins;
 #[cfg(feature = "mod-push")]
 #[allow(dead_code)]
 pub mod push;
-#[cfg(feature = "mod-pwa")]
-pub mod pwa;
+// mod-pwa retired: manifest.json and sw.js are served by the static
+// file handler from parkhub-web/dist/*, built from the Astro source.
+// The dynamic Rust manifest was narrower (7 fields) than the Astro one
+// (17 fields incl. screenshots, shortcuts, categories, lang, dir) and
+// shadowed the richer PWA install experience.
 #[cfg(feature = "mod-qr")]
 pub mod qr;
 pub mod rate_dashboard;
@@ -798,14 +801,10 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
             )
             .route("/api/v1/payments/config", get(stripe::stripe_config));
     }
-    #[cfg(feature = "mod-pwa")]
-    {
-        // PWA manifest (no auth). /sw.js is intentionally NOT served here —
-        // the static file handler serves the Astro-built enhanced service
-        // worker from parkhub-web/dist/sw.js (stale-while-revalidate API
-        // cache, background sync, push notifications, offline page).
-        public_routes = public_routes.route("/manifest.json", get(pwa::pwa_manifest));
-    }
+    // PWA manifest.json + sw.js: served by the static file handler from
+    // parkhub-web/dist/* (Astro-built). The former dynamic Rust handler
+    // shadowed the richer Astro manifest and service worker — see the
+    // mod-pwa retirement note above.
     #[cfg(feature = "mod-enhanced-pwa")]
     {
         // Enhanced PWA: dynamic manifest and enhanced service worker
