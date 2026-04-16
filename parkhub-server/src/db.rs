@@ -3320,6 +3320,7 @@ mod tests {
             model: Some("Model 3".to_string()),
             color: Some("White".to_string()),
             vehicle_type: parkhub_common::models::VehicleType::Electric,
+            fuel_type: parkhub_common::FuelType::Unknown,
             is_default: true,
             created_at: Utc::now(),
         }

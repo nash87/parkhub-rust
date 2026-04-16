@@ -701,6 +701,7 @@ async fn insert_booking_direct(
             model: None,
             color: None,
             vehicle_type: VehicleType::default(),
+            fuel_type: parkhub_common::FuelType::Unknown,
             is_default: false,
             created_at: now,
         },

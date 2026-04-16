@@ -413,6 +413,11 @@ pub struct Vehicle {
     pub model: Option<String>,
     pub color: Option<String>,
     pub vehicle_type: VehicleType,
+    /// Powertrain/fuel type — independent of body shape. `VehicleType::Car`
+    /// could be gasoline, diesel, hybrid, or EV. Used for CO2 accounting.
+    /// Defaults to `Unknown` for legacy records without the attribute.
+    #[serde(default)]
+    pub fuel_type: FuelType,
     pub is_default: bool,
     pub created_at: DateTime<Utc>,
 }
@@ -429,6 +434,23 @@ pub enum VehicleType {
     Truck,
     Van,
     Electric,
+}
+
+/// Powertrain / fuel type — drives the CO2 emission factor used by the
+/// `/api/v1/bookings/co2-summary` endpoint. Values mirror the DEFRA 2024
+/// and UBA (Umweltbundesamt) per-km emission tables; see
+/// `parkhub-server/src/api/co2.rs`.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum FuelType {
+    #[default]
+    Unknown,
+    Gasoline,
+    Diesel,
+    Hybrid,
+    PluginHybrid,
+    Electric,
+    Hydrogen,
 }
 
 /// Request to create a booking

@@ -12,6 +12,7 @@ use axum::{
     response::IntoResponse,
 };
 use chrono::{DateTime, Datelike, TimeDelta, Utc};
+use parkhub_common::FuelType;
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
 use uuid::Uuid;
@@ -173,6 +174,7 @@ pub async fn create_booking(
                 model: None,
                 color: None,
                 vehicle_type: VehicleType::Car,
+                fuel_type: FuelType::Unknown,
                 is_default: false,
                 created_at: Utc::now(),
             },
@@ -1298,6 +1300,7 @@ pub async fn quick_book(
             model: None,
             color: None,
             vehicle_type: VehicleType::Car,
+            fuel_type: FuelType::Unknown,
             is_default: false,
             created_at: Utc::now(),
         });
@@ -1592,7 +1595,8 @@ pub async fn update_booking(
 #[cfg(test)]
 mod tests {
     use parkhub_common::{
-        Booking, BookingPricing, BookingStatus, GuestBooking, PaymentStatus, Vehicle, VehicleType,
+        Booking, BookingPricing, BookingStatus, FuelType, GuestBooking, PaymentStatus, Vehicle,
+        VehicleType,
     };
     use uuid::Uuid;
 
@@ -1605,6 +1609,7 @@ mod tests {
             model: Some("X5".to_string()),
             color: Some("Black".to_string()),
             vehicle_type: VehicleType::Car,
+            fuel_type: FuelType::Unknown,
             is_default: true,
             created_at: chrono::Utc::now(),
         }

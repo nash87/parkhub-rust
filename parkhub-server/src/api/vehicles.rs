@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use base64::Engine;
+use parkhub_common::FuelType;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -113,6 +114,10 @@ pub async fn create_vehicle(
             .vehicle_type
             .map(|t| serde_json::from_value(serde_json::Value::String(t)).unwrap_or_default())
             .unwrap_or_default(),
+        fuel_type: req
+            .fuel_type
+            .and_then(|t| serde_json::from_value(serde_json::Value::String(t)).ok())
+            .unwrap_or(FuelType::Unknown),
         is_default: req.is_default,
         created_at: Utc::now(),
     };
