@@ -18,6 +18,10 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Security
 - **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E (`.github/workflows/e2e.yml`) and nightly (`.github/workflows/nightly.yml`) builds opt in explicitly by passing `--features headless,full,e2e-bypass`.
 
+### Changed
+- **Helm chart**: `livenessProbe` now hits the shallow `/health/live` endpoint instead of the deep `/health`. The deep check exercises the database and a memory guard, which under load spikes would restart the pod unnecessarily; the liveness contract is "is the axum listener alive", not "is the DB OK". `readinessProbe` still hits `/health/ready` so the Service endpoints controller pulls the pod out of rotation when DB is degraded. Added `terminationGracePeriodSeconds: 45` and a `preStop: sleep 15` hook so kube-proxy de-registers the pod before SIGTERM, letting in-flight axum requests drain.
+- **reqwest clients in `parkhub-server/src/api/updates.rs` and `oauth.rs`** now build with a 15 s timeout. Five previously unbounded clients — three in updates.rs (GitHub API release fetches), two in oauth.rs (Google + GitHub OAuth token exchange) — could hang a request handler forever if the remote stalled; any slow-loris upstream now returns an error after 15 s instead of blocking the worker.
+
 ### Security
 - **All GitHub Actions in `.github/workflows/` are now pinned to full commit SHAs** (v-tag kept as trailing comment) — SLSA L3 + GitHub's own security guide require SHA pins because a tag can be rewritten by the action author to point at malicious code. Covers 23 distinct actions across 11 workflow files.
 
