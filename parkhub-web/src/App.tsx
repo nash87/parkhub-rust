@@ -68,6 +68,7 @@ const AdminTranslationsPage = lazy(() => import('./views/AdminTranslations'), 'A
 const AdminAnalyticsPage = lazy(() => import('./views/AdminAnalytics'), 'AdminAnalyticsPage', '/admin/analytics');
 const AdminRateLimitsPage = lazy(() => import('./views/AdminRateLimits'), 'AdminRateLimitsPage', '/admin/rate-limits');
 const AdminTenantsPage = lazy(() => import('./views/AdminTenants'), 'AdminTenantsPage', '/admin/tenants');
+const AdminModulesPage = lazy(() => import('./views/AdminModules'), 'AdminModulesPage', '/admin/modules');
 const AdminAuditLogPage = lazy(() => import('./views/AdminAuditLog'), 'AdminAuditLogPage', '/admin/audit-log');
 const AdminDataManagementPage = lazy(() => import('./views/AdminDataManagement'), 'AdminDataManagementPage', '/admin/data');
 const AdminFleetPage = lazy(() => import('./views/AdminFleet'), 'AdminFleetPage', '/admin/fleet');
@@ -208,6 +209,7 @@ function ViewTransitionRoutes() {
           <Route path="analytics" element={<SuspenseRoute><AdminAnalyticsPage /></SuspenseRoute>} />
           <Route path="rate-limits" element={<SuspenseRoute><AdminRateLimitsPage /></SuspenseRoute>} />
           <Route path="tenants" element={<SuspenseRoute><AdminTenantsPage /></SuspenseRoute>} />
+          <Route path="modules" element={<SuspenseRoute><AdminModulesPage /></SuspenseRoute>} />
           <Route path="audit-log" element={<SuspenseRoute><AdminAuditLogPage /></SuspenseRoute>} />
           <Route path="data" element={<SuspenseRoute><AdminDataManagementPage /></SuspenseRoute>} />
           <Route path="fleet" element={<SuspenseRoute><AdminFleetPage /></SuspenseRoute>} />
