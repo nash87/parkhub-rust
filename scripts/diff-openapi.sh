@@ -28,9 +28,17 @@ fetch() {
 }
 
 extract_paths() {
-    # Normalise {id}, {uuid}, {slug} → {id} so routes that differ only in
-    # parameter name don't show up as drift.
-    jq -r '.paths | keys[]' | sed -E 's/\{[a-zA-Z_]+\}/{id}/g' | sort -u
+    # Normalise two things:
+    #   (1) `{id}` / `{uuid}` / `{slug}` → `{id}` so routes that differ only
+    #       in parameter name don't show up as drift.
+    #   (2) Missing `/api/v1` prefix. Scramble drops it when the PHP routes
+    #       live inside a `Route::prefix('v1')` group; utoipa on the Rust
+    #       side keeps it. Add it back if it's not there so the two specs
+    #       line up.
+    jq -r '.paths | keys[]' \
+        | sed -E 's/\{[a-zA-Z_]+\}/{id}/g' \
+        | awk '{ if ($0 !~ /^\/api\/v1\//) print "/api/v1" $0; else print $0 }' \
+        | sort -u
 }
 
 rust_tmp=$(mktemp)
