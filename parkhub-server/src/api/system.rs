@@ -205,7 +205,8 @@ pub async fn security_headers_middleware(request: Request<Body>, next: Next) -> 
              connect-src 'self' ws: wss:; \
              frame-ancestors 'none'; \
              base-uri 'self'; \
-             form-action 'self'",
+             form-action 'self'; \
+             object-src 'none'",
         ),
     );
     headers.insert(
