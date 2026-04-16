@@ -31,13 +31,21 @@ extract_paths() {
     # Normalise two things:
     #   (1) `{id}` / `{uuid}` / `{slug}` → `{id}` so routes that differ only
     #       in parameter name don't show up as drift.
-    #   (2) Missing `/api/v1` prefix. Scramble drops it when the PHP routes
-    #       live inside a `Route::prefix('v1')` group; utoipa on the Rust
-    #       side keeps it. Add it back if it's not there so the two specs
-    #       line up.
+    #   (2) Scramble drops either the whole `/api/v1` prefix (when the
+    #       Scramble `api_path` points at the `v1` group) or just the
+    #       `/api` half (when it points at the outer `api` group). Utoipa
+    #       on the Rust side always keeps the full `/api/v1/…` path.
+    #       Collapse both PHP variants to the Rust form: leading `/v1/…`
+    #       becomes `/api/v1/…`, and leading `/foo/…` (i.e. no `/api` and
+    #       no `/v1`) becomes `/api/v1/foo/…`.
     jq -r '.paths | keys[]' \
         | sed -E 's/\{[a-zA-Z_]+\}/{id}/g' \
-        | awk '{ if ($0 !~ /^\/api\/v1\//) print "/api/v1" $0; else print $0 }' \
+        | awk '
+            /^\/api\/v1\// { print; next }
+            /^\/v1\//       { print "/api" $0; next }
+            /^\/api\//      { sub(/^\/api/, "/api/v1"); print; next }
+            { print "/api/v1" $0 }
+          ' \
         | sort -u
 }
 
