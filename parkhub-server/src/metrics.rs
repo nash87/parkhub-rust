@@ -121,6 +121,26 @@ pub fn record_registered_users(count: u64) {
     gauge!("registered_users_total").set(count as f64);
 }
 
+/// Record a background-job run outcome.
+///
+/// `job` is one of: `"auto_release"`, `"expand_recurring"`, `"purge_expired"`,
+/// `"aggregate_occupancy"`. `success` = true on `Ok(())`, false on
+/// `Err(...)`. Exposed as `parkhub_job_runs_total{job, success}` via
+/// Prometheus so alerts can fire on sustained error rates.
+pub fn record_job_run(job: &str, success: bool) {
+    let labels = [
+        ("job", job.to_string()),
+        ("success", success.to_string()),
+    ];
+    counter!("job_runs_total", &labels).increment(1);
+}
+
+/// Record how long a background-job run took, regardless of outcome.
+pub fn record_job_duration(job: &str, duration: std::time::Duration) {
+    let labels = [("job", job.to_string())];
+    histogram!("job_duration_seconds", &labels).record(duration.as_secs_f64());
+}
+
 /// Timer for measuring operation duration
 pub struct MetricsTimer {
     start: Instant,

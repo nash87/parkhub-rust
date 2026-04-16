@@ -14,6 +14,7 @@ use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::AppState;
+use crate::metrics;
 
 pub type SharedState = Arc<RwLock<AppState>>;
 
@@ -21,66 +22,88 @@ pub type SharedState = Arc<RwLock<AppState>>;
 #[allow(clippy::needless_pass_by_value)] // state is cloned into multiple spawned tasks
 pub fn start_background_jobs(state: SharedState) {
     // ── AutoRelease: every 5 minutes ────────────────────────────────────────
-    {
-        let s = state.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
-            loop {
-                interval.tick().await;
-                if let Err(e) = auto_release_no_shows(&s).await {
-                    error!("AutoRelease job error: {e}");
-                }
-            }
-        });
-    }
+    spawn_recurring_job(
+        "auto_release",
+        state.clone(),
+        /* first_run_delay = */ None,
+        tokio::time::Duration::from_secs(300),
+        |s| Box::pin(async move { auto_release_no_shows(&s).await }),
+    );
 
     // ── ExpandRecurring: every hour ──────────────────────────────────────────
-    {
-        let s = state.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600));
-            loop {
-                interval.tick().await;
-                if let Err(e) = expand_recurring_bookings(&s).await {
-                    error!("ExpandRecurring job error: {e}");
-                }
-            }
-        });
-    }
+    spawn_recurring_job(
+        "expand_recurring",
+        state.clone(),
+        None,
+        tokio::time::Duration::from_secs(3600),
+        |s| Box::pin(async move { expand_recurring_bookings(&s).await }),
+    );
 
     // ── PurgeExpired: every 24 hours (first run after 60 s) ─────────────────
-    {
-        let s = state.clone();
-        tokio::spawn(async move {
-            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86400));
-            loop {
-                interval.tick().await;
-                if let Err(e) = purge_expired_bookings(&s).await {
-                    error!("PurgeExpired job error: {e}");
-                }
-            }
-        });
-    }
+    spawn_recurring_job(
+        "purge_expired",
+        state.clone(),
+        Some(tokio::time::Duration::from_secs(60)),
+        tokio::time::Duration::from_secs(86400),
+        |s| Box::pin(async move { purge_expired_bookings(&s).await }),
+    );
 
     // ── AggregateOccupancy: every 15 minutes ────────────────────────────────
-    {
-        let s = state.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(900));
-            loop {
-                interval.tick().await;
-                if let Err(e) = aggregate_occupancy_stats(&s).await {
-                    error!("AggregateOccupancy job error: {e}");
-                }
-            }
-        });
-    }
+    spawn_recurring_job(
+        "aggregate_occupancy",
+        state.clone(),
+        None,
+        tokio::time::Duration::from_secs(900),
+        |s| Box::pin(async move { aggregate_occupancy_stats(&s).await }),
+    );
 
     info!(
         "Background jobs started: AutoRelease (5m), ExpandRecurring (1h), \
          PurgeExpired (24h), AggregateOccupancy (15m)"
     );
+}
+
+/// Spawn a recurring background job with uniform observability.
+///
+/// Each tick runs `run`, records the wall-clock duration into the
+/// `parkhub_job_duration_seconds{job}` histogram, and increments the
+/// `parkhub_job_runs_total{job, success}` counter. An `Err` is logged at
+/// `error!` level but never propagated — a single bad run must not take
+/// down the whole scheduler. The `first_run_delay` lets slow jobs like
+/// `purge_expired` skip the initial boot storm.
+fn spawn_recurring_job<F>(
+    name: &'static str,
+    state: SharedState,
+    first_run_delay: Option<tokio::time::Duration>,
+    period: tokio::time::Duration,
+    run: F,
+) where
+    F: Fn(
+            SharedState,
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send>,
+        > + Send
+        + 'static,
+{
+    tokio::spawn(async move {
+        if let Some(delay) = first_run_delay {
+            tokio::time::sleep(delay).await;
+        }
+        let mut interval = tokio::time::interval(period);
+        loop {
+            interval.tick().await;
+            let started = std::time::Instant::now();
+            let outcome = run(state.clone()).await;
+            metrics::record_job_duration(name, started.elapsed());
+            match outcome {
+                Ok(()) => metrics::record_job_run(name, true),
+                Err(e) => {
+                    error!("{name} job error: {e:#}");
+                    metrics::record_job_run(name, false);
+                }
+            }
+        }
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
