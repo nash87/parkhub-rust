@@ -1,4 +1,11 @@
-//! PWA support — manifest.json and service worker.
+//! PWA support — dynamic manifest.json (branding-aware).
+//!
+//! The service worker is served directly by the static file handler from
+//! parkhub-web/dist/sw.js (built from parkhub-web/public/sw.js). That file
+//! is the single source of truth and ships stale-while-revalidate API
+//! caching, background sync for offline mutations, push notifications,
+//! and an offline fallback page. Do not re-introduce an inline /sw.js
+//! route here — it will shadow the enhanced SW.
 
 use axum::{
     extract::State,
@@ -42,72 +49,8 @@ pub async fn pwa_manifest(State(state): State<SharedState>) -> impl IntoResponse
     )
 }
 
-/// `GET /sw.js` — Service Worker for offline caching.
-pub async fn service_worker() -> impl IntoResponse {
-    let sw_js = r#"const CACHE_NAME = 'parkhub-v1';
-const STATIC_ASSETS = ['/'];
-self.addEventListener('install', e => e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-));
-self.addEventListener('fetch', e => {
-    if (e.request.method !== 'GET') return;
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-});
-"#;
-
-    ([(header::CONTENT_TYPE, "application/javascript")], sw_js)
-}
-
 #[cfg(test)]
 mod tests {
-    // ── Service Worker ──
-
-    #[test]
-    fn service_worker_is_valid_javascript() {
-        let sw_js = r#"const CACHE_NAME = 'parkhub-v1';
-const STATIC_ASSETS = ['/'];
-self.addEventListener('install', e => e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-));
-self.addEventListener('fetch', e => {
-    if (e.request.method !== 'GET') return;
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-});
-"#;
-        assert!(sw_js.contains("CACHE_NAME"));
-        assert!(sw_js.contains("addEventListener"));
-        assert!(sw_js.contains("install"));
-        assert!(sw_js.contains("fetch"));
-    }
-
-    #[test]
-    fn service_worker_only_caches_get_requests() {
-        let sw_js = r#"const CACHE_NAME = 'parkhub-v1';
-const STATIC_ASSETS = ['/'];
-self.addEventListener('install', e => e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-));
-self.addEventListener('fetch', e => {
-    if (e.request.method !== 'GET') return;
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-});
-"#;
-        // Verify the service worker guards against non-GET requests
-        assert!(
-            sw_js.contains("!== 'GET'"),
-            "service worker should only intercept GET requests"
-        );
-    }
-
-    #[test]
-    fn service_worker_cache_name_includes_version() {
-        let cache_name = "parkhub-v1";
-        assert!(
-            cache_name.contains("v1"),
-            "cache name should include version for cache busting"
-        );
-    }
-
     // ── PWA Manifest ──
 
     #[test]
