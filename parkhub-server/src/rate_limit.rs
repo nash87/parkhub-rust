@@ -195,14 +195,37 @@ pub struct EndpointRateLimiters {
     pub general: Arc<GlobalRateLimiter>,
 }
 
+/// Compile-time gated rate-limit bypass.
+///
+/// Only builds with the `e2e-bypass` cargo feature honor
+/// `PARKHUB_DISABLE_RATE_LIMITS`. The production Dockerfile builds with
+/// `--no-default-features --features headless`, which never enables this
+/// feature, so a leaked env var in prod can't silently disarm brute-force
+/// protection. Defense-in-depth: without the feature, seeing the env var
+/// panics so a misconfigured deployment fails loudly at startup.
+fn bypass_requested() -> bool {
+    let raw = std::env::var_os("PARKHUB_DISABLE_RATE_LIMITS");
+
+    #[cfg(not(feature = "e2e-bypass"))]
+    {
+        if raw.is_some() {
+            panic!(
+                "PARKHUB_DISABLE_RATE_LIMITS is set but this binary was not built \
+                 with the `e2e-bypass` cargo feature. Refusing to start."
+            );
+        }
+        false
+    }
+
+    #[cfg(feature = "e2e-bypass")]
+    {
+        raw.map(|v| v == "true" || v == "1").unwrap_or(false)
+    }
+}
+
 impl EndpointRateLimiters {
     pub fn new() -> Self {
-        // `PARKHUB_DISABLE_RATE_LIMITS=true` raises every per-IP limiter to an
-        // effectively-infinite budget (100_000 / minute). Only intended for
-        // E2E test runs and local dev — never set in production.
-        let disable_limits = std::env::var("PARKHUB_DISABLE_RATE_LIMITS")
-            .map(|v| v == "true" || v == "1")
-            .unwrap_or(false);
+        let disable_limits = bypass_requested();
         let rpm = |normal: u32| if disable_limits { 100_000 } else { normal };
         let period = |normal: u32, secs: u64| -> (u32, Duration) {
             if disable_limits {

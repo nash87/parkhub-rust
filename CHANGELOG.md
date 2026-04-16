@@ -7,6 +7,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Security
+- **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E (`.github/workflows/e2e.yml`) and nightly (`.github/workflows/nightly.yml`) builds opt in explicitly by passing `--features headless,full,e2e-bypass`.
+
+### Changed
+- `cargo fmt --all` applied; restores green fmt check on CI after the two previous feature commits landed unformatted.
+
+---
+
 ## [4.12.0] - 2026-04-16
 
 ### Added

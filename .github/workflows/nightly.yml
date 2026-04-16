@@ -88,8 +88,12 @@ jobs:
       - name: Build frontend
         run: cd parkhub-web && npm ci && npm run build
 
-      - name: Build server
-        run: cargo build --release --locked --package parkhub-server --no-default-features --features headless,full
+      - name: Build server (with e2e-bypass feature)
+        # e2e-bypass activates the compile-time gate that lets
+        # PARKHUB_DISABLE_RATE_LIMITS disable rate limiters for the Playwright
+        # shards below. Production Dockerfile omits this feature so the env
+        # var panics at startup if ever leaked into a prod deployment.
+        run: cargo build --release --locked --package parkhub-server --no-default-features --features headless,full,e2e-bypass
 
       - name: Upload server binary
         uses: actions/upload-artifact@v7
