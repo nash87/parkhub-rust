@@ -31,11 +31,30 @@ test.describe('Security — Access Control & Hardening', () => {
   test.describe('Admin routes blocked for regular users (UI)', () => {
     for (const route of ADMIN_ROUTES) {
       test(`${route} redirects or blocks non-admin`, async ({ page }) => {
-        // Navigate without login — should redirect to login
+        // Navigate without login. ProtectedRoute is a client-side guard
+        // that runs after React hydrates, so a bare
+        // waitForLoadState('domcontentloaded') fires before the <Navigate>
+        // redirect lands. Wait for the redirect (or an explicit 403 body)
+        // instead of reading the URL too early.
         await page.goto(route);
-        await page.waitForLoadState('domcontentloaded');
 
-        // Should either redirect to /login or show access denied
+        await page
+          .waitForFunction(
+            () => {
+              const onAuthPage =
+                location.pathname.includes('/login') ||
+                location.pathname.includes('/welcome');
+              const bodyText = document.body?.textContent ?? '';
+              const bodyBlocks =
+                /forbidden|access denied|unauthorized|not authorized/i.test(bodyText);
+              return onAuthPage || bodyBlocks;
+            },
+            { timeout: 10_000 },
+          )
+          .catch(() => {
+            /* swallow: the assertion below surfaces the real failure */
+          });
+
         const url = page.url();
         const body = await page.locator('body').textContent();
         const isBlocked =
