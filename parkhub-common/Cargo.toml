@@ -17,3 +17,8 @@ chrono.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
 utoipa = { version = "5", features = ["chrono", "uuid"] }
+
+[dev-dependencies]
+# Property-based round-trip tests for DTOs and enums. Pinned to a stable
+# release; only pulled in for `cargo test`, never in the release binary.
+proptest = "1.8"
