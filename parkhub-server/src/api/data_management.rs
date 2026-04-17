@@ -178,6 +178,9 @@ pub async fn import_users(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
+    // T-1731: imported users inherit the caller's tenant_id.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+
     let entries: Vec<UserImportEntry> = if req.format == "json" {
         match serde_json::from_str(&req.data) {
             Ok(v) => v,
@@ -307,7 +310,8 @@ pub async fn import_users(
             created_at: Utc::now(),
             updated_at: Utc::now(),
             last_login: None,
-            tenant_id: None,
+            // T-1731: inherit admin caller's tenant_id.
+            tenant_id: caller_tenant_id.clone(),
             accessibility_needs: None,
             cost_center: None,
             department: None,
@@ -350,6 +354,9 @@ pub async fn import_lots(
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
+
+    // T-1731: imported lots inherit the caller's tenant_id.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
 
     let entries: Vec<LotImportEntry> = if req.format == "json" {
         match serde_json::from_str(&req.data) {
@@ -463,7 +470,8 @@ pub async fn import_lots(
             status: LotStatus::Open,
             created_at: now,
             updated_at: now,
-            tenant_id: None,
+            // T-1731: inherit admin caller's tenant_id.
+            tenant_id: caller_tenant_id.clone(),
         };
 
         match state_guard.db.save_parking_lot(&lot).await {

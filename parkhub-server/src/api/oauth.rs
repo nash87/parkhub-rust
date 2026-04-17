@@ -664,6 +664,9 @@ async fn complete_oauth_login(
                 credits_balance: 40,
                 credits_monthly_quota: 40,
                 credits_last_refilled: Some(now),
+                // SAFETY(T-1731): OAuth callback provisions a new account for
+                // an unauthenticated caller; tenant binding is a separate
+                // (future) feature.  Matches the public-register path.
                 tenant_id: None,
                 accessibility_needs: None,
                 cost_center: None,

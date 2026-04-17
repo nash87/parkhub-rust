@@ -242,7 +242,9 @@ pub async fn create_lot(
             .unwrap_or(LotStatus::Open),
         created_at: now,
         updated_at: now,
-        tenant_id: None,
+        // T-1731: inherit the creating admin's tenant so the lot is scoped
+        // correctly when MODULE_MULTI_TENANT is enabled.
+        tenant_id: user.tenant_id.clone(),
     };
 
     // Persist the lot

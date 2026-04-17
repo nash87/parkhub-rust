@@ -581,6 +581,9 @@ pub async fn wizard_step(
                 status: parkhub_common::LotStatus::Open,
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
+                // SAFETY(T-1731): setup-wizard lot is created during initial
+                // platform bootstrap (no authenticated caller); it is a
+                // platform-owned record until a tenant claims it.
                 tenant_id: None,
             };
 

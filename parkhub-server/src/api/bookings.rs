@@ -434,7 +434,10 @@ pub async fn create_booking(
         check_out_time: None,
         qr_code: Some(Uuid::new_v4().to_string()),
         notes: req.notes,
-        tenant_id: None,
+        // T-1731: inherit the booking_user's tenant; MODULE_MULTI_TENANT is OFF
+        // today so this is typically None (flag-off default), but once the flag
+        // flips the record is already correctly partitioned.
+        tenant_id: booking_user.tenant_id.clone(),
     };
 
     // ── Phase 2: mutations under a write lock ──────────────────────────────────
@@ -1251,6 +1254,10 @@ pub async fn quick_book(
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
     let state_guard = state.write().await;
 
+    // T-1731: resolve the caller's tenant_id up-front so the booking inherits
+    // it when MODULE_MULTI_TENANT flips on.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+
     // Find first available slot in the lot
     let slots = match state_guard
         .db
@@ -1381,7 +1388,8 @@ pub async fn quick_book(
         check_out_time: None,
         qr_code: Some(Uuid::new_v4().to_string()),
         notes: Some(format!("Quick book ({booking_type})")),
-        tenant_id: None,
+        // T-1731: propagate caller's tenant_id.
+        tenant_id: caller_tenant_id.clone(),
     };
 
     if let Err(e) = state_guard.db.save_booking(&booking).await {
