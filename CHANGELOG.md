@@ -9,29 +9,82 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+_No unreleased changes._
+
+---
+
+## [4.13.0] - 2026-04-17
+
+Major release: the Modular UX platform — admins can now see, toggle, and
+configure every compiled-in module through the web UI, plus a fleet of
+security, quality, and testing-infrastructure improvements.
+
 ### Added
+
+#### Modular UX platform (T-1720 v1 + v2 + v3)
+
+- **`GET /api/v1/modules` returns enriched `ModuleInfo`**: 72 modules across 11 categories (Core, Booking, Vehicle, Admin, Payment, Integration, Analytics, Compliance, Notification, Enterprise, Experimental) with `{name, category, description, enabled, runtime_toggleable, runtime_enabled, config_keys, ui_route, depends_on, version, config_schema}`. Response envelope keeps the legacy flat `{modules: {name: bool}}` map so existing callers don't break.
+- **`GET /api/v1/modules/{name}`**: single-module detail endpoint.
+- **`PATCH /api/v1/admin/modules/{name}`** (admin-only): flip `runtime_enabled` on runtime-toggleable modules without redeploying. 15 safe modules are flagged toggleable in v1: `announcements`, `widgets`, `themes`, `favorites`, `social`, `lobby-display`, `accessible`, `calendar-drag`, `ev-charging`, `maintenance`, `geofence`, `map`, `graphql`, `api-docs`, `setup-wizard`. Security-sensitive modules (auth, payments, rbac, webhooks, audit-export, multi-tenant, notifications) keep `runtime_toggleable = false`.
+- **`GET /api/v1/admin/modules/{name}/config`** + **`PATCH /api/v1/admin/modules/{name}/config`** (admin-only, v3): per-module JSON Schema config editor. Five modules now ship a declared `config_schema`: `themes`, `announcements`, `notifications`, `email-templates`, `widgets`. PATCH validates body against the schema via the `jsonschema` 0.35 crate and persists each key as a setting. Every write emits an `AuditEventType::ConfigChanged` entry.
+- **`module_gate` middleware**: runtime-disabled modules return `404 MODULE_DISABLED` uniformly, indistinguishable from a feature that was never compiled in. Wired on 5 representative routes (`/api/v1/lots/map`, `/graphql`, `/docs`, `/announcements`, `/user/favorites`) as a proof of concept; broader coverage lands per route-table growth.
+- **Frontend `ModulesDashboard`** (`/admin/modules`): grid grouped by category, search + tag filter, per-card Status pill (green=runtime on, amber=runtime off, gray=compile-time off), config-keys count, dependency chain, Export-Config JSON download. Admin-only. v2 adds per-card toggle switch (a11y-compliant, optimistic update + toast rollback). v3 adds per-card "Configure" button that opens a modal with a hand-rolled JSON Schema form renderer (6 field shapes: string, enum, email, time, integer min/max, boolean). Zero external runtime dependencies.
+- **Frontend `CommandPalette` + `CommandPaletteProvider`** (Cmd+K / Ctrl+K / `/`): framework-agnostic `commandRegistry` with fuzzy search + predicate-gated visibility. Plugin-native — any view can `register()` commands and get automatic cleanup via `unregister()`. Provider auto-seeds default commands from `/api/v1/modules`: every active module with `ui_route` appears as a "Go to …" entry. All 10 locales (en/de/es/fr/it/ja/pl/pt/tr/zh) carry the `command.*` + `admin.modules.*` + `admin.modules.toggle.*` + `admin.modules.config.*` key sets.
+
+#### Testing infrastructure (T-1734 all 6 items shipped)
+
+- **`cargo-fuzz` skeleton** at `parkhub-server/fuzz/` with two targets: `jwt_parse` (feeds arbitrary bytes into JWT decode) and `webhook_hmac` (feeds arbitrary bytes into Stripe-style HMAC verify). Smoke runs for each: 441 k / 511 k executions in 10 s, 0 crashes. Nightly workflow at `.github/workflows/fuzz-smoke.yml` (04:00 UTC, soft-fail, 60 s per target).
+- **`proptest` coverage** in `parkhub-common` via a new `validation` module: `is_valid_email`, `is_valid_e164_phone`, `is_valid_booking_duration`, `TimeRange::{new, is_valid, duration, overlaps, contains}`. Seven property blocks × 256 default cases; unit-test count bumps by 18.
+- **`cargo-mutants` 25.3.1 nightly sweep** via `.github/workflows/mutants.yml` (03:00 UTC, soft-fail, 3 h timeout, parkhub-common scoped for v1). Config at `.cargo/mutants.toml` excludes time-dependent jobs + main.rs boilerplate.
+- **`insta` 1.47 snapshot tests** (feature `json` + `redactions`): `health`, `version`, OpenAPI metadata envelope. Redacts `.version` / `.info.version` so snapshots stay stable across version bumps.
+
+#### Security posture (T-1742 + T-1743)
+
+- **JWT revocation store** (`RevocationStore` trait) with two implementations: `InMemoryRevocationList` (single-replica default) and `RedisRevocationList` (feature-gated `redis-revocation`, fail-closed on Redis error). Refresh-token **family rotation**: every refresh issues a new `family_id`; revoking the family at reuse-detection time invalidates every descendant token. Wired into the axum bootstrap; 27 JWT tests green including 5 new family-rotation tests.
+- **Per-identity rate limiter** layered on top of the existing per-IP `tower_governor`. Six buckets keyed on `AuthUser`: `Login=10/min`, `Register=5/min`, `PasswordReset=3/min`, `Mutation=60/min`, `Read=300/min`, `Admin=120/min`. `X-RateLimit-Bucket` response header emitted. DashMap-backed with 5-minute idle eviction. Applied to pre-auth routes + dynamic classification middleware on protected routes (auth on the outside, rate-limit on the inside).
+- **Session absolute lifetime middleware** (PHP parity): honours `config('session.absolute_lifetime')` (default 1440 min / 24 h). Invalidates + 401s when `now - auth_at > lifetime`.
+
+### Changed
+
+- **Multi-tenancy enforcement** (T-1731 part 2): 7 handler sites in `api/bookings.rs`, `api/lots.rs`, `api/import.rs`, `api/data_management.rs`, `jobs.rs` now call the new `resolve_tenant_id(&state, user_id)` helper to inherit the caller's tenant on domain-object creation, replacing stub `tenant_id: None`. 10 intentionally system-owned sites (bootstrap admin, self-registration, SSO/OAuth first-login, demo seed) carry explicit `// SAFETY(T-1731):` annotations. Two new read-path filters in `admin_list_users` + `admin_list_bookings` apply tenant filter when the caller is tenant-bound, with in-memory re-pagination fallback; platform admins (role=SuperAdmin + tenant_id=None) see cross-tenant rollups as intended.
+- **Admin user writes are now cross-tenant guarded** (T-1737): `admin_update_user_role`, `admin_update_user_status`, `admin_delete_user`, `admin_update_user`, `admin_reset_user_password` all load the target and check `matches_tenant` before mutating. Cross-tenant targets return 404 (no existence leak), platform-admin override preserved.
+- **OpenAPI drift gate is authoritative**: `scripts/dump-openapi.sh` always regenerates against a fresh-built server on port 18181; three drift-fixup commits this cycle (`eed0d73`, `0083d00`) document the failure mode where `fop build` incremental cache left a stale binary after a docstring-only edit, and the `touch + cargo build` workaround now documented in the v2/v3 process notes.
+
+### Fixed
+
+- **Mobile-Safari / WebKit cookie race in e2e tests** (T-1751): `loginViaUi()` now polls `page.context().cookies()` for the `parkhub_token` / `laravel_session` / `XSRF-TOKEN` cookie after `waitForURL` returns. WebKit commits `Set-Cookie` noticeably later than Chromium, so the caller's subsequent `page.goto('/protected-route')` was racing with the cookie landing and being redirected back to `/login` at 30 s timeout.
+
+### Tests
+
+- Unit test count: `parkhub-server` 1596 → 1729 (+133). Integration tests unchanged at 93. `parkhub-common` 148 → 162.
+- New test files: `api/snapshots.rs`, `tests/property_roundtrip.rs` (via parkhub-common), 10+ module registry / PATCH / gate / policy tests, 3 regression tests asserting CONFIG_VALIDATION_FAILED envelope shape, 6 cross-tenant admin-write negative tests.
+
+### Dependencies
+
+- `jsonwebtoken` bumped to 10 (feature `rust_crypto`).
+- `redis` 1.x added (optional, feature-gated `redis-revocation`).
+- `dashmap` 6 added (per-identity rate-limit bucket map).
+- `jsonschema` 0.35 added (crate-local to `parkhub-server`, `default-features = false` — no HTTP / file retrievers).
+- `insta` 1.x added (dev-dep, `features = ["json", "redactions"]`).
+- `proptest` 1.8 extended into `parkhub-common` validators.
+- Rust base image `1.94-slim → 1.95-slim` (Dependabot).
+- Distroless `cc-debian13` digest bump (Dependabot).
+
+---
+
+### Earlier this cycle
+
 - **Legal templates for BFSG + EU AI Act** in `legal/`:
   - `bfsg-barrierefreiheit-template.md` — Accessibility Statement template per § 14 BFSG (in force since 2025-06-28), covering EN 301 549 / WCAG 2.1 AA scope, current a11y features, feedback path, Schlichtungsstelle BGG + Bundesfachstelle contact details.
   - `ai-act-transparency-template.md` — AI Act Art. 50 transparency template for the planned Occupancy Forecast (T-1717) + optional Dashboard narrative module. Classifies them as limited-risk (not high-risk Annex III), documents data basis, confidence intervals, opt-out, 90-day inference logging.
 - Both templates are mirrored from `parkhub-php/legal/` so a single source stays in sync across the two implementations.
-
-### Security
-- **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E (`.github/workflows/e2e.yml`) and nightly (`.github/workflows/nightly.yml`) builds opt in explicitly by passing `--features headless,full,e2e-bypass`.
-
-### Added
-- **Property-based round-trip tests in `parkhub-common`** via a new `proptest` dev-dependency. `tests/property_roundtrip.rs` exhaustively exercises every variant of `VehicleType`, `FuelType`, `UserRole`, `SlotType`, `SlotStatus`, `SlotFeature` through `serialise → bytes → deserialise` and asserts idempotence, plus one extra test that pins the JSON shape across a second round-trip so an asymmetric alias on either side of the HTTP boundary would fail at `cargo test`. Stable-only toolchain, no nightly / libFuzzer dependency — first deliverable of T-1734 "fuzz + property + mutation testing".
-- **Per-job Prometheus counters + duration histogram**: every background job (AutoRelease, ExpandRecurring, PurgeExpired, AggregateOccupancy) now emits `parkhub_job_runs_total{job,success}` + `parkhub_job_duration_seconds{job}`, so ops can alert on sustained error rates or runtime regressions instead of greping through logs. A new `spawn_recurring_job` helper consolidates the four near-identical spawn blocks and makes the instrumentation uniform. Verified: 12 / 12 jobs-module tests pass under `cargo test jobs`, clippy pedantic + nursery gate stays green.
-
-### Changed
-- **Helm chart**: `livenessProbe` now hits the shallow `/health/live` endpoint instead of the deep `/health`. The deep check exercises the database and a memory guard, which under load spikes would restart the pod unnecessarily; the liveness contract is "is the axum listener alive", not "is the DB OK". `readinessProbe` still hits `/health/ready` so the Service endpoints controller pulls the pod out of rotation when DB is degraded. Added `terminationGracePeriodSeconds: 45` and a `preStop: sleep 15` hook so kube-proxy de-registers the pod before SIGTERM, letting in-flight axum requests drain.
-- **reqwest clients in `parkhub-server/src/api/updates.rs` and `oauth.rs`** now build with a 15 s timeout. Five previously unbounded clients — three in updates.rs (GitHub API release fetches), two in oauth.rs (Google + GitHub OAuth token exchange) — could hang a request handler forever if the remote stalled; any slow-loris upstream now returns an error after 15 s instead of blocking the worker.
-
-### Security
-- **All GitHub Actions in `.github/workflows/` are now pinned to full commit SHAs** (v-tag kept as trailing comment) — SLSA L3 + GitHub's own security guide require SHA pins because a tag can be rewritten by the action author to point at malicious code. Covers 23 distinct actions across 11 workflow files.
-
-### Changed
-- **Lot QR codes are now rendered locally**: `GET /api/v1/lots/{id}/qr` used to return a URL pointing at `api.qrserver.com`, which leaked the operator's `base_url` plus lot IDs to a third-party service and broke the self-hosted privacy claim for air-gapped deployments. The handler now uses the `qrcode` + `image` crates (already present for booking QRs) to render a 300×300 PNG in memory and returns it as a `data:image/png;base64,…` URL in the existing `qr_url` field — same call site in the frontend, zero network calls at runtime. Two new unit tests lock down the PNG output shape and assert no-network behavior.
-- `cargo fmt --all` applied; restores green fmt check on CI after the two previous feature commits landed unformatted.
+- **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E + nightly builds opt in explicitly.
+- **Property-based round-trip tests in `parkhub-common`** via a new `proptest` dev-dependency. `tests/property_roundtrip.rs` exhaustively exercises every variant of `VehicleType`, `FuelType`, `UserRole`, `SlotType`, `SlotStatus`, `SlotFeature` through `serialise → bytes → deserialise` and asserts idempotence, plus one extra test that pins the JSON shape across a second round-trip — first deliverable of T-1734.
+- **Per-job Prometheus counters + duration histogram** on AutoRelease / ExpandRecurring / PurgeExpired / AggregateOccupancy: `parkhub_job_runs_total{job,success}` + `parkhub_job_duration_seconds{job}`. New `spawn_recurring_job` helper consolidates the four near-identical spawn blocks.
+- **Helm chart**: `livenessProbe` → shallow `/health/live`, `readinessProbe` still deep `/health/ready`. Added `terminationGracePeriodSeconds: 45` + `preStop: sleep 15` so kube-proxy de-registers before SIGTERM.
+- **reqwest clients in `updates.rs` + `oauth.rs`** now build with a 15 s timeout — five previously unbounded clients (GitHub API release fetches, Google/GitHub OAuth token exchange) can no longer hang a request handler forever.
+- **All GitHub Actions in `.github/workflows/` pinned to full commit SHAs** (v-tag as trailing comment) — SLSA L3 + GitHub security guide require SHA pins. Covers 23 distinct actions across 11 workflow files.
+- **Lot QR codes rendered locally**: `GET /api/v1/lots/{id}/qr` no longer points at `api.qrserver.com`; uses `qrcode` + `image` crates to render a 300×300 PNG in-memory as a `data:image/png;base64,…` URL. Zero network calls at runtime.
 
 ---
 
