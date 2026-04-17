@@ -104,6 +104,14 @@ USER 65532:65532
 # Environment
 ENV RUST_LOG=info
 
+# Optional: PARKHUB_REDIS_URL — consumed only when the server was compiled
+# with `--features redis-revocation` (off by default, see T-1742). Points the
+# shared JWT revocation list and refresh-token family map at an external Redis
+# so logouts survive pod restarts and propagate across multi-replica deploys.
+# When the feature is OFF, this variable is ignored. When the feature is ON
+# and this variable is UNSET, the server panics at startup with a clear message.
+# Example: PARKHUB_REDIS_URL=redis://redis.parkhub.svc:6379/0
+
 EXPOSE 10000
 
 # Health check — uses the binary's built-in --health-check mode so no shell
