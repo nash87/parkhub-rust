@@ -478,40 +478,37 @@ async fn admin_middleware(
 // `ListModulesResponse` envelope there. The legacy flat `{name: bool}`
 // map is preserved under the `modules` field for backward compatibility.
 
-/// Create the API router with `OpenAPI` docs and metrics.
-/// Returns (router, `demo_state`) so the demo state can be used for scheduled resets.
+// ═════════════════════════════════════════════════════════════════════════════
+// ROUTE-GROUP HELPERS (T-1741)
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// `create_router` composes a Router by *merging* these focused helpers, one per
+// cohesive endpoint group. Each helper returns a `Router<SharedState>` with its
+// route-local extensions/layers already applied (e.g. the per-route rate limits
+// on the pre-auth `/auth/*` sub-routers, or the `Extension(payment_store)` on
+// the payments group). Cross-cutting middleware — `auth_middleware`,
+// `admin_middleware`, the outer tower stack — is still layered in
+// `create_router` itself so the order matches the pre-split implementation
+// verbatim. No handler's visibility or request-processing order should change.
+//
+// Helpers are `#[allow(unused_variables, clippy::too_many_lines)]` because
+// feature-gated blocks may elide every use of a rate-limiter arg in a given
+// build (e.g. `--no-default-features`), and the booking/integration helpers
+// intentionally group many small route blocks by domain.
+
+/// Rate-limited, pre-auth `/api/v1/auth/*` routes (login, 2FA-login, register,
+/// forgot-password, refresh, reset-password, logout) and the standalone
+/// `/api/v1/bookings/{id}/qr` route.
 ///
-/// `revocation_store` is injected as an axum `Extension` so the `AuthUser`
-/// extractor (see `crate::jwt`) can consult it on every token validation.
-/// Callers in tests build one via `state.read().await.revocation_store.clone()`;
-/// the production `main.rs` path passes the same `Arc` it stored in `AppState`.
-#[allow(unused_mut, unused_variables)]
-pub fn create_router(
-    state: SharedState,
-    revocation_store: Arc<crate::jwt::TokenRevocationList>,
-) -> (Router, demo::SharedDemoState) {
-    // Initialize Prometheus metrics
-    let metrics_handle = metrics::init_metrics();
-
-    // Instantiate per-endpoint rate limiters
-    let rate_limiters = EndpointRateLimiters::new();
-    let global_limiter = rate_limiters.general.clone();
-    let identity_limiters = rate_limiters.identity.clone();
-
-    // Spawn the per-identity idle-entry eviction task (sweeps every 60 s).
-    // Returns `None` when no tokio runtime is available — fine in unit tests
-    // that sweep manually. Dropping the handle detaches the task; the process
-    // terminates alongside it.
-    let _identity_eviction =
-        crate::rate_limit::per_identity::spawn_eviction_task(identity_limiters.clone());
-
-    // 2FA temporary token store — shared between login and 2FA login routes
-    let two_fa_store = security::TwoFactorTempTokenStore::new();
-
-    // Rate-limited auth routes — each sub-router gets its own per-IP limiter applied
-    // via route_layer so only that specific route is affected.
-
-    // POST /api/v1/auth/login — 5 requests per minute per IP, Login bucket per identity
+/// Each sub-router has its own per-IP + per-identity rate-limit layers applied
+/// via `route_layer` (so only that route is affected), and `two_fa_store` is
+/// installed as an extension on the login + 2FA-login routes only.
+fn auth_rate_limited_routes(
+    rate_limiters: &EndpointRateLimiters,
+    identity_limiters: &Arc<IdentityRateLimiters>,
+    two_fa_store: Arc<security::TwoFactorTempTokenStore>,
+) -> Router<SharedState> {
+    // POST /api/v1/auth/login — 5/min per IP, Login bucket per identity
     let login_limiter = rate_limiters.login.clone();
     let login_identity = identity_limiters.clone();
     let login_route = Router::new()
@@ -529,7 +526,7 @@ pub fn create_router(
             ip_rate_limit_middleware(login_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/2fa/login — 5 requests per minute per IP, Login bucket per identity
+    // POST /api/v1/auth/2fa/login — 5/min per IP, Login bucket per identity
     let two_fa_login_limiter = rate_limiters.login.clone();
     let two_fa_login_identity = identity_limiters.clone();
     let two_fa_login_route = Router::new()
@@ -547,7 +544,7 @@ pub fn create_router(
             ip_rate_limit_middleware(two_fa_login_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/register — 3 requests per minute per IP, Register bucket per identity
+    // POST /api/v1/auth/register — 3/min per IP, Register bucket per identity
     let register_limiter = rate_limiters.register.clone();
     let register_identity = identity_limiters.clone();
     let register_route = Router::new()
@@ -564,7 +561,7 @@ pub fn create_router(
             ip_rate_limit_middleware(register_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/forgot-password — 3/15 min per IP, PasswordReset bucket per identity
+    // POST /api/v1/auth/forgot-password — 3/15 min per IP, PasswordReset bucket
     let forgot_limiter = rate_limiters.forgot_password.clone();
     let forgot_identity = identity_limiters.clone();
     let forgot_route = Router::new()
@@ -581,9 +578,7 @@ pub fn create_router(
             ip_rate_limit_middleware(forgot_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/refresh — 10 requests per minute per IP
-    // Token refresh uses Mutation bucket per identity (refresh is a state-changing
-    // rotation, so it's grouped with writes rather than reads).
+    // POST /api/v1/auth/refresh — 10/min per IP, Mutation bucket per identity
     let refresh_limiter = rate_limiters.token_refresh.clone();
     let refresh_identity = identity_limiters.clone();
     let refresh_route = Router::new()
@@ -600,7 +595,7 @@ pub fn create_router(
             ip_rate_limit_middleware(refresh_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/reset-password — 5/15 min per IP, PasswordReset bucket per identity
+    // POST /api/v1/auth/reset-password — 5/15 min per IP, PasswordReset bucket
     let reset_pw_limiter = rate_limiters.password_reset.clone();
     let reset_pw_identity = identity_limiters.clone();
     let reset_password_route = Router::new()
@@ -620,23 +615,38 @@ pub fn create_router(
     // POST /api/v1/auth/logout — clears httpOnly cookie, invalidates session
     let logout_route = Router::new().route("/api/v1/auth/logout", post(logout));
 
-    // GET /api/v1/bookings/:id/qr — 10 requests per minute per IP (QR pass generation)
-    #[cfg(feature = "mod-qr")]
-    let qr_route = {
-        let qr_limiter = rate_limiters.qr_pass.clone();
-        Router::new()
-            .route("/api/v1/bookings/{id}/qr", get(qr::booking_qr_code))
-            .route_layer(middleware::from_fn_with_state(
-                state.clone(),
-                auth_middleware,
-            ))
-            .route_layer(middleware::from_fn(move |req, next| {
-                ip_rate_limit_middleware(qr_limiter.clone(), req, next)
-            }))
-    };
+    Router::new()
+        .merge(login_route)
+        .merge(two_fa_login_route)
+        .merge(register_route)
+        .merge(forgot_route)
+        .merge(refresh_route)
+        .merge(reset_password_route)
+        .merge(logout_route)
+}
 
-    // Remaining public routes (no rate limiting needed)
-    let mut public_routes = Router::new()
+/// Standalone QR pass route — 10/min per IP, auth-middleware applied inside
+/// the sub-router (not by the outer protected-routes auth layer).
+#[cfg(feature = "mod-qr")]
+fn qr_pass_route(state: SharedState, rate_limiters: &EndpointRateLimiters) -> Router<SharedState> {
+    let qr_limiter = rate_limiters.qr_pass.clone();
+    Router::new()
+        .route("/api/v1/bookings/{id}/qr", get(qr::booking_qr_code))
+        .route_layer(middleware::from_fn_with_state(state, auth_middleware))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(qr_limiter.clone(), req, next)
+        }))
+}
+
+/// Public (unauthenticated) routes: health, setup, module registry, legal,
+/// WebSocket handshake, and all feature-gated public surfaces (docs, graphql
+/// playground, pass verification, shared booking view, version + changelog,
+/// audit-export download, calendar iCal by token, feature flags + theme,
+/// active announcements, VAPID key, map markers, Stripe webhook + config,
+/// PWA manifest, branding logo, SSO + OAuth entry points, lobby display).
+#[allow(unused_variables, clippy::too_many_lines)]
+fn public_routes(state: &SharedState, rate_limiters: &EndpointRateLimiters) -> Router<SharedState> {
+    let mut router = Router::new()
         .route("/health", get(health_check))
         .route("/health/live", get(liveness_check))
         .route("/health/ready", get(readiness_check))
@@ -648,17 +658,10 @@ pub fn create_router(
         // Module registry — public (compile-time feature introspection
         // plus category/description/config-keys/UI-deep-links/dependencies
         // for the admin Modules Dashboard and the Command Palette).
-        //
-        // `GET /api/v1/modules` returns the enriched envelope
-        // `{ modules: {name: bool}, module_info: [...], version }`.
-        // The flat Boolean `modules` map is preserved verbatim for
-        // backward compatibility with older clients + contract tests.
         .route("/api/v1/modules", get(modules::list_modules))
         .route("/api/v1/modules/{name}", get(modules::get_module))
         // Legacy aliases — the enriched endpoint used to live at
-        // `/api/v1/modules/info`. Kept as aliases so older frontends
-        // keep working during the rollout. New callers should use
-        // `/api/v1/modules` directly.
+        // `/api/v1/modules/info`. Kept so older frontends keep working.
         .route("/api/v1/modules/info", get(modules::list_modules))
         .route("/api/v1/modules/info/{name}", get(modules::get_module))
         // Setup wizard — only works before initial setup is completed
@@ -676,7 +679,7 @@ pub fn create_router(
     // Setup wizard (multi-step onboarding) — public for initial setup
     #[cfg(feature = "mod-setup-wizard")]
     {
-        public_routes = public_routes
+        router = router
             .route("/api/v1/setup/wizard/status", get(system::wizard_status))
             .route("/api/v1/setup/wizard", post(system::wizard_step));
     }
@@ -691,13 +694,13 @@ pub fn create_router(
                 ip_rate_limit_middleware(lobby_limiter.clone(), req, next)
             }))
             .with_state(state.clone());
-        public_routes = public_routes.merge(lobby_route);
+        router = router.merge(lobby_route);
     }
 
     // Interactive API documentation (public)
     #[cfg(feature = "mod-api-docs")]
     {
-        public_routes = public_routes
+        router = router
             .route("/api/v1/docs", get(api_docs::api_docs_ui))
             .route(
                 "/api/v1/docs/openapi.json",
@@ -712,7 +715,7 @@ pub fn create_router(
     // GraphQL playground (public, no auth — playground UI)
     #[cfg(feature = "mod-graphql")]
     {
-        public_routes = public_routes
+        router = router
             .route(
                 "/api/v1/graphql/playground",
                 get(graphql::graphql_playground),
@@ -723,20 +726,19 @@ pub fn create_router(
     // Public pass verification (no auth needed — used by QR scan)
     #[cfg(feature = "mod-parking-pass")]
     {
-        public_routes = public_routes.route("/api/v1/pass/verify/{code}", get(verify_pass));
+        router = router.route("/api/v1/pass/verify/{code}", get(verify_pass));
     }
 
     // Shared booking view (public, no auth — accessed via share link)
     #[cfg(feature = "mod-sharing")]
     {
-        public_routes =
-            public_routes.route("/api/v1/shared/{code}", get(sharing::get_shared_booking));
+        router = router.route("/api/v1/shared/{code}", get(sharing::get_shared_booking));
     }
 
     // API versioning (public, no auth — version and changelog info)
     #[cfg(feature = "mod-api-versioning")]
     {
-        public_routes = public_routes
+        router = router
             .route("/api/v1/version", get(versioning::api_version))
             .route("/api/v1/changelog", get(versioning::api_changelog));
     }
@@ -744,90 +746,71 @@ pub fn create_router(
     // Audit export download — token-based auth (no bearer needed)
     #[cfg(feature = "mod-audit-export")]
     {
-        public_routes = public_routes.route(
+        router = router.route(
             "/api/v1/admin/audit-log/export/download/{token}",
             get(audit_export::download_audit_export),
         );
     }
 
-    // Calendar iCal via personal subscription token — public (no auth, token in URL)
+    // Calendar iCal via personal subscription token — public (token in URL)
     #[cfg(feature = "mod-calendar")]
     {
-        public_routes =
-            public_routes.route("/api/v1/calendar/ical/{token}", get(calendar_ical_by_token));
+        router = router.route("/api/v1/calendar/ical/{token}", get(calendar_ical_by_token));
     }
 
-    // Feature-gated public routes
+    // Feature flags + public theme — frontend needs these before auth
     #[cfg(feature = "mod-settings")]
     {
-        // Feature flags — public (frontend needs to know which features are enabled)
-        public_routes = public_routes
+        router = router
             .route("/api/v1/features", get(get_features))
-            // Theme — public (frontend needs theme before auth for login page styling)
             .route("/api/v1/theme", get(get_public_theme));
     }
     #[cfg(feature = "mod-announcements")]
     {
-        // Announcements — public (active announcements visible without auth)
-        public_routes = public_routes.route(
+        router = router.route(
             "/api/v1/announcements/active",
             get(get_active_announcements),
         );
     }
     #[cfg(feature = "mod-push")]
     {
-        // VAPID public key (no auth — frontend needs it before login)
-        public_routes = public_routes.route("/api/v1/push/vapid-key", get(push::get_vapid_key));
+        router = router.route("/api/v1/push/vapid-key", get(push::get_vapid_key));
     }
     #[cfg(feature = "mod-map")]
     {
-        // Map markers — public (frontend shows map without auth)
-        public_routes = public_routes.route("/api/v1/lots/map", get(map::list_lot_markers));
+        router = router.route("/api/v1/lots/map", get(map::list_lot_markers));
     }
     #[cfg(feature = "mod-stripe")]
     {
-        // Stripe webhook (no auth — Stripe calls this endpoint directly)
-        // Stripe config (public — frontend needs to know if Stripe is available)
-        public_routes = public_routes
+        router = router
             .route(
                 "/api/v1/payments/webhook",
                 post(stripe::stripe_webhook).layer(Extension(stripe::new_checkout_store())),
             )
             .route("/api/v1/payments/config", get(stripe::stripe_config));
     }
-    // PWA manifest.json + sw.js: served by the static file handler from
-    // parkhub-web/dist/* (Astro-built). The former dynamic Rust handler
-    // shadowed the richer Astro manifest and service worker — see the
-    // mod-pwa retirement note above.
     #[cfg(feature = "mod-enhanced-pwa")]
     {
         // Enhanced PWA: dynamic manifest with branding + offline booking data.
-        // The /sw-v2.js route was retired — the frontend registers /sw.js
-        // (the Astro-built SW in parkhub-web/dist) and that ships a richer
-        // offline strategy than the inline stub that sw-v2 used to serve.
-        public_routes = public_routes.route(
+        router = router.route(
             "/api/v1/pwa/manifest",
             get(enhanced_pwa::pwa_dynamic_manifest),
         );
     }
     #[cfg(feature = "mod-branding")]
     {
-        // Branding logo (public, cached)
-        public_routes =
-            public_routes.route("/api/v1/branding/logo", get(branding::get_branding_logo));
+        router = router.route("/api/v1/branding/logo", get(branding::get_branding_logo));
     }
     #[cfg(feature = "mod-sso")]
     {
-        // SSO: providers list (public, no auth) + login redirect + callback
-        public_routes = public_routes
+        router = router
             .route("/api/v1/auth/sso/providers", get(sso_list_providers))
             .route("/api/v1/auth/sso/{provider}/login", get(sso_login))
             .route("/api/v1/auth/sso/{provider}/callback", post(sso_callback));
     }
     #[cfg(feature = "mod-oauth")]
     {
-        // OAuth: providers list (public, no auth) + redirect + callback
-        public_routes = public_routes
+        router = router
             .route("/api/v1/auth/oauth/providers", get(oauth::oauth_providers))
             .route(
                 "/api/v1/auth/oauth/google",
@@ -847,8 +830,15 @@ pub fn create_router(
             );
     }
 
-    // Protected routes (auth required) — core user + admin routes
-    let mut protected_routes = Router::new()
+    router
+}
+
+/// Core user routes: `/users/me`, `/me` alias, password change, GDPR
+/// export/delete, admin user lookup, plus the user stats + preferences,
+/// security (2FA / sessions / API keys / login history), and
+/// notification/theme preference endpoints.
+fn user_core_routes() -> Router<SharedState> {
+    Router::new()
         .route(
             "/api/v1/users/me",
             get(get_current_user).put(update_current_user),
@@ -863,6 +853,13 @@ pub fn create_router(
         )
         // Admin-only: retrieve any user by ID
         .route("/api/v1/users/{id}", get(get_user))
+}
+
+/// Core lot + slot CRUD, per-lot pricing, dynamic pricing (read), operating
+/// hours (read), lot QR code, plus user stats and preference endpoints.
+#[allow(unused_mut)]
+fn lot_core_routes() -> Router<SharedState> {
+    let mut router = Router::new()
         .route("/api/v1/lots", get(list_lots).post(create_lot))
         .route(
             "/api/v1/lots/{id}",
@@ -885,7 +882,7 @@ pub fn create_router(
     // Dynamic pricing (occupancy-based) — user-facing read endpoint
     #[cfg(feature = "mod-dynamic-pricing")]
     {
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/lots/{id}/pricing/dynamic",
             get(dynamic_pricing::get_dynamic_pricing),
         );
@@ -894,13 +891,13 @@ pub fn create_router(
     // Operating hours — user-facing read endpoint
     #[cfg(feature = "mod-operating-hours")]
     {
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/lots/{id}/hours",
             get(operating_hours::get_operating_hours),
         );
     }
 
-    protected_routes = protected_routes
+    router
         // QR code for lot
         .route("/api/v1/lots/{id}/qr", get(lot_qr_code))
         // User stats & preferences
@@ -909,6 +906,12 @@ pub fn create_router(
             "/api/v1/user/preferences",
             get(get_user_preferences).put(update_user_preferences),
         )
+}
+
+/// Per-user security + preference routes: 2FA lifecycle, login history,
+/// session management, API keys, notification preferences, design theme.
+fn user_security_routes() -> Router<SharedState> {
+    Router::new()
         // ── Security: 2FA ──
         .route("/api/v1/auth/2fa/setup", post(security::two_factor_setup))
         .route("/api/v1/auth/2fa/verify", post(security::two_factor_verify))
@@ -936,13 +939,17 @@ pub fn create_router(
             "/api/v1/preferences/theme",
             get(admin_ext::get_design_theme_preference)
                 .put(admin_ext::update_design_theme_preference),
-        );
+        )
+}
 
-    // ── Admin routes (guarded by admin_middleware) ────────────────────────
-    // All /api/v1/admin/* routes are grouped under a shared admin_middleware
-    // layer (issue #109) providing defense-in-depth: even if a handler forgets
-    // to call check_admin(), the middleware rejects non-admin users.
-    let admin_routes = Router::new()
+/// Admin sub-router — every `/api/v1/admin/*` route that is gated by the
+/// shared `admin_middleware` layer (issue #109). Returns the router *without*
+/// the middleware layer applied; `create_router` wraps the merged router in
+/// `from_fn_with_state(state, admin_middleware)` before merging it into the
+/// protected surface, matching the pre-split middleware order verbatim.
+#[allow(unused_mut, clippy::too_many_lines)]
+fn admin_core_routes() -> Router<SharedState> {
+    let mut admin_routes = Router::new()
         .route(
             "/api/v1/admin/impressum",
             get(get_impressum_admin).put(update_impressum),
@@ -972,33 +979,39 @@ pub fn create_router(
         );
 
     #[cfg(feature = "mod-audit-export")]
-    let admin_routes = admin_routes.route(
-        "/api/v1/admin/audit-log/export/enhanced",
-        get(audit_export::enhanced_audit_export),
-    );
+    {
+        admin_routes = admin_routes.route(
+            "/api/v1/admin/audit-log/export/enhanced",
+            get(audit_export::enhanced_audit_export),
+        );
+    }
 
     #[cfg(feature = "mod-analytics")]
-    let admin_routes = admin_routes.route(
-        "/api/v1/admin/analytics/overview",
-        get(analytics::analytics_overview),
-    );
+    {
+        admin_routes = admin_routes.route(
+            "/api/v1/admin/analytics/overview",
+            get(analytics::analytics_overview),
+        );
+    }
 
     #[cfg(feature = "mod-admin-analytics")]
-    let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/analytics/occupancy",
-            get(admin_analytics::admin_occupancy),
-        )
-        .route(
-            "/api/v1/admin/analytics/revenue",
-            get(admin_analytics::admin_revenue_summary),
-        )
-        .route(
-            "/api/v1/admin/analytics/popular-lots",
-            get(admin_analytics::admin_popular_lots),
-        );
+    {
+        admin_routes = admin_routes
+            .route(
+                "/api/v1/admin/analytics/occupancy",
+                get(admin_analytics::admin_occupancy),
+            )
+            .route(
+                "/api/v1/admin/analytics/revenue",
+                get(admin_analytics::admin_revenue_summary),
+            )
+            .route(
+                "/api/v1/admin/analytics/popular-lots",
+                get(admin_analytics::admin_popular_lots),
+            );
+    }
 
-    let admin_routes = admin_routes
+    admin_routes = admin_routes
         .route("/api/v1/admin/reset", post(admin_reset))
         .route(
             "/api/v1/admin/settings/auto-release",
@@ -1066,116 +1079,134 @@ pub fn create_router(
         );
 
     #[cfg(feature = "mod-multi-tenant")]
-    let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/tenants",
-            get(tenants::list_tenants).post(tenants::create_tenant),
-        )
-        .route("/api/v1/admin/tenants/{id}", put(tenants::update_tenant));
+    {
+        admin_routes = admin_routes
+            .route(
+                "/api/v1/admin/tenants",
+                get(tenants::list_tenants).post(tenants::create_tenant),
+            )
+            .route("/api/v1/admin/tenants/{id}", put(tenants::update_tenant));
+    }
 
     #[cfg(feature = "mod-geofence")]
-    let admin_routes =
-        admin_routes.route("/api/v1/admin/lots/{id}/geofence", put(admin_set_geofence));
+    {
+        admin_routes =
+            admin_routes.route("/api/v1/admin/lots/{id}/geofence", put(admin_set_geofence));
+    }
 
     #[cfg(feature = "mod-widgets")]
-    let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/widgets",
-            get(get_widget_layout).put(save_widget_layout),
-        )
-        .route(
-            "/api/v1/admin/widgets/data/{widget_id}",
-            get(get_widget_data),
-        );
+    {
+        admin_routes = admin_routes
+            .route(
+                "/api/v1/admin/widgets",
+                get(get_widget_layout).put(save_widget_layout),
+            )
+            .route(
+                "/api/v1/admin/widgets/data/{widget_id}",
+                get(get_widget_data),
+            );
+    }
 
     #[cfg(feature = "mod-plugins")]
-    let admin_routes = admin_routes
-        .route("/api/v1/admin/plugins", get(plugins::list_plugins))
-        .route(
-            "/api/v1/admin/plugins/{id}/toggle",
-            put(plugins::toggle_plugin),
-        )
-        .route(
-            "/api/v1/admin/plugins/{id}/config",
-            get(plugins::get_plugin_config).put(plugins::update_plugin_config),
-        );
+    {
+        admin_routes = admin_routes
+            .route("/api/v1/admin/plugins", get(plugins::list_plugins))
+            .route(
+                "/api/v1/admin/plugins/{id}/toggle",
+                put(plugins::toggle_plugin),
+            )
+            .route(
+                "/api/v1/admin/plugins/{id}/config",
+                get(plugins::get_plugin_config).put(plugins::update_plugin_config),
+            );
+    }
 
     #[cfg(feature = "mod-compliance")]
-    let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/compliance/report",
-            get(compliance::compliance_report),
-        )
-        .route(
-            "/api/v1/admin/compliance/report/pdf",
-            get(compliance::compliance_report_pdf),
-        )
-        .route(
-            "/api/v1/admin/compliance/data-map",
-            get(compliance::compliance_data_map),
-        )
-        .route(
-            "/api/v1/admin/compliance/audit-export",
-            get(compliance::compliance_audit_export),
-        );
+    {
+        admin_routes = admin_routes
+            .route(
+                "/api/v1/admin/compliance/report",
+                get(compliance::compliance_report),
+            )
+            .route(
+                "/api/v1/admin/compliance/report/pdf",
+                get(compliance::compliance_report_pdf),
+            )
+            .route(
+                "/api/v1/admin/compliance/data-map",
+                get(compliance::compliance_data_map),
+            )
+            .route(
+                "/api/v1/admin/compliance/audit-export",
+                get(compliance::compliance_audit_export),
+            );
+    }
 
     #[cfg(feature = "mod-scheduled-reports")]
-    let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/reports/schedules",
-            get(scheduled_reports::list_schedules).post(scheduled_reports::create_schedule),
-        )
-        .route(
-            "/api/v1/admin/reports/schedules/{id}",
-            put(scheduled_reports::update_schedule).delete(scheduled_reports::delete_schedule),
-        )
-        .route(
-            "/api/v1/admin/reports/schedules/{id}/send-now",
-            post(scheduled_reports::send_now),
-        );
+    {
+        admin_routes = admin_routes
+            .route(
+                "/api/v1/admin/reports/schedules",
+                get(scheduled_reports::list_schedules).post(scheduled_reports::create_schedule),
+            )
+            .route(
+                "/api/v1/admin/reports/schedules/{id}",
+                put(scheduled_reports::update_schedule).delete(scheduled_reports::delete_schedule),
+            )
+            .route(
+                "/api/v1/admin/reports/schedules/{id}/send-now",
+                post(scheduled_reports::send_now),
+            );
+    }
 
     #[cfg(feature = "mod-sso")]
-    let admin_routes = admin_routes.route(
-        "/api/v1/admin/sso/{provider}",
-        put(sso_configure_provider).delete(sso_delete_provider),
-    );
+    {
+        admin_routes = admin_routes.route(
+            "/api/v1/admin/sso/{provider}",
+            put(sso_configure_provider).delete(sso_delete_provider),
+        );
+    }
 
     #[cfg(feature = "mod-webhooks-v2")]
-    let admin_routes = admin_routes
-        .route(
-            "/api/v1/admin/webhooks-v2",
-            get(webhooks_v2::list_webhooks_v2).post(webhooks_v2::create_webhook_v2),
-        )
-        .route(
-            "/api/v1/admin/webhooks-v2/{id}",
-            put(webhooks_v2::update_webhook_v2).delete(webhooks_v2::delete_webhook_v2),
-        )
-        .route(
-            "/api/v1/admin/webhooks-v2/{id}/test",
-            post(webhooks_v2::test_webhook_v2),
-        )
-        .route(
-            "/api/v1/admin/webhooks-v2/{id}/deliveries",
-            get(webhooks_v2::list_deliveries_v2),
-        );
+    {
+        admin_routes = admin_routes
+            .route(
+                "/api/v1/admin/webhooks-v2",
+                get(webhooks_v2::list_webhooks_v2).post(webhooks_v2::create_webhook_v2),
+            )
+            .route(
+                "/api/v1/admin/webhooks-v2/{id}",
+                put(webhooks_v2::update_webhook_v2).delete(webhooks_v2::delete_webhook_v2),
+            )
+            .route(
+                "/api/v1/admin/webhooks-v2/{id}/test",
+                post(webhooks_v2::test_webhook_v2),
+            )
+            .route(
+                "/api/v1/admin/webhooks-v2/{id}/deliveries",
+                get(webhooks_v2::list_deliveries_v2),
+            );
+    }
 
     #[cfg(feature = "mod-rbac")]
-    let admin_routes = admin_routes
-        .route("/api/v1/admin/roles", get(list_roles).post(create_role))
-        .route(
-            "/api/v1/admin/roles/{id}",
-            put(update_role).delete(delete_role),
-        )
-        .route(
-            "/api/v1/admin/users/{id}/roles",
-            get(get_user_roles).put(assign_user_roles),
-        );
+    {
+        admin_routes = admin_routes
+            .route("/api/v1/admin/roles", get(list_roles).post(create_role))
+            .route(
+                "/api/v1/admin/roles/{id}",
+                put(update_role).delete(delete_role),
+            )
+            .route(
+                "/api/v1/admin/users/{id}/roles",
+                get(get_user_roles).put(assign_user_roles),
+            );
+    }
 
     // ── Module runtime toggle — PATCH /api/v1/admin/modules/{name} ──
     // Flips the `module.{name}.runtime_enabled` admin setting for a
     // runtime-toggleable module. Security-sensitive modules return 409.
     // See `parkhub-server/src/api/modules.rs` for the allow-list policy.
-    let admin_routes = admin_routes.route(
+    admin_routes = admin_routes.route(
         "/api/v1/admin/modules/{name}",
         axum::routing::patch(modules::patch_admin_module),
     );
@@ -1185,24 +1216,23 @@ pub fn create_router(
     // under `module.{name}.config.{field}`. Admin-gated by the shared
     // admin_middleware layer; the handlers also call `check_admin` as
     // defense-in-depth (same pattern as `patch_admin_module`).
-    let admin_routes = admin_routes.route(
+    admin_routes.route(
         "/api/v1/admin/modules/{name}/config",
         get(modules::get_module_config).patch(modules::patch_module_config),
-    );
+    )
+}
 
-    let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
-        state.clone(),
-        admin_middleware,
-    ));
-
-    // Merge admin routes into protected routes
-    protected_routes = protected_routes.merge(admin_routes);
-
-    // ── Feature-gated protected routes ──────────────────────────────────────
+/// Booking + lot-adjacent protected routes: bookings CRUD, sharing, history,
+/// geofence check-in, waitlist-ext, parking-pass, calendar drag-reschedule,
+/// graphql query, invoice PDF, slot QR, zones, parking-zones pricing, smart
+/// recommendations.
+#[allow(unused_mut)]
+fn booking_protected_routes() -> Router<SharedState> {
+    let mut router = Router::new();
 
     #[cfg(feature = "mod-bookings")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/bookings", get(list_bookings).post(create_booking))
             .route(
                 "/api/v1/bookings/{id}",
@@ -1217,7 +1247,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-sharing")]
     {
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/bookings/{id}/share",
                 post(sharing::create_share_link).delete(sharing::revoke_share_link),
@@ -1227,7 +1257,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-history")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/bookings/history", get(booking_history))
             .route("/api/v1/bookings/stats", get(booking_stats))
             .route("/api/v1/bookings/co2-summary", get(co2::co2_summary));
@@ -1235,14 +1265,14 @@ pub fn create_router(
 
     #[cfg(feature = "mod-geofence")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/geofence/check-in", post(geofence_check_in))
             .route("/api/v1/lots/{id}/geofence", get(get_lot_geofence));
     }
 
     #[cfg(feature = "mod-waitlist-ext")]
     {
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/lots/{id}/waitlist/subscribe",
                 post(subscribe_waitlist),
@@ -1263,29 +1293,24 @@ pub fn create_router(
 
     #[cfg(feature = "mod-parking-pass")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/bookings/{id}/pass", get(get_booking_pass))
             .route("/api/v1/me/passes", get(list_my_passes));
     }
 
     #[cfg(feature = "mod-calendar-drag")]
     {
-        // Calendar drag-to-reschedule
-        protected_routes =
-            protected_routes.route("/api/v1/bookings/{id}/reschedule", put(reschedule_booking));
+        router = router.route("/api/v1/bookings/{id}/reschedule", put(reschedule_booking));
     }
 
     #[cfg(feature = "mod-graphql")]
     {
-        // GraphQL query/mutation endpoint (auth required)
-        protected_routes =
-            protected_routes.route("/api/v1/graphql", post(graphql::graphql_execute));
+        router = router.route("/api/v1/graphql", post(graphql::graphql_execute));
     }
 
     #[cfg(feature = "mod-invoices")]
     {
-        // PDF invoice download
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/bookings/{id}/invoice/pdf",
             get(invoices::get_booking_invoice_pdf),
         );
@@ -1293,8 +1318,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-qr")]
     {
-        // QR code for individual slot
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/lots/{lot_id}/slots/{slot_id}/qr",
             get(qr::slot_qr_code),
         );
@@ -1302,8 +1326,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-zones")]
     {
-        // Zones (admin-only CRUD, nested under lots)
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/lots/{lot_id}/zones",
                 get(list_zones).post(create_zone),
@@ -1316,8 +1339,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-parking-zones")]
     {
-        // Zone pricing tiers
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/lots/{id}/zones/pricing",
                 get(parking_zones::list_zones_pricing),
@@ -1334,8 +1356,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-recommendations")]
     {
-        // Smart parking recommendations
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/bookings/recommendations", get(get_recommendations))
             .route(
                 "/api/v1/recommendations/stats",
@@ -1343,9 +1364,20 @@ pub fn create_router(
             );
     }
 
+    router
+}
+
+/// Vehicle routes: list/create, city-codes lookup, update/delete, photo
+/// upload/fetch. `city-codes` is registered before `{id}` to avoid axum's
+/// parameter capture swallowing the literal path.
+#[allow(unused_mut)]
+fn vehicle_routes() -> Router<SharedState> {
+    #[allow(unused_mut)]
+    let mut router = Router::new();
+
     #[cfg(feature = "mod-vehicles")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/vehicles", get(list_vehicles).post(create_vehicle))
             // City codes must come before {id} to avoid parameter capture
             .route("/api/v1/vehicles/city-codes", get(vehicle_city_codes))
@@ -1360,10 +1392,20 @@ pub fn create_router(
             );
     }
 
+    router
+}
+
+/// Credits, favorites, and settings/feature-flag admin endpoints. Groups
+/// balance+admin-quota, favorite CRUD, feature flag + system-settings admin
+/// surface, dynamic-pricing admin rules, operating-hours admin, import/export
+/// and data-management admin endpoints, plus the fleet admin surface.
+#[allow(unused_mut, clippy::too_many_lines)]
+fn settings_and_data_routes() -> Router<SharedState> {
+    let mut router = Router::new();
+
     #[cfg(feature = "mod-credits")]
     {
-        // Credits
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/user/credits", get(get_user_credits))
             // Admin-only: credits management
             .route(
@@ -1386,8 +1428,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-favorites")]
     {
-        // Favorites (user-authenticated)
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/user/favorites",
                 get(list_favorites).post(add_favorite),
@@ -1397,13 +1438,11 @@ pub fn create_router(
 
     #[cfg(feature = "mod-settings")]
     {
-        // Admin-only: feature flags management
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/admin/features",
                 get(admin_get_features).put(admin_update_features),
             )
-            // Admin-only: system settings
             .route(
                 "/api/v1/admin/settings",
                 get(admin_get_settings).put(admin_update_settings),
@@ -1413,8 +1452,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-dynamic-pricing")]
     {
-        // Admin-only: dynamic pricing rules management
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/admin/lots/{id}/pricing/dynamic",
             get(dynamic_pricing::admin_get_dynamic_pricing_rules)
                 .put(dynamic_pricing::admin_update_dynamic_pricing_rules),
@@ -1423,8 +1461,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-operating-hours")]
     {
-        // Admin-only: operating hours management
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/admin/lots/{id}/hours",
             put(operating_hours::admin_update_operating_hours),
         );
@@ -1432,14 +1469,12 @@ pub fn create_router(
 
     #[cfg(feature = "mod-import")]
     {
-        // Admin-only: CSV import
-        protected_routes =
-            protected_routes.route("/api/v1/admin/users/import", post(import_users_csv));
+        router = router.route("/api/v1/admin/users/import", post(import_users_csv));
     }
 
     #[cfg(feature = "mod-export")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/admin/export/users", get(admin_export_users_csv))
             .route(
                 "/api/v1/admin/export/bookings",
@@ -1453,7 +1488,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-data-import")]
     {
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/admin/import/users",
                 post(data_management::import_users),
@@ -1478,7 +1513,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-fleet")]
     {
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/admin/fleet", get(fleet::admin_fleet_list))
             .route("/api/v1/admin/fleet/stats", get(fleet::admin_fleet_stats))
             .route(
@@ -1487,8 +1522,12 @@ pub fn create_router(
             );
     }
 
-    // Self-update system (always available for admin)
-    protected_routes = protected_routes
+    router
+}
+
+/// Self-update system — always available for admin (not feature-gated).
+fn updates_routes() -> Router<SharedState> {
+    Router::new()
         .route(
             "/api/v1/admin/updates/check",
             get(updates::check_for_updates),
@@ -1505,11 +1544,20 @@ pub fn create_router(
         .route(
             "/api/v1/admin/updates/rollback",
             post(updates::rollback_update),
-        );
+        )
+}
+
+/// Domain feature routes: accessible slots, maintenance, cost-center billing,
+/// EV charging, absences + absence-approval + iCal import, team, announcements
+/// admin, notifications, mobile quick-book, notification center, waitlist,
+/// swap, recurring bookings, guest bookings, visitors, calendar, translations.
+#[allow(unused_mut, clippy::too_many_lines)]
+fn domain_feature_routes() -> Router<SharedState> {
+    let mut router = Router::new();
 
     #[cfg(feature = "mod-accessible")]
     {
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/lots/{id}/slots/accessible",
                 get(accessible::list_accessible_slots),
@@ -1530,7 +1578,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-maintenance")]
     {
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/admin/maintenance",
                 post(maintenance::create_maintenance).get(maintenance::list_maintenance),
@@ -1547,7 +1595,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-cost-center")]
     {
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/admin/billing/by-cost-center",
                 get(billing::billing_by_cost_center),
@@ -1568,8 +1616,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-ev-charging")]
     {
-        // EV Charging
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/lots/{id}/chargers", get(list_lot_chargers))
             .route("/api/v1/chargers/{id}/start", post(start_charging))
             .route("/api/v1/chargers/{id}/stop", post(stop_charging))
@@ -1582,8 +1629,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-absences")]
     {
-        // Absences (user-scoped)
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/absences", get(list_absences).post(create_absence))
             .route("/api/v1/absences/team", get(list_team_absences))
             .route(
@@ -1598,8 +1644,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-absence-approval")]
     {
-        // Absence approval workflow (user submits, admin approves/rejects)
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/absences/requests", post(submit_absence_request))
             .route("/api/v1/absences/my", get(my_absence_requests))
             .route("/api/v1/admin/absences/pending", get(list_pending_absences))
@@ -1610,7 +1655,7 @@ pub fn create_router(
     // Absence iCal import needs both absences + import modules
     #[cfg(all(feature = "mod-absences", feature = "mod-import"))]
     {
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/absences/import/ical",
             post(import::import_absences_ical),
         );
@@ -1618,16 +1663,14 @@ pub fn create_router(
 
     #[cfg(feature = "mod-team")]
     {
-        // Team view
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/team/today", get(team_today))
             .route("/api/v1/team", get(team_list));
     }
 
     #[cfg(feature = "mod-announcements")]
     {
-        // Admin-only: announcements management
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/admin/announcements",
                 get(admin_list_announcements).post(admin_create_announcement),
@@ -1640,8 +1683,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-notifications")]
     {
-        // Notifications (user-scoped)
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/notifications", get(list_notifications))
             .route(
                 "/api/v1/notifications/{id}/read",
@@ -1655,8 +1697,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-mobile")]
     {
-        // Mobile-optimized booking flow
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/mobile/quick-book", get(mobile_quick_book))
             .route("/api/v1/mobile/nearby-lots", get(nearby_lots))
             .route("/api/v1/mobile/active-booking", get(active_booking));
@@ -1664,8 +1705,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-notification-center")]
     {
-        // Smart Notification Center (enhanced notification hub)
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/notifications/center",
                 get(list_center_notifications),
@@ -1680,16 +1720,14 @@ pub fn create_router(
 
     #[cfg(feature = "mod-waitlist")]
     {
-        // Waitlist
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/waitlist", get(list_waitlist).post(join_waitlist))
             .route("/api/v1/waitlist/{id}", delete(leave_waitlist));
     }
 
     #[cfg(feature = "mod-swap")]
     {
-        // Swap requests
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/swap-requests", get(list_swap_requests))
             .route(
                 "/api/v1/bookings/{id}/swap-request",
@@ -1700,8 +1738,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-recurring")]
     {
-        // Recurring bookings
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/recurring-bookings",
                 get(list_recurring_bookings).post(create_recurring_booking),
@@ -1718,7 +1755,7 @@ pub fn create_router(
         // current user's own passes — used by the GuestPass page on mount)
         // and POST (create a new pass). Register both on one router entry
         // or they race and the later insert wins.
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/bookings/guest",
                 get(list_user_guest_bookings).post(create_guest_booking),
@@ -1735,8 +1772,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-visitors")]
     {
-        // Visitor pre-registration
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/visitors/register", post(register_visitor))
             .route("/api/v1/visitors", get(list_my_visitors))
             .route("/api/v1/visitors/{id}/check-in", put(check_in_visitor))
@@ -1746,66 +1782,17 @@ pub fn create_router(
 
     #[cfg(feature = "mod-calendar")]
     {
-        // Calendar
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/calendar/events", get(calendar_events))
-            // iCal export for user's bookings
             .route("/api/v1/user/calendar.ics", get(user_calendar_ics))
-            // iCal feed (authenticated, per issue spec)
             .route("/api/v1/bookings/ical", get(calendar_ical_authenticated))
-            // iCal feed alias
             .route("/api/v1/calendar/ical", get(calendar_ical_authenticated))
-            // Generate personal calendar subscription token
             .route("/api/v1/calendar/token", post(generate_calendar_token));
-    }
-
-    #[cfg(feature = "mod-webhooks")]
-    {
-        // Admin-only: webhooks
-        protected_routes = protected_routes
-            .route("/api/v1/webhooks", get(list_webhooks).post(create_webhook))
-            .route(
-                "/api/v1/webhooks/{id}",
-                put(update_webhook).delete(delete_webhook),
-            )
-            .route("/api/v1/webhooks/{id}/test", post(test_webhook));
-    }
-
-    #[cfg(feature = "mod-push")]
-    {
-        // Push notifications
-        protected_routes = protected_routes
-            .route("/api/v1/push/subscribe", post(push::subscribe))
-            .route("/api/v1/push/unsubscribe", delete(push::unsubscribe));
-    }
-
-    #[cfg(feature = "mod-branding")]
-    {
-        // Admin: branding config
-        protected_routes = protected_routes
-            .route(
-                "/api/v1/admin/branding",
-                get(branding::admin_get_branding).put(branding::admin_update_branding),
-            )
-            .route(
-                "/api/v1/admin/branding/logo",
-                post(branding::admin_upload_logo),
-            );
-    }
-
-    #[cfg(feature = "mod-map")]
-    {
-        // Admin: set lot coordinates for map view
-        protected_routes = protected_routes.route(
-            "/api/v1/admin/lots/{id}/location",
-            put(map::set_lot_location),
-        );
     }
 
     #[cfg(feature = "mod-translations")]
     {
-        // Translation management
-        protected_routes = protected_routes
+        router = router
             .route("/api/v1/translations/overrides", get(list_overrides))
             .route(
                 "/api/v1/translations/proposals",
@@ -1822,10 +1809,61 @@ pub fn create_router(
             );
     }
 
+    router
+}
+
+/// Integration routes: webhooks, push subscribe/unsubscribe, branding admin,
+/// map admin, payments (Stripe stub + checkout), and enhanced-PWA offline
+/// data. Each feature group installs its own extension store inline so the
+/// existing `.layer(Extension(...))` ordering is preserved verbatim.
+#[allow(unused_mut)]
+fn integration_routes() -> Router<SharedState> {
+    let mut router = Router::new();
+
+    #[cfg(feature = "mod-webhooks")]
+    {
+        router = router
+            .route("/api/v1/webhooks", get(list_webhooks).post(create_webhook))
+            .route(
+                "/api/v1/webhooks/{id}",
+                put(update_webhook).delete(delete_webhook),
+            )
+            .route("/api/v1/webhooks/{id}/test", post(test_webhook));
+    }
+
+    #[cfg(feature = "mod-push")]
+    {
+        router = router
+            .route("/api/v1/push/subscribe", post(push::subscribe))
+            .route("/api/v1/push/unsubscribe", delete(push::unsubscribe));
+    }
+
+    #[cfg(feature = "mod-branding")]
+    {
+        router = router
+            .route(
+                "/api/v1/admin/branding",
+                get(branding::admin_get_branding).put(branding::admin_update_branding),
+            )
+            .route(
+                "/api/v1/admin/branding/logo",
+                post(branding::admin_upload_logo),
+            );
+    }
+
+    #[cfg(feature = "mod-map")]
+    {
+        router = router.route(
+            "/api/v1/admin/lots/{id}/location",
+            put(map::set_lot_location),
+        );
+    }
+
     #[cfg(feature = "mod-payments")]
     {
-        // Payments (Stripe stub)
-        protected_routes = protected_routes
+        // Payments (Stripe stub). The Extension applies to routes added above
+        // this line only — matches pre-split behaviour verbatim.
+        router = router
             .route(
                 "/api/v1/payments/create-intent",
                 post(payments::create_payment_intent),
@@ -1840,9 +1878,10 @@ pub fn create_router(
 
     #[cfg(feature = "mod-stripe")]
     {
-        // Stripe checkout (authenticated routes)
+        // Stripe checkout (authenticated routes). Extension applies to routes
+        // added above this line only — matches pre-split behaviour verbatim.
         let stripe_store = stripe::new_checkout_store();
-        protected_routes = protected_routes
+        router = router
             .route(
                 "/api/v1/payments/create-checkout",
                 post(stripe::create_checkout),
@@ -1853,12 +1892,106 @@ pub fn create_router(
 
     #[cfg(feature = "mod-enhanced-pwa")]
     {
-        // Enhanced PWA: offline data (auth required)
-        protected_routes = protected_routes.route(
+        router = router.route(
             "/api/v1/pwa/offline-data",
             get(enhanced_pwa::pwa_offline_data),
         );
     }
+
+    router
+}
+
+/// Public demo-mode routes (vote + reset are rate-limited, status + config
+/// are not). Returns the router plus the demo state so `create_router` can
+/// hand the state to the caller for scheduled resets.
+fn demo_routes(
+    rate_limiters: &EndpointRateLimiters,
+) -> (Router<SharedState>, demo::SharedDemoState) {
+    let demo_state = demo::new_demo_state();
+    let demo_state_ret = demo_state.clone();
+    let demo_limiter = rate_limiters.demo.clone();
+    let demo_limiter2 = demo_limiter.clone();
+    let demo_vote_route = Router::new()
+        .route("/api/v1/demo/vote", post(demo::demo_vote))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(demo_limiter.clone(), req, next)
+        }));
+    let demo_reset_route = Router::new()
+        .route("/api/v1/demo/reset", post(demo::demo_reset))
+        .route_layer(middleware::from_fn(move |req, next| {
+            ip_rate_limit_middleware(demo_limiter2.clone(), req, next)
+        }));
+    let router = Router::new()
+        .route("/api/v1/demo/status", get(demo::demo_status))
+        .route("/api/v1/demo/config", get(demo::demo_config))
+        .merge(demo_vote_route)
+        .merge(demo_reset_route)
+        .layer(Extension(demo_state));
+    (router, demo_state_ret)
+}
+
+/// Create the API router with `OpenAPI` docs and metrics.
+/// Returns (router, `demo_state`) so the demo state can be used for scheduled resets.
+///
+/// `revocation_store` is injected as an axum `Extension` so the `AuthUser`
+/// extractor (see `crate::jwt`) can consult it on every token validation.
+/// Callers in tests build one via `state.read().await.revocation_store.clone()`;
+/// the production `main.rs` path passes the same `Arc` it stored in `AppState`.
+#[allow(unused_mut, unused_variables)]
+pub fn create_router(
+    state: SharedState,
+    revocation_store: Arc<crate::jwt::TokenRevocationList>,
+) -> (Router, demo::SharedDemoState) {
+    // ── Initialization: metrics + rate-limit infrastructure ───────────────
+    let metrics_handle = metrics::init_metrics();
+
+    let rate_limiters = EndpointRateLimiters::new();
+    let global_limiter = rate_limiters.general.clone();
+    let identity_limiters = rate_limiters.identity.clone();
+
+    // Spawn the per-identity idle-entry eviction task (sweeps every 60 s).
+    // Returns `None` when no tokio runtime is available — fine in unit tests
+    // that sweep manually. Dropping the handle detaches the task; the process
+    // terminates alongside it.
+    let _identity_eviction =
+        crate::rate_limit::per_identity::spawn_eviction_task(identity_limiters.clone());
+
+    // 2FA temporary token store — shared between login and 2FA login routes
+    let two_fa_store = security::TwoFactorTempTokenStore::new();
+
+    // ── Compose route groups via helpers ──────────────────────────────────
+    // Each helper returns a `Router<SharedState>` with its route-local layers
+    // (per-route rate limiters, feature-gated endpoints) already applied.
+    // Cross-cutting middleware (auth, admin, outer tower stack) is still
+    // layered below so the order matches the pre-split implementation.
+    let auth_public = auth_rate_limited_routes(&rate_limiters, &identity_limiters, two_fa_store);
+    let public = public_routes(&state, &rate_limiters);
+    let (demo, demo_state_ret) = demo_routes(&rate_limiters);
+
+    // ── Protected (auth-required) routes ──────────────────────────────────
+    // Build admin sub-router first, apply admin_middleware, then merge into
+    // the protected surface. Order matches pre-split verbatim: admin routes
+    // added via `admin_core_routes` are guarded by admin_middleware; later
+    // `/api/v1/admin/*` routes (e.g. credits admin, dynamic-pricing admin)
+    // added through `settings_and_data_routes` / `domain_feature_routes` are
+    // intentionally NOT wrapped by admin_middleware — they rely on handler-
+    // level `check_admin` only. See feedback_modular_refactor rationale.
+    let admin_with_guard = admin_core_routes().route_layer(middleware::from_fn_with_state(
+        state.clone(),
+        admin_middleware,
+    ));
+
+    let protected_routes = Router::new()
+        .merge(user_core_routes())
+        .merge(lot_core_routes())
+        .merge(user_security_routes())
+        .merge(admin_with_guard)
+        .merge(booking_protected_routes())
+        .merge(vehicle_routes())
+        .merge(settings_and_data_routes())
+        .merge(updates_routes())
+        .merge(domain_feature_routes())
+        .merge(integration_routes());
 
     // Apply per-identity rate limiting layered INSIDE auth_middleware so the
     // layer sees the `AuthUser` that auth_middleware inserts. Bucket kind is
@@ -1878,29 +2011,6 @@ pub fn create_router(
         auth_middleware,
     ));
 
-    // Demo mode routes (no auth — by design for public demo, rate-limited POST endpoints)
-    let demo_state = demo::new_demo_state();
-    let demo_state_ret = demo_state.clone();
-    let demo_limiter = rate_limiters.demo;
-    let demo_limiter2 = demo_limiter.clone();
-    let demo_vote_route = Router::new()
-        .route("/api/v1/demo/vote", post(demo::demo_vote))
-        .route_layer(middleware::from_fn(move |req, next| {
-            ip_rate_limit_middleware(demo_limiter.clone(), req, next)
-        }));
-    let demo_reset_route = Router::new()
-        .route("/api/v1/demo/reset", post(demo::demo_reset))
-        .route_layer(middleware::from_fn(move |req, next| {
-            ip_rate_limit_middleware(demo_limiter2.clone(), req, next)
-        }));
-    let demo_routes = Router::new()
-        .route("/api/v1/demo/status", get(demo::demo_status))
-        .route("/api/v1/demo/config", get(demo::demo_config))
-        .merge(demo_vote_route)
-        .merge(demo_reset_route)
-        .layer(Extension(demo_state))
-        .layer(Extension(state.clone()));
-
     // Clone handle for the closure
     let metrics_handle_clone = metrics_handle;
 
@@ -1917,16 +2027,11 @@ pub fn create_router(
 
     let x_request_id = HeaderName::from_static("x-request-id");
 
+    // ── Merge all route groups into the root router ──────────────────────
     let mut router = Router::new()
-        .merge(public_routes)
-        .merge(login_route)
-        .merge(two_fa_login_route)
-        .merge(register_route)
-        .merge(forgot_route)
-        .merge(refresh_route)
-        .merge(reset_password_route)
-        .merge(logout_route)
-        .merge(demo_routes)
+        .merge(public)
+        .merge(auth_public)
+        .merge(demo)
         .merge(protected_routes);
 
     // ── Runtime module gate (T-1720 v2) ─────────────────────────────────
@@ -1943,7 +2048,7 @@ pub fn create_router(
 
     #[cfg(feature = "mod-qr")]
     {
-        router = router.merge(qr_route);
+        router = router.merge(qr_pass_route(state.clone(), &rate_limiters));
     }
 
     // Swagger UI (only available when all modules are compiled)
