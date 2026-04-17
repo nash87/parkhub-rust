@@ -3,6 +3,9 @@
 //! These tests spin up the full Axum router (with a real in-memory DB) and send
 //! requests through `tower::ServiceExt::oneshot` — no TCP listener needed.
 
+// Test setup holds read/write guards across awaits by design — no contention.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use std::sync::Arc;

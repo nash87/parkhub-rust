@@ -4,6 +4,9 @@
 //! login history, sessions, API keys), admin extensions (bulk ops, reports, policies),
 //! and edge cases (auth, lots, public endpoints).
 
+// Test setup holds read/write guards across awaits by design — no contention.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use std::sync::Arc;

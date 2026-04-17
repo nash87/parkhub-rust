@@ -5,6 +5,10 @@
 //! - `GET  /api/v1/admin/billing/export` — CSV export with cost center breakdown
 //! - `POST /api/v1/admin/billing/allocate` — manual credit allocation per cost center
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::State,

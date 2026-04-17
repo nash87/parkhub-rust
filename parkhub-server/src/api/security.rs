@@ -1,5 +1,9 @@
 //! Security features: 2FA/TOTP, password policy, login history, session management, API keys.
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{Extension, Json, extract::State, http::StatusCode, response::Response};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

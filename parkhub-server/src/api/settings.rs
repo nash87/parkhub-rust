@@ -1,5 +1,9 @@
 //! Admin settings, feature flags, and use-case theme configuration.
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use serde::Deserialize;
 

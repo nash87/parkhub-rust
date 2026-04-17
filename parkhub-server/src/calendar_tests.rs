@@ -6,6 +6,9 @@
 //!  - `POST /api/v1/calendar/token`      — generate personal subscription token
 //!  - `GET /api/v1/calendar/ical/{token}`— public iCal feed via token
 
+// Test setup holds read/write guards across awaits by design — no contention.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use std::sync::Arc;

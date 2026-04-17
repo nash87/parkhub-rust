@@ -6,6 +6,11 @@
 //! - **PurgeExpired** (every 24 h): remove old cancelled/expired bookings beyond retention period
 //! - **AggregateOccupancy** (every 15 min): persist aggregated occupancy stats to settings
 
+// Background jobs hold read/write guards within tight scoped blocks by design.
+// Clippy flags the contained scope as "not tight enough" but the block is the
+// scope — these are false positives for this module's access pattern.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::sync::Arc;
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveTime, Utc};

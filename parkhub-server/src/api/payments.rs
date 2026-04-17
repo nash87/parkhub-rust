@@ -8,6 +8,10 @@
 //!
 //! Payments are tracked in an in-memory `HashMap` (no persistence).
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Path, State},

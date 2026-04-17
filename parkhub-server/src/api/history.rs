@@ -3,6 +3,10 @@
 //! `GET /api/v1/bookings/history` — paginated booking history with filters
 //! `GET /api/v1/bookings/stats` — personal parking stats
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Query, State},

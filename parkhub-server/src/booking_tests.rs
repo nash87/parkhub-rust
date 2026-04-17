@@ -2,6 +2,9 @@
 //!
 //! Closes #63 (booking workflow) and #62 (admin + rate-limit tests).
 
+// Test setup holds read/write guards across awaits by design — no contention.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use chrono::{TimeDelta, Utc};

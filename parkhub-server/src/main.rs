@@ -5,6 +5,9 @@
 
 // Hide console window on Windows when running with GUI
 #![cfg_attr(all(feature = "gui", windows), windows_subsystem = "windows")]
+// AppState read guards in cron job closures span the whole pass — db access
+// goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
 
 use anyhow::{Context, Result};
 use std::net::SocketAddr;

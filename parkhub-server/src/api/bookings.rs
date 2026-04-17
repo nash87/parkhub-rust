@@ -3,6 +3,9 @@
 //!
 //! Extracted from mod.rs to keep the router module focused on routing.
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
 #![allow(unused_imports)]
 
 use axum::{

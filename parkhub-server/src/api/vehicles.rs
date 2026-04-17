@@ -1,6 +1,10 @@
 //! Vehicle handlers: list, create, update, delete, photo upload/download,
 //! and German licence-plate city-code reference data.
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Path, State},

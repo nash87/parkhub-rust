@@ -8,6 +8,9 @@
 //! - `POST   /api/v1/admin/webhooks-v2/{id}/test`     — send test event
 //! - `GET    /api/v1/admin/webhooks-v2/{id}/deliveries` — delivery log
 
+// Test setup holds read/write guards across awaits by design — no contention.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use std::sync::Arc;

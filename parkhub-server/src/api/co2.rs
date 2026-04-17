@@ -16,6 +16,10 @@
 //!
 //! Endpoint: `GET /api/v1/bookings/co2-summary?from=ISO&to=ISO[&lot_id=UUID]`
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Query, State},

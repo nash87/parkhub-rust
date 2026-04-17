@@ -1894,6 +1894,8 @@ impl Database {
     }
 
     /// Delete a notification by ID
+    // Write lock intentionally spans the mutating write txn — critical section.
+    #[allow(clippy::significant_drop_tightening)]
     pub async fn delete_notification(&self, id: &str) -> Result<bool> {
         let db = self.inner.write().await;
         let write_txn = db.begin_write()?;

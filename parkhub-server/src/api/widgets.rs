@@ -6,6 +6,10 @@
 //! - `PUT /api/v1/admin/widgets` — save widget layout
 //! - `GET /api/v1/admin/widgets/data/{widget_id}` — get data for a specific widget
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Path, State},

@@ -3,6 +3,10 @@
 //! Self-service: operators configure their own Stripe keys via admin settings.
 //! When keys are not configured, endpoints return `501 Not Implemented`.
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{Extension, Json, body::Bytes, extract::State, http::HeaderMap, http::StatusCode};
 use chrono::{DateTime, Utc};
 use hmac::{Hmac, Mac};

@@ -23,6 +23,10 @@
 //!     one of `success`, `failure`, `opened`, `half_opened`, `closed`,
 //!     `short_circuit`, `rejected_half_open`.
 
+// std::sync::Mutex guards are held across short state transitions — the mutex
+// is non-async and the critical section is entirely synchronous.
+#![allow(clippy::significant_drop_tightening)]
+
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;

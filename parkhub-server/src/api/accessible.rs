@@ -5,6 +5,10 @@
 //! - `GET  /api/v1/bookings/accessible-stats` — admin stats on accessible slot usage
 //! - `PUT  /api/v1/users/me/accessibility-needs` — update user accessibility needs
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Path, State},

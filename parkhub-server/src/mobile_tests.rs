@@ -5,6 +5,9 @@
 //! - `GET /api/v1/mobile/nearby-lots`    — geolocation-based lot discovery
 //! - `GET /api/v1/mobile/active-booking` — current active booking with countdown
 
+// Test setup holds read/write guards across awaits by design — no contention.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::body::Body;
 use axum::http::{self, Request, StatusCode};
 use chrono::{TimeDelta, Utc};

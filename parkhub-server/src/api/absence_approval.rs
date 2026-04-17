@@ -8,6 +8,10 @@
 //! - `PUT /api/v1/admin/absences/{id}/reject` — reject with reason
 //! - `GET /api/v1/absences/my` — user's absence history with approval status
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Path, State},

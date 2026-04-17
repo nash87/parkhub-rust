@@ -4,6 +4,10 @@
 //! - `GET /api/v1/admin/analytics/revenue`        — daily revenue summary for last 30 days
 //! - `GET /api/v1/admin/analytics/popular-lots`   — top 10 lots by booking count
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{Extension, Json, extract::State, http::StatusCode};
 use chrono::{Duration, Timelike, Utc};
 use parkhub_common::{ApiResponse, BookingStatus};

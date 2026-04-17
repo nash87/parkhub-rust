@@ -8,6 +8,10 @@
 //! - `PUT  /api/v1/admin/zones/{id}/pricing`       — set zone pricing tier
 //! - `GET  /api/v1/zones/{id}/price`               — calculate price for a zone
 
+// AppState read/write guards are held across handler duration by design —
+// db access goes through its own inner RwLock. See workspace lint config.
+#![allow(clippy::significant_drop_tightening)]
+
 use axum::{
     Extension, Json,
     extract::{Path, State},
