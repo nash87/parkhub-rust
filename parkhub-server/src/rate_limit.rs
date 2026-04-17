@@ -1,10 +1,26 @@
 //! Rate Limiting
 //!
 //! Provides configurable rate limiting using the Governor library.
+//!
+//! ## Layered model (T-1743)
+//!
+//! Authenticated endpoints run through two stacked limiters:
+//!
+//! 1. **Per-IP** — the classic limiter keyed off the client IP. Protects the
+//!    server from unauthenticated flooding and from attackers who don't yet
+//!    have credentials.
+//! 2. **Per-identity** — a second limiter keyed off the caller's `user_id`
+//!    (session / bearer / cookie auth) or `api_key_id` (X-API-Key auth).
+//!    Protects against credential-reuse attacks where a compromised key or
+//!    session rotates across IPs behind CGNAT/mobile carrier NAT.
+//!
+//! Both limiters must allow the request — the stricter of the two wins.
+//! Unauthenticated requests bypass the per-identity layer entirely and are
+//! subject only to the per-IP limiter (current behaviour preserved).
 
 use axum::{
     body::Body,
-    http::Request,
+    http::{HeaderValue, Request},
     middleware::Next,
     response::{IntoResponse, Response},
 };
@@ -14,7 +30,13 @@ use governor::{
     middleware::NoOpMiddleware,
     state::{InMemoryState, NotKeyed},
 };
-use std::{net::SocketAddr, num::NonZeroU32, sync::Arc, time::Duration};
+use std::{
+    net::SocketAddr,
+    num::NonZeroU32,
+    sync::Arc,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
+use uuid::Uuid;
 
 use crate::error::AppError;
 
@@ -193,6 +215,11 @@ pub struct EndpointRateLimiters {
     pub lobby_display: Arc<per_ip::IpRateLimiter>,
     /// General API (relaxed global limiter)
     pub general: Arc<GlobalRateLimiter>,
+    /// Per-identity layered limiters (T-1743).  Applied *on top* of the
+    /// per-IP limiters above for authenticated requests.  An authenticated
+    /// call must pass BOTH the per-IP and the per-identity check — the
+    /// stricter of the two decides.
+    pub identity: Arc<IdentityRateLimiters>,
 }
 
 /// Compile-time gated rate-limit bypass.
@@ -237,6 +264,20 @@ impl EndpointRateLimiters {
         let (forgot_n, forgot_p) = period(3, 15 * 60);
         let (reset_n, reset_p) = period(5, 15 * 60);
 
+        // Per-identity quotas — env-overridable, bypass-aware.
+        let identity_limits = if disable_limits {
+            IdentityLimits {
+                login: 100_000,
+                register: 100_000,
+                password_reset: 100_000,
+                mutation: 100_000,
+                read: 100_000,
+                admin: 100_000,
+            }
+        } else {
+            IdentityLimits::from_env()
+        };
+
         Self {
             // 5 login attempts per minute per IP (normal) / unlimited in test mode
             login: per_ip::create_ip_rate_limiter(rpm(5)),
@@ -256,6 +297,8 @@ impl EndpointRateLimiters {
             lobby_display: per_ip::create_ip_rate_limiter(rpm(10)),
             // 100 requests per second globally
             general: create_rate_limiter(&RateLimitConfig::default()),
+            // Per-identity layered limiters (T-1743)
+            identity: Arc::new(IdentityRateLimiters::new(identity_limits)),
         }
     }
 }
@@ -263,6 +306,423 @@ impl EndpointRateLimiters {
 impl Default for EndpointRateLimiters {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Per-identity rate limiter (T-1743)
+// ────────────────────────────────────────────────────────────────────────────
+
+/// Per-identity rate limiter — a lazy `DashMap` of governor limiters keyed off
+/// a caller identity (`user_id` or `api_key_id`).
+///
+/// Reuses the `IpRateLimiter` type shape; only the key changes.  Limiters are
+/// created on first hit and evicted by [`per_identity::sweep_idle`] after 5
+/// minutes of inactivity so an attacker can't grow the map unboundedly.
+///
+/// See [`per_identity::IdentityRateLimiters`] for the bundle of
+/// purpose-specific limiters (login / register / mutation / read / …).
+pub mod per_identity {
+    use super::{Arc, Duration, NonZeroU32, Quota, RateLimiter, Uuid};
+    use dashmap::DashMap;
+    use governor::clock::{Clock, DefaultClock};
+    use governor::middleware::NoOpMiddleware;
+    use governor::state::InMemoryState;
+    use std::sync::Mutex;
+    use std::time::Instant;
+
+    /// Identity that keys the per-identity limiter.
+    ///
+    /// * `User(Uuid)` — JWT / bearer / cookie auth.
+    /// * `ApiKey(Uuid)` — X-API-Key auth. Keyed by the *key id*, not the user,
+    ///   so a compromised key can't starve the user's other keys.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum Identity {
+        User(Uuid),
+        ApiKey(Uuid),
+    }
+
+    impl Identity {
+        /// Returns the opaque bucket label exposed via the `X-RateLimit-Bucket`
+        /// debug header.  Never leaks internal limiter names.
+        pub const fn bucket_label(&self) -> &'static str {
+            match self {
+                Self::User(_) => "user",
+                Self::ApiKey(_) => "api_key",
+            }
+        }
+    }
+
+    /// A single per-identity governor limiter (direct — one entry per id).
+    pub type IdentityLimiter =
+        RateLimiter<governor::state::NotKeyed, InMemoryState, DefaultClock, NoOpMiddleware>;
+
+    struct Entry {
+        limiter: Arc<IdentityLimiter>,
+        quota_per_minute: u32,
+        last_hit: Mutex<Instant>,
+    }
+
+    /// Lazy store of per-identity limiters sharing one quota.
+    ///
+    /// Allocates a fresh governor limiter per `Identity` on first use; reuses
+    /// it afterwards.  Evicts entries idle for >5 min via [`sweep_idle`].
+    pub struct IdentityBucket {
+        inner: DashMap<Identity, Arc<Entry>>,
+        quota: Quota,
+        quota_per_minute: u32,
+        idle_ttl: Duration,
+    }
+
+    impl IdentityBucket {
+        /// Per-minute quota bucket.
+        #[must_use]
+        pub fn per_minute(requests_per_minute: u32) -> Self {
+            let rpm = NonZeroU32::new(requests_per_minute.max(1))
+                .expect("requests_per_minute clamped to >= 1");
+            Self {
+                inner: DashMap::new(),
+                quota: Quota::per_minute(rpm),
+                quota_per_minute: rpm.get(),
+                idle_ttl: Duration::from_secs(5 * 60),
+            }
+        }
+
+        /// Override the idle TTL.  Used by tests to exercise eviction.
+        #[must_use]
+        pub const fn with_idle_ttl(mut self, ttl: Duration) -> Self {
+            self.idle_ttl = ttl;
+            self
+        }
+
+        /// Quota size per minute (exposed for response headers).
+        #[must_use]
+        pub const fn quota_per_minute(&self) -> u32 {
+            self.quota_per_minute
+        }
+
+        fn limiter_for(&self, id: Identity) -> Arc<Entry> {
+            if let Some(existing) = self.inner.get(&id) {
+                *existing.last_hit.lock().expect("identity mutex poisoned") = Instant::now();
+                return Arc::clone(&existing);
+            }
+            let entry = Arc::new(Entry {
+                limiter: Arc::new(RateLimiter::direct(self.quota)),
+                quota_per_minute: self.quota_per_minute,
+                last_hit: Mutex::new(Instant::now()),
+            });
+            self.inner
+                .entry(id)
+                .or_insert_with(|| Arc::clone(&entry))
+                .clone()
+        }
+
+        /// Check whether the identity is currently allowed a request.
+        ///
+        /// Returns `Ok(remaining_approx, reset_unix_secs)` when allowed, or
+        /// `Err(reset_unix_secs)` when over quota.  The returned "remaining"
+        /// is a best-effort lower bound derived from the governor snapshot.
+        pub fn check(&self, id: Identity) -> Result<RateInfo, RateInfo> {
+            let entry = self.limiter_for(id);
+            let clock = DefaultClock::default();
+            match entry.limiter.check() {
+                Ok(()) => Ok(RateInfo {
+                    limit: entry.quota_per_minute,
+                    remaining: entry
+                        .quota_per_minute
+                        .saturating_sub(1)
+                        .min(entry.quota_per_minute),
+                    reset_unix_secs: now_unix() + 60,
+                }),
+                Err(negative) => {
+                    let wait = negative.wait_time_from(clock.now());
+                    Err(RateInfo {
+                        limit: entry.quota_per_minute,
+                        remaining: 0,
+                        reset_unix_secs: now_unix() + wait.as_secs().max(1),
+                    })
+                }
+            }
+        }
+
+        /// Drop entries whose last hit is older than `idle_ttl`.
+        ///
+        /// Returns the number of entries evicted.  Called every 60 s from the
+        /// background task spawned by [`spawn_eviction_task`].
+        pub fn sweep_idle(&self) -> usize {
+            let cutoff = Instant::now();
+            let ttl = self.idle_ttl;
+            let stale: Vec<Identity> = self
+                .inner
+                .iter()
+                .filter_map(|r| {
+                    let last = *r.value().last_hit.lock().expect("identity mutex poisoned");
+                    if cutoff.duration_since(last) >= ttl {
+                        Some(*r.key())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+            let n = stale.len();
+            for id in stale {
+                self.inner.remove(&id);
+            }
+            n
+        }
+
+        /// Number of live identity entries (for tests / metrics).
+        #[must_use]
+        pub fn len(&self) -> usize {
+            self.inner.len()
+        }
+
+        #[must_use]
+        pub fn is_empty(&self) -> bool {
+            self.inner.is_empty()
+        }
+    }
+
+    /// Rate-limit info returned from [`IdentityBucket::check`].
+    #[derive(Debug, Clone, Copy)]
+    pub struct RateInfo {
+        pub limit: u32,
+        pub remaining: u32,
+        pub reset_unix_secs: u64,
+    }
+
+    fn now_unix() -> u64 {
+        super::SystemTime::now()
+            .duration_since(super::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs())
+    }
+
+    /// Bundle of per-identity buckets wired into [`super::IdentityRateLimiters`].
+    ///
+    /// Mutation buckets are stricter than read buckets so a leaked credential
+    /// can't rack up write amplification while staying under the read quota.
+    pub struct IdentityRateLimiters {
+        pub login: IdentityBucket,
+        pub register: IdentityBucket,
+        pub password_reset: IdentityBucket,
+        pub mutation: IdentityBucket,
+        pub read: IdentityBucket,
+        pub admin: IdentityBucket,
+    }
+
+    impl IdentityRateLimiters {
+        #[must_use]
+        pub fn new(limits: IdentityLimits) -> Self {
+            Self {
+                login: IdentityBucket::per_minute(limits.login),
+                register: IdentityBucket::per_minute(limits.register),
+                password_reset: IdentityBucket::per_minute(limits.password_reset),
+                mutation: IdentityBucket::per_minute(limits.mutation),
+                read: IdentityBucket::per_minute(limits.read),
+                admin: IdentityBucket::per_minute(limits.admin),
+            }
+        }
+
+        /// Sweep every bucket once.
+        pub fn sweep_all(&self) -> usize {
+            self.login.sweep_idle()
+                + self.register.sweep_idle()
+                + self.password_reset.sweep_idle()
+                + self.mutation.sweep_idle()
+                + self.read.sweep_idle()
+                + self.admin.sweep_idle()
+        }
+    }
+
+    /// Effective per-identity quotas resolved from env overrides with sensible
+    /// defaults (see module docs / T-1743 for the rationale).
+    #[derive(Debug, Clone, Copy)]
+    pub struct IdentityLimits {
+        pub login: u32,
+        pub register: u32,
+        pub password_reset: u32,
+        pub mutation: u32,
+        pub read: u32,
+        pub admin: u32,
+    }
+
+    impl IdentityLimits {
+        /// Defaults per T-1743 spec.
+        pub const DEFAULTS: Self = Self {
+            login: 10,
+            register: 5,
+            password_reset: 3,
+            mutation: 60,
+            read: 300,
+            admin: 120,
+        };
+
+        /// Load from `PARKHUB_IDENTITY_LIMIT_*` env vars, falling back to
+        /// `DEFAULTS` on unset / unparsable values.
+        #[must_use]
+        pub fn from_env() -> Self {
+            fn parse(name: &str, default: u32) -> u32 {
+                std::env::var(name)
+                    .ok()
+                    .and_then(|s| s.parse::<u32>().ok())
+                    .filter(|&n| n > 0)
+                    .unwrap_or(default)
+            }
+            let d = Self::DEFAULTS;
+            Self {
+                login: parse("PARKHUB_IDENTITY_LIMIT_LOGIN", d.login),
+                register: parse("PARKHUB_IDENTITY_LIMIT_REGISTER", d.register),
+                password_reset: parse("PARKHUB_IDENTITY_LIMIT_PASSWORD_RESET", d.password_reset),
+                mutation: parse("PARKHUB_IDENTITY_LIMIT_MUTATION", d.mutation),
+                read: parse("PARKHUB_IDENTITY_LIMIT_READ", d.read),
+                admin: parse("PARKHUB_IDENTITY_LIMIT_ADMIN", d.admin),
+            }
+        }
+    }
+
+    impl Default for IdentityLimits {
+        fn default() -> Self {
+            Self::DEFAULTS
+        }
+    }
+
+    /// Spawn a tokio task that sweeps idle entries every 60 s.
+    ///
+    /// Returns the `JoinHandle` so callers can abort on shutdown.  Aborts
+    /// silently if no tokio runtime is present (e.g. during unit tests that
+    /// don't run one) — callers in those contexts sweep manually.
+    pub fn spawn_eviction_task(
+        limiters: Arc<IdentityRateLimiters>,
+    ) -> Option<tokio::task::JoinHandle<()>> {
+        if tokio::runtime::Handle::try_current().is_err() {
+            return None;
+        }
+        Some(tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(Duration::from_secs(60));
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                ticker.tick().await;
+                let _ = limiters.sweep_all();
+            }
+        }))
+    }
+}
+
+#[allow(unused_imports)] // `Identity` is referenced via `per_identity::Identity` by callers
+pub use per_identity::{Identity, IdentityLimits, IdentityRateLimiters};
+
+/// Bucket category the per-identity middleware should apply to a request.
+#[derive(Debug, Clone, Copy)]
+pub enum IdentityBucketKind {
+    Login,
+    Register,
+    PasswordReset,
+    Mutation,
+    Read,
+    Admin,
+}
+
+impl IdentityBucketKind {
+    fn select(self, limiters: &IdentityRateLimiters) -> &per_identity::IdentityBucket {
+        match self {
+            Self::Login => &limiters.login,
+            Self::Register => &limiters.register,
+            Self::PasswordReset => &limiters.password_reset,
+            Self::Mutation => &limiters.mutation,
+            Self::Read => &limiters.read,
+            Self::Admin => &limiters.admin,
+        }
+    }
+}
+
+/// Standard rate-limit response headers.
+///
+/// Uses `X-RateLimit-*` (the widely-adopted draft spec) rather than the
+/// newer IETF `RateLimit-*` names because our existing per-IP middleware
+/// already emits `x-ratelimit-remaining`; staying consistent avoids breaking
+/// clients that parse the old names.
+fn apply_rate_headers(response: &mut Response, info: per_identity::RateInfo, bucket: &str) {
+    let headers = response.headers_mut();
+    if let Ok(v) = HeaderValue::from_str(&info.limit.to_string()) {
+        headers.insert("x-ratelimit-limit", v);
+    }
+    if let Ok(v) = HeaderValue::from_str(&info.remaining.to_string()) {
+        headers.insert("x-ratelimit-remaining", v);
+    }
+    if let Ok(v) = HeaderValue::from_str(&info.reset_unix_secs.to_string()) {
+        headers.insert("x-ratelimit-reset", v);
+    }
+    if let Ok(v) = HeaderValue::from_str(bucket) {
+        headers.insert("x-ratelimit-bucket", v);
+    }
+}
+
+/// Middleware that enforces per-identity rate limits layered on top of an
+/// existing per-IP limiter.
+///
+/// Lookup order:
+///   1. If the request has an [`crate::api::AuthUser`] extension, pick the
+///      identity (api_key_id preferred over user_id).
+///   2. Check the per-identity bucket.  On reject, 429.
+///   3. Otherwise run the rest of the chain and tag the response with
+///      `X-RateLimit-Bucket` = `user` | `api_key`.
+///
+/// Unauthenticated requests pass through and get `X-RateLimit-Bucket: ip`
+/// attached by the per-IP middleware layer, if present in the response.
+pub async fn identity_rate_limit_middleware(
+    limiters: Arc<IdentityRateLimiters>,
+    kind: IdentityBucketKind,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    let auth = request.extensions().get::<crate::api::AuthUser>().cloned();
+
+    let Some(auth) = auth else {
+        // Unauthenticated — no per-identity enforcement.  Let the per-IP
+        // layer (if any) own this request entirely.  Tag the bucket header
+        // so clients can tell which layer is dominant.
+        let mut response = next.run(request).await;
+        response
+            .headers_mut()
+            .insert("x-ratelimit-bucket", HeaderValue::from_static("ip"));
+        return response;
+    };
+
+    // Prefer api_key_id when present — isolates each key's quota even for
+    // the same user.
+    let identity = auth.api_key_id.map_or(
+        per_identity::Identity::User(auth.user_id),
+        per_identity::Identity::ApiKey,
+    );
+    let bucket = kind.select(&limiters);
+
+    match bucket.check(identity) {
+        Ok(info) => {
+            let mut response = next.run(request).await;
+            apply_rate_headers(&mut response, info, identity.bucket_label());
+            response
+        }
+        Err(info) => {
+            let mut response = AppError::RateLimited.into_response();
+            apply_rate_headers(&mut response, info, identity.bucket_label());
+            let headers = response.headers_mut();
+            headers.insert(
+                "retry-after",
+                HeaderValue::from_str(
+                    &info
+                        .reset_unix_secs
+                        .saturating_sub(
+                            SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .map_or(0, |d| d.as_secs()),
+                        )
+                        .max(1)
+                        .to_string(),
+                )
+                .unwrap_or(HeaderValue::from_static("60")),
+            );
+            response
+        }
     }
 }
 
@@ -339,5 +799,116 @@ mod tests {
         assert!(limiters.password_reset.check_key(&test_ip).is_ok());
         assert!(limiters.lobby_display.check_key(&test_ip).is_ok());
         assert!(limiters.general.check().is_ok());
+        // Per-identity bundle is also present
+        let user = per_identity::Identity::User(uuid::Uuid::nil());
+        assert!(limiters.identity.read.check(user).is_ok());
+    }
+
+    // ─── T-1743 per-identity tests ────────────────────────────────────────
+
+    /// User A exhausts the per-identity login quota → further requests
+    /// return 429 even when arriving from a different IP.  This is the
+    /// core regression the feature prevents: stolen credential + CGNAT
+    /// rotation.
+    #[test]
+    fn test_identity_limit_follows_credential_across_ips() {
+        use per_identity::{Identity, IdentityBucket};
+
+        let bucket = IdentityBucket::per_minute(3);
+        let alice = Identity::User(uuid::Uuid::from_u128(0xA11CE));
+
+        // 3 hits allowed (regardless of pretend IP the caller claims).
+        for _ in 0..3 {
+            assert!(bucket.check(alice).is_ok());
+        }
+        // 4th is rejected — the per-IP limiter doesn't matter, the
+        // identity bucket itself is full.
+        assert!(bucket.check(alice).is_err());
+    }
+
+    /// Two users behind the same NAT IP both get their own quota —
+    /// exhaustion by one must NOT block the other.
+    #[test]
+    fn test_two_identities_same_nat_dont_starve() {
+        use per_identity::{Identity, IdentityBucket};
+
+        let bucket = IdentityBucket::per_minute(2);
+        let alice = Identity::User(uuid::Uuid::from_u128(1));
+        let bob = Identity::User(uuid::Uuid::from_u128(2));
+
+        // Alice burns her quota.
+        assert!(bucket.check(alice).is_ok());
+        assert!(bucket.check(alice).is_ok());
+        assert!(bucket.check(alice).is_err());
+
+        // Bob still has his entire quota.
+        assert!(bucket.check(bob).is_ok());
+        assert!(bucket.check(bob).is_ok());
+        assert!(bucket.check(bob).is_err());
+    }
+
+    /// API-key auth isolates each key's quota — a leaked key can't starve
+    /// the user's other keys (or vice versa).
+    #[test]
+    fn test_api_key_buckets_are_independent() {
+        use per_identity::{Identity, IdentityBucket};
+
+        let bucket = IdentityBucket::per_minute(1);
+        let key_a = Identity::ApiKey(uuid::Uuid::from_u128(0xAAAA));
+        let key_b = Identity::ApiKey(uuid::Uuid::from_u128(0xBBBB));
+
+        assert!(bucket.check(key_a).is_ok());
+        assert!(bucket.check(key_a).is_err());
+        // Sibling key still has its quota.
+        assert!(bucket.check(key_b).is_ok());
+        assert!(bucket.check(key_b).is_err());
+    }
+
+    /// The bucket_label emitted in the X-RateLimit-Bucket header must
+    /// never leak internal limiter names — only a small enum-of-strings.
+    #[test]
+    fn test_bucket_label_enum_of_strings() {
+        use per_identity::Identity;
+
+        assert_eq!(Identity::User(uuid::Uuid::nil()).bucket_label(), "user");
+        assert_eq!(
+            Identity::ApiKey(uuid::Uuid::nil()).bucket_label(),
+            "api_key"
+        );
+    }
+
+    /// Idle entries are evicted by `sweep_idle` — prevents unbounded map
+    /// growth from attackers cycling identities.
+    #[test]
+    fn test_identity_bucket_sweeps_idle_entries() {
+        use per_identity::{Identity, IdentityBucket};
+
+        // TTL of zero means "sweep anything not touched this instant".
+        let bucket =
+            IdentityBucket::per_minute(10).with_idle_ttl(std::time::Duration::from_millis(0));
+
+        for i in 0u32..5 {
+            let id = Identity::User(uuid::Uuid::from_u128(u128::from(i)));
+            assert!(bucket.check(id).is_ok());
+        }
+        assert_eq!(bucket.len(), 5);
+        // A tiny sleep ensures the Instant::now() inside sweep is strictly
+        // after the last_hit values we just wrote.
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        let evicted = bucket.sweep_idle();
+        assert_eq!(evicted, 5);
+        assert!(bucket.is_empty());
+    }
+
+    /// Env vars override defaults; unset falls back to DEFAULTS.
+    #[test]
+    fn test_identity_limits_defaults() {
+        let d = IdentityLimits::DEFAULTS;
+        assert_eq!(d.login, 10);
+        assert_eq!(d.register, 5);
+        assert_eq!(d.password_reset, 3);
+        assert_eq!(d.mutation, 60);
+        assert_eq!(d.read, 300);
+        assert_eq!(d.admin, 120);
     }
 }

@@ -1292,7 +1292,21 @@ pub async fn revoke_api_key(
 ///
 /// Uses a reverse index (`api_key_idx:{prefix}` → `user_id`) for O(1) lookup
 /// instead of scanning all users. Falls back to full scan if index miss.
+#[allow(dead_code)] // retained for binary-tree compatibility; new code uses validate_api_key_detailed
 pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option<Uuid> {
+    validate_api_key_detailed(db, api_key)
+        .await
+        .map(|(user_id, _)| user_id)
+}
+
+/// Validate an API key and return both the owning user_id and the api_key_id.
+///
+/// Used by the per-identity rate limiter (T-1743) so that each API key gets
+/// its own quota bucket independent of other keys owned by the same user.
+pub async fn validate_api_key_detailed(
+    db: &crate::db::Database,
+    api_key: &str,
+) -> Option<(Uuid, Uuid)> {
     // Fast path: use reverse index by key prefix (first 12 chars)
     if api_key.len() >= 12 {
         let prefix = &api_key[..12];
@@ -1320,7 +1334,7 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
                     continue;
                 }
                 if super::verify_password(api_key, &key.key_hash).await {
-                    return Some(user_id);
+                    return Some((user_id, key.id));
                 }
             }
         }
@@ -1354,7 +1368,7 @@ pub async fn validate_api_key(db: &crate::db::Database, api_key: &str) -> Option
                 // Backfill the index for future lookups
                 let index_key = format!("api_key_idx:{}", key.key_prefix);
                 let _ = db.set_setting(&index_key, &user.id.to_string()).await;
-                return Some(user.id);
+                return Some((user.id, key.id));
             }
         }
     }
