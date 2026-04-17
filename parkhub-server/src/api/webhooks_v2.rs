@@ -24,6 +24,7 @@ use uuid::Uuid;
 use parkhub_common::ApiResponse;
 
 use crate::audit::{AuditEntry, AuditEventType};
+use crate::circuit_breaker::{self, Error as CbError};
 
 use super::{AuthUser, SharedState};
 
@@ -274,17 +275,24 @@ async fn deliver_event(
         delivered_at: Utc::now(),
     };
 
+    let breaker = circuit_breaker::for_url(&webhook.url);
+
     for attempt in 1..=MAX_RETRIES {
         last_entry.attempt = attempt;
 
-        let result = client
-            .post(&webhook.url)
-            .header("Content-Type", "application/json")
-            .header("X-ParkHub-Signature", &signature)
-            .header("X-ParkHub-Event", event_type)
-            .header("X-ParkHub-Delivery", last_entry.id.to_string())
-            .body(payload_bytes.clone())
-            .send()
+        let delivery_id = last_entry.id.to_string();
+        let result = breaker
+            .call(|| async {
+                client
+                    .post(&webhook.url)
+                    .header("Content-Type", "application/json")
+                    .header("X-ParkHub-Signature", &signature)
+                    .header("X-ParkHub-Event", event_type)
+                    .header("X-ParkHub-Delivery", delivery_id)
+                    .body(payload_bytes.clone())
+                    .send()
+                    .await
+            })
             .await;
 
         match result {
@@ -302,9 +310,15 @@ async fn deliver_event(
                 last_entry.response_body = Some(body.chars().take(500).collect());
                 last_entry.error = Some(format!("HTTP {status}"));
             }
-            Err(e) => {
+            Err(CbError::Inner(e)) => {
                 last_entry.error = Some(format!("Request failed: {e}"));
                 last_entry.delivered_at = Utc::now();
+            }
+            Err(CbError::Open | CbError::HalfOpenRejected) => {
+                last_entry.error = Some("Circuit breaker open for destination".to_string());
+                last_entry.delivered_at = Utc::now();
+                // Short-circuit: skip remaining retries for this dispatch.
+                break;
             }
         }
 
