@@ -11,6 +11,14 @@ repository.workspace = true
 name = "parkhub-server"
 path = "src/main.rs"
 
+# Library target is fuzz-only. See src/lib.rs — it exposes the `fuzz_api`
+# module behind the off-by-default `fuzzing` feature so cargo-fuzz targets can
+# link against a stable, minimal mirror of the JWT decode and webhook HMAC
+# verification paths. No production consumer should depend on this lib.
+[lib]
+name = "parkhub_server"
+path = "src/lib.rs"
+
 [lints]
 workspace = true
 
@@ -208,6 +216,9 @@ e2e-bypass = []
 # When enabled, `PARKHUB_REDIS_URL` MUST be set at startup or the server panics
 # early. Default builds (single binary, no Redis) are unaffected.
 redis-revocation = ["dep:redis"]
+# Off by default: enables `src/lib.rs::fuzz_api` for cargo-fuzz harnesses.
+# Production builds NEVER enable this — see `fuzz/` for consumers.
+fuzzing = []
 mod-bookings = []
 mod-vehicles = []
 mod-absences = []
