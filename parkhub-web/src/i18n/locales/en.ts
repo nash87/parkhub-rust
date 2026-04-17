@@ -495,6 +495,14 @@ export default {
         exportConfig: 'Export config',
         exportHint: 'Download the current module-enablement map as JSON',
         status: { enabled: 'Enabled', disabled: 'Disabled', runtimeOff: 'Runtime off' },
+        toggle: {
+          enable: 'Enable',
+          disable: 'Disable',
+          notRuntimeToggleable: 'Not runtime toggleable',
+          success: 'Module {{name}} toggled',
+          error: 'Could not toggle {{name}}',
+          requiresReload: 'Reload to apply',
+        },
         category: {
           core: 'Core',
           booking: 'Booking',

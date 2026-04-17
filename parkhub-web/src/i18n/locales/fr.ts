@@ -484,6 +484,14 @@ export default {
         exportConfig: 'Exporter la configuration',
         exportHint: 'Télécharger la carte d\'activation en JSON',
         status: { enabled: 'Activé', disabled: 'Désactivé', runtimeOff: 'Runtime désactivé' },
+        toggle: {
+          enable: 'Activer',
+          disable: 'Désactiver',
+          notRuntimeToggleable: 'Non commutable à l\'exécution',
+          success: 'Module {{name}} basculé',
+          error: 'Impossible de basculer {{name}}',
+          requiresReload: 'Recharger pour appliquer',
+        },
         category: {
           core: 'Noyau',
           booking: 'Réservations',

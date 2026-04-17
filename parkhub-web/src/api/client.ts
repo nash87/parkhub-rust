@@ -362,6 +362,13 @@ export const api = {
   adminUpdateSettings: (data: Record<string, string>) =>
     request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
+  // ── Admin Modules (T-1720 v2 — runtime enable/disable) ──
+  patchModule: (name: string, runtime_enabled: boolean) =>
+    request<ModuleInfo>(`/api/v1/admin/modules/${encodeURIComponent(name)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ runtime_enabled }),
+    }),
+
   // ── Admin Announcements ──
   adminListAnnouncements: () => request<Announcement[]>('/api/v1/admin/announcements'),
   adminCreateAnnouncement: (data: { title: string; message: string; severity: string; active: boolean; expires_at?: string }) =>
@@ -572,6 +579,21 @@ export const api = {
 };
 
 // ── Types ──
+
+/** Module registry entry returned by /api/v1/modules/info and /api/v1/admin/modules/{name}. */
+export interface ModuleInfo {
+  name: string;
+  category: string;
+  description: string;
+  enabled: boolean;
+  runtime_toggleable: boolean;
+  runtime_enabled?: boolean;
+  config_keys: string[];
+  ui_route: string | null;
+  depends_on: string[];
+  version: string;
+}
+
 export interface User {
   id: string;
   username: string;

@@ -484,6 +484,14 @@ export default {
         exportConfig: 'Esporta configurazione',
         exportHint: 'Scarica la mappa di attivazione come JSON',
         status: { enabled: 'Abilitato', disabled: 'Disabilitato', runtimeOff: 'Runtime spento' },
+        toggle: {
+          enable: 'Abilita',
+          disable: 'Disabilita',
+          notRuntimeToggleable: 'Non commutabile a runtime',
+          success: 'Modulo {{name}} commutato',
+          error: 'Impossibile commutare {{name}}',
+          requiresReload: 'Ricarica per applicare',
+        },
         category: {
           core: 'Base',
           booking: 'Prenotazioni',
