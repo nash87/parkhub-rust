@@ -1,8 +1,15 @@
-name: Mutation Testing
+name: Mutation Testing (nightly)
+
+# Runs cargo-mutants against parkhub-common on a nightly cron. Reports
+# escaped mutants as artifacts for morning triage. Not a blocking gate —
+# surfaces coverage gaps, doesn't gate merges. See T-1734.
+#
+# v1 scope: parkhub-common only. parkhub-server is too big for a single
+# 3-hour nightly run; expand scope later once baseline kill rate is known.
 
 on:
   schedule:
-    - cron: '0 6 * * 0'
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 concurrency:
@@ -19,7 +26,8 @@ jobs:
   mutants:
     name: cargo-mutants sweep
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
+    continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -40,10 +48,10 @@ jobs:
         run: cd parkhub-web && npm ci && npm run build
 
       - name: Install cargo-mutants
-        run: cargo install cargo-mutants --locked
+        run: cargo install cargo-mutants --locked --version '^25'
 
-      - name: Run cargo-mutants
-        run: cargo mutants --no-shuffle --timeout 180 --output mutants.out || true
+      - name: Run cargo-mutants (parkhub-common)
+        run: cargo mutants --json --timeout 300 --test-package parkhub-common
 
       - name: Upload mutants report
         if: always()

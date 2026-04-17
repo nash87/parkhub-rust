@@ -1,0 +1,8 @@
+---
+source: parkhub-server/src/api/snapshots.rs
+expression: value
+---
+{
+  "name": "parkhub-server",
+  "version": "[redacted]"
+}

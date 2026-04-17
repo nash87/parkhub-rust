@@ -178,6 +178,8 @@ pub mod settings;
 pub mod setup;
 #[cfg(feature = "mod-sharing")]
 pub mod sharing;
+#[cfg(test)]
+mod snapshots;
 #[cfg(feature = "mod-social")]
 mod social;
 #[cfg(feature = "mod-sso")]

@@ -296,6 +296,12 @@ mod-admin-analytics = []
 tempfile = "3"
 http-body-util = "0.1"
 tower = { version = "0.5", features = ["util"] }
+# insta — snapshot testing for stable handler responses (T-1734). Snapshots
+# live alongside the source in `src/api/snapshots/` as *.snap files and are
+# committed; *.snap.new is gitignored (`cargo insta review` locally before
+# accepting). JSON feature enables `assert_json_snapshot!` with inline
+# redactions for non-deterministic fields (timestamps, UUIDs, versions).
+insta = { version = "1", features = ["json", "redactions"] }
 # Integration test dependencies (used by ../tests/main.rs)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 chrono = { version = "0.4", features = ["serde"] }

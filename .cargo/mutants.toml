@@ -8,34 +8,34 @@
 # coverage; a mutant that gets caught counts as a kill. Higher kill rate =
 # stronger test gauntlet.
 #
-# We scope to the hand-written validation + math logic, not the generated
-# axum boilerplate, because handler-level mutants usually get caught by
-# the integration tests anyway and the volume would slow sweeps to the
-# point nobody runs them.
+# Scope mutations to parkhub-server + parkhub-common only (skip parkhub-web
+# since that's TypeScript and mutation-tested separately via infection-php /
+# StrykerJS-style tooling).
 
-# Only mutate files that have a meaningful test-to-code ratio; skip the
-# giant db.rs / main.rs / the utoipa openapi macro bodies that explode the
-# build graph without yielding actionable coverage gaps.
 examine_globs = [
-    "parkhub-common/src/**.rs",
-    "parkhub-server/src/validation.rs",
-    "parkhub-server/src/api/co2.rs",
-    "parkhub-server/src/rate_limit.rs",
-    "parkhub-server/src/jwt.rs",
+    "parkhub-server/src/**/*.rs",
+    "parkhub-common/src/**/*.rs",
 ]
 
+# Skip known-flaky paths — time-dependent code and the binary entry point
+# produce mutants that either hang on intervals or can't be exercised
+# from unit tests.
 exclude_globs = [
+    "**/jobs.rs",
+    "**/main.rs",
     "**/tests/**",
     "**/*_tests.rs",
     "**/build.rs",
 ]
 
-# Timeout per-mutant: a missed timeout can hang indefinitely when a mutant
-# invalidates a loop guard. 5× the base test-run time is the recommended
-# default; we run the Rust suite in <30s baseline so 180s is generous.
-timeout = "180"
+# Cap individual mutant timeout at 3× the baseline test run. Default is
+# generous; keep it sane so a mutant that invalidates a loop guard can't
+# hang indefinitely.
+timeout_multiplier = 3.0
 
-# Run mutants for ALL features; some of the hardening lives behind the
-# `e2e-bypass` flag so exclude that specific feature to keep prod-shape
-# mutants relevant.
-additional_cargo_args = ["--no-default-features", "--features", "full,headless"]
+test_tool = "cargo"
+
+# Only test with the default feature set — full matrix is too slow for
+# nightly. `default = ["headless"]` in parkhub-server, `headless = ["full"]`
+# pulls in every mod-* feature.
+additional_cargo_args = ["--no-default-features", "--features", "headless"]

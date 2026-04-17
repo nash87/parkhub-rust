@@ -1,0 +1,15 @@
+---
+source: parkhub-server/src/api/snapshots.rs
+expression: envelope
+---
+{
+  "info": {
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "title": "ParkHub API",
+    "version": "[redacted]"
+  },
+  "openapi": "3.0.3"
+}
