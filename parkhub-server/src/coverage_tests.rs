@@ -51,6 +51,7 @@ async fn test_harness() -> TestHarness {
         mdns: None,
         scheduler: None,
         ws_events: crate::api::ws::EventBroadcaster::new(),
+        revocation_store: crate::jwt::TokenRevocationList::new(),
     }));
 
     {
@@ -64,7 +65,12 @@ async fn test_harness() -> TestHarness {
 }
 
 fn router(state: Arc<RwLock<AppState>>) -> axum::Router {
-    let (router, _demo) = create_router(state);
+    let revocation_store = state
+        .try_read()
+        .expect("no concurrent writer in test helper")
+        .revocation_store
+        .clone();
+    let (router, _demo) = create_router(state, revocation_store);
     router
 }
 

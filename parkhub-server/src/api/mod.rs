@@ -30,7 +30,10 @@ use crate::demo;
 use crate::metrics;
 #[cfg(feature = "full")]
 use crate::openapi::ApiDoc;
-use crate::rate_limit::{EndpointRateLimiters, ip_rate_limit_middleware};
+use crate::rate_limit::{
+    EndpointRateLimiters, IdentityBucketKind, IdentityRateLimiters, identity_rate_limit_middleware,
+    ip_rate_limit_middleware,
+};
 use crate::static_files;
 
 /// Maximum allowed request body size: 4 MiB.
@@ -583,14 +586,30 @@ async fn list_module_features() -> impl IntoResponse {
 
 /// Create the API router with `OpenAPI` docs and metrics.
 /// Returns (router, `demo_state`) so the demo state can be used for scheduled resets.
+///
+/// `revocation_store` is injected as an axum `Extension` so the `AuthUser`
+/// extractor (see `crate::jwt`) can consult it on every token validation.
+/// Callers in tests build one via `state.read().await.revocation_store.clone()`;
+/// the production `main.rs` path passes the same `Arc` it stored in `AppState`.
 #[allow(unused_mut, unused_variables)]
-pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
+pub fn create_router(
+    state: SharedState,
+    revocation_store: Arc<crate::jwt::TokenRevocationList>,
+) -> (Router, demo::SharedDemoState) {
     // Initialize Prometheus metrics
     let metrics_handle = metrics::init_metrics();
 
     // Instantiate per-endpoint rate limiters
     let rate_limiters = EndpointRateLimiters::new();
     let global_limiter = rate_limiters.general.clone();
+    let identity_limiters = rate_limiters.identity.clone();
+
+    // Spawn the per-identity idle-entry eviction task (sweeps every 60 s).
+    // Returns `None` when no tokio runtime is available — fine in unit tests
+    // that sweep manually. Dropping the handle detaches the task; the process
+    // terminates alongside it.
+    let _identity_eviction =
+        crate::rate_limit::per_identity::spawn_eviction_task(identity_limiters.clone());
 
     // 2FA temporary token store — shared between login and 2FA login routes
     let two_fa_store = security::TwoFactorTempTokenStore::new();
@@ -598,52 +617,108 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
     // Rate-limited auth routes — each sub-router gets its own per-IP limiter applied
     // via route_layer so only that specific route is affected.
 
-    // POST /api/v1/auth/login — 5 requests per minute per IP
+    // POST /api/v1/auth/login — 5 requests per minute per IP, Login bucket per identity
     let login_limiter = rate_limiters.login.clone();
+    let login_identity = identity_limiters.clone();
     let login_route = Router::new()
         .route("/api/v1/auth/login", post(login))
         .layer(Extension(two_fa_store.clone()))
         .route_layer(middleware::from_fn(move |req, next| {
+            identity_rate_limit_middleware(
+                login_identity.clone(),
+                IdentityBucketKind::Login,
+                req,
+                next,
+            )
+        }))
+        .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(login_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/2fa/login — 5 requests per minute per IP (same as login)
+    // POST /api/v1/auth/2fa/login — 5 requests per minute per IP, Login bucket per identity
     let two_fa_login_limiter = rate_limiters.login.clone();
+    let two_fa_login_identity = identity_limiters.clone();
     let two_fa_login_route = Router::new()
         .route("/api/v1/auth/2fa/login", post(security::two_factor_login))
         .layer(Extension(two_fa_store))
         .route_layer(middleware::from_fn(move |req, next| {
+            identity_rate_limit_middleware(
+                two_fa_login_identity.clone(),
+                IdentityBucketKind::Login,
+                req,
+                next,
+            )
+        }))
+        .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(two_fa_login_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/register — 3 requests per minute per IP
+    // POST /api/v1/auth/register — 3 requests per minute per IP, Register bucket per identity
     let register_limiter = rate_limiters.register.clone();
+    let register_identity = identity_limiters.clone();
     let register_route = Router::new()
         .route("/api/v1/auth/register", post(register))
+        .route_layer(middleware::from_fn(move |req, next| {
+            identity_rate_limit_middleware(
+                register_identity.clone(),
+                IdentityBucketKind::Register,
+                req,
+                next,
+            )
+        }))
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(register_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/forgot-password — 3 requests per 15 minutes per IP
+    // POST /api/v1/auth/forgot-password — 3/15 min per IP, PasswordReset bucket per identity
     let forgot_limiter = rate_limiters.forgot_password.clone();
+    let forgot_identity = identity_limiters.clone();
     let forgot_route = Router::new()
         .route("/api/v1/auth/forgot-password", post(forgot_password))
+        .route_layer(middleware::from_fn(move |req, next| {
+            identity_rate_limit_middleware(
+                forgot_identity.clone(),
+                IdentityBucketKind::PasswordReset,
+                req,
+                next,
+            )
+        }))
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(forgot_limiter.clone(), req, next)
         }));
 
     // POST /api/v1/auth/refresh — 10 requests per minute per IP
+    // Token refresh uses Mutation bucket per identity (refresh is a state-changing
+    // rotation, so it's grouped with writes rather than reads).
     let refresh_limiter = rate_limiters.token_refresh.clone();
+    let refresh_identity = identity_limiters.clone();
     let refresh_route = Router::new()
         .route("/api/v1/auth/refresh", post(refresh_token))
+        .route_layer(middleware::from_fn(move |req, next| {
+            identity_rate_limit_middleware(
+                refresh_identity.clone(),
+                IdentityBucketKind::Mutation,
+                req,
+                next,
+            )
+        }))
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(refresh_limiter.clone(), req, next)
         }));
 
-    // POST /api/v1/auth/reset-password — 5 requests per 15 minutes per IP
+    // POST /api/v1/auth/reset-password — 5/15 min per IP, PasswordReset bucket per identity
     let reset_pw_limiter = rate_limiters.password_reset.clone();
+    let reset_pw_identity = identity_limiters.clone();
     let reset_password_route = Router::new()
         .route("/api/v1/auth/reset-password", post(reset_password))
+        .route_layer(middleware::from_fn(move |req, next| {
+            identity_rate_limit_middleware(
+                reset_pw_identity.clone(),
+                IdentityBucketKind::PasswordReset,
+                req,
+                next,
+            )
+        }))
         .route_layer(middleware::from_fn(move |req, next| {
             ip_rate_limit_middleware(reset_pw_limiter.clone(), req, next)
         }));
@@ -1867,7 +1942,19 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         );
     }
 
-    // Apply auth middleware to all protected routes
+    // Apply per-identity rate limiting layered INSIDE auth_middleware so the
+    // layer sees the `AuthUser` that auth_middleware inserts. Bucket kind is
+    // resolved at request time from method + path (Admin / Read / Mutation).
+    // Login / Register / PasswordReset buckets are wired directly on the
+    // pre-auth `/api/v1/auth/*` sub-routers above.
+    let protected_identity_limiters = identity_limiters.clone();
+    let protected_routes = protected_routes.route_layer(middleware::from_fn(move |req, next| {
+        protected_identity_rate_limit_middleware(protected_identity_limiters.clone(), req, next)
+    }));
+
+    // Apply auth middleware to all protected routes. Runs OUTSIDE the
+    // per-identity limiter above so `AuthUser` is present by the time the
+    // identity limiter fires.
     let protected_routes = protected_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),
         auth_middleware,
@@ -2036,6 +2123,11 @@ pub fn create_router(state: SharedState) -> (Router, demo::SharedDemoState) {
         )
         // Assign a unique x-request-id to every inbound request (UUID v4)
         .layer(SetRequestIdLayer::new(x_request_id, MakeRequestUuid))
+        // JWT revocation store — made available to every handler via
+        // `request.extensions()`.  `AuthUser` (see `crate::jwt`) consults
+        // this on every token validation.  The backend (in-memory vs
+        // Redis) is decided once in `main::build_revocation_store`.
+        .layer(Extension(revocation_store))
         // 30-second request timeout — returns 408 on breach
         .layer(
             ServiceBuilder::new()
@@ -2205,6 +2297,39 @@ async fn auth_middleware(
     });
 
     Ok(next.run(request).await)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PER-IDENTITY RATE-LIMIT ROUTER (T-1743)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Pick the [`IdentityBucketKind`] for a protected-router request.
+///
+/// * `/api/v1/admin/*`                                  → `Admin`
+/// * `GET` / `HEAD`                                      → `Read`
+/// * anything else (POST / PUT / PATCH / DELETE / …)     → `Mutation`
+fn classify_protected_bucket(method: &axum::http::Method, path: &str) -> IdentityBucketKind {
+    if path.starts_with("/api/v1/admin/") || path == "/api/v1/admin" {
+        IdentityBucketKind::Admin
+    } else if method == axum::http::Method::GET || method == axum::http::Method::HEAD {
+        IdentityBucketKind::Read
+    } else {
+        IdentityBucketKind::Mutation
+    }
+}
+
+/// Per-identity rate-limit middleware for authenticated (protected) routes.
+///
+/// Delegates to [`identity_rate_limit_middleware`] after resolving the bucket
+/// kind from the request method + path.  Runs INSIDE `auth_middleware` so the
+/// [`AuthUser`] extension is present by the time the identity limiter fires.
+async fn protected_identity_rate_limit_middleware(
+    limiters: std::sync::Arc<IdentityRateLimiters>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    let kind = classify_protected_bucket(request.method(), request.uri().path());
+    identity_rate_limit_middleware(limiters, kind, request, next).await
 }
 
 // Health & system handler re-exports from system module

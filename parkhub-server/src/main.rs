@@ -68,6 +68,7 @@ mod webhooks_v2_tests;
 use config::ServerConfig;
 use db::{Database, DatabaseConfig};
 use discovery::MdnsService;
+use jwt::TokenRevocationList;
 
 #[cfg(feature = "gui")]
 slint::include_modules!();
@@ -90,6 +91,13 @@ pub struct AppState {
     pub scheduler: Option<tokio_cron_scheduler::JobScheduler>,
     /// Broadcast channel for WebSocket real-time events.
     pub ws_events: api::ws::EventBroadcaster,
+    /// JWT revocation store — backed by either an in-memory HashMap
+    /// (single-replica default) or Redis (when the `redis-revocation`
+    /// feature is enabled AND `PARKHUB_REDIS_URL` is set).
+    ///
+    /// Wired into every request via an axum `Extension` layer so the
+    /// `AuthUser` extractor can consult it on token validation.
+    pub revocation_store: Arc<TokenRevocationList>,
 }
 
 /// CLI arguments for the server
@@ -481,6 +489,11 @@ async fn main() -> Result<()> {
         None
     };
 
+    // Build the JWT revocation store — Redis when the `redis-revocation`
+    // feature is enabled, in-memory otherwise. Must happen before AppState
+    // so the backend is fixed for the lifetime of this process.
+    let revocation_store = build_revocation_store().await;
+
     // Create application state
     let state = Arc::new(RwLock::new(AppState {
         config: config.clone(),
@@ -488,10 +501,13 @@ async fn main() -> Result<()> {
         mdns,
         scheduler: None,
         ws_events: api::ws::EventBroadcaster::new(),
+        revocation_store: revocation_store.clone(),
     }));
 
-    // Build the API router
-    let (app, demo_state) = api::create_router(state.clone());
+    // Build the API router. `revocation_store` is passed alongside `state` so
+    // `create_router` can install it as an axum `Extension` without having to
+    // acquire the `AppState` lock synchronously.
+    let (app, demo_state) = api::create_router(state.clone(), revocation_store);
 
     // Determine bind address
     let addr: SocketAddr = format!("0.0.0.0:{}", config.port).parse()?;
@@ -939,6 +955,35 @@ async fn main() -> Result<()> {
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     Ok(())
+}
+
+/// Build the JWT revocation store used by [`AppState`].
+///
+/// * With `--features redis-revocation` AND `PARKHUB_REDIS_URL` set → returns a
+///   Redis-backed store shared across replicas.
+/// * With `--features redis-revocation` AND `PARKHUB_REDIS_URL` **unset** →
+///   panics per the Cargo.toml contract: a misconfigured production deploy
+///   must fail loudly at startup rather than silently fall back to
+///   process-local state that won't propagate logouts.
+/// * Without the feature → returns the in-memory default (single-replica OK).
+// `async` is unused when the `redis-revocation` feature is off, but we keep
+// the signature stable so the call site in `main` stays uniform across
+// feature matrices.
+#[allow(clippy::unused_async)]
+async fn build_revocation_store() -> Arc<TokenRevocationList> {
+    #[cfg(feature = "redis-revocation")]
+    {
+        // `from_env` enforces the PARKHUB_REDIS_URL requirement by panicking
+        // with a clear message when the feature is on but the env var is unset.
+        let store = jwt::RedisRevocationList::from_env().await;
+        info!("JWT revocation store: Redis (shared across replicas)");
+        TokenRevocationList::from_store(store)
+    }
+    #[cfg(not(feature = "redis-revocation"))]
+    {
+        info!("JWT revocation store: in-memory (single-replica)");
+        TokenRevocationList::new()
+    }
 }
 
 /// Get the application data directory
