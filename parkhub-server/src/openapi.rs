@@ -66,7 +66,17 @@ use crate::{
         (name = "Calendar", description = "Calendar events and iCal export"),
         (name = "Team", description = "Team overview and member status"),
         (name = "Payments", description = "Stripe payment stub (demo mode)"),
-        (name = "Translations", description = "Community translation proposals, voting, and overrides")
+        (name = "Translations", description = "Community translation proposals, voting, and overrides"),
+        (name = "Security", description = "Password policy, login history, and active session management"),
+        (name = "2FA", description = "Two-factor authentication setup, verification, and login flow"),
+        (name = "API Keys", description = "Personal API key creation and revocation"),
+        (name = "OAuth", description = "Third-party OAuth sign-in (Google, GitHub)"),
+        (name = "RBAC", description = "Role-based access control: roles, permissions, and assignments"),
+        (name = "Branding", description = "Tenant branding — colors, fonts, and logo upload"),
+        (name = "Maintenance", description = "Scheduled lot/slot maintenance windows"),
+        (name = "Billing", description = "Cost-center and department billing rollups"),
+        (name = "Absence Approval", description = "Manager approval workflow for absence requests"),
+        (name = "Visitors", description = "Visitor registration, check-in, and admin oversight")
     ),
     components(
         schemas(
@@ -188,6 +198,21 @@ use crate::{
             crate::api::modules::ConfigSchema,
             crate::api::modules::ModuleConfig,
             crate::api::modules::UpdateModuleConfigRequest,
+
+            // T-1739 pass 1 — security/2FA/API-keys/password-policy
+            crate::api::security::TwoFactorLoginRequest,
+            crate::api::security::TwoFactorVerifyRequest,
+            crate::api::security::TwoFactorDisableRequest,
+            crate::api::security::CreateApiKeyRequest,
+            crate::api::security::PasswordPolicy,
+
+            // T-1739 pass 1 — RBAC
+            crate::api::rbac::CreateRoleRequest,
+            crate::api::rbac::UpdateRoleRequest,
+            crate::api::rbac::AssignRolesRequest,
+
+            // T-1739 pass 1 — Zones (update)
+            crate::api::zones::UpdateZoneRequest,
         )
     ),
     paths(
@@ -402,6 +427,86 @@ use crate::{
         crate::api::translations::create_proposal,
         crate::api::translations::vote_on_proposal,
         crate::api::translations::review_proposal,
+
+        // ───── T-1739 pass 1 ─────
+        // Auth — session lifecycle
+        crate::api::auth::logout,
+
+        // 2FA (Authentication)
+        crate::api::security::two_factor_login,
+        crate::api::security::two_factor_setup,
+        crate::api::security::two_factor_verify,
+        crate::api::security::two_factor_disable,
+        crate::api::security::two_factor_status,
+
+        // Security — password policy, login history, sessions, API keys
+        crate::api::security::get_password_policy,
+        crate::api::security::update_password_policy,
+        crate::api::security::get_login_history,
+        crate::api::security::admin_get_login_history,
+        crate::api::security::list_sessions,
+        crate::api::security::revoke_session,
+        crate::api::security::create_api_key,
+        crate::api::security::list_api_keys,
+        crate::api::security::revoke_api_key,
+
+        // OAuth
+        crate::api::oauth::oauth_providers,
+        crate::api::oauth::oauth_google_redirect,
+        crate::api::oauth::oauth_google_callback,
+        crate::api::oauth::oauth_github_redirect,
+        crate::api::oauth::oauth_github_callback,
+
+        // RBAC
+        crate::api::rbac::list_roles,
+        crate::api::rbac::create_role,
+        crate::api::rbac::update_role,
+        crate::api::rbac::delete_role,
+        crate::api::rbac::get_user_roles,
+        crate::api::rbac::assign_user_roles,
+
+        // Branding
+        crate::api::branding::admin_get_branding,
+        crate::api::branding::admin_update_branding,
+        crate::api::branding::admin_upload_logo,
+        crate::api::branding::get_branding_logo,
+
+        // Maintenance
+        crate::api::maintenance::create_maintenance,
+        crate::api::maintenance::list_maintenance,
+        crate::api::maintenance::update_maintenance,
+        crate::api::maintenance::delete_maintenance,
+        crate::api::maintenance::active_maintenance,
+
+        // Billing (cost center / department / export / allocate)
+        crate::api::billing::billing_by_cost_center,
+        crate::api::billing::billing_by_department,
+        crate::api::billing::billing_export_csv,
+        crate::api::billing::billing_allocate,
+
+        // Absence Approval workflow
+        crate::api::absence_approval::submit_absence_request,
+        crate::api::absence_approval::list_pending_absences,
+        crate::api::absence_approval::approve_absence,
+        crate::api::absence_approval::reject_absence,
+        crate::api::absence_approval::my_absence_requests,
+
+        // Visitors
+        crate::api::visitors::register_visitor,
+        crate::api::visitors::list_my_visitors,
+        crate::api::visitors::admin_list_visitors,
+        crate::api::visitors::check_in_visitor,
+        crate::api::visitors::cancel_visitor,
+
+        // Bookings / Absences / Zones — missing CRUD verbs
+        crate::api::bookings::update_booking,
+        crate::api::absences::update_absence,
+        crate::api::zones::update_zone,
+
+        // Calendar — iCal feed endpoints + token issuance
+        crate::api::calendar::calendar_ical_authenticated,
+        crate::api::calendar::calendar_ical_by_token,
+        crate::api::calendar::generate_calendar_token,
     )
 )]
 pub struct ApiDoc;

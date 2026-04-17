@@ -164,6 +164,29 @@
         ],
         "type": "object"
       },
+      "AllocateCreditsRequest": {
+        "description": "Credit allocation request",
+        "properties": {
+          "cost_center": {
+            "type": "string"
+          },
+          "credits": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "cost_center",
+          "credits"
+        ],
+        "type": "object"
+      },
       "AnnouncementSeverity": {
         "description": "Announcement severity level",
         "enum": [
@@ -199,6 +222,33 @@
         "required": [
           "code",
           "message"
+        ],
+        "type": "object"
+      },
+      "ApproveAbsenceRequest": {
+        "description": "Request body for approving an absence",
+        "properties": {
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "AssignRolesRequest": {
+        "properties": {
+          "role_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "role_ids"
         ],
         "type": "object"
       },
@@ -265,6 +315,23 @@
           }
         ],
         "description": "Booking list filters"
+      },
+      "BrandingUpdate": {
+        "properties": {
+          "app_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "primary_color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
       },
       "ChangePasswordRequest": {
         "description": "Request body for password change",
@@ -393,6 +460,27 @@
         ],
         "type": "object"
       },
+      "CreateApiKeyRequest": {
+        "description": "Request to create an API key.",
+        "properties": {
+          "expires_in_days": {
+            "description": "Optional expiry in days (None = never expires)",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
       "CreateBookingRequest": {
         "description": "Request to create a booking",
         "properties": {
@@ -471,6 +559,42 @@
           "start_time",
           "end_time",
           "guest_name"
+        ],
+        "type": "object"
+      },
+      "CreateMaintenanceRequest": {
+        "description": "Request to create a maintenance window",
+        "properties": {
+          "affected_slots": {
+            "description": "\"all\" or list of slot IDs",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "end_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "lot_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "start_time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lot_id",
+          "start_time",
+          "end_time",
+          "reason"
         ],
         "type": "object"
       },
@@ -641,6 +765,30 @@
           "start_date",
           "start_time",
           "end_time"
+        ],
+        "type": "object"
+      },
+      "CreateRoleRequest": {
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "permissions"
         ],
         "type": "object"
       },
@@ -983,6 +1131,18 @@
         ],
         "type": "object"
       },
+      "LogoUpload": {
+        "properties": {
+          "logo": {
+            "description": "Base64-encoded image data, optionally with a `data:<mime>;base64,` prefix.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logo"
+        ],
+        "type": "object"
+      },
       "ModuleCategory": {
         "description": "Semantic grouping used by the admin Modules Dashboard.\n\nSerialized as kebab-case (stable JSON, matches the kebab-case\nmodule slugs and aligns with the Web UI category filter values).",
         "enum": [
@@ -1109,6 +1269,62 @@
             "description": "Items per page",
             "format": "int32",
             "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PasswordPolicy": {
+        "description": "Configurable password policy.",
+        "properties": {
+          "min_length": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "require_lowercase": {
+            "type": "boolean"
+          },
+          "require_number": {
+            "type": "boolean"
+          },
+          "require_special_char": {
+            "type": "boolean"
+          },
+          "require_uppercase": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "min_length",
+          "require_uppercase",
+          "require_lowercase",
+          "require_number",
+          "require_special_char"
+        ],
+        "type": "object"
+      },
+      "PatchBookingRequest": {
+        "description": "Request body for patching a booking",
+        "properties": {
+          "end_time": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_time": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "type": "object"
@@ -1328,6 +1544,51 @@
         ],
         "type": "object"
       },
+      "RegisterVisitorRequest": {
+        "description": "Request body for pre-registering a visitor",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "visit_date": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "visit_date"
+        ],
+        "type": "object"
+      },
+      "RejectAbsenceRequest": {
+        "description": "Request body for rejecting an absence",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "description": "Request body for the reset-password endpoint",
         "properties": {
@@ -1489,6 +1750,30 @@
           "refunded"
         ],
         "type": "string"
+      },
+      "SubmitAbsenceRequest": {
+        "description": "Request body for submitting an absence request",
+        "properties": {
+          "absence_type": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "absence_type",
+          "start_date",
+          "end_date",
+          "reason"
+        ],
+        "type": "object"
       },
       "SubscribeRequest": {
         "properties": {
@@ -1666,6 +1951,84 @@
         ],
         "type": "object"
       },
+      "TwoFactorDisableRequest": {
+        "description": "Request body for disabling 2FA.",
+        "properties": {
+          "current_password": {
+            "description": "Current password required to disable 2FA",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password"
+        ],
+        "type": "object"
+      },
+      "TwoFactorLoginRequest": {
+        "description": "Login response extension when 2FA is required.",
+        "properties": {
+          "code": {
+            "description": "The 6-digit TOTP code",
+            "type": "string"
+          },
+          "temp_token": {
+            "description": "Temporary token from initial login",
+            "type": "string"
+          }
+        },
+        "required": [
+          "temp_token",
+          "code"
+        ],
+        "type": "object"
+      },
+      "TwoFactorVerifyRequest": {
+        "description": "Request body for verifying a TOTP code.",
+        "properties": {
+          "code": {
+            "description": "The 6-digit TOTP code from the authenticator app",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "UpdateAbsenceRequest": {
+        "description": "Request body for updating an absence",
+        "properties": {
+          "absence_type": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AbsenceType"
+              }
+            ]
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "UpdateAnnouncementRequest": {
         "properties": {
           "active": {
@@ -1803,6 +2166,41 @@
             "format": "double",
             "type": [
               "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateMaintenanceRequest": {
+        "description": "Request to update a maintenance window",
+        "properties": {
+          "affected_slots": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "end_time": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_time": {
+            "format": "date-time",
+            "type": [
+              "string",
               "null"
             ]
           }
@@ -2006,6 +2404,32 @@
         ],
         "type": "object"
       },
+      "UpdateRoleRequest": {
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "UpdateSwapRequestBody": {
         "description": "Request body for accepting/declining a swap request",
         "properties": {
@@ -2067,6 +2491,32 @@
           },
           "url": {
             "description": "New target URL (optional)",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateZoneRequest": {
+        "properties": {
+          "color": {
+            "description": "New display color (optional, hex code e.g. \"#FFD700\")",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "description": "New description (optional)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "New zone name (optional)",
             "type": [
               "string",
               "null"
@@ -2273,6 +2723,26 @@
         ]
       }
     },
+    "/api/v1/absences/my": {
+      "get": {
+        "description": "List the current user's absence requests with approval status.",
+        "operationId": "my_absence_requests",
+        "responses": {
+          "200": {
+            "description": "List of user's absence requests"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "My absence requests",
+        "tags": [
+          "Absence Approval"
+        ]
+      }
+    },
     "/api/v1/absences/pattern": {
       "get": {
         "description": "Get the current user's recurring absence pattern.",
@@ -2310,6 +2780,39 @@
         "summary": "Save absence pattern",
         "tags": [
           "Absences"
+        ]
+      }
+    },
+    "/api/v1/absences/requests": {
+      "post": {
+        "description": "Submit a new absence request that requires admin approval.",
+        "operationId": "submit_absence_request",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAbsenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Request submitted"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Submit absence request",
+        "tags": [
+          "Absence Approval"
         ]
       }
     },
@@ -2356,6 +2859,157 @@
         "summary": "Delete an absence",
         "tags": [
           "Absences"
+        ]
+      },
+      "put": {
+        "description": "Update absence_type, start_date, end_date, or notes. Only the owner or an admin may update.",
+        "operationId": "update_absence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAbsenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update an absence",
+        "tags": [
+          "Absences"
+        ]
+      }
+    },
+    "/api/v1/admin/absences/pending": {
+      "get": {
+        "description": "Admin endpoint to list all pending absence requests.",
+        "operationId": "list_pending_absences",
+        "responses": {
+          "200": {
+            "description": "List of pending requests"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List pending absence requests",
+        "tags": [
+          "Absence Approval"
+        ]
+      }
+    },
+    "/api/v1/admin/absences/{id}/approve": {
+      "put": {
+        "description": "Approve a pending absence request with an optional comment.",
+        "operationId": "approve_absence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveAbsenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Request approved"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Approve absence request",
+        "tags": [
+          "Absence Approval"
+        ]
+      }
+    },
+    "/api/v1/admin/absences/{id}/reject": {
+      "put": {
+        "description": "Reject a pending absence request with a reason.",
+        "operationId": "reject_absence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectAbsenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Request rejected"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Request not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Reject absence request",
+        "tags": [
+          "Absence Approval"
         ]
       }
     },
@@ -2509,6 +3163,111 @@
         ]
       }
     },
+    "/api/v1/admin/billing/allocate": {
+      "post": {
+        "description": "Grant credits equally to all users in a cost center. Admin only.",
+        "operationId": "billing_allocate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocateCreditsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Credits allocated"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Allocate credits by cost center",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/admin/billing/by-cost-center": {
+      "get": {
+        "description": "Aggregate bookings, credits, and spending by cost center. Admin only.",
+        "operationId": "billing_by_cost_center",
+        "responses": {
+          "200": {
+            "description": "Cost center summaries"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Billing by cost center",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/admin/billing/by-department": {
+      "get": {
+        "description": "Aggregate bookings, credits, and spending by department. Admin only.",
+        "operationId": "billing_by_department",
+        "responses": {
+          "200": {
+            "description": "Department summaries"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Billing by department",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/admin/billing/export": {
+      "get": {
+        "description": "Download billing data as CSV with cost center breakdown. Admin only.",
+        "operationId": "billing_export_csv",
+        "responses": {
+          "200": {
+            "description": "CSV file"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Export billing CSV",
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
     "/api/v1/admin/bookings": {
       "get": {
         "description": "Returns paginated bookings with enriched details. Admin only.",
@@ -2549,6 +3308,102 @@
           }
         ],
         "summary": "List all bookings (admin)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/branding": {
+      "get": {
+        "operationId": "admin_get_branding",
+        "responses": {
+          "200": {
+            "description": "Branding config"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get branding configuration",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "operationId": "admin_update_branding",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated branding config"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update branding configuration",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/branding/logo": {
+      "post": {
+        "operationId": "admin_upload_logo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Logo uploaded"
+          },
+          "400": {
+            "description": "Invalid image or too large"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Upload branding logo",
         "tags": [
           "Admin"
         ]
@@ -2919,6 +3774,141 @@
         ]
       }
     },
+    "/api/v1/admin/maintenance": {
+      "get": {
+        "description": "List all scheduled maintenance windows. Admin only.",
+        "operationId": "list_maintenance",
+        "responses": {
+          "200": {
+            "description": "Maintenance list"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List all maintenance",
+        "tags": [
+          "Maintenance"
+        ]
+      },
+      "post": {
+        "description": "Schedule a maintenance window for a lot. Admin only.",
+        "operationId": "create_maintenance",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMaintenanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Maintenance window created"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Create maintenance window",
+        "tags": [
+          "Maintenance"
+        ]
+      }
+    },
+    "/api/v1/admin/maintenance/{id}": {
+      "delete": {
+        "operationId": "delete_maintenance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Cancel maintenance",
+        "tags": [
+          "Maintenance"
+        ]
+      },
+      "put": {
+        "operationId": "update_maintenance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMaintenanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update maintenance window",
+        "tags": [
+          "Maintenance"
+        ]
+      }
+    },
     "/api/v1/admin/modules/{name}": {
       "patch": {
         "description": "Admin-only. Flips a runtime-toggleable module on/off via admin setting `module.{name}.runtime_enabled`. Returns 400 for unknown slug and 409 when the module is marked runtime_toggleable=false (security-sensitive — cannot be disabled without a rebuild). Audit-logged.",
@@ -3171,6 +4161,122 @@
         ]
       }
     },
+    "/api/v1/admin/roles": {
+      "get": {
+        "description": "Returns all defined roles including built-in and custom roles with their permissions.",
+        "operationId": "list_roles",
+        "responses": {
+          "200": {
+            "description": "List of roles"
+          }
+        },
+        "summary": "List all roles",
+        "tags": [
+          "RBAC"
+        ]
+      },
+      "post": {
+        "description": "Create a new custom role with specified permissions. Only super_admin can create roles.",
+        "operationId": "create_role",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Role created"
+          },
+          "400": {
+            "description": "Invalid permissions"
+          },
+          "409": {
+            "description": "Role name already exists"
+          }
+        },
+        "summary": "Create custom role",
+        "tags": [
+          "RBAC"
+        ]
+      }
+    },
+    "/api/v1/admin/roles/{id}": {
+      "delete": {
+        "description": "Delete a custom role. Built-in roles cannot be deleted.",
+        "operationId": "delete_role",
+        "parameters": [
+          {
+            "description": "Role ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role deleted"
+          },
+          "400": {
+            "description": "Cannot delete built-in role"
+          },
+          "404": {
+            "description": "Role not found"
+          }
+        },
+        "summary": "Delete custom role",
+        "tags": [
+          "RBAC"
+        ]
+      },
+      "put": {
+        "description": "Update an existing role's name, description, or permissions.",
+        "operationId": "update_role",
+        "parameters": [
+          {
+            "description": "Role ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated"
+          },
+          "400": {
+            "description": "Invalid permissions"
+          },
+          "404": {
+            "description": "Role not found"
+          }
+        },
+        "summary": "Update role",
+        "tags": [
+          "RBAC"
+        ]
+      }
+    },
     "/api/v1/admin/settings": {
       "get": {
         "description": "Returns all system settings. Admin only.",
@@ -3298,6 +4404,52 @@
           }
         ],
         "summary": "Update email settings",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/settings/password-policy": {
+      "get": {
+        "operationId": "get_password_policy",
+        "responses": {
+          "200": {
+            "description": "Password policy"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get password policy",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "operationId": "update_password_policy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordPolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Password policy updated"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update password policy",
         "tags": [
           "Admin"
         ]
@@ -3510,6 +4662,39 @@
         ]
       }
     },
+    "/api/v1/admin/users/{id}/login-history": {
+      "get": {
+        "operationId": "admin_get_login_history",
+        "parameters": [
+          {
+            "description": "User UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login history"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get user login history (admin)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/admin/users/{id}/quota": {
       "put": {
         "description": "Set a user's monthly credit allowance (0-999). Admin only.",
@@ -3602,6 +4787,75 @@
         ]
       }
     },
+    "/api/v1/admin/users/{id}/roles": {
+      "get": {
+        "description": "Returns all roles assigned to a specific user.",
+        "operationId": "get_user_roles",
+        "parameters": [
+          {
+            "description": "User ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User role assignments"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "summary": "Get user roles",
+        "tags": [
+          "RBAC"
+        ]
+      },
+      "put": {
+        "description": "Replace a user's role assignments with the specified set of roles.",
+        "operationId": "assign_user_roles",
+        "parameters": [
+          {
+            "description": "User ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRolesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Roles assigned"
+          },
+          "400": {
+            "description": "Invalid role IDs"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "summary": "Assign roles to user",
+        "tags": [
+          "RBAC"
+        ]
+      }
+    },
     "/api/v1/admin/users/{id}/status": {
       "patch": {
         "description": "Sets a user's active/inactive status. Admin only.",
@@ -3685,6 +4939,22 @@
         ]
       }
     },
+    "/api/v1/admin/visitors": {
+      "get": {
+        "description": "List all visitors across all hosts. Admin only.",
+        "operationId": "admin_list_visitors",
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List all visitors",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/announcements/active": {
       "get": {
         "description": "Returns active non-expired announcements. No auth required.",
@@ -3697,6 +4967,230 @@
         "summary": "Get active announcements",
         "tags": [
           "Public"
+        ]
+      }
+    },
+    "/api/v1/auth/2fa/disable": {
+      "post": {
+        "description": "Disables two-factor authentication. Requires current password.",
+        "operationId": "two_factor_disable",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorDisableRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "2FA disabled"
+          },
+          "401": {
+            "description": "Invalid password"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Disable 2FA",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/2fa/login": {
+      "post": {
+        "description": "Validates a TOTP code against a temporary token issued during initial login. Returns full session tokens on success.",
+        "operationId": "two_factor_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid or expired temp token / invalid TOTP code"
+          }
+        },
+        "summary": "Complete 2FA login",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/2fa/setup": {
+      "post": {
+        "description": "Generates a TOTP secret and QR code URI for authenticator app enrollment. Does not enable 2FA until verified.",
+        "operationId": "two_factor_setup",
+        "responses": {
+          "200": {
+            "description": "2FA setup info"
+          },
+          "409": {
+            "description": "2FA already enabled"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Set up 2FA",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/2fa/status": {
+      "get": {
+        "description": "Returns whether two-factor authentication is enabled for the current user.",
+        "operationId": "two_factor_status",
+        "responses": {
+          "200": {
+            "description": "2FA status"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get 2FA status",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/2fa/verify": {
+      "post": {
+        "description": "Verifies a TOTP code from the authenticator app and enables 2FA for the user.",
+        "operationId": "two_factor_verify",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TwoFactorVerifyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "2FA enabled"
+          },
+          "400": {
+            "description": "Invalid code"
+          },
+          "404": {
+            "description": "No pending 2FA setup"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Verify and enable 2FA",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/api-keys": {
+      "get": {
+        "description": "Returns all API keys for the current user (without the actual key values).",
+        "operationId": "list_api_keys",
+        "responses": {
+          "200": {
+            "description": "API keys"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List API keys",
+        "tags": [
+          "Authentication"
+        ]
+      },
+      "post": {
+        "description": "Creates a new API key. The key is shown only once in the response.",
+        "operationId": "create_api_key",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "API key created"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Create API key",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/api-keys/{id}": {
+      "delete": {
+        "operationId": "revoke_api_key",
+        "parameters": [
+          {
+            "description": "API key UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key revoked"
+          },
+          "404": {
+            "description": "API key not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Revoke API key",
+        "tags": [
+          "Authentication"
         ]
       }
     },
@@ -3753,6 +5247,152 @@
         "summary": "Log in",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/login-history": {
+      "get": {
+        "description": "Returns the last 10 login attempts for the current user.",
+        "operationId": "get_login_history",
+        "responses": {
+          "200": {
+            "description": "Login history"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get login history",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Clear the auth cookie and optionally invalidate the server session.",
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "Logged out successfully"
+          }
+        },
+        "summary": "Log out",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/github": {
+      "get": {
+        "operationId": "oauth_github_redirect",
+        "responses": {
+          "302": {
+            "description": "Redirect to GitHub"
+          },
+          "503": {
+            "description": "OAuth not configured"
+          }
+        },
+        "summary": "Initiate GitHub OAuth login",
+        "tags": [
+          "OAuth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/github/callback": {
+      "get": {
+        "operationId": "oauth_github_callback",
+        "parameters": [
+          {
+            "description": "Authorization code",
+            "in": "query",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "400": {
+            "description": "Missing code"
+          },
+          "503": {
+            "description": "OAuth not configured"
+          }
+        },
+        "summary": "GitHub OAuth callback",
+        "tags": [
+          "OAuth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google": {
+      "get": {
+        "operationId": "oauth_google_redirect",
+        "responses": {
+          "302": {
+            "description": "Redirect to Google"
+          },
+          "503": {
+            "description": "OAuth not configured"
+          }
+        },
+        "summary": "Initiate Google OAuth login",
+        "tags": [
+          "OAuth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/google/callback": {
+      "get": {
+        "operationId": "oauth_google_callback",
+        "parameters": [
+          {
+            "description": "Authorization code",
+            "in": "query",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "400": {
+            "description": "Missing code"
+          },
+          "503": {
+            "description": "OAuth not configured"
+          }
+        },
+        "summary": "Google OAuth callback",
+        "tags": [
+          "OAuth"
+        ]
+      }
+    },
+    "/api/v1/auth/oauth/providers": {
+      "get": {
+        "description": "Returns which OAuth providers are configured. No authentication required.",
+        "operationId": "oauth_providers",
+        "responses": {
+          "200": {
+            "description": "Provider availability"
+          }
+        },
+        "summary": "List available OAuth providers",
+        "tags": [
+          "OAuth"
         ]
       }
     },
@@ -3846,6 +5486,60 @@
         ]
       }
     },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "description": "Returns all active sessions for the current user.",
+        "operationId": "list_sessions",
+        "responses": {
+          "200": {
+            "description": "Active sessions"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List active sessions",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/sessions/{id}": {
+      "delete": {
+        "description": "Revokes a specific active session by its ID prefix.",
+        "operationId": "revoke_session",
+        "parameters": [
+          {
+            "description": "Session ID prefix",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session revoked"
+          },
+          "404": {
+            "description": "Session not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Revoke session",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
     "/api/v1/bookings": {
       "get": {
         "description": "Returns all bookings for the authenticated user.",
@@ -3923,6 +5617,26 @@
         "summary": "Create guest booking",
         "tags": [
           "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/ical": {
+      "get": {
+        "description": "Returns the user's bookings as an iCal feed for direct subscription.",
+        "operationId": "calendar_ical_authenticated",
+        "responses": {
+          "200": {
+            "description": "iCalendar feed"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "iCal feed (authenticated)",
+        "tags": [
+          "Calendar"
         ]
       }
     },
@@ -4049,6 +5763,40 @@
           }
         ],
         "summary": "Get booking by ID",
+        "tags": [
+          "Bookings"
+        ]
+      },
+      "patch": {
+        "description": "Update notes and/or times on a booking. Only the booking owner or an admin may update.",
+        "operationId": "update_booking",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update a booking",
         "tags": [
           "Bookings"
         ]
@@ -4196,6 +5944,24 @@
         ]
       }
     },
+    "/api/v1/branding/logo": {
+      "get": {
+        "description": "Returns the stored logo image with appropriate Content-Type and Cache-Control headers.",
+        "operationId": "get_branding_logo",
+        "responses": {
+          "200": {
+            "description": "Logo image"
+          },
+          "404": {
+            "description": "No logo configured"
+          }
+        },
+        "summary": "Get branding logo",
+        "tags": [
+          "Branding"
+        ]
+      }
+    },
     "/api/v1/calendar/events": {
       "get": {
         "description": "Returns bookings and absences as calendar events.",
@@ -4211,6 +5977,54 @@
           }
         ],
         "summary": "Calendar events",
+        "tags": [
+          "Calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/ical/{token}": {
+      "get": {
+        "description": "Returns a user's bookings as an iCal feed via a personal subscription token.",
+        "operationId": "calendar_ical_by_token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "iCalendar feed"
+          },
+          "404": {
+            "description": "Invalid or expired token"
+          }
+        },
+        "summary": "iCal feed (public via token)",
+        "tags": [
+          "Calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/token": {
+      "post": {
+        "description": "Creates a personal token for subscribing to the iCal feed from external apps.",
+        "operationId": "generate_calendar_token",
+        "responses": {
+          "200": {
+            "description": "Token generated"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Generate calendar subscription token",
         "tags": [
           "Calendar"
         ]
@@ -4803,6 +6617,70 @@
         "summary": "Delete a zone",
         "tags": [
           "Zones"
+        ]
+      },
+      "put": {
+        "description": "Partially update a zone's name, description, or color. Admin only.",
+        "operationId": "update_zone",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "lot_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Zone ID",
+            "in": "path",
+            "name": "zone_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateZoneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Zone updated"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Zone not found"
+          }
+        },
+        "summary": "Update a zone",
+        "tags": [
+          "Zones"
+        ]
+      }
+    },
+    "/api/v1/maintenance/active": {
+      "get": {
+        "description": "List currently active maintenance windows. Public.",
+        "operationId": "active_maintenance",
+        "responses": {
+          "200": {
+            "description": "Active maintenance list"
+          }
+        },
+        "summary": "Active maintenance",
+        "tags": [
+          "Maintenance"
         ]
       }
     },
@@ -6138,6 +8016,100 @@
         ]
       }
     },
+    "/api/v1/visitors": {
+      "get": {
+        "description": "List all visitors registered by the current user.",
+        "operationId": "list_my_visitors",
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List my visitors",
+        "tags": [
+          "Visitors"
+        ]
+      }
+    },
+    "/api/v1/visitors/register": {
+      "post": {
+        "description": "Pre-register a visitor with name, email, vehicle plate, and visit date.",
+        "operationId": "register_visitor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterVisitorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Register a visitor",
+        "tags": [
+          "Visitors"
+        ]
+      }
+    },
+    "/api/v1/visitors/{id}": {
+      "delete": {
+        "description": "Cancel a visitor registration. Only the host or admin can cancel.",
+        "operationId": "cancel_visitor",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Cancel visitor registration",
+        "tags": [
+          "Visitors"
+        ]
+      }
+    },
+    "/api/v1/visitors/{id}/check-in": {
+      "put": {
+        "description": "Mark a visitor as checked in.",
+        "operationId": "check_in_visitor",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Check in a visitor",
+        "tags": [
+          "Visitors"
+        ]
+      }
+    },
     "/api/v1/waitlist": {
       "get": {
         "description": "Returns waitlist entries for the authenticated user.",
@@ -6557,6 +8529,46 @@
     {
       "description": "Community translation proposals, voting, and overrides",
       "name": "Translations"
+    },
+    {
+      "description": "Password policy, login history, and active session management",
+      "name": "Security"
+    },
+    {
+      "description": "Two-factor authentication setup, verification, and login flow",
+      "name": "2FA"
+    },
+    {
+      "description": "Personal API key creation and revocation",
+      "name": "API Keys"
+    },
+    {
+      "description": "Third-party OAuth sign-in (Google, GitHub)",
+      "name": "OAuth"
+    },
+    {
+      "description": "Role-based access control: roles, permissions, and assignments",
+      "name": "RBAC"
+    },
+    {
+      "description": "Tenant branding — colors, fonts, and logo upload",
+      "name": "Branding"
+    },
+    {
+      "description": "Scheduled lot/slot maintenance windows",
+      "name": "Maintenance"
+    },
+    {
+      "description": "Cost-center and department billing rollups",
+      "name": "Billing"
+    },
+    {
+      "description": "Manager approval workflow for absence requests",
+      "name": "Absence Approval"
+    },
+    {
+      "description": "Visitor registration, check-in, and admin oversight",
+      "name": "Visitors"
     }
   ]
 }
