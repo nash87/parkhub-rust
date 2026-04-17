@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 
 // ── Mocks ──
 
@@ -115,17 +115,24 @@ vi.mock('@phosphor-icons/react', () => ({
   ArrowUp: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
   ArrowDown: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
   CircleDashed: (props: any) => <span data-testid="icon-circle-dashed" {...props} />,
+  Leaf: (props: any) => <span data-testid="icon-leaf" {...props} />,
 }));
 
 vi.mock('../components/KineticObservatory', () => ({
-  KpiCard: ({ label, value, live, delta }: any) => (
-    <div data-testid={`kpi-${String(label).toLowerCase().replace(/\s+/g, '-')}`}>
-      <span>{label}</span>
-      <span data-testid="kpi-value">{value}</span>
-      {live && <span data-testid="live-badge">Live</span>}
-      {delta && <span data-testid="delta-badge">{delta.value}{delta.suffix || '%'}</span>}
-    </div>
-  ),
+  KpiCard: ({ label, value, live, delta, ...rest }: any) => {
+    // Honor a caller-provided data-testid (Dashboard sets kpi-active-bookings,
+    // kpi-credits, kpi-this-month, kpi-total, kpi-co2-saved). Fall back to a
+    // label-derived id so tests can still find ad-hoc cards by label.
+    const testid = rest['data-testid'] || `kpi-${String(label).toLowerCase().replace(/\s+/g, '-')}`;
+    return (
+      <div data-testid={testid}>
+        <span>{label}</span>
+        <span>{value}</span>
+        {live && <span data-testid="live-badge">Live</span>}
+        {delta && <span data-testid="delta-badge">{delta.value}{delta.suffix || '%'}</span>}
+      </div>
+    );
+  },
   TrendCard: ({ title, subtitle, periods, activePeriod, onPeriodChange }: any) => (
     <section data-testid="trend-card">
       <h3>{title}</h3>
@@ -240,14 +247,21 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />);
 
+    // All five KPI cards render with stable test-ids (post-KpiCard migration)
     await waitFor(() => {
-      // "Active Bookings" appears as both stat card label and section heading
-      expect(screen.getAllByText('Active Bookings').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByTestId('kpi-active-bookings')).toBeInTheDocument();
     });
-    expect(screen.getByText('Credits Left')).toBeInTheDocument();
-    // "This Month" appears as stat card label and chart section heading
-    expect(screen.getAllByText('This Month').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText(/Total Bookings/i)).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-credits')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-this-month')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-total')).toBeInTheDocument();
+    expect(screen.getByTestId('kpi-co2-saved')).toBeInTheDocument();
+
+    // Credits card shows the value from useAuth (credits_balance: 7)
+    expect(within(screen.getByTestId('kpi-credits')).getByText('7')).toBeInTheDocument();
+    // Total bookings from userStats
+    expect(within(screen.getByTestId('kpi-total')).getByText('10')).toBeInTheDocument();
+    // This Month from userStats
+    expect(within(screen.getByTestId('kpi-this-month')).getByText('3')).toBeInTheDocument();
   });
 
   it('shows empty state when no active bookings', async () => {
