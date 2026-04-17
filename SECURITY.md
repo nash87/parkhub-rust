@@ -102,6 +102,22 @@ Researchers are credited in release notes unless anonymity is requested.
 - All cryptography via audited Rust crates (argon2, aes-gcm, rustls, rand)
 - No third-party JavaScript loaded at runtime
 
+## Kubernetes Hardening
+
+The bundled Helm chart (`helm/parkhub/`) ships with the full [Pod Security
+Standards **restricted**](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted)
+profile, default on (T-1746):
+
+- `runAsNonRoot: true`, `runAsUser: 1000`
+- `allowPrivilegeEscalation: false`
+- `capabilities: drop: [ALL]`
+- `readOnlyRootFilesystem: true`
+- `seccompProfile: { type: RuntimeDefault }`
+
+`parkhub-server` is a static Rust binary backed by `redb`; the only
+writable path is the PVC mount at `/data`. No `emptyDir` shims are
+needed — unlike the Laravel/Apache stack in `parkhub-php`.
+
 ## Full Security Documentation
 
 See [docs/SECURITY.md](docs/SECURITY.md) for the complete security model, architecture details, and audit log reference.
