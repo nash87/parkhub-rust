@@ -992,7 +992,7 @@
         "type": "string"
       },
       "ModuleInfo": {
-        "description": "Runtime-serializable view of a [`ModuleDef`] with owned strings.\n\nTwo extra fields over `ModuleDef`:\n\n- `runtime_toggleable` — `true` for modules that honour an admin\n  setting that flips them on/off without a rebuild. `false` for v1\n  across the board; flipped per-module as the runtime gate lands.\n- `runtime_enabled` — effective enablement after applying any\n  runtime override. For v1 this always equals `enabled`; when\n  `runtime_toggleable` starts flipping to `true` the handler will\n  consult the settings store to compute this.",
+        "description": "Runtime-serializable view of a [`ModuleDef`] with owned strings.\n\nShape used by `GET /api/v1/modules`, `GET /api/v1/modules/{name}`\nand the `PATCH /api/v1/admin/modules/{name}` response body.\n\n- `runtime_toggleable` — `true` for modules that honour an admin\n  setting that flips them on/off without a rebuild. Fifteen safe-to-\n  toggle rows are marked true; security-sensitive modules keep it\n  `false`.\n- `runtime_enabled` — effective enablement after applying any\n  runtime override. For rows with `runtime_toggleable = false` this\n  always equals `enabled`. For toggleable rows, the handler reads\n  `module.{name}.runtime_enabled` from the settings store and\n  overrides this field accordingly (see [`module_registry`]).",
         "properties": {
           "category": {
             "$ref": "#/components/schemas/ModuleCategory"
