@@ -1169,6 +1169,15 @@ pub fn create_router(
             get(get_user_roles).put(assign_user_roles),
         );
 
+    // ── Module runtime toggle — PATCH /api/v1/admin/modules/{name} ──
+    // Flips the `module.{name}.runtime_enabled` admin setting for a
+    // runtime-toggleable module. Security-sensitive modules return 409.
+    // See `parkhub-server/src/api/modules.rs` for the allow-list policy.
+    let admin_routes = admin_routes.route(
+        "/api/v1/admin/modules/{name}",
+        axum::routing::patch(modules::patch_admin_module),
+    );
+
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),
         admin_middleware,
@@ -1907,6 +1916,18 @@ pub fn create_router(
         .merge(logout_route)
         .merge(demo_routes)
         .merge(protected_routes);
+
+    // ── Runtime module gate (T-1720 v2) ─────────────────────────────────
+    // Short-circuits requests targeting routes owned by a module that is
+    // currently disabled via admin setting. Applied to the merged router
+    // so both public and protected surfaces inherit the gate. Paths not
+    // listed in `modules::MODULE_ROUTES` pass through unchanged — see
+    // the table for the authoritative coverage list (currently: map,
+    // graphql, api-docs, announcements, favorites).
+    router = router.layer(middleware::from_fn_with_state(
+        state.clone(),
+        modules::module_gate,
+    ));
 
     #[cfg(feature = "mod-qr")]
     {
