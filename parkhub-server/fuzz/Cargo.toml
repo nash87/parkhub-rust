@@ -1,0 +1,39 @@
+[package]
+name = "parkhub-server-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+# Keep this crate OUT of the parkhub-rust workspace. cargo-fuzz runs its own
+# nightly builds with sanitizers + libFuzzer; pulling it into the workspace
+# would force every `cargo check` / `cargo build` in the monorepo to resolve
+# unrelated libfuzzer-sys deps on stable. See T-1734.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.parkhub-server]
+path = ".."
+# fuzzing feature exposes src/lib.rs::fuzz_api (fuzz-only mirrors of JWT
+# decode + webhook HMAC verify). Default features OFF so the fuzz build does
+# not drag in the entire Axum/redb/slint surface.
+default-features = false
+features = ["fuzzing"]
+
+[[bin]]
+name = "jwt_parse"
+path = "fuzz_targets/jwt_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "webhook_hmac"
+path = "fuzz_targets/webhook_hmac.rs"
+test = false
+doc = false
+bench = false
