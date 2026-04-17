@@ -1672,6 +1672,8 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
         credits_balance: 40,
         credits_monthly_quota: 40,
         credits_last_refilled: Some(Utc::now()),
+        // SAFETY(T-1731): bootstrap SuperAdmin created from CLI config at
+        // first launch — platform admin, intentionally tenant-less.
         tenant_id: None,
         accessibility_needs: None,
         cost_center: None,
@@ -1867,6 +1869,8 @@ async fn generate_dummy_users(db: &Database, username_style: UsernameStyle) -> R
                     credits_balance: rng.random_range(10..41),
                     credits_monthly_quota: 40,
                     credits_last_refilled: Some(Utc::now()),
+                    // SAFETY(T-1731): dummy seed users, platform-wide; kept
+                    // tenant-less until an operator assigns them a tenant.
                     tenant_id: None,
                     accessibility_needs: None,
                     cost_center: None,
@@ -1988,6 +1992,8 @@ pub(crate) async fn create_sample_parking_lot(db: &Database) -> Result<()> {
         status: LotStatus::Open,
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        // SAFETY(T-1731): sample seed lot created by `create_sample_parking_lot`
+        // at bootstrap; platform-owned until a tenant claims it.
         tenant_id: None,
     };
 
@@ -2242,6 +2248,7 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
             status: LotStatus::Open,
             created_at: Utc::now(),
             updated_at: Utc::now(),
+            // SAFETY(T-1731): demo seed lot (10-lot fixture), platform-owned.
             tenant_id: None,
         };
 
@@ -2356,6 +2363,8 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
                     credits_balance: rng.random_range(5..41),
                     credits_monthly_quota: 40,
                     credits_last_refilled: Some(Utc::now()),
+                    // SAFETY(T-1731): demo seed users (200 German-style fixture
+                    // accounts), platform-wide and intentionally tenant-less.
                     tenant_id: None,
                     accessibility_needs: None,
                     cost_center: None,

@@ -165,6 +165,10 @@ pub async fn setup_init(
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
         last_login: None,
+        // SAFETY(T-1731): bootstrap admin created by the unauthenticated
+        // first-run setup endpoint — platform-wide, intentionally tenant-less.
+        // Mirrors the PHP rule: `role === 'superadmin' && tenant_id IS NULL`
+        // identifies a platform admin.
         tenant_id: None,
         accessibility_needs: None,
         cost_center: None,

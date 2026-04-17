@@ -71,11 +71,37 @@ pub async fn admin_list_users(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    match state_guard
-        .db
-        .list_users_paginated(pagination.page, pagination.per_page)
-        .await
-    {
+    // T-1731: resolve caller tenant so non-platform admins only see their own
+    // tenant's users.  Platform admins (tenant_id == None) see everything,
+    // matching the PHP global-scope no-op.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+
+    let result = if caller_tenant_id.is_some() {
+        // Tenant-bound admin: load all users, filter, then paginate in memory
+        // so `total`/`total_pages` reflect the tenant-scoped set.
+        state_guard.db.list_users().await.map(|all| {
+            let filtered: Vec<User> = all
+                .into_iter()
+                .filter(|u| {
+                    super::matches_tenant(u.tenant_id.as_deref(), caller_tenant_id.as_deref())
+                })
+                .collect();
+            let total = filtered.len();
+            let skip = usize::try_from((pagination.page - 1).max(0))
+                .unwrap_or(0)
+                .saturating_mul(usize::try_from(pagination.per_page.max(1)).unwrap_or(1));
+            let take = usize::try_from(pagination.per_page.max(1)).unwrap_or(1);
+            let page_items: Vec<User> = filtered.into_iter().skip(skip).take(take).collect();
+            (page_items, total)
+        })
+    } else {
+        state_guard
+            .db
+            .list_users_paginated(pagination.page, pagination.per_page)
+            .await
+    };
+
+    match result {
         Ok((users, total)) => {
             tracing::debug!(count = users.len(), total, "Admin listed users");
             let items: Vec<AdminUserResponse> = users.iter().map(AdminUserResponse::from).collect();
@@ -384,11 +410,34 @@ pub async fn admin_list_bookings(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    let (bookings, total) = match state_guard
-        .db
-        .list_bookings_paginated(pagination.page, pagination.per_page)
-        .await
-    {
+    // T-1731: tenant-scope the booking list for non-platform admins.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+
+    let bookings_result = if caller_tenant_id.is_some() {
+        state_guard.db.list_bookings().await.map(|all| {
+            let filtered: Vec<parkhub_common::Booking> = all
+                .into_iter()
+                .filter(|b| {
+                    super::matches_tenant(b.tenant_id.as_deref(), caller_tenant_id.as_deref())
+                })
+                .collect();
+            let total = filtered.len();
+            let skip = usize::try_from((pagination.page - 1).max(0))
+                .unwrap_or(0)
+                .saturating_mul(usize::try_from(pagination.per_page.max(1)).unwrap_or(1));
+            let take = usize::try_from(pagination.per_page.max(1)).unwrap_or(1);
+            let page_items: Vec<parkhub_common::Booking> =
+                filtered.into_iter().skip(skip).take(take).collect();
+            (page_items, total)
+        })
+    } else {
+        state_guard
+            .db
+            .list_bookings_paginated(pagination.page, pagination.per_page)
+            .await
+    };
+
+    let (bookings, total) = match bookings_result {
         Ok(result) => result,
         Err(e) => {
             tracing::error!("Failed to list bookings: {}", e);

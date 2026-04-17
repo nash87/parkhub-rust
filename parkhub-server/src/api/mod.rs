@@ -401,6 +401,47 @@ pub async fn check_admin(
     }
 }
 
+/// T-1731: resolve the caller's tenant_id by looking up the authenticated user.
+///
+/// Returns the user's `tenant_id` field (which is `None` for platform admins
+/// or unbound accounts — the same semantic the PHP side uses via
+/// `TenantScope::currentId()`).  Returns `None` when the user cannot be
+/// loaded at all (caller should treat that as "no tenant bound" rather than
+/// failing the request — the auth layer already guaranteed a valid user_id).
+///
+/// This is the first half of the Rust-side multi-tenancy hardening: every
+/// domain object created on behalf of `auth_user` carries the caller's
+/// tenant_id instead of a hard-coded `None`, so when `MODULE_MULTI_TENANT`
+/// flips on (today it is OFF) the records are already partitioned correctly.
+pub async fn resolve_tenant_id(state: &crate::AppState, user_id: Uuid) -> Option<String> {
+    state
+        .db
+        .get_user(&user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .and_then(|u| u.tenant_id)
+}
+
+/// T-1731: read-path guard — does this entity belong to the caller's tenant?
+///
+/// Semantics mirror the PHP `TenantScope`:
+/// * caller with `tenant_id = None` (platform admin / unbound) → sees
+///   everything (returns true unconditionally).  The flag-off default also
+///   resolves every user to `None`, so current behaviour is preserved.
+/// * caller with `tenant_id = Some(t)` → only entities with the same
+///   `tenant_id` are visible.
+///
+/// Use this as a `.filter()` predicate on `Vec<T>` returned from bulk list
+/// calls that don't yet have a tenant predicate in the DB query.
+#[must_use]
+pub fn matches_tenant(entity_tenant: Option<&str>, caller_tenant: Option<&str>) -> bool {
+    match caller_tenant {
+        None => true,
+        Some(caller) => entity_tenant == Some(caller),
+    }
+}
+
 /// Middleware that enforces admin role for an entire route group (issue #109).
 ///
 /// Expects `AuthUser` to be in request extensions (set by `auth_middleware`).
@@ -2456,3 +2497,123 @@ fn verify_password_sync(password: &str, hash: &str) -> bool {
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOOKING UPDATE (PATCH /api/v1/bookings/{id})
 // ═══════════════════════════════════════════════════════════════════════════════
+
+#[cfg(test)]
+mod tenant_scope_tests {
+    //! T-1731 pre-flip hardening: unit tests for the tenant-resolution and
+    //! read-path guards.  `resolve_tenant_id` is exercised end-to-end against
+    //! an in-memory database so we cover both "user has tenant" and "user has
+    //! no tenant" branches.  `matches_tenant` is tested in-process because it
+    //! is a pure function.
+
+    use super::*;
+    use crate::config::ServerConfig;
+    use crate::db::{Database, DatabaseConfig};
+    use parkhub_common::models::{User, UserPreferences, UserRole};
+
+    struct StateHarness {
+        state: AppState,
+        _dir: tempfile::TempDir,
+    }
+
+    fn build_state() -> StateHarness {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_config = DatabaseConfig {
+            path: dir.path().to_path_buf(),
+            encryption_enabled: false,
+            passphrase: None,
+            create_if_missing: true,
+        };
+        let db = Database::open(&db_config).expect("open test db");
+        let state = AppState {
+            config: ServerConfig::default(),
+            db,
+            mdns: None,
+            scheduler: None,
+            ws_events: crate::api::ws::EventBroadcaster::new(),
+            revocation_store: crate::jwt::TokenRevocationList::new(),
+        };
+        StateHarness { state, _dir: dir }
+    }
+
+    fn make_user(tenant_id: Option<String>) -> User {
+        User {
+            id: Uuid::new_v4(),
+            username: "t1731".to_string(),
+            email: "t1731@example.test".to_string(),
+            name: "Tenant Test".to_string(),
+            password_hash: "x".to_string(),
+            role: UserRole::User,
+            is_active: true,
+            phone: None,
+            picture: None,
+            preferences: UserPreferences::default(),
+            credits_balance: 0,
+            credits_monthly_quota: 0,
+            credits_last_refilled: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+            last_login: None,
+            tenant_id,
+            accessibility_needs: None,
+            cost_center: None,
+            department: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn resolve_tenant_id_returns_user_tenant_when_set() {
+        let h = build_state();
+        let user = make_user(Some("tenant-acme".to_string()));
+        let uid = user.id;
+        h.state.db.save_user(&user).await.expect("save user");
+
+        let resolved = resolve_tenant_id(&h.state, uid).await;
+        assert_eq!(
+            resolved.as_deref(),
+            Some("tenant-acme"),
+            "caller's tenant_id must propagate via resolver"
+        );
+    }
+
+    #[tokio::test]
+    async fn resolve_tenant_id_returns_none_when_user_is_platform_scope() {
+        let h = build_state();
+        let user = make_user(None);
+        let uid = user.id;
+        h.state.db.save_user(&user).await.expect("save user");
+
+        let resolved = resolve_tenant_id(&h.state, uid).await;
+        assert!(
+            resolved.is_none(),
+            "platform-admin / unbound users must resolve to None (flag-off default)"
+        );
+    }
+
+    #[tokio::test]
+    async fn resolve_tenant_id_returns_none_for_missing_user() {
+        let h = build_state();
+        let ghost = Uuid::new_v4();
+        let resolved = resolve_tenant_id(&h.state, ghost).await;
+        assert!(
+            resolved.is_none(),
+            "missing user must not panic and must default to None"
+        );
+    }
+
+    #[test]
+    fn matches_tenant_platform_admin_sees_all() {
+        // caller == None (platform scope) sees every entity regardless of tenant
+        assert!(matches_tenant(None, None));
+        assert!(matches_tenant(Some("t-a"), None));
+        assert!(matches_tenant(Some("t-b"), None));
+    }
+
+    #[test]
+    fn matches_tenant_tenant_admin_sees_only_own() {
+        assert!(matches_tenant(Some("t-a"), Some("t-a")));
+        assert!(!matches_tenant(Some("t-b"), Some("t-a")));
+        // entity with no tenant is NOT visible to a tenant-bound caller
+        assert!(!matches_tenant(None, Some("t-a")));
+    }
+}

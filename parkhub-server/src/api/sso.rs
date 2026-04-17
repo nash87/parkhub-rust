@@ -337,6 +337,10 @@ pub async fn sso_callback(
                 credits_balance: 40,
                 credits_monthly_quota: 40,
                 credits_last_refilled: Some(now),
+                // SAFETY(T-1731): SSO callback provisions a new account for an
+                // unauthenticated caller.  Provider-level tenant binding is a
+                // separate (future) feature; until then new SSO users start
+                // tenant-less like the public-register path.
                 tenant_id: None,
                 accessibility_needs: None,
                 cost_center: None,

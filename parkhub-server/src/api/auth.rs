@@ -451,6 +451,10 @@ pub async fn register(
         credits_balance: 40,
         credits_monthly_quota: 40,
         credits_last_refilled: Some(now),
+        // SAFETY(T-1731): public registration is unauthenticated, so there is
+        // no caller tenant to inherit.  New accounts start tenant-less; a
+        // platform admin binds them to a tenant later.  Mirrors the PHP
+        // "anonymous → TenantScope::currentId() == null" path.
         tenant_id: None,
         accessibility_needs: None,
         cost_center: None,

@@ -376,7 +376,10 @@ async fn expand_recurring_bookings(state: &SharedState) -> anyhow::Result<()> {
                         check_out_time: None,
                         qr_code: None,
                         notes: Some(format!("Auto-expanded from recurring booking {}", rec.id)),
-                        tenant_id: None,
+                        // T-1731: auto-expanded bookings inherit the owning
+                        // user's tenant so background-created rows are scoped
+                        // the same way as user-created ones.
+                        tenant_id: user.tenant_id.clone(),
                     };
 
                     let guard = state.write().await;

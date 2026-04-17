@@ -159,6 +159,10 @@ pub async fn import_users_csv(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
+    // T-1731: imported users inherit the caller's tenant_id (bulk CSV import
+    // is always scoped to the admin performing it).
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+
     // Collect non-empty lines, skip header
     let mut lines: Vec<&str> = body
         .lines()
@@ -309,7 +313,8 @@ pub async fn import_users_csv(
             credits_balance: 40,
             credits_monthly_quota: 40,
             credits_last_refilled: Some(now),
-            tenant_id: None,
+            // T-1731: inherit admin caller's tenant_id.
+            tenant_id: caller_tenant_id.clone(),
             accessibility_needs: None,
             cost_center: None,
             department: None,
