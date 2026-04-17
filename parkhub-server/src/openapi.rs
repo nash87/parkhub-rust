@@ -178,6 +178,11 @@ use crate::{
             parkhub_common::models::TranslationProposal,
             parkhub_common::models::TranslationOverride,
             parkhub_common::models::ProposalStatus,
+
+            // Modules registry (T-1720 — admin Modules Dashboard + Command Palette)
+            crate::api::modules::ModuleInfo,
+            crate::api::modules::ModuleCategory,
+            crate::api::modules::ListModulesResponse,
         )
     ),
     paths(
@@ -307,6 +312,10 @@ use crate::{
         crate::api::announcements::get_active_announcements,
         crate::api::misc::public_occupancy,
         crate::api::misc::public_display,
+
+        // Modules registry — enriched metadata for admin Modules Dashboard
+        crate::api::modules::list_modules,
+        crate::api::modules::get_module,
 
         // Absences
         crate::api::absences::list_absences,
