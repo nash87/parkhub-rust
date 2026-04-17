@@ -1,0 +1,55 @@
+# parkhub-rust — pre-commit hooks
+#
+# Install once:
+#   pip install --user pre-commit && pre-commit install
+#
+# Then every `git commit` runs these checks; `pre-commit run --all-files`
+# runs them across the repo.
+#
+# Hook revs are SHA-pinned (same discipline as .github/workflows/*.yml).
+# To bump: `pre-commit autoupdate --freeze`.
+---
+repos:
+  # Basics: whitespace, EOL, YAML/JSON sanity — upstream v6.0.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(Cargo\.lock|docs/openapi/.*\.json|target/)
+      - id: end-of-file-fixer
+        exclude: ^(Cargo\.lock|docs/openapi/.*\.json|target/)
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+        exclude: ^helm/.*/templates/
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Rust — cargo fmt + clippy as system hooks (respect rust-toolchain.toml)
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt --check
+        language: system
+        entry: cargo fmt --all -- --check
+        pass_filenames: false
+        files: \.rs$
+
+      - id: cargo-clippy
+        name: cargo clippy (headless, -D warnings)
+        language: system
+        entry: bash -c 'mkdir -p parkhub-web/dist && [ -f parkhub-web/dist/index.html ] || printf "%s" "<!doctype html><html><body></body></html>" > parkhub-web/dist/index.html; cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones'
+        pass_filenames: false
+        files: \.rs$
+        stages: [pre-push]   # slow — run on push, not every commit
+
+      - id: cargo-check
+        name: cargo check
+        language: system
+        entry: bash -c 'mkdir -p parkhub-web/dist && [ -f parkhub-web/dist/index.html ] || printf "%s" "<!doctype html><html><body></body></html>" > parkhub-web/dist/index.html; cargo check --locked --package parkhub-common --all-targets'
+        pass_filenames: false
+        files: \.rs$
