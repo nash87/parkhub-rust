@@ -183,12 +183,14 @@ cargo build --release --package parkhub-server --features gui
 
 | | |
 |---|---|
-| ![Dashboard](screenshots/05-dashboard.png) | ![Booking](screenshots/06-book.png) |
+| ![Dashboard](screenshots/02-dashboard.png) | ![Booking](screenshots/05-book.png) |
 | Dashboard with occupancy stats | Interactive booking flow |
-| ![Admin Panel](screenshots/09-admin.png) | ![Dark Mode](screenshots/10-dark-mode.png) |
+| ![Admin Panel](screenshots/08-admin.png) | ![Dark Mode](screenshots/09-dark-mode.png) |
 | Admin panel with layout editor | Full dark mode support |
-| ![Login](screenshots/01-login.png) | ![Vehicles](screenshots/08-vehicles.png) |
+| ![Login](screenshots/01-login.png) | ![Vehicles](screenshots/07-vehicles.png) |
 | Clean login screen | Vehicle registry |
+| ![Modules Dashboard](screenshots/10-modules-dashboard.png) | ![Command Palette](screenshots/11-command-palette.png) |
+| Admin Modules Dashboard — toggle plugins + edit JSON-schema config without redeploying (v4.13.0) | Command Palette (Cmd+K) — navigate + run actions from one search bar |
 
 ---
 

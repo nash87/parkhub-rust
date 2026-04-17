@@ -42,7 +42,21 @@ git clone https://github.com/nash87/parkhub-rust
 cd parkhub-rust
 ```
 
-### Step 2 — (Optional) Enable database encryption
+### Step 2 — Set the admin password (required)
+
+The shipped `docker-compose.yml` requires `PARKHUB_ADMIN_PASSWORD` before first start — the variable uses `:?` so Compose fails fast with a clear message rather than silently booting with a weak default. Create `.env` next to `docker-compose.yml`:
+
+```bash
+# Generate a strong random admin password and write it to .env
+echo "PARKHUB_ADMIN_PASSWORD=$(openssl rand -base64 24)" > .env
+cat .env   # copy this somewhere safe — you'll need it to log in as `admin`
+```
+
+`.env` is already listed in `.gitignore`, so the secret stays local.
+
+> **Log-in credentials**: username `admin`, password = the value from `.env` above. The demo user `admin@parkhub.test` exists only in `DEMO_MODE=true` builds (the hosted demo, not production).
+
+### Step 3 — (Optional) Enable database encryption
 
 For production, set the `PARKHUB_DB_PASSPHRASE` environment variable to enable AES-256-GCM at-rest encryption.
 Edit `docker-compose.yml` and uncomment the `PARKHUB_DB_PASSPHRASE` line, then set a strong random value:
@@ -65,13 +79,13 @@ Then in `docker-compose.yml`:
 > `docker-compose.yml` (not an environment variable). To change the port, edit both the `--port` value
 > in `command` and the `ports` mapping.
 
-### Step 3 — Start
+### Step 4 — Start
 
 ```bash
 docker compose up -d
 ```
 
-### Step 4 — Verify
+### Step 5 — Verify
 
 ```bash
 docker compose ps
