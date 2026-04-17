@@ -335,6 +335,16 @@ export const api = {
   getUserCredits: () => request<UserCredits>('/api/v1/user/credits'),
   getUserStats: () => request<UserStats>('/api/v1/user/stats'),
 
+  // ── CO2 summary (T-1715) ──
+  getCo2Summary: (from?: string, to?: string, lotId?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (lotId) params.set('lot_id', lotId);
+    const q = params.toString();
+    return request<Co2Summary>(`/api/v1/bookings/co2-summary${q ? `?${q}` : ''}`);
+  },
+
   // ── Admin ──
   adminStats: () => request<AdminStats>('/api/v1/admin/stats'),
   adminUsers: () => request<User[]>('/api/v1/admin/users'),
@@ -773,6 +783,20 @@ export interface UserStats {
   homeoffice_days_this_month: number;
   avg_duration_minutes: number;
   favorite_slot?: string;
+}
+
+/** CO2 summary response from `/api/v1/bookings/co2-summary` (T-1715). */
+export interface Co2Summary {
+  from: string;
+  to: string;
+  bookings_counted: number;
+  total_km: number;
+  emitted_g: number;
+  counterfactual_g: number;
+  saved_g: number;
+  carpool_saved_g: number;
+  /** Server-rounded to 2 decimals; display directly. */
+  saved_kg: number;
 }
 
 export interface AdminStats {

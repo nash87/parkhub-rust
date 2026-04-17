@@ -97,6 +97,7 @@ export default {
       creditsLeft: 'Créditos restantes',
       thisMonth: 'Este mes',
       nextBooking: 'Próxima reserva',
+      co2Saved: 'CO₂ ahorrado (30d)',
       quickActions: 'Acciones rápidas',
       bookSpot: 'Reservar una plaza',
       myVehicles: 'Mis vehículos',
