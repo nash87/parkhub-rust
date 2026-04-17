@@ -926,6 +926,38 @@
         ],
         "type": "object"
       },
+      "ListModulesResponse": {
+        "description": "Backwards-compatible envelope for `GET /api/v1/modules`.\n\n- `modules`: the legacy flat Boolean map. Kept exactly as it was so\n  old clients and integration tests keep passing.\n- `module_info`: the enriched `Vec<ModuleInfo>` added in T-1720.\n- `version`: the workspace crate version.",
+        "properties": {
+          "module_info": {
+            "description": "Enriched per-module metadata. Order matches the registry.",
+            "items": {
+              "$ref": "#/components/schemas/ModuleInfo"
+            },
+            "type": "array"
+          },
+          "modules": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Legacy flat feature map — `{ \"bookings\": true, \"vehicles\": true, … }`.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "version": {
+            "description": "Workspace crate version (semver).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "modules",
+          "module_info",
+          "version"
+        ],
+        "type": "object"
+      },
       "LoginRequest": {
         "description": "Login request",
         "properties": {
@@ -939,6 +971,87 @@
         "required": [
           "username",
           "password"
+        ],
+        "type": "object"
+      },
+      "ModuleCategory": {
+        "description": "Semantic grouping used by the admin Modules Dashboard.\n\nSerialized as kebab-case (stable JSON, matches the kebab-case\nmodule slugs and aligns with the Web UI category filter values).",
+        "enum": [
+          "core",
+          "booking",
+          "vehicle",
+          "admin",
+          "payment",
+          "integration",
+          "analytics",
+          "compliance",
+          "notification",
+          "enterprise",
+          "experimental"
+        ],
+        "type": "string"
+      },
+      "ModuleInfo": {
+        "description": "Runtime-serializable view of a [`ModuleDef`] with owned strings.\n\nTwo extra fields over `ModuleDef`:\n\n- `runtime_toggleable` — `true` for modules that honour an admin\n  setting that flips them on/off without a rebuild. `false` for v1\n  across the board; flipped per-module as the runtime gate lands.\n- `runtime_enabled` — effective enablement after applying any\n  runtime override. For v1 this always equals `enabled`; when\n  `runtime_toggleable` starts flipping to `true` the handler will\n  consult the settings store to compute this.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/ModuleCategory"
+          },
+          "config_keys": {
+            "description": "Admin-settings keys the module consumes.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "depends_on": {
+            "description": "Other module slugs that must be enabled for this to work.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Compile-time `cfg!(feature = \"mod-...\")` result.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Stable slug — matches the feature flag without the `mod-` prefix.",
+            "type": "string"
+          },
+          "runtime_enabled": {
+            "description": "Effective enablement after applying the runtime override. Equal\nto `enabled` when the module is not runtime-toggleable.",
+            "type": "boolean"
+          },
+          "runtime_toggleable": {
+            "description": "When true, the module's observable behavior can be toggled at\nruntime via an admin setting (without a rebuild). The UI surfaces\na toggle only for these.",
+            "type": "boolean"
+          },
+          "ui_route": {
+            "description": "Deep-link into the user-facing UI.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "Semver — tied to the workspace version.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "description",
+          "enabled",
+          "runtime_toggleable",
+          "runtime_enabled",
+          "config_keys",
+          "depends_on",
+          "version"
         ],
         "type": "object"
       },
@@ -4456,6 +4569,64 @@
         "summary": "Delete a zone",
         "tags": [
           "Zones"
+        ]
+      }
+    },
+    "/api/v1/modules": {
+      "get": {
+        "description": "Returns compile-time module enablement as both the legacy flat Boolean map and an enriched array of ModuleInfo objects (category, description, config keys, UI route, dependencies).",
+        "operationId": "list_modules",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListModulesResponse"
+                }
+              }
+            },
+            "description": "Module registry"
+          }
+        },
+        "summary": "List module features + enriched metadata",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/api/v1/modules/{name}": {
+      "get": {
+        "description": "Returns enriched ModuleInfo for one module, keyed by its stable slug (matches the feature flag without the `mod-` prefix).",
+        "operationId": "get_module",
+        "parameters": [
+          {
+            "description": "Module slug (e.g. 'bookings', 'admin-analytics')",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleInfo"
+                }
+              }
+            },
+            "description": "Module metadata"
+          },
+          "404": {
+            "description": "Unknown module slug"
+          }
+        },
+        "summary": "Get a single module by slug",
+        "tags": [
+          "Public"
         ]
       }
     },
