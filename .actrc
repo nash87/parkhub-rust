@@ -1,0 +1,12 @@
+# nektos/act — local GitHub Actions runner
+#
+# act-latest is the smallest catthehacker image that still resolves ~95% of
+# marketplace actions (dtolnay/rust-toolchain, Swatinem/rust-cache,
+# setup-node, cache, buildx, etc.). Full image is ~15 GB and is overkill for
+# local iteration; micro/medium break too many actions.
+# See https://github.com/catthehacker/docker_images.
+#
+# linux/amd64 is pinned because buildx QEMU emulation on arm hosts produces
+# flaky cargo builds and our release targets are amd64.
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+--container-architecture linux/amd64
