@@ -183,6 +183,7 @@ use crate::{
             crate::api::modules::ModuleInfo,
             crate::api::modules::ModuleCategory,
             crate::api::modules::ListModulesResponse,
+            crate::api::modules::UpdateModuleRequest,
         )
     ),
     paths(
@@ -316,6 +317,7 @@ use crate::{
         // Modules registry — enriched metadata for admin Modules Dashboard
         crate::api::modules::list_modules,
         crate::api::modules::get_module,
+        crate::api::modules::patch_admin_module,
 
         // Absences
         crate::api::absences::list_absences,

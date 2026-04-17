@@ -1767,6 +1767,19 @@
         },
         "type": "object"
       },
+      "UpdateModuleRequest": {
+        "description": "Request body for the runtime-toggle endpoint.\n\nA deliberately minimal shape — only `runtime_enabled` is settable\nfrom the admin UI. `enabled` stays compile-time-only (matches the\nunderlying cargo feature flag and therefore a rebuild).",
+        "properties": {
+          "runtime_enabled": {
+            "description": "New effective runtime enablement. Persisted to admin setting\n`module.{name}.runtime_enabled`.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "runtime_enabled"
+        ],
+        "type": "object"
+      },
       "UpdateParkingLotRequest": {
         "description": "Update parking lot request (admin)",
         "properties": {
@@ -2842,6 +2855,63 @@
           }
         ],
         "summary": "Update Impressum (admin)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/modules/{name}": {
+      "patch": {
+        "description": "Admin-only. Flips a runtime-toggleable module on/off via admin setting `module.{name}.runtime_enabled`. Returns 400 for unknown slug and 409 when the module is marked runtime_toggleable=false (security-sensitive — cannot be disabled without a rebuild). Audit-logged.",
+        "operationId": "patch_admin_module",
+        "parameters": [
+          {
+            "description": "Module slug (kebab-case)",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleInfo"
+                }
+              }
+            },
+            "description": "Updated module state"
+          },
+          "400": {
+            "description": "Unknown module slug"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "409": {
+            "description": "Module is not runtime_toggleable"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Toggle a module's runtime state",
         "tags": [
           "Admin"
         ]
@@ -4574,7 +4644,7 @@
     },
     "/api/v1/modules": {
       "get": {
-        "description": "Returns compile-time module enablement as both the legacy flat Boolean map and an enriched array of ModuleInfo objects (category, description, config keys, UI route, dependencies).",
+        "description": "Returns compile-time module enablement as both the legacy flat Boolean map and an enriched array of ModuleInfo objects (category, description, config keys, UI route, dependencies, runtime_toggleable, runtime_enabled).",
         "operationId": "list_modules",
         "responses": {
           "200": {
@@ -4596,7 +4666,7 @@
     },
     "/api/v1/modules/{name}": {
       "get": {
-        "description": "Returns enriched ModuleInfo for one module, keyed by its stable slug (matches the feature flag without the `mod-` prefix).",
+        "description": "Returns enriched ModuleInfo for one module, keyed by its stable slug (matches the feature flag without the `mod-` prefix). Runtime setting overrides are applied.",
         "operationId": "get_module",
         "parameters": [
           {
