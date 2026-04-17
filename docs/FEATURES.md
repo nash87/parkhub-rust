@@ -12,10 +12,11 @@
 1. [For Building Owners](#1-for-building-owners)
 2. [For Developers](#2-for-developers)
 3. [For Operations](#3-for-operations)
-4. [API Examples](#4-api-examples)
-5. [Integration Guide](#5-integration-guide)
-6. [Deployment Options](#6-deployment-options)
-7. [Pricing Model](#7-pricing-model)
+4. [Modular UX Platform](#4-modular-ux-platform)
+5. [API Examples](#5-api-examples)
+6. [Integration Guide](#6-integration-guide)
+7. [Deployment Options](#7-deployment-options)
+8. [Pricing Model](#8-pricing-model)
 
 ---
 
@@ -261,7 +262,65 @@ ParkHub is audited for GDPR/DSGVO, UK GDPR, CCPA, nDSG, and TTDSG.
 
 ---
 
-## 4. API Examples
+## 4. Modular UX Platform
+
+*Added in v4.13.0 (T-1720 v1 + v2 + v3).*
+
+Every compiled-in feature is a first-class **module**. The registry, admin dashboard, and command palette turn ParkHub from a fixed binary into a configurable product surface — operators can see what's compiled in, flip safe modules on and off, and tune per-module settings without a rebuild.
+
+### Module Registry
+
+Seventy-two modules across eleven categories (Core, Booking, Vehicle, Admin, Payment, Integration, Analytics, Compliance, Notification, Enterprise, Experimental). Each `ModuleDef` row declares its slug, category, description, compile-time flag, runtime-toggleable bit, config keys, UI route, dependency chain, and optional JSON Schema.
+
+Introspection endpoints live under `/api/v1/modules*` — see [API.md § Modules](API.md#modules) for the full contract. The legacy flat `{modules: {name: bool}}` map is preserved in the response envelope so existing callers keep working.
+
+### Admin Dashboard — `/admin/modules`
+
+Admin-only UI grouped by category with search + tag filter. Every card shows:
+
+- Status pill: green (runtime on) · amber (runtime off) · gray (compile-time off)
+- Version, dependency chain, config-keys count
+- Export-Config JSON download for ops hand-off
+- Per-card **runtime toggle** (on 15 safe modules — see below)
+- Per-card **Configure** button for the five modules that ship a JSON Schema
+
+Optimistic updates with toast rollback on failure; fully a11y-compliant.
+
+### Runtime Toggle
+
+Fifteen safe modules can be flipped at runtime without redeploying:
+
+`announcements` · `widgets` · `themes` · `favorites` · `social` · `lobby-display` · `accessible` · `calendar-drag` · `ev-charging` · `maintenance` · `geofence` · `map` · `graphql` · `api-docs` · `setup-wizard`
+
+Security-sensitive modules (`auth`, `payments`, `rbac`, `webhooks`, `audit-export`, `multi-tenant`, `notifications`) keep `runtime_toggleable = false` and can only change via a rebuild with different Cargo features.
+
+### JSON Schema Config Editor
+
+Five modules ship a declared `config_schema` and surface a per-module config modal: `themes`, `announcements`, `notifications`, `email-templates`, `widgets`.
+
+The config editor renders a hand-rolled form covering six field shapes (string, enum, email, time, integer with min/max, boolean) — zero external runtime dependencies. Writes are validated server-side against the schema via `jsonschema` 0.35; validation failures return `422 CONFIG_VALIDATION_FAILED` with a structured `details` array.
+
+### Command Palette (Cmd+K / Ctrl+K / `/`)
+
+Framework-agnostic `commandRegistry` with fuzzy search and predicate-gated visibility. Any view can `register()` commands and get automatic cleanup via `unregister()`. The provider auto-seeds default commands from `/api/v1/modules` — every active module with a `ui_route` appears as a "Go to …" entry.
+
+All ten locales (en, de, es, fr, it, ja, pl, pt, tr, zh) carry the `command.*` and `admin.modules.*` key sets.
+
+### Module Gate Middleware
+
+The `module_gate` axum middleware returns `404 MODULE_DISABLED` for any route whose backing module is runtime-disabled — indistinguishable from a feature that was never compiled in. Wired on five representative routes in v1 (`/api/v1/lots/map`, `/graphql`, `/docs`, `/announcements`, `/user/favorites`); broader coverage follows the route table.
+
+### Pluginable by Design
+
+Adding a new module is one declarative row in the `ModuleDef` table: the registry, dashboard, palette, and gate pick it up automatically. The UI does not special-case any module by name.
+
+### Audit Trail
+
+Every runtime toggle and every config write emits an `AuditEventType::ConfigChanged` entry with actor, module slug, before/after value, timestamp, and originating IP. Filter + export from the compliance dashboard ([GDPR.md](GDPR.md)).
+
+---
+
+## 5. API Examples
 
 Set up a shell variable with your access token before running the examples:
 
@@ -392,7 +451,7 @@ curl http://localhost:8080/metrics
 
 ---
 
-## 5. Integration Guide
+## 6. Integration Guide
 
 ### Webhooks v2
 
@@ -524,7 +583,7 @@ Enable Stripe to let users purchase credit packs:
 
 ---
 
-## 6. Deployment Options
+## 7. Deployment Options
 
 ParkHub is a single ~15 MB Rust binary. It embeds the React frontend, the database engine, and the TLS stack — no separate processes required.
 
@@ -623,7 +682,7 @@ The [live demo](https://parkhub-rust-demo.onrender.com) runs on Render and reset
 
 ---
 
-## 7. Pricing Model
+## 8. Pricing Model
 
 ### Open Source (MIT)
 

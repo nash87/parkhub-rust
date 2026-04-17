@@ -42,6 +42,7 @@ The OpenAPI JSON spec is at `/api-docs/openapi.json`.
 - [Public Display](#public-display)
 - [QR Codes](#qr-codes)
 - [Legal (DDG §5)](#legal-ddg-5)
+- [Modules](#modules)
 - [Admin — User Management](#admin--user-management)
 - [Admin — Bookings & Export](#admin--bookings--export)
 - [Admin — Settings](#admin--settings)
@@ -1495,6 +1496,139 @@ Response:
   }
 }
 ```
+
+---
+
+## Modules
+
+*Added in v4.13.0 (T-1720 v1 + v2 + v3).*
+
+The Modular UX platform exposes the full compiled-in module registry over REST. See [FEATURES.md § Modular UX Platform](FEATURES.md#4-modular-ux-platform) for the product overview, and the OpenAPI snapshot at [`docs/openapi/rust.json`](openapi/rust.json) for the canonical schema.
+
+Read endpoints are open to any authenticated user. Write endpoints under `/api/v1/admin/modules/*` require `role=admin` or `role=superadmin`.
+
+### GET /api/v1/modules
+
+List every compiled-in module with enriched metadata. The response envelope keeps the legacy flat `modules` map in place so older clients still work.
+
+```bash
+curl -s http://localhost:8080/api/v1/modules \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "modules": { "bookings": true, "stripe": false, "announcements": true },
+    "module_info": [
+      {
+        "name": "announcements",
+        "category": "Notification",
+        "description": "Admin-authored announcements shown to users on login.",
+        "enabled": true,
+        "runtime_toggleable": true,
+        "runtime_enabled": true,
+        "config_keys": ["announcement.max_active"],
+        "depends_on": [],
+        "ui_route": "/announcements",
+        "version": "4.13.0",
+        "config_schema": { "type": "object", "properties": { "...": {} } }
+      }
+    ],
+    "version": "4.13.0"
+  }
+}
+```
+
+`runtime_enabled` reflects the effective state after applying any admin override. For rows with `runtime_toggleable = false`, it always equals `enabled`.
+
+### GET /api/v1/modules/{name}
+
+Return a single `ModuleInfo`. Returns `404 NOT_FOUND` if the slug is unknown.
+
+```bash
+curl -s http://localhost:8080/api/v1/modules/announcements \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### PATCH /api/v1/admin/modules/{name}
+
+Flip a module's `runtime_enabled` bit without redeploying. **Admin-only.**
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/v1/admin/modules/announcements \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"runtime_enabled": false}'
+```
+
+Response: the updated `ModuleInfo` (same shape as `GET /api/v1/modules/{name}`).
+
+Error codes:
+
+| Code | HTTP | When |
+|------|------|------|
+| `NOT_FOUND` | 404 | Unknown module slug |
+| `CONFLICT` | 409 | Module has `runtime_toggleable = false` (security-sensitive row) |
+| `FORBIDDEN` | 403 | Caller is not an admin |
+
+Every successful toggle writes an `AuditEventType::ConfigChanged` entry.
+
+### GET /api/v1/admin/modules/{name}/config
+
+Return the module's JSON Schema plus the currently-persisted values for each schema property. **Admin-only.**
+
+```bash
+curl -s http://localhost:8080/api/v1/admin/modules/themes/config \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "schema": {
+      "type": "object",
+      "properties": {
+        "default_theme": { "type": "string", "enum": ["light", "dark", "auto"] }
+      },
+      "required": ["default_theme"]
+    },
+    "values": { "default_theme": "dark" }
+  }
+}
+```
+
+Error codes: `404 NOT_FOUND` for unknown slug, `400 BAD_REQUEST` for a module without a declared `config_schema`.
+
+### PATCH /api/v1/admin/modules/{name}/config
+
+Persist new values for the module's config. **Admin-only.** Body is validated against the module's schema via `jsonschema` 0.35; failures return `422` with a structured `details` array.
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/v1/admin/modules/themes/config \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"values": {"default_theme": "light"}}'
+```
+
+Success response: the updated `{schema, values}` pair (same shape as the GET).
+
+Error codes:
+
+| Code | HTTP | When |
+|------|------|------|
+| `NOT_FOUND` | 404 | Unknown module slug |
+| `BAD_REQUEST` | 400 | Module has no declared `config_schema` |
+| `CONFIG_VALIDATION_FAILED` | 422 | Body fails schema validation |
+| `FORBIDDEN` | 403 | Caller is not an admin |
+
+Every successful write emits an `AuditEventType::ConfigChanged` entry.
 
 ---
 
