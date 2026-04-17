@@ -16,6 +16,8 @@ use tracing::{info, warn};
 mod api;
 #[allow(dead_code)]
 mod audit;
+#[allow(dead_code)]
+mod circuit_breaker;
 mod config;
 mod db;
 mod demo;

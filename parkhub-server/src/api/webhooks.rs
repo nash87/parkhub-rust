@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, UserRole};
 
+use crate::circuit_breaker::{self, Error as CbError};
 use crate::db::Webhook;
 
 use super::{AuthUser, SharedState};
@@ -576,14 +577,22 @@ pub async fn test_webhook(
         .build()
         .unwrap_or_default();
 
-    match client
-        .post(&webhook.url)
-        .header("Content-Type", "application/json")
-        .header("X-Webhook-Signature", &signature)
-        .body(body)
-        .send()
-        .await
-    {
+    let breaker = circuit_breaker::for_url(&webhook.url);
+    let url = webhook.url.clone();
+    let signature_cl = signature.clone();
+    let send_result = breaker
+        .call(|| async {
+            client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .header("X-Webhook-Signature", &signature_cl)
+                .body(body)
+                .send()
+                .await
+        })
+        .await;
+
+    match send_result {
         Ok(resp) => {
             let status = resp.status().as_u16();
             let result = serde_json::json!({
@@ -598,12 +607,24 @@ pub async fn test_webhook(
             );
             (StatusCode::OK, Json(ApiResponse::success(result)))
         }
-        Err(e) => {
+        Err(CbError::Inner(e)) => {
             let result = serde_json::json!({
                 "delivered": false,
                 "error": e.to_string(),
             });
             tracing::warn!("Test webhook {} delivery failed: {}", id, e);
+            (StatusCode::OK, Json(ApiResponse::success(result)))
+        }
+        Err(CbError::Open | CbError::HalfOpenRejected) => {
+            let result = serde_json::json!({
+                "delivered": false,
+                "error": "circuit breaker open for destination",
+            });
+            tracing::warn!(
+                "Test webhook {} short-circuited by breaker for {}",
+                id,
+                webhook.url
+            );
             (StatusCode::OK, Json(ApiResponse::success(result)))
         }
     }
@@ -675,18 +696,24 @@ pub async fn dispatch_webhook_event(
                 .build()
                 .unwrap_or_default();
 
+            let breaker = circuit_breaker::for_url(&url);
             let max_attempts = 3u32;
             let mut delay = std::time::Duration::from_secs(2);
 
             for attempt in 1..=max_attempts {
-                match client
-                    .post(&url)
-                    .header("Content-Type", "application/json")
-                    .header("X-Webhook-Signature", &signature)
-                    .body(body.clone())
-                    .send()
-                    .await
-                {
+                let send = breaker
+                    .call(|| async {
+                        client
+                            .post(&url)
+                            .header("Content-Type", "application/json")
+                            .header("X-Webhook-Signature", &signature)
+                            .body(body.clone())
+                            .send()
+                            .await
+                    })
+                    .await;
+
+                match send {
                     Ok(resp) if resp.status().is_success() => {
                         tracing::info!(
                             "Webhook {} delivered event '{}' to {} — HTTP {} (attempt {}/{})",
@@ -710,7 +737,7 @@ pub async fn dispatch_webhook_event(
                             max_attempts
                         );
                     }
-                    Err(e) => {
+                    Err(CbError::Inner(e)) => {
                         tracing::warn!(
                             "Webhook {} failed to deliver '{}' to {}: {} (attempt {}/{})",
                             webhook.id,
@@ -720,6 +747,16 @@ pub async fn dispatch_webhook_event(
                             attempt,
                             max_attempts
                         );
+                    }
+                    Err(CbError::Open | CbError::HalfOpenRejected) => {
+                        tracing::warn!(
+                            "Webhook {} short-circuited by breaker for {} (attempt {}/{}); aborting remaining retries",
+                            webhook.id,
+                            url,
+                            attempt,
+                            max_attempts
+                        );
+                        return;
                     }
                 }
 
