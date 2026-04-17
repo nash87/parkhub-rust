@@ -17,7 +17,7 @@ RUN DOCKER=1 npm run build
 # ---------------------------------------------------------------------------
 # Stage 2: Cargo chef — prepare dependency recipe
 # ---------------------------------------------------------------------------
-FROM rust:1.94-slim@sha256:cf09adf8c3ebaba10779e5c23ff7fe4df4cccdab8a91f199b0c142c53fef3e1a AS chef
+FROM rust:1.95-slim@sha256:275c320a57d0d8b6ab09454ab6d1660d70c745fb3cc85adbefad881b69a212cc AS chef
 RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config libssl-dev cmake make perl clang curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
