@@ -85,7 +85,7 @@ RUN mkdir -p /data && chown 65532:65532 /data
 # Digest-pinned for reproducibility and to satisfy CodeQL DS-0001
 # (':latest' tag used).
 # ---------------------------------------------------------------------------
-FROM gcr.io/distroless/cc-debian13@sha256:9d412062635760e6aaf0f73809c3c6ea60f389d4986713fe153667e95c6b7b72 AS runtime
+FROM gcr.io/distroless/cc-debian13@sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447d0788b82284d14ad79cd5f93cc AS runtime
 
 WORKDIR /app
 
