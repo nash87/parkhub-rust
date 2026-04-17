@@ -97,6 +97,7 @@ export default {
       creditsLeft: 'Credits Left',
       thisMonth: 'This Month',
       nextBooking: 'Next Booking',
+      co2Saved: 'CO₂ Saved (30d)',
       quickActions: 'Quick Actions',
       bookSpot: 'Book a Spot',
       myVehicles: 'My Vehicles',

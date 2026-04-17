@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import {
   CalendarCheck, Car, Coins, CalendarPlus, ArrowRight,
-  MapPin, ChartLine, Gauge,
+  MapPin, ChartLine, Gauge, Leaf,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
-import { api, type Booking, type UserStats } from '../api/client';
+import { api, type Booking, type Co2Summary, type UserStats } from '../api/client';
 import { DashboardSkeleton } from '../components/Skeleton';
 import { staggerSlow, fadeUp } from '../constants/animations';
 import { useWebSocket, type WsEvent } from '../hooks/useWebSocket';
@@ -26,6 +26,7 @@ export function DashboardPage() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [co2, setCo2] = useState<Co2Summary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const handleWsEvent = useCallback((event: WsEvent) => {
@@ -44,9 +45,16 @@ export function DashboardPage() {
   const { connected: wsConnected } = useWebSocket({ onEvent: handleWsEvent });
 
   useEffect(() => {
-    Promise.all([api.getBookings(), api.getUserStats()]).then(([bRes, sRes]) => {
+    // CO2 summary is best-effort — the tile renders '—' if the endpoint
+    // errors or is disabled so the whole dashboard doesn't block on it.
+    Promise.all([
+      api.getBookings(),
+      api.getUserStats(),
+      api.getCo2Summary().catch(() => null),
+    ]).then(([bRes, sRes, cRes]) => {
       if (bRes.success && bRes.data) setBookings(bRes.data);
       if (sRes.success && sRes.data) setStats(sRes.data);
+      if (cRes && cRes.success && cRes.data) setCo2(cRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -166,7 +174,7 @@ export function DashboardPage() {
       {/* KPI Row — Kinetic Observatory style with delta badges */}
       <motion.div
         variants={item}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+        className="grid grid-cols-2 lg:grid-cols-5 gap-3"
         role="region"
         aria-label={t('dashboard.statistics')}
       >
@@ -195,6 +203,12 @@ export function DashboardPage() {
           value={totalBookings}
           icon={<Gauge weight="bold" />}
           data-testid="kpi-total"
+        />
+        <KpiCard
+          label={t('dashboard.co2Saved', 'CO₂ Saved (30d)')}
+          value={co2 ? `${co2.saved_kg.toFixed(1)} kg` : '—'}
+          icon={<Leaf weight="bold" />}
+          data-testid="kpi-co2-saved"
         />
       </motion.div>
 
