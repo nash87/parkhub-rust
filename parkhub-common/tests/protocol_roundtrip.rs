@@ -16,13 +16,16 @@ fn arb_small_string() -> impl Strategy<Value = String> {
 }
 
 fn arb_api_error() -> impl Strategy<Value = ApiError> {
-    (arb_small_string(), arb_small_string(), any::<Option<String>>()).prop_map(
-        |(code, message, details)| ApiError {
+    (
+        arb_small_string(),
+        arb_small_string(),
+        any::<Option<String>>(),
+    )
+        .prop_map(|(code, message, details)| ApiError {
             code,
             message,
             details: details.map(Value::String),
-        },
-    )
+        })
 }
 
 fn arb_response_meta() -> impl Strategy<Value = ResponseMeta> {
@@ -41,10 +44,8 @@ fn arb_response_meta() -> impl Strategy<Value = ResponseMeta> {
 }
 
 fn arb_login_request() -> impl Strategy<Value = LoginRequest> {
-    (arb_small_string(), arb_small_string()).prop_map(|(username, password)| LoginRequest {
-        username,
-        password,
-    })
+    (arb_small_string(), arb_small_string())
+        .prop_map(|(username, password)| LoginRequest { username, password })
 }
 
 fn arb_register_request() -> impl Strategy<Value = RegisterRequest> {
@@ -54,12 +55,14 @@ fn arb_register_request() -> impl Strategy<Value = RegisterRequest> {
         arb_small_string(),
         arb_small_string(),
     )
-        .prop_map(|(email, password, password_confirmation, name)| RegisterRequest {
-            email,
-            password,
-            password_confirmation,
-            name,
-        })
+        .prop_map(
+            |(email, password, password_confirmation, name)| RegisterRequest {
+                email,
+                password,
+                password_confirmation,
+                name,
+            },
+        )
 }
 
 proptest! {

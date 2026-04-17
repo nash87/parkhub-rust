@@ -80,9 +80,9 @@ fn spawn_recurring_job<F>(
 ) where
     F: Fn(
             SharedState,
-        ) -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send>,
-        > + Send
+        )
+            -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send>>
+        + Send
         + 'static,
 {
     tokio::spawn(async move {

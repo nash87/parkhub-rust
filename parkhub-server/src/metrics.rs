@@ -128,10 +128,7 @@ pub fn record_registered_users(count: u64) {
 /// `Err(...)`. Exposed as `parkhub_job_runs_total{job, success}` via
 /// Prometheus so alerts can fire on sustained error rates.
 pub fn record_job_run(job: &str, success: bool) {
-    let labels = [
-        ("job", job.to_string()),
-        ("success", success.to_string()),
-    ];
+    let labels = [("job", job.to_string()), ("success", success.to_string())];
     counter!("job_runs_total", &labels).increment(1);
 }
 

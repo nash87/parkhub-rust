@@ -119,8 +119,7 @@ pub async fn co2_summary(
     let emitted_g: f64 = scoped
         .iter()
         .map(|b| {
-            emission_factor(b.vehicle.vehicle_type, b.vehicle.fuel_type)
-                * ASSUMED_KM_PER_BOOKING
+            emission_factor(b.vehicle.vehicle_type, b.vehicle.fuel_type) * ASSUMED_KM_PER_BOOKING
         })
         .sum();
     let counterfactual_g = scoped.len() as f64 * BASELINE_G_PER_KM * ASSUMED_KM_PER_BOOKING;
