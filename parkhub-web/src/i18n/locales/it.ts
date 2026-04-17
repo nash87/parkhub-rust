@@ -492,6 +492,22 @@ export default {
           error: 'Impossibile commutare {{name}}',
           requiresReload: 'Ricarica per applicare',
         },
+        config: {
+          open: 'Configura',
+          noSchema: 'Nessuno schema di configurazione',
+          modalTitle: 'Configura {{name}}',
+          save: 'Salva',
+          cancel: 'Annulla',
+          saving: 'Salvataggio…',
+          successToast: 'Configurazione di {{name}} salvata',
+          errorToast: 'Impossibile salvare la configurazione di {{name}}',
+          validationFailed: 'Correggi i campi evidenziati',
+          required: 'Obbligatorio',
+          fieldFormat: {
+            email: 'Inserisci un indirizzo email valido',
+            time: 'Orario in formato 24 ore HH:MM',
+          },
+        },
         category: {
           core: 'Base',
           booking: 'Prenotazioni',

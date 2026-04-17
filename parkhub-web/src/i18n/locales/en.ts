@@ -503,6 +503,22 @@ export default {
           error: 'Could not toggle {{name}}',
           requiresReload: 'Reload to apply',
         },
+        config: {
+          open: 'Configure',
+          noSchema: 'No configuration schema',
+          modalTitle: 'Configure {{name}}',
+          save: 'Save',
+          cancel: 'Cancel',
+          saving: 'Saving…',
+          successToast: '{{name}} config saved',
+          errorToast: 'Could not save {{name}} config',
+          validationFailed: 'Please fix the highlighted fields',
+          required: 'Required',
+          fieldFormat: {
+            email: 'Enter a valid email address',
+            time: 'Use 24-hour HH:MM time',
+          },
+        },
         category: {
           core: 'Core',
           booking: 'Booking',

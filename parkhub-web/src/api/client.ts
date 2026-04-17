@@ -3,7 +3,7 @@ const BASE_URL = import.meta.env?.VITE_API_URL || '';
 export interface ApiResponse<T> {
   success: boolean;
   data: T | null;
-  error?: { code: string; message: string };
+  error?: { code: string; message: string; details?: unknown };
 }
 
 export interface RequestOptions extends Omit<RequestInit, 'signal'> {
@@ -369,6 +369,20 @@ export const api = {
       body: JSON.stringify({ runtime_enabled }),
     }),
 
+  // ── Admin Module Config (T-1720 v3 — per-module JSON Schema editor) ──
+  getModuleConfig: (name: string) =>
+    request<ModuleConfigResponse>(
+      `/api/v1/admin/modules/${encodeURIComponent(name)}/config`,
+    ),
+  patchModuleConfig: (name: string, values: Record<string, unknown>) =>
+    request<ModuleConfigResponse>(
+      `/api/v1/admin/modules/${encodeURIComponent(name)}/config`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(values),
+      },
+    ),
+
   // ── Admin Announcements ──
   adminListAnnouncements: () => request<Announcement[]>('/api/v1/admin/announcements'),
   adminCreateAnnouncement: (data: { title: string; message: string; severity: string; active: boolean; expires_at?: string }) =>
@@ -589,9 +603,23 @@ export interface ModuleInfo {
   runtime_toggleable: boolean;
   runtime_enabled?: boolean;
   config_keys: string[];
+  /** JSON Schema for the module's PATCH /config endpoint, when the module ships one (T-1720 v3). */
+  config_schema?: unknown;
   ui_route: string | null;
   depends_on: string[];
   version: string;
+}
+
+/** Response body of `GET/PATCH /api/v1/admin/modules/{name}/config` (T-1720 v3). */
+export interface ModuleConfigResponse {
+  schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+    title?: string;
+    description?: string;
+  };
+  values: Record<string, unknown>;
 }
 
 export interface User {

@@ -503,6 +503,22 @@ export default {
           error: '{{name}} konnte nicht umgeschaltet werden',
           requiresReload: 'Neu laden, um zu übernehmen',
         },
+        config: {
+          open: 'Konfigurieren',
+          noSchema: 'Kein Konfigurationsschema',
+          modalTitle: '{{name}} konfigurieren',
+          save: 'Speichern',
+          cancel: 'Abbrechen',
+          saving: 'Wird gespeichert…',
+          successToast: 'Konfiguration von {{name}} gespeichert',
+          errorToast: 'Konfiguration von {{name}} konnte nicht gespeichert werden',
+          validationFailed: 'Bitte korrigieren Sie die markierten Felder',
+          required: 'Pflichtfeld',
+          fieldFormat: {
+            email: 'Gültige E-Mail-Adresse eingeben',
+            time: 'Uhrzeit im 24-Stunden-Format HH:MM',
+          },
+        },
         category: {
           core: 'Kern',
           booking: 'Buchung',

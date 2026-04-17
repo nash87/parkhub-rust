@@ -485,6 +485,7 @@ export default {
         exportHint: 'Transferir o mapa de ativação como JSON',
         status: { enabled: 'Ativado', disabled: 'Desativado', runtimeOff: 'Runtime desligado' },
         toggle: { enable: 'Ativar', disable: 'Desativar', notRuntimeToggleable: 'Não comutável em tempo de execução', success: 'Módulo {{name}} alternado', error: 'Não foi possível alternar {{name}}', requiresReload: 'Recarregar para aplicar' },
+        config: { open: 'Configurar', noSchema: 'Sem esquema de configuração', modalTitle: 'Configurar {{name}}', save: 'Guardar', cancel: 'Cancelar', saving: 'A guardar…', successToast: 'Configuração de {{name}} guardada', errorToast: 'Não foi possível guardar a configuração de {{name}}', validationFailed: 'Corrija os campos destacados', required: 'Obrigatório', fieldFormat: { email: 'Introduza um endereço de email válido', time: 'Hora no formato 24 h HH:MM' } },
         category: { core: 'Essencial', booking: 'Reservas', vehicle: 'Veículos', payment: 'Pagamentos', admin: 'Administração', analytics: 'Análises', integration: 'Integrações', notification: 'Notificações', compliance: 'Conformidade', enterprise: 'Enterprise', experimental: 'Experimental' },
       },
     },

@@ -492,6 +492,22 @@ export default {
           error: 'Impossible de basculer {{name}}',
           requiresReload: 'Recharger pour appliquer',
         },
+        config: {
+          open: 'Configurer',
+          noSchema: 'Pas de schéma de configuration',
+          modalTitle: 'Configurer {{name}}',
+          save: 'Enregistrer',
+          cancel: 'Annuler',
+          saving: 'Enregistrement…',
+          successToast: 'Configuration de {{name}} enregistrée',
+          errorToast: 'Impossible d\'enregistrer la configuration de {{name}}',
+          validationFailed: 'Veuillez corriger les champs signalés',
+          required: 'Requis',
+          fieldFormat: {
+            email: 'Entrez une adresse e-mail valide',
+            time: 'Heure au format 24 h HH:MM',
+          },
+        },
         category: {
           core: 'Noyau',
           booking: 'Réservations',

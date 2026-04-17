@@ -492,6 +492,22 @@ export default {
           error: 'No se pudo conmutar {{name}}',
           requiresReload: 'Recargar para aplicar',
         },
+        config: {
+          open: 'Configurar',
+          noSchema: 'Sin esquema de configuración',
+          modalTitle: 'Configurar {{name}}',
+          save: 'Guardar',
+          cancel: 'Cancelar',
+          saving: 'Guardando…',
+          successToast: 'Configuración de {{name}} guardada',
+          errorToast: 'No se pudo guardar la configuración de {{name}}',
+          validationFailed: 'Corrige los campos resaltados',
+          required: 'Obligatorio',
+          fieldFormat: {
+            email: 'Introduce una dirección de correo válida',
+            time: 'Hora en formato 24 h HH:MM',
+          },
+        },
         category: {
           core: 'Núcleo',
           booking: 'Reservas',

@@ -311,4 +311,113 @@ describe('AdminModulesPage', () => {
     await screen.findByTestId('module-card-toggleme');
     expect(screen.queryByTestId('module-toggle-toggleme')).toBeNull();
   });
+
+  // ── T-1720 v3: per-module JSON Schema config editor ──
+
+  it('shows a Config button only for modules shipping a config_schema', async () => {
+    setAuthUser({ role: 'admin' });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        module_info: [
+          mkModule({
+            name: 'with-schema',
+            category: 'core',
+            config_schema: {
+              type: 'object',
+              properties: { active: { type: 'boolean' } },
+            },
+          }),
+          mkModule({ name: 'no-schema', category: 'core' }),
+        ],
+      }),
+    });
+
+    renderPage();
+
+    await screen.findByTestId('module-card-with-schema');
+    expect(screen.getByTestId('module-config-with-schema')).toBeInTheDocument();
+    expect(screen.queryByTestId('module-config-no-schema')).toBeNull();
+  });
+
+  it('hides the Config button for non-admins even when a schema is present', async () => {
+    setAuthUser({ role: 'user' });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        module_info: [
+          mkModule({
+            name: 'with-schema',
+            category: 'core',
+            config_schema: {
+              type: 'object',
+              properties: { active: { type: 'boolean' } },
+            },
+          }),
+        ],
+      }),
+    });
+
+    renderPage();
+    await screen.findByTestId('module-card-with-schema');
+    expect(screen.queryByTestId('module-config-with-schema')).toBeNull();
+  });
+
+  it('opens the config modal when the Config button is clicked', async () => {
+    setAuthUser({ role: 'admin' });
+    fetchMock.mockImplementation((url: string) => {
+      if (typeof url === 'string' && url.includes('/api/v1/modules/info')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            module_info: [
+              mkModule({
+                name: 'sample',
+                category: 'core',
+                config_schema: {
+                  type: 'object',
+                  properties: { mode: { type: 'string', enum: ['a', 'b'] } },
+                  required: ['mode'],
+                },
+              }),
+            ],
+          }),
+        });
+      }
+      if (
+        typeof url === 'string' &&
+        url.includes('/api/v1/admin/modules/sample/config')
+      ) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: {
+              schema: {
+                type: 'object',
+                properties: { mode: { type: 'string', enum: ['a', 'b'] } },
+                required: ['mode'],
+              },
+              values: { mode: 'a' },
+            },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404, json: async () => null });
+    });
+
+    renderPage();
+
+    const btn = await screen.findByTestId('module-config-sample');
+    fireEvent.click(btn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('config-modal')).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('cfg-field-mode')).toBeInTheDocument();
+    });
+  });
 });

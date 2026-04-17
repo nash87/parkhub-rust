@@ -23,6 +23,7 @@ import toast from 'react-hot-toast';
 import { type ModuleInfo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useModuleToggle } from '../hooks/useModuleToggle';
+import { ConfigEditorModal } from '../components/ConfigEditorModal';
 
 const CATEGORY_ORDER = [
   'core',
@@ -141,9 +142,10 @@ interface ModuleCardProps {
   t: (k: string, d?: string, o?: Record<string, unknown>) => string;
   isAdmin: boolean;
   onModuleChange: (name: string, runtimeEnabled: boolean) => void;
+  onOpenConfig: (name: string) => void;
 }
 
-function ModuleCard({ m, t, isAdmin, onModuleChange }: ModuleCardProps) {
+function ModuleCard({ m, t, isAdmin, onModuleChange, onOpenConfig }: ModuleCardProps) {
   const enabled = m.runtime_enabled ?? m.enabled;
   return (
     <div
@@ -201,6 +203,17 @@ function ModuleCard({ m, t, isAdmin, onModuleChange }: ModuleCardProps) {
         ) : (
           <span className="text-surface-400">{t('admin.modules.noUi', 'No UI surface')}</span>
         )}
+        {isAdmin && m.config_schema != null && (
+          <button
+            type="button"
+            onClick={() => onOpenConfig(m.name)}
+            className="rounded border border-surface-200 dark:border-surface-700 px-2 py-0.5 text-[11px] text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800"
+            data-testid={`module-config-${m.name}`}
+            aria-label={t('admin.modules.config.open', 'Configure')}
+          >
+            {t('admin.modules.config.open', 'Configure')}
+          </button>
+        )}
         <span className="ml-auto text-surface-400">v{m.version}</span>
       </div>
     </div>
@@ -217,6 +230,7 @@ export function AdminModulesPage() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<string | 'all'>('all');
   const [hideDisabled, setHideDisabled] = useState(false);
+  const [configOpenFor, setConfigOpenFor] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -350,11 +364,20 @@ export function AdminModulesPage() {
                   t={t}
                   isAdmin={isAdmin}
                   onModuleChange={handleModuleChange}
+                  onOpenConfig={(name) => setConfigOpenFor(name)}
                 />
               ))}
             </div>
           </section>
         ))
+      )}
+
+      {configOpenFor && (
+        <ConfigEditorModal
+          moduleName={configOpenFor}
+          isOpen={configOpenFor !== null}
+          onClose={() => setConfigOpenFor(null)}
+        />
       )}
     </div>
   );
