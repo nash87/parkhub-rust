@@ -29,6 +29,26 @@
 //!   same shape as a feature that was never compiled in.
 //! - **Local-only**: every string ships in the binary. No network call
 //!   ever leaves the handler.
+//!
+//! ## v3 — per-module JSON Schema config editor
+//!
+//! Each row can optionally declare a JSON Schema (draft 2020-12) string
+//! that describes the module's admin-settings payload. Modules that
+//! declare one get two admin-only endpoints:
+//!
+//! - `GET /api/v1/admin/modules/{name}/config` — returns the schema and
+//!   the currently stored values (looked up via admin-settings keys
+//!   `module.{name}.config.{field}`).
+//! - `PATCH /api/v1/admin/modules/{name}/config` — validates the request
+//!   body against the schema and, on success, writes each field back to
+//!   the settings store. Every successful write emits an
+//!   [`AuditEventType::ConfigChanged`] entry with the list of changed
+//!   keys.
+//!
+//! Modules without a `config_schema` entry return `400 BAD_REQUEST` on
+//! both endpoints — there is no "empty schema" fallback to avoid
+//! accidentally shipping an editor for a module whose settings story
+//! hasn't been codified yet.
 
 use axum::{
     Json,
@@ -46,6 +66,147 @@ use utoipa::ToSchema;
 use crate::audit::{AuditEntry, AuditEventType};
 
 use super::{AuthUser, SharedState, check_admin};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Module config schemas (T-1720 v3)
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// One const string per module that exposes a config editor. We keep the
+// schemas as literal JSON so (a) they are trivially reviewable in diffs,
+// (b) they cost zero runtime parsing effort beyond the one-time registry
+// materialisation, and (c) the set of declared modules is obvious from
+// `rg MOD_.*_SCHEMA`.
+//
+// Every schema is draft 2020-12, `additionalProperties: false`, and only
+// enumerates fields that the Settings store actually consumes today. We
+// deliberately do *not* invent aspirational fields — better to extend
+// the schema when a setting is added than to ship a UI for a
+// non-existent key.
+
+/// `mod-themes` — tenant default theme + per-user override flag.
+const MOD_THEMES_SCHEMA: &str = r#"{
+  "type": "object",
+  "title": "Themes settings",
+  "description": "Default theme for the tenant plus a flag that gates per-user theme override.",
+  "properties": {
+    "default_theme": {
+      "type": "string",
+      "enum": ["light", "dark", "classic"],
+      "description": "Theme used when a user has not picked one."
+    },
+    "allow_user_override": {
+      "type": "boolean",
+      "description": "When true, individual users can pick their own theme."
+    }
+  },
+  "required": ["default_theme", "allow_user_override"],
+  "additionalProperties": false
+}"#;
+
+/// `mod-announcements` — admin banner policy.
+const MOD_ANNOUNCEMENTS_SCHEMA: &str = r#"{
+  "type": "object",
+  "title": "Announcements settings",
+  "description": "Controls the admin-published banner system.",
+  "properties": {
+    "max_announcements": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "description": "Maximum number of simultaneously active announcements."
+    },
+    "default_ttl_days": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "description": "Default days until an announcement auto-expires."
+    },
+    "show_on_login": {
+      "type": "boolean",
+      "description": "Display the active announcement list on the login page."
+    }
+  },
+  "required": ["max_announcements", "default_ttl_days", "show_on_login"],
+  "additionalProperties": false
+}"#;
+
+/// `mod-notifications` — delivery channels and quiet hours.
+///
+/// `quiet_hours_start` / `quiet_hours_end` use an `HH:MM` 24-hour pattern
+/// rather than the full RFC 3339 `time` format because we only ever
+/// consume minutes-of-day; seconds + timezone would be silently
+/// discarded otherwise.
+const MOD_NOTIFICATIONS_SCHEMA: &str = r#"{
+  "type": "object",
+  "title": "Notifications settings",
+  "description": "Master switches per channel plus nightly quiet-hours window.",
+  "properties": {
+    "push_enabled": {
+      "type": "boolean",
+      "description": "Send Web Push notifications to subscribed clients."
+    },
+    "email_enabled": {
+      "type": "boolean",
+      "description": "Send transactional email notifications."
+    },
+    "quiet_hours_start": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+      "description": "Start of the nightly quiet window (HH:MM, 24h)."
+    },
+    "quiet_hours_end": {
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+      "description": "End of the nightly quiet window (HH:MM, 24h)."
+    }
+  },
+  "required": ["push_enabled", "email_enabled", "quiet_hours_start", "quiet_hours_end"],
+  "additionalProperties": false
+}"#;
+
+/// `mod-email-templates` — outbound envelope identity.
+const MOD_EMAIL_TEMPLATES_SCHEMA: &str = r#"{
+  "type": "object",
+  "title": "Email template settings",
+  "description": "Envelope identity applied to every transactional email.",
+  "properties": {
+    "from_address": {
+      "type": "string",
+      "format": "email",
+      "description": "`From:` address on outbound email."
+    },
+    "from_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "Human-readable display name on outbound email."
+    },
+    "reply_to": {
+      "type": "string",
+      "format": "email",
+      "description": "`Reply-To:` address, typically a monitored inbox."
+    }
+  },
+  "required": ["from_address", "from_name", "reply_to"],
+  "additionalProperties": false
+}"#;
+
+/// `mod-widgets` — embeddable dashboard widget cap.
+const MOD_WIDGETS_SCHEMA: &str = r#"{
+  "type": "object",
+  "title": "Widgets settings",
+  "description": "Limits for the embeddable widgets subsystem.",
+  "properties": {
+    "max_widgets_per_dashboard": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "description": "Maximum number of widgets that can be pinned to one dashboard."
+    }
+  },
+  "required": ["max_widgets_per_dashboard"],
+  "additionalProperties": false
+}"#;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Types
@@ -116,6 +277,39 @@ struct ModuleDef {
     /// Other module slugs that must also be enabled for this to work.
     /// Validated at test time — broken references fail the test suite.
     depends_on: &'static [&'static str],
+    /// Optional JSON Schema (draft 2020-12) literal describing the
+    /// module's admin config payload.
+    ///
+    /// When `Some(_)`, the module gains a pair of admin-only endpoints
+    /// under `/api/v1/admin/modules/{name}/config`. `None` — the default
+    /// for every module — means the module has no generic config editor
+    /// and both endpoints return `400 BAD_REQUEST`.
+    ///
+    /// The literal must parse as a valid JSON object; [`module_registry_static`]
+    /// validates the shape on startup / in tests (see
+    /// `test_config_schema_strings_are_valid_json`).
+    config_schema: Option<&'static str>,
+}
+
+/// Wrapper that transparently serialises a JSON Schema document (draft
+/// 2020-12) into the API payload while still giving utoipa a handle on
+/// the field for schema generation.
+///
+/// The inner `schema` is a `serde_json::Value` because JSON Schema
+/// documents are themselves unbounded in shape — encoding it as an
+/// arbitrary `Object` lets us round-trip any valid schema without
+/// forcing a second-order type. `#[serde(flatten)]` pulls the schema's
+/// top-level keys (`type`, `properties`, `required`, …) onto the
+/// response envelope so clients see the raw schema, not a
+/// `{schema: {...}}` wrapper.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ConfigSchema {
+    /// JSON Schema document (draft 2020-12) describing the module's
+    /// settings. Transparent — fields are flattened into the parent
+    /// response.
+    #[serde(flatten)]
+    #[schema(value_type = Object)]
+    pub schema: serde_json::Value,
 }
 
 /// Runtime-serializable view of a [`ModuleDef`] with owned strings.
@@ -155,6 +349,14 @@ pub struct ModuleInfo {
     pub depends_on: Vec<String>,
     /// Semver — tied to the workspace version.
     pub version: String,
+    /// Parsed JSON Schema for the module's admin config editor.
+    ///
+    /// `Some(_)` when the module declared a literal `config_schema` in
+    /// its [`ModuleDef`] row; `None` otherwise. Present in
+    /// `/api/v1/modules` so the admin dashboard can decide whether to
+    /// render an "Edit config" affordance without a second round trip.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config_schema: Option<ConfigSchema>,
 }
 
 /// Backwards-compatible envelope for `GET /api/v1/modules`.
@@ -193,7 +395,28 @@ pub fn runtime_enabled_setting_key(module_name: &str) -> String {
 /// This is the pure compile-time view — used by tests, by callers that
 /// don't need the admin-settings override, and as the starting point
 /// for [`module_registry`] before it applies overrides.
+///
+/// A malformed `config_schema` string (non-JSON) is treated as "no
+/// schema declared" for this row: we emit a `tracing::error!` and set
+/// `config_schema = None` rather than panicking, so one typo doesn't
+/// take the entire modules endpoint down. The
+/// `test_config_schema_strings_are_valid_json` test guarantees we never
+/// actually ship a broken literal.
 fn materialize(def: &ModuleDef) -> ModuleInfo {
+    let config_schema =
+        def.config_schema
+            .and_then(|src| match serde_json::from_str::<serde_json::Value>(src) {
+                Ok(schema) => Some(ConfigSchema { schema }),
+                Err(e) => {
+                    tracing::error!(
+                        module = def.name,
+                        error = %e,
+                        "module config_schema literal is not valid JSON; dropping"
+                    );
+                    None
+                }
+            });
+
     ModuleInfo {
         name: def.name.to_string(),
         category: def.category,
@@ -205,6 +428,7 @@ fn materialize(def: &ModuleDef) -> ModuleInfo {
         ui_route: def.ui_route.map(std::string::ToString::to_string),
         depends_on: def.depends_on.iter().map(|s| (*s).to_string()).collect(),
         version: env!("CARGO_PKG_VERSION").to_string(),
+        config_schema,
     }
 }
 
@@ -277,6 +501,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             ],
             ui_route: Some("/bookings"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "vehicles",
@@ -287,6 +512,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/vehicles"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "zones",
@@ -297,6 +523,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/admin/zones"),
             depends_on: &[],
+            config_schema: None,
         },
         // ── Booking-side ────────────────────────────────────────────────────
         ModuleDef {
@@ -308,6 +535,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &["auto_release_on_absence"],
             ui_route: Some("/absences"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "absence-approval",
@@ -318,6 +546,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["absences"],
+            config_schema: None,
         },
         ModuleDef {
             name: "recurring",
@@ -328,6 +557,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["bookings"],
+            config_schema: None,
         },
         ModuleDef {
             name: "guest",
@@ -338,6 +568,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["bookings"],
+            config_schema: None,
         },
         ModuleDef {
             name: "swap",
@@ -348,6 +579,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["bookings"],
+            config_schema: None,
         },
         ModuleDef {
             name: "waitlist",
@@ -358,6 +590,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "waitlist-ext",
@@ -368,6 +601,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["waitlist"],
+            config_schema: None,
         },
         ModuleDef {
             name: "sharing",
@@ -378,6 +612,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["bookings"],
+            config_schema: None,
         },
         ModuleDef {
             name: "calendar",
@@ -388,6 +623,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/calendar"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "calendar-drag",
@@ -398,6 +634,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["calendar"],
+            config_schema: None,
         },
         ModuleDef {
             name: "favorites",
@@ -408,6 +645,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/favorites"),
             depends_on: &[],
+            config_schema: None,
         },
         // ── Vehicle / Fleet ─────────────────────────────────────────────────
         ModuleDef {
@@ -419,6 +657,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/admin/fleet"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "qr",
@@ -429,6 +668,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "parking-pass",
@@ -439,6 +679,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Payment ─────────────────────────────────────────────────────────
         ModuleDef {
@@ -450,6 +691,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "stripe",
@@ -460,6 +702,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &["stripe_publishable_key"],
             ui_route: None,
             depends_on: &["payments"],
+            config_schema: None,
         },
         ModuleDef {
             name: "credits",
@@ -470,6 +713,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &["credits_enabled", "credits_per_booking"],
             ui_route: Some("/credits"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "invoices",
@@ -480,6 +724,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "dynamic-pricing",
@@ -490,6 +735,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Admin ───────────────────────────────────────────────────────────
         ModuleDef {
@@ -501,6 +747,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "sso",
@@ -511,6 +758,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "audit-export",
@@ -521,6 +769,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/admin/audit"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "data-import",
@@ -531,6 +780,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "import",
@@ -541,6 +791,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "export",
@@ -551,6 +802,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "settings",
@@ -561,6 +813,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Analytics ───────────────────────────────────────────────────────
         ModuleDef {
@@ -572,6 +825,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/admin/analytics"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "analytics",
@@ -582,6 +836,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "scheduled-reports",
@@ -592,6 +847,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Integration ─────────────────────────────────────────────────────
         ModuleDef {
@@ -603,6 +859,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "webhooks-v2",
@@ -613,6 +870,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "graphql",
@@ -623,6 +881,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/admin/graphql"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "api-docs",
@@ -633,6 +892,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/api/docs"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "api-versioning",
@@ -643,6 +903,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "oauth",
@@ -653,6 +914,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "ical",
@@ -663,6 +925,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "websocket",
@@ -673,6 +936,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Notification ────────────────────────────────────────────────────
         ModuleDef {
@@ -684,6 +948,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/notifications"),
             depends_on: &[],
+            config_schema: Some(MOD_NOTIFICATIONS_SCHEMA),
         },
         ModuleDef {
             name: "notification-center",
@@ -694,6 +959,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["notifications"],
+            config_schema: None,
         },
         ModuleDef {
             name: "announcements",
@@ -704,6 +970,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: Some(MOD_ANNOUNCEMENTS_SCHEMA),
         },
         ModuleDef {
             name: "email",
@@ -714,6 +981,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "email-templates",
@@ -724,6 +992,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["email"],
+            config_schema: Some(MOD_EMAIL_TEMPLATES_SCHEMA),
         },
         ModuleDef {
             name: "push",
@@ -734,6 +1003,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Compliance ──────────────────────────────────────────────────────
         ModuleDef {
@@ -745,6 +1015,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "accessible",
@@ -755,6 +1026,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         // ── Enterprise ──────────────────────────────────────────────────────
         ModuleDef {
@@ -766,6 +1038,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "cost-center",
@@ -776,6 +1049,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "themes",
@@ -786,6 +1060,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: Some(MOD_THEMES_SCHEMA),
         },
         ModuleDef {
             name: "plugins",
@@ -796,6 +1071,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/admin/plugins"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "branding",
@@ -806,6 +1082,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "translations",
@@ -816,6 +1093,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "parking-zones",
@@ -826,6 +1104,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "widgets",
@@ -836,6 +1115,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: Some(MOD_WIDGETS_SCHEMA),
         },
         // ── Experimental / Hardware ─────────────────────────────────────────
         ModuleDef {
@@ -847,6 +1127,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "map",
@@ -857,6 +1138,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/map"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "geofence",
@@ -867,6 +1149,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "visitors",
@@ -877,6 +1160,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "maintenance",
@@ -887,6 +1171,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "history",
@@ -897,6 +1182,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/history"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "social",
@@ -907,6 +1193,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "recommendations",
@@ -917,6 +1204,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "operating-hours",
@@ -927,6 +1215,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "lobby-display",
@@ -937,6 +1226,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "team",
@@ -947,6 +1237,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "setup-wizard",
@@ -957,6 +1248,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: Some("/setup"),
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "jobs",
@@ -967,6 +1259,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "pwa",
@@ -977,6 +1270,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
         ModuleDef {
             name: "enhanced-pwa",
@@ -987,6 +1281,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &["pwa"],
+            config_schema: None,
         },
         ModuleDef {
             name: "mobile",
@@ -997,6 +1292,7 @@ fn registry_defs() -> Vec<ModuleDef> {
             config_keys: &[],
             ui_route: None,
             depends_on: &[],
+            config_schema: None,
         },
     ]
 }
@@ -1216,6 +1512,401 @@ pub async fn patch_admin_module(
     };
 
     (StatusCode::OK, Json(ApiResponse::success(updated)))
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Per-module JSON Schema config editor (T-1720 v3)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// Response + request body for the config editor. Carries both the
+/// schema (so the UI can render a form) and the current persisted values
+/// (so the UI can pre-fill fields). The PATCH request shape reuses the
+/// same struct: send `{"values": {...}}` and leave `schema` empty /
+/// ignored.
+///
+/// Using one struct for both directions keeps the client contract
+/// symmetric and means a `PATCH` response can be fed straight back into
+/// the editor without renormalisation.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ModuleConfig {
+    /// Parsed schema for this module, echoed back so clients don't need
+    /// to re-fetch it after a PATCH. On PATCH requests this field is
+    /// ignored — the server is the source of truth for schemas.
+    pub schema: ConfigSchema,
+    /// Currently persisted values, one entry per schema `properties` key
+    /// that has a stored value. Keys with no stored value are omitted;
+    /// the UI falls back to schema defaults (or an empty form field).
+    pub values: HashMap<String, serde_json::Value>,
+}
+
+/// PATCH request body — only `values`, no schema.
+///
+/// Kept as a separate struct (instead of reusing [`ModuleConfig`]) so
+/// the OpenAPI request-body schema doesn't accept a (server-owned)
+/// `schema` field.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateModuleConfigRequest {
+    /// New values keyed by schema property name. Each value must pass
+    /// the schema validator for its property.
+    pub values: HashMap<String, serde_json::Value>,
+}
+
+/// Build the admin-settings key that stores one field of a module's
+/// runtime config.
+///
+/// Shape: `module.{slug}.config.{field}`. Each field is stored as a
+/// JSON-encoded string so we can round-trip any schema type (boolean,
+/// integer, string, object, …) through the string-typed settings
+/// store.
+#[must_use]
+pub fn config_setting_key(module_name: &str, field: &str) -> String {
+    format!("module.{module_name}.config.{field}")
+}
+
+/// Compile-time validate a raw schema literal → runtime [`ConfigSchema`].
+///
+/// Returns `Err(String)` when the literal is not a JSON object. Handler
+/// code turns this into a 500 with a clear log line — the
+/// `test_config_schema_strings_are_valid_json` test rules out shipping
+/// broken literals in the first place.
+fn parse_schema(literal: &str) -> Result<(serde_json::Value, ConfigSchema), String> {
+    let value: serde_json::Value = serde_json::from_str(literal)
+        .map_err(|e| format!("schema literal is not valid JSON: {e}"))?;
+    Ok((value.clone(), ConfigSchema { schema: value }))
+}
+
+/// Read every value currently persisted for a module, keyed off the
+/// schema's `properties` object.
+///
+/// Keys that have no stored value are omitted from the returned map.
+/// Values that failed to JSON-decode (e.g. a hand-edited row) are also
+/// skipped with an error log rather than poisoning the entire response.
+async fn load_module_values(
+    db: &crate::db::Database,
+    module_name: &str,
+    schema_value: &serde_json::Value,
+) -> HashMap<String, serde_json::Value> {
+    let Some(properties) = schema_value.get("properties").and_then(|p| p.as_object()) else {
+        return HashMap::new();
+    };
+
+    let mut out = HashMap::new();
+    for field in properties.keys() {
+        let key = config_setting_key(module_name, field);
+        match db.get_setting(&key).await {
+            Ok(Some(raw)) => match serde_json::from_str::<serde_json::Value>(&raw) {
+                Ok(value) => {
+                    out.insert(field.clone(), value);
+                }
+                Err(e) => {
+                    tracing::error!(
+                        module = module_name,
+                        field = %field,
+                        error = %e,
+                        "stored module config value is not valid JSON; skipping"
+                    );
+                }
+            },
+            Ok(None) => { /* unset — fine */ }
+            Err(e) => {
+                tracing::error!(
+                    module = module_name,
+                    field = %field,
+                    error = %e,
+                    "settings store read failed"
+                );
+            }
+        }
+    }
+    out
+}
+
+/// Resolve a module slug to its parsed schema, or return the appropriate
+/// HTTP error. Centralises the 404 / 400 distinction shared by the
+/// `GET` and `PATCH` handlers.
+///
+/// - `Err(NOT_FOUND)` — slug is not in the registry at all.
+/// - `Err(BAD_REQUEST)` — slug exists but has no `config_schema`
+///   declared (no generic editor available for this module).
+fn resolve_schema(name: &str) -> Result<(serde_json::Value, ConfigSchema), StatusCode> {
+    let Some(def) = registry_defs().into_iter().find(|d| d.name == name) else {
+        return Err(StatusCode::NOT_FOUND);
+    };
+    let Some(literal) = def.config_schema else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
+    parse_schema(literal).map_err(|e| {
+        tracing::error!(module = name, error = %e, "module schema literal is broken");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })
+}
+
+/// `GET /api/v1/admin/modules/{name}/config` — schema + current values.
+///
+/// Admin-only. Returns:
+/// - `200 OK` with `{schema, values}` when the module declares a schema.
+/// - `403 FORBIDDEN` when the caller is not an admin (defense-in-depth;
+///   the admin_middleware layer is the primary guard).
+/// - `404 NOT_FOUND` when the slug is not in the registry.
+/// - `400 BAD_REQUEST` when the module exists but has no schema.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/modules/{name}/config",
+    tag = "Admin",
+    summary = "Read a module's config schema + current values",
+    description = "Admin-only. Returns the JSON Schema (draft 2020-12) describing the module's admin config payload plus the currently persisted values. Returns 404 when the slug is unknown and 400 when the module has no schema declared.",
+    security(("bearer_auth" = [])),
+    params(("name" = String, Path, description = "Module slug (kebab-case)")),
+    responses(
+        (status = 200, description = "Config schema + values", body = ModuleConfig),
+        (status = 400, description = "Module has no config schema"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Unknown module slug")
+    )
+)]
+pub async fn get_module_config(
+    State(state): State<SharedState>,
+    axum::Extension(auth_user): axum::Extension<AuthUser>,
+    Path(name): Path<String>,
+) -> Result<Json<ModuleConfig>, (StatusCode, Json<ApiResponse<()>>)> {
+    let state_guard = state.read().await;
+
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return Err((status, Json(ApiResponse::error("FORBIDDEN", msg))));
+    }
+
+    let (schema_value, schema) = resolve_schema(&name).map_err(|status| match status {
+        StatusCode::NOT_FOUND => (
+            status,
+            Json(ApiResponse::error(
+                "UNKNOWN_MODULE",
+                format!("Unknown module slug: {name}"),
+            )),
+        ),
+        StatusCode::BAD_REQUEST => (
+            status,
+            Json(ApiResponse::error(
+                "NO_CONFIG_SCHEMA",
+                format!("Module '{name}' has no config schema"),
+            )),
+        ),
+        _ => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to resolve module schema",
+            )),
+        ),
+    })?;
+
+    let values = load_module_values(&state_guard.db, &name, &schema_value).await;
+    drop(state_guard);
+
+    Ok(Json(ModuleConfig { schema, values }))
+}
+
+/// Validate an instance against a JSON Schema document, returning a
+/// list of human-readable error messages on failure.
+///
+/// The errors carry enough context to surface in a form UI (`/foo:
+/// message`) without leaking internal state.
+fn validate_instance(
+    schema_value: &serde_json::Value,
+    instance: &serde_json::Value,
+) -> Result<(), Vec<String>> {
+    let validator = match jsonschema::draft202012::new(schema_value) {
+        Ok(v) => v,
+        Err(e) => {
+            // If the literal is broken we've already returned 500 from
+            // `resolve_schema`; reaching here is a programmer error.
+            return Err(vec![format!("schema compile error: {e}")]);
+        }
+    };
+    let errors: Vec<String> = validator
+        .iter_errors(instance)
+        .map(|e| format!("{} at `{}`", e, e.instance_path))
+        .collect();
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
+/// `PATCH /api/v1/admin/modules/{name}/config` — write new values.
+///
+/// Admin-only. Body is `{"values": {...}}`. The full
+/// `values` object is validated against the module's schema in one shot
+/// (so `required` / `additionalProperties: false` / cross-field
+/// constraints all apply). On success every field is JSON-encoded and
+/// persisted to `module.{name}.config.{field}`.
+///
+/// Emits an `AuditEventType::ConfigChanged` entry carrying the caller's
+/// user_id, the module slug, and the list of changed keys. The entry is
+/// written even if some keys already had the new value — the caller's
+/// *intent* is what we audit.
+///
+/// Error map:
+/// - `400 BAD_REQUEST` — module has no schema.
+/// - `403 FORBIDDEN` — caller is not an admin.
+/// - `404 NOT_FOUND` — unknown slug.
+/// - `422 UNPROCESSABLE_ENTITY` — body fails schema validation. The
+///   response carries a `details.errors: [...]` array with one string
+///   per violation for form-level display.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/modules/{name}/config",
+    tag = "Admin",
+    summary = "Update a module's config values",
+    description = "Admin-only. Validates the `values` body against the module's JSON Schema. On success writes each field to `module.{name}.config.{field}` in the settings store and emits a `ConfigChanged` audit entry. Returns 422 with a per-violation error list when validation fails.",
+    security(("bearer_auth" = [])),
+    params(("name" = String, Path, description = "Module slug (kebab-case)")),
+    request_body = UpdateModuleConfigRequest,
+    responses(
+        (status = 200, description = "Updated config", body = ModuleConfig),
+        (status = 400, description = "Module has no config schema"),
+        (status = 403, description = "Admin access required"),
+        (status = 404, description = "Unknown module slug"),
+        (status = 422, description = "Validation failed")
+    )
+)]
+pub async fn patch_module_config(
+    State(state): State<SharedState>,
+    axum::Extension(auth_user): axum::Extension<AuthUser>,
+    Path(name): Path<String>,
+    Json(body): Json<UpdateModuleConfigRequest>,
+) -> (StatusCode, Json<ApiResponse<ModuleConfig>>) {
+    let state_guard = state.read().await;
+
+    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+
+    let (schema_value, schema) = match resolve_schema(&name) {
+        Ok(pair) => pair,
+        Err(StatusCode::NOT_FOUND) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error(
+                    "UNKNOWN_MODULE",
+                    format!("Unknown module slug: {name}"),
+                )),
+            );
+        }
+        Err(StatusCode::BAD_REQUEST) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ApiResponse::error(
+                    "NO_CONFIG_SCHEMA",
+                    format!("Module '{name}' has no config schema"),
+                )),
+            );
+        }
+        Err(_) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to resolve module schema",
+                )),
+            );
+        }
+    };
+
+    // Validate the full `values` object (not each field in isolation) so
+    // `required`, `additionalProperties: false`, and any cross-field
+    // schema constraints all apply together.
+    let instance = serde_json::to_value(&body.values).unwrap_or(serde_json::Value::Null);
+    if let Err(errors) = validate_instance(&schema_value, &instance) {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse {
+                success: false,
+                data: None,
+                error: Some(parkhub_common::ApiError {
+                    code: "VALIDATION_FAILED".to_string(),
+                    message: "Request body failed schema validation".to_string(),
+                    details: Some(serde_json::json!({ "errors": errors })),
+                }),
+                meta: None,
+            }),
+        );
+    }
+
+    // Persist — each field is JSON-encoded so we can round-trip any
+    // schema type through the string-typed settings store.
+    let mut keys_changed: Vec<String> = Vec::with_capacity(body.values.len());
+    for (field, value) in &body.values {
+        let key = config_setting_key(&name, field);
+        let encoded = match serde_json::to_string(value) {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!(
+                    module = %name,
+                    field = %field,
+                    error = %e,
+                    "failed to encode module config value"
+                );
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        "SERVER_ERROR",
+                        "Failed to encode config value",
+                    )),
+                );
+            }
+        };
+        if let Err(e) = state_guard.db.set_setting(&key, &encoded).await {
+            tracing::error!(
+                module = %name,
+                field = %field,
+                error = %e,
+                "failed to persist module config value"
+            );
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to save module config",
+                )),
+            );
+        }
+        keys_changed.push(field.clone());
+    }
+    // Stable order for the audit entry + tests.
+    keys_changed.sort();
+
+    // Audit log — ConfigChanged with the list of touched keys.
+    if state_guard.config.audit_logging_enabled {
+        let admin_username = state_guard
+            .db
+            .get_user(&auth_user.user_id.to_string())
+            .await
+            .ok()
+            .flatten()
+            .map(|u| u.username)
+            .unwrap_or_default();
+
+        let entry = AuditEntry::new(AuditEventType::ConfigChanged)
+            .user(auth_user.user_id, &admin_username)
+            .resource("module", &name)
+            .details(serde_json::json!({
+                "module": name,
+                "keys_changed": keys_changed,
+            }))
+            .log();
+        entry.persist(&state_guard.db).await;
+    }
+
+    // Re-read persisted values so the response reflects the new state
+    // exactly as a subsequent GET would.
+    let values = load_module_values(&state_guard.db, &name, &schema_value).await;
+    drop(state_guard);
+
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(ModuleConfig { schema, values })),
+    )
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -2025,5 +2716,347 @@ mod tests {
             .await
             .expect("serve");
         assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // T-1720 v3 — per-module JSON Schema config editor
+    // ─────────────────────────────────────────────────────────────────
+
+    /// Every module that declares a `config_schema` literal must parse
+    /// as valid JSON *and* compile as a draft 2020-12 schema. A typo in
+    /// a schema literal would otherwise only surface at runtime when an
+    /// admin hits the endpoint.
+    #[test]
+    fn test_config_schema_strings_are_valid_json() {
+        for def in registry_defs() {
+            let Some(literal) = def.config_schema else {
+                continue;
+            };
+            let value: serde_json::Value = serde_json::from_str(literal).unwrap_or_else(|e| {
+                panic!("module '{}' has invalid config_schema JSON: {e}", def.name)
+            });
+            jsonschema::draft202012::new(&value).unwrap_or_else(|e| {
+                panic!(
+                    "module '{}' config_schema does not compile as draft 2020-12: {e}",
+                    def.name
+                )
+            });
+        }
+    }
+
+    /// The five modules that ship a schema in v3: themes,
+    /// announcements, notifications, email-templates, widgets. Other
+    /// modules intentionally keep `config_schema: None`.
+    #[test]
+    fn test_expected_modules_have_schemas() {
+        let with_schema: std::collections::HashSet<String> = registry_defs()
+            .into_iter()
+            .filter(|d| d.config_schema.is_some())
+            .map(|d| d.name.to_string())
+            .collect();
+        let expected: std::collections::HashSet<String> = [
+            "themes",
+            "announcements",
+            "notifications",
+            "email-templates",
+            "widgets",
+        ]
+        .into_iter()
+        .map(String::from)
+        .collect();
+        assert_eq!(
+            with_schema, expected,
+            "expected exactly the v3 5-module set to ship a schema"
+        );
+    }
+
+    /// GET returns 200 OK with the themes schema + empty values on a
+    /// fresh DB. Once a value is persisted, the GET reflects it.
+    #[tokio::test]
+    async fn test_get_config_returns_schema_and_values_for_themes() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        // Empty DB → schema present, values empty.
+        let result = get_module_config(
+            State(state.clone()),
+            axum::Extension(admin.clone()),
+            Path("themes".to_string()),
+        )
+        .await;
+        let Json(cfg) = result.expect("200 OK");
+        assert!(cfg.schema.schema.is_object(), "schema must be an object");
+        assert!(cfg.values.is_empty(), "fresh DB has no values");
+
+        // Persist a value directly and confirm GET surfaces it.
+        state
+            .read()
+            .await
+            .db
+            .set_setting(&config_setting_key("themes", "default_theme"), "\"dark\"")
+            .await
+            .expect("set_setting");
+        let result = get_module_config(
+            State(state.clone()),
+            axum::Extension(admin),
+            Path("themes".to_string()),
+        )
+        .await;
+        let Json(cfg) = result.expect("200 OK");
+        assert_eq!(
+            cfg.values.get("default_theme"),
+            Some(&serde_json::Value::String("dark".to_string()))
+        );
+    }
+
+    /// GET with an unknown slug returns 404 NOT_FOUND.
+    #[tokio::test]
+    async fn test_get_config_404_for_unknown_module() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        let result = get_module_config(
+            State(state),
+            axum::Extension(admin),
+            Path("does-not-exist".to_string()),
+        )
+        .await;
+        let err = result.expect_err("404");
+        assert_eq!(err.0, StatusCode::NOT_FOUND);
+    }
+
+    /// GET on a module that has no `config_schema` declared returns 400
+    /// BAD_REQUEST. `bookings` is picked because it ships with the
+    /// registry but has no schema in v3.
+    #[tokio::test]
+    async fn test_get_config_400_for_module_without_schema() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        let result = get_module_config(
+            State(state),
+            axum::Extension(admin),
+            Path("bookings".to_string()),
+        )
+        .await;
+        let err = result.expect_err("400");
+        assert_eq!(err.0, StatusCode::BAD_REQUEST);
+    }
+
+    /// Non-admin callers get 403 FORBIDDEN. The admin_middleware layer
+    /// is the primary guard in production, but the handler re-checks
+    /// defense-in-depth.
+    #[tokio::test]
+    async fn test_get_config_403_for_non_admin() {
+        let (_dir, state) = test_state();
+        let user = seed_user(&state, UserRole::User).await;
+
+        let result = get_module_config(
+            State(state),
+            axum::Extension(user),
+            Path("themes".to_string()),
+        )
+        .await;
+        let err = result.expect_err("403");
+        assert_eq!(err.0, StatusCode::FORBIDDEN);
+    }
+
+    /// PATCH rejects values whose **type** does not match the schema
+    /// (integer where a string is required).
+    #[tokio::test]
+    async fn test_patch_config_validates_types() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        let mut values = HashMap::new();
+        values.insert(
+            "default_theme".to_string(),
+            serde_json::Value::Number(42.into()),
+        );
+        values.insert("allow_user_override".to_string(), serde_json::json!(true));
+
+        let (status, Json(response)) = patch_module_config(
+            State(state.clone()),
+            axum::Extension(admin),
+            Path("themes".to_string()),
+            Json(UpdateModuleConfigRequest { values }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        let err = response.error.expect("error payload");
+        assert_eq!(err.code, "VALIDATION_FAILED");
+        let errors = err
+            .details
+            .as_ref()
+            .and_then(|d| d.get("errors"))
+            .and_then(|e| e.as_array())
+            .expect("details.errors");
+        assert!(!errors.is_empty(), "at least one violation expected");
+
+        // Nothing should have been persisted.
+        let raw = state
+            .read()
+            .await
+            .db
+            .get_setting(&config_setting_key("themes", "default_theme"))
+            .await
+            .expect("get_setting");
+        assert!(raw.is_none(), "rejected PATCH must not persist anything");
+    }
+
+    /// PATCH rejects values outside the schema's `enum` constraint.
+    #[tokio::test]
+    async fn test_patch_config_validates_enum() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        let mut values = HashMap::new();
+        values.insert(
+            "default_theme".to_string(),
+            serde_json::Value::String("neon".to_string()),
+        );
+        values.insert("allow_user_override".to_string(), serde_json::json!(true));
+
+        let (status, Json(response)) = patch_module_config(
+            State(state),
+            axum::Extension(admin),
+            Path("themes".to_string()),
+            Json(UpdateModuleConfigRequest { values }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(response.error.expect("error").code, "VALIDATION_FAILED");
+    }
+
+    /// PATCH persists values and a subsequent GET returns them. Confirms
+    /// each value is JSON-encoded in the settings store (so we can
+    /// round-trip any schema type through the string-typed store).
+    #[tokio::test]
+    async fn test_patch_config_persists_values() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        let mut values = HashMap::new();
+        values.insert(
+            "default_theme".to_string(),
+            serde_json::Value::String("dark".to_string()),
+        );
+        values.insert("allow_user_override".to_string(), serde_json::json!(false));
+
+        let (status, Json(response)) = patch_module_config(
+            State(state.clone()),
+            axum::Extension(admin.clone()),
+            Path("themes".to_string()),
+            Json(UpdateModuleConfigRequest {
+                values: values.clone(),
+            }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let cfg = response.data.expect("config payload");
+        assert_eq!(
+            cfg.values.get("default_theme"),
+            Some(&serde_json::Value::String("dark".to_string()))
+        );
+        assert_eq!(
+            cfg.values.get("allow_user_override"),
+            Some(&serde_json::json!(false))
+        );
+
+        // Raw setting is JSON-encoded.
+        let raw = state
+            .read()
+            .await
+            .db
+            .get_setting(&config_setting_key("themes", "default_theme"))
+            .await
+            .expect("get_setting")
+            .expect("value present");
+        assert_eq!(raw, "\"dark\"");
+
+        // Round-trip via GET.
+        let result = get_module_config(
+            State(state),
+            axum::Extension(admin),
+            Path("themes".to_string()),
+        )
+        .await;
+        let Json(cfg) = result.expect("200 OK");
+        assert_eq!(
+            cfg.values.get("default_theme"),
+            Some(&serde_json::Value::String("dark".to_string()))
+        );
+    }
+
+    /// Successful PATCH emits a `ConfigChanged` audit entry naming the
+    /// module and the changed keys.
+    #[tokio::test]
+    async fn test_patch_config_audit_log_entry_exists() {
+        let (_dir, state) = test_state();
+        let admin = seed_user(&state, UserRole::Admin).await;
+
+        // `test_state()` uses `ServerConfig::default()`; make sure audit
+        // logging is on for this test — otherwise the handler correctly
+        // skips the persist step.
+        {
+            let mut guard = state.write().await;
+            guard.config.audit_logging_enabled = true;
+        }
+
+        let mut values = HashMap::new();
+        values.insert(
+            "default_theme".to_string(),
+            serde_json::Value::String("classic".to_string()),
+        );
+        values.insert("allow_user_override".to_string(), serde_json::json!(true));
+
+        let (status, _) = patch_module_config(
+            State(state.clone()),
+            axum::Extension(admin),
+            Path("themes".to_string()),
+            Json(UpdateModuleConfigRequest { values }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+
+        let entries = state
+            .read()
+            .await
+            .db
+            .list_audit_log(100)
+            .await
+            .expect("list_audit_log");
+        // DB-persisted audit entries encode `event_type` via `Debug`
+        // formatting of `AuditEventType` (see `audit::AuditEntry::persist`)
+        // and `details` as the `ToString` of the JSON value — we parse it
+        // back here to inspect the structured payload.
+        let cfg_entries: Vec<_> = entries
+            .iter()
+            .filter(|e| e.event_type == "ConfigChanged")
+            .filter(|e| e.target_type.as_deref() == Some("module"))
+            .filter(|e| e.target_id.as_deref() == Some("themes"))
+            .collect();
+        assert_eq!(
+            cfg_entries.len(),
+            1,
+            "exactly one ConfigChanged entry for 'themes' expected"
+        );
+        let details_raw = cfg_entries[0].details.as_ref().expect("details present");
+        let details: serde_json::Value =
+            serde_json::from_str(details_raw).expect("details is JSON");
+        assert_eq!(
+            details.get("module").and_then(|v| v.as_str()),
+            Some("themes")
+        );
+        let keys = details
+            .get("keys_changed")
+            .and_then(|v| v.as_array())
+            .expect("keys_changed array");
+        let mut key_strs: Vec<String> = keys
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect();
+        key_strs.sort();
+        assert_eq!(key_strs, vec!["allow_user_override", "default_theme"]);
     }
 }

@@ -316,6 +316,15 @@
         ],
         "type": "object"
       },
+      "ConfigSchema": {
+        "allOf": [
+          {
+            "description": "JSON Schema document (draft 2020-12) describing the module's\nsettings. Transparent — fields are flattened into the parent\nresponse.",
+            "type": "object"
+          }
+        ],
+        "description": "Wrapper that transparently serialises a JSON Schema document (draft\n2020-12) into the API payload while still giving utoipa a handle on\nthe field for schema generation.\n\nThe inner `schema` is a `serde_json::Value` because JSON Schema\ndocuments are themselves unbounded in shape — encoding it as an\narbitrary `Object` lets us round-trip any valid schema without\nforcing a second-order type. `#[serde(flatten)]` pulls the schema's\ntop-level keys (`type`, `properties`, `required`, …) onto the\nresponse envelope so clients see the raw schema, not a\n`{schema: {...}}` wrapper."
+      },
       "ConfirmPaymentRequest": {
         "properties": {
           "payment_intent_id": {
@@ -991,6 +1000,28 @@
         ],
         "type": "string"
       },
+      "ModuleConfig": {
+        "description": "Response + request body for the config editor. Carries both the\nschema (so the UI can render a form) and the current persisted values\n(so the UI can pre-fill fields). The PATCH request shape reuses the\nsame struct: send `{\"values\": {...}}` and leave `schema` empty /\nignored.\n\nUsing one struct for both directions keeps the client contract\nsymmetric and means a `PATCH` response can be fed straight back into\nthe editor without renormalisation.",
+        "properties": {
+          "schema": {
+            "$ref": "#/components/schemas/ConfigSchema",
+            "description": "Parsed schema for this module, echoed back so clients don't need\nto re-fetch it after a PATCH. On PATCH requests this field is\nignored — the server is the source of truth for schemas."
+          },
+          "values": {
+            "additionalProperties": {},
+            "description": "Currently persisted values, one entry per schema `properties` key\nthat has a stored value. Keys with no stored value are omitted;\nthe UI falls back to schema defaults (or an empty form field).",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema",
+          "values"
+        ],
+        "type": "object"
+      },
       "ModuleInfo": {
         "description": "Runtime-serializable view of a [`ModuleDef`] with owned strings.\n\nShape used by `GET /api/v1/modules`, `GET /api/v1/modules/{name}`\nand the `PATCH /api/v1/admin/modules/{name}` response body.\n\n- `runtime_toggleable` — `true` for modules that honour an admin\n  setting that flips them on/off without a rebuild. Fifteen safe-to-\n  toggle rows are marked true; security-sensitive modules keep it\n  `false`.\n- `runtime_enabled` — effective enablement after applying any\n  runtime override. For rows with `runtime_toggleable = false` this\n  always equals `enabled`. For toggleable rows, the handler reads\n  `module.{name}.runtime_enabled` from the settings store and\n  overrides this field accordingly (see [`module_registry`]).",
         "properties": {
@@ -1003,6 +1034,17 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "config_schema": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ConfigSchema",
+                "description": "Parsed JSON Schema for the module's admin config editor.\n\n`Some(_)` when the module declared a literal `config_schema` in\nits [`ModuleDef`] row; `None` otherwise. Present in\n`/api/v1/modules` so the admin dashboard can decide whether to\nrender an \"Edit config\" affordance without a second round trip."
+              }
+            ]
           },
           "depends_on": {
             "description": "Other module slugs that must be enabled for this to work.",
@@ -1765,6 +1807,23 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "UpdateModuleConfigRequest": {
+        "description": "PATCH request body — only `values`, no schema.\n\nKept as a separate struct (instead of reusing [`ModuleConfig`]) so\nthe OpenAPI request-body schema doesn't accept a (server-owned)\n`schema` field.",
+        "properties": {
+          "values": {
+            "additionalProperties": {},
+            "description": "New values keyed by schema property name. Each value must pass\nthe schema validator for its property.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "values"
+        ],
         "type": "object"
       },
       "UpdateModuleRequest": {
@@ -2912,6 +2971,111 @@
           }
         ],
         "summary": "Toggle a module's runtime state",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/modules/{name}/config": {
+      "get": {
+        "description": "Admin-only. Returns the JSON Schema (draft 2020-12) describing the module's admin config payload plus the currently persisted values. Returns 404 when the slug is unknown and 400 when the module has no schema declared.",
+        "operationId": "get_module_config",
+        "parameters": [
+          {
+            "description": "Module slug (kebab-case)",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleConfig"
+                }
+              }
+            },
+            "description": "Config schema + values"
+          },
+          "400": {
+            "description": "Module has no config schema"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Unknown module slug"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Read a module's config schema + current values",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "patch": {
+        "description": "Admin-only. Validates the `values` body against the module's JSON Schema. On success writes each field to `module.{name}.config.{field}` in the settings store and emits a `ConfigChanged` audit entry. Returns 422 with a per-violation error list when validation fails.",
+        "operationId": "patch_module_config",
+        "parameters": [
+          {
+            "description": "Module slug (kebab-case)",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModuleConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleConfig"
+                }
+              }
+            },
+            "description": "Updated config"
+          },
+          "400": {
+            "description": "Module has no config schema"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Unknown module slug"
+          },
+          "422": {
+            "description": "Validation failed"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update a module's config values",
         "tags": [
           "Admin"
         ]

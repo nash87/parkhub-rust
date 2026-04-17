@@ -82,6 +82,12 @@ ring = "0.17"
 # Input validation
 validator = { version = "0.20", features = ["derive"] }  # updated from 0.18
 
+# JSON Schema validation — T-1720 v3: per-module admin config editor.
+# Crate-local (only parkhub-server needs it). Draft 2020-12 compliant, no
+# transitive network deps (default features disabled to skip the `resolve-http`
+# / `resolve-file` retrievers we don't want in a local-only server).
+jsonschema = { version = "0.35", default-features = false }
+
 # OpenAPI documentation
 utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }  # updated from 8

@@ -184,6 +184,10 @@ use crate::{
             crate::api::modules::ModuleCategory,
             crate::api::modules::ListModulesResponse,
             crate::api::modules::UpdateModuleRequest,
+            // T-1720 v3 — per-module JSON Schema config editor
+            crate::api::modules::ConfigSchema,
+            crate::api::modules::ModuleConfig,
+            crate::api::modules::UpdateModuleConfigRequest,
         )
     ),
     paths(
@@ -318,6 +322,9 @@ use crate::{
         crate::api::modules::list_modules,
         crate::api::modules::get_module,
         crate::api::modules::patch_admin_module,
+        // T-1720 v3 — per-module JSON Schema config editor
+        crate::api::modules::get_module_config,
+        crate::api::modules::patch_module_config,
 
         // Absences
         crate::api::absences::list_absences,

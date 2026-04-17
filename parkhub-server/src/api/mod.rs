@@ -1180,6 +1180,16 @@ pub fn create_router(
         axum::routing::patch(modules::patch_admin_module),
     );
 
+    // ── Per-module JSON Schema config editor (T-1720 v3) ──────────
+    // GET returns {schema, values}; PATCH validates + persists values
+    // under `module.{name}.config.{field}`. Admin-gated by the shared
+    // admin_middleware layer; the handlers also call `check_admin` as
+    // defense-in-depth (same pattern as `patch_admin_module`).
+    let admin_routes = admin_routes.route(
+        "/api/v1/admin/modules/{name}/config",
+        get(modules::get_module_config).patch(modules::patch_module_config),
+    );
+
     let admin_routes = admin_routes.route_layer(middleware::from_fn_with_state(
         state.clone(),
         admin_middleware,
