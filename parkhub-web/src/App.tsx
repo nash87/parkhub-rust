@@ -14,6 +14,7 @@ import { loadTranslationOverrides } from './i18n';
 // and is only needed after auth, so it's lazy — unauthenticated users
 // (login, welcome, register) never pay its ~150KB cost in the main chunk.
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CommandPaletteProvider } from './components/CommandPaletteProvider';
 
 // Lazy helper — wraps named exports for React.lazy and auto-registers
 // the module loader for hover-intent prefetching.
@@ -175,7 +176,7 @@ function ViewTransitionRoutes() {
       <Route path="/choose" element={<SuspenseRoute><UseCaseSelectorPage /></SuspenseRoute>} />
       <Route path="/lobby/:lotId" element={<SuspenseRoute><LobbyDisplayPage /></SuspenseRoute>} />
       <Route path="/setup" element={<SuspenseRoute><SetupWizardPage /></SuspenseRoute>} />
-      <Route path="/" element={<ProtectedRoute><SuspenseRoute><Layout /></SuspenseRoute></ProtectedRoute>}>
+      <Route path="/" element={<ProtectedRoute><CommandPaletteProvider><SuspenseRoute><Layout /></SuspenseRoute></CommandPaletteProvider></ProtectedRoute>}>
         <Route index element={<SuspenseRoute><DashboardPage /></SuspenseRoute>} />
         <Route path="book" element={<SuspenseRoute><BookPage /></SuspenseRoute>} />
         <Route path="bookings" element={<SuspenseRoute><BookingsPage /></SuspenseRoute>} />
