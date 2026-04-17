@@ -183,6 +183,21 @@ pub async fn admin_update_user_role(
         }
     };
 
+    // T-1737: cross-tenant admin-write guard.  A tenant-bound admin must not
+    // be able to mutate a user in a different tenant.  Platform admins
+    // (caller tenant_id == None) keep unrestricted access; self-service
+    // (caller editing their own row) is always allowed.  404 instead of 403
+    // avoids leaking existence of the target user to the wrong tenant.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+    if user.id != auth_user.user_id
+        && !super::matches_tenant(user.tenant_id.as_deref(), caller_tenant_id.as_deref())
+    {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
+    }
+
     // Parse role string
     user.role = match req.role.as_str() {
         "admin" => UserRole::Admin,
@@ -261,6 +276,17 @@ pub async fn admin_update_user_status(
         }
     };
 
+    // T-1737: cross-tenant admin-write guard — see `admin_update_user_role`.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+    if user.id != auth_user.user_id
+        && !super::matches_tenant(user.tenant_id.as_deref(), caller_tenant_id.as_deref())
+    {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
+    }
+
     user.is_active = req.status == "active";
     user.updated_at = Utc::now();
 
@@ -329,6 +355,36 @@ pub async fn admin_delete_user(
                 "CANNOT_DELETE_SELF",
                 "You cannot delete your own account",
             )),
+        );
+    }
+
+    // T-1737: cross-tenant admin-write guard.  Load the target before
+    // mutating so tenant-bound admins can't delete users outside their
+    // tenant.  Platform admins (caller tenant_id == None) keep unrestricted
+    // access.  404 matches the read-path guard style to avoid leaking the
+    // existence of a target in another tenant.  (Self-delete is already
+    // rejected above with BAD_REQUEST, so no self-service branch is needed.)
+    let target = match state_guard.db.get_user(&id).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!("Database error: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+    if !super::matches_tenant(target.tenant_id.as_deref(), caller_tenant_id.as_deref()) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
         );
     }
 
@@ -1502,6 +1558,17 @@ pub async fn admin_update_user(
         }
     };
 
+    // T-1737: cross-tenant admin-write guard — see `admin_update_user_role`.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+    if user.id != auth_user.user_id
+        && !super::matches_tenant(user.tenant_id.as_deref(), caller_tenant_id.as_deref())
+    {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
+    }
+
     if let Some(name) = req.name {
         user.name = name;
     }
@@ -1628,6 +1695,19 @@ pub async fn admin_reset_user_password(
             );
         }
     };
+
+    // T-1737: cross-tenant admin-write guard — see `admin_update_user_role`.
+    // Near-duplicate of the four flagged sites; same root cause (get_user
+    // → save_user without tenant check), same fix.
+    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+    if user.id != auth_user.user_id
+        && !super::matches_tenant(user.tenant_id.as_deref(), caller_tenant_id.as_deref())
+    {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        );
+    }
 
     let new_hash = match hash_password_simple(&req.new_password).await {
         Ok(hash) => hash,
@@ -1862,5 +1942,305 @@ mod tests {
         assert!(entry.target_type.is_none());
         assert!(entry.target_id.is_none());
         assert!(entry.ip_address.is_none());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // T-1737: cross-tenant admin-write guard tests
+    // ─────────────────────────────────────────────────────────────────────────
+    // These tests drive the four flagged user-write handlers (role, status,
+    // delete, update) directly with `State`/`Extension` arguments.  They seed
+    // callers and targets with distinct tenant_ids in an in-memory database
+    // and assert that a tenant-bound admin gets a 404 for cross-tenant targets
+    // while a platform admin (tenant_id = None) retains full access.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    use crate::config::ServerConfig;
+    use crate::db::{Database, DatabaseConfig};
+    use axum::extract::{Path, State};
+    use axum::{Extension, Json};
+    use parkhub_common::models::{User, UserPreferences, UserRole};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    struct GuardHarness {
+        state: SharedState,
+        _dir: tempfile::TempDir,
+    }
+
+    fn guard_harness() -> GuardHarness {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db_config = DatabaseConfig {
+            path: dir.path().to_path_buf(),
+            encryption_enabled: false,
+            passphrase: None,
+            create_if_missing: true,
+        };
+        let db = Database::open(&db_config).expect("open test db");
+        let state = Arc::new(RwLock::new(AppState {
+            config: ServerConfig::default(),
+            db,
+            mdns: None,
+            scheduler: None,
+            ws_events: crate::api::ws::EventBroadcaster::new(),
+            revocation_store: crate::jwt::TokenRevocationList::new(),
+        }));
+        GuardHarness { state, _dir: dir }
+    }
+
+    fn mk_user(username: &str, role: UserRole, tenant_id: Option<String>) -> User {
+        User {
+            id: uuid::Uuid::new_v4(),
+            username: username.to_string(),
+            email: format!("{username}@example.test"),
+            name: username.to_string(),
+            password_hash: "x".to_string(),
+            role,
+            is_active: true,
+            phone: None,
+            picture: None,
+            preferences: UserPreferences::default(),
+            credits_balance: 0,
+            credits_monthly_quota: 0,
+            credits_last_refilled: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_login: None,
+            tenant_id,
+            accessibility_needs: None,
+            cost_center: None,
+            department: None,
+        }
+    }
+
+    async fn seed(state: &SharedState, user: &User) {
+        state
+            .read()
+            .await
+            .db
+            .save_user(user)
+            .await
+            .expect("save user");
+    }
+
+    fn auth(u: &User) -> AuthUser {
+        AuthUser {
+            user_id: u.id,
+            api_key_id: None,
+        }
+    }
+
+    // ── admin_update_user_role ────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_admin_role_change_404_for_cross_tenant_target() {
+        let h = guard_harness();
+        let caller = mk_user("admin_a", UserRole::Admin, Some("tenant-a".into()));
+        let target = mk_user("victim_b", UserRole::User, Some("tenant-b".into()));
+        seed(&h.state, &caller).await;
+        seed(&h.state, &target).await;
+
+        let (status, body) = admin_update_user_role(
+            State(h.state.clone()),
+            Extension(auth(&caller)),
+            Path(target.id.to_string()),
+            Json(UpdateUserRoleRequest {
+                role: "admin".into(),
+            }),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert!(!body.0.success);
+        // Target must be unchanged.
+        let reloaded = h
+            .state
+            .read()
+            .await
+            .db
+            .get_user(&target.id.to_string())
+            .await
+            .expect("get")
+            .expect("present");
+        assert_eq!(reloaded.role, UserRole::User);
+    }
+
+    // ── admin_update_user_status ──────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_admin_status_change_404_for_cross_tenant_target() {
+        let h = guard_harness();
+        let caller = mk_user("admin_a", UserRole::Admin, Some("tenant-a".into()));
+        let target = mk_user("victim_b", UserRole::User, Some("tenant-b".into()));
+        seed(&h.state, &caller).await;
+        seed(&h.state, &target).await;
+        assert!(target.is_active);
+
+        let (status, body) = admin_update_user_status(
+            State(h.state.clone()),
+            Extension(auth(&caller)),
+            Path(target.id.to_string()),
+            Json(UpdateUserStatusRequest {
+                status: "inactive".into(),
+            }),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert!(!body.0.success);
+        let reloaded = h
+            .state
+            .read()
+            .await
+            .db
+            .get_user(&target.id.to_string())
+            .await
+            .expect("get")
+            .expect("present");
+        assert!(reloaded.is_active, "target must not be deactivated");
+    }
+
+    // ── admin_delete_user ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_admin_delete_404_for_cross_tenant_target() {
+        let h = guard_harness();
+        let caller = mk_user("admin_a", UserRole::Admin, Some("tenant-a".into()));
+        let target = mk_user("victim_b", UserRole::User, Some("tenant-b".into()));
+        seed(&h.state, &caller).await;
+        seed(&h.state, &target).await;
+
+        let (status, body) = admin_delete_user(
+            State(h.state.clone()),
+            Extension(auth(&caller)),
+            Path(target.id.to_string()),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert!(!body.0.success);
+        // Target must still exist and must NOT be anonymized.
+        let reloaded = h
+            .state
+            .read()
+            .await
+            .db
+            .get_user(&target.id.to_string())
+            .await
+            .expect("get")
+            .expect("target must remain");
+        assert_eq!(reloaded.email, target.email);
+    }
+
+    // ── admin_update_user ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_admin_update_404_for_cross_tenant_target() {
+        let h = guard_harness();
+        let caller = mk_user("admin_a", UserRole::Admin, Some("tenant-a".into()));
+        let target = mk_user("victim_b", UserRole::User, Some("tenant-b".into()));
+        seed(&h.state, &caller).await;
+        seed(&h.state, &target).await;
+
+        let (status, body) = admin_update_user(
+            State(h.state.clone()),
+            Extension(auth(&caller)),
+            Path(target.id.to_string()),
+            Json(AdminUpdateUserRequest {
+                name: Some("Hacked".into()),
+                email: None,
+                role: None,
+                is_active: Some(false),
+            }),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::NOT_FOUND);
+        assert!(!body.0.success);
+        let reloaded = h
+            .state
+            .read()
+            .await
+            .db
+            .get_user(&target.id.to_string())
+            .await
+            .expect("get")
+            .expect("present");
+        assert_eq!(reloaded.name, target.name, "name must not change");
+        assert!(reloaded.is_active, "is_active must not change");
+    }
+
+    // ── Positive controls ─────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_admin_update_allowed_for_same_tenant_target() {
+        let h = guard_harness();
+        let caller = mk_user("admin_a", UserRole::Admin, Some("tenant-a".into()));
+        let target = mk_user("ally_a", UserRole::User, Some("tenant-a".into()));
+        seed(&h.state, &caller).await;
+        seed(&h.state, &target).await;
+
+        let (status, _body) = admin_update_user(
+            State(h.state.clone()),
+            Extension(auth(&caller)),
+            Path(target.id.to_string()),
+            Json(AdminUpdateUserRequest {
+                name: Some("Renamed".into()),
+                email: None,
+                role: None,
+                is_active: None,
+            }),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::OK);
+        let reloaded = h
+            .state
+            .read()
+            .await
+            .db
+            .get_user(&target.id.to_string())
+            .await
+            .expect("get")
+            .expect("present");
+        assert_eq!(reloaded.name, "Renamed");
+    }
+
+    #[tokio::test]
+    async fn test_admin_update_allowed_for_platform_admin() {
+        let h = guard_harness();
+        // Platform admin: SuperAdmin with tenant_id == None.
+        let caller = mk_user("platform_root", UserRole::SuperAdmin, None);
+        let target = mk_user("any_tenant", UserRole::User, Some("tenant-b".into()));
+        seed(&h.state, &caller).await;
+        seed(&h.state, &target).await;
+
+        let (status, _body) = admin_update_user(
+            State(h.state.clone()),
+            Extension(auth(&caller)),
+            Path(target.id.to_string()),
+            Json(AdminUpdateUserRequest {
+                name: Some("Platform Edit".into()),
+                email: None,
+                role: None,
+                is_active: None,
+            }),
+        )
+        .await;
+
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "platform admin must be able to edit any tenant's user"
+        );
+        let reloaded = h
+            .state
+            .read()
+            .await
+            .db
+            .get_user(&target.id.to_string())
+            .await
+            .expect("get")
+            .expect("present");
+        assert_eq!(reloaded.name, "Platform Edit");
     }
 }
