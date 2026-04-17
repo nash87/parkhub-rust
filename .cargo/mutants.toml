@@ -1,0 +1,41 @@
+# cargo-mutants config — run with `cargo mutants`
+#
+# https://mutants.rs/
+#
+# cargo-mutants introduces small semantic-level "mutants" (swap `true` for
+# `false`, delete function bodies, flip comparisons) and runs the full test
+# suite against each mutant. A mutant that escapes the tests is a gap in
+# coverage; a mutant that gets caught counts as a kill. Higher kill rate =
+# stronger test gauntlet.
+#
+# We scope to the hand-written validation + math logic, not the generated
+# axum boilerplate, because handler-level mutants usually get caught by
+# the integration tests anyway and the volume would slow sweeps to the
+# point nobody runs them.
+
+# Only mutate files that have a meaningful test-to-code ratio; skip the
+# giant db.rs / main.rs / the utoipa openapi macro bodies that explode the
+# build graph without yielding actionable coverage gaps.
+examine_globs = [
+    "parkhub-common/src/**.rs",
+    "parkhub-server/src/validation.rs",
+    "parkhub-server/src/api/co2.rs",
+    "parkhub-server/src/rate_limit.rs",
+    "parkhub-server/src/jwt.rs",
+]
+
+exclude_globs = [
+    "**/tests/**",
+    "**/*_tests.rs",
+    "**/build.rs",
+]
+
+# Timeout per-mutant: a missed timeout can hang indefinitely when a mutant
+# invalidates a loop guard. 5× the base test-run time is the recommended
+# default; we run the Rust suite in <30s baseline so 180s is generous.
+timeout = "180"
+
+# Run mutants for ALL features; some of the hardening lives behind the
+# `e2e-bypass` flag so exclude that specific feature to keep prod-shape
+# mutants relevant.
+additional_cargo_args = ["--no-default-features", "--features", "full,headless"]
