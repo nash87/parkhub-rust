@@ -6,10 +6,15 @@
 pub mod error;
 pub mod models;
 pub mod protocol;
+pub mod validation;
 
 pub use error::*;
 pub use models::*;
 pub use protocol::*;
+pub use validation::{
+    MAX_BOOKING_MINUTES, MIN_BOOKING_MINUTES, TimeRange, is_valid_booking_duration,
+    is_valid_e164_phone, is_valid_email,
+};
 
 /// Protocol version for client-server compatibility checks
 pub const PROTOCOL_VERSION: &str = "1.0.0";
