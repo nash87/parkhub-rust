@@ -26,6 +26,19 @@ export async function loginViaUi(page: Page): Promise<void> {
   await page.getByRole('button', { name: /sign in|log in|login/i }).click();
   // Wait for redirect away from login page
   await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10_000 });
+  // WebKit / mobile-safari commits Set-Cookie noticeably later than Chromium,
+  // which races with the caller's subsequent page.goto('/protected-route'):
+  // the second navigation runs before the HttpOnly auth cookie lands, the
+  // server redirects to /login, and the test times out. Poll the browser
+  // context until the server-issued cookie is actually present.
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    const cookies = await page.context().cookies();
+    if (cookies.some((c) => c.name === 'parkhub_token' || c.name === 'laravel_session' || c.name === 'XSRF-TOKEN')) {
+      return;
+    }
+    await page.waitForTimeout(100);
+  }
 }
 
 /** All public frontend routes (no auth needed). */
