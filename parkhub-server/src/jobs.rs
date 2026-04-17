@@ -534,6 +534,7 @@ mod tests {
             mdns: None,
             scheduler: None,
             ws_events: crate::api::ws::EventBroadcaster::new(),
+            revocation_store: crate::jwt::TokenRevocationList::new(),
         }));
         (state, dir)
     }
