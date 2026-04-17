@@ -8,7 +8,7 @@ use axum::{
     extract::State,
     http::{HeaderName, HeaderValue, Request, StatusCode, header},
     middleware::{self, Next},
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{delete, get, post, put},
 };
 use std::sync::Arc;
@@ -132,7 +132,7 @@ pub mod map;
 pub mod misc;
 #[cfg(feature = "mod-mobile")]
 pub mod mobile;
-pub mod modules_meta;
+pub mod modules;
 #[cfg(feature = "mod-notification-center")]
 pub mod notification_center;
 #[cfg(feature = "mod-notifications")]
@@ -471,159 +471,10 @@ async fn admin_middleware(
     Ok(next.run(request).await)
 }
 
-/// `GET /api/v1/modules` — compile-time module feature introspection.
-///
-/// Returns which optional modules are compiled into this binary.
-/// Always available (no auth required, no feature gate).
-async fn list_module_features() -> impl IntoResponse {
-    let mut modules = serde_json::Map::new();
-
-    modules.insert("bookings".into(), cfg!(feature = "mod-bookings").into());
-    modules.insert("vehicles".into(), cfg!(feature = "mod-vehicles").into());
-    modules.insert("absences".into(), cfg!(feature = "mod-absences").into());
-    modules.insert("branding".into(), cfg!(feature = "mod-branding").into());
-    modules.insert("import".into(), cfg!(feature = "mod-import").into());
-    modules.insert(
-        "data-import".into(),
-        cfg!(feature = "mod-data-import").into(),
-    );
-    modules.insert("fleet".into(), cfg!(feature = "mod-fleet").into());
-    modules.insert("qr".into(), cfg!(feature = "mod-qr").into());
-    modules.insert("pwa".into(), cfg!(feature = "mod-pwa").into());
-    modules.insert("payments".into(), cfg!(feature = "mod-payments").into());
-    modules.insert("webhooks".into(), cfg!(feature = "mod-webhooks").into());
-    modules.insert(
-        "notifications".into(),
-        cfg!(feature = "mod-notifications").into(),
-    );
-    modules.insert(
-        "announcements".into(),
-        cfg!(feature = "mod-announcements").into(),
-    );
-    modules.insert("recurring".into(), cfg!(feature = "mod-recurring").into());
-    modules.insert("guest".into(), cfg!(feature = "mod-guest").into());
-    modules.insert("calendar".into(), cfg!(feature = "mod-calendar").into());
-    modules.insert("team".into(), cfg!(feature = "mod-team").into());
-    modules.insert("settings".into(), cfg!(feature = "mod-settings").into());
-    modules.insert("jobs".into(), cfg!(feature = "mod-jobs").into());
-    modules.insert("swap".into(), cfg!(feature = "mod-swap").into());
-    modules.insert("waitlist".into(), cfg!(feature = "mod-waitlist").into());
-    modules.insert("zones".into(), cfg!(feature = "mod-zones").into());
-    modules.insert("credits".into(), cfg!(feature = "mod-credits").into());
-    modules.insert("email".into(), cfg!(feature = "mod-email").into());
-    modules.insert("export".into(), cfg!(feature = "mod-export").into());
-    modules.insert("favorites".into(), cfg!(feature = "mod-favorites").into());
-    modules.insert("push".into(), cfg!(feature = "mod-push").into());
-    modules.insert(
-        "recommendations".into(),
-        cfg!(feature = "mod-recommendations").into(),
-    );
-    modules.insert(
-        "translations".into(),
-        cfg!(feature = "mod-translations").into(),
-    );
-    modules.insert("social".into(), cfg!(feature = "mod-social").into());
-    modules.insert("themes".into(), cfg!(feature = "mod-themes").into());
-    modules.insert("oauth".into(), cfg!(feature = "mod-oauth").into());
-    modules.insert("invoices".into(), cfg!(feature = "mod-invoices").into());
-    modules.insert(
-        "dynamic-pricing".into(),
-        cfg!(feature = "mod-dynamic-pricing").into(),
-    );
-    modules.insert(
-        "operating-hours".into(),
-        cfg!(feature = "mod-operating-hours").into(),
-    );
-    modules.insert("websocket".into(), cfg!(feature = "mod-websocket").into());
-    modules.insert(
-        "lobby-display".into(),
-        cfg!(feature = "mod-lobby-display").into(),
-    );
-    modules.insert(
-        "setup-wizard".into(),
-        cfg!(feature = "mod-setup-wizard").into(),
-    );
-    modules.insert("map".into(), cfg!(feature = "mod-map").into());
-    modules.insert("stripe".into(), cfg!(feature = "mod-stripe").into());
-    modules.insert(
-        "multi-tenant".into(),
-        cfg!(feature = "mod-multi-tenant").into(),
-    );
-    modules.insert("accessible".into(), cfg!(feature = "mod-accessible").into());
-    modules.insert(
-        "maintenance".into(),
-        cfg!(feature = "mod-maintenance").into(),
-    );
-    modules.insert(
-        "cost-center".into(),
-        cfg!(feature = "mod-cost-center").into(),
-    );
-    modules.insert("visitors".into(), cfg!(feature = "mod-visitors").into());
-    modules.insert(
-        "ev-charging".into(),
-        cfg!(feature = "mod-ev-charging").into(),
-    );
-    modules.insert("history".into(), cfg!(feature = "mod-history").into());
-    modules.insert("geofence".into(), cfg!(feature = "mod-geofence").into());
-    modules.insert(
-        "waitlist-ext".into(),
-        cfg!(feature = "mod-waitlist-ext").into(),
-    );
-    modules.insert(
-        "parking-pass".into(),
-        cfg!(feature = "mod-parking-pass").into(),
-    );
-    modules.insert("api-docs".into(), cfg!(feature = "mod-api-docs").into());
-    modules.insert(
-        "absence-approval".into(),
-        cfg!(feature = "mod-absence-approval").into(),
-    );
-    modules.insert(
-        "calendar-drag".into(),
-        cfg!(feature = "mod-calendar-drag").into(),
-    );
-    modules.insert("widgets".into(), cfg!(feature = "mod-widgets").into());
-    modules.insert("plugins".into(), cfg!(feature = "mod-plugins").into());
-    modules.insert("graphql".into(), cfg!(feature = "mod-graphql").into());
-    modules.insert("compliance".into(), cfg!(feature = "mod-compliance").into());
-    modules.insert("sharing".into(), cfg!(feature = "mod-sharing").into());
-    modules.insert(
-        "scheduled-reports".into(),
-        cfg!(feature = "mod-scheduled-reports").into(),
-    );
-    modules.insert(
-        "api-versioning".into(),
-        cfg!(feature = "mod-api-versioning").into(),
-    );
-    modules.insert("sso".into(), cfg!(feature = "mod-sso").into());
-    modules.insert("rbac".into(), cfg!(feature = "mod-rbac").into());
-    modules.insert(
-        "audit-export".into(),
-        cfg!(feature = "mod-audit-export").into(),
-    );
-    modules.insert(
-        "parking-zones".into(),
-        cfg!(feature = "mod-parking-zones").into(),
-    );
-    modules.insert(
-        "enhanced-pwa".into(),
-        cfg!(feature = "mod-enhanced-pwa").into(),
-    );
-    modules.insert(
-        "webhooks-v2".into(),
-        cfg!(feature = "mod-webhooks-v2").into(),
-    );
-    modules.insert(
-        "notification-center".into(),
-        cfg!(feature = "mod-notification-center").into(),
-    );
-    modules.insert("mobile".into(), cfg!(feature = "mod-mobile").into());
-
-    Json(serde_json::json!({
-        "modules": modules,
-        "version": env!("CARGO_PKG_VERSION")
-    }))
-}
+// `GET /api/v1/modules` and `GET /api/v1/modules/{name}` live in
+// `api::modules` — see the declarative registry (`ModuleDef` table) and
+// `ListModulesResponse` envelope there. The legacy flat `{name: bool}`
+// map is preserved under the `modules` field for backward compatibility.
 
 /// Create the API router with `OpenAPI` docs and metrics.
 /// Returns (router, `demo_state`) so the demo state can be used for scheduled resets.
@@ -792,17 +643,22 @@ pub fn create_router(
         .route("/status", get(server_status))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
-        // Module feature flags — public (compile-time feature introspection)
-        .route("/api/v1/modules", get(list_module_features))
-        // Enriched module metadata (category, description, config keys,
-        // UI deep-links, dependencies) — feeds the admin Modules
-        // Dashboard and the Command Palette's auto-registered module
-        // commands. Public because the flat `/api/v1/modules` already is.
-        .route("/api/v1/modules/info", get(modules_meta::list_modules_info))
-        .route(
-            "/api/v1/modules/info/{name}",
-            get(modules_meta::get_module_info),
-        )
+        // Module registry — public (compile-time feature introspection
+        // plus category/description/config-keys/UI-deep-links/dependencies
+        // for the admin Modules Dashboard and the Command Palette).
+        //
+        // `GET /api/v1/modules` returns the enriched envelope
+        // `{ modules: {name: bool}, module_info: [...], version }`.
+        // The flat Boolean `modules` map is preserved verbatim for
+        // backward compatibility with older clients + contract tests.
+        .route("/api/v1/modules", get(modules::list_modules))
+        .route("/api/v1/modules/{name}", get(modules::get_module))
+        // Legacy aliases — the enriched endpoint used to live at
+        // `/api/v1/modules/info`. Kept as aliases so older frontends
+        // keep working during the rollout. New callers should use
+        // `/api/v1/modules` directly.
+        .route("/api/v1/modules/info", get(modules::list_modules))
+        .route("/api/v1/modules/info/{name}", get(modules::get_module))
         // Setup wizard — only works before initial setup is completed
         .route("/api/v1/setup/status", get(setup::setup_status))
         .route("/api/v1/setup", post(setup::setup_init))
