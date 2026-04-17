@@ -6,6 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 
 const mockGetBookings = vi.fn();
 const mockGetUserStats = vi.fn();
+const mockGetCo2Summary = vi.fn();
 
 vi.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: any) => <a href={to} {...props}>{children}</a>,
@@ -29,6 +30,7 @@ vi.mock('../api/client', () => ({
   api: {
     getBookings: (...args: any[]) => mockGetBookings(...args),
     getUserStats: (...args: any[]) => mockGetUserStats(...args),
+    getCo2Summary: (...args: any[]) => mockGetCo2Summary(...args),
   },
 }));
 
@@ -183,6 +185,23 @@ describe('DashboardPage', () => {
   beforeEach(() => {
     mockGetBookings.mockClear();
     mockGetUserStats.mockClear();
+    mockGetCo2Summary.mockClear();
+    // Default: CO2 endpoint returns a fresh summary. Individual tests
+    // can override.
+    mockGetCo2Summary.mockResolvedValue({
+      success: true,
+      data: {
+        from: '2026-03-18T00:00:00Z',
+        to: '2026-04-17T00:00:00Z',
+        bookings_counted: 0,
+        total_km: 0,
+        emitted_g: 0,
+        counterfactual_g: 0,
+        saved_g: 0,
+        carpool_saved_g: 0,
+        saved_kg: 0,
+      },
+    });
   });
 
   afterEach(() => {
@@ -192,6 +211,7 @@ describe('DashboardPage', () => {
   it('shows loading skeleton initially', () => {
     mockGetBookings.mockReturnValue(new Promise(() => {}));
     mockGetUserStats.mockReturnValue(new Promise(() => {}));
+    mockGetCo2Summary.mockReturnValue(new Promise(() => {}));
 
     render(<DashboardPage />);
     expect(screen.getByTestId('dashboard-skeleton')).toBeInTheDocument();
