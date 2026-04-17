@@ -37,6 +37,21 @@ cargo clippy --workspace -- -D warnings
 cargo fmt --all -- --check
 ```
 
+## Pre-Push Gate (mandatory)
+Every push must go through the local CI mirror first — it runs the same jobs as `.github/workflows/*.yml`:
+```sh
+make ci         # fmt + clippy + check + test + frontend + openapi drift
+make act        # optional: run the actual workflow files locally via nektos/act (.actrc preconfigured)
+```
+Install pre-commit hooks once per clone: `pre-commit install` (config in `.pre-commit-config.yaml`). See [DEVELOPMENT.md](DEVELOPMENT.md) for the full loop. Mutation testing runs weekly via `.github/workflows/mutants.yml` (`.cargo/mutants.toml` gates survivors). OpenAPI parity with the PHP edition is enforced via [docs/openapi-parity.md](docs/openapi-parity.md) + `scripts/dump-openapi.sh` / `scripts/diff-openapi.sh`.
+
+## Dual-Remote Convention
+Two remotes are always configured on this repo:
+- `origin` — Gitea at `git@192.168.178.220:florian/parkhub-rust.git` (primary, source of truth)
+- `github` — `https://github.com/nash87/parkhub-rust.git` (public mirror)
+
+Always `git push origin <branch>` first, then `git push github <branch>`. Never push only to GitHub. CI runs on GitHub; operator review happens on Gitea.
+
 ## Architecture
 ```
 parkhub-common/     # Shared types, models, encryption, validation
@@ -67,8 +82,9 @@ parkhub-web/        # React 19 SPA (embedded in binary at build time)
 - Never store passwords in plaintext — Argon2id only
 - DB passphrase (PARKHUB_DB_PASSPHRASE) enables at-rest encryption — strongly recommended for production
 - No external database server dependency — redb is embedded
-- Legal templates in `legal/` must be customized by the operator before production use
+- Legal templates in `legal/` must be customized by the operator before production use (includes BFSG accessibility statement + EU AI Act Art. 50 transparency notice)
 - MIT license for headless builds; GUI builds include Slint (GPL-3.0 community edition)
+- **SHA-pinned GitHub Actions** — every `uses:` in `.github/workflows/*.yml` must reference a full commit SHA with the v-tag as a trailing comment (e.g. `uses: actions/checkout@1d96c772d19495a3b5c517cd2bc0cb401ea0529f # v5.0.0`). 23+ actions are pinned this way today; never introduce a bare `@v5` / `@main` reference.
 
 ## Deploy
 ```sh

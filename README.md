@@ -139,6 +139,7 @@ cargo build --release --package parkhub-server --features gui
 
 ### 📊 Analytics & Operations
 - **Admin analytics dashboard** — daily bookings/revenue charts, peak hours heatmap, top lots, user growth
+- **CO₂ tracking** — per-booking CO₂ estimates via `FuelType` enum + `/api/v1/bookings/co2-summary` (carpool detection, dashboard KPI tile, 10-locale copy)
 - **Prometheus metrics** — `/metrics` endpoint for Grafana/K8s monitoring
 - **Audit log** — full audit trail with UI, filtering, and multi-format export (PDF, CSV, JSON)
 - **Scheduled reports** — automated daily/weekly/monthly email digests
@@ -336,7 +337,11 @@ ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regula
 | [Security Model](docs/SECURITY.md) | Auth, encryption, OWASP Top 10, vulnerability disclosure |
 | [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Ready-to-use Datenschutzerklärung (German) |
 | [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG §5 provider identification (German) |
+| [BFSG Accessibility Template](legal/bfsg-barrierefreiheit-template.md) | German Accessibility Improvement Act (BFSG) statement — required for most commercial deployments from 2025-06-28 |
+| [EU AI Act Transparency Template](legal/ai-act-transparency-template.md) | Art. 50 transparency notice — required if the operator enables AI/ML features |
 | [Third-Party Licenses](LICENSE-THIRD-PARTY.md) | All Rust crate and npm dependency licenses |
+
+See [`legal/`](legal/) for the full template set — all documents are operator-customizable, not binding legal texts.
 
 **Key compliance features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3, audit logging, data export (Art. 15/20), account erasure (Art. 17), no cookies, no tracking, no third-party data processors by default.
 
@@ -347,15 +352,17 @@ ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regula
 Contributions are very welcome! Here's how to get started:
 
 1. **Fork** the repository and create a feature branch
-2. **Read** [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for code style, commit conventions, and PR process
-3. **Run the test suite** before opening a PR:
+2. **Read** [DEVELOPMENT.md](DEVELOPMENT.md) for the local dev loop, and [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for code style, commit conventions, and PR process
+3. **Install pre-commit hooks** (config already in `.pre-commit-config.yaml`):
    ```bash
-   cargo clippy --workspace -- -D warnings
-   cargo fmt --all -- --check
-   cargo test -p parkhub-server --no-default-features --features headless
-   cd parkhub-web && npm ci && npx vitest run
+   pre-commit install
    ```
-4. **Open a PR** — CI will run automatically
+4. **Run the pre-push gate** before opening a PR — `make ci` mirrors the GitHub Actions pipeline (fmt + clippy + check + test + frontend + OpenAPI drift):
+   ```bash
+   make ci             # full local CI mirror — required before push
+   make act            # optional: run the actual workflows locally via nektos/act (.actrc preconfigured)
+   ```
+5. **Open a PR** — CI will run automatically. The [OpenAPI parity contract](docs/openapi-parity.md) ensures the REST surface stays aligned with the [PHP edition](https://github.com/nash87/parkhub-php).
 
 **Bug reports and feature requests:** [GitHub Issues](https://github.com/nash87/parkhub-rust/issues)
 
