@@ -6,13 +6,13 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.11.0-brightgreen.svg?style=flat-square" alt="v4.11.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.13.0-brightgreen.svg?style=flat-square" alt="v4.13.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.94%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.94+"></a>
   <a href="https://astro.build/"><img src="https://img.shields.io/badge/Astro-6-BC52EE.svg?style=flat-square&logo=astro&logoColor=white" alt="Astro 6"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4.svg?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4"></a>
-  <img src="https://img.shields.io/badge/Tests-1800%2B-success.svg?style=flat-square" alt="1800+ tests">
+  <img src="https://img.shields.io/badge/Tests-1785%2B-success.svg?style=flat-square" alt="1785+ tests">
   <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
   <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
@@ -37,15 +37,16 @@
 
 ---
 
-## What's New in v4.10.0
+## What's New in v4.13.0
 
 | Feature | Description |
 |---------|-------------|
-| **Kinetic Observatory dashboard** | New `KpiCard`, `TrendCard`, `SensorFeedCard`, `RecentActivityCard` kit drives the home dashboard: 4-KPI row, SVG trend chart with period selector, pulsing sensor feed, responsive activity table |
-| **Single-arch container** | Dropped `linux/arm64` from Release Container — amd64-only, distroless, ~25 MB, builds in ~5 minutes |
-| **Runtime base hardened** | Runtime pinned to `distroless/cc-debian13@sha256:9d41206…` so the builder's `libssl.so.3` symbol versions match the runtime |
-| **Deploy reliability** | `/data` directory correctly chowned to the non-root UID in the final image; Render demo now boots cleanly on every push |
-| **E2E test reliability** | Replaced Playwright `networkidle` with `domcontentloaded` across all specs; E2E job no longer runs into the 45-minute timeout |
+| **Modular UX Platform (T-1720)** | 72-module registry with admin dashboard at `/admin/modules`, runtime enable/disable toggle for safe modules, per-module JSON Schema config editor, and Command Palette (`Cmd+K` / `Ctrl+K` / `/`). See [docs/FEATURES.md § Modular UX Platform](docs/FEATURES.md#4-modular-ux-platform) |
+| **Backend refactors (T-1740, T-1741, T-1748)** | `db.rs` (4528 LOC), `api/mod.rs` router, and `api/modules.rs` (3066 LOC) split into focused sub-modules; `main.rs` bootstrap helpers extracted for testability |
+| **Security hardening (T-1737, T-1744)** | Cross-tenant admin write guards on user updates; async lock scopes tightened under load |
+| **Testing depth (T-1734 finale)** | `cargo-fuzz` harnesses for JWT + HMAC (nightly), `proptest` on `parkhub-common` validators, `cargo-mutants` weekly, `insta` snapshot tests |
+| **OpenAPI coverage closed (T-1739)** | Pass 1 + pass 2 wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`; spec at [`docs/openapi/rust.json`](docs/openapi/rust.json) now exposes **229 paths** and regenerates on every schema change |
+| **Runtime toolchain refresh** | Rust builder bumped to `rust:1.95-slim`; distroless runtime base pinned to `cc-debian13@sha256:56aaf20…` |
 
 ---
 
@@ -174,7 +175,7 @@ cargo build --release --package parkhub-server --features gui
 - **Enterprise identity** — SAML/SSO and similar flows remain optional and runtime-sensitive
 
 ### 🧩 Modularity
-**72 Cargo feature flags** — build only the modules you need. The `full` feature enables everything; `headless` gives you a minimal server binary. See [ARCHITECTURE.md](ARCHITECTURE.md#module-system) for the full feature flag reference.
+**72 modules** across 11 categories in a single declarative registry, all exposed in the admin dashboard at `/admin/modules`. 15 are safe to flip on/off at runtime via `PATCH /api/v1/admin/modules/{name}`; 5 ship JSON Schema config editors at `PATCH /api/v1/admin/modules/{name}/config`. Every toggle and config write lands in the audit log. A Command Palette (`Cmd+K` / `Ctrl+K` / `/`) auto-seeds "Go to…" entries for every active module with a UI route. Compile-time: build only what you need via `--features "headless,mod-..."`. See [ARCHITECTURE.md § Module System](ARCHITECTURE.md#module-system) and [docs/FEATURES.md § Modular UX Platform](docs/FEATURES.md#4-modular-ux-platform).
 
 ---
 
@@ -201,7 +202,7 @@ cargo build --release --package parkhub-server --features gui
 | **Encryption** | AES-256-GCM at rest · Argon2id passwords · rustls TLS 1.3 |
 | **Frontend** | [React](https://react.dev/) 19 + [TypeScript](https://www.typescriptlang.org/) + [Astro](https://astro.build/) 6 |
 | **Styling** | [Tailwind CSS](https://tailwindcss.com/) 4 — 12 switchable themes |
-| **API Docs** | [utoipa](https://github.com/juhaku/utoipa) + Swagger UI — 125+ annotated endpoints |
+| **API Docs** | [utoipa](https://github.com/juhaku/utoipa) + Swagger UI — full OpenAPI 3.0 spec at [`docs/openapi/rust.json`](docs/openapi/rust.json), 229 paths, drift-gated in CI |
 | **Desktop Client** | [Slint](https://slint.dev/) GUI with system tray (Windows/macOS) |
 | **Service Discovery** | [mdns-sd](https://github.com/keepsimple1/mdns-sd) — zero-config LAN autodiscovery |
 | **Deployment** | Single binary · Docker · Helm chart · Render/Koyeb PaaS |
@@ -218,7 +219,7 @@ cargo build --release --package parkhub-server --features gui
 | **GDPR compliant by default** | ✅ Yes | ⚠️ Contract needed | ⚠️ Contract needed | ⚠️ Contract needed |
 | **Data leaves your premises** | ✅ Never | ❌ Always | ❌ Always | ❌ Always |
 | **Single binary deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Customizable / Extensible** | ✅ 72 feature flags | ❌ No | ❌ No | ❌ No |
+| **Customizable / Extensible** | ✅ 72 modules · runtime toggles · JSON Schema config | ❌ No | ❌ No | ❌ No |
 | **Multi-language UI** | ✅ 10 languages | ⚠️ Limited | ⚠️ Limited | ⚠️ Limited |
 | **API access** | ✅ Full REST + GraphQL | ⚠️ Enterprise only | ⚠️ Limited | ⚠️ Limited |
 | **Air-gapped deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
@@ -275,7 +276,7 @@ See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed guides.
 
 ## 🧪 Testing
 
-**1,800+ tests** across Rust backend and React frontend, plus 29 E2E Playwright specs. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
+**1,785 Rust unit + integration tests** (`cargo test --workspace`) plus Vitest frontend and 29 Playwright E2E specs. Clippy runs in pedantic + nursery mode with zero warnings. Lighthouse CI enforces accessibility ≥ 95, performance ≥ 90.
 
 ```bash
 cargo test --workspace           # Rust backend
@@ -283,13 +284,22 @@ cd parkhub-web && npx vitest run # Frontend unit tests
 npx playwright test              # E2E tests
 ```
 
-CI runs on every push via **GitHub Actions** with CodeQL scanning, Trivy container scanning, Dependabot updates, and cargo-deny license audits.
+Supplementary safety nets (all CI-enforced):
+
+- **`cargo-fuzz`** — nightly fuzz harnesses on JWT decoding + HMAC verification (`fuzz/`)
+- **`proptest`** — property tests on `parkhub-common` validators
+- **`cargo-mutants`** — weekly mutation testing, survivors fail the workflow
+- **`insta`** — snapshot tests for router + OpenAPI output
+- **Lighthouse CI** — a11y ≥ 95, perf ≥ 90, SEO ≥ 95 gates
+- **CodeQL + Trivy** — SAST + container CVE scanning on every push
+- **SBOM + cosign** — every release image attested with Syft SBOM and cosign signature
+- **cargo-deny** — advisories, licenses, bans, sources on every PR
 
 ---
 
 ## 📖 API Documentation
 
-Interactive API docs at `/swagger-ui` when the server is running. The OpenAPI 3.0 spec covers **125+ endpoints** across auth, bookings, lots, vehicles, admin, GDPR, and more.
+Interactive API docs at `/swagger-ui` when the server is running. The full OpenAPI 3.0 spec — snapshotted at [`docs/openapi/rust.json`](docs/openapi/rust.json) and regenerated on every schema change — covers **229 paths** and 280 documented operations across auth, bookings, lots, vehicles, admin, modules, GDPR, and more. A CI drift gate (`make drift`) blocks any handler change that forgets to update the spec. T-1739 passes 1 + 2 landed in v4.13.0 and wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`.
 
 **[Live API Docs →](https://parkhub-rust-demo.onrender.com/swagger-ui)**
 

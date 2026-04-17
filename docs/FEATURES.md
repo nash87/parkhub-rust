@@ -78,9 +78,9 @@ All charts export to CSV. Scheduled email digests (daily/weekly/monthly) deliver
 
 ParkHub is designed to be embedded, extended, and automated. Every feature exposed in the UI has a corresponding REST endpoint, most operations are also available via GraphQL, and the modular build system means you ship only the code you need.
 
-### REST API — 125+ Endpoints
+### REST API — 229 Documented Paths
 
-All endpoints are documented in [API.md](API.md) and exposed interactively at `/swagger-ui` (OpenAPI 3.0). The API follows a standard JSON envelope:
+All endpoints are documented in [API.md](API.md), snapshotted at [`docs/openapi/rust.json`](openapi/rust.json), and exposed interactively at `/swagger-ui` (OpenAPI 3.0). T-1739 passes 1 + 2 wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`; a CI drift gate regenerates the spec on every schema change. The API follows a standard JSON envelope:
 
 ```json
 {
@@ -114,9 +114,9 @@ Full OpenAPI JSON spec: `GET /api-docs/openapi.json`
 
 A full GraphQL schema runs alongside the REST API, with an interactive GraphiQL playground at `/graphql`. Use it to fetch exactly the fields you need in a single round-trip — no over-fetching.
 
-### 64 Cargo Feature Flags
+### 72 Cargo Feature Flags
 
-Every major feature is an independent Cargo feature flag. Enable only what you need to minimise binary size, attack surface, and compile time.
+Every major feature is an independent Cargo feature flag — one flag per registry module. Enable only what you need to minimise binary size, attack surface, and compile time. Runtime toggling (via `PATCH /api/v1/admin/modules/{name}`) layers on top of the compile-time feature set; see [§ 4 — Modular UX Platform](#4-modular-ux-platform) for the admin-dashboard surface.
 
 ```toml
 # Minimal booking-only build (~8 MB)
