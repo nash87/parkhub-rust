@@ -33,6 +33,38 @@
         ],
         "type": "string"
       },
+      "AddChargerRequest": {
+        "description": "Request to add a charger (admin)",
+        "properties": {
+          "connector_type": {
+            "$ref": "#/components/schemas/ConnectorType"
+          },
+          "label": {
+            "type": "string"
+          },
+          "location_hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lot_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "power_kw": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lot_id",
+          "label",
+          "connector_type",
+          "power_kw"
+        ],
+        "type": "object"
+      },
       "AddFavoriteRequest": {
         "properties": {
           "lot_id": {
@@ -68,6 +100,18 @@
         },
         "required": [
           "amount"
+        ],
+        "type": "object"
+      },
+      "AdminResetPasswordRequest": {
+        "description": "Request body for resetting a user's password",
+        "properties": {
+          "new_password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_password"
         ],
         "type": "object"
       },
@@ -316,6 +360,35 @@
         ],
         "description": "Booking list filters"
       },
+      "BookingPolicies": {
+        "description": "Admin-configurable booking policies.",
+        "properties": {
+          "max_advance_booking_days": {
+            "description": "Maximum days in advance a booking can be made (0 = unlimited)",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_booking_duration_hours": {
+            "description": "Maximum booking duration in hours (0 = no maximum)",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "min_booking_duration_hours": {
+            "description": "Minimum booking duration in hours (0 = no minimum)",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_advance_booking_days",
+          "min_booking_duration_hours",
+          "max_booking_duration_hours"
+        ],
+        "type": "object"
+      },
       "BrandingUpdate": {
         "properties": {
           "app_name": {
@@ -331,6 +404,49 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "BulkDeleteRequest": {
+        "description": "Request body for bulk user deletion.",
+        "properties": {
+          "user_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids"
+        ],
+        "type": "object"
+      },
+      "BulkUserUpdateRequest": {
+        "description": "Request body for bulk user update.",
+        "properties": {
+          "action": {
+            "description": "Action: \"activate\", \"deactivate\", \"set_role\"",
+            "type": "string"
+          },
+          "role": {
+            "description": "Role to set (only used with \"set_role\" action)",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_ids": {
+            "description": "User IDs to update",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids",
+          "action"
+        ],
         "type": "object"
       },
       "ChangePasswordRequest": {
@@ -402,6 +518,16 @@
           "payment_intent_id"
         ],
         "type": "object"
+      },
+      "ConnectorType": {
+        "description": "EV Charger connector type",
+        "enum": [
+          "type2",
+          "ccs",
+          "chademo",
+          "tesla"
+        ],
+        "type": "string"
       },
       "CreateAbsenceRequest": {
         "properties": {
@@ -521,6 +647,31 @@
           "duration_minutes",
           "vehicle_id",
           "license_plate"
+        ],
+        "type": "object"
+      },
+      "CreateCheckoutRequest": {
+        "description": "Request to create a Stripe checkout session for credit purchase.",
+        "properties": {
+          "credits": {
+            "description": "Number of credits to purchase",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "currency": {
+            "description": "Currency code (ISO 4217)",
+            "type": "string"
+          },
+          "price_per_credit": {
+            "description": "Price per credit in cents (smallest currency unit)",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "credits"
         ],
         "type": "object"
       },
@@ -948,6 +1099,24 @@
         ],
         "type": "object"
       },
+      "FlagVehicleRequest": {
+        "description": "Request to flag a vehicle",
+        "properties": {
+          "flagged": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "flagged"
+        ],
+        "type": "object"
+      },
       "ForgotPasswordRequest": {
         "description": "Request body for the forgot-password endpoint",
         "properties": {
@@ -1018,6 +1187,26 @@
         ],
         "type": "string"
       },
+      "IcalImportResult": {
+        "description": "Result of an iCal absence import.",
+        "properties": {
+          "imported": {
+            "description": "Number of absences successfully imported.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "skipped": {
+            "description": "Number of events skipped (missing required fields).",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "skipped"
+        ],
+        "type": "object"
+      },
       "ImportError": {
         "description": "Describes a single row that failed during import.",
         "properties": {
@@ -1039,6 +1228,24 @@
           "row",
           "field",
           "message"
+        ],
+        "type": "object"
+      },
+      "ImportRequest": {
+        "description": "Import request body (CSV or JSON, base64-encoded CSV data or raw JSON array).",
+        "properties": {
+          "data": {
+            "description": "Base64-encoded CSV or JSON array as string",
+            "type": "string"
+          },
+          "format": {
+            "description": "\"csv\" or \"json\"",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "data"
         ],
         "type": "object"
       },
@@ -1257,6 +1464,61 @@
         ],
         "type": "object"
       },
+      "NotificationPreferences": {
+        "description": "Per-user notification preferences.",
+        "properties": {
+          "email_booking_confirm": {
+            "type": "boolean"
+          },
+          "email_booking_reminder": {
+            "type": "boolean"
+          },
+          "email_swap_request": {
+            "type": "boolean"
+          },
+          "phone_number": {
+            "description": "Phone number for SMS/WhatsApp (E.164 format, e.g. \"+491234567890\")",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "push_enabled": {
+            "type": "boolean"
+          },
+          "sms_booking_cancelled": {
+            "description": "SMS channel: booking cancelled",
+            "type": "boolean"
+          },
+          "sms_booking_confirm": {
+            "description": "SMS channel: booking confirmations",
+            "type": "boolean"
+          },
+          "sms_booking_reminder": {
+            "description": "SMS channel: booking reminders",
+            "type": "boolean"
+          },
+          "whatsapp_booking_cancelled": {
+            "description": "WhatsApp channel: booking cancelled",
+            "type": "boolean"
+          },
+          "whatsapp_booking_confirm": {
+            "description": "WhatsApp channel: booking confirmations",
+            "type": "boolean"
+          },
+          "whatsapp_booking_reminder": {
+            "description": "WhatsApp channel: booking reminders",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email_booking_confirm",
+          "email_booking_reminder",
+          "email_swap_request",
+          "push_enabled"
+        ],
+        "type": "object"
+      },
       "PaginationParams": {
         "description": "Pagination parameters",
         "properties": {
@@ -1382,6 +1644,16 @@
           "status"
         ],
         "type": "object"
+      },
+      "PricingTier": {
+        "description": "Available pricing tiers.",
+        "enum": [
+          "economy",
+          "standard",
+          "premium",
+          "vip"
+        ],
+        "type": "string"
       },
       "PrivacySettingsRequest": {
         "description": "Request body for privacy settings update",
@@ -1589,6 +1861,24 @@
         ],
         "type": "object"
       },
+      "RescheduleRequest": {
+        "description": "Request body for rescheduling a booking",
+        "properties": {
+          "new_end": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "new_start": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_start",
+          "new_end"
+        ],
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "description": "Request body for the reset-password endpoint",
         "properties": {
@@ -1619,6 +1909,77 @@
         },
         "required": [
           "status"
+        ],
+        "type": "object"
+      },
+      "SaveWidgetLayoutRequest": {
+        "description": "Request to save a widget layout",
+        "properties": {
+          "widgets": {
+            "items": {
+              "$ref": "#/components/schemas/WidgetEntry"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "widgets"
+        ],
+        "type": "object"
+      },
+      "SetAccessibleRequest": {
+        "description": "Request to toggle accessible status on a slot",
+        "properties": {
+          "is_accessible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_accessible"
+        ],
+        "type": "object"
+      },
+      "SetLocationRequest": {
+        "description": "Request body for setting a lot's geographic coordinates.",
+        "properties": {
+          "latitude": {
+            "format": "double",
+            "type": "number"
+          },
+          "longitude": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "type": "object"
+      },
+      "SetZonePricingRequest": {
+        "properties": {
+          "max_capacity": {
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pricing_multiplier": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "tier": {
+            "$ref": "#/components/schemas/PricingTier"
+          }
+        },
+        "required": [
+          "tier"
         ],
         "type": "object"
       },
@@ -1741,6 +2102,19 @@
         ],
         "type": "object"
       },
+      "StartChargingRequest": {
+        "description": "Request to start a charging session",
+        "properties": {
+          "booking_id": {
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "StripePaymentStatus": {
         "description": "Payment status for Stripe-style intents.",
         "enum": [
@@ -1790,6 +2164,25 @@
           "endpoint",
           "keys"
         ],
+        "type": "object"
+      },
+      "SubscribeWaitlistRequest": {
+        "description": "Request body for subscribing to waitlist",
+        "properties": {
+          "notes": {
+            "description": "Optional notes",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "description": "Priority level 1-5 (1 = highest)",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "SubscriptionResponse": {
@@ -2029,6 +2422,18 @@
         },
         "type": "object"
       },
+      "UpdateAccessibilityNeedsRequest": {
+        "description": "Request to update user accessibility needs",
+        "properties": {
+          "accessibility_needs": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "accessibility_needs"
+        ],
+        "type": "object"
+      },
       "UpdateAnnouncementRequest": {
         "properties": {
           "active": {
@@ -2115,6 +2520,59 @@
           "picture": {
             "type": [
               "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateDynamicPricingRequest": {
+        "description": "Request body for updating dynamic pricing rules.",
+        "properties": {
+          "base_price": {
+            "description": "Base hourly rate before multipliers",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "discount_multiplier": {
+            "description": "Multiplier applied when occupancy is below `discount_threshold`",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "discount_threshold": {
+            "description": "Occupancy percentage (0-100) below which discount pricing activates",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "enabled": {
+            "description": "Enable or disable dynamic pricing",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "surge_multiplier": {
+            "description": "Multiplier applied when occupancy exceeds `surge_threshold`",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "surge_threshold": {
+            "description": "Occupancy percentage (0-100) that triggers surge pricing",
+            "format": "double",
+            "type": [
+              "number",
               "null"
             ]
           }
@@ -2404,6 +2862,35 @@
         ],
         "type": "object"
       },
+      "UpdateRecurringBookingRequest": {
+        "description": "Request body for updating a recurring booking",
+        "properties": {
+          "days_of_week": {
+            "items": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "UpdateRoleRequest": {
         "properties": {
           "description": {
@@ -2613,6 +3100,71 @@
         ],
         "type": "object"
       },
+      "WebhookEvent": {
+        "description": "Stripe webhook event payload (simplified).",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WebhookEventData",
+            "description": "Event data containing the object"
+          },
+          "type": {
+            "description": "Event type (e.g., \"checkout.session.completed\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "data"
+        ],
+        "type": "object"
+      },
+      "WebhookEventData": {
+        "description": "Webhook event data wrapper.",
+        "properties": {
+          "object": {
+            "$ref": "#/components/schemas/WebhookObject"
+          }
+        },
+        "required": [
+          "object"
+        ],
+        "type": "object"
+      },
+      "WebhookObject": {
+        "description": "Webhook object (checkout session or payment intent).",
+        "properties": {
+          "amount_total": {
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "payment_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
       "WebhookResponse": {
         "properties": {
           "active": {
@@ -2657,6 +3209,72 @@
           "updated_at"
         ],
         "type": "object"
+      },
+      "WidgetEntry": {
+        "description": "A widget entry in the user's layout",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "position": {
+            "$ref": "#/components/schemas/WidgetPosition"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "widget_type": {
+            "$ref": "#/components/schemas/WidgetType"
+          }
+        },
+        "required": [
+          "id",
+          "widget_type",
+          "position",
+          "visible"
+        ],
+        "type": "object"
+      },
+      "WidgetPosition": {
+        "description": "Position and size of a widget on the dashboard grid",
+        "properties": {
+          "h": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "w": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "x": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "y": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "type": "object"
+      },
+      "WidgetType": {
+        "description": "Available widget types",
+        "enum": [
+          "occupancy_chart",
+          "revenue_summary",
+          "recent_bookings",
+          "user_growth",
+          "booking_heatmap",
+          "active_alerts",
+          "maintenance_status",
+          "ev_charging_status"
+        ],
+        "type": "string"
       }
     }
   },
@@ -2718,6 +3336,47 @@
           }
         ],
         "summary": "Create an absence",
+        "tags": [
+          "Absences"
+        ]
+      }
+    },
+    "/api/v1/absences/import/ical": {
+      "post": {
+        "description": "Parse VEVENT blocks from an iCal (RFC 5545) body and create absences for the authenticated user. DTSTART and DTEND are required; SUMMARY is used to infer the absence type.",
+        "operationId": "import_absences_ical",
+        "requestBody": {
+          "content": {
+            "text/calendar": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "iCal data (VCALENDAR with VEVENT blocks)",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IcalImportResult"
+                }
+              }
+            },
+            "description": "Import completed"
+          },
+          "400": {
+            "description": "Empty or invalid iCal body"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Import absences from iCal",
         "tags": [
           "Absences"
         ]
@@ -3163,6 +3822,115 @@
         ]
       }
     },
+    "/api/v1/admin/audit-log/export/download/{token}": {
+      "get": {
+        "description": "Download the exported audit log using a signed token. Token expires after 5 minutes.",
+        "operationId": "download_audit_export",
+        "parameters": [
+          {
+            "description": "Download token",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export file"
+          },
+          "401": {
+            "description": "Invalid or expired token"
+          }
+        },
+        "summary": "Download audit log export",
+        "tags": [
+          "Audit Export"
+        ]
+      }
+    },
+    "/api/v1/admin/audit-log/export/enhanced": {
+      "get": {
+        "description": "Creates a signed download URL for audit log export in CSV, JSON, or PDF format. URL expires in 5 minutes.",
+        "operationId": "enhanced_audit_export",
+        "parameters": [
+          {
+            "description": "Export format: csv, json, or pdf (default: csv)",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Start date (inclusive), e.g. `2026-01-01`",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "End date (inclusive), e.g. `2026-03-23`",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Filter by action type (partial match)",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Filter by user ID or username",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed download URL created"
+          },
+          "400": {
+            "description": "Invalid format"
+          }
+        },
+        "summary": "Create signed audit log export",
+        "tags": [
+          "Audit Export"
+        ]
+      }
+    },
     "/api/v1/admin/billing/allocate": {
       "post": {
         "description": "Grant credits equally to all users in a cost center. Admin only.",
@@ -3409,6 +4177,44 @@
         ]
       }
     },
+    "/api/v1/admin/chargers": {
+      "get": {
+        "operationId": "admin_charger_overview",
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Admin charger overview",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "operationId": "admin_add_charger",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddChargerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Add charger to lot",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/admin/credits/refill-all": {
       "post": {
         "description": "Reset all active non-admin users' credit balances to their monthly quota. Admin only.",
@@ -3422,6 +4228,24 @@
           }
         },
         "summary": "Refill all users' credits",
+        "tags": [
+          "Credits"
+        ]
+      }
+    },
+    "/api/v1/admin/credits/transactions": {
+      "get": {
+        "description": "Returns all credit transactions across all users, with optional filtering.",
+        "operationId": "admin_list_credit_transactions",
+        "responses": {
+          "200": {
+            "description": "Transaction list"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "summary": "List all credit transactions (admin)",
         "tags": [
           "Credits"
         ]
@@ -3445,6 +4269,84 @@
           }
         ],
         "summary": "Admin dashboard chart data",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/data/export/bookings": {
+      "get": {
+        "description": "Download bookings as CSV with date range filter. Admin only.",
+        "operationId": "export_bookings_csv",
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "CSV file"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Export bookings as CSV (enhanced)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/data/export/lots": {
+      "get": {
+        "description": "Download all parking lots with stats as CSV. Admin only.",
+        "operationId": "export_lots_csv",
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "CSV file"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Export lots as CSV",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/data/export/users": {
+      "get": {
+        "description": "Download all users as CSV with booking stats. Admin only.",
+        "operationId": "export_users_csv",
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "CSV file"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Export users as CSV (enhanced)",
         "tags": [
           "Admin"
         ]
@@ -3660,6 +4562,98 @@
         ]
       }
     },
+    "/api/v1/admin/fleet": {
+      "get": {
+        "description": "List all vehicles across all users with booking stats. Admin only.",
+        "operationId": "admin_fleet_list",
+        "responses": {
+          "200": {
+            "description": "Vehicle list"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Fleet overview",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/fleet/stats": {
+      "get": {
+        "description": "Fleet overview: total, types distribution, electric ratio. Admin only.",
+        "operationId": "admin_fleet_stats",
+        "responses": {
+          "200": {
+            "description": "Fleet stats"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Fleet statistics",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/fleet/{id}/flag": {
+      "put": {
+        "description": "Flag or unflag a vehicle (stolen, expired registration, etc.). Admin only.",
+        "operationId": "admin_fleet_flag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlagVehicleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Vehicle flagged"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Vehicle not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Flag vehicle",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/admin/guest-bookings": {
       "get": {
         "description": "List all guest bookings. Admin only.",
@@ -3722,6 +4716,78 @@
         ]
       }
     },
+    "/api/v1/admin/import/lots": {
+      "post": {
+        "description": "Import parking lots from CSV (base64) or JSON. Admin only.",
+        "operationId": "import_lots",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Import result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Bulk lot import",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/import/users": {
+      "post": {
+        "description": "Import users from CSV (base64) or JSON. Admin only.",
+        "operationId": "import_users",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Import result"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Bulk user import",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/admin/impressum": {
       "get": {
         "description": "Returns current Impressum fields for editing. Admin only.",
@@ -3771,6 +4837,240 @@
         "summary": "Update Impressum (admin)",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/lots/{id}/hours": {
+      "put": {
+        "description": "Set the operating hours schedule for a parking lot.",
+        "operationId": "admin_update_operating_hours",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated operating hours"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Parking lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update lot operating hours (admin)",
+        "tags": [
+          "Operating Hours"
+        ]
+      }
+    },
+    "/api/v1/admin/lots/{id}/location": {
+      "put": {
+        "description": "Admin endpoint to set latitude/longitude for a parking lot.",
+        "operationId": "set_lot_location",
+        "parameters": [
+          {
+            "description": "Lot UUID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetLocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Location updated"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Set lot coordinates",
+        "tags": [
+          "Map"
+        ]
+      }
+    },
+    "/api/v1/admin/lots/{id}/pricing/dynamic": {
+      "get": {
+        "description": "Returns the configured dynamic pricing rules for a lot.",
+        "operationId": "admin_get_dynamic_pricing_rules",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dynamic pricing rules"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Parking lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get dynamic pricing rules (admin)",
+        "tags": [
+          "Dynamic Pricing"
+        ]
+      },
+      "put": {
+        "description": "Set the dynamic pricing rules for a lot. All fields are optional — only provided fields are updated.",
+        "operationId": "admin_update_dynamic_pricing_rules",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDynamicPricingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Updated dynamic pricing rules"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Parking lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update dynamic pricing rules (admin)",
+        "tags": [
+          "Dynamic Pricing"
+        ]
+      }
+    },
+    "/api/v1/admin/lots/{id}/slots/{slot_id}/accessible": {
+      "put": {
+        "description": "Mark or unmark a parking slot as accessible. Admin only.",
+        "operationId": "admin_set_slot_accessible",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slot_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAccessibleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Slot accessibility updated"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Slot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Toggle slot accessibility",
+        "tags": [
+          "Accessible"
         ]
       }
     },
@@ -4111,6 +5411,52 @@
         ]
       }
     },
+    "/api/v1/admin/rate-limits": {
+      "get": {
+        "description": "Returns current rate limit statistics per endpoint group.",
+        "operationId": "admin_rate_limit_stats",
+        "responses": {
+          "200": {
+            "description": "Rate limit stats"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Rate limit stats",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/rate-limits/history": {
+      "get": {
+        "description": "Returns blocked requests over the last 24 hours in hourly bins.",
+        "operationId": "admin_rate_limit_history",
+        "responses": {
+          "200": {
+            "description": "Blocked request history"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Blocked request history",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/admin/reports": {
       "get": {
         "description": "Returns daily booking stats.",
@@ -4126,6 +5472,66 @@
           }
         ],
         "summary": "Booking reports (admin)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/occupancy": {
+      "get": {
+        "description": "Occupancy trends with date range.",
+        "operationId": "occupancy_report",
+        "responses": {
+          "200": {
+            "description": "Occupancy report"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Occupancy report",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/revenue": {
+      "get": {
+        "description": "Revenue breakdown by lot and time period.",
+        "operationId": "revenue_report",
+        "responses": {
+          "200": {
+            "description": "Revenue report"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Revenue report",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reports/users": {
+      "get": {
+        "description": "User growth, active users by period.",
+        "operationId": "user_report",
+        "responses": {
+          "200": {
+            "description": "User report"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "User growth report",
         "tags": [
           "Admin"
         ]
@@ -4369,6 +5775,52 @@
         ]
       }
     },
+    "/api/v1/admin/settings/booking-policies": {
+      "get": {
+        "operationId": "get_booking_policies",
+        "responses": {
+          "200": {
+            "description": "Booking policies"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get booking policies",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "put": {
+        "operationId": "update_booking_policies",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingPolicies"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Policies updated"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update booking policies",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/admin/settings/email": {
       "get": {
         "description": "Return SMTP configuration (password masked). Admin only.",
@@ -4531,6 +5983,69 @@
           }
         ],
         "summary": "List all users (admin)",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/bulk-delete": {
+      "post": {
+        "description": "Delete multiple users at once.",
+        "operationId": "bulk_delete_users",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk delete result"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Bulk delete users",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/bulk-update": {
+      "post": {
+        "description": "Batch activate, deactivate, or change role for multiple users.",
+        "operationId": "bulk_update_users",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUserUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Bulk operation result"
+          },
+          "400": {
+            "description": "Invalid action"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Bulk update users",
         "tags": [
           "Admin"
         ]
@@ -4737,6 +6252,42 @@
         "summary": "Update user's monthly quota",
         "tags": [
           "Credits"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/reset-password": {
+      "post": {
+        "description": "Admin can set a new password for any user.",
+        "operationId": "admin_reset_user_password",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminResetPasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Reset user password",
+        "tags": [
+          "Admin"
         ]
       }
     },
@@ -4952,6 +6503,138 @@
         "summary": "List all visitors",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/widgets": {
+      "get": {
+        "description": "Get the current admin user's dashboard widget layout.",
+        "operationId": "get_widget_layout",
+        "responses": {
+          "200": {
+            "description": "Widget layout"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get widget layout",
+        "tags": [
+          "Admin Widgets"
+        ]
+      },
+      "put": {
+        "description": "Save the admin user's dashboard widget layout (positions, sizes, visibility).",
+        "operationId": "save_widget_layout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveWidgetLayoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Layout saved"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Save widget layout",
+        "tags": [
+          "Admin Widgets"
+        ]
+      }
+    },
+    "/api/v1/admin/widgets/data/{widget_id}": {
+      "get": {
+        "description": "Get the data for a specific dashboard widget.",
+        "operationId": "get_widget_data",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "widget_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Widget data"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "404": {
+            "description": "Widget not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get widget data",
+        "tags": [
+          "Admin Widgets"
+        ]
+      }
+    },
+    "/api/v1/admin/zones/{id}/pricing": {
+      "put": {
+        "description": "Configure the pricing tier, multiplier, and capacity for a zone.",
+        "operationId": "set_zone_pricing",
+        "parameters": [
+          {
+            "description": "Zone ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetZonePricingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing updated"
+          },
+          "400": {
+            "description": "Invalid zone ID"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "summary": "Set zone pricing tier",
+        "tags": [
+          "Parking Zones"
         ]
       }
     },
@@ -5594,7 +7277,44 @@
         ]
       }
     },
+    "/api/v1/bookings/accessible-stats": {
+      "get": {
+        "description": "Admin stats: total accessible slots, utilization, bookings on accessible slots.",
+        "operationId": "accessible_stats",
+        "responses": {
+          "200": {
+            "description": "Accessible stats"
+          },
+          "403": {
+            "description": "Admin access required"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Accessible slot statistics",
+        "tags": [
+          "Accessible"
+        ]
+      }
+    },
     "/api/v1/bookings/guest": {
+      "get": {
+        "description": "Return the guest bookings created by the current user.",
+        "operationId": "list_user_guest_bookings",
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List my guest bookings",
+        "tags": [
+          "Bookings"
+        ]
+      },
       "post": {
         "description": "Create a visitor parking booking with a guest code.",
         "operationId": "create_guest_booking",
@@ -5862,6 +7582,77 @@
         ]
       }
     },
+    "/api/v1/bookings/{id}/invoice/pdf": {
+      "get": {
+        "operationId": "get_booking_invoice_pdf",
+        "parameters": [
+          {
+            "description": "Booking ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "PDF invoice"
+          },
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        },
+        "summary": "Download PDF invoice for a booking",
+        "tags": [
+          "Invoices"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/pass": {
+      "get": {
+        "description": "Generate a digital parking pass with QR code for a booking.",
+        "operationId": "get_booking_pass",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass generated"
+          },
+          "403": {
+            "description": "Not your booking"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Generate parking pass",
+        "tags": [
+          "Parking Pass"
+        ]
+      }
+    },
     "/api/v1/bookings/{id}/qr": {
       "get": {
         "description": "Returns a PNG image containing a QR code that encodes booking details (ID, user email, lot name, start/end times). Requires authentication; only the booking owner or an admin may request it. Rate limited to 10 requests per minute per IP.",
@@ -5905,6 +7696,56 @@
         "summary": "Generate QR code parking pass",
         "tags": [
           "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/reschedule": {
+      "put": {
+        "description": "Change the start and end dates of a booking. Validates slot availability and detects conflicts.",
+        "operationId": "reschedule_booking",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RescheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Booking rescheduled"
+          },
+          "400": {
+            "description": "Invalid dates or conflicts"
+          },
+          "403": {
+            "description": "Not your booking"
+          },
+          "404": {
+            "description": "Booking not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Reschedule a booking",
+        "tags": [
+          "Calendar Drag"
         ]
       }
     },
@@ -6030,6 +7871,126 @@
         ]
       }
     },
+    "/api/v1/chargers/sessions": {
+      "get": {
+        "operationId": "charging_history",
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "User charging history",
+        "tags": [
+          "EV Charging"
+        ]
+      }
+    },
+    "/api/v1/chargers/{id}/start": {
+      "post": {
+        "operationId": "start_charging",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartChargingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Start charging session",
+        "tags": [
+          "EV Charging"
+        ]
+      }
+    },
+    "/api/v1/chargers/{id}/stop": {
+      "post": {
+        "operationId": "stop_charging",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Stop charging session",
+        "tags": [
+          "EV Charging"
+        ]
+      }
+    },
+    "/api/v1/docs": {
+      "get": {
+        "description": "Serves an embedded Swagger UI page for exploring and testing the ParkHub REST API.",
+        "operationId": "api_docs_ui",
+        "responses": {
+          "200": {
+            "description": "Swagger UI HTML page"
+          }
+        },
+        "summary": "Interactive API documentation",
+        "tags": [
+          "Documentation"
+        ]
+      }
+    },
+    "/api/v1/docs/openapi.json": {
+      "get": {
+        "description": "Returns the raw OpenAPI 3.0 JSON specification for the ParkHub API.",
+        "operationId": "api_docs_openapi_json",
+        "responses": {
+          "200": {
+            "description": "OpenAPI JSON spec"
+          }
+        },
+        "summary": "OpenAPI specification",
+        "tags": [
+          "Documentation"
+        ]
+      }
+    },
+    "/api/v1/docs/postman.json": {
+      "get": {
+        "description": "Returns an auto-generated Postman v2.1 collection derived from the OpenAPI specification. Import directly into Postman.",
+        "operationId": "api_docs_postman_json",
+        "responses": {
+          "200": {
+            "description": "Postman collection JSON"
+          }
+        },
+        "summary": "Postman collection",
+        "tags": [
+          "Documentation"
+        ]
+      }
+    },
     "/api/v1/features": {
       "get": {
         "description": "Returns enabled and available features. No auth required.",
@@ -6101,6 +8062,21 @@
         "summary": "Create a parking lot",
         "tags": [
           "Lots"
+        ]
+      }
+    },
+    "/api/v1/lots/map": {
+      "get": {
+        "description": "Returns all parking lots with coordinates, availability, and color-coded markers.",
+        "operationId": "list_lot_markers",
+        "responses": {
+          "200": {
+            "description": "List of lot markers"
+          }
+        },
+        "summary": "List lots for map view",
+        "tags": [
+          "Map"
         ]
       }
     },
@@ -6206,6 +8182,89 @@
         ]
       }
     },
+    "/api/v1/lots/{id}/chargers": {
+      "get": {
+        "operationId": "list_lot_chargers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List chargers in a lot",
+        "tags": [
+          "EV Charging"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/display": {
+      "get": {
+        "description": "Returns structured display data for digital signage / kiosk monitors. No auth required. Rate-limited to 10 req/min per IP.",
+        "operationId": "lot_display",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lobby display data"
+          },
+          "404": {
+            "description": "Parking lot not found"
+          }
+        },
+        "summary": "Lobby display data for a parking lot",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/hours": {
+      "get": {
+        "description": "Returns the operating hours schedule and whether the lot is currently open.",
+        "operationId": "get_operating_hours",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operating hours"
+          },
+          "404": {
+            "description": "Parking lot not found"
+          }
+        },
+        "summary": "Get lot operating hours",
+        "tags": [
+          "Operating Hours"
+        ]
+      }
+    },
     "/api/v1/lots/{id}/pricing": {
       "get": {
         "description": "Returns the current pricing configuration for the specified parking lot.",
@@ -6277,6 +8336,35 @@
         "summary": "Update lot pricing",
         "tags": [
           "Lots"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/pricing/dynamic": {
+      "get": {
+        "description": "Returns the current effective price based on lot occupancy and dynamic pricing rules.",
+        "operationId": "get_dynamic_pricing",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current dynamic price"
+          },
+          "404": {
+            "description": "Parking lot not found"
+          }
+        },
+        "summary": "Get current dynamic price for a lot",
+        "tags": [
+          "Dynamic Pricing"
         ]
       }
     },
@@ -6379,6 +8467,270 @@
         "summary": "List slots in a parking lot",
         "tags": [
           "Lots"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/slots/accessible": {
+      "get": {
+        "description": "Returns only slots marked as accessible in the given lot.",
+        "operationId": "list_accessible_slots",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accessible slots list"
+          },
+          "404": {
+            "description": "Lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List accessible slots",
+        "tags": [
+          "Accessible"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/waitlist": {
+      "delete": {
+        "description": "Remove the current user from a lot's waitlist.",
+        "operationId": "leave_lot_waitlist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Left waitlist"
+          },
+          "404": {
+            "description": "Not on waitlist"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Leave waitlist",
+        "tags": [
+          "Waitlist"
+        ]
+      },
+      "get": {
+        "description": "View the current user's waitlist position and estimated wait time for a lot.",
+        "operationId": "get_lot_waitlist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Waitlist overview"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "View waitlist",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/waitlist/subscribe": {
+      "post": {
+        "description": "Join the waitlist for a specific parking lot with an optional priority level.",
+        "operationId": "subscribe_waitlist",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscribeWaitlistRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Subscribed to waitlist"
+          },
+          "404": {
+            "description": "Lot not found"
+          },
+          "409": {
+            "description": "Already on waitlist"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Subscribe to waitlist",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/waitlist/{entry_id}/accept": {
+      "post": {
+        "description": "Accept an offered parking slot from the waitlist.",
+        "operationId": "accept_waitlist_offer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer accepted"
+          },
+          "403": {
+            "description": "Not your entry"
+          },
+          "404": {
+            "description": "Entry not found"
+          },
+          "410": {
+            "description": "Offer expired"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Accept waitlist offer",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/waitlist/{entry_id}/decline": {
+      "post": {
+        "description": "Decline an offered slot. The slot will be offered to the next person in line.",
+        "operationId": "decline_waitlist_offer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer declined"
+          },
+          "403": {
+            "description": "Not your entry"
+          },
+          "404": {
+            "description": "Entry not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Decline waitlist offer",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
+    "/api/v1/lots/{id}/zones/pricing": {
+      "get": {
+        "description": "Returns all zones for a lot including their pricing tier, multiplier, and capacity.",
+        "operationId": "list_zones_pricing",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zones with pricing"
+          }
+        },
+        "summary": "List zones with pricing tiers",
+        "tags": [
+          "Parking Zones"
         ]
       }
     },
@@ -6505,6 +8857,58 @@
           }
         },
         "summary": "Update a parking slot",
+        "tags": [
+          "Lots"
+        ]
+      }
+    },
+    "/api/v1/lots/{lot_id}/slots/{slot_id}/qr": {
+      "get": {
+        "description": "Returns a PNG image containing a QR code encoding the slot identity. Requires authentication.",
+        "operationId": "slot_qr_code",
+        "parameters": [
+          {
+            "description": "Lot UUID",
+            "in": "path",
+            "name": "lot_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Slot UUID",
+            "in": "path",
+            "name": "slot_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {}
+            },
+            "description": "QR code PNG image"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Slot not found"
+          },
+          "500": {
+            "description": "QR generation failed"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Generate QR code for a parking slot",
         "tags": [
           "Lots"
         ]
@@ -6684,6 +9088,118 @@
         ]
       }
     },
+    "/api/v1/me/passes": {
+      "get": {
+        "description": "List all parking passes for the current user's active bookings.",
+        "operationId": "list_my_passes",
+        "responses": {
+          "200": {
+            "description": "List of passes"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List my passes",
+        "tags": [
+          "Parking Pass"
+        ]
+      }
+    },
+    "/api/v1/mobile/active-booking": {
+      "get": {
+        "description": "Returns the user's current active booking with countdown timer metadata.",
+        "operationId": "active_booking",
+        "responses": {
+          "200": {
+            "description": "Active booking or null"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get active booking with countdown",
+        "tags": [
+          "Mobile Booking"
+        ]
+      }
+    },
+    "/api/v1/mobile/nearby-lots": {
+      "get": {
+        "description": "Returns parking lots within a given radius of the user's location, sorted by distance.",
+        "operationId": "nearby_lots",
+        "parameters": [
+          {
+            "description": "Latitude",
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Longitude",
+            "in": "query",
+            "name": "lng",
+            "required": true,
+            "schema": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Radius in meters (default 1000, max 10000)",
+            "in": "query",
+            "name": "radius",
+            "required": false,
+            "schema": {
+              "format": "double",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nearby lots sorted by distance"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Find nearby parking lots",
+        "tags": [
+          "Mobile Booking"
+        ]
+      }
+    },
+    "/api/v1/mobile/quick-book": {
+      "get": {
+        "description": "Returns lots with available slots for one-tap mobile booking.",
+        "operationId": "quick_book",
+        "responses": {
+          "200": {
+            "description": "Quick-book eligible lots"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Quick booking options",
+        "tags": [
+          "Mobile Booking"
+        ]
+      }
+    },
     "/api/v1/modules": {
       "get": {
         "description": "Returns compile-time module enablement as both the legacy flat Boolean map and an enriched array of ModuleInfo objects (category, description, config keys, UI route, dependencies, runtime_toggleable, runtime_enabled).",
@@ -6762,6 +9278,66 @@
         ]
       }
     },
+    "/api/v1/notifications/center": {
+      "get": {
+        "description": "Returns paginated notifications for the authenticated user with optional read/unread filtering.",
+        "operationId": "list_center_notifications",
+        "parameters": [
+          {
+            "description": "Page number (1-based)",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page (default 20, max 100)",
+            "in": "query",
+            "name": "per_page",
+            "required": false,
+            "schema": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter: read, unread, or all",
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter by notification type",
+            "in": "query",
+            "name": "notification_type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated notifications"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List notifications (paginated)",
+        "tags": [
+          "Notification Center"
+        ]
+      }
+    },
     "/api/v1/notifications/read-all": {
       "post": {
         "description": "Marks all notifications as read.",
@@ -6779,6 +9355,74 @@
         "summary": "Mark all notifications as read",
         "tags": [
           "Notifications"
+        ]
+      },
+      "put": {
+        "description": "Marks all unread notifications as read for the authenticated user.",
+        "operationId": "mark_all_read",
+        "responses": {
+          "200": {
+            "description": "Count of notifications marked as read"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Mark all notifications as read",
+        "tags": [
+          "Notification Center"
+        ]
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "description": "Returns the number of unread notifications for badge display.",
+        "operationId": "unread_count",
+        "responses": {
+          "200": {
+            "description": "Unread count"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get unread notification count",
+        "tags": [
+          "Notification Center"
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}": {
+      "delete": {
+        "description": "Permanently deletes a notification owned by the authenticated user.",
+        "operationId": "delete_notification",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Delete a notification",
+        "tags": [
+          "Notification Center"
         ]
       }
     },
@@ -6809,6 +9453,46 @@
         "summary": "Mark notification as read",
         "tags": [
           "Notifications"
+        ]
+      }
+    },
+    "/api/v1/pass/verify/{code}": {
+      "get": {
+        "description": "Public endpoint to verify a parking pass QR code.",
+        "operationId": "verify_pass",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification result"
+          }
+        },
+        "summary": "Verify parking pass",
+        "tags": [
+          "Parking Pass"
+        ]
+      }
+    },
+    "/api/v1/payments/config": {
+      "get": {
+        "description": "Returns whether Stripe is configured and the publishable key (if set).",
+        "operationId": "stripe_config",
+        "responses": {
+          "200": {
+            "description": "Stripe config"
+          }
+        },
+        "summary": "Stripe configuration status",
+        "tags": [
+          "Stripe"
         ]
       }
     },
@@ -6848,6 +9532,42 @@
         ]
       }
     },
+    "/api/v1/payments/create-checkout": {
+      "post": {
+        "description": "Create a checkout session for purchasing credits. Returns a checkout URL.",
+        "operationId": "create_checkout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Checkout session created"
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "501": {
+            "description": "Stripe not configured"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Create Stripe checkout session",
+        "tags": [
+          "Stripe"
+        ]
+      }
+    },
     "/api/v1/payments/create-intent": {
       "post": {
         "operationId": "create_payment_intent",
@@ -6878,6 +9598,54 @@
         },
         "tags": [
           "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/history": {
+      "get": {
+        "description": "Returns the payment/checkout history for the authenticated user.",
+        "operationId": "payment_history",
+        "responses": {
+          "200": {
+            "description": "Payment history"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Payment history",
+        "tags": [
+          "Stripe"
+        ]
+      }
+    },
+    "/api/v1/payments/webhook": {
+      "post": {
+        "description": "Receives Stripe webhook events. Verifies signature, then processes checkout completions to grant credits.",
+        "operationId": "stripe_webhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Event processed"
+          },
+          "400": {
+            "description": "Invalid event or signature verification failed"
+          }
+        },
+        "summary": "Stripe webhook handler",
+        "tags": [
+          "Stripe"
         ]
       }
     },
@@ -6915,6 +9683,52 @@
         },
         "tags": [
           "Payments"
+        ]
+      }
+    },
+    "/api/v1/preferences/notifications": {
+      "get": {
+        "operationId": "get_notification_preferences",
+        "responses": {
+          "200": {
+            "description": "Notification preferences"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get notification preferences",
+        "tags": [
+          "Users"
+        ]
+      },
+      "put": {
+        "operationId": "update_notification_preferences",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update notification preferences",
+        "tags": [
+          "Users"
         ]
       }
     },
@@ -7055,6 +9869,22 @@
         ]
       }
     },
+    "/api/v1/recommendations/stats": {
+      "get": {
+        "description": "Admin-only: view recommendation service statistics.",
+        "operationId": "get_recommendation_stats",
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Recommendation acceptance stats",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/v1/recurring-bookings": {
       "get": {
         "description": "List the current user's recurring booking patterns.",
@@ -7116,6 +9946,40 @@
           }
         ],
         "summary": "Delete recurring booking",
+        "tags": [
+          "Bookings"
+        ]
+      },
+      "put": {
+        "description": "Update days_of_week, start_date, or end_date of a recurring booking. Only the owner or an admin may update.",
+        "operationId": "update_recurring_booking",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecurringBookingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {},
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update a recurring booking",
         "tags": [
           "Bookings"
         ]
@@ -7676,6 +10540,39 @@
         "summary": "Update current user profile",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/v1/users/me/accessibility-needs": {
+      "put": {
+        "description": "Set the user's accessibility needs (wheelchair, reduced_mobility, visual, hearing, none).",
+        "operationId": "update_accessibility_needs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAccessibilityNeedsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Accessibility needs updated"
+          },
+          "400": {
+            "description": "Invalid accessibility need"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update accessibility needs",
+        "tags": [
+          "Accessible"
         ]
       }
     },
@@ -8342,6 +11239,35 @@
         ]
       }
     },
+    "/api/v1/zones/{id}/price": {
+      "get": {
+        "description": "Returns the calculated price for a zone based on its tier and pricing multiplier.",
+        "operationId": "get_zone_price",
+        "parameters": [
+          {
+            "description": "Zone ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zone price"
+          },
+          "404": {
+            "description": "Zone not found"
+          }
+        },
+        "summary": "Calculate zone price",
+        "tags": [
+          "Parking Zones"
+        ]
+      }
+    },
     "/handshake": {
       "post": {
         "description": "Verifies protocol version compatibility between client and server.",
@@ -8377,6 +11303,21 @@
           }
         },
         "summary": "Basic health check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health/detailed": {
+      "get": {
+        "description": "Extended health check including build info, DB connectivity, and disk space.",
+        "operationId": "detailed_health_check",
+        "responses": {
+          "200": {
+            "description": "Health check"
+          }
+        },
+        "summary": "Detailed health check",
         "tags": [
           "Health"
         ]
@@ -8569,6 +11510,66 @@
     {
       "description": "Visitor registration, check-in, and admin oversight",
       "name": "Visitors"
+    },
+    {
+      "description": "Accessibility — accessible slot listing, toggling, user needs",
+      "name": "Accessible"
+    },
+    {
+      "description": "Self-hosted API documentation (Swagger UI, OpenAPI JSON, Postman)",
+      "name": "Documentation"
+    },
+    {
+      "description": "Electric vehicle charging station management",
+      "name": "EV Charging"
+    },
+    {
+      "description": "Persistent in-app notification center (list, unread count, mark all read)",
+      "name": "Notification Center"
+    },
+    {
+      "description": "Digital parking passes with QR verification",
+      "name": "Parking Pass"
+    },
+    {
+      "description": "Calendar drag-and-drop booking reschedule",
+      "name": "Calendar Drag"
+    },
+    {
+      "description": "Time-of-day / demand-based dynamic pricing rules",
+      "name": "Dynamic Pricing"
+    },
+    {
+      "description": "Per-lot operating hours and closures",
+      "name": "Operating Hours"
+    },
+    {
+      "description": "Zone-level pricing and price lookup",
+      "name": "Parking Zones"
+    },
+    {
+      "description": "Mobile-optimised quick actions (nearby lots, quick book, active booking)",
+      "name": "Mobile Booking"
+    },
+    {
+      "description": "Map markers and admin lot location editing",
+      "name": "Map"
+    },
+    {
+      "description": "Admin dashboard widget layout + data",
+      "name": "Admin Widgets"
+    },
+    {
+      "description": "Stripe payments (checkout, webhook, history, config)",
+      "name": "Stripe"
+    },
+    {
+      "description": "Enhanced audit-log export with signed download tokens",
+      "name": "Audit Export"
+    },
+    {
+      "description": "Per-booking invoice PDF rendering",
+      "name": "Invoices"
     }
   ]
 }

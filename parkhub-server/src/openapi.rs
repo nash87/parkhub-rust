@@ -76,7 +76,22 @@ use crate::{
         (name = "Maintenance", description = "Scheduled lot/slot maintenance windows"),
         (name = "Billing", description = "Cost-center and department billing rollups"),
         (name = "Absence Approval", description = "Manager approval workflow for absence requests"),
-        (name = "Visitors", description = "Visitor registration, check-in, and admin oversight")
+        (name = "Visitors", description = "Visitor registration, check-in, and admin oversight"),
+        (name = "Accessible", description = "Accessibility — accessible slot listing, toggling, user needs"),
+        (name = "Documentation", description = "Self-hosted API documentation (Swagger UI, OpenAPI JSON, Postman)"),
+        (name = "EV Charging", description = "Electric vehicle charging station management"),
+        (name = "Notification Center", description = "Persistent in-app notification center (list, unread count, mark all read)"),
+        (name = "Parking Pass", description = "Digital parking passes with QR verification"),
+        (name = "Calendar Drag", description = "Calendar drag-and-drop booking reschedule"),
+        (name = "Dynamic Pricing", description = "Time-of-day / demand-based dynamic pricing rules"),
+        (name = "Operating Hours", description = "Per-lot operating hours and closures"),
+        (name = "Parking Zones", description = "Zone-level pricing and price lookup"),
+        (name = "Mobile Booking", description = "Mobile-optimised quick actions (nearby lots, quick book, active booking)"),
+        (name = "Map", description = "Map markers and admin lot location editing"),
+        (name = "Admin Widgets", description = "Admin dashboard widget layout + data"),
+        (name = "Stripe", description = "Stripe payments (checkout, webhook, history, config)"),
+        (name = "Audit Export", description = "Enhanced audit-log export with signed download tokens"),
+        (name = "Invoices", description = "Per-booking invoice PDF rendering")
     ),
     components(
         schemas(
@@ -213,6 +228,26 @@ use crate::{
 
             // T-1739 pass 1 — Zones (update)
             crate::api::zones::UpdateZoneRequest,
+
+            // T-1739 pass 2 — Admin bulk ops, booking/notification prefs, data management
+            crate::api::admin_ext::BulkUserUpdateRequest,
+            crate::api::admin_ext::BulkDeleteRequest,
+            crate::api::admin_ext::BookingPolicies,
+            crate::api::admin_ext::NotificationPreferences,
+
+            // T-1739 pass 2 — Dynamic pricing
+            crate::api::dynamic_pricing::UpdateDynamicPricingRequest,
+
+            // T-1739 pass 2 — Import (iCal)
+            crate::api::import::IcalImportResult,
+
+            // T-1739 pass 2 — Map / Parking zones
+            crate::api::map::SetLocationRequest,
+            crate::api::parking_zones::SetZonePricingRequest,
+
+            // T-1739 pass 2 — Stripe / Checkout
+            crate::api::stripe::CreateCheckoutRequest,
+            crate::api::stripe::WebhookEvent,
         )
     ),
     paths(
@@ -507,6 +542,140 @@ use crate::{
         crate::api::calendar::calendar_ical_authenticated,
         crate::api::calendar::calendar_ical_by_token,
         crate::api::calendar::generate_calendar_token,
+
+        // ───── T-1739 pass 2 ─────
+        // Accessibility
+        crate::api::accessible::list_accessible_slots,
+        crate::api::accessible::admin_set_slot_accessible,
+        crate::api::accessible::accessible_stats,
+        crate::api::accessible::update_accessibility_needs,
+
+        // Admin — bulk user ops, reports, detailed health, booking policies
+        crate::api::admin_ext::bulk_update_users,
+        crate::api::admin_ext::bulk_delete_users,
+        crate::api::admin_ext::revenue_report,
+        crate::api::admin_ext::occupancy_report,
+        crate::api::admin_ext::user_report,
+        crate::api::admin_ext::detailed_health_check,
+        crate::api::admin_ext::get_booking_policies,
+        crate::api::admin_ext::update_booking_policies,
+        crate::api::admin_ext::get_notification_preferences,
+        crate::api::admin_ext::update_notification_preferences,
+
+        // Admin — password reset
+        crate::api::admin_handlers::admin_reset_user_password,
+
+        // API Docs / Swagger UI / Postman collection
+        crate::api::api_docs::api_docs_ui,
+        crate::api::api_docs::api_docs_openapi_json,
+        crate::api::api_docs::api_docs_postman_json,
+
+        // Audit log export — enhanced + signed download
+        crate::api::audit_export::enhanced_audit_export,
+        crate::api::audit_export::download_audit_export,
+
+        // Calendar drag (reschedule booking)
+        crate::api::calendar_drag::reschedule_booking,
+
+        // Credits — transactions ledger
+        crate::api::credits::admin_list_credit_transactions,
+
+        // Data management — import + bulk CSV export
+        crate::api::data_management::import_users,
+        crate::api::data_management::import_lots,
+        crate::api::data_management::export_lots_csv,
+        crate::api::data_management::export_bookings_csv,
+        crate::api::data_management::export_users_csv,
+
+        // Dynamic pricing
+        crate::api::dynamic_pricing::get_dynamic_pricing,
+        crate::api::dynamic_pricing::admin_get_dynamic_pricing_rules,
+        crate::api::dynamic_pricing::admin_update_dynamic_pricing_rules,
+
+        // EV charging
+        crate::api::ev_charging::list_lot_chargers,
+        crate::api::ev_charging::start_charging,
+        crate::api::ev_charging::stop_charging,
+        crate::api::ev_charging::charging_history,
+        crate::api::ev_charging::admin_charger_overview,
+        crate::api::ev_charging::admin_add_charger,
+
+        // Fleet management (admin)
+        crate::api::fleet::admin_fleet_list,
+        crate::api::fleet::admin_fleet_stats,
+        crate::api::fleet::admin_fleet_flag,
+
+        // Guest bookings (user-facing list)
+        crate::api::guest::list_user_guest_bookings,
+
+        // Import — absences iCal
+        crate::api::import::import_absences_ical,
+
+        // Invoices — PDF
+        crate::api::invoices::get_booking_invoice_pdf,
+
+        // Lobby (public display)
+        crate::api::lobby::lot_display,
+
+        // Map (lot markers + admin location)
+        crate::api::map::list_lot_markers,
+        crate::api::map::set_lot_location,
+
+        // Mobile quick endpoints
+        crate::api::mobile::nearby_lots,
+        crate::api::mobile::quick_book,
+        crate::api::mobile::active_booking,
+
+        // Notification center (in-app notifications)
+        crate::api::notification_center::list_center_notifications,
+        crate::api::notification_center::unread_count,
+        crate::api::notification_center::delete_notification,
+        crate::api::notification_center::mark_all_read,
+
+        // Operating hours
+        crate::api::operating_hours::get_operating_hours,
+        crate::api::operating_hours::admin_update_operating_hours,
+
+        // Parking pass (digital passes + verify)
+        crate::api::parking_pass::get_booking_pass,
+        crate::api::parking_pass::verify_pass,
+        crate::api::parking_pass::list_my_passes,
+
+        // Parking zones pricing
+        crate::api::parking_zones::list_zones_pricing,
+        crate::api::parking_zones::set_zone_pricing,
+        crate::api::parking_zones::get_zone_price,
+
+        // QR — slot QR code
+        crate::api::qr::slot_qr_code,
+
+        // Rate limits dashboard (admin)
+        crate::api::rate_dashboard::admin_rate_limit_stats,
+        crate::api::rate_dashboard::admin_rate_limit_history,
+
+        // Recommendations — stats
+        crate::api::recommendations::get_recommendation_stats,
+
+        // Recurring bookings — update
+        crate::api::recurring::update_recurring_booking,
+
+        // Stripe (real checkout, webhook, history, config)
+        crate::api::stripe::create_checkout,
+        crate::api::stripe::stripe_webhook,
+        crate::api::stripe::payment_history,
+        crate::api::stripe::stripe_config,
+
+        // Waitlist extended (subscribe, list, leave, accept, decline)
+        crate::api::waitlist_ext::subscribe_waitlist,
+        crate::api::waitlist_ext::get_lot_waitlist,
+        crate::api::waitlist_ext::leave_lot_waitlist,
+        crate::api::waitlist_ext::accept_waitlist_offer,
+        crate::api::waitlist_ext::decline_waitlist_offer,
+
+        // Admin widgets (dashboard layout + data)
+        crate::api::widgets::get_widget_layout,
+        crate::api::widgets::save_widget_layout,
+        crate::api::widgets::get_widget_data,
     )
 )]
 pub struct ApiDoc;
