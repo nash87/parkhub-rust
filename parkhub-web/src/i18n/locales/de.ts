@@ -495,6 +495,14 @@ export default {
         exportConfig: 'Konfiguration exportieren',
         exportHint: 'Aktuelle Modul-Aktivierung als JSON herunterladen',
         status: { enabled: 'Aktiviert', disabled: 'Deaktiviert', runtimeOff: 'Laufzeit aus' },
+        toggle: {
+          enable: 'Aktivieren',
+          disable: 'Deaktivieren',
+          notRuntimeToggleable: 'Nicht zur Laufzeit umschaltbar',
+          success: 'Modul {{name}} umgeschaltet',
+          error: '{{name}} konnte nicht umgeschaltet werden',
+          requiresReload: 'Neu laden, um zu übernehmen',
+        },
         category: {
           core: 'Kern',
           booking: 'Buchung',

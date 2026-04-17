@@ -484,6 +484,7 @@ export default {
         exportConfig: 'Exportar configuração',
         exportHint: 'Transferir o mapa de ativação como JSON',
         status: { enabled: 'Ativado', disabled: 'Desativado', runtimeOff: 'Runtime desligado' },
+        toggle: { enable: 'Ativar', disable: 'Desativar', notRuntimeToggleable: 'Não comutável em tempo de execução', success: 'Módulo {{name}} alternado', error: 'Não foi possível alternar {{name}}', requiresReload: 'Recarregar para aplicar' },
         category: { core: 'Essencial', booking: 'Reservas', vehicle: 'Veículos', payment: 'Pagamentos', admin: 'Administração', analytics: 'Análises', integration: 'Integrações', notification: 'Notificações', compliance: 'Conformidade', enterprise: 'Enterprise', experimental: 'Experimental' },
       },
     },

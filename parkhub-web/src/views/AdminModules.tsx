@@ -9,26 +9,20 @@
  * filter, and surfaces each module's config-keys + dependencies +
  * deep-link to its own admin page.
  *
- * Entirely local: one server call per page load. No analytics, no
- * third-party scripts, no AI inference.
+ * T-1720 v2: admins see an inline runtime enable/disable switch for
+ * every module where `runtime_toggleable` is true. The switch is
+ * optimistic: the card flips immediately, then on a non-OK response
+ * the state reverts and a toast surfaces the error. Non-admins keep
+ * the v1 read-only view.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-
-interface ModuleInfo {
-  name: string;
-  category: string;
-  description: string;
-  enabled: boolean;
-  runtime_toggleable: boolean;
-  runtime_enabled?: boolean;
-  config_keys: string[];
-  ui_route: string | null;
-  depends_on: string[];
-  version: string;
-}
+import toast from 'react-hot-toast';
+import { type ModuleInfo } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useModuleToggle } from '../hooks/useModuleToggle';
 
 const CATEGORY_ORDER = [
   'core',
@@ -48,16 +42,108 @@ function categoryLabel(t: (k: string, d?: string) => string, cat: string): strin
   return t(`admin.modules.category.${cat}`, cat.charAt(0).toUpperCase() + cat.slice(1));
 }
 
-function StatusDot({ enabled }: { enabled: boolean }) {
+/** Status pill reflects runtime_enabled (green), runtime off (amber), or compile-time off (gray). */
+function StatusDot({ m }: { m: ModuleInfo }) {
+  const runtime = m.runtime_enabled ?? m.enabled;
+  let cls = 'bg-neutral-500';
+  let label = 'disabled';
+  if (!m.enabled) {
+    // Compile-time disabled — nothing admins can do at runtime.
+    cls = 'bg-neutral-500';
+    label = 'compile-time off';
+  } else if (runtime) {
+    cls = 'bg-emerald-500';
+    label = 'enabled';
+  } else {
+    // Compiled in but runtime-toggled off.
+    cls = 'bg-amber-500';
+    label = 'runtime off';
+  }
   return (
-    <span
-      aria-label={enabled ? 'enabled' : 'disabled'}
-      className={`inline-block h-2.5 w-2.5 rounded-full ${enabled ? 'bg-emerald-500' : 'bg-neutral-500'}`}
-    />
+    <span aria-label={label} className={`inline-block h-2.5 w-2.5 rounded-full ${cls}`} />
   );
 }
 
-function ModuleCard({ m, t }: { m: ModuleInfo; t: (k: string, d?: string) => string }) {
+interface ModuleToggleSwitchProps {
+  m: ModuleInfo;
+  onLocalChange: (next: boolean) => void;
+  onRevert: () => void;
+  t: (k: string, d?: string, o?: Record<string, unknown>) => string;
+}
+
+/**
+ * Accessible switch rendered inside each admin module card. Handles the
+ * optimistic flip + toast + revert itself via the useModuleToggle hook.
+ */
+function ModuleToggleSwitch({ m, onLocalChange, onRevert, t }: ModuleToggleSwitchProps) {
+  const { inFlight, toggle } = useModuleToggle(m.name);
+  const currentRuntime = m.runtime_enabled ?? m.enabled;
+
+  const disabledForCompileTime = !m.enabled;
+  const notToggleable = !m.runtime_toggleable;
+  const disabled = inFlight || disabledForCompileTime || notToggleable;
+
+  async function onClick() {
+    if (disabled) return;
+    const next = !currentRuntime;
+    // Optimistic: flip the card immediately, server confirms or we revert.
+    onLocalChange(next);
+    const result = await toggle(next);
+    if (result.ok) {
+      toast.success(
+        t('admin.modules.toggle.success', 'Module {{name}} toggled', { name: m.name }),
+      );
+    } else {
+      onRevert();
+      toast.error(
+        t('admin.modules.toggle.error', 'Could not toggle {{name}}', { name: m.name }),
+      );
+    }
+  }
+
+  const ariaLabel = notToggleable
+    ? t('admin.modules.toggle.notRuntimeToggleable', 'Not runtime toggleable')
+    : currentRuntime
+      ? t('admin.modules.toggle.disable', 'Disable')
+      : t('admin.modules.toggle.enable', 'Enable');
+
+  const title = notToggleable
+    ? t('admin.modules.toggle.notRuntimeToggleable', 'Not runtime toggleable')
+    : ariaLabel;
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={currentRuntime}
+      aria-label={ariaLabel}
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      data-testid={`module-toggle-${m.name}`}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-surface-900 ${
+        currentRuntime
+          ? 'bg-primary-600'
+          : 'bg-surface-300 dark:bg-surface-600'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+    >
+      <span
+        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform shadow-sm ${
+          currentRuntime ? 'translate-x-5' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
+interface ModuleCardProps {
+  m: ModuleInfo;
+  t: (k: string, d?: string, o?: Record<string, unknown>) => string;
+  isAdmin: boolean;
+  onModuleChange: (name: string, runtimeEnabled: boolean) => void;
+}
+
+function ModuleCard({ m, t, isAdmin, onModuleChange }: ModuleCardProps) {
   const enabled = m.runtime_enabled ?? m.enabled;
   return (
     <div
@@ -69,12 +155,22 @@ function ModuleCard({ m, t }: { m: ModuleInfo; t: (k: string, d?: string) => str
       data-testid={`module-card-${m.name}`}
     >
       <div className="flex items-center gap-2 mb-1">
-        <StatusDot enabled={enabled} />
+        <StatusDot m={m} />
         <h3 className="font-semibold capitalize">{m.name.replace(/-/g, ' ')}</h3>
         {m.runtime_toggleable && (
-          <span className="ml-auto rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase text-amber-600 dark:text-amber-400">
+          <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium uppercase text-amber-600 dark:text-amber-400">
             {t('admin.modules.runtimeToggleable', 'runtime')}
           </span>
+        )}
+        {isAdmin && (
+          <div className="ml-auto">
+            <ModuleToggleSwitch
+              m={m}
+              onLocalChange={(next) => onModuleChange(m.name, next)}
+              onRevert={() => onModuleChange(m.name, enabled)}
+              t={t}
+            />
+          </div>
         )}
       </div>
       <p className="text-sm text-surface-600 dark:text-surface-400 mb-3">{m.description}</p>
@@ -113,6 +209,9 @@ function ModuleCard({ m, t }: { m: ModuleInfo; t: (k: string, d?: string) => str
 
 export function AdminModulesPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+
   const [modules, setModules] = useState<ModuleInfo[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -133,6 +232,13 @@ export function AdminModulesPage() {
       active = false;
     };
   }, []);
+
+  /** Optimistic local update. Caller is responsible for reverting on failure. */
+  function handleModuleChange(name: string, runtimeEnabled: boolean) {
+    setModules((prev) =>
+      prev?.map((m) => (m.name === name ? { ...m, runtime_enabled: runtimeEnabled } : m)) ?? prev,
+    );
+  }
 
   const filtered = useMemo(() => {
     if (!modules) return [];
@@ -238,7 +344,13 @@ export function AdminModulesPage() {
             </h2>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {mods.map((m) => (
-                <ModuleCard key={m.name} m={m} t={t} />
+                <ModuleCard
+                  key={m.name}
+                  m={m}
+                  t={t}
+                  isAdmin={isAdmin}
+                  onModuleChange={handleModuleChange}
+                />
               ))}
             </div>
           </section>

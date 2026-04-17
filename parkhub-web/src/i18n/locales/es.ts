@@ -484,6 +484,14 @@ export default {
         exportConfig: 'Exportar configuración',
         exportHint: 'Descargar el mapa de habilitación de módulos como JSON',
         status: { enabled: 'Habilitado', disabled: 'Deshabilitado', runtimeOff: 'Runtime off' },
+        toggle: {
+          enable: 'Habilitar',
+          disable: 'Deshabilitar',
+          notRuntimeToggleable: 'No conmutable en tiempo de ejecución',
+          success: 'Módulo {{name}} conmutado',
+          error: 'No se pudo conmutar {{name}}',
+          requiresReload: 'Recargar para aplicar',
+        },
         category: {
           core: 'Núcleo',
           booking: 'Reservas',
