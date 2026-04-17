@@ -372,10 +372,18 @@ pub use users::{
     get_user_preferences, update_current_user, update_user_preferences, user_stats,
 };
 
-/// User ID extracted from auth token
+/// User ID extracted from auth token.
+///
+/// When the request authenticated via an API key, `api_key_id` is set so
+/// downstream middleware (notably the per-identity rate limiter introduced
+/// in T-1743) can use the key id as the rate-limit bucket instead of the
+/// user id, giving each key its own quota.
 #[derive(Clone, Debug)]
 pub struct AuthUser {
     pub user_id: Uuid,
+    /// API key id when the request authenticated via `X-API-Key` header.
+    /// `None` for session/bearer/cookie auth.
+    pub api_key_id: Option<Uuid>,
 }
 
 /// Helper: verify the caller is an admin or superadmin.
@@ -2067,12 +2075,17 @@ async fn auth_middleware(
         .and_then(|h| h.to_str().ok())
     {
         let state_guard = state.read().await;
-        if let Some(user_id) = security::validate_api_key(&state_guard.db, api_key).await {
+        if let Some((user_id, api_key_id)) =
+            security::validate_api_key_detailed(&state_guard.db, api_key).await
+        {
             // Verify user is still active
             match state_guard.db.get_user(&user_id.to_string()).await {
                 Ok(Some(u)) if u.is_active => {
                     drop(state_guard);
-                    request.extensions_mut().insert(AuthUser { user_id });
+                    request.extensions_mut().insert(AuthUser {
+                        user_id,
+                        api_key_id: Some(api_key_id),
+                    });
                     return Ok(next.run(request).await);
                 }
                 _ => {
@@ -2188,6 +2201,7 @@ async fn auth_middleware(
     // Insert user info into request extensions
     request.extensions_mut().insert(AuthUser {
         user_id: session.user_id,
+        api_key_id: None,
     });
 
     Ok(next.run(request).await)

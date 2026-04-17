@@ -81,10 +81,18 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }  # updated from 8
 # === PHASE 2: Production Ready ===
 # JWT Authentication
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+async-trait = "0.1"  # erased async trait methods for RevocationStore
+
+# Optional Redis-backed revocation list (see feature `redis-revocation` below).
+# Gated behind an off-by-default feature so single-replica deploys keep the
+# zero-dep in-memory default.
+redis = { version = "1", default-features = false, features = ["tokio-comp", "connection-manager"], optional = true }
 
 # Rate limiting
 tower_governor = "0.8"  # updated from 0.4
 governor = "0.10"  # updated from 0.7
+# In-memory map for per-identity rate limiter store (keyed off user_id or api_key_id)
+dashmap = "6"
 
 # Metrics
 metrics = "0.24"
@@ -194,6 +202,12 @@ headless = ["full"]
 # When disabled, PARKHUB_DISABLE_RATE_LIMITS is ignored and its presence at
 # startup panics so a misconfigured production deployment fails loudly.
 e2e-bypass = []
+# Off by default: switches the JWT revocation list from an in-memory HashMap
+# (fine for single-replica) to a shared Redis backend (required for multi-
+# replica deploys so logouts and theft-response family revocations propagate).
+# When enabled, `PARKHUB_REDIS_URL` MUST be set at startup or the server panics
+# early. Default builds (single binary, no Redis) are unaffected.
+redis-revocation = ["dep:redis"]
 mod-bookings = []
 mod-vehicles = []
 mod-absences = []
