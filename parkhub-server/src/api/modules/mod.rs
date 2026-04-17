@@ -151,8 +151,7 @@ pub struct ConfigSchema {
     pub schema: serde_json::Value,
 }
 
-/// Runtime-serializable view of a [`registry::ModuleDef`] with owned
-/// strings.
+/// Runtime-serializable view of a [`ModuleDef`] with owned strings.
 ///
 /// Shape used by `GET /api/v1/modules`, `GET /api/v1/modules/{name}`
 /// and the `PATCH /api/v1/admin/modules/{name}` response body.
@@ -192,7 +191,7 @@ pub struct ModuleInfo {
     /// Parsed JSON Schema for the module's admin config editor.
     ///
     /// `Some(_)` when the module declared a literal `config_schema` in
-    /// its `ModuleDef` row; `None` otherwise. Present in
+    /// its [`ModuleDef`] row; `None` otherwise. Present in
     /// `/api/v1/modules` so the admin dashboard can decide whether to
     /// render an "Edit config" affordance without a second round trip.
     #[serde(skip_serializing_if = "Option::is_none")]
