@@ -1,0 +1,73 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+# PrometheusRule — golden-signal alerts for parkhub-server.
+#
+# Metric names match the Rust axum + metrics-exporter-prometheus
+# middleware (`http_requests_total`, `http_request_duration_seconds`)
+# and the background job recorder (`job_runs_total`). Alert labels
+# can be extended per-environment via
+# `monitoring.prometheusRule.alertLabels`.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "parkhub.fullname" . }}
+  labels:
+    {{- include "parkhub.labels" . | nindent 4 }}
+    {{- with .Values.monitoring.prometheusRule.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: parkhub.rules
+      rules:
+        - alert: ParkhubHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+              /
+            sum(rate(http_requests_total[5m])) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+            {{- with .Values.monitoring.prometheusRule.alertLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          annotations:
+            summary: "ParkHub 5xx error ratio above 5%"
+            description: "More than 5% of HTTP responses are 5xx over the last 5m."
+        - alert: ParkhubHighLatencyP99
+          expr: |
+            histogram_quantile(
+              0.99,
+              sum by (le) (rate(http_request_duration_seconds_bucket[5m]))
+            ) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            {{- with .Values.monitoring.prometheusRule.alertLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          annotations:
+            summary: "ParkHub p99 latency above 500ms"
+            description: "p99 HTTP latency exceeded 500ms for 10m."
+        - alert: ParkhubJobFailureRate
+          expr: rate(job_runs_total{success="false"}[15m]) > 0.1
+          for: 15m
+          labels:
+            severity: warning
+            {{- with .Values.monitoring.prometheusRule.alertLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          annotations:
+            summary: "ParkHub background job failure rate elevated"
+            description: "More than 0.1 job failures/sec over the last 15m (parkhub_job_runs_total)."
+        - alert: ParkhubServiceDown
+          expr: up{job=~"parkhub.*"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            {{- with .Values.monitoring.prometheusRule.alertLabels }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          annotations:
+            summary: "ParkHub target down"
+            description: "Prometheus has been unable to scrape the ParkHub target for 5m."
+{{- end }}
