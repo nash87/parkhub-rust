@@ -15,7 +15,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Building, Palette, Bell, Car, Keyboard, Shield, Coins, ChartLine, FileText, ArrowRight } from '@phosphor-icons/react';
+import { User, Building, Bell, Car, Keyboard, Shield, Coins, ChartLine, FileText, ArrowRight } from '@phosphor-icons/react';
 import {
   SCard,
   SRow,
