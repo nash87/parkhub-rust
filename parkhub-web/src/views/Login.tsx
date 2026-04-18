@@ -114,7 +114,7 @@ export function LoginPage() {
           {/* Mobile back link */}
           <Link
             to="/welcome"
-            className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors lg:hidden"
+            className="inline-flex items-center gap-2 text-sm text-surface-600 hover:text-primary-600 mb-8 transition-colors lg:hidden"
           >
             <ArrowLeft weight="bold" className="w-4 h-4" />
             {t('auth.back')}
@@ -131,7 +131,7 @@ export function LoginPage() {
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '-0.02em' }}>
             {t('auth.login')}
           </h1>
-          <p className="text-surface-500 dark:text-surface-400 text-sm mb-8">
+          <p className="text-surface-600 dark:text-surface-300 text-sm mb-8">
             {t('auth.loginSubtitle')}
           </p>
 
@@ -146,7 +146,7 @@ export function LoginPage() {
             type="button"
             id="demo-autofill"
             onClick={autofillDemo}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 text-sm text-primary-700 dark:text-primary-300 mb-6 w-full text-left cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-950/50 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-950/30 border border-primary-200 dark:border-primary-800 text-sm text-primary-800 dark:text-primary-300 mb-6 w-full text-left cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-950/50 transition-colors"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
             {t('auth.demoHint')}
@@ -169,7 +169,7 @@ export function LoginPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-surface-700 dark:text-surface-300">
                   {t('auth.password')}
                 </label>
-                <Link to="/forgot-password" className="text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                <Link to="/forgot-password" className="text-xs text-primary-700 dark:text-primary-400 hover:underline">
                   {t('auth.forgotPassword')}
                 </Link>
               </div>
@@ -219,14 +219,14 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-surface-500 dark:text-surface-400 mt-6">
+          <p className="text-center text-sm text-surface-600 dark:text-surface-300 mt-6">
             {t('auth.noAccount')}{' '}
-            <Link to="/register" className="text-primary-600 dark:text-primary-400 font-medium hover:underline">
+            <Link to="/register" className="text-primary-700 dark:text-primary-400 font-medium hover:underline">
               {t('auth.signUp')}
             </Link>
           </p>
 
-          <p className="text-center text-xs text-surface-500 dark:text-surface-400 mt-8">
+          <p className="text-center text-xs text-surface-600 dark:text-surface-300 mt-8">
             ParkHub v{APP_VERSION}
           </p>
         </motion.div>

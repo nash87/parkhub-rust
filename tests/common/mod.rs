@@ -75,21 +75,32 @@ pub async fn start_test_server() -> TestServer {
     let binary = server_binary();
     let config_path = data_dir.join("config.toml");
 
-    // Phase 1: start server so it creates its default config.toml
-    let mut child = Command::new(&binary)
-        .args([
-            "--headless",
-            "--unattended",
-            "--port",
-            &port.to_string(),
-            "--data-dir",
-            &data_dir.to_string_lossy(),
-        ])
-        .env("DEMO_MODE", "true")
-        .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
-        .env("RUST_LOG", "warn")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
+    // Phase 1: start server so it creates its default config.toml. We only
+    // forward PARKHUB_DISABLE_RATE_LIMITS when the parent already has it —
+    // the server's `rate_limit::bypass_requested` panics on startup if the
+    // env is set without the `e2e-bypass` cargo feature. The integration
+    // pipeline builds with `headless` alone (no `e2e-bypass`), so setting
+    // it unconditionally here would crash every integration-test server.
+    // Simulation + visual workflows set the env themselves AND compile the
+    // binary with `e2e-bypass`, so the forward is correct in those cases.
+    let mut cmd = Command::new(&binary);
+    cmd.args([
+        "--headless",
+        "--unattended",
+        "--port",
+        &port.to_string(),
+        "--data-dir",
+        &data_dir.to_string_lossy(),
+    ])
+    .env("DEMO_MODE", "true")
+    .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
+    .env("RUST_LOG", "warn")
+    .stdout(std::process::Stdio::null())
+    .stderr(std::process::Stdio::null());
+    if std::env::var("PARKHUB_DISABLE_RATE_LIMITS").is_ok() {
+        cmd.env("PARKHUB_DISABLE_RATE_LIMITS", "true");
+    }
+    let mut child = cmd
         .spawn()
         .unwrap_or_else(|e| panic!("Failed to start server at {}: {}", binary.display(), e));
 
@@ -99,12 +110,17 @@ pub async fn start_test_server() -> TestServer {
         .build()
         .expect("build reqwest client");
 
-    // Wait for first start to create config and become healthy
-    let deadline = Instant::now() + Duration::from_secs(15);
+    // Wait for first start to create config and become healthy. 180s covers
+    // GitHub-hosted runners where 4 parallel cargo-test threads each spawn
+    // their own server simultaneously; under CPU contention a cold binary
+    // spawn + migrations + port bind can exceed 60s even though local runs
+    // settle in <2s. Tests that hit a genuine hang still fail promptly via
+    // their per-request 10s reqwest timeout.
+    let deadline = Instant::now() + Duration::from_secs(180);
     loop {
         assert!(
             Instant::now() <= deadline,
-            "Server did not become healthy within 15 seconds on port {port}"
+            "Server did not become healthy within 180 seconds on port {port}"
         );
         match client.get(format!("{url}/health")).send().await {
             Ok(resp) if resp.status().is_success() => break,
@@ -125,31 +141,36 @@ pub async fn start_test_server() -> TestServer {
         let _ = child.kill();
         let _ = child.wait();
 
-        let child2 = Command::new(&binary)
-            .args([
-                "--headless",
-                "--unattended",
-                "--port",
-                &port.to_string(),
-                "--data-dir",
-                &data_dir.to_string_lossy(),
-            ])
-            .env("DEMO_MODE", "true")
-            .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
-            .env("RUST_LOG", "warn")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+        // Phase-2 restart: same conditional-forward as phase-1.
+        let mut cmd2 = Command::new(&binary);
+        cmd2.args([
+            "--headless",
+            "--unattended",
+            "--port",
+            &port.to_string(),
+            "--data-dir",
+            &data_dir.to_string_lossy(),
+        ])
+        .env("DEMO_MODE", "true")
+        .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
+        .env("RUST_LOG", "warn")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+        if std::env::var("PARKHUB_DISABLE_RATE_LIMITS").is_ok() {
+            cmd2.env("PARKHUB_DISABLE_RATE_LIMITS", "true");
+        }
+        let child2 = cmd2
             .spawn()
             .unwrap_or_else(|e| panic!("Failed to restart server: {}", e));
 
         child = child2;
 
-        // Wait for restart
-        let deadline = Instant::now() + Duration::from_secs(15);
+        // Wait for restart (matches phase-1 timeout; same CI contention rules)
+        let deadline = Instant::now() + Duration::from_secs(180);
         loop {
             assert!(
                 Instant::now() <= deadline,
-                "Server did not restart within 15 seconds on port {port}"
+                "Server did not restart within 180 seconds on port {port}"
             );
             match client.get(format!("{url}/health")).send().await {
                 Ok(resp) if resp.status().is_success() => break,
