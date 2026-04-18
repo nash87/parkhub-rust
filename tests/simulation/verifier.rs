@@ -159,8 +159,12 @@ async fn check_audit_trail(
     results: &InjectionResults,
 ) -> (usize, bool) {
     // Query with a large page size so total reflects the whole simulation.
-    let (status, body) =
-        auth_get(srv, &ctx.admin_token, "/api/v1/admin/audit-log?per_page=10000").await;
+    let (status, body) = auth_get(
+        srv,
+        &ctx.admin_token,
+        "/api/v1/admin/audit-log?per_page=10000",
+    )
+    .await;
 
     if status != 200 {
         // Audit log may not be available
