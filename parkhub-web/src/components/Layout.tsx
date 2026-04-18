@@ -14,6 +14,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { CommandPalette } from './CommandPalette';
 import { NotificationCenter } from './NotificationCenter';
 import { ShortcutsHelp } from './ShortcutsHelp';
+import { Assistant } from './Assistant';
 import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
@@ -325,6 +326,7 @@ export function Layout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [themeSwitcherOpen, setThemeSwitcherOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [openSections, setOpenSections] = useState<Record<NavSection['id'], boolean>>(
     () => readInitialSectionState(),
@@ -350,10 +352,15 @@ export function Layout() {
     () => setShortcutsHelpOpen(prev => !prev),
     [],
   );
+  const toggleAssistant = useCallback(
+    () => setAssistantOpen(prev => !prev),
+    [],
+  );
 
   useKeyboardShortcuts({
     onToggleCommandPalette: toggleCommandPalette,
     onToggleShortcutsHelp: toggleShortcutsHelp,
+    onToggleAssistant: toggleAssistant,
   });
   usePageTitle();
 
@@ -553,6 +560,7 @@ export function Layout() {
 
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
       <ShortcutsHelp open={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
+      <Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <ThemeSwitcherFab onClick={() => setThemeSwitcherOpen(true)} />
       <ThemeSwitcher open={themeSwitcherOpen} onClose={() => setThemeSwitcherOpen(false)} />
     </div>

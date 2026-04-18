@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export function useKeyboardShortcuts({
   onToggleCommandPalette,
   onToggleShortcutsHelp,
+  onToggleAssistant,
 }: {
   onToggleCommandPalette: () => void;
   /**
@@ -11,6 +12,10 @@ export function useKeyboardShortcuts({
    * Kept optional so Layout can opt-in without forcing older callers to pass it.
    */
   onToggleShortcutsHelp?: () => void;
+  /**
+   * Optional. Ctrl/Cmd + . toggles the Assistant side panel (v3 design).
+   */
+  onToggleAssistant?: () => void;
 }) {
   const navigate = useNavigate();
 
@@ -38,9 +43,16 @@ export function useKeyboardShortcuts({
         onToggleShortcutsHelp();
         return;
       }
+
+      // Ctrl/Cmd+. → toggle Assistant side panel (v3 design addition).
+      if (mod && e.key === '.' && onToggleAssistant) {
+        e.preventDefault();
+        onToggleAssistant();
+        return;
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, onToggleCommandPalette, onToggleShortcutsHelp]);
+  }, [navigate, onToggleCommandPalette, onToggleShortcutsHelp, onToggleAssistant]);
 }
