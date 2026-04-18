@@ -1,24 +1,48 @@
-import { useState } from 'react';
+import { useActionState, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { CarSimple, ArrowLeft, SpinnerGap, CheckCircle } from '@phosphor-icons/react';
 import { api } from '../api/client';
 
+/**
+ * Forgot-password flow.
+ *
+ * Uses React 19's `useActionState` + form `action` attribute instead of the
+ * classic `useState` + `onSubmit` + manual loading-boolean pattern. The
+ * third tuple entry (`isPending`) replaces the hand-rolled loading flag;
+ * the action swallows preventDefault and the returned state drives the
+ * success panel.
+ *
+ * Anti-enumeration: we always show the success panel regardless of whether
+ * the email exists — the backend does the same, and the action mirrors
+ * that contract so the UI never branches on the result.
+ */
+
+interface ForgotPasswordState {
+  sent: boolean;
+}
+
+const INITIAL_STATE: ForgotPasswordState = { sent: false };
+
+async function forgotPasswordAction(
+  _prev: ForgotPasswordState,
+  formData: FormData,
+): Promise<ForgotPasswordState> {
+  const email = String(formData.get('email') ?? '').trim();
+  if (!email) return { sent: false };
+  // Errors are intentionally swallowed — the backend returns 200 regardless
+  // so we don't leak account existence; mirror that at the UI.
+  await api.forgotPassword(email).catch(() => undefined);
+  return { sent: true };
+}
+
 export function ForgotPasswordPage() {
   const { t } = useTranslation();
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    await api.forgotPassword(email);
-    // Always show success (anti-enumeration — backend does the same)
-    setSent(true);
-    setLoading(false);
-  }
+  const [state, formAction, isPending] = useActionState(forgotPasswordAction, INITIAL_STATE);
+  // Tracked locally so the submit button can disable while the input is
+  // empty (pure-uncontrolled inputs don't expose emptiness to React).
+  const [emailDraft, setEmailDraft] = useState('');
 
   return (
     <main className="min-h-dvh bg-white dark:bg-surface-950 flex items-center justify-center px-6 py-12">
@@ -42,7 +66,7 @@ export function ForgotPasswordPage() {
           <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
         </div>
 
-        {sent ? (
+        {state.sent ? (
           <div className="space-y-4" role="status">
             <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
               <CheckCircle weight="fill" className="w-6 h-6" />
@@ -64,16 +88,17 @@ export function ForgotPasswordPage() {
               {t('forgotPassword.subtitle')}
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form action={formAction} className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
                   {t('forgotPassword.emailLabel')}
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  value={emailDraft}
+                  onChange={(e) => setEmailDraft(e.target.value)}
                   placeholder={t('auth.email')}
                   autoComplete="email"
                   className="input"
@@ -83,10 +108,10 @@ export function ForgotPasswordPage() {
 
               <button
                 type="submit"
-                disabled={loading || !email}
+                disabled={isPending || !emailDraft.trim()}
                 className="btn btn-primary w-full py-2.5 disabled:opacity-50"
               >
-                {loading ? (
+                {isPending ? (
                   <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('forgotPassword.sending')}</>
                 ) : (
                   t('forgotPassword.sendResetLink')
