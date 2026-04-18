@@ -122,12 +122,10 @@ function TweaksPanel({ visible, state, setState }) {
           </div>
         </div>
 
-        <div>
-          <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Theme</label>
-          <select value={state.theme} onChange={(e) => setState({ theme: e.target.value })} className="input" style={{ marginTop: 6, padding: '6px 8px', fontSize: 12 }}>
-            {themes.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
+        {/* Theme dropdown disabled for now — tokens.css defines [data-theme]
+            (light/dark) and [data-usecase] (5 palettes) but no [data-design-theme]
+            overrides, so picking 'bento' / 'glass' / 'brutalist' etc. would be a
+            no-op. Re-enable once per-theme token overrides land in tokens.css. */}
       </div>
     </div>
   );
@@ -146,18 +144,11 @@ function App() {
     document.documentElement.setAttribute('data-design-theme', state.theme);
   }, [state.dark, state.useCase, state.theme]);
 
-  // Edit-mode protocol
-  React.useEffect(() => {
-    const handler = (e) => {
-      if (e.data?.type === '__activate_edit_mode') setTweaksOn(true);
-      if (e.data?.type === '__deactivate_edit_mode') setTweaksOn(false);
-    };
-    window.addEventListener('message', handler);
-    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
-    return () => window.removeEventListener('message', handler);
-  }, []);
-
-  const screen = state.screen || 'dashboard';
+  // Clamp persisted screen to a known key so a stale or tampered-with
+  // localStorage entry can't crash the page (titleMap[screen] would
+  // otherwise be undefined, breaking the TopBar dereference on line 197).
+  const validScreens = new Set(SCREENS.map(s => s.k));
+  const screen = validScreens.has(state.screen) ? state.screen : 'dashboard';
 
   // Landing is a different layout — no app shell
   if (screen === 'landing') {
