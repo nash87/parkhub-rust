@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-usecase="company">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ParkHub — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design/tokens.css"/>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="design/icons.jsx"></script>
+<script type="text/babel" src="design/shell.jsx"></script>
+<script type="text/babel" src="design/dashboard.jsx"></script>
+<script type="text/babel" src="design/book.jsx"></script>
+<script type="text/babel" src="design/pass.jsx"></script>
+<script type="text/babel" src="design/admin.jsx"></script>
+<script type="text/babel" src="design/showcase.jsx"></script>
+<script type="text/babel" src="design/landing.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "screen": "dashboard",
+  "theme": "classic",
+  "useCase": "company",
+  "dark": false,
+  "edition": "rust"
+}/*EDITMODE-END*/;
+
+const SCREENS = [
+  { k: 'landing',   l: 'Marketing landing', icon: 'rocket' },
+  { k: 'dashboard', l: 'Dashboard',         icon: 'home' },
+  { k: 'book',      l: 'Book a spot',       icon: 'calendar-plus' },
+  { k: 'pass',      l: 'Parking pass',      icon: 'qr' },
+  { k: 'admin',     l: 'Admin · lot editor',icon: 'grid' },
+  { k: 'theme',     l: 'Theme & use-case',  icon: 'sparkle' },
+];
+
+function useLocalState(key, initial) {
+  const [v, setV] = React.useState(() => {
+    try { const s = localStorage.getItem(key); if (s) return JSON.parse(s); } catch(e){}
+    return initial;
+  });
+  React.useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(v)); } catch(e){}
+  }, [key, v]);
+  return [v, setV];
+}
+
+function TweaksPanel({ visible, state, setState }) {
+  if (!visible) return null;
+  const themes = ['classic','glass','bento','brutalist','neon','warm','liquid','mono','ocean','forest','synthwave','zen'];
+  const useCases = [
+    { k:'company', l:'Company', c:'oklch(0.6 0.15 175)' },
+    { k:'residential', l:'Residential', c:'oklch(0.6 0.15 155)' },
+    { k:'shared', l:'Shared', c:'oklch(0.6 0.15 290)' },
+    { k:'rental', l:'Rental', c:'oklch(0.6 0.15 260)' },
+    { k:'personal', l:'Personal', c:'oklch(0.6 0.2 12)' },
+  ];
+  return (
+    <div style={{
+      position: 'fixed', bottom: 16, right: 16, zIndex: 1000,
+      width: 280, padding: 14, borderRadius: 14,
+      background: 'var(--theme-card-bg)', border: '1px solid var(--theme-border)',
+      boxShadow: '0 20px 40px -12px rgba(0,0,0,0.25)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Tweaks</div>
+        <span style={{ fontSize: 10, color: 'var(--theme-text-muted)', fontWeight: 600 }}>Live</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Use case</label>
+          <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+            {useCases.map(u => (
+              <button key={u.k} onClick={() => setState({ useCase: u.k })} title={u.l}
+                style={{
+                  width: 26, height: 26, borderRadius: '50%', background: u.c,
+                  border: state.useCase === u.k ? '2px solid var(--theme-text)' : '2px solid transparent',
+                  boxShadow: state.useCase === u.k ? '0 0 0 2px var(--theme-card-bg), 0 0 0 3px var(--theme-text)' : 'none',
+                }}/>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dark mode</label>
+          <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+            {[{v:false,l:'Light',i:'sun'},{v:true,l:'Dark',i:'moon'}].map(o => (
+              <button key={String(o.v)} onClick={() => setState({ dark: o.v })} style={{
+                flex: 1, padding: '6px', fontSize: 11, fontWeight: 600,
+                borderRadius: 6, border: '1px solid', borderColor: state.dark === o.v ? 'var(--color-primary-500)' : 'var(--theme-border)',
+                background: state.dark === o.v ? 'color-mix(in oklch, var(--color-primary-500) 8%, transparent)' : 'transparent',
+                color: state.dark === o.v ? 'var(--color-primary-700)' : 'var(--theme-text)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+              }}><Icon name={o.i} size={11}/>{o.l}</button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Edition</label>
+          <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+            {['rust','php'].map(e => (
+              <button key={e} onClick={() => setState({ edition: e })} style={{
+                flex: 1, padding: '6px', fontSize: 11, fontWeight: 700,
+                borderRadius: 6, border: '1px solid',
+                borderColor: state.edition === e ? 'var(--color-primary-500)' : 'var(--theme-border)',
+                background: state.edition === e ? 'color-mix(in oklch, var(--color-primary-500) 8%, transparent)' : 'transparent',
+                color: state.edition === e ? 'var(--color-primary-700)' : 'var(--theme-text)',
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+              }}>{e}</button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--theme-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Theme</label>
+          <select value={state.theme} onChange={(e) => setState({ theme: e.target.value })} className="input" style={{ marginTop: 6, padding: '6px 8px', fontSize: 12 }}>
+            {themes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [state, setStateRaw] = useLocalState('parkhub-tweaks', TWEAK_DEFAULTS);
+  const [collapsed, setCollapsed] = React.useState(false);
+  const [tweaksOn, setTweaksOn] = React.useState(true);
+
+  const setState = (patch) => setStateRaw(s => ({ ...s, ...patch }));
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', state.dark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-usecase', state.useCase);
+    document.documentElement.setAttribute('data-design-theme', state.theme);
+  }, [state.dark, state.useCase, state.theme]);
+
+  // Edit-mode protocol
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setTweaksOn(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOn(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const screen = state.screen || 'dashboard';
+
+  // Landing is a different layout — no app shell
+  if (screen === 'landing') {
+    return <>
+      <ScreenPicker screen={screen} onPick={(k) => setState({ screen: k })} />
+      <Landing />
+      <TweaksPanel visible={tweaksOn} state={state} setState={setState} />
+    </>;
+  }
+
+  // Map sidebar clicks to screens
+  const sidebarToScreen = {
+    'dashboard': 'dashboard',
+    'book': 'book',
+    'checkin': 'pass',
+    'admin-lots': 'admin',
+  };
+  const sidebarActive = Object.entries(sidebarToScreen).find(([_, s]) => s === screen)?.[0] || 'dashboard';
+
+  const titleMap = {
+    dashboard: { t: 'Dashboard', s: 'Your parking overview · synced across devices', bc: ['ParkHub', 'Overview'] },
+    book: { t: 'Book a spot', s: 'Pick a lot and slot — confirmed instantly', bc: ['ParkHub', 'Bookings', 'New'] },
+    pass: { t: 'Parking pass', s: 'Your active QR pass and check-in timeline', bc: ['ParkHub', 'Active', 'L2-14'] },
+    admin: { t: 'Lot editor', s: 'Configure lots, floors, zones and slots', bc: ['Admin', 'Infrastructure', 'Lots'] },
+    theme: { t: 'Design system', s: 'Themes, palettes, and component samples', bc: ['Docs', 'Design'] },
+  };
+  const info = titleMap[screen];
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      <Sidebar active={sidebarActive}
+               onNav={(k) => setState({ screen: sidebarToScreen[k] || 'dashboard' })}
+               collapsed={collapsed}
+               onToggle={() => setCollapsed(c => !c)} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <TopBar title={info.t} subtitle={info.s} breadcrumbs={info.bc}
+                edition={state.edition} onEditionChange={(e) => setState({ edition: e })}
+                onCmdK={() => {}}/>
+        <main style={{ flex: 1, overflow: 'auto', background: 'var(--theme-bg)' }} data-screen-label={screen}>
+          {screen === 'dashboard' && <Dashboard edition={state.edition} />}
+          {screen === 'book' && <Book />}
+          {screen === 'pass' && <ParkingPass />}
+          {screen === 'admin' && <AdminLots />}
+          {screen === 'theme' && (
+            <ThemeShowcase
+              currentTheme={state.theme}
+              currentUseCase={state.useCase}
+              onThemeChange={(t) => setState({ theme: t })}
+              onUseCaseChange={(u) => setState({ useCase: u })} />
+          )}
+        </main>
+      </div>
+      <ScreenPicker screen={screen} onPick={(k) => setState({ screen: k })} />
+      <TweaksPanel visible={tweaksOn} state={state} setState={setState} />
+    </div>
+  );
+}
+
+function ScreenPicker({ screen, onPick }) {
+  // Floating top-center screen switcher so users can hop between designs
+  return (
+    <div style={{
+      position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 1000, display: 'flex', gap: 4, padding: 4,
+      background: 'var(--theme-card-bg)', border: '1px solid var(--theme-border)',
+      borderRadius: 12, boxShadow: '0 8px 20px -6px rgba(0,0,0,0.12)',
+    }}>
+      {SCREENS.map(s => (
+        <button key={s.k} onClick={() => onPick(s.k)} title={s.l}
+          style={{
+            padding: '6px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+            background: screen === s.k ? 'var(--color-primary-600)' : 'transparent',
+            color: screen === s.k ? '#fff' : 'var(--theme-text-muted)',
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+          }}>
+          <Icon name={s.icon} size={12}/>{s.l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
