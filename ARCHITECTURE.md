@@ -29,10 +29,10 @@ parkhub-rust/
 │
 ├── parkhub-server/            # HTTP API server crate
 │   └── src/
-│       ├── main.rs            # Thin entry point — bootstrap helpers extracted into dedicated modules (T-1748)
+│       ├── main.rs            # Thin entry point — bootstrap helpers extracted into dedicated modules
 │       ├── api/
-│       │   ├── mod.rs         # Router composition — `create_router` decomposed into per-group helpers (T-1741)
-│       │   ├── modules/       # 72-module registry (T-1748 split of the previously 3066-LoC modules.rs):
+│       │   ├── mod.rs         # Router composition — `create_router` decomposed into per-group helpers
+│       │   ├── modules/       # 72-module registry (split of the previously 3066-LoC modules.rs):
 │       │   │                  #   registry.rs — declarative ModuleDef table (single source of truth)
 │       │   │                  #   schemas.rs  — JSON Schema 2020-12 literals for 5 configurable modules
 │       │   │                  #   handlers.rs — admin HTTP handlers (PATCH toggle + config)
@@ -42,15 +42,15 @@ parkhub-rust/
 │       │   ├── bookings.rs    # CRUD + quick-book, guest booking, swap
 │       │   ├── lots.rs        # Parking lot & slot management
 │       │   ├── credits.rs     # Credit system (monthly quota, grants, refills)
-│       │   ├── admin.rs       # Admin user/booking management — cross-tenant write guards on user updates (T-1737)
+│       │   ├── admin.rs       # Admin user/booking management — cross-tenant write guards on user updates
 │       │   ├── export.rs      # CSV export (bookings, users)
 │       │   ├── favorites.rs   # Favorite slot bookmarking
 │       │   ├── push.rs        # Web Push (VAPID) subscriptions + dispatch
 │       │   ├── setup.rs       # First-run setup wizard endpoints
 │       │   ├── webhooks.rs    # Webhook CRUD + test delivery
 │       │   └── zones.rs       # Parking zone management
-│       ├── db/                # redb database layer (T-1740 split of the previously 4528-LoC db.rs into domain-oriented sub-modules: users, bookings, lots, slots, vehicles, audit, sessions, settings, …) with AES-256-GCM encryption
-│       ├── jwt.rs             # JWT access/refresh tokens with family rotation + optional Redis revocation (T-1742)
+│       ├── db/                # redb database layer (split of the previously 4528-LoC db.rs into domain-oriented sub-modules: users, bookings, lots, slots, vehicles, audit, sessions, settings, …) with AES-256-GCM encryption
+│       ├── jwt.rs             # JWT access/refresh tokens with family rotation + optional Redis revocation
 │       ├── audit.rs           # Audit log recording
 │       ├── config.rs          # TOML-based server configuration
 │       ├── demo.rs            # Demo mode: collaborative reset voting, auto-reset timer
@@ -483,8 +483,8 @@ ParkHub ships **72 modules** organized across **11 categories** (Core, Booking, 
 **Runtime surfaces:**
 
 - **`GET /api/v1/modules`** — full registry envelope `{modules, module_info}` consumed by the shared React frontend.
-- **`PATCH /api/v1/admin/modules/{name}`** — runtime enable/disable for the 15 safe-to-toggle modules (v4.13.0, T-1720 v2). Security-sensitive modules (`auth`, `payments`, `rbac`, `webhooks`, `audit-export`, `multi-tenant`, `notifications`) keep `runtime_toggleable = false` and can only change via a rebuild.
-- **`GET|PATCH /api/v1/admin/modules/{name}/config`** — JSON Schema 2020-12 editor for the 5 modules that ship `config_schema`: `themes`, `announcements`, `notifications`, `email-templates`, `widgets` (v4.13.0, T-1720 v3). Validated server-side via `jsonschema` 0.35; invalid payloads return `422 CONFIG_VALIDATION_FAILED` with structured `details`.
+- **`PATCH /api/v1/admin/modules/{name}`** — runtime enable/disable for the 15 safe-to-toggle modules (v4.13.0). Security-sensitive modules (`auth`, `payments`, `rbac`, `webhooks`, `audit-export`, `multi-tenant`, `notifications`) keep `runtime_toggleable = false` and can only change via a rebuild.
+- **`GET|PATCH /api/v1/admin/modules/{name}/config`** — JSON Schema 2020-12 editor for the 5 modules that ship `config_schema`: `themes`, `announcements`, `notifications`, `email-templates`, `widgets` (v4.13.0). Validated server-side via `jsonschema` 0.35; invalid payloads return `422 CONFIG_VALIDATION_FAILED` with structured `details`.
 - **Admin Dashboard** — `/admin/modules`: category-grouped UI with search, status pills (green/amber/gray), per-module runtime toggle, and per-module "Configure" modal for schema-bearing rows.
 - **Command Palette** — `Cmd+K` / `Ctrl+K` / `/` auto-seeds "Go to…" entries from every active module with a `ui_route`.
 - **Audit log** — every toggle and every config write emits an `AuditLog` row (action, actor, module slug, before/after, timestamp, IP).

@@ -41,11 +41,11 @@
 
 | Feature | Description |
 |---------|-------------|
-| **Modular UX Platform (T-1720)** | 72-module registry with admin dashboard at `/admin/modules`, runtime enable/disable toggle for safe modules, per-module JSON Schema config editor, and Command Palette (`Cmd+K` / `Ctrl+K` / `/`). See [docs/FEATURES.md § Modular UX Platform](docs/FEATURES.md#4-modular-ux-platform) |
-| **Backend refactors (T-1740, T-1741, T-1748)** | `db.rs` (4528 LOC), `api/mod.rs` router, and `api/modules.rs` (3066 LOC) split into focused sub-modules; `main.rs` bootstrap helpers extracted for testability |
-| **Security hardening (T-1737, T-1744)** | Cross-tenant admin write guards on user updates; async lock scopes tightened under load |
-| **Testing depth (T-1734 finale)** | `cargo-fuzz` harnesses for JWT + HMAC (nightly), `proptest` on `parkhub-common` validators, `cargo-mutants` weekly, `insta` snapshot tests |
-| **OpenAPI coverage closed (T-1739)** | Pass 1 + pass 2 wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`; spec at [`docs/openapi/rust.json`](docs/openapi/rust.json) now exposes **229 paths** and regenerates on every schema change |
+| **Modular UX Platform** | 72-module registry with admin dashboard at `/admin/modules`, runtime enable/disable toggle for safe modules, per-module JSON Schema config editor, and Command Palette (`Cmd+K` / `Ctrl+K` / `/`). See [docs/FEATURES.md § Modular UX Platform](docs/FEATURES.md#4-modular-ux-platform) |
+| **Backend refactors** | `db.rs` (4528 LOC), `api/mod.rs` router, and `api/modules.rs` (3066 LOC) split into focused sub-modules; `main.rs` bootstrap helpers extracted for testability |
+| **Security hardening** | Cross-tenant admin write guards on user updates; async lock scopes tightened under load |
+| **Testing depth** | `cargo-fuzz` harnesses for JWT + HMAC (nightly), `proptest` on `parkhub-common` validators, `cargo-mutants` weekly, `insta` snapshot tests |
+| **OpenAPI coverage closed** | Pass 1 + pass 2 wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`; spec at [`docs/openapi/rust.json`](docs/openapi/rust.json) now exposes **229 paths** and regenerates on every schema change |
 | **Runtime toolchain refresh** | Rust builder bumped to `rust:1.95-slim`; distroless runtime base pinned to `cc-debian13@sha256:56aaf20…` |
 
 ---
@@ -301,7 +301,7 @@ Supplementary safety nets (all CI-enforced):
 
 ## 📖 API Documentation
 
-Interactive API docs at `/swagger-ui` when the server is running. The full OpenAPI 3.0 spec — snapshotted at [`docs/openapi/rust.json`](docs/openapi/rust.json) and regenerated on every schema change — covers **229 paths** and 280 documented operations across auth, bookings, lots, vehicles, admin, modules, GDPR, and more. A CI drift gate (`make drift`) blocks any handler change that forgets to update the spec. T-1739 passes 1 + 2 landed in v4.13.0 and wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`.
+Interactive API docs at `/swagger-ui` when the server is running. The full OpenAPI 3.0 spec — snapshotted at [`docs/openapi/rust.json`](docs/openapi/rust.json) and regenerated on every schema change — covers **229 paths** and 280 documented operations across auth, bookings, lots, vehicles, admin, modules, GDPR, and more. A CI drift gate (`make drift`) blocks any handler change that forgets to update the spec. The OpenAPI coverage work landed in v4.13.0 and wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`.
 
 **[Live API Docs →](https://parkhub-rust-demo.onrender.com/swagger-ui)**
 

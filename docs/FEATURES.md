@@ -80,7 +80,7 @@ ParkHub is designed to be embedded, extended, and automated. Every feature expos
 
 ### REST API — 229 Documented Paths
 
-All endpoints are documented in [API.md](API.md), snapshotted at [`docs/openapi/rust.json`](openapi/rust.json), and exposed interactively at `/swagger-ui` (OpenAPI 3.0). T-1739 passes 1 + 2 wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`; a CI drift gate regenerates the spec on every schema change. The API follows a standard JSON envelope:
+All endpoints are documented in [API.md](API.md), snapshotted at [`docs/openapi/rust.json`](openapi/rust.json), and exposed interactively at `/swagger-ui` (OpenAPI 3.0). The OpenAPI coverage work (passes 1 + 2) wired 280 of 282 annotated handlers (99.3 %) into `ApiDoc`; a CI drift gate regenerates the spec on every schema change. The API follows a standard JSON envelope:
 
 ```json
 {
@@ -264,7 +264,7 @@ ParkHub is audited for GDPR/DSGVO, UK GDPR, CCPA, nDSG, and TTDSG.
 
 ## 4. Modular UX Platform
 
-*Added in v4.13.0 (T-1720 v1 + v2 + v3).*
+*Added in v4.13.0 (v1 + v2 + v3).*
 
 Every compiled-in feature is a first-class **module**. The registry, admin dashboard, and command palette turn ParkHub from a fixed binary into a configurable product surface — operators can see what's compiled in, flip safe modules on and off, and tune per-module settings without a rebuild.
 

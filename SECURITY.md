@@ -106,7 +106,7 @@ Researchers are credited in release notes unless anonymity is requested.
 
 The bundled Helm chart (`helm/parkhub/`) ships with the full [Pod Security
 Standards **restricted**](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted)
-profile, default on (T-1746):
+profile, default on:
 
 - `runAsNonRoot: true`, `runAsUser: 1000`
 - `allowPrivilegeEscalation: false`

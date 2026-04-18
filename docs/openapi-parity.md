@@ -121,13 +121,11 @@ never appear in a real drift report.
 
 ## Open follow-up tasks
 
-- **T-1726a**: CI job that dumps both specs and runs `diff-openapi.sh`.
-- **T-1726b**: Port the ~80 PHP-only endpoints to Rust (or classify them
+- **CI drift gate**: CI job that dumps both specs and runs `diff-openapi.sh`.
+- **Port PHP-only endpoints**: Port the ~80 PHP-only endpoints to Rust (or classify them
   as PHP-only in the drift allow-list).
-- **T-1726c**: Annotate ~80 Rust-only endpoints in Scramble so the PHP
+- **Annotate Rust-only endpoints**: Annotate ~80 Rust-only endpoints in Scramble so the PHP
   spec reflects them, or port to PHP.
-- **T-1726d**: Publish a canonical `docs/api/openapi.json` derived from
+- **Canonical spec**: Publish a canonical `docs/api/openapi.json` derived from
   Rust (since `utoipa` is the hand-curated source of truth) and make
   Scramble drift-test against it.
-
-Tracked as children of T-1726 in the fop task board.

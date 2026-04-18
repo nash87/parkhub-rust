@@ -1501,7 +1501,7 @@ Response:
 
 ## Modules
 
-*Added in v4.13.0 (T-1720 v1 + v2 + v3).*
+*Added in v4.13.0 (v1 + v2 + v3).*
 
 The Modular UX platform exposes the full compiled-in module registry over REST. See [FEATURES.md § Modular UX Platform](FEATURES.md#4-modular-ux-platform) for the product overview, and the OpenAPI snapshot at [`docs/openapi/rust.json`](openapi/rust.json) for the canonical schema.
 
