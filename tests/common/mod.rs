@@ -75,22 +75,32 @@ pub async fn start_test_server() -> TestServer {
     let binary = server_binary();
     let config_path = data_dir.join("config.toml");
 
-    // Phase 1: start server so it creates its default config.toml
-    let mut child = Command::new(&binary)
-        .args([
-            "--headless",
-            "--unattended",
-            "--port",
-            &port.to_string(),
-            "--data-dir",
-            &data_dir.to_string_lossy(),
-        ])
-        .env("DEMO_MODE", "true")
-        .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
-        .env("PARKHUB_DISABLE_RATE_LIMITS", "true")
-        .env("RUST_LOG", "warn")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
+    // Phase 1: start server so it creates its default config.toml. We only
+    // forward PARKHUB_DISABLE_RATE_LIMITS when the parent already has it —
+    // the server's `rate_limit::bypass_requested` panics on startup if the
+    // env is set without the `e2e-bypass` cargo feature. The integration
+    // pipeline builds with `headless` alone (no `e2e-bypass`), so setting
+    // it unconditionally here would crash every integration-test server.
+    // Simulation + visual workflows set the env themselves AND compile the
+    // binary with `e2e-bypass`, so the forward is correct in those cases.
+    let mut cmd = Command::new(&binary);
+    cmd.args([
+        "--headless",
+        "--unattended",
+        "--port",
+        &port.to_string(),
+        "--data-dir",
+        &data_dir.to_string_lossy(),
+    ])
+    .env("DEMO_MODE", "true")
+    .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
+    .env("RUST_LOG", "warn")
+    .stdout(std::process::Stdio::null())
+    .stderr(std::process::Stdio::null());
+    if std::env::var("PARKHUB_DISABLE_RATE_LIMITS").is_ok() {
+        cmd.env("PARKHUB_DISABLE_RATE_LIMITS", "true");
+    }
+    let mut child = cmd
         .spawn()
         .unwrap_or_else(|e| panic!("Failed to start server at {}: {}", binary.display(), e));
 
@@ -131,21 +141,25 @@ pub async fn start_test_server() -> TestServer {
         let _ = child.kill();
         let _ = child.wait();
 
-        let child2 = Command::new(&binary)
-            .args([
-                "--headless",
-                "--unattended",
-                "--port",
-                &port.to_string(),
-                "--data-dir",
-                &data_dir.to_string_lossy(),
-            ])
-            .env("DEMO_MODE", "true")
-            .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
-            .env("PARKHUB_DISABLE_RATE_LIMITS", "true")
-            .env("RUST_LOG", "warn")
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
+        // Phase-2 restart: same conditional-forward as phase-1.
+        let mut cmd2 = Command::new(&binary);
+        cmd2.args([
+            "--headless",
+            "--unattended",
+            "--port",
+            &port.to_string(),
+            "--data-dir",
+            &data_dir.to_string_lossy(),
+        ])
+        .env("DEMO_MODE", "true")
+        .env("PARKHUB_ADMIN_PASSWORD", "Admin123!")
+        .env("RUST_LOG", "warn")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+        if std::env::var("PARKHUB_DISABLE_RATE_LIMITS").is_ok() {
+            cmd2.env("PARKHUB_DISABLE_RATE_LIMITS", "true");
+        }
+        let child2 = cmd2
             .spawn()
             .unwrap_or_else(|e| panic!("Failed to restart server: {}", e));
 
