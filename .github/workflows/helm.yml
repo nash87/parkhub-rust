@@ -1,0 +1,39 @@
+name: Helm Chart
+
+on:
+  pull_request:
+    paths:
+      - 'helm/**'
+      - '.github/workflows/helm.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.github/workflows/helm.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint + Template
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: 'v3.16.4'
+      - name: helm lint
+        run: helm lint helm/parkhub
+      - name: helm template (default values)
+        run: helm template release helm/parkhub > /tmp/rendered-default.yaml
+      - name: helm template (grafana opt-in)
+        run: helm template release helm/parkhub --set grafana.dashboardsEnabled=true > /tmp/rendered-grafana.yaml
+      - name: helm template (pdb + topology enabled)
+        run: helm template release helm/parkhub --set pdb.enabled=true > /tmp/rendered-ha.yaml
+      - name: Validate rendered YAML
+        run: |
+          for f in /tmp/rendered-*.yaml; do
+            yq eval-all '.' "$f" > /dev/null || { echo "YAML parse failed in $f"; exit 1; }
+          done
