@@ -86,6 +86,141 @@ jobs:
           path: parkhub-linux-x64.tar.gz
           retention-days: 14
 
+  build-linux-arm64:
+    name: Build Linux ARM64
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    # GitHub-hosted ARM runners (GA since March 2025) — no cross-compile needed.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build web frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build server (headless)
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
+
+      - name: Build client
+        run: cargo build --locked --release --package parkhub-client
+
+      - name: Create portable package
+        run: |
+          mkdir -p parkhub-linux-arm64
+          cp target/release/parkhub-server parkhub-linux-arm64/
+          cp target/release/parkhub parkhub-linux-arm64/
+          cp README.md LICENSE parkhub-linux-arm64/
+          mkdir -p parkhub-linux-arm64/parkhub-data
+          touch parkhub-linux-arm64/parkhub-data/.portable
+          tar -czvf parkhub-linux-arm64.tar.gz parkhub-linux-arm64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-linux-arm64
+          path: parkhub-linux-arm64.tar.gz
+          retention-days: 14
+
+  build-macos:
+    name: Build macOS (universal)
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    # macos-latest is Apple Silicon by default now; we cross-build to x86_64
+    # too and lipo the results into a universal binary so one archive runs
+    # on both Intel and Apple Silicon.
+    runs-on: macos-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust cache (macOS)
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: "."
+          key: macos-release
+
+      - name: Install OpenSSL (Homebrew)
+        run: |
+          brew install openssl@3
+          {
+            echo "OPENSSL_DIR=$(brew --prefix openssl@3)"
+            echo "OPENSSL_STATIC=1"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build web frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build aarch64 (Apple Silicon)
+        run: |
+          cargo build --locked --release --target aarch64-apple-darwin --package parkhub-server --no-default-features --features headless
+          cargo build --locked --release --target aarch64-apple-darwin --package parkhub-client
+
+      - name: Build x86_64 (Intel)
+        run: |
+          cargo build --locked --release --target x86_64-apple-darwin --package parkhub-server --no-default-features --features headless
+          cargo build --locked --release --target x86_64-apple-darwin --package parkhub-client
+
+      - name: Create universal binaries via lipo
+        run: |
+          mkdir -p parkhub-macos-universal
+          lipo -create -output parkhub-macos-universal/parkhub-server \
+            target/aarch64-apple-darwin/release/parkhub-server \
+            target/x86_64-apple-darwin/release/parkhub-server
+          lipo -create -output parkhub-macos-universal/parkhub \
+            target/aarch64-apple-darwin/release/parkhub \
+            target/x86_64-apple-darwin/release/parkhub
+          cp README.md LICENSE parkhub-macos-universal/
+          mkdir -p parkhub-macos-universal/parkhub-data
+          touch parkhub-macos-universal/parkhub-data/.portable
+          tar -czvf parkhub-macos-universal.tar.gz parkhub-macos-universal
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-macos-universal
+          path: parkhub-macos-universal.tar.gz
+          retention-days: 14
+
   build-windows:
     name: Build Windows
     needs: [validate-tag]
@@ -153,7 +288,15 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build-linux, build-windows]
+    # `needs:` here enforces *timing*, not gating: it ensures every build
+    # job finishes (success OR failure) before we try to download their
+    # artifacts. The `if: always() && build-linux == success` condition
+    # is what actually gates — release runs even if macos/arm64/windows
+    # failed, provided linux-x64 produced an artifact. The downloads
+    # below use `continue-on-error: true`, so missing artifacts are
+    # silently skipped and the release still publishes with whatever
+    # platforms succeeded.
+    needs: [build-linux, build-linux-arm64, build-macos, build-windows]
     if: always() && needs.build-linux.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -162,10 +305,22 @@ jobs:
       attestations: write
       id-token: write
     steps:
-      - name: Download Linux artifact
+      - name: Download Linux x64 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: parkhub-linux-x64
+
+      - name: Download Linux ARM64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-linux-arm64
+
+      - name: Download macOS universal artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-macos-universal
 
       - name: Download Windows artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -174,7 +329,17 @@ jobs:
           name: parkhub-windows-x64
 
       - name: Generate checksums
-        run: sha256sum parkhub-linux-x64.tar.gz parkhub-windows-x64.zip > checksums.txt 2>/dev/null || sha256sum parkhub-linux-x64.tar.gz > checksums.txt
+        # Sum every archive that actually made it through the matrix. The
+        # wildcard + `2>/dev/null || true` pattern keeps us from exploding
+        # when (say) macOS failed to produce its tarball.
+        run: |
+          set -e
+          for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz parkhub-macos-universal.tar.gz parkhub-windows-x64.zip; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" >> checksums.txt
+            fi
+          done
+          cat checksums.txt
 
       - name: Attest release artifacts
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
@@ -189,6 +354,8 @@ jobs:
           fail_on_unmatched_files: false
           files: |
             parkhub-linux-x64.tar.gz
+            parkhub-linux-arm64.tar.gz
+            parkhub-macos-universal.tar.gz
             parkhub-windows-x64.zip
             checksums.txt
           generate_release_notes: true
