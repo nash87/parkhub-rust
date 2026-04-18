@@ -21,8 +21,14 @@ podLabels: {}
 
 podSecurityContext:
   runAsNonRoot: true
-  runAsUser: 1000
-  fsGroup: 1000
+  # Trivy KSV-0020 / KSV-0021 require UID and GID > 10000 to stay clear
+  # of any user/group IDs that may be pre-created by the base image or
+  # mounted filesystems. We use 10001 across the board; the parkhub-data
+  # volume is created by the container at startup so the UID can be
+  # freely chosen without touching the host.
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
   # PSS "restricted" profile — constrains syscalls to the RuntimeDefault
   # seccomp profile (blocks known-dangerous calls like unshare, kexec,
   # swapon, etc.). parkhub-server is a pure-async axum binary and has no
