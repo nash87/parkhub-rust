@@ -172,8 +172,10 @@ jobs:
       - name: Install OpenSSL (Homebrew)
         run: |
           brew install openssl@3
-          echo "OPENSSL_DIR=$(brew --prefix openssl@3)" >> $GITHUB_ENV
-          echo "OPENSSL_STATIC=1" >> $GITHUB_ENV
+          {
+            echo "OPENSSL_DIR=$(brew --prefix openssl@3)"
+            echo "OPENSSL_STATIC=1"
+          } >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
