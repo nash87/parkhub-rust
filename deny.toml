@@ -19,6 +19,14 @@ ignore = [
     "RUSTSEC-2023-0019", # kuchiki unmaintained (transitive via printpdf)
     "RUSTSEC-2024-0384", # instant unmaintained (transitive via web-push -> isahc; no maintained upgrade path yet)
     "RUSTSEC-2026-0097", # rand 0.9.2 unsoundness with custom logger + thread_rng (we use tracing, not log with thread_rng access)
+    # Tauri-transitive advisories (webkit2gtk 4.1 → gtk3 stack on Linux).
+    # The GTK4/WebKitGTK 6 migration is upstream-blocked on Tauri; these
+    # are unmaintained-but-functional bindings until that lands.
+    "RUSTSEC-2024-0411", # glib (gtk-rs core, unmaintained)
+    "RUSTSEC-2024-0414", # gio (gtk-rs, unmaintained)
+    "RUSTSEC-2024-0417", # pango (gtk-rs, unmaintained)
+    "RUSTSEC-2025-0081", # soup2 / webkit2gtk transitive unmaintained
+    "RUSTSEC-2025-0075", # another webkit2gtk transitive
 ]
 
 [licenses]
