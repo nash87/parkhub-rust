@@ -25,3 +25,19 @@ jobs:
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+          # Slint ships under a tri-license (GPL-3.0 OR Royalty-free OR Commercial).
+          # ParkHub uses the non-GPL arm; deny.toml records the same exception.
+          allow-dependencies-licenses: >-
+            pkg:cargo/slint,
+            pkg:cargo/slint-build,
+            pkg:cargo/slint-macros,
+            pkg:cargo/i-slint-core,
+            pkg:cargo/i-slint-backend-selector,
+            pkg:cargo/i-slint-backend-winit,
+            pkg:cargo/i-slint-backend-linuxkms,
+            pkg:cargo/i-slint-common,
+            pkg:cargo/i-slint-compiler,
+            pkg:cargo/i-slint-core-macros,
+            pkg:cargo/i-slint-renderer-femtovg,
+            pkg:cargo/i-slint-renderer-skia,
+            pkg:cargo/i-slint-renderer-software
