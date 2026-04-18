@@ -158,14 +158,28 @@ async fn check_audit_trail(
     ctx: &SimContext,
     results: &InjectionResults,
 ) -> (usize, bool) {
-    let (status, body) = auth_get(srv, &ctx.admin_token, "/api/v1/admin/audit-log").await;
+    // Query with a large page size so total reflects the whole simulation.
+    let (status, body) =
+        auth_get(srv, &ctx.admin_token, "/api/v1/admin/audit-log?per_page=10000").await;
 
     if status != 200 {
         // Audit log may not be available
         return (0, true);
     }
 
-    let entries = body["data"].as_array().map(Vec::len).unwrap_or(0);
+    // Handler returns { data: { entries: [...], total, page, ... } } — prefer the
+    // explicit total, fall back to entries array length, then to a raw array for
+    // compatibility with older handler shapes.
+    let entries = body["data"]["total"].as_u64().map_or_else(
+        || {
+            body["data"]["entries"]
+                .as_array()
+                .or_else(|| body["data"].as_array())
+                .map(Vec::len)
+                .unwrap_or(0)
+        },
+        |t| t as usize,
+    );
 
     // We expect at least one audit entry per successful booking + cancellation + login
     // This is a soft check since audit granularity varies
