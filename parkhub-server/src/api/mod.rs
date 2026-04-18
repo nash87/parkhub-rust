@@ -2101,8 +2101,8 @@ pub fn create_router(
         // Request-ID tracing middleware — logs request_id in every span
         .layer(axum::middleware::from_fn(request_id_tracing_middleware))
         .layer(TraceLayer::new_for_http())
-        // Response compression (gzip + brotli) — negotiated via Accept-Encoding
-        .layer(CompressionLayer::new().gzip(true).br(true))
+        // Response compression (zstd + brotli + gzip) — negotiated via Accept-Encoding
+        .layer(CompressionLayer::new().gzip(true).br(true).zstd(true))
         // Global rate limit — 100 req/s with burst 200
         .layer(axum::middleware::from_fn(move |req, next| {
             crate::rate_limit::rate_limit_middleware(global_limiter.clone(), req, next)
