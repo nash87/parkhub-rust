@@ -20,13 +20,29 @@ import { loginViaUi } from './helpers';
  */
 
 const SURFACES = [
+  // Public
   { name: 'login', path: '/login', auth: false },
+  { name: 'register', path: '/register', auth: false },
+  { name: 'forgot-password', path: '/forgot-password', auth: false },
+  { name: 'welcome', path: '/welcome', auth: false },
+  // Authenticated user
   { name: 'dashboard', path: '/', auth: true },
   { name: 'book', path: '/book', auth: true },
   { name: 'bookings', path: '/bookings', auth: true },
   { name: 'vehicles', path: '/vehicles', auth: true },
+  { name: 'credits', path: '/credits', auth: true },
+  { name: 'favorites', path: '/favorites', auth: true },
+  { name: 'absences', path: '/absences', auth: true },
+  { name: 'notifications', path: '/notifications', auth: true },
+  { name: 'calendar', path: '/calendar', auth: true },
+  { name: 'profile', path: '/profile', auth: true },
+  // Admin
   { name: 'admin', path: '/admin', auth: true },
   { name: 'admin-modules', path: '/admin/modules', auth: true },
+  { name: 'admin-settings', path: '/admin/settings', auth: true },
+  { name: 'admin-users', path: '/admin/users', auth: true },
+  { name: 'admin-lots', path: '/admin/lots', auth: true },
+  { name: 'admin-analytics', path: '/admin/analytics', auth: true },
 ];
 
 const VIEWPORTS = [
