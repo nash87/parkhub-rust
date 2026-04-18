@@ -50,13 +50,13 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![ping])
-        .setup(|app| {
+        .setup(|_app| {
             // Tracing setup — mirrors parkhub-server so log events from
             // native commands surface through the same formatters when
             // the user runs with RUST_LOG set.
             #[cfg(debug_assertions)]
             {
-                let window = app.get_webview_window("main").unwrap();
+                let window = _app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
             Ok(())
