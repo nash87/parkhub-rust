@@ -175,39 +175,23 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check results
+        env:
+          ACTIONLINT: ${{ needs.actionlint.result }}
+          CHECK: ${{ needs.check.result }}
+          TEST: ${{ needs.test.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          FMT: ${{ needs.fmt.result }}
+          CLIPPY: ${{ needs.clippy.result }}
+          INTEGRATION: ${{ needs.integration.result }}
         run: |
-          if [[ "${{ needs.actionlint.result }}" == "failure" ]]; then
-            echo "actionlint advisory: ${{ needs.actionlint.result }}"
-          fi
-          if [[ "${{ needs.check.result }}" != "success" ]]; then
-            echo "check failed: ${{ needs.check.result }}"
-            exit 1
-          fi
-          if [[ "${{ needs.test.result }}" != "success" ]]; then
-            echo "test failed: ${{ needs.test.result }}"
-            exit 1
-          fi
-          if [[ "${{ needs.frontend.result }}" != "success" ]]; then
-            echo "frontend failed: ${{ needs.frontend.result }}"
-            exit 1
-          fi
-          if [[ "${{ needs.fmt.result }}" == "success" ]]; then
-            echo "fmt passed"
-          elif [[ "${{ needs.fmt.result }}" == "failure" ]]; then
-            echo "fmt remains advisory until the pre-existing formatting drift is cleaned up"
-          else
-            echo "fmt status: ${{ needs.fmt.result }}"
-          fi
-          if [[ "${{ needs.clippy.result }}" == "success" ]]; then
-            echo "clippy passed"
-          elif [[ "${{ needs.clippy.result }}" == "failure" ]]; then
-            echo "clippy remains advisory until the pre-existing warning backlog is cleaned up"
-          else
-            echo "clippy status: ${{ needs.clippy.result }}"
-          fi
-          if [[ "${{ needs.integration.result }}" == "success" ]]; then
-            echo "integration tests passed"
-          elif [[ "${{ needs.integration.result }}" == "failure" ]]; then
-            echo "integration tests advisory: ${{ needs.integration.result }}"
+          for check in ACTIONLINT CHECK TEST FRONTEND FMT CLIPPY; do
+            if [[ "${!check}" != "success" ]]; then
+              echo "REQUIRED: ${check} failed: ${!check}"
+              exit 1
+            fi
+          done
+          # TODO(make-required-once-stabilized): integration has 1 real failure in last 24h (cancellation_produces_correct_booking_status)
+          if [[ "${INTEGRATION}" != "success" ]]; then
+            echo "ADVISORY: INTEGRATION: ${INTEGRATION}"
           fi
           echo "All checks passed"
