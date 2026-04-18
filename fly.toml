@@ -1,0 +1,36 @@
+# fly.toml — ParkHub Rust server on Fly.io
+# Deploy: flyctl launch --no-deploy, set PARKHUB_ADMIN_PASSWORD via `fly secrets set`, then `flyctl deploy`
+app = "parkhub-rust"
+primary_region = "fra"  # Frankfurt — GDPR/EU
+
+[build]
+  image = "ghcr.io/nash87/parkhub-rust:latest"
+
+[env]
+  RUST_LOG = "info"
+  DEMO_MODE = "false"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "suspend"  # scale to zero when idle
+  auto_start_machines = true
+  min_machines_running = 0
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health/ready"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+
+[[mounts]]
+  source = "parkhub_data"
+  destination = "/data"
+  initial_size = "1gb"
+
+[deploy]
+  strategy = "rolling"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
