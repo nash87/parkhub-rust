@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useActionState, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { UserPlus, QrCode, Trash, CheckCircle, Question, MagnifyingGlass, CalendarBlank, Envelope } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +51,6 @@ export function VisitorsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormData>(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showQr, setShowQr] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -69,13 +68,15 @@ export function VisitorsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // React 19: useActionState drives registration. Action closes over
+  // `form` since every field is already a controlled React input. The
+  // third tuple entry (isSubmitting) replaces the manual setSubmitting
+  // boolean.
+  const [, registerAction, isSubmitting] = useActionState(async () => {
     if (!form.name.trim() || !form.email.trim() || !form.visit_date) {
       toast.error(t('visitors.requiredFields'));
-      return;
+      return null;
     }
-    setSubmitting(true);
     try {
       const body: Record<string, unknown> = {
         name: form.name,
@@ -103,8 +104,8 @@ export function VisitorsPage() {
     } catch {
       toast.error(t('common.error'));
     }
-    setSubmitting(false);
-  }
+    return null;
+  }, null);
 
   async function handleCheckIn(id: string) {
     try {
@@ -194,7 +195,7 @@ export function VisitorsPage() {
       {showForm && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-6">
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">{t('visitors.registerTitle')}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form action={registerAction} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('visitors.name')} *</label>
               <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="input-field" required />
@@ -217,7 +218,7 @@ export function VisitorsPage() {
             </div>
             <div className="sm:col-span-2 flex justify-end gap-2">
               <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); }} className="btn-secondary">{t('common.cancel')}</button>
-              <button type="submit" disabled={submitting} className="btn-primary">{submitting ? '...' : t('common.save')}</button>
+              <button type="submit" disabled={isSubmitting} className="btn-primary">{isSubmitting ? '...' : t('common.save')}</button>
             </div>
           </form>
         </motion.div>

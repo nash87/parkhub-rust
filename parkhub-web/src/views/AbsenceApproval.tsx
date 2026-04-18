@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useActionState, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar, Check, X, Clock, Question, PaperPlaneTilt, ChatText,
@@ -48,15 +48,18 @@ function SubmitForm({ onSubmitted }: { onSubmitted: () => void }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // React 19: useActionState drives submit. Validation + api call + toasts
+  // live inside the action; the third tuple entry (isSubmitting) replaces
+  // the manual setSubmitting boolean. Action closes over current state so
+  // every controlled input (select + two date pickers + textarea) is read
+  // straight off React state — FormData would need one hidden mirror per
+  // field which isn't cleaner here.
+  const [, submitAction, isSubmitting] = useActionState(async () => {
     if (!startDate || !endDate || !reason.trim()) {
       toast.error(t('absenceApproval.requiredFields'));
-      return;
+      return null;
     }
-    setSubmitting(true);
     try {
       const res = await api.submitAbsenceRequest({ absence_type: absenceType, start_date: startDate, end_date: endDate, reason });
       if (res.success) {
@@ -70,11 +73,11 @@ function SubmitForm({ onSubmitted }: { onSubmitted: () => void }) {
     } catch {
       toast.error(t('common.error'));
     }
-    setSubmitting(false);
-  }
+    return null;
+  }, null);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 bg-surface-50 dark:bg-surface-800 rounded-xl p-4 border border-surface-200 dark:border-surface-700">
+    <form action={submitAction} className="space-y-4 bg-surface-50 dark:bg-surface-800 rounded-xl p-4 border border-surface-200 dark:border-surface-700">
       <h3 className="font-semibold text-surface-900 dark:text-surface-100">{t('absenceApproval.submitTitle')}</h3>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -99,9 +102,9 @@ function SubmitForm({ onSubmitted }: { onSubmitted: () => void }) {
         <label className="text-sm text-surface-600 dark:text-surface-400">{t('absenceApproval.reason')}</label>
         <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder={t('absenceApproval.reasonPlaceholder')} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 resize-none" />
       </div>
-      <button type="submit" disabled={submitting} className="w-full py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+      <button type="submit" disabled={isSubmitting} className="w-full py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
         <PaperPlaneTilt size={18} />
-        {submitting ? t('absenceApproval.submitting') : t('absenceApproval.submitBtn')}
+        {isSubmitting ? t('absenceApproval.submitting') : t('absenceApproval.submitBtn')}
       </button>
     </form>
   );

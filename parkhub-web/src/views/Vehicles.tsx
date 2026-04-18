@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Car, Plus, Trash, Star, X, SpinnerGap } from '@phosphor-icons/react';
 import { api, type Vehicle } from '../api/client';
@@ -6,6 +6,22 @@ import { VehiclesSkeleton } from '../components/Skeleton';
 import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+
+/**
+ * Result contract between the add-vehicle action and the component:
+ *  - `idle`  — before first submit, or after success/error was consumed.
+ *  - `ok`    — creation succeeded; the component pushes `vehicle` to the
+ *              list and closes the modal via useEffect, then dispatches
+ *              `{ kind: 'idle' }` to avoid re-firing on re-render.
+ *  - `err`   — creation failed; the component shows a toast and resets to
+ *              `idle` the same way.
+ */
+type AddResult =
+  | { kind: 'idle' }
+  | { kind: 'ok'; vehicle: Vehicle }
+  | { kind: 'err'; message: string };
+
+const IDLE: AddResult = { kind: 'idle' };
 
 const COLOR_DEFS = [
   { key: 'black', bg: 'bg-gray-900' },
@@ -36,7 +52,6 @@ export function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ plate: '', make: '', model: '', color: '' });
 
   useEffect(() => {
@@ -45,27 +60,41 @@ export function VehiclesPage() {
     }).finally(() => setLoading(false));
   }, []);
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    /* istanbul ignore next -- defensive guard; submit button is disabled when plate is empty */
-    if (!form.plate.trim()) return;
-    setSaving(true);
-    const res = await api.createVehicle({
-      plate: form.plate.toUpperCase(),
-      make: form.make || undefined,
-      model: form.model || undefined,
-      color: form.color || undefined,
-    });
-    if (res.success && res.data) {
-      setVehicles(prev => [...prev, res.data!]);
+  // React 19: useActionState drives the add-vehicle flow. The third tuple
+  // entry (isPending) replaces the manual setSaving boolean. The action
+  // closes over `form` so the color picker (button-selected, not a real
+  // input) is preserved verbatim — FormData only carries the text fields.
+  const [addResult, addAction, isAdding] = useActionState<AddResult, FormData>(
+    async (_prev, _formData) => {
+      const plate = form.plate.trim().toUpperCase();
+      if (!plate) return { kind: 'err', message: t('vehicles.plateRequired', 'Plate required') };
+      const res = await api.createVehicle({
+        plate,
+        make: form.make || undefined,
+        model: form.model || undefined,
+        color: form.color || undefined,
+      });
+      if (res.success && res.data) return { kind: 'ok', vehicle: res.data };
+      return { kind: 'err', message: res.error?.message || t('common.error') };
+    },
+    IDLE,
+  );
+
+  // Side effects dispatched off the action-state machine rather than inline
+  // in the submit handler. Keeps the action pure.
+  useEffect(() => {
+    if (addResult.kind === 'ok') {
+      setVehicles(prev => [...prev, addResult.vehicle]);
       toast.success(t('vehicles.added', 'Fahrzeug hinzugef\u00fcgt'));
       setForm({ plate: '', make: '', model: '', color: '' });
       setShowForm(false);
-    } else {
-      toast.error(res.error?.message || t('common.error'));
+    } else if (addResult.kind === 'err') {
+      toast.error(addResult.message);
     }
-    setSaving(false);
-  }
+  // The action-state identity is stable across renders; watching `addResult`
+  // by reference is correct (every new submit produces a new object).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addResult]);
 
   async function handleDelete(id: string) {
     const res = await api.deleteVehicle(id);
@@ -108,7 +137,7 @@ export function VehiclesPage() {
                   <X weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" />
                 </button>
               </div>
-              <form onSubmit={handleAdd} className="p-6 space-y-4">
+              <form action={addAction} className="p-6 space-y-4">
                 <div>
                   <label htmlFor="vehicle-plate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('vehicles.plate', 'Kennzeichen')} *</label>
                   <input id="vehicle-plate" type="text" value={form.plate} onChange={e => setForm({ ...form, plate: e.target.value })} className="input w-full" placeholder="M-AB 1234" required autoFocus />
@@ -136,8 +165,8 @@ export function VehiclesPage() {
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">{t('common.cancel', 'Abbrechen')}</button>
-                  <button type="submit" disabled={saving || !form.plate.trim()} className="btn btn-primary">
-                    {saving ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : t('common.save', 'Speichern')}
+                  <button type="submit" disabled={isAdding || !form.plate.trim()} className="btn btn-primary">
+                    {isAdding ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : t('common.save', 'Speichern')}
                   </button>
                 </div>
               </form>

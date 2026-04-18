@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useActionState, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserPlus, Copy, ShareNetwork, Trash, QrCode, SpinnerGap, CheckCircle, CalendarBlank, MapPin } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -77,7 +77,6 @@ export function GuestPassPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormData>(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
   const [createdPass, setCreatedPass] = useState<GuestBooking | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -125,13 +124,15 @@ export function GuestPassPage() {
     })();
   }, [form.lot_id]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // React 19: useActionState drives pass creation. Third tuple entry
+  // (isSubmitting) replaces the manual setSubmitting boolean; action
+  // closes over current form state (all fields are already controlled
+  // React inputs — two selects, two datetime pickers, two text inputs).
+  const [, createAction, isSubmitting] = useActionState(async () => {
     if (!form.guest_name.trim() || !form.lot_id || !form.slot_id || !form.start_time || !form.end_time) {
       toast.error(t('guestBooking.requiredFields'));
-      return;
+      return null;
     }
-    setSubmitting(true);
     try {
       const res = await fetch('/api/v1/bookings/guest', {
         method: 'POST',
@@ -160,8 +161,8 @@ export function GuestPassPage() {
     } catch {
       toast.error(t('common.error'));
     }
-    setSubmitting(false);
-  }
+    return null;
+  }, null);
 
   async function handleCancel(id: string) {
     try {
@@ -296,7 +297,7 @@ export function GuestPassPage() {
         {showForm && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-6" data-testid="guest-form">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4">{t('guestBooking.formTitle')}</h2>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <form action={createAction} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('guestBooking.guestName')} *</label>
                 <input
@@ -373,9 +374,9 @@ export function GuestPassPage() {
               </div>
               <div className="sm:col-span-2 flex justify-end gap-2">
                 <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); }} className="btn btn-secondary">{t('common.cancel')}</button>
-                <button type="submit" disabled={submitting} className="btn btn-primary" data-testid="submit-guest-btn">
-                  {submitting ? <SpinnerGap size={16} className="animate-spin inline mr-1" /> : null}
-                  {submitting ? t('guestBooking.creating') : t('common.save')}
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary" data-testid="submit-guest-btn">
+                  {isSubmitting ? <SpinnerGap size={16} className="animate-spin inline mr-1" /> : null}
+                  {isSubmitting ? t('guestBooking.creating') : t('common.save')}
                 </button>
               </div>
             </form>
