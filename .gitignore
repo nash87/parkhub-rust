@@ -71,6 +71,9 @@ playwright-report/
 test-results/
 blob-report/
 
+# Lighthouse CI local output (JSON + HTML reports)
+.lighthouseci/
+
 # Coverage
 coverage/
 *.lcov

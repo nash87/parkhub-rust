@@ -28,6 +28,7 @@ export function WelcomePage() {
   const [greetingIdx, setGreetingIdx] = useState(0);
   const [showLanguages, setShowLanguages] = useState(false);
   const [selectedLang, setSelectedLang] = useState(i18n.language?.slice(0, 2) || 'en');
+  const isFirstGreeting = greetingIdx === 0;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -83,7 +84,9 @@ export function WelcomePage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={greeting.lang}
-              initial={{ opacity: 0, y: 20, filter: 'blur(4px)' }}
+              // First greeting renders visible immediately to avoid delaying
+              // LCP behind a spring animation. Cycled greetings still animate.
+              initial={isFirstGreeting ? false : { opacity: 0, y: 20, filter: 'blur(4px)' }}
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
@@ -96,21 +99,14 @@ export function WelcomePage() {
           </AnimatePresence>
         </div>
 
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-lg sm:text-xl text-surface-500 dark:text-surface-400 max-w-lg mb-10 leading-relaxed"
-        >
+        {/* Subtitle — rendered as plain <p> so it's the LCP element without
+            waiting on framer-motion's opacity animation. */}
+        <p className="text-lg sm:text-xl text-surface-500 dark:text-surface-400 max-w-lg mb-10 leading-relaxed">
           {t('welcome.subtitle')}
-        </motion.p>
+        </p>
 
         {/* Feature pills */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+        <div
           className="flex flex-wrap gap-x-8 gap-y-3 mb-10 text-sm text-surface-500 dark:text-surface-400"
         >
           <span className="flex items-center gap-2">
@@ -129,7 +125,7 @@ export function WelcomePage() {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             {t('welcome.selfHosted')}
           </span>
-        </motion.div>
+        </div>
 
         {/* Actions */}
         <motion.div

@@ -4,9 +4,39 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, NavigationArrow } from '@phosphor-icons/react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+// Leaflet CSS is loaded at runtime (see loadLeafletCss below) to keep it out
+// of the landing-page render-blocking critical path. Importing it at the top
+// of this module would make Astro hoist the stylesheet into every page's
+// <head> — this view is lazy, so its CSS should be too.
 import { api, type LotMarker } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
+
+const LEAFLET_CSS_URL = new URL('leaflet/dist/leaflet.css', import.meta.url).href;
+let leafletCssPromise: Promise<void> | null = null;
+function loadLeafletCss(): Promise<void> {
+  if (typeof document === 'undefined') return Promise.resolve();
+  if (leafletCssPromise) return leafletCssPromise;
+  // Already present (hot-reload or repeat navigation)
+  if (document.querySelector(`link[data-leaflet-css]`)) {
+    leafletCssPromise = Promise.resolve();
+    return leafletCssPromise;
+  }
+  leafletCssPromise = new Promise(resolve => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = LEAFLET_CSS_URL;
+    link.dataset.leafletCss = 'true';
+    let settled = false;
+    const done = () => { if (!settled) { settled = true; resolve(); } };
+    link.onload = done;
+    link.onerror = done;
+    document.head.appendChild(link);
+    // Safety net for environments that never fire load/error (e.g. jsdom).
+    // Leaflet's own container has a loading skeleton so late CSS is fine.
+    setTimeout(done, 100);
+  });
+  return leafletCssPromise;
+}
 
 // Fix Leaflet default icon path issue with bundlers
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -57,13 +87,17 @@ export function MapViewPage() {
   const { t } = useTranslation();
   const [markers, setMarkers] = useState<LotMarker[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cssReady, setCssReady] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    loadLeafletCss().then(() => { if (!cancelled) setCssReady(true); });
     api.getMapMarkers()
       .then(res => {
         if (res.success && res.data) setMarkers(res.data);
       })
       .finally(() => setLoading(false));
+    return () => { cancelled = true; };
   }, []);
 
   const icons = useMemo(() => ({
@@ -79,7 +113,7 @@ export function MapViewPage() {
   // Default center: Munich, Germany (can be overridden by markers)
   const defaultCenter: [number, number] = [48.1351, 11.5820];
 
-  if (loading) {
+  if (loading || !cssReady) {
     return (
       <div className="space-y-6">
         <div className="h-10 w-64 skeleton rounded-xl" />
