@@ -28,12 +28,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 
 # Database - Pure Rust embedded database
-redb = "3"  # upgraded from 2; API compatible for our usage
+redb = "3"  # 4.0 has breaking file format change — separate migration PR tracked in backlog
 
 # Encryption utilities (for application-level encryption)
 aes-gcm = "0.10"  # 0.11 is RC only
 pbkdf2 = { version = "0.12", features = ["simple"] }  # 0.13 is RC only
-sha2 = "0.10"
+sha2 = "0.10"  # 0.11 breaks hmac 0.12 compat (digest 0.11 vs 0.10); hold until hmac 0.13
 rand = "0.10"  # updated from 0.9
 zeroize = { version = "1", features = ["derive"] }
 
@@ -44,7 +44,7 @@ totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
 axum = { version = "0.8", features = ["tokio", "json", "ws"] }  # updated from 0.7
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace", "limit", "compression-gzip", "compression-br", "compression-zstd", "request-id", "propagate-header"] }
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }  # 0.13 exists but may break
+reqwest = { version = "0.13", features = ["json", "form", "rustls"] }  # 0.13: rustls-tls -> rustls, form is now opt-in
 
 # Security
 rcgen = "0.14"  # updated from 0.13
