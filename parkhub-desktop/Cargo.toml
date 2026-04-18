@@ -1,0 +1,45 @@
+[package]
+name = "parkhub-desktop"
+description = "ParkHub Desktop — Tauri 2 shell wrapping parkhub-web as native desktop + mobile app"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+# Tauri lets lib.rs define the app; main.rs just calls into it. Needed for
+# mobile (iOS/Android) targets which use lib as the entry point.
+name = "parkhub_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "parkhub-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-http = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-store = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-os = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+# Deep linking so parkhub:// URLs open the app
+tauri-plugin-deep-link = "2"
+# Persistent state for first-run marker + saved server URL
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tracing.workspace = true
+directories = "6"
+
+[lints]
+workspace = true
