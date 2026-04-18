@@ -46,8 +46,8 @@ function categoryLabel(t: (k: string, d?: string) => string, cat: string): strin
 /** Status pill reflects runtime_enabled (green), runtime off (amber), or compile-time off (gray). */
 function StatusDot({ m }: { m: ModuleInfo }) {
   const runtime = m.runtime_enabled ?? m.enabled;
-  let cls = 'bg-neutral-500';
-  let label = 'disabled';
+  let cls: string;
+  let label: string;
   if (!m.enabled) {
     // Compile-time disabled — nothing admins can do at runtime.
     cls = 'bg-neutral-500';
@@ -375,7 +375,7 @@ export function AdminModulesPage() {
       {configOpenFor && (
         <ConfigEditorModal
           moduleName={configOpenFor}
-          isOpen={configOpenFor !== null}
+          isOpen
           onClose={() => setConfigOpenFor(null)}
         />
       )}
