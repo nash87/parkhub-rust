@@ -100,12 +100,16 @@ pub async fn start_test_server() -> TestServer {
         .build()
         .expect("build reqwest client");
 
-    // Wait for first start to create config and become healthy
-    let deadline = Instant::now() + Duration::from_secs(15);
+    // Wait for first start to create config and become healthy. 60s covers
+    // GitHub-hosted runners where a cold binary spawn + migrations + port
+    // bind can exceed the previous 15s budget even though local runs settle
+    // in <2s. Tests that hit a genuine hang still fail promptly via their
+    // per-request 10s reqwest timeout.
+    let deadline = Instant::now() + Duration::from_secs(60);
     loop {
         assert!(
             Instant::now() <= deadline,
-            "Server did not become healthy within 15 seconds on port {port}"
+            "Server did not become healthy within 60 seconds on port {port}"
         );
         match client.get(format!("{url}/health")).send().await {
             Ok(resp) if resp.status().is_success() => break,
