@@ -35,9 +35,22 @@ Initial Tauri 2.1 scaffold. Not yet feature-complete; tracking to Slint-client p
 - [ ] System-tray integration (optional; disabled by default)
 - [ ] macOS universal binary + Linux ARM64 + Windows installer in release.yml
 
-## Coexistence with parkhub-client (Slint)
+## Coexistence with parkhub-client (Slint) — both kept, permanently
 
-The Slint-based `parkhub-client` crate stays in the workspace through this migration. Once parkhub-desktop reaches parity (T-1844) and the v4.15 release ships both without regressions, parkhub-client is deprecated and removed in v4.16 — tracked as **T-1848**.
+Two distinct desktop clients ship side-by-side, both fully supported:
+
+| | `parkhub-client` (Slint) | `parkhub-desktop` (Tauri) |
+|---|---|---|
+| **UI** | Native Rust widgets, GPU-direct rendering via skia/femtovg | System WebView wrapping the parkhub-web React app |
+| **Best for** | Embedded / kiosk deployments, low-resource devices, "prefers pure-Rust" users | Standard desktop users who want UX parity with the web / PWA / mobile |
+| **Bundle size** | ~15 MB | ~8 MB (shared OS WebView) |
+| **Feature cadence** | Per-surface hand-port in Slint DSL | Automatic — every web feature ships in desktop on rebuild |
+| **Mobile (iOS/Android)** | No | Yes (Tauri 2 mobile targets) |
+| **License surface** | Slint 1.15 dual-GPL/commercial | Tauri 2 MIT |
+
+Both build from the same workspace; both connect to the same ParkHub server contract. Users pick whichever fits.
+
+Future releases (T-1843) add the same per-platform runners for parkhub-desktop that parkhub-client already has: Linux x64 + Linux ARM64 + macOS universal + Windows x64.
 
 ## Icons
 

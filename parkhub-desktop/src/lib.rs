@@ -14,9 +14,11 @@
 //!  - ~8 MB bundle per platform vs Electron's ~80 MB.
 //!  - System WebView is security-patched by the OS, not by us.
 //!
-//! The old Slint `parkhub-client` crate stays in-tree through this
-//! migration and will be deprecated once parkhub-desktop reaches feature
-//! parity (tracked as T-1844).
+//! The Slint `parkhub-client` crate stays alongside this one permanently
+//! — two distinct desktop experiences sharing the same backend contract.
+//! parkhub-client is the pure-Rust GPU-native option; parkhub-desktop is
+//! the web-UI-parity option. See parkhub-desktop/README.md for the
+//! side-by-side comparison.
 
 use tauri::Manager;
 
