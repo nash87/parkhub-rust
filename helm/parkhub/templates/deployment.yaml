@@ -113,3 +113,10 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      # T-1791: spread replicas across nodes. whenUnsatisfiable=ScheduleAnyway
+      # keeps single-node/dev clusters schedulable while still giving kube-scheduler
+      # a strong preference to balance Pods across hostnames.
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

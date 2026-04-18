@@ -83,6 +83,25 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# -- PodDisruptionBudget (T-1790)
+# minAvailable: 1 blocks all-at-once evictions during node drains while still
+# permitting rolling updates (which respect maxUnavailable on the Deployment).
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# -- topologySpreadConstraints (T-1791)
+# Spread replicas across nodes so a single-node outage doesn't take the whole
+# Deployment down. whenUnsatisfiable: ScheduleAnyway keeps single-node/dev
+# clusters schedulable (pods still land, just all on one node).
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: parkhub
+
 # -- Application configuration
 config:
   # Server

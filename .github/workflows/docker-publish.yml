@@ -93,6 +93,21 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
+      # T-1789: keyless Sigstore signature on every pushed digest.
+      # Uses the ambient GitHub OIDC token — no long-lived keys to rotate.
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Sign container image (keyless OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          cosign sign --yes "${IMAGE_REF}@${IMAGE_DIGEST}"
+
   deploy-demo:
     name: Deploy demo
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)

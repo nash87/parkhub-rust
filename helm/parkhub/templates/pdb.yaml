@@ -1,0 +1,17 @@
+{{- if .Values.pdb.enabled }}
+# T-1790: PodDisruptionBudget guards against voluntary disruptions
+# (node drain, cluster autoscaler, rolling update) evicting every
+# replica at once. minAvailable=1 keeps at least one Pod serving
+# during a drain while still permitting rolling updates.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "parkhub.fullname" . }}
+  labels:
+    {{- include "parkhub.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "parkhub.selectorLabels" . | nindent 6 }}
+{{- end }}
