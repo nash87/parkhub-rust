@@ -3,6 +3,7 @@ members = [
     "parkhub-common",
     "parkhub-server",
     "parkhub-client",
+    "parkhub-desktop",
 ]
 resolver = "2"
 
