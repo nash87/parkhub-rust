@@ -72,6 +72,7 @@ export default {
       notifications: 'Notifications',
       translations: 'Translations',
       profile: 'Profile',
+      settings: 'Settings',
       admin: 'Admin',
       lightMode: 'Light Mode',
       darkMode: 'Dark Mode',

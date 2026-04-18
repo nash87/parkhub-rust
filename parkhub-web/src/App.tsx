@@ -48,6 +48,7 @@ const CreditsPage = lazy(() => import('./views/Credits'), 'CreditsPage', '/credi
 const VehiclesPage = lazy(() => import('./views/Vehicles'), 'VehiclesPage', '/vehicles');
 const AbsencesPage = lazy(() => import('./views/Absences'), 'AbsencesPage', '/absences');
 const ProfilePage = lazy(() => import('./views/Profile'), 'ProfilePage', '/profile');
+const SettingsPage = lazy(() => import('./views/Settings'), 'SettingsPage', '/settings');
 const TeamPage = lazy(() => import('./views/Team'), 'TeamPage', '/team');
 const NotificationsPage = lazy(() => import('./views/Notifications'), 'NotificationsPage', '/notifications');
 const CalendarPage = lazy(() => import('./views/Calendar'), 'CalendarPage', '/calendar');
