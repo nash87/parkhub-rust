@@ -288,10 +288,15 @@ jobs:
 
   release:
     name: Create Release
+    # `needs:` here enforces *timing*, not gating: it ensures every build
+    # job finishes (success OR failure) before we try to download their
+    # artifacts. The `if: always() && build-linux == success` condition
+    # is what actually gates — release runs even if macos/arm64/windows
+    # failed, provided linux-x64 produced an artifact. The downloads
+    # below use `continue-on-error: true`, so missing artifacts are
+    # silently skipped and the release still publishes with whatever
+    # platforms succeeded.
     needs: [build-linux, build-linux-arm64, build-macos, build-windows]
-    # Require Linux x64 as the minimum gate (matches prior behavior); the
-    # other platforms are best-effort (continue-on-error downloads) so a
-    # transient macOS / arm runner flake doesn't kill the release.
     if: always() && needs.build-linux.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
