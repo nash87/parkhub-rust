@@ -1025,17 +1025,30 @@ pub async fn get_booking_invoice(
     let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
     let end_str = booking.end_time.format("%d.%m.%Y %H:%M").to_string();
 
-    let invoice_number = format!(
-        "INV-{}",
-        booking
-            .id
-            .to_string()
-            .to_uppercase()
-            .replace('-', "")
-            .chars()
-            .take(12)
-            .collect::<String>()
-    );
+    // Sequential invoice number per § 14 UStG (fortlaufende Rechnungsnummer).
+    // Allocated once per booking from the per-year SETTINGS counter and then
+    // reused on every re-download so the series remains gap-free.
+    let booking_year: i32 = booking
+        .created_at
+        .format("%Y")
+        .to_string()
+        .parse()
+        .unwrap_or(2026);
+    let invoice_number = match state_guard
+        .db
+        .get_or_assign_invoice_number(&booking.id.to_string(), booking_year)
+        .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Failed to allocate invoice number: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Failed to allocate invoice number".to_string(),
+            );
+        }
+    };
 
     // HTML-escape all user-controlled values to prevent stored XSS
     let company = html_escape(&company);

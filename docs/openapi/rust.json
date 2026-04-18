@@ -3107,12 +3107,17 @@
             "$ref": "#/components/schemas/WebhookEventData",
             "description": "Event data containing the object"
           },
+          "id": {
+            "description": "Stripe event id (e.g. `evt_1NqX...`). Used for idempotency dedup —\nduplicate deliveries short-circuit before the credit mutation.",
+            "type": "string"
+          },
           "type": {
             "description": "Event type (e.g., \"checkout.session.completed\")",
             "type": "string"
           }
         },
         "required": [
+          "id",
           "type",
           "data"
         ],

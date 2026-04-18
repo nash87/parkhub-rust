@@ -29,9 +29,11 @@ mod communications;
 mod encryption;
 mod ev;
 mod favorites;
+mod invoice_counters;
 mod lots;
 mod sessions;
 mod settings;
+mod stripe_events;
 mod translations;
 mod users;
 mod vehicles;
@@ -95,6 +97,11 @@ pub(crate) const VISITORS: TableDefinition<&str, &[u8]> = TableDefinition::new("
 pub(crate) const EV_CHARGERS: TableDefinition<&str, &[u8]> = TableDefinition::new("ev_chargers");
 pub(crate) const CHARGING_SESSIONS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("charging_sessions");
+/// Stripe webhook event log (idempotency). Key: Stripe `evt_...` id.
+/// Value: event type (e.g. `checkout.session.completed`). Presence of the key
+/// means the event was already processed — retries short-circuit to 200 OK
+/// before any credit mutation, preventing double-credit.
+pub(crate) const STRIPE_EVENTS: TableDefinition<&str, &str> = TableDefinition::new("stripe_events");
 
 // Settings keys
 const SETTING_SETUP_COMPLETED: &str = "setup_completed";
@@ -264,6 +271,7 @@ impl Database {
             let _ = write_txn.open_table(VISITORS)?;
             let _ = write_txn.open_table(EV_CHARGERS)?;
             let _ = write_txn.open_table(CHARGING_SESSIONS)?;
+            let _ = write_txn.open_table(STRIPE_EVENTS)?;
         }
         write_txn.commit()?;
 
@@ -379,6 +387,7 @@ impl Database {
         drain_table!(write_txn, VISITORS);
         drain_table!(write_txn, EV_CHARGERS);
         drain_table!(write_txn, CHARGING_SESSIONS);
+        drain_table!(write_txn, STRIPE_EVENTS);
         // Preserve SETTINGS table (encryption salt, setup status, etc.)
         write_txn.commit()?;
         info!("All data tables cleared for demo reset");

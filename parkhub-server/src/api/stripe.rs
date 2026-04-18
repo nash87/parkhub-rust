@@ -99,6 +99,9 @@ pub struct CheckoutResponse {
 /// Stripe webhook event payload (simplified).
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct WebhookEvent {
+    /// Stripe event id (e.g. `evt_1NqX...`). Used for idempotency dedup —
+    /// duplicate deliveries short-circuit before the credit mutation.
+    pub id: String,
     /// Event type (e.g., "checkout.session.completed")
     #[serde(rename = "type")]
     pub event_type: String,
@@ -316,6 +319,7 @@ pub async fn create_checkout(
     )
 )]
 pub async fn stripe_webhook(
+    State(state): State<SharedState>,
     headers: HeaderMap,
     Extension(store): Extension<CheckoutStore>,
     body: Bytes,
@@ -374,6 +378,49 @@ pub async fn stripe_webhook(
             );
         }
     };
+
+    // ── Idempotency: dedup by Stripe event id ──────────────────────────
+    // Stripe retries deliveries on any non-2xx and occasionally even on 2xx
+    // during network blips. Record the event id BEFORE the credit mutation
+    // in a single redb write-tx. If the id was already present, return 200
+    // and skip the mutation entirely — this prevents double-credit on retry.
+    //
+    // Order matters: record-first, grant-second. A crash between them loses
+    // the grant (Stripe will retry and the replay will find the event
+    // already recorded — this is an at-most-once grant, the correct failure
+    // mode for money-adjacent operations over double-grant).
+    let inserted = {
+        let guard = state.read().await;
+        match guard
+            .db
+            .record_stripe_event(&event.id, &event.event_type)
+            .await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!(
+                    "Failed to record Stripe event {} for idempotency: {e}",
+                    event.id,
+                );
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error(
+                        "IDEMPOTENCY_STORE_ERROR",
+                        "failed to record event for idempotency",
+                    )),
+                );
+            }
+        }
+    };
+
+    if !inserted {
+        tracing::info!(
+            "Duplicate Stripe event {} ({}) — short-circuit 200 OK, no credit mutation",
+            event.id,
+            event.event_type,
+        );
+        return (StatusCode::OK, Json(ApiResponse::success(())));
+    }
 
     // ── Event dispatch ──────────────────────────────────────────────────
     match event.event_type.as_str() {
@@ -548,6 +595,7 @@ mod tests {
     #[test]
     fn test_webhook_event_deserialize() {
         let json = serde_json::json!({
+            "id": "evt_test_1",
             "type": "checkout.session.completed",
             "data": {
                 "object": {
@@ -559,6 +607,7 @@ mod tests {
             }
         });
         let event: WebhookEvent = serde_json::from_value(json).unwrap();
+        assert_eq!(event.id, "evt_test_1");
         assert_eq!(event.event_type, "checkout.session.completed");
         assert_eq!(event.data.object.id, "cs_test");
         assert_eq!(event.data.object.metadata.get("user_id").unwrap(), "u-1");
@@ -567,6 +616,7 @@ mod tests {
     #[test]
     fn test_webhook_event_payment_intent() {
         let json = serde_json::json!({
+            "id": "evt_test_2",
             "type": "payment_intent.succeeded",
             "data": {
                 "object": {
@@ -576,6 +626,7 @@ mod tests {
             }
         });
         let event: WebhookEvent = serde_json::from_value(json).unwrap();
+        assert_eq!(event.id, "evt_test_2");
         assert_eq!(event.event_type, "payment_intent.succeeded");
     }
 
@@ -755,5 +806,78 @@ mod tests {
         let header = format!("t={ts},v1=deadbeef,v1={v1_correct}");
 
         assert!(verify_stripe_signature(&header, body, secret).is_ok());
+    }
+
+    // ── Idempotency integration test ────────────────────────────────────
+
+    /// Simulates the webhook dedup flow against a real database: the first
+    /// delivery of an event id records the event and performs the credit
+    /// mutation; a duplicate delivery (same event id) must short-circuit
+    /// before touching the credit mutation — no double-credit.
+    #[tokio::test]
+    async fn test_webhook_duplicate_event_does_not_double_credit() {
+        use crate::db::{Database, DatabaseConfig};
+        let dir = tempfile::tempdir().expect("tempdir");
+        let db = Database::open(&DatabaseConfig {
+            path: dir.path().to_path_buf(),
+            encryption_enabled: false,
+            passphrase: None,
+            create_if_missing: true,
+        })
+        .expect("open db");
+
+        // A single pending checkout in the in-memory store.
+        let store = new_checkout_store();
+        store.write().await.push(CheckoutRecord {
+            id: "cs_idem".to_string(),
+            user_id: "u-idem".to_string(),
+            amount: 1000,
+            credits: 10,
+            currency: "eur".to_string(),
+            status: CheckoutStatus::Pending,
+            checkout_url: None,
+            created_at: Utc::now(),
+            completed_at: None,
+        });
+
+        // Helper that replays the webhook handler's dedup + mutation logic
+        // for a given event id. Returns whether the credit mutation ran.
+        async fn deliver(
+            db: &Database,
+            store: &CheckoutStore,
+            event_id: &str,
+            session_id: &str,
+        ) -> bool {
+            let inserted = db
+                .record_stripe_event(event_id, "checkout.session.completed")
+                .await
+                .unwrap();
+            if !inserted {
+                // Duplicate — short-circuit before mutation.
+                return false;
+            }
+            let mut records = store.write().await;
+            if let Some(r) = records.iter_mut().find(|r| r.id == session_id) {
+                r.status = CheckoutStatus::Completed;
+                r.completed_at = Some(Utc::now());
+            }
+            true
+        }
+
+        // First delivery: mutation runs.
+        assert!(deliver(&db, &store, "evt_idem_1", "cs_idem").await);
+        let completed_at_first = store.read().await[0].completed_at;
+        assert_eq!(store.read().await[0].status, CheckoutStatus::Completed);
+        assert!(completed_at_first.is_some());
+
+        // Duplicate delivery (Stripe retry): must short-circuit, no mutation.
+        assert!(!deliver(&db, &store, "evt_idem_1", "cs_idem").await);
+        // completed_at must be unchanged (not bumped to a new Utc::now()).
+        assert_eq!(store.read().await[0].completed_at, completed_at_first);
+        // Status is still Completed but the record was not touched twice.
+        assert_eq!(store.read().await[0].status, CheckoutStatus::Completed);
+
+        // A different event id for the same session still works (new event).
+        assert!(deliver(&db, &store, "evt_idem_2", "cs_idem").await);
     }
 }

@@ -23,17 +23,6 @@ use super::{AuthUser, SharedState};
 /// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
 const VAT_RATE: f64 = 0.19;
 
-/// Invoice number format: INV-{YEAR}-{sequential_hex}
-pub fn format_invoice_number(booking_id: &str, year: i32) -> String {
-    let hex_part: String = booking_id
-        .replace('-', "")
-        .chars()
-        .take(8)
-        .collect::<String>()
-        .to_uppercase();
-    format!("INV-{year}-{hex_part}")
-}
-
 /// `GET /api/v1/bookings/:id/invoice/pdf` — generate a PDF receipt for a booking.
 #[utoipa::path(
     get,
@@ -123,14 +112,33 @@ pub async fn get_booking_invoice_pdf(
         org_name
     };
 
-    // Invoice metadata
+    // Invoice metadata — sequential invoice number per § 14 UStG
+    // (fortlaufende Rechnungsnummer). Allocated once per booking from the
+    // per-year counter in the SETTINGS table and then reused on re-download.
     let year = booking
         .created_at
         .format("%Y")
         .to_string()
         .parse::<i32>()
         .unwrap_or(2026);
-    let invoice_number = format_invoice_number(&booking.id.to_string(), year);
+    let invoice_number = match state_guard
+        .db
+        .get_or_assign_invoice_number(&booking.id.to_string(), year)
+        .await
+    {
+        Ok(n) => n,
+        Err(e) => {
+            tracing::error!("Failed to allocate invoice number: {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::<()>::error(
+                    "SERVER_ERROR",
+                    "Failed to allocate invoice number",
+                )),
+            )
+                .into_response();
+        }
+    };
     let invoice_date = booking.created_at.format("%d.%m.%Y").to_string();
     let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
     let end_str = booking.end_time.format("%d.%m.%Y %H:%M").to_string();
@@ -417,26 +425,6 @@ fn generate_pdf(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_invoice_number_format() {
-        let invoice = format_invoice_number("550e8400-e29b-41d4-a716-446655440000", 2026);
-        assert!(invoice.starts_with("INV-2026-"));
-        assert_eq!(invoice, "INV-2026-550E8400");
-    }
-
-    #[test]
-    fn test_invoice_number_short_id() {
-        let invoice = format_invoice_number("abcd", 2025);
-        assert_eq!(invoice, "INV-2025-ABCD");
-    }
-
-    #[test]
-    fn test_invoice_number_strips_hyphens() {
-        let invoice = format_invoice_number("a-b-c-d-e-f-g-h-i", 2026);
-        // After removing hyphens: "abcdefghi", take first 8 = "ABCDEFGH"
-        assert_eq!(invoice, "INV-2026-ABCDEFGH");
-    }
 
     #[test]
     fn test_pdf_generation_produces_valid_pdf() {
