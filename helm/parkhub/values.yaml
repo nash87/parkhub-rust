@@ -211,6 +211,14 @@ monitoring:
     # additionalLabels: {}
     # alertLabels: {}  # e.g. team: platform
 
+# -- Grafana dashboards (opt-in)
+# When enabled, the chart ships a ConfigMap labelled `grafana_dashboard: "1"`
+# that is auto-discovered by the Grafana Helm chart's sidecar or the
+# grafana-operator. Keep disabled on clusters without Grafana so the chart
+# still installs cleanly.
+grafana:
+  dashboardsEnabled: false   # opt-in; requires grafana-operator or grafana helm chart in the cluster
+
 # -- Extra environment variables
 extraEnv: []
 #  - name: CUSTOM_VAR

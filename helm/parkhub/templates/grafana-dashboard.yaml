@@ -1,0 +1,19 @@
+{{- if .Values.grafana.dashboardsEnabled }}
+# Grafana dashboard sidecar ConfigMap.
+#
+# Gated behind `grafana.dashboardsEnabled` so the chart still installs
+# cleanly on clusters without Grafana. The `grafana_dashboard: "1"`
+# label is the contract understood by both the Grafana Helm chart's
+# sidecar and the grafana-operator, which auto-import any ConfigMap
+# carrying that label as a dashboard.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "parkhub.fullname" . }}-dashboard
+  labels:
+    {{- include "parkhub.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  parkhub-overview.json: |-
+{{ .Files.Get "dashboards/parkhub-overview.json" | indent 4 }}
+{{- end }}
