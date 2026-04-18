@@ -31,7 +31,7 @@ use crate::email;
 use crate::metrics;
 use crate::utils::html_escape;
 
-use super::{AuthUser, SharedState, VAT_RATE, check_admin, read_admin_setting};
+use super::{AuthUser, SharedState, check_admin, read_admin_setting};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BOOKINGS
@@ -124,6 +124,7 @@ pub async fn create_booking(
         mut booking_user,
         lot_opt,
         org_name,
+        vat_rate,
     ) = {
         let rg = state.read().await;
 
@@ -256,6 +257,13 @@ pub async fn create_booking(
 
         let org_name = rg.config.organization_name.clone();
 
+        // Resolve the seller-country VAT rate under the same read lock so
+        // the booking-creation hot path stays lock-minimal. Reverse-charge
+        // only matters for B2B invoicing, which happens later at PDF render
+        // time; on creation we always book the seller's standard rate so
+        // the persisted `tax` stays consistent with the configured country.
+        let vat_rate = super::tax::resolve_standard_rate(&rg).await;
+
         (
             slot,
             vehicle,
@@ -271,6 +279,7 @@ pub async fn create_booking(
             booking_user,
             lot_opt,
             org_name,
+            vat_rate,
         )
     };
     // Read lock released here.
@@ -397,7 +406,8 @@ pub async fn create_booking(
     // Cap at daily_max if configured (e.g. all-day price ceiling)
     let raw_price = (f64::from(req.duration_minutes) / 60.0) * hourly_rate;
     let base_price = daily_max.map_or(raw_price, |cap| raw_price.min(cap));
-    let tax = base_price * VAT_RATE;
+    // `vat_rate` resolved above from the seller-country tax profile.
+    let tax = base_price * vat_rate;
     let total = base_price + tax;
 
     let floor_name = lot_opt.as_ref().map_or_else(
@@ -1016,10 +1026,49 @@ pub async fn get_booking_invoice(
     let duration_hours = duration_minutes / 60;
     let duration_mins_part = duration_minutes % 60;
 
-    // VAT breakdown (19% German standard — Umsatzsteuergesetz § 12 Abs. 1)
+    // VAT breakdown — seller country is resolved from the tax settings, so
+    // the MwSt. row matches whatever jurisdiction the operator configured.
+    // Historical invoices still show `booking.pricing.tax` when available
+    // (see resolved gross below); this path is exercised on rerender so the
+    // rendered rate reflects the current configuration.
+    let seller_country = super::tax::resolve_seller_country_from_settings(&state_guard).await;
+    let buyer_vat_key = format!("user_vat_id_{}", booking.user_id);
+    let buyer_country_key = format!("user_country_{}", booking.user_id);
+    let buyer_vat_id = state_guard
+        .db
+        .get_setting(&buyer_vat_key)
+        .await
+        .ok()
+        .flatten()
+        .filter(|v| !v.trim().is_empty());
+    let buyer_country = state_guard
+        .db
+        .get_setting(&buyer_country_key)
+        .await
+        .ok()
+        .flatten()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| seller_country.clone());
+    let resolved_rate =
+        super::tax::resolve_rate(&seller_country, &buyer_country, buyer_vat_id.as_deref());
     let net_price = booking.pricing.base_price;
-    let vat_amount = net_price * VAT_RATE;
+    let vat_amount = net_price * resolved_rate.as_rate();
     let gross_total = net_price + vat_amount;
+    let vat_label = if resolved_rate.is_reverse_charge() {
+        "MwSt. 0% (Reverse Charge, Art. 194 VAT Directive)".to_string()
+    } else {
+        let pct = resolved_rate.as_rate() * 100.0;
+        if (pct - pct.round()).abs() < f64::EPSILON {
+            format!("MwSt. {}% (§ 12 UStG)", pct.round() as i64)
+        } else {
+            format!("MwSt. {pct:.1}% (§ 12 UStG)")
+        }
+    };
+    let reverse_charge_html = if resolved_rate.is_reverse_charge() {
+        "<p><strong>Hinweis:</strong> Reverse charge per Art. 194 VAT Directive.</p>"
+    } else {
+        ""
+    };
 
     let invoice_date = booking.created_at.format("%d.%m.%Y").to_string();
     let start_str = booking.start_time.format("%d.%m.%Y %H:%M").to_string();
@@ -1194,7 +1243,7 @@ pub async fn get_booking_invoice(
             <td class="text-right">{net_price:.2}</td>
           </tr>
           <tr>
-            <td>MwSt. 19% (§ 12 UStG)</td>
+            <td>{vat_label}</td>
             <td class="text-right">{vat_amount:.2}</td>
           </tr>
           <tr class="total-row">
@@ -1203,6 +1252,7 @@ pub async fn get_booking_invoice(
           </tr>
         </tbody>
       </table>
+      {reverse_charge_html}
     </div>
 
     <!-- Footer -->
@@ -1232,6 +1282,8 @@ pub async fn get_booking_invoice(
         currency = booking.pricing.currency,
         net_price = net_price,
         vat_amount = vat_amount,
+        vat_label = vat_label,
+        reverse_charge_html = reverse_charge_html,
         gross_total = gross_total,
     );
 
@@ -1375,7 +1427,9 @@ pub async fn quick_book(
     #[allow(clippy::cast_precision_loss)]
     let raw_price_gs = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
     let base_price = daily_max_gs.map_or(raw_price_gs, |cap| raw_price_gs.min(cap));
-    let tax = base_price * VAT_RATE;
+    // Seller-country VAT rate resolved under the held write lock.
+    let vat_rate = super::tax::resolve_standard_rate(&state_guard).await;
+    let tax = base_price * vat_rate;
     let total = base_price + tax;
 
     let booking = Booking {

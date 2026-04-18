@@ -18,10 +18,65 @@ use printpdf::{
 
 use parkhub_common::{ApiResponse, UserRole};
 
+use super::tax::{self, REVERSE_CHARGE_NOTE, ResolvedRate};
 use super::{AuthUser, SharedState};
 
-/// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
-const VAT_RATE: f64 = 0.19;
+/// Resolve the buyer country ISO code for a specific user.
+///
+/// Stored in a per-user setting `user_country_{user_id}` so operators can
+/// flag international customers without a schema migration. Falls back to
+/// the `tax_default_country` setting, then to the seller country so
+/// domestic buyers never trigger reverse-charge by accident.
+async fn resolve_buyer_country(state: &crate::AppState, user_id: uuid::Uuid) -> String {
+    let user_key = format!("user_country_{user_id}");
+    if let Ok(Some(v)) = state.db.get_setting(&user_key).await {
+        let trimmed = v.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    if let Ok(Some(v)) = state.db.get_setting("tax_default_country").await {
+        let trimmed = v.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    tax::resolve_seller_country_from_settings(state).await
+}
+
+/// Resolve the buyer VAT ID for a specific user.
+///
+/// Stored in a per-user setting `user_vat_id_{user_id}`; absent/empty means
+/// B2C sale (no reverse-charge eligibility).
+async fn resolve_buyer_vat_id(state: &crate::AppState, user_id: uuid::Uuid) -> Option<String> {
+    let key = format!("user_vat_id_{user_id}");
+    match state.db.get_setting(&key).await {
+        Ok(Some(v)) if !v.trim().is_empty() => Some(v.trim().to_string()),
+        _ => None,
+    }
+}
+
+/// Format the VAT line label based on the resolved rate.
+///
+/// * `Standard(0.19)` → `"VAT 19%"`
+/// * `Standard(0.077)` → `"VAT 7.7%"`
+/// * `ReverseCharge` → `"VAT 0% (reverse charge)"`
+fn format_vat_label(rate: ResolvedRate) -> String {
+    match rate {
+        ResolvedRate::ReverseCharge => "VAT 0% (reverse charge)".to_string(),
+        ResolvedRate::Standard(r) => {
+            let pct = r * 100.0;
+            // Avoid a trailing `.0` on whole percentages (e.g. "19%" not
+            // "19.0%") while preserving one decimal for fractional rates
+            // like Switzerland's 7.7 %.
+            if (pct - pct.round()).abs() < f64::EPSILON {
+                format!("VAT {}%", pct.round() as i64)
+            } else {
+                format!("VAT {pct:.1}%")
+            }
+        }
+    }
+}
 
 /// `GET /api/v1/bookings/:id/invoice/pdf` — generate a PDF receipt for a booking.
 #[utoipa::path(
@@ -148,11 +203,21 @@ pub async fn get_booking_invoice_pdf(
     let duration_hours = duration_minutes / 60;
     let duration_mins_part = duration_minutes % 60;
 
-    // Pricing
+    // Pricing — resolve the rate from the configured seller country,
+    // applying EU B2B reverse-charge if the buyer supplied a VAT ID from a
+    // different EU member state. See `api::tax` for the full policy.
+    let seller_country = tax::resolve_seller_country_from_settings(&state_guard).await;
+    let buyer_country = resolve_buyer_country(&state_guard, booking.user_id).await;
+    let buyer_vat_id = resolve_buyer_vat_id(&state_guard, booking.user_id).await;
+    let resolved_rate = tax::resolve_rate(&seller_country, &buyer_country, buyer_vat_id.as_deref());
     let net_price = booking.pricing.base_price;
-    let vat_amount = net_price * VAT_RATE;
+    let vat_amount = net_price * resolved_rate.as_rate();
     let gross_total = net_price + vat_amount;
     let currency = &booking.pricing.currency;
+    let vat_label = format_vat_label(resolved_rate);
+    let reverse_charge_note = resolved_rate
+        .is_reverse_charge()
+        .then(|| REVERSE_CHARGE_NOTE.to_string());
 
     drop(state_guard);
 
@@ -176,6 +241,8 @@ pub async fn get_booking_invoice_pdf(
         vat_amount,
         gross_total,
         currency,
+        &vat_label,
+        reverse_charge_note.as_deref(),
     ) {
         Ok(bytes) => bytes,
         Err(e) => {
@@ -228,6 +295,8 @@ fn generate_pdf(
     vat_amount: f64,
     gross_total: f64,
     currency: &str,
+    vat_label: &str,
+    reverse_charge_note: Option<&str>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut ops = Vec::new();
 
@@ -365,7 +434,7 @@ fn generate_pdf(
         regular,
     );
     y -= Mm(6.0);
-    text_at(&mut ops, "VAT 19%", 9.0, Mm(20.0), y, regular);
+    text_at(&mut ops, vat_label, 9.0, Mm(20.0), y, regular);
     text_at(
         &mut ops,
         &format!("{vat_amount:.2}"),
@@ -388,6 +457,12 @@ fn generate_pdf(
         y,
         bold,
     );
+
+    // ── Reverse-charge note (EU B2B, Art. 194 VAT Directive) ──
+    if let Some(note) = reverse_charge_note {
+        y -= Mm(10.0);
+        text_at(&mut ops, note, 8.0, Mm(20.0), y, bold);
+    }
 
     // ── Footer ──
     let footer_y = Mm(25.0);
@@ -447,6 +522,8 @@ mod tests {
             2.85,
             17.85,
             "EUR",
+            "VAT 19%",
+            None,
         )
         .expect("PDF generation should succeed");
 
@@ -479,6 +556,8 @@ mod tests {
             0.0,
             0.0,
             "EUR",
+            "VAT 19%",
+            None,
         )
         .expect("PDF generation with zero price should succeed");
 
@@ -507,6 +586,8 @@ mod tests {
             190.0,
             1190.0,
             "EUR",
+            "VAT 19%",
+            None,
         )
         .expect("PDF generation with long names should succeed");
 
@@ -514,7 +595,50 @@ mod tests {
     }
 
     #[test]
-    fn test_vat_rate_is_nineteen_percent() {
-        assert!((VAT_RATE - 0.19).abs() < f64::EPSILON);
+    fn test_pdf_generation_reverse_charge_renders() {
+        // Zero-rated EU B2B invoice still has to round-trip through the
+        // renderer: the renderer accepts the extra reverse-charge note
+        // and produces a structurally valid PDF. (The note itself is
+        // encoded through printpdf's text section and is not trivially
+        // recoverable from raw bytes, so we only assert the PDF header
+        // here; content rendering is covered by the snapshot tests.)
+        let bytes = generate_pdf(
+            "Test Company",
+            "INV-2026-RC000001",
+            "22.03.2026",
+            "Acme S.A.",
+            "billing@acme.fr",
+            "Parkhaus A",
+            42,
+            "Ebene 1",
+            "AB-CD-1234",
+            "22.03.2026 08:00",
+            "22.03.2026 18:00",
+            10,
+            0,
+            "Confirmed",
+            100.0,
+            0.0,
+            100.0,
+            "EUR",
+            "VAT 0% (reverse charge)",
+            Some(super::super::tax::REVERSE_CHARGE_NOTE),
+        )
+        .expect("reverse-charge PDF should render");
+
+        assert!(bytes.starts_with(b"%PDF"));
+        assert!(bytes.len() > 100);
+    }
+
+    #[test]
+    fn test_format_vat_label_whole_and_fractional_rates() {
+        use super::super::tax::ResolvedRate;
+        assert_eq!(format_vat_label(ResolvedRate::Standard(0.19)), "VAT 19%");
+        assert_eq!(format_vat_label(ResolvedRate::Standard(0.20)), "VAT 20%");
+        assert_eq!(format_vat_label(ResolvedRate::Standard(0.077)), "VAT 7.7%");
+        assert_eq!(
+            format_vat_label(ResolvedRate::ReverseCharge),
+            "VAT 0% (reverse charge)"
+        );
     }
 }

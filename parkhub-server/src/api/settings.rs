@@ -14,6 +14,11 @@ use crate::audit::{AuditEntry, AuditEventType};
 use super::{AuthUser, SharedState, check_admin};
 
 /// All admin settings with their default values.
+///
+/// The `tax_default_country` / `tax_seller_country` keys drive the
+/// multi-country VAT profile resolver in [`super::tax`]. Both default to
+/// `"DE"` so single-tenant German deployments keep behaving exactly as
+/// before; international operators override them via PUT.
 pub const ADMIN_SETTINGS: &[(&str, &str)] = &[
     ("company_name", "ParkHub"),
     ("use_case", "company"),
@@ -30,6 +35,8 @@ pub const ADMIN_SETTINGS: &[(&str, &str)] = &[
     ("max_booking_duration_hours", "0"),
     ("credits_enabled", "false"),
     ("credits_per_booking", "1"),
+    ("tax_default_country", "DE"),
+    ("tax_seller_country", "DE"),
 ];
 
 /// Read a single admin setting from DB, falling back to its default.
@@ -226,6 +233,17 @@ fn validate_setting_value(key: &str, value: &str) -> Result<(), &'static str> {
             }
         }
         "company_name" => { /* any string is fine */ }
+        "tax_default_country" | "tax_seller_country" => {
+            // ISO 3166-1 alpha-2 country code that must resolve to a
+            // shipped tax profile. Case-insensitive; unknown codes are
+            // rejected so operators can't silently persist a typo that
+            // would then fall back to the default at read time.
+            if super::tax::profile_for(value).is_none() {
+                return Err(
+                    "Country must be a supported ISO-3166-1 alpha-2 code (e.g. DE, AT, FR, IT, ES, NL, PL, CH, GB, US)",
+                );
+            }
+        }
         _ => return Err("Unknown setting key"),
     }
     Ok(())

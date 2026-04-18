@@ -45,9 +45,10 @@ const MAX_REQUEST_BODY_BYTES: usize = 4 * 1024 * 1024; // 4 MiB
 #[cfg(feature = "mod-vehicles")]
 pub const MAX_PHOTO_BYTES: usize = 2 * 1024 * 1024;
 
-/// German standard VAT rate (19% — Umsatzsteuergesetz § 12 Abs. 1)
-#[cfg(feature = "mod-bookings")]
-pub(super) const VAT_RATE: f64 = 0.19;
+// `api::tax::resolve_standard_rate` now owns the VAT-rate resolution. The
+// historical `pub(super) const VAT_RATE = 0.19;` constant was retired when
+// the multi-country tax profile layer shipped — callers should go through
+// the resolver so the seller country is honoured.
 
 use parkhub_common::{ApiResponse, LoginResponse, UserRole};
 
@@ -189,6 +190,7 @@ pub mod stripe;
 #[cfg(feature = "mod-swap")]
 pub mod swap;
 pub mod system;
+pub mod tax;
 #[cfg(feature = "mod-team")]
 pub mod team;
 #[cfg(feature = "mod-multi-tenant")]
