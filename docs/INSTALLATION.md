@@ -25,8 +25,8 @@
 | Deployment | Requirements |
 |-----------|--------------|
 | Docker Compose | Docker Engine 24+, Compose v2 (`docker compose`) |
-| Bare metal / source | Rust 1.84+, Node.js 22+, npm |
-| Windows GUI build | Rust 1.84+, Node.js 22+, CMake, C++ compiler |
+| Bare metal / source | Rust 1.94+ (Edition 2024), Node.js 22+, npm |
+| Windows GUI build | Rust 1.94+ (Edition 2024), Node.js 22+, CMake, C++ compiler |
 | Kubernetes | kubectl, a running cluster, a PVC storage class |
 
 ---
@@ -89,20 +89,31 @@ docker compose up -d
 
 ```bash
 docker compose ps
-curl http://localhost:8080/health/live
-# HTTP 200 OK
+curl -i http://localhost:8080/health/live
+# HTTP/1.1 200 OK
+curl http://localhost:8080/health/ready
+# {"ready":true}
 ```
 
-Open `http://localhost:8080` in your browser.
+Open `http://localhost:8080` in your browser and log in with username `admin`
+plus the password you wrote to `.env` in Step 2.
 
 ### First Boot
 
 On first start, ParkHub automatically:
 
-- Creates an admin account with an auto-generated password (printed in the server logs)
+- Creates the `admin` account using `PARKHUB_ADMIN_PASSWORD` from `.env` (the
+  Compose stack refuses to boot without it, see Step 2)
 - Creates a sample parking lot for immediate exploration
 
-To set a known admin password, add `PARKHUB_ADMIN_PASSWORD=your-password` to the environment section of `docker-compose.yml` before first start.
+Change the password after first login from the admin profile page — or set a
+new `PARKHUB_ADMIN_PASSWORD` in `.env` and recreate the container.
+
+> **Bare-metal / source build only**: when the binary starts without
+> `PARKHUB_ADMIN_PASSWORD` set (e.g. `cargo run` on a dev box), it
+> auto-generates one and prints it to the server logs on first boot. The
+> Docker Compose path shipped in this repo never hits that branch — the `:?`
+> gate on `PARKHUB_ADMIN_PASSWORD` fails fast instead.
 
 ### Data Persistence
 
@@ -275,6 +286,20 @@ enable_tls = false
 
 ## Kubernetes
 
+A production-ready Helm chart ships in `helm/parkhub/` — the fastest path:
+
+```bash
+helm install parkhub ./helm/parkhub \
+  --namespace parkhub --create-namespace \
+  --set config.adminPassword="$(openssl rand -base64 24)" \
+  --set config.dbPassphrase="$(openssl rand -base64 32)"
+```
+
+See [`helm/README.md`](../helm/README.md) for the full value reference.
+
+The raw manifests below are kept for clusters where Helm is unavailable or to
+show what the chart renders to.
+
 ### Namespace
 
 ```yaml
@@ -337,7 +362,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: parkhub
-          image: ghcr.io/nash87/parkhub-rust:v1.2.5  # Pin to specific version; check releases for latest
+          image: ghcr.io/nash87/parkhub-rust:v4.13.0  # Pin to specific version; check GitHub Releases for the latest tag
           args: ["--headless", "--unattended", "--port", "8080"]
           ports:
             - containerPort: 8080
