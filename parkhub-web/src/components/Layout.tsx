@@ -81,6 +81,7 @@ const NAV_SECTIONS: readonly NavSection[] = [
       { to: '/notifications', icon: Bell, key: 'notifications' },
       { to: '/translations', icon: Translate, key: 'translations' },
       { to: '/profile', icon: UserCircle, key: 'profile' },
+      { to: '/settings', icon: GearSix, key: 'settings' },
     ],
   },
 ] as const;
