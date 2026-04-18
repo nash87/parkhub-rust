@@ -1,26 +1,22 @@
 name: Visual Regression
 
-# Soft-fail visual regression gate (T-1770). Not yet a required check — triage
-# diff artifacts in the PR review before requiring this to be green. Once the
-# baselines are stable for a few weeks, promote to required in branch
-# protection.
+# Nightly visual regression. Runs against `main` once per day so baseline
+# drift is caught within 24h without surfacing flaky red X's on every PR.
+# GitHub-hosted runners render with slight anti-aliasing / font-hinting
+# differences from local baselines, which made the per-PR gate noisy
+# without providing matching merge-blocking value (the job was already
+# `continue-on-error: true`).
+#
+# Run manually via `workflow_dispatch` when intentionally rebasing
+# baselines.
 
 on:
-  pull_request:
-    paths:
-      - 'parkhub-server/**'
-      - 'parkhub-web/**'
-      - 'parkhub-common/**'
-      - 'parkhub-client/**'
-      - 'e2e/visual.spec.ts'
-      - 'e2e/helpers.ts'
-      - 'e2e/visual.spec.ts-snapshots/**'
-      - 'playwright.config.ts'
-      - '.github/workflows/visual-regression.yml'
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC daily
   workflow_dispatch:
 
 concurrency:
-  group: visual-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: visual-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
