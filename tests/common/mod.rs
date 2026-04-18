@@ -100,16 +100,17 @@ pub async fn start_test_server() -> TestServer {
         .build()
         .expect("build reqwest client");
 
-    // Wait for first start to create config and become healthy. 60s covers
-    // GitHub-hosted runners where a cold binary spawn + migrations + port
-    // bind can exceed the previous 15s budget even though local runs settle
-    // in <2s. Tests that hit a genuine hang still fail promptly via their
-    // per-request 10s reqwest timeout.
-    let deadline = Instant::now() + Duration::from_secs(60);
+    // Wait for first start to create config and become healthy. 180s covers
+    // GitHub-hosted runners where 4 parallel cargo-test threads each spawn
+    // their own server simultaneously; under CPU contention a cold binary
+    // spawn + migrations + port bind can exceed 60s even though local runs
+    // settle in <2s. Tests that hit a genuine hang still fail promptly via
+    // their per-request 10s reqwest timeout.
+    let deadline = Instant::now() + Duration::from_secs(180);
     loop {
         assert!(
             Instant::now() <= deadline,
-            "Server did not become healthy within 60 seconds on port {port}"
+            "Server did not become healthy within 180 seconds on port {port}"
         );
         match client.get(format!("{url}/health")).send().await {
             Ok(resp) if resp.status().is_success() => break,
@@ -150,12 +151,12 @@ pub async fn start_test_server() -> TestServer {
 
         child = child2;
 
-        // Wait for restart
-        let deadline = Instant::now() + Duration::from_secs(15);
+        // Wait for restart (matches phase-1 timeout; same CI contention rules)
+        let deadline = Instant::now() + Duration::from_secs(180);
         loop {
             assert!(
                 Instant::now() <= deadline,
-                "Server did not restart within 15 seconds on port {port}"
+                "Server did not restart within 180 seconds on port {port}"
             );
             match client.get(format!("{url}/health")).send().await {
                 Ok(resp) if resp.status().is_success() => break,
