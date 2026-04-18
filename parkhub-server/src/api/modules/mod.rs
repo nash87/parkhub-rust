@@ -399,7 +399,7 @@ pub(super) fn validate_instance(
     };
     let errors: Vec<String> = validator
         .iter_errors(instance)
-        .map(|e| format!("{} at `{}`", e, e.instance_path))
+        .map(|e| format!("{} at `{}`", e, e.instance_path()))
         .collect();
     if errors.is_empty() {
         Ok(())
