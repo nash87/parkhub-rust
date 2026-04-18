@@ -12,7 +12,7 @@
  * as T-1842 along with the nav-variants integration.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { User, Building, Palette, Bell, Car, Keyboard, Shield, Coins, ChartLine, FileText, ArrowRight } from '@phosphor-icons/react';
@@ -59,37 +59,34 @@ function writeStored(key: string, value: string): void {
  * selection immediately re-tints the whole app via the existing theme
  * bridge — no additional CSS has to ship with this component.
  */
-const THEME_SWATCHES: ThemeSwatch[] = [
-  { value: 'classic', label: 'Classic (teal)', color: 'oklch(0.6 0.15 175)' },
-  { value: 'residential', label: 'Residential', color: 'oklch(0.6 0.15 155)' },
-  { value: 'shared', label: 'Shared', color: 'oklch(0.6 0.15 290)' },
-  { value: 'rental', label: 'Rental', color: 'oklch(0.6 0.15 260)' },
-  { value: 'personal', label: 'Personal', color: 'oklch(0.6 0.2 12)' },
-  { value: 'glass', label: 'Glass', color: 'linear-gradient(135deg, #67e8f9, #c4b5fd)' },
-  { value: 'bento', label: 'Bento', color: 'linear-gradient(135deg, #fb923c, #f472b6)' },
-  { value: 'brutalist', label: 'Brutalist', color: '#0a0a0a' },
-];
+// Swatches are derived at render time from the single source of truth
+// (DESIGN_THEMES via useTheme().designThemes) so every swatch value is
+// guaranteed to be a valid DesignThemeId. Previously-hardcoded IDs
+// (`residential`/`shared`/`rental`/`personal`) were use-case palette keys,
+// not design-theme keys, so clicking those was a silent no-op.
 
 export function SettingsPage() {
   const { t } = useTranslation();
-  const { designTheme, setDesignTheme } = useTheme();
+  const { designTheme, setDesignTheme, setTheme, resolved, designThemes } = useTheme();
 
   const [scope, setScope] = useState<Scope>('user');
   const [navLayout, setNavLayoutState] = useState<NavLayout>(() => readStored<NavLayout>(NAV_LAYOUT_KEY, 'classic'));
   const [density, setDensityState] = useState<'compact' | 'cozy' | 'comfortable'>(() =>
     readStored<'compact' | 'cozy' | 'comfortable'>(DENSITY_KEY, 'cozy'),
   );
-  const [dark, setDark] = useState<boolean>(() =>
-    typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+
+  const themeSwatches = useMemo<ThemeSwatch[]>(
+    () =>
+      designThemes.map((t) => ({
+        value: t.id,
+        label: t.name,
+        color: `linear-gradient(135deg, ${t.previewColors.light[2]}, ${t.previewColors.light[3]})`,
+      })),
+    [designThemes],
   );
 
   useEffect(() => writeStored(NAV_LAYOUT_KEY, navLayout), [navLayout]);
   useEffect(() => writeStored(DENSITY_KEY, density), [density]);
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.documentElement.classList.toggle('dark', dark);
-  }, [dark]);
 
   const userSections = [
     { id: 'profile', label: t('settings.profile', 'Profile'), icon: User, to: '/profile' as const },
@@ -171,7 +168,7 @@ export function SettingsPage() {
           <ThemeSwatches
             value={designTheme}
             onChange={(v) => setDesignTheme(v as DesignThemeId)}
-            options={THEME_SWATCHES}
+            options={themeSwatches}
           />
         </SRow>
 
@@ -179,7 +176,16 @@ export function SettingsPage() {
           title={t('settings.dark', 'Dark mode')}
           description={t('settings.darkDesc', 'Also togglable via ⌘⇧D.')}
         >
-          <SToggle value={dark} onChange={setDark} label={t('settings.dark', 'Dark mode')} />
+          {/* Drive dark mode through ThemeContext so the preference persists
+              in localStorage (parkhub_theme) and stays in sync with every
+              other theme-aware control — ThemeSwitcher, PWA meta-theme-color,
+              etc. `resolved` returns the effective light/dark even when
+              theme === 'system'. */}
+          <SToggle
+            value={resolved === 'dark'}
+            onChange={(v) => setTheme(v ? 'dark' : 'light')}
+            label={t('settings.dark', 'Dark mode')}
+          />
         </SRow>
 
         <SRow
