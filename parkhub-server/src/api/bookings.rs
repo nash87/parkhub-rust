@@ -518,11 +518,6 @@ pub async fn create_booking(
             "Booking created"
         );
 
-        AuditEntry::new(AuditEventType::BookingCreated)
-            .user(auth_user.user_id, &booking_user.username)
-            .resource("booking", &booking.id.to_string())
-            .log();
-
         // Deduct credits if enabled and user is not admin
         if credits_enabled && !is_admin_user {
             booking_user.credits_balance -= credits_per_booking;
