@@ -14,7 +14,11 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { CommandPalette } from './CommandPalette';
 import { NotificationCenter } from './NotificationCenter';
 import { ShortcutsHelp } from './ShortcutsHelp';
-import { Assistant } from './Assistant';
+// Assistant pulls the live-data reply builder + framer-motion dialog
+// styles; lazy-load so the Layout critical chunk stays lean. Suspense
+// fallback is `null` because the assistant only renders when the user
+// opens it via ⌘. — there's nothing to show until then.
+const Assistant = lazy(() => import('./Assistant').then(m => ({ default: m.Assistant })));
 import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
@@ -612,7 +616,11 @@ export function Layout() {
 
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
       <ShortcutsHelp open={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
-      <Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      {assistantOpen && (
+        <Suspense fallback={null}>
+          <Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+        </Suspense>
+      )}
       <ThemeSwitcherFab onClick={() => setThemeSwitcherOpen(true)} />
       <ThemeSwitcher open={themeSwitcherOpen} onClose={() => setThemeSwitcherOpen(false)} />
     </div>
