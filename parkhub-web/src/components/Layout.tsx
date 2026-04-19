@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,11 @@ import { usePageTitle } from '../hooks/usePageTitle';
 import { CommandPalette } from './CommandPalette';
 import { NotificationCenter } from './NotificationCenter';
 import { ShortcutsHelp } from './ShortcutsHelp';
-import { Assistant } from './Assistant';
+// Assistant pulls the live-data reply builder + framer-motion dialog
+// styles; lazy-load so the Layout critical chunk stays lean. Suspense
+// fallback is `null` because the assistant only renders when the user
+// opens it via ⌘. — there's nothing to show until then.
+const Assistant = lazy(() => import('./Assistant').then(m => ({ default: m.Assistant })));
 import { ThemeSwitcher, ThemeSwitcherFab } from './ThemeSwitcher';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { NotificationBadge } from './ui/NotificationBadge';
@@ -22,9 +26,14 @@ import { languages } from '../i18n/index';
 import { getInMemoryToken } from '../api/client';
 import { preloadRoute } from '../lib/routePreload';
 import { useNavLayout } from '../hooks/useNavLayout';
-import { RailSidebar } from './nav/RailSidebar';
-import { FloatingDock } from './nav/FloatingDock';
-import { TopTabs } from './nav/TopTabs';
+import { useDensity } from '../hooks/useDensity';
+// Non-classic layouts are lazy-loaded so Classic users (default) don't
+// download the framer-motion dock magnification code, the top-tabs
+// overflow dropdown, or the rail tooltip plumbing. Each chunk is ~3-4KB
+// gzipped and swaps in on first layout change.
+const RailSidebar = lazy(() => import('./nav/RailSidebar').then(m => ({ default: m.RailSidebar })));
+const FloatingDock = lazy(() => import('./nav/FloatingDock').then(m => ({ default: m.FloatingDock })));
+const TopTabs = lazy(() => import('./nav/TopTabs').then(m => ({ default: m.TopTabs })));
 import { APP_VERSION } from '../lib/appVersion';
 
 export type NavItem = {
@@ -410,6 +419,10 @@ export function Layout() {
   // Classic renders the wide sidebar. Rail/Top/Dock render their own
   // components and suppress the classic aside.
   const [navLayout] = useNavLayout();
+  // Boot the density hook so the `data-density` attribute is applied on <html>
+  // before first paint of any route — pages consuming var(--density-…) get
+  // the right scale without flashing the default.
+  useDensity();
   const useTopTabs = navLayout === 'top';
   const useDock = navLayout === 'dock';
   const outerLayout = useTopTabs ? 'flex flex-col' : 'flex';
@@ -418,14 +431,20 @@ export function Layout() {
     <div className={`min-h-dvh bg-surface-50 dark:bg-surface-950 ${outerLayout}`}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">{t('nav.skipToContent')}</a>
 
-      {/* Rail layout — narrow icon sidebar */}
+      {/* Rail layout — narrow icon sidebar. Lazy-loaded, so the empty
+          <Suspense> fallback holds the 72px column width briefly on
+          first switch from Classic. */}
       {navLayout === 'rail' && (
-        <RailSidebar unreadCount={unreadCount} onLogout={handleLogout} isAdmin={isAdmin} />
+        <Suspense fallback={<div className="hidden lg:block w-[72px]" aria-hidden="true" />}>
+          <RailSidebar unreadCount={unreadCount} onLogout={handleLogout} isAdmin={isAdmin} />
+        </Suspense>
       )}
 
       {/* Top tabs — horizontal header */}
       {useTopTabs && (
-        <TopTabs unreadCount={unreadCount} onLogout={handleLogout} isAdmin={isAdmin} />
+        <Suspense fallback={<div className="hidden lg:block h-14" aria-hidden="true" />}>
+          <TopTabs unreadCount={unreadCount} onLogout={handleLogout} isAdmin={isAdmin} />
+        </Suspense>
       )}
 
       {/* Classic sidebar — wide glass-morphism column. Hidden when the user
@@ -589,11 +608,19 @@ export function Layout() {
 
       {/* Floating dock — renders over the top of the main area, so the
           footer gets extra padding above to avoid overlap. */}
-      {useDock && <FloatingDock unreadCount={unreadCount} isAdmin={isAdmin} />}
+      {useDock && (
+        <Suspense fallback={null}>
+          <FloatingDock unreadCount={unreadCount} isAdmin={isAdmin} />
+        </Suspense>
+      )}
 
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
       <ShortcutsHelp open={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
-      <Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      {assistantOpen && (
+        <Suspense fallback={null}>
+          <Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+        </Suspense>
+      )}
       <ThemeSwitcherFab onClick={() => setThemeSwitcherOpen(true)} />
       <ThemeSwitcher open={themeSwitcherOpen} onClose={() => setThemeSwitcherOpen(false)} />
     </div>

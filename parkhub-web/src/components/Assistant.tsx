@@ -17,6 +17,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkle, ArrowRight, X } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import { buildLiveReply, defaultReply } from '../lib/assistantReply';
+
+// Re-export for callers that want a synchronous fallback (tests, storybook).
+export { defaultReply };
 
 interface Message {
   role: 'user' | 'bot';
@@ -26,43 +30,27 @@ interface Message {
 interface AssistantProps {
   open: boolean;
   onClose: () => void;
-  /** Optional custom matcher. Defaults to `defaultReply`. */
-  reply?: (question: string) => string;
+  /**
+   * Optional custom matcher. Defaults to `buildLiveReply`, which queries
+   * the running parkhub-server for real data. Tests that don't want to
+   * stub `api.*` can pass `defaultReply` (sync, deterministic).
+   */
+  reply?: (question: string) => string | Promise<string>;
   /** Optional initial suggestion chips shown before the first message. */
   suggestions?: string[];
 }
 
-/**
- * Default reply heuristics — match user input against a handful of intent
- * keywords and return a canned answer that looks like real local data.
- * Backend teams can swap in a smarter matcher via the `reply` prop.
- */
-export function defaultReply(q: string): string {
-  const lc = q.toLowerCase();
-  if (lc.includes('nearest ev') || lc.includes('ev slot'))
-    return 'Slot L2-07 is the closest available EV charger — 45 m from the entrance, 150 kW CCS. Want to reserve it for 4 hours?';
-  if (lc.includes('credit'))
-    return 'You used 43 credits this month vs 31 in April (+39%). The jump came from 3 full-day bookings on high-demand Fridays. Tuesdays and Thursdays are typically 20% cheaper.';
-  if (lc.includes('friday'))
-    return "Friday's historical occupancy peaks at 92% between 09:30–11:00. Booking before 08:30 gives you 68% slot choice and saves 1 credit.";
-  if (lc.includes('marco'))
-    return "I can share your L2-14 pass with Marco for today. He'll get a QR that works 08:00–16:00. Confirm?";
-  if (lc.includes('where') || lc.includes('yesterday'))
-    return 'Yesterday you parked at HQ Garage, slot L2-14, from 08:17 to 17:42 (9h 25m). Total: 3 credits.';
-  return 'I only answer from your local data. Try asking about credits, slot availability, swap requests, or recent bookings.';
-}
-
 const DEFAULT_SUGGESTIONS = [
-  'Find the nearest EV slot',
-  'My credit usage this month',
-  'Best time to book for Friday',
-  'Share pass with Marco',
+  'How many credits do I have?',
+  'What is my next booking?',
+  'Where did I park last?',
+  'Stats this month',
 ];
 
 export function Assistant({
   open,
   onClose,
-  reply = defaultReply,
+  reply = buildLiveReply,
   suggestions = DEFAULT_SUGGESTIONS,
 }: AssistantProps) {
   const { t } = useTranslation();
@@ -86,20 +74,28 @@ export function Assistant({
     if (!open && d.open) d.close();
   }, [open]);
 
-  const send = (text?: string) => {
+  const send = async (text?: string) => {
     const q = (text ?? input).trim();
     if (!q) return;
     setMsgs((m) => [...m, { role: 'user', content: q }]);
     setInput('');
     setThinking(true);
-    // Small delay preserves the "thinking" affordance from the design.
-    // Using setTimeout rather than useOptimistic because this isn't a
-    // server round-trip — it's purely local pattern matching and the
-    // UI intentionally pauses to feel responsive.
-    setTimeout(() => {
-      setMsgs((m) => [...m, { role: 'bot', content: reply(q) }]);
+    // reply() can be sync (test doubles, defaultReply) or async (the live
+    // builder that queries parkhub-server). Promise.resolve() normalizes.
+    try {
+      const answer = await Promise.resolve(reply(q));
+      setMsgs((m) => [...m, { role: 'bot', content: answer }]);
+    } catch (e) {
+      setMsgs((m) => [
+        ...m,
+        {
+          role: 'bot',
+          content: `Couldn't answer — ${e instanceof Error ? e.message : 'unknown error'}.`,
+        },
+      ]);
+    } finally {
       setThinking(false);
-    }, 500);
+    }
   };
 
   return (

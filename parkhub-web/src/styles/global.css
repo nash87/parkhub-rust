@@ -693,3 +693,50 @@ body {
     animation-duration: 0s;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Density — user-pickable spacing scale. Applied via [data-density=…] on <html>
+   by the useDensity() hook (src/hooks/useDensity.ts). Changing the attribute
+   reflows the whole app via CSS custom properties — no component re-mount.
+   
+   Scales map to the shared Tailwind spacing scale so custom CSS doesn't fight
+   existing utility classes.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --density-row-gap: 0.75rem;      /* cozy default matches existing spacing */
+  --density-card-padding: 1.25rem;
+  --density-nav-item-py: 0.5rem;
+  --density-text-scale: 1;
+}
+
+[data-density="compact"] {
+  --density-row-gap: 0.5rem;
+  --density-card-padding: 0.875rem;
+  --density-nav-item-py: 0.375rem;
+  --density-text-scale: 0.95;
+}
+
+[data-density="cozy"] {
+  --density-row-gap: 0.75rem;
+  --density-card-padding: 1.25rem;
+  --density-nav-item-py: 0.5rem;
+  --density-text-scale: 1;
+}
+
+[data-density="comfortable"] {
+  --density-row-gap: 1rem;
+  --density-card-padding: 1.75rem;
+  --density-nav-item-py: 0.625rem;
+  --density-text-scale: 1.05;
+}
+
+/* Opt-in classes — components use the primitive class that consumes the var.
+   Pairing with `p-5` (Tailwind) still works because these classes override via
+   higher specificity when applied. */
+.density-card {
+  padding: var(--density-card-padding);
+}
+.density-rows > * + * {
+  margin-top: var(--density-row-gap);
+}

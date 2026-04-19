@@ -37,7 +37,11 @@ export function SCard({
   return (
     <section
       id={id}
-      className="card p-5 mb-4 border border-surface-200 dark:border-surface-800"
+      // `density-card` consumes var(--density-card-padding) so the
+      // Appearance → Density segmented control actually reflows this
+      // card's inner spacing (compact/cozy/comfortable). See
+      // styles/global.css density block + hooks/useDensity.
+      className="card density-card mb-4 border border-surface-200 dark:border-surface-800"
     >
       {(title || actions) && (
         <header className="flex items-center justify-between mb-3">
