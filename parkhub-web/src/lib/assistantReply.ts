@@ -14,7 +14,12 @@
  *  - `defaultReply`     — kept as a synchronous fallback for stories /
  *                         tests that don't have an API context.
  */
-import { api, type Booking, type UserCredits, type UserStats, type Vehicle } from '../api/client';
+// Types only — the actual `api` runtime is imported lazily inside
+// buildLiveReply() so this module stays a leaf dependency of <Assistant>
+// and doesn't pull the ~80KB API client into the Layout critical-path
+// chunk. The dynamic import resolves once (cached by the bundler) so
+// subsequent Assistant queries don't re-download.
+import type { Booking, UserCredits, UserStats, Vehicle } from '../api/client';
 
 type BuildOpts = {
   /** Optional locale code for number formatting (defaults to the browser). */
@@ -61,6 +66,8 @@ function fmtDayRelative(ts: string, locale?: string): string {
 export async function buildLiveReply(q: string, opts: BuildOpts = {}): Promise<string> {
   const intent = matchIntent(q);
   const nf = NF(opts.locale);
+  // Lazy-import keeps this module out of the Layout-critical chunk.
+  const { api } = await import('../api/client');
 
   try {
     switch (intent) {
