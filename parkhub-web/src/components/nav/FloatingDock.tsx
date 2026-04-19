@@ -18,6 +18,7 @@ import { DotsThree, X } from '@phosphor-icons/react';
 import { preloadRoute } from '../../lib/routePreload';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { NAV_SECTIONS, type NavItem } from '../Layout';
+import { isActivePath } from './navActive';
 
 interface FloatingDockProps {
   unreadCount: number;
@@ -63,10 +64,7 @@ export function FloatingDock({ unreadCount, isAdmin }: FloatingDockProps) {
           <DockIcon
             key={item.key}
             item={item}
-            active={
-              location.pathname === item.to ||
-              (item.to !== '/' && location.pathname.startsWith(item.to))
-            }
+            active={isActivePath(location.pathname, item.to)}
             badge={item.key === 'notifications' ? unreadCount : 0}
             mouseX={mouseX}
             label={t(`nav.${item.key}`)}
@@ -173,11 +171,17 @@ interface DockIconProps {
  */
 function DockIcon({ item, active, badge, mouseX, label }: DockIconProps) {
   const ref = useRef<HTMLAnchorElement>(null);
+  // Resting distance kept past the magnification ceiling so the scale
+  // ramp (0..50..120) bottoms out at 1.0 whenever the cursor isn't on
+  // the dock. A naive `return 0` would map the null/idle state to the
+  // MAXIMUM scale — every icon permanently zoomed, which is exactly
+  // the opposite of the desired "springs up as you approach" feel.
+  const REST_DISTANCE = 1_000;
   const distance = useTransform(mouseX, (mx) => {
-    if (mx === null || !ref.current) return 0;
+    if (mx === null || !ref.current) return REST_DISTANCE;
     const rect = ref.current.getBoundingClientRect();
     const parent = ref.current.parentElement?.getBoundingClientRect();
-    if (!parent) return 0;
+    if (!parent) return REST_DISTANCE;
     const iconCenter = rect.left - parent.left + rect.width / 2;
     return Math.abs(mx - iconCenter);
   });

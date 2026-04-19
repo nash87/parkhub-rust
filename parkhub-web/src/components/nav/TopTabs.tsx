@@ -25,6 +25,7 @@ import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { preloadRoute } from '../../lib/routePreload';
 import { NAV_SECTIONS, type NavItem } from '../Layout';
+import { isActivePath } from './navActive';
 
 interface TopTabsProps {
   unreadCount: number;
@@ -66,9 +67,7 @@ export function TopTabs({ unreadCount, onLogout, isAdmin }: TopTabsProps) {
 
       <nav className="flex items-center gap-1 flex-1 min-w-0 overflow-x-auto">
         {primary.map(item => {
-          const isActive =
-            location.pathname === item.to ||
-            (item.to !== '/' && location.pathname.startsWith(item.to));
+          const isActive = isActivePath(location.pathname, item.to);
           return (
             <NavLink
               key={item.key}

@@ -24,6 +24,7 @@ import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { preloadRoute } from '../../lib/routePreload';
 import { NAV_SECTIONS, type NavItem } from '../Layout';
+import { isActivePath } from './navActive';
 
 interface RailSidebarProps {
   unreadCount: number;
@@ -38,9 +39,7 @@ export function RailSidebar({ unreadCount, onLogout, isAdmin }: RailSidebarProps
   const location = useLocation();
 
   const renderItem = (item: NavItem) => {
-    const isActive =
-      location.pathname === item.to ||
-      (item.to !== '/' && location.pathname.startsWith(item.to));
+    const isActive = isActivePath(location.pathname, item.to);
     return (
       <RailIconButton
         key={item.key}
@@ -91,7 +90,7 @@ export function RailSidebar({ unreadCount, onLogout, isAdmin }: RailSidebarProps
               to="/admin"
               icon={GearSix}
               label={t('nav.admin')}
-              active={location.pathname.startsWith('/admin')}
+              active={isActivePath(location.pathname, '/admin')}
             />
           </>
         )}

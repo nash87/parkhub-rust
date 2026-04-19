@@ -48,10 +48,16 @@ describe('useNavLayout', () => {
 
   it('picks up cross-tab storage events', () => {
     const { result } = renderHook(() => useNavLayout());
+    // jsdom's StorageEvent constructor in some CodeQL ruleset versions is
+    // typed as one-arg. Build the event with `new Event` + Object.assign to
+    // sidestep that without changing the dispatched shape our listener
+    // actually reads (e.key / e.newValue).
     act(() => {
-      window.dispatchEvent(
-        new StorageEvent('storage', { key: NAV_LAYOUT_KEY, newValue: 'rail' }),
-      );
+      const ev = Object.assign(new Event('storage'), {
+        key: NAV_LAYOUT_KEY,
+        newValue: 'rail',
+      });
+      window.dispatchEvent(ev);
     });
     expect(result.current[0]).toBe('rail');
   });
