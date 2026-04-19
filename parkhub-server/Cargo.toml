@@ -151,6 +151,14 @@ slint-build = { version = "1.15", optional = true }  # updated from 1.14
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
 
+# macOS universal build cross-compiles x86_64 on an arm64 runner, where
+# Homebrew's openssl@3 is arm64-only and the linker refuses to mix archs.
+# Pulling in openssl-sys with `vendored` forces build.rs to compile OpenSSL
+# from source for each target architecture — Linux is unaffected because
+# the distro pkg-config path still wins when the env var isn't set.
+[target.'cfg(target_os = "macos")'.dependencies]
+openssl-sys = { version = "0.9", features = ["vendored"] }
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = [
     "Win32_UI_WindowsAndMessaging",
