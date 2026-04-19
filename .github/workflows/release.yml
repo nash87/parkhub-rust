@@ -163,6 +163,13 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
+      # macos-latest is now arm64 and rust-toolchain doesn't always cross-install
+      # the x86_64 target. Explicit rustup fallback guarantees both are present.
+      - name: Ensure both macOS targets installed
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          rustup target list --installed
+
       - name: Rust cache (macOS)
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
