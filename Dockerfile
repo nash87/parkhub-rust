@@ -29,8 +29,11 @@ WORKDIR /app
 # ---------------------------------------------------------------------------
 FROM chef AS planner
 COPY Cargo.toml Cargo.lock ./
-# Exclude desktop-only parkhub-client from workspace
-RUN sed -i '/"parkhub-client"/d' Cargo.toml
+# Exclude desktop-only members from workspace (server container only needs
+# parkhub-common + parkhub-server). parkhub-client ships Slint GUI + tray;
+# parkhub-desktop ships the Tauri 2 shell. Both pull heavy system libs
+# (webkit2gtk, skia) that aren't needed in a headless server image.
+RUN sed -i -e '/"parkhub-client"/d' -e '/"parkhub-desktop"/d' Cargo.toml
 COPY parkhub-common/Cargo.toml ./parkhub-common/
 COPY parkhub-server/Cargo.toml ./parkhub-server/
 COPY parkhub-common/src ./parkhub-common/src
@@ -43,7 +46,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS deps
 COPY --from=planner /app/recipe.json recipe.json
 COPY Cargo.toml Cargo.lock ./
-RUN sed -i '/"parkhub-client"/d' Cargo.toml
+RUN sed -i -e '/"parkhub-client"/d' -e '/"parkhub-desktop"/d' Cargo.toml
 RUN cargo chef cook --release --recipe-path recipe.json \
     --package parkhub-server --no-default-features --features headless
 
@@ -53,7 +56,7 @@ RUN cargo chef cook --release --recipe-path recipe.json \
 FROM deps AS builder
 # Re-copy root manifest so [workspace.lints] is present (cargo-chef strips it)
 COPY Cargo.toml Cargo.lock ./
-RUN sed -i '/"parkhub-client"/d' Cargo.toml
+RUN sed -i -e '/"parkhub-client"/d' -e '/"parkhub-desktop"/d' Cargo.toml
 # Copy real source (deps are already compiled)
 COPY parkhub-common/ ./parkhub-common/
 COPY parkhub-server/ ./parkhub-server/
