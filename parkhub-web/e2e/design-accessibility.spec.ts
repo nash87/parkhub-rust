@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures/axe';
+import { test } from './fixtures/axe';
 
 // claude.ai/design integration (#335) — broad axe-core pass across the key
 // post-login surfaces to catch a11y regressions introduced by design churn.
