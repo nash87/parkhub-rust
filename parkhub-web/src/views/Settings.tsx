@@ -23,17 +23,16 @@ import {
   SToggle,
   ThemeSwatches,
   NavLayoutGrid,
-  type NavLayout,
   type ThemeSwatch,
 } from '../components/ui/SettingsPrimitives';
 import { useTheme, type DesignThemeId } from '../context/ThemeContext';
+import { useNavLayout } from '../hooks/useNavLayout';
 
 type Scope = 'user' | 'workspace';
 
-// Persist the user's nav-layout choice so it survives reloads. Only
-// "classic" actually renders today (see SettingsPrimitives NavLayoutGrid);
-// the others accept the selection for when T-1842 lands the four variants.
-const NAV_LAYOUT_KEY = 'parkhub.nav.layout';
+// Nav-layout persistence moved to useNavLayout() so every consumer (Layout,
+// Settings, future kiosk shell) reads/writes the same slot and picks up
+// cross-tab + same-tab change events.
 const DENSITY_KEY = 'parkhub.ui.density';
 
 function readStored<T extends string>(key: string, fallback: T): T {
@@ -70,7 +69,7 @@ export function SettingsPage() {
   const { designTheme, setDesignTheme, setTheme, resolved, designThemes } = useTheme();
 
   const [scope, setScope] = useState<Scope>('user');
-  const [navLayout, setNavLayoutState] = useState<NavLayout>(() => readStored<NavLayout>(NAV_LAYOUT_KEY, 'classic'));
+  const [navLayout, setNavLayoutState] = useNavLayout();
   const [density, setDensityState] = useState<'compact' | 'cozy' | 'comfortable'>(() =>
     readStored<'compact' | 'cozy' | 'comfortable'>(DENSITY_KEY, 'cozy'),
   );
@@ -85,7 +84,6 @@ export function SettingsPage() {
     [designThemes],
   );
 
-  useEffect(() => writeStored(NAV_LAYOUT_KEY, navLayout), [navLayout]);
   useEffect(() => writeStored(DENSITY_KEY, density), [density]);
 
   const userSections = [
@@ -205,7 +203,7 @@ export function SettingsPage() {
 
         <SRow
           title={t('settings.navLayout', 'Navigation layout')}
-          description={t('settings.navLayoutDesc', 'Classic sidebar is current. Other variants arrive in an upcoming release.')}
+          description={t('settings.navLayoutDesc', 'Switch instantly — your choice persists across reloads and syncs to open tabs.')}
         >
           <NavLayoutGrid value={navLayout} onChange={setNavLayoutState} />
         </SRow>

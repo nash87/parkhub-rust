@@ -21,15 +21,20 @@ import { NotificationBadge } from './ui/NotificationBadge';
 import { languages } from '../i18n/index';
 import { getInMemoryToken } from '../api/client';
 import { preloadRoute } from '../lib/routePreload';
+import { useNavLayout } from '../hooks/useNavLayout';
+import { RailSidebar } from './nav/RailSidebar';
+import { FloatingDock } from './nav/FloatingDock';
+import { TopTabs } from './nav/TopTabs';
+import { APP_VERSION } from '../lib/appVersion';
 
-type NavItem = {
+export type NavItem = {
   to: string;
   icon: React.ElementType;
   key: string;
   end?: boolean;
 };
 
-type NavSection = {
+export type NavSection = {
   id: 'core' | 'fleet' | 'settings';
   labelKey: string;
   defaultOpen: boolean;
@@ -39,7 +44,8 @@ type NavSection = {
 
 // 3-section layout. Core is always visible. Fleet defaults open. Settings defaults closed.
 // Routes, icons, and per-item i18n keys are preserved from the previous flat list.
-const NAV_SECTIONS: readonly NavSection[] = [
+// Exported so alternative layouts (Rail, Dock, TopTabs) share the single source of truth.
+export const NAV_SECTIONS: readonly NavSection[] = [
   {
     id: 'core',
     labelKey: 'nav.sections.core',
@@ -400,12 +406,34 @@ export function Layout() {
     [user?.role],
   );
 
+  // Nav-layout branch — see SettingsPrimitives NavLayoutGrid and Settings view.
+  // Classic renders the wide sidebar. Rail/Top/Dock render their own
+  // components and suppress the classic aside.
+  const [navLayout] = useNavLayout();
+  const useTopTabs = navLayout === 'top';
+  const useDock = navLayout === 'dock';
+  const outerLayout = useTopTabs ? 'flex flex-col' : 'flex';
+
   return (
-    <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 flex">
+    <div className={`min-h-dvh bg-surface-50 dark:bg-surface-950 ${outerLayout}`}>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-lg">{t('nav.skipToContent')}</a>
 
-      {/* Sidebar — desktop — glass morphism */}
-      <aside className="hidden lg:flex flex-col w-64 bg-white/70 dark:bg-surface-900/70 backdrop-blur-2xl border-r border-surface-200/40 dark:border-surface-800/40 p-4 sticky top-0 h-dvh" aria-label="Main navigation">
+      {/* Rail layout — narrow icon sidebar */}
+      {navLayout === 'rail' && (
+        <RailSidebar unreadCount={unreadCount} onLogout={handleLogout} isAdmin={isAdmin} />
+      )}
+
+      {/* Top tabs — horizontal header */}
+      {useTopTabs && (
+        <TopTabs unreadCount={unreadCount} onLogout={handleLogout} isAdmin={isAdmin} />
+      )}
+
+      {/* Classic sidebar — wide glass-morphism column. Hidden when the user
+          opted into Rail/Top/Dock. */}
+      <aside
+        className={`${navLayout === 'classic' ? 'hidden lg:flex' : 'hidden'} flex-col w-64 bg-white/70 dark:bg-surface-900/70 backdrop-blur-2xl border-r border-surface-200/40 dark:border-surface-800/40 p-4 sticky top-0 h-dvh`}
+        aria-label="Main navigation"
+      >
         <div className="flex items-center gap-3 px-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
             <CarSimple weight="fill" className="w-5 h-5 text-white" />
@@ -554,10 +582,14 @@ export function Layout() {
           <div className="lg:hidden"><Breadcrumb /></div>
           <Outlet />
         </main>
-        <footer className="py-3 text-center text-xs text-surface-400 dark:text-surface-600 border-t border-surface-200/40 dark:border-surface-800/40">
-          ParkHub v4.9.0
+        <footer className={`py-3 text-center text-xs text-surface-400 dark:text-surface-600 border-t border-surface-200/40 dark:border-surface-800/40 ${useDock ? 'pb-24' : ''}`}>
+          ParkHub v{APP_VERSION}
         </footer>
       </div>
+
+      {/* Floating dock — renders over the top of the main area, so the
+          footer gets extra padding above to avoid overlap. */}
+      {useDock && <FloatingDock unreadCount={unreadCount} isAdmin={isAdmin} />}
 
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
       <ShortcutsHelp open={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />

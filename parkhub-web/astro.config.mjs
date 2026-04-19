@@ -4,12 +4,30 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import reactCompiler from 'babel-plugin-react-compiler';
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 const buildHash = (() => {
   try {
     return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
   } catch {
     return Date.now().toString(36);
+  }
+})();
+
+// Pull the workspace version from the Cargo.toml so the footer stays in sync
+// with every release tag. Fails gracefully to the package.json version if the
+// Cargo manifest is missing (docker build contexts that only ship parkhub-web).
+const appVersion = (() => {
+  try {
+    const cargo = readFileSync(new URL('../Cargo.toml', import.meta.url), 'utf8');
+    const m = cargo.match(/^version\s*=\s*"([^"]+)"/m);
+    if (m) return m[1];
+  } catch { /* fall through */ }
+  try {
+    const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+    return pkg.version || 'dev';
+  } catch {
+    return 'dev';
   }
 })();
 
@@ -104,6 +122,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
+      'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
     },
     build: {
       rollupOptions: {
