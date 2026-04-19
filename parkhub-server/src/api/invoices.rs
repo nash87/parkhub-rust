@@ -12,8 +12,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use printpdf::{
-    BuiltinFont, Color, Line, LinePoint, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, Point, Pt,
-    Rgb, TextItem,
+    BuiltinFont, Color, Line, LinePoint, Mm, Op, PdfDocument, PdfFontHandle, PdfPage,
+    PdfSaveOptions, Point, Pt, Rgb, TextItem,
 };
 
 use parkhub_common::{ApiResponse, UserRole};
@@ -303,16 +303,15 @@ fn generate_pdf(
     // Helper: add text at position with builtin font
     fn text_at(ops: &mut Vec<Op>, text: &str, size: f32, x: Mm, y: Mm, font: BuiltinFont) {
         ops.push(Op::StartTextSection);
-        ops.push(Op::SetFontSizeBuiltinFont {
+        ops.push(Op::SetFont {
+            font: PdfFontHandle::Builtin(font),
             size: Pt(size),
-            font,
         });
         ops.push(Op::SetTextCursor {
             pos: Point::new(x, y),
         });
-        ops.push(Op::WriteTextBuiltinFont {
+        ops.push(Op::ShowText {
             items: vec![TextItem::Text(text.to_string())],
-            font,
         });
         ops.push(Op::EndTextSection);
     }
