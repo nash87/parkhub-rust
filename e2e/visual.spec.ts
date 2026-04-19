@@ -136,10 +136,18 @@ for (const viewport of VIEWPORTS) {
           await expect(page).toHaveScreenshot(
             `${surface.name}-${viewport.name}-${theme}.png`,
             {
-              // 0.05 absorbs inter-runner drift (font hinting, subpixel AA)
-              // between the baseline-generation environment and the
-              // GitHub-hosted runner. 0.02 was too tight: CI was drifting
-              // 0.03–0.04 on otherwise-green runs.
+              // Two-axis tolerance:
+              //   - `threshold: 0.3` = per-pixel color sensitivity. Default
+              //     0.2 was too tight for subpixel AA drift — ubuntu-latest's
+              //     FreeType renders anti-aliased glyph edges ~0.15–0.25 off
+              //     from both Jammy and Noble Playwright containers, turning
+              //     otherwise-green runs into 7–8% pixel diffs on mobile.
+              //   - `maxDiffPixelRatio: 0.05` = spatial gate. Kept tight so
+              //     real layout regressions (whole regions moving) still
+              //     fail, since those produce >5% affected pixels.
+              // Together these absorb font-hinting noise without hiding
+              // structural changes.
+              threshold: 0.3,
               maxDiffPixelRatio: 0.05,
               fullPage: false,
               animations: 'disabled',
