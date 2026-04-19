@@ -142,7 +142,7 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 subtle = "2.6.1"
 
 # PDF generation (invoices)
-printpdf = "0.8"  # 0.9 migration (Op::SetFont/ShowText rewrite) tracked as separate PR
+printpdf = "0.9"
 web-push = { version = "0.11", features = ["hyper-client"] }
 
 [build-dependencies]
