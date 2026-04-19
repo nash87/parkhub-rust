@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 // ── Mocks ──
 
@@ -12,7 +12,7 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallback?: string) => {
       const map: Record<string, string> = {
         'admin.title': 'Administration',
         'admin.subtitle': 'Manage your ParkHub instance',
@@ -26,7 +26,7 @@ vi.mock('react-i18next', () => ({
         'admin.rateLimits': 'Rate Limits',
         'admin.tenants': 'Tenants',
       };
-      return map[key] || key;
+      return map[key] ?? fallback ?? key;
     },
   }),
 }));
@@ -35,6 +35,12 @@ vi.mock('framer-motion', () => ({
   motion: {
     div: React.forwardRef(({ children, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
+    )),
+    aside: React.forwardRef(({ children, ...props }: any, ref: any) => (
+      <aside ref={ref} {...props}>{children}</aside>
+    )),
+    span: React.forwardRef(({ children, ...props }: any, ref: any) => (
+      <span ref={ref} {...props}>{children}</span>
     )),
   },
 }));
@@ -64,6 +70,9 @@ vi.mock('@phosphor-icons/react', () => ({
   LockKey: (props: any) => <span data-testid="icon-lock-key" {...props} />,
   MapTrifold: (props: any) => <span data-testid="icon-map-trifold" {...props} />,
   ArrowsClockwise: (props: any) => <span data-testid="icon-arrows-clockwise" {...props} />,
+  List: (props: any) => <span data-testid="icon-list" {...props} />,
+  X: (props: any) => <span data-testid="icon-x" {...props} />,
+  ArrowSquareOut: (props: any) => <span data-testid="icon-arrow-square-out" {...props} />,
 }));
 
 import { AdminPage } from './Admin';
@@ -71,40 +80,50 @@ import { AdminPage } from './Admin';
 describe('AdminPage', () => {
   it('renders Admin heading', () => {
     render(<AdminPage />);
-    expect(screen.getByText('Administration')).toBeInTheDocument();
+    // "Administration" appears in both mobile header and desktop sidebar.
+    expect(screen.getAllByText('Administration').length).toBeGreaterThan(0);
   });
 
   it('renders the subtitle', () => {
     render(<AdminPage />);
-    expect(screen.getByText('Manage your ParkHub instance')).toBeInTheDocument();
+    expect(screen.getAllByText('Manage your ParkHub instance').length).toBeGreaterThan(0);
   });
 
-  it('renders all tab navigation links', () => {
+  it('renders all navigation links inside the sidebar', () => {
     render(<AdminPage />);
-    expect(screen.getByText('Overview')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
-    expect(screen.getByText('Users')).toBeInTheDocument();
-    expect(screen.getByText('Parking Lots')).toBeInTheDocument();
-    expect(screen.getByText('Announcements')).toBeInTheDocument();
-    expect(screen.getByText('Reports')).toBeInTheDocument();
-    expect(screen.getByText('Translations')).toBeInTheDocument();
-    expect(screen.getByText('Analytics')).toBeInTheDocument();
-    expect(screen.getByText('Rate Limits')).toBeInTheDocument();
-    expect(screen.getByText('Tenants')).toBeInTheDocument();
+    const nav = screen.getAllByLabelText('Admin navigation')[0];
+    const scoped = within(nav);
+    for (const label of [
+      'Overview', 'Settings', 'Users', 'Parking Lots', 'Announcements',
+      'Reports', 'Translations', 'Analytics', 'Rate Limits', 'Tenants',
+      // Modules & Features is the feature the user specifically asked about
+      'Modules & Features',
+    ]) {
+      expect(scoped.getByRole('link', { name: new RegExp(`^${label}$`) })).toBeInTheDocument();
+    }
   });
 
-  it('renders tab links with correct paths', () => {
+  it('renders navigation links with correct paths', () => {
     render(<AdminPage />);
-    expect(screen.getByText('Overview').closest('a')).toHaveAttribute('href', '/admin');
-    expect(screen.getByText('Settings').closest('a')).toHaveAttribute('href', '/admin/settings');
-    expect(screen.getByText('Users').closest('a')).toHaveAttribute('href', '/admin/users');
-    expect(screen.getByText('Parking Lots').closest('a')).toHaveAttribute('href', '/admin/lots');
-    expect(screen.getByText('Announcements').closest('a')).toHaveAttribute('href', '/admin/announcements');
-    expect(screen.getByText('Reports').closest('a')).toHaveAttribute('href', '/admin/reports');
-    expect(screen.getByText('Translations').closest('a')).toHaveAttribute('href', '/admin/translations');
-    expect(screen.getByText('Analytics').closest('a')).toHaveAttribute('href', '/admin/analytics');
-    expect(screen.getByText('Rate Limits').closest('a')).toHaveAttribute('href', '/admin/rate-limits');
-    expect(screen.getByText('Tenants').closest('a')).toHaveAttribute('href', '/admin/tenants');
+    const nav = screen.getAllByLabelText('Admin navigation')[0];
+    const scoped = within(nav);
+    const pairs: Array<[string, string]> = [
+      ['Overview', '/admin'],
+      ['Settings', '/admin/settings'],
+      ['Users', '/admin/users'],
+      ['Parking Lots', '/admin/lots'],
+      ['Announcements', '/admin/announcements'],
+      ['Reports', '/admin/reports'],
+      ['Translations', '/admin/translations'],
+      ['Analytics', '/admin/analytics'],
+      ['Rate Limits', '/admin/rate-limits'],
+      ['Tenants', '/admin/tenants'],
+      ['Modules & Features', '/admin/modules'],
+    ];
+    for (const [label, path] of pairs) {
+      const link = scoped.getByRole('link', { name: new RegExp(`^${label}$`) });
+      expect(link).toHaveAttribute('href', path);
+    }
   });
 
   it('renders the outlet for child routes', () => {

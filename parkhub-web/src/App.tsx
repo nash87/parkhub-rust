@@ -200,6 +200,7 @@ function ViewTransitionRoutes() {
         <Route path="leaderboard" element={<SuspenseRoute><TeamLeaderboardPage /></SuspenseRoute>} />
         <Route path="predict" element={<SuspenseRoute><OccupancyPredictionPage /></SuspenseRoute>} />
         <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
+        <Route path="settings" element={<SuspenseRoute><SettingsPage /></SuspenseRoute>} />
         <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
           <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
           <Route path="settings" element={<SuspenseRoute><AdminSettingsPage /></SuspenseRoute>} />

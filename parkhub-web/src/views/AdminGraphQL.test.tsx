@@ -36,6 +36,12 @@ vi.mock('framer-motion', () => ({
     div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, layoutId, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
     )),
+    aside: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, layoutId, ...props }: any, ref: any) => (
+      <aside ref={ref} {...props}>{children}</aside>
+    )),
+    span: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, custom, layoutId, ...props }: any, ref: any) => (
+      <span ref={ref} {...props}>{children}</span>
+    )),
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
@@ -70,6 +76,10 @@ vi.mock('@phosphor-icons/react', async (importOriginal) => {
     MapTrifold: icon,
     Clock: icon,
     WebhooksLogo: icon,
+    ArrowsClockwise: icon,
+    List: icon,
+    X: icon,
+    ArrowSquareOut: icon,
   };
 });
 
@@ -82,7 +92,9 @@ describe('Admin GraphQL navigation', () => {
         <AdminPage />
       </MemoryRouter>
     );
-    expect(screen.getByText('GraphQL')).toBeInTheDocument();
+    // New sidebar uses the longer "GraphQL Playground" label; accept either
+    // in case the label shortens again in future.
+    expect(screen.getByText(/GraphQL/)).toBeInTheDocument();
   });
 
   it('renders Plugins link in admin nav', () => {
@@ -91,7 +103,7 @@ describe('Admin GraphQL navigation', () => {
         <AdminPage />
       </MemoryRouter>
     );
-    expect(screen.getByText('Plugins')).toBeInTheDocument();
+    expect(screen.getAllByText('Plugins').length).toBeGreaterThan(0);
   });
 
   it('GraphQL link points to playground endpoint', () => {
@@ -100,7 +112,7 @@ describe('Admin GraphQL navigation', () => {
         <AdminPage />
       </MemoryRouter>
     );
-    const link = screen.getByText('GraphQL').closest('a');
+    const link = screen.getByText(/GraphQL/).closest('a');
     expect(link).toBeTruthy();
     expect(link?.getAttribute('href')).toBe('/api/v1/graphql/playground');
   });
