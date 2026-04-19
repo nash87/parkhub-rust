@@ -13,6 +13,27 @@ _No unreleased changes._
 
 ---
 
+## [4.14.2] - 2026-04-18
+
+### Fixed
+
+- **macOS universal build**: vendor `openssl-sys` per target for the cross-compile leg — Homebrew's arm64 OpenSSL no longer fails to link into the x86_64 binary slice (#344).
+- **Container build**: drop `parkhub-desktop` (Tauri GUI) from the workspace during the runtime image build so Docker users stop hitting GTK dependency errors (#346).
+
+## [4.14.1] - 2026-04-18
+
+### Fixed
+
+- **CI cross-compile**: explicit `rustup target add aarch64-apple-darwin x86_64-apple-darwin` in the macOS universal job so the toolchain is guaranteed present before `lipo` runs (#342).
+
+## [4.14.0] - 2026-04-17
+
+### Changed
+
+- Workspace version bump after merging the v4.13.0 release branch; no user-facing changes beyond the Modular UX platform already shipped in v4.13.0 (#340, #343).
+
+---
+
 ## [4.13.0] - 2026-04-17
 
 Major release: the Modular UX platform — admins can now see, toggle, and

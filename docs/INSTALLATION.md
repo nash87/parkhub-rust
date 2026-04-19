@@ -362,7 +362,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: parkhub
-          image: ghcr.io/nash87/parkhub-rust:v4.13.0  # Pin to specific version; check GitHub Releases for the latest tag
+          image: ghcr.io/nash87/parkhub-rust:v4.14.2  # Pin to specific version; check GitHub Releases for the latest tag
           args: ["--headless", "--unattended", "--port", "8080"]
           ports:
             - containerPort: 8080
