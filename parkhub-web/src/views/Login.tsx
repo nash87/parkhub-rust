@@ -10,8 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { FormField, FormInput } from '../components/ui/FormField';
 import { OAuthButtons } from '../components/OAuthButtons';
 import { SSOButtons } from '../components/SSOButtons';
-// @ts-ignore — Vite resolves JSON imports at build time
-import { version as APP_VERSION } from '../../package.json';
+import { APP_VERSION } from '../lib/appVersion';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Required'),
