@@ -52,6 +52,35 @@ describe('buildLiveReply', () => {
     expect(r).toContain('L2-08');
   });
 
+  it('skips cancelled bookings when picking the next one', async () => {
+    // Regression for Codex P2 #350: a chronologically-earlier cancelled
+    // booking must not be returned as the user's next booking.
+    const earlier = new Date(Date.now() + 1 * 86_400_000);
+    const later = new Date(Date.now() + 5 * 86_400_000);
+    mockedApi.getBookings.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 'cx', user_id: 'u', lot_id: 'l', slot_id: 's',
+          lot_name: 'Ghost Lot', slot_number: 'Z9',
+          start_time: earlier.toISOString(),
+          end_time: new Date(earlier.getTime() + 3600_000).toISOString(),
+          status: 'cancelled',
+        },
+        {
+          id: 'real', user_id: 'u', lot_id: 'l', slot_id: 's',
+          lot_name: 'HQ Garage', slot_number: 'L2-08',
+          start_time: later.toISOString(),
+          end_time: new Date(later.getTime() + 4 * 3600_000).toISOString(),
+          status: 'confirmed',
+        },
+      ],
+    });
+    const r = await buildLiveReply('what is my next booking?');
+    expect(r).toContain('HQ Garage');
+    expect(r).not.toContain('Ghost Lot');
+  });
+
   it('summarises monthly stats', async () => {
     mockedApi.getUserStats.mockResolvedValue({
       success: true,

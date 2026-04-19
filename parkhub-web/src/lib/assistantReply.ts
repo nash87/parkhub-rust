@@ -83,8 +83,10 @@ export async function buildLiveReply(q: string, opts: BuildOpts = {}): Promise<s
       case 'next_booking': {
         const res = await api.getBookings();
         if (!res.success || !res.data) return "I couldn't reach the bookings endpoint just now.";
+        // Filter out cancelled bookings — a chronologically-first cancelled
+        // reservation must never be announced as the user's next booking.
         const upcoming = [...res.data]
-          .filter(b => new Date(b.end_time).getTime() > Date.now())
+          .filter(b => b.status !== 'cancelled' && new Date(b.end_time).getTime() > Date.now())
           .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
         if (upcoming.length === 0) return 'No upcoming bookings on your account.';
         const next = upcoming[0];
@@ -95,8 +97,10 @@ export async function buildLiveReply(q: string, opts: BuildOpts = {}): Promise<s
       case 'recent': {
         const res = await api.getBookings();
         if (!res.success || !res.data) return "I couldn't reach the bookings endpoint just now.";
+        // Same exclusion — cancelled bookings never happened, so they
+        // shouldn't surface as "last time you parked".
         const past = [...res.data]
-          .filter(b => new Date(b.end_time).getTime() <= Date.now())
+          .filter(b => b.status !== 'cancelled' && new Date(b.end_time).getTime() <= Date.now())
           .sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime());
         if (past.length === 0) return 'No past bookings yet.';
         const last = past[0];
