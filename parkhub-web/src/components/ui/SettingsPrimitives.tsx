@@ -238,13 +238,14 @@ export function ThemeSwatches({
 
 // ─── Nav layout picker — all four variants now live (see components/nav/) ───
 
-export type NavLayout = 'classic' | 'rail' | 'top' | 'dock';
+export type NavLayout = 'classic' | 'rail' | 'top' | 'dock' | 'focus';
 
 export const NAV_LAYOUTS: { value: NavLayout; label: string; description: string }[] = [
   { value: 'classic', label: 'Classic sidebar', description: 'Left rail with labels' },
   { value: 'rail', label: 'Icon rail', description: 'Icons only, side-popping tooltip' },
   { value: 'top', label: 'Top tabs', description: 'Horizontal navigation + overflow' },
   { value: 'dock', label: 'Floating dock', description: 'macOS-style bottom dock' },
+  { value: 'focus', label: 'Focus', description: 'Dark rail with live pass + floor heatmap' },
 ];
 
 export function NavLayoutGrid({
@@ -344,6 +345,30 @@ function NavLayoutPreview({ layout, active }: { layout: NavLayout; active: boole
           <div className="flex-1 flex flex-col gap-0.5 p-0.5">
             <span className={`block h-2 w-3/4 rounded-sm ${secondary}`} />
             <span className={`block h-4 w-full rounded-sm ${secondary}`} />
+          </div>
+        </div>
+      );
+    case 'focus':
+      // Dark opinionated rail with a "live pass" card hint + 3 occupancy bars.
+      return (
+        <div
+          className={`relative flex w-full h-20 p-1 gap-1 rounded ${active ? 'border-primary-500 border' : 'border border-surface-300 dark:border-surface-700'}`}
+          style={{ background: 'oklch(0.17 0.02 260)' }}
+        >
+          <div className="w-2/5 flex flex-col gap-0.5 p-0.5">
+            {/* simulated live-pass card */}
+            <span
+              className="block h-3 w-full rounded-sm"
+              style={{ background: active ? 'color-mix(in oklch, var(--color-primary-500) 40%, oklch(0.22 0.02 260))' : 'oklch(0.22 0.02 260)' }}
+            />
+            {/* occupancy bars */}
+            <span className="block h-0.5 w-3/4 rounded-full" style={{ background: 'oklch(0.58 0.16 25)' }} />
+            <span className="block h-0.5 w-2/3 rounded-full" style={{ background: 'oklch(0.70 0.14 75)' }} />
+            <span className="block h-0.5 w-1/2 rounded-full" style={{ background: 'oklch(0.58 0.14 150)' }} />
+          </div>
+          <div className="flex-1 flex flex-col gap-0.5 p-0.5">
+            <span className="block h-2 w-3/4 rounded-sm" style={{ background: 'oklch(0.32 0.02 260)' }} />
+            <span className="block h-4 w-full rounded-sm" style={{ background: 'oklch(0.28 0.02 260)' }} />
           </div>
         </div>
       );

@@ -7,7 +7,7 @@ import type { NavLayout } from '../components/ui/SettingsPrimitives';
 export const NAV_LAYOUT_KEY = 'parkhub.nav.layout';
 const NAV_LAYOUT_EVENT = 'parkhub:nav-layout';
 
-const ALLOWED: NavLayout[] = ['classic', 'rail', 'top', 'dock'];
+const ALLOWED: NavLayout[] = ['classic', 'rail', 'top', 'dock', 'focus'];
 
 function read(fallback: NavLayout = 'classic'): NavLayout {
   if (typeof window === 'undefined') return fallback;
