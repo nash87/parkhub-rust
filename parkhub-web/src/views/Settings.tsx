@@ -12,7 +12,7 @@
  * as T-1842 along with the nav-variants integration.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { User, Building, Bell, Car, Keyboard, Shield, Coins, ChartLine, FileText, ArrowRight } from '@phosphor-icons/react';
@@ -27,30 +27,13 @@ import {
 } from '../components/ui/SettingsPrimitives';
 import { useTheme, type DesignThemeId } from '../context/ThemeContext';
 import { useNavLayout } from '../hooks/useNavLayout';
+import { useDensity } from '../hooks/useDensity';
 
 type Scope = 'user' | 'workspace';
 
-// Nav-layout persistence moved to useNavLayout() so every consumer (Layout,
-// Settings, future kiosk shell) reads/writes the same slot and picks up
-// cross-tab + same-tab change events.
-const DENSITY_KEY = 'parkhub.ui.density';
-
-function readStored<T extends string>(key: string, fallback: T): T {
-  try {
-    const v = window.localStorage.getItem(key);
-    return (v as T) ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStored(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {
-    /* quota / private mode — accept silently */
-  }
-}
+// Both nav-layout and density persistence live in dedicated hooks
+// (useNavLayout, useDensity) so every consumer shares a single source of
+// truth with cross-tab + same-tab change events.
 
 /**
  * Theme swatches exposed in the picker. Each `value` matches one of the
@@ -70,9 +53,7 @@ export function SettingsPage() {
 
   const [scope, setScope] = useState<Scope>('user');
   const [navLayout, setNavLayoutState] = useNavLayout();
-  const [density, setDensityState] = useState<'compact' | 'cozy' | 'comfortable'>(() =>
-    readStored<'compact' | 'cozy' | 'comfortable'>(DENSITY_KEY, 'cozy'),
-  );
+  const [density, setDensityState] = useDensity();
 
   const themeSwatches = useMemo<ThemeSwatch[]>(
     () =>
@@ -83,8 +64,6 @@ export function SettingsPage() {
       })),
     [designThemes],
   );
-
-  useEffect(() => writeStored(DENSITY_KEY, density), [density]);
 
   const userSections = [
     { id: 'profile', label: t('settings.profile', 'Profile'), icon: User, to: '/profile' as const },

@@ -22,6 +22,7 @@ import { languages } from '../i18n/index';
 import { getInMemoryToken } from '../api/client';
 import { preloadRoute } from '../lib/routePreload';
 import { useNavLayout } from '../hooks/useNavLayout';
+import { useDensity } from '../hooks/useDensity';
 import { RailSidebar } from './nav/RailSidebar';
 import { FloatingDock } from './nav/FloatingDock';
 import { TopTabs } from './nav/TopTabs';
@@ -410,6 +411,10 @@ export function Layout() {
   // Classic renders the wide sidebar. Rail/Top/Dock render their own
   // components and suppress the classic aside.
   const [navLayout] = useNavLayout();
+  // Boot the density hook so the `data-density` attribute is applied on <html>
+  // before first paint of any route — pages consuming var(--density-…) get
+  // the right scale without flashing the default.
+  useDensity();
   const useTopTabs = navLayout === 'top';
   const useDock = navLayout === 'dock';
   const outerLayout = useTopTabs ? 'flex flex-col' : 'flex';
