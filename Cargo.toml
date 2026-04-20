@@ -28,7 +28,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 
 # Database - Pure Rust embedded database
-redb = "3"  # 4.0 has breaking file format change — separate migration PR tracked in backlog
+redb = "4"  # 4.0 has breaking file format change — separate migration PR tracked in backlog
 
 # Encryption utilities (for application-level encryption)
 aes-gcm = "0.10"  # 0.11 is RC only
