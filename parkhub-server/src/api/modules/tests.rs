@@ -152,6 +152,73 @@ fn test_ui_routes_start_with_slash() {
     }
 }
 
+/// Rust ships GDPR self-service endpoints and a Prometheus exporter;
+/// both must be visible in the public module registry so the PHP and
+/// Rust contracts stay aligned.
+#[test]
+fn test_registry_includes_gdpr_and_metrics_modules() {
+    let registry = module_registry_static();
+
+    let gdpr = registry
+        .iter()
+        .find(|m| m.name == "gdpr")
+        .expect("registry missing gdpr module");
+    assert_eq!(gdpr.category, ModuleCategory::Compliance);
+    assert!(
+        gdpr.enabled,
+        "gdpr should be enabled in the static registry"
+    );
+    assert!(!gdpr.runtime_toggleable);
+
+    let metrics = registry
+        .iter()
+        .find(|m| m.name == "metrics")
+        .expect("registry missing metrics module");
+    assert_eq!(metrics.category, ModuleCategory::Analytics);
+    assert!(
+        metrics.enabled,
+        "metrics should be enabled in the static registry"
+    );
+    assert!(!metrics.runtime_toggleable);
+}
+
+/// Public admin surfaces that already ship in Rust must be visible in the
+/// module contract so dashboards and module pickers can deep-link to them.
+#[test]
+fn test_registry_includes_admin_reports_audit_log_and_rate_dashboard_modules() {
+    let registry = module_registry_static();
+
+    let admin_reports = registry
+        .iter()
+        .find(|m| m.name == "admin-reports")
+        .expect("registry missing admin-reports module");
+    assert_eq!(admin_reports.category, ModuleCategory::Analytics);
+    assert!(admin_reports.enabled);
+    assert!(!admin_reports.runtime_toggleable);
+    assert_eq!(admin_reports.ui_route.as_deref(), Some("/admin/reports"));
+
+    let audit_log = registry
+        .iter()
+        .find(|m| m.name == "audit-log")
+        .expect("registry missing audit-log module");
+    assert_eq!(audit_log.category, ModuleCategory::Admin);
+    assert!(audit_log.enabled);
+    assert!(!audit_log.runtime_toggleable);
+    assert_eq!(audit_log.ui_route.as_deref(), Some("/admin/audit-log"));
+
+    let rate_dashboard = registry
+        .iter()
+        .find(|m| m.name == "rate-dashboard")
+        .expect("registry missing rate-dashboard module");
+    assert_eq!(rate_dashboard.category, ModuleCategory::Admin);
+    assert!(rate_dashboard.enabled);
+    assert!(!rate_dashboard.runtime_toggleable);
+    assert_eq!(
+        rate_dashboard.ui_route.as_deref(),
+        Some("/admin/rate-limits")
+    );
+}
+
 /// v2 invariant: the registry contains exactly 15 runtime-toggleable
 /// modules — the safe-to-flip surfaces (UI widgets, display-only
 /// integrations, experimental features). Expanding the list needs an
@@ -351,6 +418,12 @@ async fn test_list_modules_handler_shape() {
     let (_dir, state) = test_state();
 
     let Json(response) = list_modules(State(state)).await;
+    assert!(
+        response.success,
+        "list_modules should return success envelope"
+    );
+    assert!(response.error.is_none());
+    let response = response.data.expect("module payload");
 
     // Registry has a healthy number of modules.
     assert!(
@@ -375,6 +448,26 @@ async fn test_list_modules_handler_shape() {
 
     // Version is the workspace version.
     assert_eq!(response.version, env!("CARGO_PKG_VERSION"));
+
+    assert!(
+        response.module_info.iter().any(|m| m.name == "gdpr"),
+        "gdpr module must be present in module_info"
+    );
+    assert_eq!(response.modules.get("gdpr").copied(), Some(true));
+
+    assert!(
+        response.module_info.iter().any(|m| m.name == "metrics"),
+        "metrics module must be present in module_info"
+    );
+    assert_eq!(response.modules.get("metrics").copied(), Some(true));
+
+    for module in ["admin-reports", "audit-log", "rate-dashboard"] {
+        assert!(
+            response.module_info.iter().any(|m| m.name == module),
+            "{module} module must be present in module_info"
+        );
+        assert_eq!(response.modules.get(module).copied(), Some(true));
+    }
 }
 
 /// `get_module` returns 404 on unknown slugs.
@@ -382,8 +475,29 @@ async fn test_list_modules_handler_shape() {
 async fn test_get_module_unknown_returns_404() {
     let (_dir, state) = test_state();
 
-    let result = get_module(State(state), Path("does-not-exist".to_string())).await;
-    assert!(matches!(result, Err(StatusCode::NOT_FOUND)));
+    let (status, Json(response)) =
+        get_module(State(state), Path("does-not-exist".to_string())).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert!(!response.success);
+    assert!(response.data.is_none());
+    assert_eq!(
+        response.error.expect("error payload").code,
+        "UNKNOWN_MODULE"
+    );
+}
+
+/// Legacy transport-named slug lookups stay compatible, but the public
+/// module contract emits the capability-first `realtime` name.
+#[tokio::test]
+async fn test_get_module_legacy_websocket_slug_returns_realtime_module() {
+    let (_dir, state) = test_state();
+
+    let (status, Json(response)) = get_module(State(state), Path("websocket".to_string())).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(response.success);
+    let module = response.data.expect("module payload");
+    assert_eq!(module.name, "realtime");
+    assert_eq!(module.category, ModuleCategory::Integration);
 }
 
 /// `ModuleCategory` serializes as kebab-case so the JSON matches the
@@ -546,6 +660,43 @@ async fn test_patch_returns_400_for_unknown_module() {
     .await;
 
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+/// Legacy transport slugs still resolve on the admin toggle surface.
+/// `websocket` maps to the canonical `realtime` module and therefore
+/// returns the realtime module's semantics (`409`, not `400`).
+#[tokio::test]
+async fn test_patch_legacy_websocket_alias_returns_realtime_toggle_semantics() {
+    let (_dir, state) = test_state();
+    let admin = seed_user(&state, UserRole::Admin).await;
+
+    let (status, Json(response)) = patch_admin_module(
+        State(state.clone()),
+        axum::Extension(admin),
+        Path("websocket".to_string()),
+        Json(UpdateModuleRequest {
+            runtime_enabled: false,
+        }),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert!(!response.success);
+    assert_eq!(
+        response.error.expect("error payload").code,
+        "NOT_RUNTIME_TOGGLEABLE"
+    );
+    assert!(
+        state
+            .read()
+            .await
+            .db
+            .get_setting(&runtime_enabled_setting_key("realtime"))
+            .await
+            .expect("get_setting")
+            .is_none(),
+        "legacy alias must not create a realtime runtime toggle setting"
+    );
 }
 
 /// PATCH without admin role is rejected (403) and does not persist
@@ -844,6 +995,28 @@ async fn test_get_config_400_for_module_without_schema() {
     assert_eq!(err.0, StatusCode::BAD_REQUEST);
 }
 
+/// Legacy transport slugs stay compatible on the admin config read
+/// path: `websocket` resolves to `realtime` and therefore returns
+/// `400 NO_CONFIG_SCHEMA` instead of `404 UNKNOWN_MODULE`.
+#[tokio::test]
+async fn test_get_config_legacy_websocket_alias_returns_realtime_semantics() {
+    let (_dir, state) = test_state();
+    let admin = seed_user(&state, UserRole::Admin).await;
+
+    let result = get_module_config(
+        State(state),
+        axum::Extension(admin),
+        Path("websocket".to_string()),
+    )
+    .await;
+    let err = result.expect_err("400");
+    assert_eq!(err.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        err.1.error.as_ref().expect("error payload").code,
+        "NO_CONFIG_SCHEMA"
+    );
+}
+
 /// Non-admin callers get 403 FORBIDDEN. The admin_middleware layer
 /// is the primary guard in production, but the handler re-checks
 /// defense-in-depth.
@@ -986,6 +1159,35 @@ async fn test_patch_config_persists_values() {
     assert_eq!(
         cfg.values.get("default_theme"),
         Some(&serde_json::Value::String("dark".to_string()))
+    );
+}
+
+/// Legacy transport slugs stay compatible on the admin config write
+/// path: `websocket` resolves to `realtime` and therefore returns
+/// `400 NO_CONFIG_SCHEMA` instead of `404 UNKNOWN_MODULE`.
+#[tokio::test]
+async fn test_patch_config_legacy_websocket_alias_returns_realtime_semantics() {
+    let (_dir, state) = test_state();
+    let admin = seed_user(&state, UserRole::Admin).await;
+
+    let mut values = HashMap::new();
+    values.insert(
+        "default_theme".to_string(),
+        serde_json::Value::String("dark".to_string()),
+    );
+
+    let (status, Json(response)) = patch_module_config(
+        State(state),
+        axum::Extension(admin),
+        Path("websocket".to_string()),
+        Json(UpdateModuleConfigRequest { values }),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        response.error.expect("error payload").code,
+        "NO_CONFIG_SCHEMA"
     );
 }
 

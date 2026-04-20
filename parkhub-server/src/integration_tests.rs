@@ -153,6 +153,233 @@ async fn readiness_returns_200_with_ready_true() {
     assert_eq!(json["ready"], true);
 }
 
+#[tokio::test]
+async fn v1_health_alias_returns_success_envelope() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(Request::get("/api/v1/health").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["success"], true);
+    assert_eq!(json["data"]["status"], "ok");
+    assert!(json["data"]["uptime"].as_str().unwrap().ends_with('s'));
+}
+
+#[tokio::test]
+async fn v1_health_live_returns_success_envelope() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/health/live")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["success"], true);
+    assert_eq!(json["data"]["status"], "ok");
+    assert!(json["data"]["uptime"].as_str().unwrap().ends_with('s'));
+}
+
+#[tokio::test]
+async fn v1_health_ready_returns_success_envelope() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/health/ready")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["success"], true);
+    assert_eq!(json["data"]["status"], "ok");
+    assert_eq!(json["data"]["database"], "ok");
+    assert_eq!(json["data"]["version"], env!("CARGO_PKG_VERSION"));
+    assert!(json["data"]["cache"].is_string());
+}
+
+#[tokio::test]
+async fn v1_health_info_returns_canonical_module_map() {
+    let state = test_state().await;
+    let expected_modules = {
+        let guard = state.read().await;
+        crate::api::modules::module_registry(&guard.db)
+            .await
+            .into_iter()
+            .map(|m| (m.name, serde_json::Value::Bool(m.runtime_enabled)))
+            .collect::<serde_json::Map<String, serde_json::Value>>()
+    };
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/health/info")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["success"], true);
+    assert_eq!(json["data"]["version"], env!("CARGO_PKG_VERSION"));
+    assert!(json["data"]["environment"].is_string());
+    assert!(json["data"]["debug"].is_boolean());
+    assert_eq!(
+        json["data"]["modules"],
+        serde_json::Value::Object(expected_modules)
+    );
+
+    let modules = json["data"]["modules"].as_object().unwrap();
+    assert!(modules.keys().all(|name| !name.contains('_')));
+}
+
+#[tokio::test]
+async fn discover_returns_enabled_modules_and_capabilities() {
+    let state = test_state().await;
+    let (expected_modules, expected_realtime, expected_transport, expected_docs) = {
+        let guard = state.read().await;
+        let runtime_modules = crate::api::modules::module_registry(&guard.db).await;
+        let realtime = runtime_modules
+            .iter()
+            .any(|module| module.name == "realtime" && module.runtime_enabled);
+        let docs = runtime_modules
+            .iter()
+            .find(|module| module.name == "api-docs")
+            .and_then(|module| module.runtime_enabled.then_some("/api/v1/docs"));
+        let mut modules = runtime_modules
+            .into_iter()
+            .filter(|m| m.runtime_enabled)
+            .map(|m| m.name)
+            .collect::<Vec<_>>();
+        modules.sort();
+        let transport = if realtime {
+            serde_json::Value::String("websocket".to_string())
+        } else {
+            serde_json::Value::Null
+        };
+        (modules, realtime, transport, docs)
+    };
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/discover")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["success"], true);
+    assert_eq!(json["data"]["api_version"], "v1");
+    assert_eq!(json["data"]["version"], env!("CARGO_PKG_VERSION"));
+    assert_eq!(json["data"]["endpoints"]["auth"], "/api/v1/auth/login");
+    assert_eq!(json["data"]["endpoints"]["health"], "/api/v1/health");
+    assert_eq!(
+        json["data"]["endpoints"]["docs"],
+        expected_docs
+            .map(|path| serde_json::Value::String(path.to_string()))
+            .unwrap_or(serde_json::Value::Null)
+    );
+    assert_eq!(json["data"]["capabilities"]["auth"], "bearer");
+    assert_eq!(
+        json["data"]["capabilities"]["realtime"],
+        serde_json::Value::Bool(expected_realtime)
+    );
+    assert_eq!(
+        json["data"]["capabilities"]["realtime_transport"],
+        expected_transport
+    );
+    assert!(json["data"]["capabilities"]["push"].is_boolean());
+    assert!(json["data"]["capabilities"]["email"].is_boolean());
+    assert!(json["data"]["capabilities"]["demo_mode"].is_boolean());
+    assert!(
+        json["data"]["capabilities"]["websocket"].is_null(),
+        "transport detail leaked into capability block"
+    );
+
+    let mut actual_modules = json["data"]["modules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|value| value.as_str().unwrap().to_string())
+        .collect::<Vec<_>>();
+    actual_modules.sort();
+
+    assert_eq!(actual_modules, expected_modules);
+    assert!(actual_modules.iter().all(|name| !name.contains('_')));
+}
+
+#[cfg(not(feature = "mod-push"))]
+#[tokio::test]
+async fn push_route_is_hidden_when_push_feature_is_disabled() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/push/vapid-key")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[cfg(not(feature = "mod-websocket"))]
+#[tokio::test]
+async fn websocket_route_is_hidden_when_websocket_feature_is_disabled() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(Request::get("/api/v1/ws").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+}
+
+#[cfg(feature = "mod-websocket")]
+#[tokio::test]
+async fn websocket_route_is_mounted_when_websocket_feature_is_enabled() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(Request::get("/api/v1/ws").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::BAD_REQUEST,
+        "mounted websocket route should reject a plain HTTP GET instead of 404ing"
+    );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // 2. STATUS / HANDSHAKE
 // ═════════════════════════════════════════════════════════════════════════════

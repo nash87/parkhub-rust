@@ -1024,6 +1024,135 @@
         ],
         "type": "object"
       },
+      "DiscoverCapabilities": {
+        "properties": {
+          "auth": {
+            "type": "string"
+          },
+          "demo_mode": {
+            "type": "boolean"
+          },
+          "email": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "realtime": {
+            "type": "boolean"
+          },
+          "realtime_transport": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "auth",
+          "realtime",
+          "push",
+          "email",
+          "demo_mode"
+        ],
+        "type": "object"
+      },
+      "DiscoverEndpoints": {
+        "properties": {
+          "auth": {
+            "type": "string"
+          },
+          "docs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "health": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "auth",
+          "health"
+        ],
+        "type": "object"
+      },
+      "DiscoverPayload": {
+        "properties": {
+          "api_version": {
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/DiscoverCapabilities"
+          },
+          "endpoints": {
+            "$ref": "#/components/schemas/DiscoverEndpoints"
+          },
+          "modules": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "api_version",
+          "modules",
+          "capabilities",
+          "endpoints"
+        ],
+        "type": "object"
+      },
+      "DiscoverResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DiscoverPayload"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
       "EmailSettingsRequest": {
         "description": "Request body for email settings update",
         "properties": {
@@ -1322,6 +1451,47 @@
         ],
         "type": "object"
       },
+      "ListModulesResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ListModulesResponse"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
       "LoginRequest": {
         "description": "Login request",
         "properties": {
@@ -1386,6 +1556,47 @@
         "required": [
           "schema",
           "values"
+        ],
+        "type": "object"
+      },
+      "ModuleConfigResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ModuleConfig"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
         ],
         "type": "object"
       },
@@ -1461,6 +1672,47 @@
           "config_keys",
           "depends_on",
           "version"
+        ],
+        "type": "object"
+      },
+      "ModuleInfoResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ModuleInfo"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
         ],
         "type": "object"
       },
@@ -1694,6 +1946,54 @@
           "rejected"
         ],
         "type": "string"
+      },
+      "PublicApiErrorSchema": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "PublicResponseMetaSchema": {
+        "properties": {
+          "page": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "per_page": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "total": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "total_pages": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
       },
       "PushKeys": {
         "properties": {
@@ -3010,6 +3310,208 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "V1HealthInfoPayload": {
+        "properties": {
+          "debug": {
+            "type": "boolean"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "laravel_version": {
+            "type": "string"
+          },
+          "modules": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "php_version": {
+            "type": "string"
+          },
+          "uptime": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "php_version",
+          "laravel_version",
+          "environment",
+          "debug",
+          "modules",
+          "uptime"
+        ],
+        "type": "object"
+      },
+      "V1HealthInfoResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/V1HealthInfoPayload"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
+      "V1HealthLivePayload": {
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "uptime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "uptime"
+        ],
+        "type": "object"
+      },
+      "V1HealthLiveResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/V1HealthLivePayload"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "type": "object"
+      },
+      "V1HealthReadyPayload": {
+        "properties": {
+          "cache": {
+            "type": "string"
+          },
+          "database": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "cache",
+          "version"
+        ],
+        "type": "object"
+      },
+      "V1HealthReadyResponseSchema": {
+        "properties": {
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/V1HealthReadyPayload"
+              }
+            ]
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicApiErrorSchema"
+              }
+            ]
+          },
+          "meta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PublicResponseMetaSchema"
+              }
+            ]
+          },
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
         "type": "object"
       },
       "VapidKeyResponse": {
@@ -5244,19 +5746,40 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModuleInfo"
+                  "$ref": "#/components/schemas/ModuleInfoResponseSchema"
                 }
               }
             },
             "description": "Updated module state"
           },
           "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleInfoResponseSchema"
+                }
+              }
+            },
             "description": "Unknown module slug"
           },
           "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleInfoResponseSchema"
+                }
+              }
+            },
             "description": "Admin access required"
           },
           "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleInfoResponseSchema"
+                }
+              }
+            },
             "description": "Module is not runtime_toggleable"
           }
         },
@@ -5346,22 +5869,50 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModuleConfig"
+                  "$ref": "#/components/schemas/ModuleConfigResponseSchema"
                 }
               }
             },
             "description": "Updated config"
           },
           "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleConfigResponseSchema"
+                }
+              }
+            },
             "description": "Module has no config schema"
           },
           "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleConfigResponseSchema"
+                }
+              }
+            },
             "description": "Admin access required"
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleConfigResponseSchema"
+                }
+              }
+            },
             "description": "Unknown module slug"
           },
           "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleConfigResponseSchema"
+                }
+              }
+            },
             "description": "Validation failed"
           }
         },
@@ -7951,6 +8502,28 @@
         ]
       }
     },
+    "/api/v1/discover": {
+      "get": {
+        "description": "Returns version, canonical enabled modules, and high-level public capabilities for shared clients.",
+        "operationId": "v1_discover",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverResponseSchema"
+                }
+              }
+            },
+            "description": "Discovery payload"
+          }
+        },
+        "summary": "Discover API capabilities",
+        "tags": [
+          "Public"
+        ]
+      }
+    },
     "/api/v1/docs": {
       "get": {
         "description": "Serves an embedded Swagger UI page for exploring and testing the ParkHub REST API.",
@@ -8008,6 +8581,104 @@
         "summary": "Get enabled feature flags",
         "tags": [
           "Public"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Compatibility alias that returns the public health envelope used by the PHP API.",
+        "operationId": "v1_health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1HealthLiveResponseSchema"
+                }
+              }
+            },
+            "description": "Healthy"
+          }
+        },
+        "summary": "Public health alias",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/info": {
+      "get": {
+        "description": "Compatibility endpoint carrying runtime metadata and the canonical module map.",
+        "operationId": "v1_health_info",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1HealthInfoResponseSchema"
+                }
+              }
+            },
+            "description": "Health info"
+          }
+        },
+        "summary": "Public health info",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "description": "Compatibility alias that returns the public health envelope used by the PHP API.",
+        "operationId": "v1_health_live",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1HealthLiveResponseSchema"
+                }
+              }
+            },
+            "description": "Alive"
+          }
+        },
+        "summary": "Public liveness alias",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "description": "Compatibility alias that reports database readiness in the PHP envelope shape.",
+        "operationId": "v1_health_ready",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1HealthReadyResponseSchema"
+                }
+              }
+            },
+            "description": "Ready"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/V1HealthReadyResponseSchema"
+                }
+              }
+            },
+            "description": "Not ready"
+          }
+        },
+        "summary": "Public readiness alias",
+        "tags": [
+          "Health"
         ]
       }
     },
@@ -9214,7 +9885,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListModulesResponse"
+                  "$ref": "#/components/schemas/ListModulesResponseSchema"
                 }
               }
             },
@@ -9247,13 +9918,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModuleInfo"
+                  "$ref": "#/components/schemas/ModuleInfoResponseSchema"
                 }
               }
             },
             "description": "Module metadata"
           },
           "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleInfoResponseSchema"
+                }
+              }
+            },
             "description": "Unknown module slug"
           }
         },

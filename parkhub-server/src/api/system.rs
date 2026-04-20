@@ -15,17 +15,130 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use std::sync::Arc;
+use serde::Serialize;
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use tracing::Instrument;
+use utoipa::ToSchema;
 
 use parkhub_common::{
     ApiResponse, HandshakeRequest, HandshakeResponse, PROTOCOL_VERSION, ServerStatus,
 };
 
 use crate::AppState;
+use crate::api::modules::module_registry;
 
 type SharedState = Arc<RwLock<AppState>>;
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct V1HealthLivePayload {
+    status: String,
+    uptime: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct V1HealthReadyPayload {
+    status: String,
+    database: String,
+    cache: String,
+    version: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct V1HealthInfoPayload {
+    version: String,
+    // Compatibility placeholders so PHP and Rust can expose the same
+    // top-level field names to shared clients.
+    php_version: String,
+    laravel_version: String,
+    environment: String,
+    debug: bool,
+    modules: HashMap<String, bool>,
+    uptime: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+struct DiscoverCapabilities {
+    auth: String,
+    realtime: bool,
+    realtime_transport: Option<String>,
+    push: bool,
+    email: bool,
+    demo_mode: bool,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+struct DiscoverEndpoints {
+    auth: String,
+    health: String,
+    docs: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub(crate) struct DiscoverPayload {
+    name: String,
+    version: String,
+    api_version: String,
+    modules: Vec<String>,
+    capabilities: DiscoverCapabilities,
+    endpoints: DiscoverEndpoints,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+struct PublicApiErrorSchema {
+    code: String,
+    message: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+struct PublicResponseMetaSchema {
+    page: Option<i32>,
+    per_page: Option<i32>,
+    total: Option<i32>,
+    total_pages: Option<i32>,
+}
+
+macro_rules! define_public_response_schema {
+    ($name:ident, $payload:ty) => {
+        #[derive(Debug, Clone, Serialize, ToSchema)]
+        struct $name {
+            success: bool,
+            data: Option<$payload>,
+            error: Option<PublicApiErrorSchema>,
+            meta: Option<PublicResponseMetaSchema>,
+        }
+    };
+}
+
+define_public_response_schema!(V1HealthLiveResponseSchema, V1HealthLivePayload);
+define_public_response_schema!(V1HealthReadyResponseSchema, V1HealthReadyPayload);
+define_public_response_schema!(V1HealthInfoResponseSchema, V1HealthInfoPayload);
+define_public_response_schema!(DiscoverResponseSchema, DiscoverPayload);
+
+fn compat_uptime() -> String {
+    // The Rust server currently does not track process start time in the
+    // shared HTTP state. Expose a stable compatibility value until uptime
+    // bookkeeping is promoted into AppState.
+    "0s".to_string()
+}
+
+fn app_environment() -> String {
+    std::env::var("APP_ENV").unwrap_or_else(|_| "production".to_string())
+}
+
+fn app_debug_enabled() -> bool {
+    cfg!(debug_assertions)
+        || std::env::var("APP_DEBUG")
+            .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+            .unwrap_or(false)
+}
+
+fn build_v1_health_live_payload() -> V1HealthLivePayload {
+    V1HealthLivePayload {
+        status: "ok".to_string(),
+        uptime: compat_uptime(),
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HEALTH & DISCOVERY
@@ -86,6 +199,171 @@ pub async fn readiness_check(State(state): State<SharedState>) -> impl IntoRespo
             )
         }
     }
+}
+
+/// PHP-compatible alias for the liveness response.
+#[utoipa::path(
+    get,
+    path = "/api/v1/health",
+    tag = "Health",
+    summary = "Public health alias",
+    description = "Compatibility alias that returns the public health envelope used by the PHP API.",
+    responses((status = 200, description = "Healthy", body = V1HealthLiveResponseSchema))
+)]
+pub async fn v1_health() -> Json<ApiResponse<V1HealthLivePayload>> {
+    Json(ApiResponse::success(build_v1_health_live_payload()))
+}
+
+/// PHP-compatible alias for the liveness response.
+#[utoipa::path(
+    get,
+    path = "/api/v1/health/live",
+    tag = "Health",
+    summary = "Public liveness alias",
+    description = "Compatibility alias that returns the public health envelope used by the PHP API.",
+    responses((status = 200, description = "Alive", body = V1HealthLiveResponseSchema))
+)]
+pub async fn v1_health_live() -> Json<ApiResponse<V1HealthLivePayload>> {
+    Json(ApiResponse::success(build_v1_health_live_payload()))
+}
+
+/// PHP-compatible readiness endpoint.
+#[utoipa::path(
+    get,
+    path = "/api/v1/health/ready",
+    tag = "Health",
+    summary = "Public readiness alias",
+    description = "Compatibility alias that reports database readiness in the PHP envelope shape.",
+    responses(
+        (status = 200, description = "Ready", body = V1HealthReadyResponseSchema),
+        (status = 503, description = "Not ready", body = V1HealthReadyResponseSchema)
+    )
+)]
+pub async fn v1_health_ready(
+    State(state): State<SharedState>,
+) -> (StatusCode, Json<ApiResponse<V1HealthReadyPayload>>) {
+    let state = state.read().await;
+    let (status, database) = match state.db.stats().await {
+        Ok(_) => (StatusCode::OK, "ok".to_string()),
+        Err(e) => {
+            tracing::error!(error = %e, "Public readiness alias failed — database unavailable");
+            (StatusCode::SERVICE_UNAVAILABLE, "error".to_string())
+        }
+    };
+
+    let payload = V1HealthReadyPayload {
+        status: if status == StatusCode::OK {
+            "ok".to_string()
+        } else {
+            "degraded".to_string()
+        },
+        database,
+        // Rust has no external cache dependency in this path. Keep the
+        // field for cross-backend contract parity.
+        cache: "n/a".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    };
+
+    (status, Json(ApiResponse::success(payload)))
+}
+
+/// PHP-compatible public health info.
+#[utoipa::path(
+    get,
+    path = "/api/v1/health/info",
+    tag = "Health",
+    summary = "Public health info",
+    description = "Compatibility endpoint carrying runtime metadata and the canonical module map.",
+    responses((status = 200, description = "Health info", body = V1HealthInfoResponseSchema))
+)]
+pub async fn v1_health_info(
+    State(state): State<SharedState>,
+) -> Json<ApiResponse<V1HealthInfoPayload>> {
+    let state = state.read().await;
+    let modules = module_registry(&state.db)
+        .await
+        .into_iter()
+        .map(|module| (module.name, module.runtime_enabled))
+        .collect();
+
+    Json(ApiResponse::success(V1HealthInfoPayload {
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        php_version: "n/a".to_string(),
+        laravel_version: "n/a".to_string(),
+        environment: app_environment(),
+        debug: app_debug_enabled(),
+        modules,
+        uptime: compat_uptime(),
+    }))
+}
+
+/// PHP-compatible discovery handshake.
+#[utoipa::path(
+    get,
+    path = "/api/v1/discover",
+    tag = "Public",
+    summary = "Discover API capabilities",
+    description = "Returns version, canonical enabled modules, and high-level public capabilities for shared clients.",
+    responses((status = 200, description = "Discovery payload", body = DiscoverResponseSchema))
+)]
+pub async fn v1_discover(State(state): State<SharedState>) -> Json<ApiResponse<DiscoverPayload>> {
+    let state = state.read().await;
+    let module_info = module_registry(&state.db).await;
+
+    let name = if state.config.organization_name.trim().is_empty() {
+        state.config.server_name.clone()
+    } else {
+        state.config.organization_name.clone()
+    };
+
+    let modules = module_info
+        .iter()
+        .filter(|module| module.runtime_enabled)
+        .map(|module| module.name.clone())
+        .collect::<Vec<_>>();
+
+    let is_enabled = |name: &str| {
+        module_info
+            .iter()
+            .find(|module| module.name == name)
+            .map(|module| module.runtime_enabled)
+            .unwrap_or(false)
+    };
+
+    let push_configured = std::env::var("VAPID_PUBLIC_KEY")
+        .map(|value| !value.is_empty())
+        .unwrap_or(false);
+
+    Json(ApiResponse::success(DiscoverPayload {
+        name,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        api_version: "v1".to_string(),
+        modules,
+        capabilities: DiscoverCapabilities {
+            auth: "bearer".to_string(),
+            // `realtime` is the client-facing capability. The concrete
+            // transport (`websocket` today) remains discoverable via module
+            // metadata instead of leaking transport names into capabilities.
+            realtime: is_enabled("realtime"),
+            realtime_transport: if is_enabled("realtime") {
+                Some("websocket".to_string())
+            } else {
+                None
+            },
+            push: is_enabled("push") && push_configured,
+            email: is_enabled("email"),
+            demo_mode: false,
+        },
+        endpoints: DiscoverEndpoints {
+            auth: "/api/v1/auth/login".to_string(),
+            health: "/api/v1/health".to_string(),
+            docs: if is_enabled("api-docs") {
+                Some("/api/v1/docs".to_string())
+            } else {
+                None
+            },
+        },
+    }))
 }
 
 /// `GET /api/v1/system/version` — server version information

@@ -169,6 +169,112 @@ curl http://localhost:8080/health/ready
 
 Returns HTTP 503 with `{"ready":false}` if the database is not available.
 
+### GET /api/v1/health
+
+Public compatibility alias for the PHP-style health envelope.
+
+```bash
+curl http://localhost:8080/api/v1/health
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "uptime": "0s"
+  },
+  "error": null,
+  "meta": null
+}
+```
+
+### GET /api/v1/health/live
+
+Public compatibility alias for liveness. Same envelope as `/api/v1/health`.
+
+### GET /api/v1/health/ready
+
+Public compatibility alias for readiness.
+
+```bash
+curl http://localhost:8080/api/v1/health/ready
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "ok",
+    "database": "ok",
+    "cache": "n/a",
+    "version": "1.0.0"
+  },
+  "error": null,
+  "meta": null
+}
+```
+
+When the database is unavailable this endpoint returns HTTP `503` and `data.status = "degraded"`.
+
+### GET /api/v1/health/info
+
+Public runtime metadata endpoint carrying the canonical module map. Module keys use the
+public-facing canonical slugs, e.g. `realtime` instead of the legacy transport slug `websocket`.
+
+### GET /api/v1/discover
+
+Public discovery handshake for shared clients.
+
+```bash
+curl http://localhost:8080/api/v1/discover
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "name": "ParkHub",
+    "version": "1.0.0",
+    "api_version": "v1",
+    "modules": ["bookings", "realtime"],
+    "capabilities": {
+      "auth": "bearer",
+      "realtime": true,
+      "realtime_transport": "websocket",
+      "push": false,
+      "email": true,
+      "demo_mode": false
+    },
+    "endpoints": {
+      "auth": "/api/v1/auth/login",
+      "health": "/api/v1/health",
+      "docs": "/api/v1/docs"
+    }
+  },
+  "error": null,
+  "meta": null
+}
+```
+
+`realtime` is the stable public capability. Older clients may still resolve the legacy
+module slug `websocket` through `/api/v1/modules/{name}`, but discover no longer exposes
+transport names as top-level capabilities.
+
+### GET /api/v1/ws
+
+Public WebSocket upgrade endpoint for realtime events.
+
+- Mounted only when the binary is compiled with `mod-websocket`
+- Plain HTTP GET requests are rejected; clients must perform a WebSocket upgrade handshake
+- Anonymous connections receive only public events; `?token=...` upgrades them to an authenticated stream
+
 ### GET /status
 
 Server statistics. No authentication required.

@@ -263,6 +263,20 @@ pub struct UpdateModuleConfigRequest {
 // Shared helpers
 // ═════════════════════════════════════════════════════════════════════════════
 
+/// Canonicalize legacy public module slugs onto the current
+/// capability-first contract.
+///
+/// `realtime` is the stable public capability. Older clients may still
+/// ask for `websocket`, which now names the primary transport rather
+/// than the product-facing module.
+#[must_use]
+pub fn canonical_module_slug(module_name: &str) -> &str {
+    match module_name {
+        "websocket" => "realtime",
+        _ => module_name,
+    }
+}
+
 /// Build the admin-settings key that stores a module's runtime override.
 ///
 /// Shape: `module.{slug}.runtime_enabled`. Values are `"true"` or
@@ -270,7 +284,10 @@ pub struct UpdateModuleConfigRequest {
 /// is a `String -> String` map).
 #[must_use]
 pub fn runtime_enabled_setting_key(module_name: &str) -> String {
-    format!("module.{module_name}.runtime_enabled")
+    format!(
+        "module.{}.runtime_enabled",
+        canonical_module_slug(module_name)
+    )
 }
 
 /// Build the admin-settings key that stores one field of a module's
@@ -282,7 +299,10 @@ pub fn runtime_enabled_setting_key(module_name: &str) -> String {
 /// store.
 #[must_use]
 pub fn config_setting_key(module_name: &str, field: &str) -> String {
-    format!("module.{module_name}.config.{field}")
+    format!(
+        "module.{}.config.{field}",
+        canonical_module_slug(module_name)
+    )
 }
 
 /// Build the full list of modules with per-module **runtime overrides**

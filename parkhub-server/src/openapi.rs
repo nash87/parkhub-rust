@@ -314,6 +314,11 @@ use crate::{
         crate::api::system::health_check,
         crate::api::system::liveness_check,
         crate::api::system::readiness_check,
+        crate::api::system::v1_health,
+        crate::api::system::v1_health_live,
+        crate::api::system::v1_health_ready,
+        crate::api::system::v1_health_info,
+        crate::api::system::v1_discover,
         crate::api::system::handshake,
         crate::api::system::server_status,
 
@@ -787,6 +792,74 @@ mod tests {
         for path in ["/setup/status", "/setup"] {
             assert!(json.contains(path), "Missing path: {path}");
         }
+    }
+
+    #[test]
+    fn test_openapi_has_public_contract_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/health",
+            "/api/v1/health/live",
+            "/api/v1/health/ready",
+            "/api/v1/health/info",
+            "/api/v1/discover",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+        assert!(json.contains("realtime_transport"));
+    }
+
+    #[test]
+    fn test_openapi_keeps_public_module_response_schemas() {
+        let doc = ApiDoc::openapi();
+        let value: serde_json::Value = serde_json::from_str(&doc.to_json().unwrap()).unwrap();
+
+        let modules_get = &value["paths"]["/api/v1/modules"]["get"]["responses"]["200"]["content"]
+            ["application/json"]["schema"]["$ref"];
+        assert_eq!(
+            modules_get.as_str(),
+            Some("#/components/schemas/ListModulesResponseSchema")
+        );
+
+        let module_get_ok = &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["200"]
+            ["content"]["application/json"]["schema"]["$ref"];
+        assert_eq!(
+            module_get_ok.as_str(),
+            Some("#/components/schemas/ModuleInfoResponseSchema")
+        );
+
+        let module_get_not_found =
+            &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["404"]["content"]
+                ["application/json"]["schema"]["$ref"];
+        assert_eq!(
+            module_get_not_found.as_str(),
+            Some("#/components/schemas/ModuleInfoResponseSchema")
+        );
+
+        let module_patch_ok =
+            &value["paths"]["/api/v1/admin/modules/{name}"]["patch"]["responses"]["200"]
+                ["content"]["application/json"]["schema"]["$ref"];
+        assert_eq!(
+            module_patch_ok.as_str(),
+            Some("#/components/schemas/ModuleInfoResponseSchema")
+        );
+
+        let module_config_patch_ok =
+            &value["paths"]["/api/v1/admin/modules/{name}/config"]["patch"]["responses"]["200"]
+                ["content"]["application/json"]["schema"]["$ref"];
+        assert_eq!(
+            module_config_patch_ok.as_str(),
+            Some("#/components/schemas/ModuleConfigResponseSchema")
+        );
+
+        let module_config_patch_validation =
+            &value["paths"]["/api/v1/admin/modules/{name}/config"]["patch"]["responses"]["422"]
+                ["content"]["application/json"]["schema"]["$ref"];
+        assert_eq!(
+            module_config_patch_validation.as_str(),
+            Some("#/components/schemas/ModuleConfigResponseSchema")
+        );
     }
 
     #[test]

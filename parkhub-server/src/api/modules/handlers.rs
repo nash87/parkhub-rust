@@ -14,17 +14,49 @@ use axum::{
     http::StatusCode,
 };
 use parkhub_common::ApiResponse;
+use serde::Serialize;
 use std::collections::HashMap;
+use utoipa::ToSchema;
 
 use crate::audit::{AuditEntry, AuditEventType};
 
 use super::registry::{module_registry_static, registry_defs};
 use super::{
     AuthUser, ConfigSchema, ListModulesResponse, ModuleConfig, ModuleInfo, SharedState,
-    UpdateModuleConfigRequest, UpdateModuleRequest, check_admin, config_setting_key,
-    load_module_values, module_registry, parse_schema, runtime_enabled_setting_key,
-    validate_instance,
+    UpdateModuleConfigRequest, UpdateModuleRequest, canonical_module_slug, check_admin,
+    config_setting_key, load_module_values, module_registry, parse_schema,
+    runtime_enabled_setting_key, validate_instance,
 };
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+struct PublicApiErrorSchema {
+    code: String,
+    message: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+struct PublicResponseMetaSchema {
+    page: Option<i32>,
+    per_page: Option<i32>,
+    total: Option<i32>,
+    total_pages: Option<i32>,
+}
+
+macro_rules! define_public_response_schema {
+    ($name:ident, $payload:ty) => {
+        #[derive(Debug, Clone, Serialize, ToSchema)]
+        struct $name {
+            success: bool,
+            data: Option<$payload>,
+            error: Option<PublicApiErrorSchema>,
+            meta: Option<PublicResponseMetaSchema>,
+        }
+    };
+}
+
+define_public_response_schema!(ListModulesResponseSchema, ListModulesResponse);
+define_public_response_schema!(ModuleInfoResponseSchema, ModuleInfo);
+define_public_response_schema!(ModuleConfigResponseSchema, ModuleConfig);
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Handlers
@@ -48,11 +80,11 @@ use super::{
     tag = "Public",
     summary = "List module features + enriched metadata",
     description = "Returns compile-time module enablement as both the legacy flat Boolean map and an enriched array of ModuleInfo objects (category, description, config keys, UI route, dependencies, runtime_toggleable, runtime_enabled).",
-    responses(
-        (status = 200, description = "Module registry", body = ListModulesResponse)
-    )
+    responses((status = 200, description = "Module registry", body = ListModulesResponseSchema))
 )]
-pub async fn list_modules(State(state): State<SharedState>) -> Json<ListModulesResponse> {
+pub async fn list_modules(
+    State(state): State<SharedState>,
+) -> Json<ApiResponse<ListModulesResponse>> {
     let state_guard = state.read().await;
     let info = module_registry(&state_guard.db).await;
     drop(state_guard);
@@ -60,11 +92,11 @@ pub async fn list_modules(State(state): State<SharedState>) -> Json<ListModulesR
         .iter()
         .map(|m| (m.name.clone(), m.runtime_enabled))
         .collect();
-    Json(ListModulesResponse {
+    Json(ApiResponse::success(ListModulesResponse {
         modules,
         module_info: info,
         version: env!("CARGO_PKG_VERSION").to_string(),
-    })
+    }))
 }
 
 /// `GET /api/v1/modules/{name}` — single-module detail.
@@ -79,21 +111,28 @@ pub async fn list_modules(State(state): State<SharedState>) -> Json<ListModulesR
     description = "Returns enriched ModuleInfo for one module, keyed by its stable slug (matches the feature flag without the `mod-` prefix). Runtime setting overrides are applied.",
     params(("name" = String, Path, description = "Module slug (e.g. 'bookings', 'admin-analytics')")),
     responses(
-        (status = 200, description = "Module metadata", body = ModuleInfo),
-        (status = 404, description = "Unknown module slug")
+        (status = 200, description = "Module metadata", body = ModuleInfoResponseSchema),
+        (status = 404, description = "Unknown module slug", body = ModuleInfoResponseSchema)
     )
 )]
 pub async fn get_module(
     State(state): State<SharedState>,
     Path(name): Path<String>,
-) -> Result<Json<ModuleInfo>, StatusCode> {
+) -> (StatusCode, Json<ApiResponse<ModuleInfo>>) {
+    let canonical_name = canonical_module_slug(&name).to_string();
     let state_guard = state.read().await;
     let info = module_registry(&state_guard.db).await;
     drop(state_guard);
-    info.into_iter()
-        .find(|m| m.name == name)
-        .map(Json)
-        .ok_or(StatusCode::NOT_FOUND)
+    match info.into_iter().find(|m| m.name == canonical_name) {
+        Some(module) => (StatusCode::OK, Json(ApiResponse::success(module))),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error(
+                "UNKNOWN_MODULE",
+                format!("Unknown module slug: {name}"),
+            )),
+        ),
+    }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -125,10 +164,10 @@ pub async fn get_module(
     params(("name" = String, Path, description = "Module slug (kebab-case)")),
     request_body = UpdateModuleRequest,
     responses(
-        (status = 200, description = "Updated module state", body = ModuleInfo),
-        (status = 400, description = "Unknown module slug"),
-        (status = 403, description = "Admin access required"),
-        (status = 409, description = "Module is not runtime_toggleable")
+        (status = 200, description = "Updated module state", body = ModuleInfoResponseSchema),
+        (status = 400, description = "Unknown module slug", body = ModuleInfoResponseSchema),
+        (status = 403, description = "Admin access required", body = ModuleInfoResponseSchema),
+        (status = 409, description = "Module is not runtime_toggleable", body = ModuleInfoResponseSchema)
     )
 )]
 pub async fn patch_admin_module(
@@ -137,6 +176,7 @@ pub async fn patch_admin_module(
     Path(name): Path<String>,
     Json(body): Json<UpdateModuleRequest>,
 ) -> (StatusCode, Json<ApiResponse<ModuleInfo>>) {
+    let canonical_name = canonical_module_slug(&name).to_string();
     let state_guard = state.read().await;
 
     // Admin guard (defense-in-depth on top of the admin_middleware layer).
@@ -149,7 +189,7 @@ pub async fn patch_admin_module(
     // lookup.
     let Some(current) = module_registry_static()
         .into_iter()
-        .find(|m| m.name == name)
+        .find(|m| m.name == canonical_name)
     else {
         return (
             StatusCode::BAD_REQUEST,
@@ -172,14 +212,14 @@ pub async fn patch_admin_module(
         );
     }
 
-    let key = runtime_enabled_setting_key(&name);
+    let key = runtime_enabled_setting_key(&canonical_name);
     let value = if body.runtime_enabled {
         "true"
     } else {
         "false"
     };
     if let Err(e) = state_guard.db.set_setting(&key, value).await {
-        tracing::error!(module = %name, error = %e, "Failed to persist module runtime toggle");
+        tracing::error!(module = %canonical_name, error = %e, "Failed to persist module runtime toggle");
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ApiResponse::error(
@@ -202,7 +242,7 @@ pub async fn patch_admin_module(
 
         let entry = AuditEntry::new(AuditEventType::ConfigChanged)
             .user(auth_user.user_id, &admin_username)
-            .resource("module", &name)
+            .resource("module", &canonical_name)
             .details(serde_json::json!({
                 "setting_key": key,
                 "runtime_enabled": body.runtime_enabled,
@@ -215,7 +255,7 @@ pub async fn patch_admin_module(
     // override.
     let info = module_registry(&state_guard.db).await;
     drop(state_guard);
-    let Some(updated) = info.into_iter().find(|m| m.name == name) else {
+    let Some(updated) = info.into_iter().find(|m| m.name == canonical_name) else {
         // Registry must contain `name` — we already validated above. If
         // this ever fires, the registry mutated mid-request; return 500
         // rather than invent a value.
@@ -243,14 +283,18 @@ pub async fn patch_admin_module(
 /// - `Err(BAD_REQUEST)` — slug exists but has no `config_schema`
 ///   declared (no generic editor available for this module).
 pub(super) fn resolve_schema(name: &str) -> Result<(serde_json::Value, ConfigSchema), StatusCode> {
-    let Some(def) = registry_defs().into_iter().find(|d| d.name == name) else {
+    let canonical_name = canonical_module_slug(name);
+    let Some(def) = registry_defs()
+        .into_iter()
+        .find(|d| d.name == canonical_name)
+    else {
         return Err(StatusCode::NOT_FOUND);
     };
     let Some(literal) = def.config_schema else {
         return Err(StatusCode::BAD_REQUEST);
     };
     parse_schema(literal).map_err(|e| {
-        tracing::error!(module = name, error = %e, "module schema literal is broken");
+        tracing::error!(module = canonical_name, error = %e, "module schema literal is broken");
         StatusCode::INTERNAL_SERVER_ERROR
     })
 }
@@ -283,37 +327,39 @@ pub async fn get_module_config(
     axum::Extension(auth_user): axum::Extension<AuthUser>,
     Path(name): Path<String>,
 ) -> Result<Json<ModuleConfig>, (StatusCode, Json<ApiResponse<()>>)> {
+    let canonical_name = canonical_module_slug(&name).to_string();
     let state_guard = state.read().await;
 
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return Err((status, Json(ApiResponse::error("FORBIDDEN", msg))));
     }
 
-    let (schema_value, schema) = resolve_schema(&name).map_err(|status| match status {
-        StatusCode::NOT_FOUND => (
-            status,
-            Json(ApiResponse::error(
-                "UNKNOWN_MODULE",
-                format!("Unknown module slug: {name}"),
-            )),
-        ),
-        StatusCode::BAD_REQUEST => (
-            status,
-            Json(ApiResponse::error(
-                "NO_CONFIG_SCHEMA",
-                format!("Module '{name}' has no config schema"),
-            )),
-        ),
-        _ => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to resolve module schema",
-            )),
-        ),
-    })?;
+    let (schema_value, schema) =
+        resolve_schema(&canonical_name).map_err(|status| match status {
+            StatusCode::NOT_FOUND => (
+                status,
+                Json(ApiResponse::error(
+                    "UNKNOWN_MODULE",
+                    format!("Unknown module slug: {name}"),
+                )),
+            ),
+            StatusCode::BAD_REQUEST => (
+                status,
+                Json(ApiResponse::error(
+                    "NO_CONFIG_SCHEMA",
+                    format!("Module '{name}' has no config schema"),
+                )),
+            ),
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error(
+                    "SERVER_ERROR",
+                    "Failed to resolve module schema",
+                )),
+            ),
+        })?;
 
-    let values = load_module_values(&state_guard.db, &name, &schema_value).await;
+    let values = load_module_values(&state_guard.db, &canonical_name, &schema_value).await;
     drop(state_guard);
 
     Ok(Json(ModuleConfig { schema, values }))
@@ -349,11 +395,11 @@ pub async fn get_module_config(
     params(("name" = String, Path, description = "Module slug (kebab-case)")),
     request_body = UpdateModuleConfigRequest,
     responses(
-        (status = 200, description = "Updated config", body = ModuleConfig),
-        (status = 400, description = "Module has no config schema"),
-        (status = 403, description = "Admin access required"),
-        (status = 404, description = "Unknown module slug"),
-        (status = 422, description = "Validation failed")
+        (status = 200, description = "Updated config", body = ModuleConfigResponseSchema),
+        (status = 400, description = "Module has no config schema", body = ModuleConfigResponseSchema),
+        (status = 403, description = "Admin access required", body = ModuleConfigResponseSchema),
+        (status = 404, description = "Unknown module slug", body = ModuleConfigResponseSchema),
+        (status = 422, description = "Validation failed", body = ModuleConfigResponseSchema)
     )
 )]
 pub async fn patch_module_config(
@@ -362,13 +408,14 @@ pub async fn patch_module_config(
     Path(name): Path<String>,
     Json(body): Json<UpdateModuleConfigRequest>,
 ) -> (StatusCode, Json<ApiResponse<ModuleConfig>>) {
+    let canonical_name = canonical_module_slug(&name).to_string();
     let state_guard = state.read().await;
 
     if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    let (schema_value, schema) = match resolve_schema(&name) {
+    let (schema_value, schema) = match resolve_schema(&canonical_name) {
         Ok(pair) => pair,
         Err(StatusCode::NOT_FOUND) => {
             return (
@@ -423,12 +470,12 @@ pub async fn patch_module_config(
     // schema type through the string-typed settings store.
     let mut keys_changed: Vec<String> = Vec::with_capacity(body.values.len());
     for (field, value) in &body.values {
-        let key = config_setting_key(&name, field);
+        let key = config_setting_key(&canonical_name, field);
         let encoded = match serde_json::to_string(value) {
             Ok(s) => s,
             Err(e) => {
                 tracing::error!(
-                    module = %name,
+                    module = %canonical_name,
                     field = %field,
                     error = %e,
                     "failed to encode module config value"
@@ -444,7 +491,7 @@ pub async fn patch_module_config(
         };
         if let Err(e) = state_guard.db.set_setting(&key, &encoded).await {
             tracing::error!(
-                module = %name,
+                module = %canonical_name,
                 field = %field,
                 error = %e,
                 "failed to persist module config value"
@@ -475,9 +522,9 @@ pub async fn patch_module_config(
 
         let entry = AuditEntry::new(AuditEventType::ConfigChanged)
             .user(auth_user.user_id, &admin_username)
-            .resource("module", &name)
+            .resource("module", &canonical_name)
             .details(serde_json::json!({
-                "module": name,
+                "module": canonical_name,
                 "keys_changed": keys_changed,
             }))
             .log();
@@ -486,7 +533,7 @@ pub async fn patch_module_config(
 
     // Re-read persisted values so the response reflects the new state
     // exactly as a subsequent GET would.
-    let values = load_module_values(&state_guard.db, &name, &schema_value).await;
+    let values = load_module_values(&state_guard.db, &canonical_name, &schema_value).await;
     drop(state_guard);
 
     (
