@@ -817,7 +817,10 @@ mod tests {
 
         let modules_get = &value["paths"]["/api/v1/modules"]["get"]["responses"]["200"]["content"]
             ["application/json"]["schema"]["$ref"];
-        assert_eq!(modules_get.as_str(), Some("#/components/schemas/ListModulesResponse"));
+        assert_eq!(
+            modules_get.as_str(),
+            Some("#/components/schemas/ListModulesResponse")
+        );
 
         let module_get_ok = &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["200"]["content"]
             ["application/json"]["schema"]["$ref"];
