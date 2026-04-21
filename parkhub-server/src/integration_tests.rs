@@ -107,7 +107,7 @@ async fn body_json(response: http::Response<Body>) -> serde_json::Value {
 }
 
 fn demo_mode_enabled_from_env() -> bool {
-    matches!(std::env::var("DEMO_MODE").as_deref(), Ok("true") | Ok("1"))
+    matches!(std::env::var("DEMO_MODE").as_deref(), Ok("true" | "1"))
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
