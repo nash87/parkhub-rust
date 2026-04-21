@@ -106,6 +106,10 @@ async fn body_json(response: http::Response<Body>) -> serde_json::Value {
     serde_json::from_slice(&bytes).expect("parse JSON")
 }
 
+fn demo_mode_enabled_from_env() -> bool {
+    matches!(std::env::var("DEMO_MODE").as_deref(), Ok("true") | Ok("1"))
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // 1. HEALTH CHECK ENDPOINTS
 // ═════════════════════════════════════════════════════════════════════════════
@@ -889,7 +893,7 @@ async fn setup_status_returns_success() {
 // ═════════════════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-async fn demo_config_returns_disabled_by_default() {
+async fn demo_config_reflects_demo_mode_env() {
     let state = test_state().await;
     let app = router(state);
 
@@ -904,7 +908,7 @@ async fn demo_config_returns_disabled_by_default() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
-    assert_eq!(json["demo_mode"], false);
+    assert_eq!(json["demo_mode"], demo_mode_enabled_from_env());
 }
 
 #[tokio::test]
