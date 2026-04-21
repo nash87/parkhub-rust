@@ -1,13 +1,13 @@
 # parkhub-rust — Local CI/CD mirror
 #
-# These targets are LOCAL MIRRORS of .github/workflows/*.yml.
-# NEVER let them diverge: if a workflow job changes, update the matching
-# make target in the same commit. The GitHub workflows remain the source
-# of truth; these targets let you reproduce the same gates locally before
-# pushing to Gitea (origin) or GitHub (github remote).
+# These targets mirror the reproducible local subset of .github/workflows/*.yml.
+# NEVER let them drift from the workflow jobs they claim to mirror: if a
+# workflow job changes, update the matching make target in the same commit.
+# The GitHub workflows remain the source of truth; use `make ci` for the fast
+# local core gate and `make act` when you need to execute the actual YAML.
 #
 # Usage:
-#   make ci         # full local CI: fmt + clippy + check + test + frontend + drift
+#   make ci         # core local gate: fmt + clippy + check + client-check + test + frontend + drift
 #   make lint       # fmt --check + clippy (fmt + clippy jobs)
 #   make test       # cargo test headless (test job)
 #   make drift      # regenerate openapi + fail on diff — mirrors openapi-drift.yml
@@ -23,14 +23,15 @@ MAKEFLAGS += --no-print-directory
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
 
-.PHONY: help ci fmt clippy check test lint drift frontend integration embed act pre-push clean
+.PHONY: help ci fmt clippy check client-check test lint drift frontend integration embed act pre-push clean
 
 help:
 	@echo "parkhub-rust local CI mirror (see .github/workflows/*.yml)"
 	@echo ""
-	@echo "  make ci          — fmt + clippy + check + test + frontend + drift"
+	@echo "  make ci          — fmt + clippy + check + client-check + test + frontend + drift"
 	@echo "  make lint        — fmt --check + clippy (mirrors fmt + clippy jobs)"
 	@echo "  make check       — cargo check headless"
+	@echo "  make client-check — cargo check parkhub-client (requires cmake + fontconfig dev libs)"
 	@echo "  make test        — cargo test headless"
 	@echo "  make integration — integration tests (-- integration --test-threads=1)"
 	@echo "  make frontend    — parkhub-web vitest + build"
@@ -59,6 +60,10 @@ lint: fmt clippy
 check: embed
 	cargo check --locked --package parkhub-common --all-targets
 	cargo check --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
+
+## Mirrors: client-check job
+client-check:
+	cargo check --locked --package parkhub-client --all-targets
 
 ## Mirrors: test job
 test: embed
@@ -90,10 +95,10 @@ drift: embed
 	fi
 	@echo "OpenAPI snapshot in sync."
 
-## Full local CI — the same gates that must pass on GitHub before merge
-ci: fmt clippy check test frontend drift
+## Core local CI — fast, reproducible subset of the blocking GitHub checks
+ci: fmt clippy check client-check test frontend drift
 	@echo ""
-	@echo "Local CI passed. Safe to push."
+	@echo "Core local gate passed. Run 'make act' for the full workflow YAML."
 
 pre-push: ci
 

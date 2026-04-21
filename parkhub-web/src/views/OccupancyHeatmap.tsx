@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChartBar, Clock, CalendarBlank, TrendUp } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -223,7 +223,7 @@ export function OccupancyHeatmapPage() {
 
             {/* Day rows */}
             {DAY_SHORT.map((day, dayIdx) => (
-              <>
+              <Fragment key={`day-row-${dayIdx}`}>
                 <div key={`label-${dayIdx}`} className="pr-2 text-xs text-surface-500 text-right flex items-center justify-end" role="rowheader">
                   {day}
                 </div>
@@ -241,7 +241,7 @@ export function OccupancyHeatmapPage() {
                     />
                   );
                 })}
-              </>
+              </Fragment>
             ))}
           </div>
 

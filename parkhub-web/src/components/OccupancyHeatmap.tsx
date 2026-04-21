@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { Fragment, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Booking } from '../api/client';
 
@@ -206,7 +206,7 @@ export function OccupancyHeatmap({ bookings, totalSlots }: OccupancyHeatmapProps
 
           {/* Rows: one per hour */}
           {hours.map(hour => (
-            <>
+            <Fragment key={`row-${hour}`}>
               {/* Hour label */}
               <div
                 key={`hour-label-${hour}`}
@@ -235,7 +235,7 @@ export function OccupancyHeatmap({ bookings, totalSlots }: OccupancyHeatmapProps
                   />
                 );
               })}
-            </>
+            </Fragment>
           ))}
         </div>
       </div>

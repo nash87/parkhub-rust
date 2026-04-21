@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartBar, TrendUp, Users, Clock, CurrencyDollar, Export, CalendarBlank } from '@phosphor-icons/react';
 import { getInMemoryToken } from '../api/client';
@@ -71,7 +71,7 @@ function HeatmapChart({ peak_hours }: { peak_hours: HourBin[] }) {
         <div key={h} className="text-center text-surface-400 text-[10px]">{h}</div>
       ))}
       {days.map(day => (
-        <>
+        <Fragment key={`heatmap-row-${day}`}>
           <div key={day} className="pr-2 text-surface-500 text-right">{day}</div>
           {peak_hours.map((h, i) => {
             const intensity = h.count / max;
@@ -86,7 +86,7 @@ function HeatmapChart({ peak_hours }: { peak_hours: HourBin[] }) {
               />
             );
           })}
-        </>
+        </Fragment>
       ))}
     </div>
   );

@@ -33,9 +33,8 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       # Give the pod up to 45s to drain in-flight requests on SIGTERM.
       # parkhub-server hooks SIGTERM and gracefully finishes open axum
-      # connections; the preStop sleep gives the Service endpoints
-      # controller time to pull this pod out of rotation before the
-      # container starts refusing new connections.
+      # connections. The image is distroless, so we cannot rely on a shell
+      # or `/bin/sleep` preStop hook here.
       terminationGracePeriodSeconds: 45
       containers:
         - name: {{ .Chart.Name }}
@@ -47,12 +46,6 @@ spec:
             - name: http
               containerPort: {{ .Values.config.port }}
               protocol: TCP
-          lifecycle:
-            preStop:
-              exec:
-                # Sleep longer than the readiness-probe periodSeconds so kube-proxy
-                # de-registers this endpoint before the server process sees SIGTERM.
-                command: ["/bin/sleep", "15"]
           livenessProbe:
             # Shallow: only checks the HTTP listener is alive. Does NOT hit
             # the DB — a slow read-only DB must not restart-loop the pod.

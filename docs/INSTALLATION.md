@@ -508,7 +508,8 @@ fly secrets set PARKHUB_DB_PASSPHRASE="your-passphrase"
 fly volumes create parkhub_data --size 5
 ```
 
-Update `fly.toml`:
+`fly.toml` already points Fly at the published image on port `10000`.
+If you keep the default local database, only ensure the volume mount stays on `/data`:
 
 ```toml
 [mounts]

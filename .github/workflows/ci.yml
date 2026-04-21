@@ -13,10 +13,13 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   CARGO_TERM_COLOR: always
   NODE_VERSION: '22.12.0'
+  DEMO_MODE: 'true'
+  PARKHUB_ADMIN_PASSWORD: demo
 
 jobs:
   actionlint:
@@ -29,6 +32,74 @@ jobs:
       - name: Run actionlint
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
 
+      - name: Lint YAML manifests
+        run: |
+          python3 -m pip install --user yamllint
+          ~/.local/bin/yamllint -d relaxed .github/workflows docker-compose.yml docker-compose.test.yml render.yaml koyeb.yaml
+
+      - name: Validate Fly config
+        run: python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('fly.toml').read_text())"
+
+  helm-validate:
+    name: Helm validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5
+
+      - name: Validate Helm chart
+        run: |
+          helm lint ./helm/parkhub
+          helm template parkhub ./helm/parkhub > /tmp/rendered-default.yaml
+          helm template parkhub ./helm/parkhub --set grafana.dashboardsEnabled=true > /tmp/rendered-grafana.yaml
+          helm template parkhub ./helm/parkhub --set pdb.enabled=true > /tmp/rendered-ha.yaml
+          helm template parkhub ./helm/parkhub --set monitoring.serviceMonitor.enabled=true > /tmp/rendered-servicemonitor.yaml
+          helm template parkhub ./helm/parkhub --set monitoring.prometheusRule.enabled=true > /tmp/rendered-prometheusrule.yaml
+          python3 -m pip install --user pyyaml
+          python3 - <<'PY'
+          import pathlib, yaml
+          for path in pathlib.Path('/tmp').glob('rendered-*.yaml'):
+              list(yaml.safe_load_all(path.read_text()))
+          PY
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+
+  cargo-deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@58e862542551f667fa44c8a2a4a1d64ad477c96a # v2.75.17
+        with:
+          tool: cargo-deny
+
+      - name: Run cargo-deny
+        run: cargo deny check advisories bans licenses sources
+
   fmt:
     name: Cargo Format Check
     runs-on: ubuntu-latest
@@ -39,6 +110,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
+          toolchain: 1.94.1
           components: rustfmt
 
       - name: Check formatting
@@ -53,6 +125,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: 1.94.1
       - name: Cache cargo
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
@@ -66,6 +140,29 @@ jobs:
           cargo check --locked --package parkhub-common --all-targets
           cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets
 
+  client-check:
+    name: Desktop Client Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: 1.94.1
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+
+      - name: Check desktop client
+        run: cargo check --locked --package parkhub-client --all-targets
+
   clippy:
     name: Cargo Clippy (headless)
     runs-on: ubuntu-latest
@@ -76,6 +173,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
+          toolchain: 1.94.1
           components: clippy
 
       - name: Cache cargo
@@ -101,6 +199,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: 1.94.1
       - name: Cache cargo
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
@@ -150,6 +250,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: 1.94.1
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
@@ -167,29 +269,100 @@ jobs:
         env:
           RUST_LOG: warn
 
+  openapi-drift:
+    name: OpenAPI drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build frontend (rust_embed source)
+        run: cd parkhub-web && npm ci && npm run build
+
+      - name: Build server
+        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless'
+
+      - name: Start server in background
+        shell: bash
+        run: |
+          mkdir -p /tmp/parkhub-drift-db
+          ./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db > /tmp/parkhub-drift.log 2>&1 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          READY=0
+          for _i in $(seq 1 45); do
+            if curl -sf http://localhost:18181/health > /dev/null 2>&1; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy in time'
+            tail -n 50 /tmp/parkhub-drift.log
+            exit 1
+          fi
+
+      - name: Regenerate Rust OpenAPI snapshot
+        run: ./scripts/dump-openapi.sh 18181
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true
+
+      - name: Fail if snapshot drifted
+        run: |
+          if ! git diff --exit-code docs/openapi/rust.json; then
+            echo "::error::docs/openapi/rust.json is out of sync with the code."
+            echo "Run ./scripts/dump-openapi.sh locally (against a running server on 18181) and commit the updated snapshot."
+            exit 1
+          fi
+          echo "Rust OpenAPI snapshot matches the current code."
+
   required:
     name: Required checks
     if: always()
-    needs: [actionlint, fmt, check, clippy, test, frontend, integration]
+    needs: [actionlint, helm-validate, dependency-review, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Check results
         env:
           ACTIONLINT: ${{ needs.actionlint.result }}
+          HELM_VALIDATE: ${{ needs.helm-validate.result }}
+          DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
+          CARGO_DENY: ${{ needs.cargo-deny.result }}
           CHECK: ${{ needs.check.result }}
+          CLIENT_CHECK: ${{ needs.client-check.result }}
           TEST: ${{ needs.test.result }}
           FRONTEND: ${{ needs.frontend.result }}
           FMT: ${{ needs.fmt.result }}
           CLIPPY: ${{ needs.clippy.result }}
           INTEGRATION: ${{ needs.integration.result }}
+          OPENAPI_DRIFT: ${{ needs.openapi-drift.result }}
         run: |
-          for check in ACTIONLINT CHECK TEST FRONTEND FMT CLIPPY; do
+          for check in ACTIONLINT HELM_VALIDATE CARGO_DENY CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT; do
             if [[ "${!check}" != "success" ]]; then
               echo "REQUIRED: ${check} failed: ${!check}"
               exit 1
             fi
           done
+          if [[ "${DEPENDENCY_REVIEW}" != "success" && "${DEPENDENCY_REVIEW}" != "skipped" ]]; then
+            echo "REQUIRED: DEPENDENCY_REVIEW failed: ${DEPENDENCY_REVIEW}"
+            exit 1
+          fi
           # TODO(make-required-once-stabilized): integration has 1 real failure in last 24h (cancellation_produces_correct_booking_status)
           if [[ "${INTEGRATION}" != "success" ]]; then
             echo "ADVISORY: INTEGRATION: ${INTEGRATION}"

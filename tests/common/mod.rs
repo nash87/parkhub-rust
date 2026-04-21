@@ -75,14 +75,10 @@ pub async fn start_test_server() -> TestServer {
     let binary = server_binary();
     let config_path = data_dir.join("config.toml");
 
-    // Phase 1: start server so it creates its default config.toml. We only
-    // forward PARKHUB_DISABLE_RATE_LIMITS when the parent already has it —
-    // the server's `rate_limit::bypass_requested` panics on startup if the
-    // env is set without the `e2e-bypass` cargo feature. The integration
-    // pipeline builds with `headless` alone (no `e2e-bypass`), so setting
-    // it unconditionally here would crash every integration-test server.
-    // Simulation + visual workflows set the env themselves AND compile the
-    // binary with `e2e-bypass`, so the forward is correct in those cases.
+    // Phase 1: start server so it creates its default config.toml. Only
+    // forward PARKHUB_DISABLE_RATE_LIMITS when the parent explicitly set it.
+    // CI integration builds do not enable the `e2e-bypass` feature, so
+    // forcing the env here crashes the child process before health checks.
     let mut cmd = Command::new(&binary);
     cmd.args([
         "--headless",
@@ -110,12 +106,8 @@ pub async fn start_test_server() -> TestServer {
         .build()
         .expect("build reqwest client");
 
-    // Wait for first start to create config and become healthy. 180s covers
-    // GitHub-hosted runners where 4 parallel cargo-test threads each spawn
-    // their own server simultaneously; under CPU contention a cold binary
-    // spawn + migrations + port bind can exceed 60s even though local runs
-    // settle in <2s. Tests that hit a genuine hang still fail promptly via
-    // their per-request 10s reqwest timeout.
+    // GitHub-hosted runners can take much longer here when multiple test
+    // threads all spawn their own server + migrations in parallel.
     let deadline = Instant::now() + Duration::from_secs(180);
     loop {
         assert!(
@@ -141,7 +133,6 @@ pub async fn start_test_server() -> TestServer {
         let _ = child.kill();
         let _ = child.wait();
 
-        // Phase-2 restart: same conditional-forward as phase-1.
         let mut cmd2 = Command::new(&binary);
         cmd2.args([
             "--headless",
@@ -165,7 +156,6 @@ pub async fn start_test_server() -> TestServer {
 
         child = child2;
 
-        // Wait for restart (matches phase-1 timeout; same CI contention rules)
         let deadline = Instant::now() + Duration::from_secs(180);
         loop {
             assert!(

@@ -653,8 +653,13 @@ fn public_routes(state: &SharedState, rate_limiters: &EndpointRateLimiters) -> R
         .route("/health/live", get(liveness_check))
         .route("/health/ready", get(readiness_check))
         .route("/health/detailed", get(admin_ext::detailed_health_check))
+        .route("/api/v1/health", get(v1_health))
+        .route("/api/v1/health/live", get(v1_health_live))
+        .route("/api/v1/health/ready", get(v1_health_ready))
+        .route("/api/v1/health/info", get(v1_health_info))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
+        .route("/api/v1/discover", get(v1_discover))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
         // Module registry — public (compile-time feature introspection
@@ -674,9 +679,14 @@ fn public_routes(state: &SharedState, rate_limiters: &EndpointRateLimiters) -> R
         .route("/api/v1/public/display", get(public_display))
         // System info (public — no auth needed for version/maintenance checks)
         .route("/api/v1/system/version", get(system_version))
-        .route("/api/v1/system/maintenance", get(system_maintenance))
-        // WebSocket real-time events
-        .route("/api/v1/ws", get(ws::ws_handler));
+        .route("/api/v1/system/maintenance", get(system_maintenance));
+
+    #[cfg(feature = "mod-websocket")]
+    {
+        // Real-time WebSocket endpoint is part of the public contract only
+        // when the websocket module is compiled in.
+        router = router.route("/api/v1/ws", get(ws::ws_handler));
+    }
 
     // Setup wizard (multi-step onboarding) — public for initial setup
     #[cfg(feature = "mod-setup-wizard")]
@@ -2372,7 +2382,7 @@ async fn protected_identity_rate_limit_middleware(
 // Health & system handler re-exports from system module
 use system::{
     handshake, health_check, liveness_check, readiness_check, server_status, system_maintenance,
-    system_version,
+    system_version, v1_discover, v1_health, v1_health_info, v1_health_live, v1_health_ready,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

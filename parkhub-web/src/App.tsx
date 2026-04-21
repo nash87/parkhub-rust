@@ -135,18 +135,54 @@ function LoadingSplash() {
   );
 }
 
-function useThemeLoader() {
+const PUBLIC_ENTRY_ROUTES = new Set([
+  '/',
+  '/welcome',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/choose',
+]);
+
+function useThemeLoader(pathname: string) {
   useEffect(() => {
-    fetch('/api/v1/theme', { credentials: 'include' })
-      .then(r => { if (!r.ok) return null; return r.json(); })
-      .then(res => {
-        if (!res) return;
-        const key = res?.data?.use_case?.key;
-        if (key) document.documentElement.dataset.usecase = key;
-      })
-      .catch(() => {});
-    loadTranslationOverrides();
-  }, []);
+    const isDeferredRoute = PUBLIC_ENTRY_ROUTES.has(pathname);
+    let cancelled = false;
+
+    const loadTheme = () => {
+      fetch('/api/v1/theme', { credentials: 'include' })
+        .then(r => { if (!r.ok) return null; return r.json(); })
+        .then(res => {
+          if (cancelled || !res) return;
+          const key = res?.data?.use_case?.key;
+          if (key) document.documentElement.dataset.usecase = key;
+        })
+        .catch(() => {});
+    };
+
+    const loadDeferred = () => {
+      if (cancelled) return;
+      loadTheme();
+      void loadTranslationOverrides();
+    };
+
+    if (!isDeferredRoute) {
+      loadDeferred();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const schedule = (globalThis as any).requestIdleCallback
+      ?? ((cb: () => void) => setTimeout(cb, 1500));
+    const cancel = (globalThis as any).cancelIdleCallback ?? clearTimeout;
+    const handle = schedule(() => loadDeferred(), { timeout: 2500 });
+
+    return () => {
+      cancelled = true;
+      cancel(handle);
+    };
+  }, [pathname]);
 }
 
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
@@ -253,7 +289,8 @@ function AppRoutes() {
 }
 
 function ThemeLoader({ children }: { children: React.ReactNode }) {
-  useThemeLoader();
+  const location = useLocation();
+  useThemeLoader(location.pathname);
   return <>{children}</>;
 }
 

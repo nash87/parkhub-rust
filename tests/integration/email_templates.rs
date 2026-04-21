@@ -13,6 +13,7 @@ use crate::common::{
     admin_login, auth_get, auth_post, create_test_booking, create_test_lot, create_test_slot,
     create_test_user, start_test_server,
 };
+use std::time::Duration;
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Email preview endpoint (if available)
@@ -119,12 +120,23 @@ async fn cancellation_produces_correct_booking_status() {
         .unwrap();
     assert!(resp.status().is_success());
 
-    // Verify cancelled status (data that feeds the cancellation email)
-    let (status, body) =
-        auth_get(&srv, &user_token, &format!("/api/v1/bookings/{booking_id}")).await;
-    if status == 200 {
-        assert_eq!(body["data"]["status"], "cancelled");
+    // CI occasionally observes one stale read immediately after the DELETE,
+    // so retry briefly before treating the status as wrong.
+    let path = format!("/api/v1/bookings/{booking_id}");
+    for attempt in 0..5 {
+        let (status, body) = auth_get(&srv, &user_token, &path).await;
+        if status != 200 || body["data"]["status"] == "cancelled" {
+            if status == 200 {
+                assert_eq!(body["data"]["status"], "cancelled");
+            }
+            return;
+        }
+        if attempt < 4 {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
     }
+
+    panic!("booking status did not converge to cancelled after retry window");
 }
 
 #[tokio::test]

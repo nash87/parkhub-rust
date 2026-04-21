@@ -1679,11 +1679,12 @@ async fn test_modules_endpoint() {
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
     assert!(json["modules"].is_object());
-    assert!(json["version"].is_string());
+    assert!(json["module_info"].is_array());
     // Verify module flags match compile-time feature state
     assert_eq!(json["modules"]["bookings"], cfg!(feature = "mod-bookings"));
     assert_eq!(json["modules"]["vehicles"], cfg!(feature = "mod-vehicles"));
     assert_eq!(json["modules"]["oauth"], cfg!(feature = "mod-oauth"));
+    assert_eq!(json["modules"]["realtime"], cfg!(feature = "mod-websocket"));
 }
 
 #[tokio::test]

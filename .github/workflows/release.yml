@@ -19,17 +19,56 @@ env:
 
 jobs:
   validate-tag:
-    name: Validate release ref
-    if: github.event_name == 'workflow_dispatch'
+    name: Validate release ref + version surfaces
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
       - name: Require v* tag ref
         run: |
           if [[ ! "${GITHUB_REF}" =~ ^refs/tags/v ]]; then
             echo "workflow_dispatch must target a v* tag ref"
             exit 1
           fi
+
+      - name: Require tag and version surfaces to match
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import tomllib
+
+          root = pathlib.Path(".")
+          release_tag = os.environ["RELEASE_TAG"]
+          if not release_tag.startswith("v"):
+              raise SystemExit(f"release ref must be a v* tag, got: {release_tag}")
+
+          expected_version = release_tag[1:]
+          cargo_version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+          root_package_version = json.loads((root / "package.json").read_text())["version"]
+          web_package_version = json.loads((root / "parkhub-web" / "package.json").read_text())["version"]
+
+          versions = {
+              "git tag": expected_version,
+              "Cargo.toml [workspace.package].version": cargo_version,
+              "package.json version": root_package_version,
+              "parkhub-web/package.json version": web_package_version,
+          }
+
+          mismatches = {name: value for name, value in versions.items() if value != expected_version}
+          if mismatches:
+              print("Release version parity check failed:")
+              for name, value in versions.items():
+                  print(f"  {name}: {value}")
+              raise SystemExit(1)
+
+          print(f"Release version parity verified: {expected_version}")
+          PY
 
   build-linux:
     name: Build Linux
