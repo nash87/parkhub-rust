@@ -28,22 +28,22 @@ fetch() {
 }
 
 extract_paths() {
-    # Normalise two things:
-    #   (1) `{id}` / `{uuid}` / `{slug}` → `{id}` so routes that differ only
-    #       in parameter name don't show up as drift.
-    #   (2) Scramble drops either the whole `/api/v1` prefix (when the
-    #       Scramble `api_path` points at the `v1` group) or just the
-    #       `/api` half (when it points at the outer `api` group). Utoipa
-    #       on the Rust side always keeps the full `/api/v1/…` path.
-    #       Collapse both PHP variants to the Rust form: leading `/v1/…`
-    #       becomes `/api/v1/…`, and leading `/foo/…` (i.e. no `/api` and
-    #       no `/v1`) becomes `/api/v1/foo/…`.
+    local runtime="$1"
+
+    # Normalise parameter-name noise on both specs:
+    #   `{uuid}` / `{slug}` / `{bookingId}` → `{id}`
+    #
+    # Only the PHP Scramble spec needs prefix repair. Rust's utoipa output
+    # already reflects the real mounted route path, including top-level
+    # public endpoints like `/status` and `/health/detailed`; rewriting those
+    # into `/api/v1/...` creates false parity drift.
     jq -r '.paths | keys[]' \
         | sed -E 's/\{[a-zA-Z_]+\}/{id}/g' \
-        | awk '
+        | awk -v runtime="$runtime" '
+            runtime != "php" { print; next }
             /^\/api\/v1\// { print; next }
-            /^\/v1\//       { print "/api" $0; next }
-            /^\/api\//      { sub(/^\/api/, "/api/v1"); print; next }
+            /^\/v1\//      { print "/api" $0; next }
+            /^\/api\//     { sub(/^\/api/, "/api/v1"); print; next }
             { print "/api/v1" $0 }
           ' \
         | sort -u
@@ -53,8 +53,8 @@ rust_tmp=$(mktemp)
 php_tmp=$(mktemp)
 trap 'rm -f "$rust_tmp" "$php_tmp"' EXIT
 
-fetch "$rust_url" | extract_paths > "$rust_tmp"
-fetch "$php_url" | extract_paths > "$php_tmp"
+fetch "$rust_url" | extract_paths rust > "$rust_tmp"
+fetch "$php_url" | extract_paths php > "$php_tmp"
 
 rust_total=$(wc -l < "$rust_tmp")
 php_total=$(wc -l < "$php_tmp")

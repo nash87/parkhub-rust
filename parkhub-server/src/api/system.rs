@@ -15,7 +15,10 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
+use serde_json::json;
 use std::sync::Arc;
+use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tracing::Instrument;
 
@@ -26,6 +29,21 @@ use parkhub_common::{
 use crate::AppState;
 
 type SharedState = Arc<RwLock<AppState>>;
+static PROCESS_START: OnceLock<Instant> = OnceLock::new();
+
+fn format_uptime(elapsed: Duration) -> String {
+    if elapsed.as_secs() < 60 {
+        let secs = elapsed.as_secs_f64();
+        if secs < 1.0 {
+            return format!("{secs:.2}s");
+        }
+        return format!("{secs:.1}s");
+    }
+    if elapsed.as_secs() < 3_600 {
+        return format!("{:.1}m", elapsed.as_secs_f64() / 60.0);
+    }
+    format!("{:.1}h", elapsed.as_secs_f64() / 3_600.0)
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HEALTH & DISCOVERY
@@ -56,6 +74,18 @@ pub async fn health_check() -> &'static str {
 #[tracing::instrument]
 pub async fn liveness_check() -> StatusCode {
     StatusCode::OK
+}
+
+#[tracing::instrument]
+pub async fn versioned_liveness_check() -> Json<serde_json::Value> {
+    let uptime = PROCESS_START
+        .get_or_init(Instant::now)
+        .elapsed();
+
+    Json(json!({
+        "status": "ok",
+        "uptime": format_uptime(uptime),
+    }))
 }
 
 /// Kubernetes readiness probe - checks if the service can handle traffic.

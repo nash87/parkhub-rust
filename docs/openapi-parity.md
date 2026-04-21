@@ -83,7 +83,14 @@ changes in the PR diff, not hidden inside a CI artifact.
 
 ## Known drift categories
 
-The ~160 paths of apparent drift come from four patterns:
+With the current committed snapshots and the input-specific normalisation in
+`scripts/diff-openapi.sh`, the parity diff is still materially open:
+
+- Rust-only paths: `32`
+- PHP-only paths: `108`
+
+That means parity is **not** currently “just static-extractor noise”. The
+remaining drift falls into four broad buckets:
 
 ### 1. Admin routing prefix chains (PHP side)
 
@@ -94,24 +101,28 @@ extractor just didn't see them correctly.
 
 **Action**: rely on the Scramble JSON dump (runtime-accurate), not `grep`.
 
-### 2. Genuine Rust-only endpoints
+### 2. Genuine Rust-only contract surfaces
 
-Some admin features land in Rust first, e.g. `/api/v1/admin/rate-limits/history`
-and `/api/v1/admin/heatmap`. These need PHP ports so self-hosted operators
-on the PHP shared-hosting variant don't lose functionality.
+Rust still exposes paths the PHP contract does not currently publish, including
+top-level operational surfaces (`/status`, `/health/detailed`, docs endpoints),
+admin export/settings endpoints, booking QR under `/api/v1/bookings/{id}/qr`,
+and the Rust-style payments/config surface.
 
-**Action**: file a follow-up fop task per affected endpoint.
+**Action**: close these in small batches instead of one mega-port:
+auth/profile/public aliases, health/docs surfaces, booking/payment aliases,
+then admin/export/settings tails.
 
-### 3. Genuine PHP-only endpoints
+### 3. Genuine PHP-only contract surfaces
 
-PHP sometimes ships features via the Scramble auto-derivation faster than
-they are `#[utoipa::path]`-annotated on the Rust side (e.g. several
-`/compliance/*` endpoints). Either the Rust code exists but lacks the
-macro, or the endpoint is PHP-only on purpose.
+PHP still publishes a substantially larger surface, including legacy public auth
+aliases (`/api/v1/login`, `/register`, `/refresh`), health/info aliases,
+demo/discovery endpoints, broader admin analytics/settings/reporting routes,
+and several booking/user convenience routes.
 
-**Action**: for each PHP-only path, decide (a) add the `#[utoipa::path]`
-macro on the existing Rust handler, (b) port the handler to Rust, or
-(c) mark it PHP-only in `docs/openapi/drift-allow`.
+**Action**: for each cluster decide whether it is
+(a) a missing Rust alias/annotation,
+(b) a real feature port still needed,
+or (c) an intentional divergence that must be documented explicitly.
 
 ### 4. Parameter-name noise
 
@@ -121,11 +132,7 @@ never appear in a real drift report.
 
 ## Open follow-up tasks
 
-- **CI drift gate**: CI job that dumps both specs and runs `diff-openapi.sh`.
-- **Port PHP-only endpoints**: Port the ~80 PHP-only endpoints to Rust (or classify them
-  as PHP-only in the drift allow-list).
-- **Annotate Rust-only endpoints**: Annotate ~80 Rust-only endpoints in Scramble so the PHP
-  spec reflects them, or port to PHP.
-- **Canonical spec**: Publish a canonical `docs/api/openapi.json` derived from
-  Rust (since `utoipa` is the hand-curated source of truth) and make
-  Scramble drift-test against it.
+- **Truthful repo messaging**: README/AGENTS must say parity is tracked, not yet hard-enforced end-to-end.
+- **Real cross-repo CI gate**: current workflows check only self-snapshot drift; add a second-repo checkout and run `diff-openapi.sh` for real Rust-vs-PHP gating once the diff is smaller.
+- **Alias tranche**: eliminate the cheap path mismatches first (`login/register/refresh`, health/detail, QR/payment/config, import aliases).
+- **Feature tranche**: close the remaining admin/reporting/demo/user feature gaps or explicitly classify intentional divergences.

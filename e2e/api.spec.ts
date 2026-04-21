@@ -113,7 +113,8 @@ test.describe('API — Content Types', () => {
   test('health endpoint returns JSON', async ({ request }) => {
     // Backends disagree on what "health" means:
     //   Rust  /health            → text/plain "ok"
-    //   Rust  /health/live       → 200 with empty body (no Content-Type)
+    //   Rust  /health/live       → 200 with empty body (probe endpoint)
+    //   Rust  /api/v1/health/live → JSON
     //   Rust  /health/ready      → JSON
     //   PHP   /api/v1/health     → JSON
     //   PHP   /api/v1/health/live → JSON

@@ -1611,6 +1611,45 @@ async fn test_system_version_returns_version() {
 }
 
 #[tokio::test]
+async fn test_versioned_health_live_alias_returns_ok() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/health/live")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert_eq!(json["status"], "ok");
+}
+
+#[tokio::test]
+async fn test_versioned_health_detailed_alias_returns_payload() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let resp = app
+        .oneshot(
+            Request::get("/api/v1/health/detailed")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["status"].is_string());
+    assert!(json["version"].is_string());
+}
+
+#[tokio::test]
 async fn test_system_maintenance_default_off() {
     let state = test_state().await;
     let app = router(state);
@@ -1887,6 +1926,30 @@ async fn test_refresh_token_with_invalid_token() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn test_login_alias_matches_auth_login() {
+    let state = test_state().await;
+    let app = router(state);
+
+    let body = serde_json::json!({
+        "username": "admin",
+        "password": "admin123",
+    });
+    let resp = app
+        .oneshot(
+            Request::post("/api/v1/login")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::OK);
+    let json = body_json(resp).await;
+    assert!(json["data"]["tokens"]["access_token"].is_string());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

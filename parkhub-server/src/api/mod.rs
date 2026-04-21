@@ -515,6 +515,7 @@ fn auth_rate_limited_routes(
     let login_identity = identity_limiters.clone();
     let login_route = Router::new()
         .route("/api/v1/auth/login", post(login))
+        .route("/api/v1/login", post(login))
         .layer(Extension(two_fa_store.clone()))
         .route_layer(middleware::from_fn(move |req, next| {
             identity_rate_limit_middleware(
@@ -551,6 +552,7 @@ fn auth_rate_limited_routes(
     let register_identity = identity_limiters.clone();
     let register_route = Router::new()
         .route("/api/v1/auth/register", post(register))
+        .route("/api/v1/register", post(register))
         .route_layer(middleware::from_fn(move |req, next| {
             identity_rate_limit_middleware(
                 register_identity.clone(),
@@ -585,6 +587,7 @@ fn auth_rate_limited_routes(
     let refresh_identity = identity_limiters.clone();
     let refresh_route = Router::new()
         .route("/api/v1/auth/refresh", post(refresh_token))
+        .route("/api/v1/refresh", post(refresh_token))
         .route_layer(middleware::from_fn(move |req, next| {
             identity_rate_limit_middleware(
                 refresh_identity.clone(),
@@ -650,9 +653,13 @@ fn qr_pass_route(state: SharedState, rate_limiters: &EndpointRateLimiters) -> Ro
 fn public_routes(state: &SharedState, rate_limiters: &EndpointRateLimiters) -> Router<SharedState> {
     let mut router = Router::new()
         .route("/health", get(health_check))
+        .route("/api/v1/health", get(health_check))
         .route("/health/live", get(liveness_check))
+        .route("/api/v1/health/live", get(versioned_liveness_check))
         .route("/health/ready", get(readiness_check))
+        .route("/api/v1/health/ready", get(readiness_check))
         .route("/health/detailed", get(admin_ext::detailed_health_check))
+        .route("/api/v1/health/detailed", get(admin_ext::detailed_health_check))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
@@ -2372,7 +2379,7 @@ async fn protected_identity_rate_limit_middleware(
 // Health & system handler re-exports from system module
 use system::{
     handshake, health_check, liveness_check, readiness_check, server_status, system_maintenance,
-    system_version,
+    system_version, versioned_liveness_check,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

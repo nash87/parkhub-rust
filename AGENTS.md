@@ -43,7 +43,7 @@ Every push must go through the local CI mirror first — it runs the same jobs a
 make ci         # fmt + clippy + check + test + frontend + openapi drift
 make act        # optional: run the actual workflow files locally via nektos/act (.actrc preconfigured)
 ```
-Install pre-commit hooks once per clone: `pre-commit install` (config in `.pre-commit-config.yaml`). See [DEVELOPMENT.md](DEVELOPMENT.md) for the full loop. Mutation testing runs weekly via `.github/workflows/mutants.yml` (`.cargo/mutants.toml` gates survivors). OpenAPI parity with the PHP edition is enforced via [docs/openapi-parity.md](docs/openapi-parity.md) + `scripts/dump-openapi.sh` / `scripts/diff-openapi.sh`.
+Install pre-commit hooks once per clone: `pre-commit install` (config in `.pre-commit-config.yaml`). See [DEVELOPMENT.md](DEVELOPMENT.md) for the full loop. Mutation testing runs weekly via `.github/workflows/mutants.yml` (`.cargo/mutants.toml` gates survivors). OpenAPI parity with the PHP edition is tracked via [docs/openapi-parity.md](docs/openapi-parity.md) + `scripts/dump-openapi.sh` / `scripts/diff-openapi.sh`; current CI still hard-gates only self-snapshot drift.
 
 ## Dual-Remote Convention
 Two remotes are always configured on this repo:
