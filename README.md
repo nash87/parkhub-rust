@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml"><img src="https://github.com/nash87/parkhub-rust/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.14.2-brightgreen.svg?style=flat-square" alt="v4.14.2"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Release-v4.14.3-brightgreen.svg?style=flat-square" alt="v4.14.3"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="MIT License"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-1.94%2B-orange.svg?style=flat-square&logo=rust&logoColor=white" alt="Rust 1.94+"></a>
   <a href="https://astro.build/"><img src="https://img.shields.io/badge/Astro-6-BC52EE.svg?style=flat-square&logo=astro&logoColor=white" alt="Astro 6"></a>
@@ -37,7 +37,7 @@
 
 ---
 
-## What's New in v4.14.2
+## What's New in v4.14.3
 
 | Feature | Description |
 |---------|-------------|

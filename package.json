@@ -1,6 +1,6 @@
 {
   "name": "parkhub",
-  "version": "1.0.0",
+  "version": "4.14.3",
   "description": "Open source parking lot management system with client-server architecture.",
   "scripts": {
     "test:e2e": "npx playwright test",
@@ -16,8 +16,8 @@
     "url": "https://github.com/nash87/parkhub-rust.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "nash87",
+  "license": "MIT",
   "devDependencies": {
     "@axe-core/playwright": "^4.11.1",
     "@playwright/test": "^1.58.2"
