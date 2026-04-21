@@ -200,6 +200,7 @@ describe('App', () => {
     localStorageMock.clear();
     mockUser.current = null;
     mockUser.loading = false;
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: false })));
     // Mark welcome as seen to get /login redirect instead of /welcome
     localStorageMock.setItem('parkhub_welcome_seen', 'true');
   });
@@ -390,7 +391,16 @@ describe('App', () => {
     });
   });
 
-  it('calls theme API on mount', async () => {
+  it('defers theme API on public entry routes', () => {
+    window.history.pushState({}, '', '/login');
+    render(<App />);
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('calls theme API on authenticated mount', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    window.history.pushState({}, '', '/bookings');
     render(<App />);
 
     await waitFor(() => {
@@ -399,6 +409,8 @@ describe('App', () => {
   });
 
   it('applies use case theme from API response', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    window.history.pushState({}, '', '/bookings');
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve({ data: { use_case: { key: 'corporate' } } }),
@@ -415,6 +427,8 @@ describe('App', () => {
   });
 
   it('handles theme API returning no use_case key', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    window.history.pushState({}, '', '/bookings');
     delete document.documentElement.dataset.usecase;
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
       ok: true,
@@ -433,6 +447,8 @@ describe('App', () => {
   });
 
   it('handles theme API returning null response', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    window.history.pushState({}, '', '/bookings');
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve(null),
@@ -446,6 +462,8 @@ describe('App', () => {
   });
 
   it('handles theme API network failure gracefully', async () => {
+    mockUser.current = { id: '1', name: 'Test', role: 'user', email: 'test@test.com' };
+    window.history.pushState({}, '', '/bookings');
     vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('Network error'))));
 
     render(<App />);

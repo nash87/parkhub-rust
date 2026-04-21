@@ -1451,47 +1451,6 @@
         ],
         "type": "object"
       },
-      "ListModulesResponseSchema": {
-        "properties": {
-          "data": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/ListModulesResponse"
-              }
-            ]
-          },
-          "error": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PublicApiErrorSchema"
-              }
-            ]
-          },
-          "meta": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/PublicResponseMetaSchema"
-              }
-            ]
-          },
-          "success": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "success"
-        ],
-        "type": "object"
-      },
       "LoginRequest": {
         "description": "Login request",
         "properties": {
@@ -9885,7 +9844,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListModulesResponseSchema"
+                  "$ref": "#/components/schemas/ListModulesResponse"
                 }
               }
             },

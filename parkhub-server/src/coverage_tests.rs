@@ -1678,24 +1678,23 @@ async fn test_modules_endpoint() {
 
     assert_eq!(resp.status(), StatusCode::OK);
     let json = body_json(resp).await;
-    assert_eq!(json["success"], true);
-    assert!(json["data"]["modules"].is_object());
-    assert!(json["data"]["module_info"].is_array());
+    assert!(json["modules"].is_object());
+    assert!(json["module_info"].is_array());
     // Verify module flags match compile-time feature state
     assert_eq!(
-        json["data"]["modules"]["bookings"],
+        json["modules"]["bookings"],
         cfg!(feature = "mod-bookings")
     );
     assert_eq!(
-        json["data"]["modules"]["vehicles"],
+        json["modules"]["vehicles"],
         cfg!(feature = "mod-vehicles")
     );
     assert_eq!(
-        json["data"]["modules"]["oauth"],
+        json["modules"]["oauth"],
         cfg!(feature = "mod-oauth")
     );
     assert_eq!(
-        json["data"]["modules"]["realtime"],
+        json["modules"]["realtime"],
         cfg!(feature = "mod-websocket")
     );
 }
