@@ -78,9 +78,7 @@ pub async fn liveness_check() -> StatusCode {
 
 #[tracing::instrument]
 pub async fn versioned_liveness_check() -> Json<serde_json::Value> {
-    let uptime = PROCESS_START
-        .get_or_init(Instant::now)
-        .elapsed();
+    let uptime = PROCESS_START.get_or_init(Instant::now).elapsed();
 
     Json(json!({
         "status": "ok",
