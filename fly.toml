@@ -11,7 +11,7 @@ primary_region = "fra"  # Frankfurt — GDPR/EU
   DEMO_MODE = "false"
 
 [http_service]
-  internal_port = 8080
+  internal_port = 10000
   force_https = true
   auto_stop_machines = "suspend"  # scale to zero when idle
   auto_start_machines = true

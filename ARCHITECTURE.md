@@ -6,9 +6,10 @@ library. A React 19 / Astro 6 frontend is served as static assets from the
 server binary.
 
 This is the **Rust edition** of ParkHub. A feature-equivalent **PHP edition**
-(Laravel 12) exists in a sibling repository. Both backends expose the same
+(Laravel 13) exists in a sibling repository. Both backends expose the same
 `/api/v1/*` REST surface and share the identical `parkhub-web` frontend, so
-they are fully interchangeable.
+they are fully interchangeable. Cross-runtime ownership and release discipline
+are tracked in `docs/parity-governance.md` and `docs/release-checklist.md`.
 
 ## Directory Structure
 
@@ -80,7 +81,7 @@ parkhub-rust/
 │
 ├── parkhub-web/               # Shared React frontend (Astro 6 + React 19)
 │   ├── astro.config.mjs       # Static output, React compiler, Tailwind, chunk splitting
-│   ├── package.json           # v1.4.6
+│   ├── package.json           # shared frontend package metadata (currently v4.13.0)
 │   ├── vitest.config.ts       # Unit test config
 │   ├── playwright.config.ts   # E2E test config
 │   ├── public/

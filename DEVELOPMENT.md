@@ -57,10 +57,12 @@ Clippy is `pre-push` only — too slow for every commit.
 
 ---
 
-## 3. `make ci` — the local mirror
+## 3. `make ci` — the core local gate
 
-Every job in `.github/workflows/ci.yml` has a matching Make target. **Run
-`make ci` before `git push`** and GitHub will agree with you.
+The Makefile mirrors the **reproducible local subset** of
+`.github/workflows/ci.yml`. Run **`make ci` before `git push`** for fast local
+feedback, then use `make act` when you need to execute the actual workflow
+YAML.
 
 ```bash
 make ci            # fmt + clippy + check + test + frontend + drift
@@ -73,14 +75,24 @@ make drift         # openapi snapshot diff (mirrors openapi-drift.yml)
 make pre-push      # alias for make ci
 ```
 
+`make ci` intentionally covers the fast local checks: formatting, clippy,
+headless cargo check/test, frontend build/tests, and OpenAPI drift.
+Workflow-only or advisory jobs such as `actionlint` and `integration` still
+run in GitHub Actions / `act`.
+
 Note: server targets build with `--no-default-features --features headless`
 because `rust_embed` would otherwise fail when `parkhub-web/dist/` is absent.
 `make embed` generates a placeholder `index.html` to unblock local builds;
 release builds run the real `npm run build` first.
 
-See the comment block at the top of `Makefile` — those targets **must not
-diverge** from `.github/workflows/*.yml`. If a workflow job changes, update
-the corresponding make target in the same commit.
+See the comment block at the top of `Makefile` — any target that claims to
+mirror a workflow job **must not diverge** from that job. If a workflow job
+changes, update the corresponding make target in the same commit.
+
+Shared feature/API changes also need the cross-runtime docs kept in sync:
+[docs/parity-governance.md](docs/parity-governance.md),
+[docs/openapi-parity.md](docs/openapi-parity.md), and
+[docs/release-checklist.md](docs/release-checklist.md).
 
 ---
 
@@ -151,10 +163,14 @@ primitives ([docs.github.com/en/actions](https://docs.github.com/en/actions)):
 - **Artifact retention** — `actions/upload-artifact@v7` with
   `retention-days: 7` for Playwright reports + server logs.
 - **CodeQL** — `codeql.yml` scans Rust + JS on every PR.
-- **Dependency review** — `dependency-review.yml` blocks PRs that introduce
-  vulnerable deps.
-- **cargo-deny** — `security.yml` runs `cargo-deny check` (advisories,
-  licenses, bans, sources) on every PR. `deny.toml` is the source of truth.
+- **Dependency review** — PRs run `actions/dependency-review-action`, and the
+  result is folded into the main `required` gate in `ci.yml`.
+- **cargo-deny** — `cargo-deny check` (advisories, licenses, bans, sources)
+  now runs directly in `ci.yml` as part of the main required gate. `deny.toml`
+  is the source of truth.
+- **Desktop client compile check** — `ci.yml` now runs a dedicated
+  `parkhub-client` compile gate on Linux PRs so Slint/UI breakage is caught
+  before release packaging.
 - **Secret scan** — trufflehog on every PR.
 - **Artifact attestations** — `docker/build-push-action@v7` chains
   `actions/attest-build-provenance@v4` to publish SLSA v1 provenance for every
@@ -163,7 +179,10 @@ primitives ([docs.github.com/en/actions](https://docs.github.com/en/actions)):
 - **SBOM** — generated per build (Syft via buildx), uploaded alongside the
   provenance attestation.
 - **Branch protection** — `main` requires green `required` job and 1 review.
-  Set in GitHub Settings → Branches.
+  `required` now aggregates workflow hygiene, Helm validation,
+  dependency-review, cargo-deny, OpenAPI drift, and the core build/test jobs;
+  integration remains advisory until its known flake is retired. Set in GitHub
+  Settings → Branches.
 - **Environments** — not wired yet (no external deploy targets on GitHub — we
   deploy from Gitea via Flux). When we do wire them, use GitHub
   [Environments](https://docs.github.com/en/actions/managing-workflow-runs-and-deployments/managing-deployments/managing-environments-for-deployment)
@@ -184,7 +203,8 @@ schema change must land in both repos in the same PR window.
 
 - Snapshot: `docs/openapi/rust.json`
 - Drift gate: `make drift` (boots headless server on :18181, dumps, diffs)
-- Workflow: `.github/workflows/openapi-drift.yml`
+- Workflow: `.github/workflows/openapi-drift.yml` and the main `ci.yml`
+  `openapi-drift` job
 - Contract guide: [`docs/openapi-parity.md`](docs/openapi-parity.md)
 
 If CI fails on `openapi-drift`, run `make drift` locally to regenerate and

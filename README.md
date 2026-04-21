@@ -56,6 +56,8 @@ ParkHub is one product with multiple runtimes. This Rust edition shares the same
 
 Not every advanced module is equally hardened or equally enabled by default across runtimes. Treat the shared booking, admin, compliance, and theme surfaces as the core product line; treat advanced integrations and enterprise modules as optional and runtime-sensitive.
 
+Cross-runtime ownership and release discipline live in [docs/parity-governance.md](docs/parity-governance.md) and [docs/release-checklist.md](docs/release-checklist.md).
+
 ---
 
 ## 💡 Why Self-Hosted?
@@ -72,8 +74,10 @@ ParkHub is different. It runs on your server — a Raspberry Pi, a VPS, or your 
 
 ```bash
 git clone https://github.com/nash87/parkhub-rust.git && cd parkhub-rust
+cp .env.example .env
+# Edit .env and set a strong PARKHUB_ADMIN_PASSWORD before first start
 docker compose up -d
-# Open http://localhost:8080 — admin password is in the logs
+# Open http://localhost:8080
 ```
 
 The first build takes 5–10 minutes (compiles Rust + React from source). After that, starts are instant.
@@ -84,9 +88,9 @@ Download the latest release binary from [GitHub Releases](https://github.com/nas
 
 ```bash
 # Linux x86_64
-curl -Lo parkhub-server https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-server-linux-x86_64
-chmod +x parkhub-server
-./parkhub-server --headless --unattended --port 8080
+curl -Lo parkhub-linux-x64.tar.gz https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-linux-x64.tar.gz
+tar -xzf parkhub-linux-x64.tar.gz
+./parkhub-linux-x64/parkhub-server --headless --unattended --port 8080
 ```
 
 ### 🔨 Build from source
@@ -329,7 +333,7 @@ Full reference: [docs/CONFIGURATION.md](docs/CONFIGURATION.md)
 
 ## 🐘 PHP Edition
 
-A feature-equivalent **PHP edition** (Laravel 12 + MySQL/SQLite/PostgreSQL) exists for environments where shared hosting compatibility matters. Both editions share the same React frontend and REST API surface, so they're fully interchangeable.
+A feature-equivalent **PHP edition** (Laravel 13 + MySQL/SQLite/PostgreSQL) exists for environments where shared hosting compatibility matters. Both editions share the same React frontend and REST API surface, so they're fully interchangeable.
 
 **[nash87/parkhub-php →](https://github.com/nash87/parkhub-php)**
 

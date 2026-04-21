@@ -822,40 +822,36 @@ mod tests {
             Some("#/components/schemas/ListModulesResponseSchema")
         );
 
-        let module_get_ok = &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["200"]
-            ["content"]["application/json"]["schema"]["$ref"];
+        let module_get_ok = &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["200"]["content"]
+            ["application/json"]["schema"]["$ref"];
         assert_eq!(
             module_get_ok.as_str(),
             Some("#/components/schemas/ModuleInfoResponseSchema")
         );
 
-        let module_get_not_found =
-            &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["404"]["content"]
-                ["application/json"]["schema"]["$ref"];
+        let module_get_not_found = &value["paths"]["/api/v1/modules/{name}"]["get"]["responses"]["404"]
+            ["content"]["application/json"]["schema"]["$ref"];
         assert_eq!(
             module_get_not_found.as_str(),
             Some("#/components/schemas/ModuleInfoResponseSchema")
         );
 
-        let module_patch_ok =
-            &value["paths"]["/api/v1/admin/modules/{name}"]["patch"]["responses"]["200"]
-                ["content"]["application/json"]["schema"]["$ref"];
+        let module_patch_ok = &value["paths"]["/api/v1/admin/modules/{name}"]["patch"]["responses"]
+            ["200"]["content"]["application/json"]["schema"]["$ref"];
         assert_eq!(
             module_patch_ok.as_str(),
             Some("#/components/schemas/ModuleInfoResponseSchema")
         );
 
-        let module_config_patch_ok =
-            &value["paths"]["/api/v1/admin/modules/{name}/config"]["patch"]["responses"]["200"]
-                ["content"]["application/json"]["schema"]["$ref"];
+        let module_config_patch_ok = &value["paths"]["/api/v1/admin/modules/{name}/config"]["patch"]
+            ["responses"]["200"]["content"]["application/json"]["schema"]["$ref"];
         assert_eq!(
             module_config_patch_ok.as_str(),
             Some("#/components/schemas/ModuleConfigResponseSchema")
         );
 
-        let module_config_patch_validation =
-            &value["paths"]["/api/v1/admin/modules/{name}/config"]["patch"]["responses"]["422"]
-                ["content"]["application/json"]["schema"]["$ref"];
+        let module_config_patch_validation = &value["paths"]["/api/v1/admin/modules/{name}/config"]
+            ["patch"]["responses"]["422"]["content"]["application/json"]["schema"]["$ref"];
         assert_eq!(
             module_config_patch_validation.as_str(),
             Some("#/components/schemas/ModuleConfigResponseSchema")

@@ -28,3 +28,5 @@
 - [ ] CHANGELOG.md entry added
 - [ ] New endpoints are covered by OpenAPI annotations (`#[utoipa::path]`)
 - [ ] Feature-gated behind appropriate `mod-*` feature flag (if applicable)
+- [ ] Shared feature/API changes reviewed against `docs/parity-governance.md`
+- [ ] `docs/openapi-parity.md` updated or explicitly confirmed unchanged

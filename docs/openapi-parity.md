@@ -5,7 +5,7 @@
 ParkHub ships as **two interoperable implementations** of the same HTTP API:
 
 - `parkhub-rust` (axum 0.8, utoipa) — primary performance target.
-- `parkhub-php` (Laravel 12/13, dedoc/scramble) — primary integration target
+- `parkhub-php` (Laravel 13, dedoc/scramble) — primary integration target
   and shared-hosting deployment option.
 
 Clients (the shared `parkhub-web` SPA, mobile apps, operator-written
@@ -16,6 +16,11 @@ migrates between the two.
 
 This file captures the current parity state, the diff methodology, and the
 TODOs needed to close the gap.
+
+See also:
+
+- [parity-governance.md](parity-governance.md)
+- [release-checklist.md](release-checklist.md)
 
 ---
 
@@ -80,6 +85,10 @@ To avoid requiring both servers to be running during CI, add a job that:
 
 The dumps themselves should be **committed** so reviewers can see contract
 changes in the PR diff, not hidden inside a CI artifact.
+
+Until a dedicated `docs/openapi/canonical.json` lands, treat
+`docs/openapi/rust.json` as the working machine-contract baseline for parity
+review.
 
 ## Known drift categories
 
