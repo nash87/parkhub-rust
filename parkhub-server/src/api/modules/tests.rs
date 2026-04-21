@@ -409,21 +409,15 @@ async fn test_non_toggleable_ignores_setting() {
     );
 }
 
-/// Handler shape: calling `list_modules` should return the full envelope
-/// with both the legacy Boolean map and the enriched array populated.
-/// The legacy Boolean map mirrors `runtime_enabled` (the effective
-/// state after override), not raw compile-time `enabled`.
+/// Handler shape: calling `list_modules` should return the legacy flat
+/// top-level contract with both the Boolean map and the enriched array
+/// populated. The legacy Boolean map mirrors `runtime_enabled` (the
+/// effective state after override), not raw compile-time `enabled`.
 #[tokio::test]
 async fn test_list_modules_handler_shape() {
     let (_dir, state) = test_state();
 
     let Json(response) = list_modules(State(state)).await;
-    assert!(
-        response.success,
-        "list_modules should return success envelope"
-    );
-    assert!(response.error.is_none());
-    let response = response.data.expect("module payload");
 
     // Registry has a healthy number of modules.
     assert!(

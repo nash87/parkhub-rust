@@ -54,7 +54,6 @@ macro_rules! define_public_response_schema {
     };
 }
 
-define_public_response_schema!(ListModulesResponseSchema, ListModulesResponse);
 define_public_response_schema!(ModuleInfoResponseSchema, ModuleInfo);
 define_public_response_schema!(ModuleConfigResponseSchema, ModuleConfig);
 
@@ -80,11 +79,9 @@ define_public_response_schema!(ModuleConfigResponseSchema, ModuleConfig);
     tag = "Public",
     summary = "List module features + enriched metadata",
     description = "Returns compile-time module enablement as both the legacy flat Boolean map and an enriched array of ModuleInfo objects (category, description, config keys, UI route, dependencies, runtime_toggleable, runtime_enabled).",
-    responses((status = 200, description = "Module registry", body = ListModulesResponseSchema))
+    responses((status = 200, description = "Module registry", body = ListModulesResponse))
 )]
-pub async fn list_modules(
-    State(state): State<SharedState>,
-) -> Json<ApiResponse<ListModulesResponse>> {
+pub async fn list_modules(State(state): State<SharedState>) -> Json<ListModulesResponse> {
     let state_guard = state.read().await;
     let info = module_registry(&state_guard.db).await;
     drop(state_guard);
@@ -92,11 +89,11 @@ pub async fn list_modules(
         .iter()
         .map(|m| (m.name.clone(), m.runtime_enabled))
         .collect();
-    Json(ApiResponse::success(ListModulesResponse {
+    Json(ListModulesResponse {
         modules,
         module_info: info,
         version: env!("CARGO_PKG_VERSION").to_string(),
-    }))
+    })
 }
 
 /// `GET /api/v1/modules/{name}` — single-module detail.
