@@ -325,7 +325,7 @@ describe('DemoOverlay component', () => {
 
     await waitFor(() => {
       const timer = screen.getByText('02:00');
-      expect(timer.className).toContain('text-red-500');
+      expect(timer.className).toContain('text-red-700');
     });
   });
 

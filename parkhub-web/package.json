@@ -11,6 +11,7 @@
     "build:php": "VITE_API_URL= astro build && cp -r dist/* ../parkhub-php/public/",
     "build:rust": "VITE_API_URL= astro build && rm -rf ../parkhub-rust/parkhub-web/dist && cp -r dist ../parkhub-rust/parkhub-web/dist",
     "preview": "astro preview",
+    "preview:spa": "node scripts/spa-preview.mjs",
     "astro": "astro",
     "test": "vitest run",
     "test:e2e": "playwright test",

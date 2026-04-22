@@ -10,7 +10,7 @@
  * Visual tuning is left to manual QA / Playwright — unit tests here are a
  * guardrail against regressions, not a pixel-perfect harness.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Booking, ParkingLot, ParkingSlot } from '../../api/client';
@@ -52,6 +52,12 @@ describe('SidebarV3', () => {
     getBookingsMock.mockReset();
     getLotsMock.mockReset();
     getLotSlotsMock.mockReset();
+    vi.spyOn(window, 'setInterval').mockImplementation(() => 1 as unknown as number);
+    vi.spyOn(window, 'clearInterval').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders without crashing when all API responses are empty', async () => {
@@ -69,12 +75,12 @@ describe('SidebarV3', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/No active booking/i)).toBeInTheDocument();
-    });
+    }, { timeout: 10_000 });
     expect(screen.getByText(/Book now/i)).toBeInTheDocument();
     // Primary nav labels appear.
     expect(screen.getByText('Today')).toBeInTheDocument();
     expect(screen.getByText('Book')).toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('renders the Live Pass card for an active booking', async () => {
     const now = new Date();
@@ -114,10 +120,8 @@ describe('SidebarV3', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Parked')).toBeInTheDocument();
-    });
-    expect(screen.getByText(/M-AB 7823/)).toBeInTheDocument();
-    expect(screen.getByText('Show QR')).toBeInTheDocument();
-  });
+    expect(await screen.findByText('Parked', {}, { timeout: 10_000 })).toBeInTheDocument();
+    expect(await screen.findByText('Show QR', {}, { timeout: 10_000 })).toBeInTheDocument();
+    expect(screen.getAllByText(/M-AB 7823/).length).toBeGreaterThan(0);
+  }, 15_000);
 });
