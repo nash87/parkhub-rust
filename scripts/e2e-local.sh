@@ -15,10 +15,31 @@ SERVER_PORT="${SERVER_PORT:-8081}"
 WEB_PORT="${WEB_PORT:-4321}"
 SERVER_LOG="${REPO_ROOT}/target/e2e-server.log"
 
+build_server() {
+  if command -v fop >/dev/null 2>&1; then
+    fop --compact build --backend local . --preset custom -- cargo build --locked --release -p parkhub-server \
+      --no-default-features --features 'full,headless,e2e-bypass'
+    return
+  fi
+
+  echo "   fop not found; falling back to cargo build for local e2e" >&2
+  cargo build --locked --release -p parkhub-server \
+    --no-default-features --features 'full,headless,e2e-bypass'
+}
+
+build_web() {
+  if command -v fop >/dev/null 2>&1; then
+    fop --compact build --backend local . --preset custom -- bash -lc "cd parkhub-web && VITE_API_URL= npm run build"
+    return
+  fi
+
+  echo "   fop not found; falling back to npm build for local e2e" >&2
+  (cd parkhub-web && VITE_API_URL= npm run build)
+}
+
 echo "== parkhub-server (release + e2e-bypass) =="
 cd "$REPO_ROOT"
-fop --compact build --backend local . --preset custom -- cargo build --locked --release -p parkhub-server \
-  --no-default-features --features 'full,headless,e2e-bypass'
+build_server
 
 echo "== start server on :${SERVER_PORT} =="
 export DEMO_MODE=true
@@ -57,7 +78,7 @@ export PORT="${WEB_PORT}"
 export API_ORIGIN="http://localhost:${SERVER_PORT}"
 
 echo "== parkhub-web build =="
-fop --compact build --backend local . --preset custom -- bash -lc "cd parkhub-web && VITE_API_URL= npm run build"
+build_web
 
 echo "== start SPA preview on :${WEB_PORT} =="
 npm run preview:spa > "${REPO_ROOT}/target/e2e-web.log" 2>&1 &
