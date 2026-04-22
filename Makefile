@@ -67,13 +67,13 @@ client-check:
 
 ## Mirrors: test job
 test: embed
-	cargo test --locked --package parkhub-common --all-targets
-	cargo test --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
+	TMPDIR=/tmp cargo test --locked --package parkhub-common --all-targets
+	TMPDIR=/tmp cargo test --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
 
 ## Mirrors: integration job
 integration: embed
-	cargo build --locked --package parkhub-server $(SERVER_FEATURES)
-	RUST_LOG=warn cargo test --locked --package parkhub-server $(SERVER_FEATURES) -- integration --test-threads=1
+	TMPDIR=/tmp cargo build --locked --package parkhub-server $(SERVER_FEATURES)
+	TMPDIR=/tmp RUST_LOG=warn cargo test --locked --package parkhub-server $(SERVER_FEATURES) -- integration --test-threads=1
 
 ## Mirrors: frontend job
 frontend:

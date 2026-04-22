@@ -183,32 +183,49 @@ pub async fn start_test_server() -> TestServer {
 
 /// Log in as the admin user. Returns `(access_token, user_id)`.
 pub async fn admin_login(srv: &TestServer) -> (String, String) {
-    let resp = srv
-        .client
-        .post(format!("{}/api/v1/auth/login", srv.url))
-        .json(&serde_json::json!({
-            "username": "admin",
-            "password": "Admin123!",
-        }))
-        .send()
-        .await
-        .expect("admin login request");
+    let deadline = Instant::now() + Duration::from_secs(5);
 
-    assert!(
-        resp.status().is_success(),
-        "admin login failed: {}",
-        resp.status()
-    );
-    let body: Value = resp.json().await.expect("parse login json");
-    let token = body["data"]["tokens"]["access_token"]
-        .as_str()
-        .expect("access_token")
-        .to_string();
-    let user_id = body["data"]["user"]["id"]
-        .as_str()
-        .expect("user id")
-        .to_string();
-    (token, user_id)
+    loop {
+        match srv
+            .client
+            .post(format!("{}/api/v1/auth/login", srv.url))
+            .json(&serde_json::json!({
+                "username": "admin",
+                "password": "Admin123!",
+            }))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                let body: Value = resp.json().await.expect("parse login json");
+                let token = body["data"]["tokens"]["access_token"]
+                    .as_str()
+                    .expect("access_token")
+                    .to_string();
+                let user_id = body["data"]["user"]["id"]
+                    .as_str()
+                    .expect("user id")
+                    .to_string();
+                return (token, user_id);
+            }
+            Ok(resp) => {
+                let status = resp.status();
+                let body = resp.text().await.unwrap_or_default();
+                assert!(
+                    Instant::now() <= deadline,
+                    "admin login failed after retry window: status {status} body {body}"
+                );
+            }
+            Err(err) => {
+                assert!(
+                    Instant::now() <= deadline,
+                    "admin login failed after retry window: transport error: {err}"
+                );
+            }
+        }
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
 }
 
 /// Register a new user.  Returns `(access_token, user_id, username)`.

@@ -129,19 +129,19 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
           className="flex items-center gap-3 px-4 py-3 min-w-[200px]"
         >
           {/* Demo badge */}
-          <span className="flex items-center gap-1 badge badge-primary">
+          <span className="flex items-center gap-1 rounded-md bg-primary-100 px-2.5 py-1 text-[0.75rem] font-semibold text-primary-900 dark:bg-primary-900/30 dark:text-primary-100">
             <Sparkle weight="fill" className="w-3 h-3 animate-pulse" />
             {t('demo.badge')}
           </span>
 
           {/* Timer */}
-          <span className={`font-mono text-sm font-bold transition-colors duration-300 ${isLow ? 'text-red-500' : 'text-surface-700 dark:text-surface-300'}`}>
+          <span className={`font-mono text-sm font-bold transition-colors duration-300 ${isLow ? 'text-red-700 dark:text-red-300' : 'text-surface-800 dark:text-surface-200'}`}>
             <Timer weight="bold" className="w-3.5 h-3.5 inline mr-1" />
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </span>
 
           {/* Viewers */}
-          <span className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-400">
+          <span className="flex items-center gap-1 text-xs text-surface-700 dark:text-surface-300">
             <Eye weight="regular" className="w-3.5 h-3.5" />
             {demo.viewers}
           </span>
@@ -174,7 +174,7 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
                       transition={{ type: 'spring', stiffness: 100 }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-surface-600 dark:text-surface-400">
+                  <span className="text-xs font-medium text-surface-700 dark:text-surface-300">
                     {t('demo.votesNeeded', { current: demo.votes, needed: demo.vote_threshold })}
                   </span>
                 </div>
@@ -182,7 +182,7 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
                 <button
                   onClick={handleVote}
                   disabled={demo.has_voted || demo.reset_in_progress}
-                  className="btn btn-sm btn-primary w-full disabled:opacity-50"
+                  className="btn btn-sm w-full border border-primary-800 bg-primary-800 text-white shadow-sm hover:bg-primary-900 disabled:opacity-50 dark:border-primary-300 dark:bg-primary-300 dark:text-surface-950 dark:hover:bg-primary-200"
                 >
                   <ArrowsClockwise weight="bold" className={`w-3.5 h-3.5 ${demo.reset_in_progress ? 'animate-spin' : ''}`} />
                   {demo.reset_in_progress
@@ -194,17 +194,17 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
 
                 {/* Auto-reset info */}
                 {(lastReset || nextReset) && (
-                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-600 dark:text-surface-400 space-y-0.5">
+                  <div className="mt-2 pt-2 border-t border-surface-200/30 dark:border-surface-700/30 text-xs text-surface-700 dark:text-surface-300 space-y-0.5">
                     {lastReset && (
                       <div className="flex justify-between">
                         <span>{t('demo.lastReset', 'Last reset')}</span>
-                        <span className="font-mono">{lastReset}</span>
+                        <span className="font-mono text-surface-800 dark:text-surface-200">{lastReset}</span>
                       </div>
                     )}
                     {nextReset && (
                       <div className="flex justify-between">
                         <span>{t('demo.nextReset', 'Next reset')}</span>
-                        <span className="font-mono">{nextReset}</span>
+                        <span className="font-mono text-surface-800 dark:text-surface-200">{nextReset}</span>
                       </div>
                     )}
                   </div>
