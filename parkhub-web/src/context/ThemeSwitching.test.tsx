@@ -58,7 +58,7 @@ vi.mock('../api/client', () => ({
 import { ThemeProvider, useTheme, DESIGN_THEMES, type DesignThemeId } from './ThemeContext';
 
 const ALL_THEME_IDS: DesignThemeId[] = [
-  'classic', 'glass', 'bento', 'brutalist', 'neon', 'warm',
+  'classic', 'marble', 'void', 'glass', 'bento', 'brutalist', 'neon', 'warm',
   'liquid', 'mono', 'ocean', 'forest', 'synthwave', 'zen',
   'aurora', 'material', 'sakura', 'midnight',
 ];
@@ -95,8 +95,8 @@ describe('Theme Switching — Comprehensive Audit', () => {
   });
 
   describe('Design theme catalog integrity', () => {
-    it('exports exactly 16 themes', () => {
-      expect(DESIGN_THEMES).toHaveLength(16);
+    it('exports exactly 18 themes (16 legacy + marble + void v5 flagships)', () => {
+      expect(DESIGN_THEMES).toHaveLength(18);
     });
 
     it('has no duplicate theme IDs', () => {
@@ -244,10 +244,10 @@ describe('Theme Switching — Comprehensive Audit', () => {
       expect(localStorage.getItem('parkhub_design_theme')).toBe('classic');
     });
 
-    it('falls back to classic on corrupted localStorage', () => {
+    it('falls back to marble (v5 flagship default) on corrupted localStorage', () => {
       localStorage.setItem('parkhub_design_theme', 'garbage-not-a-theme');
       const { getState } = renderWithTheme();
-      expect(getState().designTheme).toBe('classic');
+      expect(getState().designTheme).toBe('marble');
     });
 
     it('currentDesignTheme falls back to first entry when designTheme is somehow unknown', () => {

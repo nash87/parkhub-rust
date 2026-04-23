@@ -73,19 +73,17 @@ describe('ThemeSwitcher', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders all 16 theme cards when open', () => {
+  it('renders all 18 theme cards when open (16 legacy + marble + void)', () => {
     render(
       <ThemeProvider>
         <ThemeSwitcher open={true} onClose={() => {}} />
       </ThemeProvider>,
     );
 
-    // Each theme card has an aria-label with theme name
     expect(screen.getByRole('dialog')).toBeTruthy();
     const buttons = screen.getAllByRole('button', { pressed: undefined });
-    // 16 theme cards + close button = 13 buttons
     const themeButtons = buttons.filter(b => b.getAttribute('aria-pressed') !== null);
-    expect(themeButtons).toHaveLength(16);
+    expect(themeButtons).toHaveLength(18);
   });
 
   it('does not render when closed', () => {
@@ -135,13 +133,17 @@ describe('ThemeSwitcher', () => {
       </ThemeProvider>,
     );
 
-    // Find the Neon theme card — it's a button with aria-pressed that contains "Neon" text
+    // Locate by rendered heading text (theme.name falls through the i18n mock)
+    // so this stays order-independent after marble + void were prepended
+    // as v5 flagships. Index-based lookup would silently click the wrong theme.
     const themeButtons = screen.getAllByRole('button').filter(
       b => b.getAttribute('aria-pressed') !== null
     );
-    // Neon is the 5th theme (index 4)
-    const neonCard = themeButtons[4];
-    await user.click(neonCard);
+    const neonCard = themeButtons.find(
+      b => b.querySelector('h3')?.textContent === 'Neon'
+    );
+    expect(neonCard).toBeDefined();
+    await user.click(neonCard!);
 
     expect(localStorageMock.setItem).toHaveBeenCalledWith('parkhub_design_theme', 'neon');
   });
