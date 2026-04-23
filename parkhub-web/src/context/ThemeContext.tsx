@@ -7,7 +7,7 @@ type ColorMode = 'light' | 'dark' | 'system';
 
 // ── Design Themes ──
 
-export type DesignThemeId = 'classic' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm' | 'liquid' | 'mono' | 'ocean' | 'forest' | 'synthwave' | 'zen' | 'aurora' | 'material' | 'sakura' | 'midnight';
+export type DesignThemeId = 'classic' | 'marble' | 'void' | 'glass' | 'bento' | 'brutalist' | 'neon' | 'warm' | 'liquid' | 'mono' | 'ocean' | 'forest' | 'synthwave' | 'zen' | 'aurora' | 'material' | 'sakura' | 'midnight';
 
 export interface DesignThemeInfo {
   id: DesignThemeId;
@@ -22,6 +22,26 @@ export interface DesignThemeInfo {
 }
 
 export const DESIGN_THEMES: DesignThemeInfo[] = [
+  {
+    id: 'marble',
+    name: 'Marble',
+    description: 'Editorial premium surface. Bright stone base, emerald accents, polished cards and spacious product framing.',
+    previewColors: {
+      light: ['#f7f5f1', '#fffdfa', '#14b8a6', '#111827', '#ded7cd'],
+      dark: ['#161a22', '#1f2937', '#34d399', '#f9fafb', '#374151'],
+    },
+    tags: ['editorial', 'premium', 'stone', 'v4'],
+  },
+  {
+    id: 'void',
+    name: 'Void',
+    description: 'Dark ops room. Inky canvas, cyan telemetry, cinematic contrast, and mission-control density.',
+    previewColors: {
+      light: ['#eef6ff', '#ffffff', '#0ea5e9', '#0f172a', '#dbeafe'],
+      dark: ['#020617', '#0f172a', '#22d3ee', '#e2e8f0', '#1e293b'],
+    },
+    tags: ['dark-first', 'ops', 'cinematic', 'v4'],
+  },
   {
     id: 'classic',
     name: 'Classic',
@@ -184,7 +204,9 @@ export const DESIGN_THEMES: DesignThemeInfo[] = [
   },
 ];
 
-const DEFAULT_DESIGN_THEME: DesignThemeId = 'classic';
+// v5 default: Marble is the flagship design (editorial premium surface,
+// OKLCH tokens, bento layouts). Void remains as the dark-first alternative.
+const DEFAULT_DESIGN_THEME: DesignThemeId = 'marble';
 
 // ── Context ──
 
