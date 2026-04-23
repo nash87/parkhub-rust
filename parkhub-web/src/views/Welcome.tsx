@@ -42,7 +42,10 @@ export function WelcomePage() {
 
   function handleGetStarted() {
     localStorage.setItem('parkhub_welcome_seen', '1');
-    navigate('/login');
+    // Freshly-welcomed users go through the 3-step transparency tour
+    // (Privacy → Features → Trust) before seeing the login screen.
+    const toured = localStorage.getItem('parkhub_onboarding_v5_seen') === '1';
+    navigate(toured ? '/login' : '/tour');
   }
 
   const greeting = CYCLE_GREETINGS[greetingIdx];

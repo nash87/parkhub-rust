@@ -1,0 +1,78 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v5 Bridge for Main App
+   Maps the existing [data-design-theme]/[.dark] selectors (used across the v4
+   surface) to the v5 --v5-* token bundles from tokens.css. This lets the
+   global ⌘K palette (mounted at the app root) render with mode-correct
+   colors without the app having to adopt [data-ph-mode] itself.
+
+   Resolution:
+     [data-design-theme="marble"]         → marble_light bundle
+     [data-design-theme="marble"].dark    → marble_dark  bundle
+     [data-design-theme="void"]           → void         bundle   (dark-first)
+     other themes                         → marble_light fallback
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Shared status tokens — same across all bundles */
+:root {
+  --v5-ok: oklch(0.65 0.17 160);
+  --v5-warn: oklch(0.74 0.16 75);
+  --v5-err: oklch(0.58 0.22 25);
+  --v5-info: oklch(0.58 0.18 260);
+  --v5-ev: oklch(0.62 0.18 260);
+  --v5-purple: oklch(0.62 0.18 295);
+}
+
+/* Fallback = marble_light */
+:root {
+  --v5-bg: oklch(0.97 0.005 80);
+  --v5-sur: #fff;
+  --v5-sur2: oklch(0.96 0.005 80);
+  --v5-bor: oklch(0.91 0.007 80);
+  --v5-txt: oklch(0.18 0.01 80);
+  --v5-mut: oklch(0.55 0.012 80);
+  --v5-acc: oklch(0.57 0.14 175);
+  --v5-acc-muted: oklch(0.57 0.14 175 / 0.1);
+  --v5-row-hover: oklch(0.95 0.01 175 / 0.5);
+  --v5-nav-bg: #fff;
+  --v5-dot: oklch(0.88 0.007 80);
+  --v5-accent-fg: #fff;
+  --v5-shadow-card: 0 1px 2px oklch(0 0 0 / 0.03), 0 4px 14px oklch(0 0 0 / 0.04);
+  --v5-shadow-lift: 0 8px 28px oklch(0 0 0 / 0.1);
+}
+
+/* Marble + dark mode → marble_dark */
+:root.dark[data-design-theme="marble"],
+:root[data-design-theme="marble"].dark {
+  --v5-bg: oklch(0.13 0.01 260);
+  --v5-sur: oklch(0.17 0.01 260);
+  --v5-sur2: oklch(0.21 0.012 260);
+  --v5-bor: oklch(0.25 0.012 260);
+  --v5-txt: oklch(0.96 0.005 260);
+  --v5-mut: oklch(0.5 0.015 260);
+  --v5-acc: oklch(0.72 0.14 175);
+  --v5-acc-muted: oklch(0.72 0.14 175 / 0.12);
+  --v5-row-hover: oklch(0.2 0.01 260 / 0.7);
+  --v5-nav-bg: oklch(0.17 0.01 260);
+  --v5-dot: oklch(0.25 0.01 260);
+  --v5-accent-fg: oklch(0.1 0 0);
+  --v5-shadow-card: 0 1px 2px oklch(0 0 0 / 0.4), 0 4px 14px oklch(0 0 0 / 0.3);
+  --v5-shadow-lift: 0 8px 28px oklch(0 0 0 / 0.5);
+}
+
+/* Void — dark-first editorial, ignores .dark (always dark) */
+:root[data-design-theme="void"] {
+  --v5-bg: #000;
+  --v5-sur: #0a0a09;
+  --v5-sur2: #141412;
+  --v5-bor: #1e1e1c;
+  --v5-txt: #f0efea;
+  --v5-mut: #3e3e3a;
+  --v5-acc: oklch(0.72 0.14 175);
+  --v5-acc-muted: oklch(0.72 0.14 175 / 0.1);
+  --v5-row-hover: oklch(0.72 0.14 175 / 0.05);
+  --v5-nav-bg: #000;
+  --v5-dot: #1a1a18;
+  --v5-accent-fg: #000;
+  --v5-shadow-card: 0 1px 2px oklch(0 0 0 / 0.6), 0 4px 14px oklch(0 0 0 / 0.5);
+  --v5-shadow-lift: 0 8px 28px oklch(0 0 0 / 0.6);
+}
