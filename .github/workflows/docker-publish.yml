@@ -116,7 +116,6 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: demo
     permissions: {}
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
