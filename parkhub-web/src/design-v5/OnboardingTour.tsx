@@ -135,33 +135,33 @@ function PrivacyStep() {
   const items = [
     {
       icon: 'shield' as const,
-      title: t('onboarding.privacy.self.title', 'Self-hosted — Ihre Daten bleiben bei Ihnen'),
+      title: t('tour.privacy.self.title', 'Self-hosted — Ihre Daten bleiben bei Ihnen'),
       body: t(
-        'onboarding.privacy.self.body',
+        'tour.privacy.self.body',
         'ParkHub läuft auf Ihrer eigenen Infrastruktur. Wir haben keinen Zugriff auf Ihre Buchungen, Fahrzeuge oder Nutzerdaten — weder live noch in Backups.'
       ),
     },
     {
       icon: 'key' as const,
-      title: t('onboarding.privacy.encryption.title', 'Verschlüsselung by default'),
+      title: t('tour.privacy.encryption.title', 'Verschlüsselung by default'),
       body: t(
-        'onboarding.privacy.encryption.body',
+        'tour.privacy.encryption.body',
         'Alle Verbindungen TLS 1.3. Passwörter als Argon2-Hashes. Session-Tokens mit Family-Rotation + optionaler Redis-Revocation für Multi-Replica.'
       ),
     },
     {
       icon: 'info' as const,
-      title: t('onboarding.privacy.gdpr.title', 'GDPR-konform seit Tag 1'),
+      title: t('tour.privacy.gdpr.title', 'GDPR-konform seit Tag 1'),
       body: t(
-        'onboarding.privacy.gdpr.body',
+        'tour.privacy.gdpr.body',
         'Auskunftsrecht (Art. 15), Löschrecht (Art. 17), Datenportabilität (Art. 20) als Self-Service-Endpoints. Audit-Log für jeden Daten-Access. Impressum + Datenschutz-Seite integriert.'
       ),
     },
     {
       icon: 'check' as const,
-      title: t('onboarding.privacy.minimization.title', 'Datensparsamkeit'),
+      title: t('tour.privacy.minimization.title', 'Datensparsamkeit'),
       body: t(
-        'onboarding.privacy.minimization.body',
+        'tour.privacy.minimization.body',
         'Nur was für den Parkbetrieb nötig ist: Name, Kennzeichen, Buchungszeit. Keine Tracking-Cookies, keine Drittanbieter-Analytics, keine Werbe-SDKs.'
       ),
     },
@@ -171,11 +171,11 @@ function PrivacyStep() {
       <div>
         <SectionLabel>Schritt 1 von 3 · Ihre Daten</SectionLabel>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', letterSpacing: '-0.5px', margin: '2px 0 6px' }}>
-          {t('onboarding.privacy.title', 'Volle Transparenz zu Ihren Daten')}
+          {t('tour.privacy.title', 'Volle Transparenz zu Ihren Daten')}
         </h2>
         <p style={{ fontSize: 13, color: 'var(--v5-mut)', lineHeight: 1.6, margin: 0 }}>
           {t(
-            'onboarding.privacy.intro',
+            'tour.privacy.intro',
             'Bevor Sie starten — so gehen wir mit Ihren Daten um. Keine versteckten Klauseln, keine Opt-Outs im Kleingedruckten.'
           )}
         </p>
@@ -221,11 +221,11 @@ function FeaturesStep({
       <div>
         <SectionLabel>Schritt 2 von 3 · Module</SectionLabel>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', letterSpacing: '-0.5px', margin: '2px 0 6px' }}>
-          {t('onboarding.features.title', 'Wählen Sie die Features die Sie brauchen')}
+          {t('tour.features.title', 'Wählen Sie die Features die Sie brauchen')}
         </h2>
         <p style={{ fontSize: 13, color: 'var(--v5-mut)', lineHeight: 1.6, margin: 0 }}>
           {t(
-            'onboarding.features.intro',
+            'tour.features.intro',
             'Jedes Modul ist abschaltbar. Deaktivierte Features verschwinden aus der Navigation und verbrauchen keine Ressourcen. Sie können das jederzeit unter Einstellungen ändern.'
           )}
         </p>
@@ -306,11 +306,11 @@ function TrustStep() {
       <div>
         <SectionLabel>Schritt 3 von 3 · Vertrauen</SectionLabel>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', letterSpacing: '-0.5px', margin: '2px 0 6px' }}>
-          {t('onboarding.trust.title', 'Warum Sie ParkHub vertrauen können')}
+          {t('tour.trust.title', 'Warum Sie ParkHub vertrauen können')}
         </h2>
         <p style={{ fontSize: 13, color: 'var(--v5-mut)', lineHeight: 1.6, margin: 0 }}>
           {t(
-            'onboarding.trust.intro',
+            'tour.trust.intro',
             'ParkHub wird öffentlich entwickelt. Jede Zeile Code, jeder Build, jeder Audit ist einsehbar. Keine Marketing-Claims — hier ist die Substanz.'
           )}
         </p>
@@ -349,12 +349,12 @@ function TrustStep() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
           <V5NamedIcon name="shield" size={14} color="var(--v5-acc)" />
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--v5-acc)', letterSpacing: 0.3, textTransform: 'uppercase' }}>
-            {t('onboarding.trust.openBadge', 'Open by default')}
+            {t('tour.trust.openBadge', 'Open by default')}
           </span>
         </div>
         <p style={{ fontSize: 12, color: 'var(--v5-txt)', lineHeight: 1.6, margin: 0 }}>
           {t(
-            'onboarding.trust.openBody',
+            'tour.trust.openBody',
             'Source auf GitHub, Security-Audits öffentlich, Vulnerability-Disclosure-Policy aktiv. Fragen Sie Ihr Team — oder uns direkt.'
           )}
         </p>
@@ -389,7 +389,7 @@ function TourInner() {
   const next = () => {
     if (isLast) {
       markOnboardingTourSeen();
-      toast(t('onboarding.complete', 'Willkommen! Ihr ParkHub ist einsatzbereit.'), 'success');
+      toast(t('tour.complete', 'Willkommen! Ihr ParkHub ist einsatzbereit.'), 'success');
       // Small delay so the toast is visible before we navigate away
       setTimeout(() => navigate('/', { replace: true }), 600);
       return;
@@ -459,7 +459,7 @@ function TourInner() {
               fontFamily: 'inherit',
             }}
           >
-            {t('onboarding.skip', 'Überspringen')}
+            {t('tour.skip', 'Überspringen')}
           </button>
           <div style={{ flex: 1 }} />
           {idx > 0 && (
@@ -477,7 +477,7 @@ function TourInner() {
                 fontFamily: 'inherit',
               }}
             >
-              {t('onboarding.back', 'Zurück')}
+              {t('tour.back', 'Zurück')}
             </button>
           )}
           <button
@@ -496,7 +496,7 @@ function TourInner() {
               fontFamily: 'inherit',
             }}
           >
-            {isLast ? t('onboarding.finish', 'Los geht\'s') : t('onboarding.next', 'Weiter')}
+            {isLast ? t('tour.finish', 'Los geht\'s') : t('tour.next', 'Weiter')}
           </button>
         </div>
       </div>

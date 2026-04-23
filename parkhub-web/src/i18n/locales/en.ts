@@ -1840,5 +1840,42 @@ export default {
       responseTime: '{{ms}}ms',
       statusCode: 'Status {{code}}',
     },
+        tour: {
+        back: 'Back',
+        next: 'Next',
+        skip: 'Skip',
+        finish: 'Let\'s go',
+        complete: 'Welcome! Your ParkHub is ready to use.',
+        privacy: {
+          title: 'Full transparency about your data',
+          intro: 'Before you start — here\'s how we handle your data. No hidden clauses, no opt-outs buried in the fine print.',
+          self: {
+            title: 'Self-hosted — your data stays with you',
+            body: 'ParkHub runs on your own infrastructure. We have no access to your bookings, vehicles or user data — neither live nor in backups.',
+          },
+          encryption: {
+            title: 'Encryption by default',
+            body: 'All connections use TLS 1.3. Passwords stored as Argon2 hashes. Session tokens with family rotation plus optional Redis revocation for multi-replica setups.',
+          },
+          gdpr: {
+            title: 'GDPR-compliant from day one',
+            body: 'Right of access (Art. 15), right to erasure (Art. 17), data portability (Art. 20) as self-service endpoints. Audit log for every data access. Imprint and privacy policy pages built in.',
+          },
+          minimization: {
+            title: 'Data minimization',
+            body: 'Only what\'s needed for parking operations: name, license plate, booking time. No tracking cookies, no third-party analytics, no advertising SDKs.',
+          },
+        },
+        features: {
+          title: 'Choose the features you need',
+          intro: 'Every module can be turned off. Disabled features disappear from the navigation and consume no resources. You can change this anytime under Settings.',
+        },
+        trust: {
+          title: 'Why you can trust ParkHub',
+          intro: 'ParkHub is developed in the open. Every line of code, every build, every audit is available for inspection. No marketing claims — here\'s the substance.',
+          openBadge: 'Open by default',
+          openBody: 'Source on GitHub, security audits public, vulnerability disclosure policy active. Ask your team — or ask us directly.',
+        },
+      },
   },
 };

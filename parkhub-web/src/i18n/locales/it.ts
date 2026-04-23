@@ -1125,5 +1125,42 @@ export default {
     guestBooking: { title: 'Pass Ospite', subtitle: 'Crea e gestisci pass parcheggio ospite', create: 'Nuovo Pass', existing: 'Pass Ospiti', empty: 'Nessun pass ospite', formTitle: 'Crea Pass Ospite', guestName: 'Nome ospite', guestEmail: 'Email ospite', lot: 'Parcheggio', slot: 'Posto', selectLot: 'Seleziona parcheggio', selectSlot: 'Seleziona posto', startTime: 'Ora inizio', endTime: 'Ora fine', creating: 'Creazione...', created: 'Pass creato', cancelled: 'Pass annullato', cancel: 'Annulla', passCreated: 'Pass Creato', shareInstructions: 'Condividi questo pass con il tuo ospite', dateRange: 'Data e ora', code: 'Codice di accesso', codeCopied: 'Codice copiato', share: 'Condividi', shareTitle: 'Pass Parcheggio', shareText: 'Ecco il pass per {{name}}. Codice: {{code}}', linkCopied: 'Link copiato', requiredFields: 'Compilare tutti i campi', status: { active: 'Attivo', expired: 'Scaduto', cancelled: 'Annullato' } },
     swap: { title: 'Richieste di Scambio', subtitle: 'Richiedi e gestisci scambi di posti', create: 'Nuovo Scambio', createTitle: 'Crea Richiesta', empty: 'Nessuna richiesta', emptyHint: 'Crea una richiesta per scambiare posti', yourSlot: 'Il Tuo Posto', theirSlot: 'Il Loro Posto', yourBooking: 'La Tua Prenotazione', selectBooking: 'Seleziona prenotazione', targetBookingId: 'ID prenotazione', targetPlaceholder: 'Inserisci l ID', messageLabel: 'Messaggio', messagePlaceholder: 'Messaggio opzionale', send: 'Invia', created: 'Richiesta inviata', accepted: 'Richiesta accettata', declined: 'Richiesta rifiutata', accept: 'Accetta', decline: 'Rifiuta', status: { pending: 'In attesa', accepted: 'Accettata', declined: 'Rifiutata' } },
     webhookDashboard: { title: "Consegne Webhook", subtitle: "Prestazioni di consegna", help: "Monitora cronologia, tassi di successo, tempi di risposta e rigioca consegne fallite.", helpLabel: "Aiuto", deliveryTimeline: "Cronologia", successRate: "Tasso successo", avgResponseTime: "Tempo medio", topErrors: "Errori frequenti", replay: "Rigioca", replaying: "Rigiocando...", replayed: "Rigiocata", replayFailed: "Fallito", noDeliveries: "Nessuna consegna", stats: "Statistiche", totalDeliveries: "Totale", successCount: "Riuscite", failureCount: "Fallite", responseTime: "{{ms}}ms", statusCode: "Stato {{code}}" },
+        tour: {
+        back: 'Indietro',
+        next: 'Avanti',
+        skip: 'Salta',
+        finish: 'Iniziamo',
+        complete: 'Benvenuto! Il tuo ParkHub è pronto all\'uso.',
+        privacy: {
+          title: 'Piena trasparenza sui tuoi dati',
+          intro: 'Prima di iniziare — ecco come gestiamo i tuoi dati. Nessuna clausola nascosta, nessun opt-out sepolto nelle note in piccolo.',
+          self: {
+            title: 'Self-hosted — i tuoi dati restano con te',
+            body: 'ParkHub funziona sulla tua infrastruttura. Non abbiamo alcun accesso alle tue prenotazioni, veicoli o dati utente — né in tempo reale né nei backup.',
+          },
+          encryption: {
+            title: 'Crittografia by default',
+            body: 'Tutte le connessioni in TLS 1.3. Password memorizzate come hash Argon2. Session token con rotazione di famiglia e revoca Redis opzionale per configurazioni multi-replica.',
+          },
+          gdpr: {
+            title: 'Conforme al GDPR dal primo giorno',
+            body: 'Diritto di accesso (Art. 15), diritto alla cancellazione (Art. 17), portabilità dei dati (Art. 20) come endpoint self-service. Audit log per ogni accesso ai dati. Pagine note legali e informativa sulla privacy integrate.',
+          },
+          minimization: {
+            title: 'Minimizzazione dei dati',
+            body: 'Solo ciò che serve per la gestione del parcheggio: nome, targa, orario di prenotazione. Nessun cookie di tracciamento, nessuna analytics di terze parti, nessun SDK pubblicitario.',
+          },
+        },
+        features: {
+          title: 'Scegli le funzionalità di cui hai bisogno',
+          intro: 'Ogni modulo può essere disattivato. Le funzionalità disattivate scompaiono dalla navigazione e non consumano risorse. Puoi modificare questa scelta in qualsiasi momento nelle Impostazioni.',
+        },
+        trust: {
+          title: 'Perché puoi fidarti di ParkHub',
+          intro: 'ParkHub è sviluppato in modo aperto. Ogni riga di codice, ogni build, ogni audit è consultabile. Niente promesse di marketing — ecco la sostanza.',
+          openBadge: 'Open by default',
+          openBody: 'Codice sorgente su GitHub, audit di sicurezza pubblici, policy di vulnerability disclosure attiva. Chiedi al tuo team — o chiedi direttamente a noi.',
+        },
+      },
   },
 };

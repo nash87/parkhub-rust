@@ -92,5 +92,42 @@ export default {
     guestBooking: { title: 'Misafir Karti', subtitle: 'Misafir park kartlari olustur ve yonet', create: 'Yeni Kart', existing: 'Misafir Kartlari', empty: 'Misafir karti yok', formTitle: 'Misafir Karti Olustur', guestName: 'Misafir adi', guestEmail: 'Misafir email', lot: 'Otopark', slot: 'Yer', selectLot: 'Otopark sec', selectSlot: 'Yer sec', startTime: 'Baslangic', endTime: 'Bitis', creating: 'Olusturuluyor...', created: 'Kart olusturuldu', cancelled: 'Kart iptal edildi', cancel: 'Iptal', passCreated: 'Kart Olusturuldu', shareInstructions: 'Bu karti misafirinizle paylasin', dateRange: 'Tarih ve saat', code: 'Erisim kodu', codeCopied: 'Kod kopyalandi', share: 'Paylas', shareTitle: 'Misafir Park Karti', shareText: '{{name}} icin park karti. Kod: {{code}}', linkCopied: 'Link kopyalandi', requiredFields: 'Tum alanlari doldurun', status: { active: 'Aktif', expired: 'Suresi doldu', cancelled: 'Iptal edildi' } },
     swap: { title: 'Takas Talepleri', subtitle: 'Park yeri takas talepleri', create: 'Yeni Takas', createTitle: 'Takas Talebi Olustur', empty: 'Takas talebi yok', emptyHint: 'Meslektasinizla yer degistirmek icin talep olusturun', yourSlot: 'Sizin Yeriniz', theirSlot: 'Onlarin Yeri', yourBooking: 'Rezervasyonunuz', selectBooking: 'Rezervasyon sec', targetBookingId: 'Hedef rezervasyon ID', targetPlaceholder: 'Rezervasyon ID girin', messageLabel: 'Mesaj', messagePlaceholder: 'Istege bagli mesaj', send: 'Gonder', created: 'Talep gonderildi', accepted: 'Talep kabul edildi', declined: 'Talep reddedildi', accept: 'Kabul Et', decline: 'Reddet', status: { pending: 'Beklemede', accepted: 'Kabul edildi', declined: 'Reddedildi' } },
     webhookDashboard: { title: "Webhook Teslimatlari", subtitle: "Teslimat performansi", help: "Gecmisi, basari oranlarini, yanit surelerini izleyin ve basarisiz teslimatlari yeniden deneyin.", helpLabel: "Yardim", deliveryTimeline: "Zaman cizelgesi", successRate: "Basari orani", avgResponseTime: "Ort. yanit suresi", topErrors: "Sik hatalar", replay: "Yeniden dene", replaying: "Deneniyor...", replayed: "Yeniden denendi", replayFailed: "Basarisiz", noDeliveries: "Teslimat yok", stats: "Istatistikler", totalDeliveries: "Toplam", successCount: "Basarili", failureCount: "Basarisiz", responseTime: "{{ms}}ms", statusCode: "Durum {{code}}" },
+        tour: {
+        back: 'Geri',
+        next: 'İleri',
+        skip: 'Atla',
+        finish: 'Hadi başlayalım',
+        complete: 'Hoş geldiniz! ParkHub\'ınız kullanıma hazır.',
+        privacy: {
+          title: 'Verileriniz konusunda tam şeffaflık',
+          intro: 'Başlamadan önce — verilerinizi nasıl işlediğimizi görün. Gizli madde yok, küçük puntolara gömülü opt-out\'lar yok.',
+          self: {
+            title: 'Self-hosted — verileriniz sizde kalır',
+            body: 'ParkHub kendi altyapınızda çalışır. Rezervasyonlarınıza, araçlarınıza veya kullanıcı verilerinize erişimimiz yoktur — ne canlı olarak ne de yedeklerde.',
+          },
+          encryption: {
+            title: 'Varsayılan olarak şifreleme',
+            body: 'Tüm bağlantılar TLS 1.3 ile. Parolalar Argon2 hash\'leri olarak saklanır. Session token\'ları aile rotasyonu ile birlikte, çoklu replika kurulumları için opsiyonel Redis revocation.',
+          },
+          gdpr: {
+            title: 'İlk günden itibaren GDPR uyumlu',
+            body: 'Erişim hakkı (Art. 15), silme hakkı (Art. 17), veri taşınabilirliği (Art. 20) self-service endpoint\'ler olarak. Her veri erişimi için audit log. Künye ve gizlilik politikası sayfaları entegre.',
+          },
+          minimization: {
+            title: 'Veri minimizasyonu',
+            body: 'Sadece otopark işletimi için gerekli olanlar: ad, plaka, rezervasyon saati. Takip çerezi yok, üçüncü taraf analitik yok, reklam SDK\'sı yok.',
+          },
+        },
+        features: {
+          title: 'İhtiyacınız olan özellikleri seçin',
+          intro: 'Her modül kapatılabilir. Devre dışı bırakılan özellikler navigasyondan kaybolur ve hiç kaynak tüketmez. Bunu istediğiniz zaman Ayarlar\'dan değiştirebilirsiniz.',
+        },
+        trust: {
+          title: 'ParkHub\'a neden güvenebilirsiniz',
+          intro: 'ParkHub açık şekilde geliştirilir. Her kod satırı, her build, her denetim incelenebilir. Pazarlama vaatleri yok — işte içerik.',
+          openBadge: 'Open by default',
+          openBody: 'Kaynak kodu GitHub\'da, güvenlik denetimleri kamuya açık, vulnerability disclosure politikası aktif. Ekibinize sorun — ya da doğrudan bize.',
+        },
+      },
   },
 };

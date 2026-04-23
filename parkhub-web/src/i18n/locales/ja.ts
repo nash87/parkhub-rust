@@ -92,5 +92,42 @@ export default {
     guestBooking: { title: 'ゲストパス', subtitle: 'ゲスト駐車パスの作成と管理', create: '新規パス', existing: 'ゲストパス一覧', empty: 'ゲストパスはありません', formTitle: 'ゲストパスを作成', guestName: 'ゲスト名', guestEmail: 'ゲストメール', lot: '駐車場', slot: 'スロット', selectLot: '駐車場を選択', selectSlot: 'スロットを選択', startTime: '開始時刻', endTime: '終了時刻', creating: '作成中...', created: 'パスを作成しました', cancelled: 'パスを取り消しました', cancel: '取り消し', passCreated: 'パス作成完了', shareInstructions: 'このパスをゲストと共有してください', dateRange: '日時', code: 'アクセスコード', codeCopied: 'コードをコピーしました', share: '共有', shareTitle: 'ゲスト駐車パス', shareText: '{{name}}さんの駐車パスです。コード: {{code}}', linkCopied: 'リンクをコピーしました', requiredFields: '必須項目を入力してください', status: { active: 'アクティブ', expired: '期限切れ', cancelled: '取消済' } },
     swap: { title: '交換リクエスト', subtitle: '駐車スロットの交換をリクエスト・管理', create: '新規交換', createTitle: '交換リクエストを作成', empty: '交換リクエストはありません', emptyHint: '同僚とスロットを交換するリクエストを作成', yourSlot: 'あなたのスロット', theirSlot: '相手のスロット', yourBooking: 'あなたの予約', selectBooking: '予約を選択', targetBookingId: '対象予約ID', targetPlaceholder: '交換する予約IDを入力', messageLabel: 'メッセージ', messagePlaceholder: '任意のメッセージ', send: '送信', created: 'リクエストを送信しました', accepted: 'リクエストが承認されました', declined: 'リクエストが辞退されました', accept: '承認', decline: '辞退', status: { pending: '保留中', accepted: '承認済', declined: '辞退済' } },
     webhookDashboard: { title: "Webhook配信", subtitle: "配信パフォーマンス", help: "履歴、成功率、応答時間を追跡し、失敗した配信を再送。", helpLabel: "ヘルプ", deliveryTimeline: "タイムライン", successRate: "成功率", avgResponseTime: "平均応答時間", topErrors: "頻出エラー", replay: "再送", replaying: "再送中...", replayed: "再送済み", replayFailed: "失敗", noDeliveries: "配信なし", stats: "統計", totalDeliveries: "合計", successCount: "成功", failureCount: "失敗", responseTime: "{{ms}}ms", statusCode: "ステータス {{code}}" },
+        tour: {
+        back: '戻る',
+        next: '次へ',
+        skip: 'スキップ',
+        finish: 'はじめる',
+        complete: 'ようこそ！ParkHubの準備が整いました。',
+        privacy: {
+          title: 'あなたのデータについて、完全な透明性を',
+          intro: 'はじめる前に — 私たちがあなたのデータをどう扱うかをご説明します。隠れた条項も、細かな文字に埋もれたオプトアウトも一切ありません。',
+          self: {
+            title: 'セルフホスト — あなたのデータはあなたのもとに',
+            body: 'ParkHubはあなた自身のインフラ上で動作します。私たちはあなたの予約、車両、ユーザーデータにアクセスすることはできません — ライブでもバックアップでもです。',
+          },
+          encryption: {
+            title: 'Encryption by default',
+            body: 'すべての接続はTLS 1.3。パスワードはArgon2ハッシュで保存。Session tokensはファミリーローテーション対応、マルチレプリカ構成向けにオプションでRedisによる失効機能も利用可能です。',
+          },
+          gdpr: {
+            title: '初日からGDPR準拠',
+            body: 'アクセス権（Art. 15）、削除権（Art. 17）、データポータビリティ（Art. 20）をセルフサービスのエンドポイントとして提供。すべてのデータアクセスに監査ログ。運営者表示とプライバシーポリシーのページも組み込み済みです。',
+          },
+          minimization: {
+            title: 'データ最小化',
+            body: '駐車場運営に必要なものだけ：氏名、ナンバープレート、予約時間。トラッキングクッキーなし、サードパーティの解析なし、広告SDKなし。',
+          },
+        },
+        features: {
+          title: '必要な機能を選んでください',
+          intro: 'どのモジュールもオフにできます。無効化された機能はナビゲーションから消え、リソースも消費しません。設定からいつでも変更できます。',
+        },
+        trust: {
+          title: 'ParkHubを信頼できる理由',
+          intro: 'ParkHubはオープンに開発されています。すべてのコード行、すべてのビルド、すべての監査を確認できます。マーケティングの約束ではなく — これが中身です。',
+          openBadge: 'Open by default',
+          openBody: 'ソースコードはGitHub上、セキュリティ監査は公開、脆弱性開示ポリシーも運用中。チームに確認してください — または私たちに直接お問い合わせください。',
+        },
+      },
   },
 };
