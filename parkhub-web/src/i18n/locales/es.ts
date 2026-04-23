@@ -1148,5 +1148,42 @@ export default {
     guestBooking: { title: 'Pase de Invitado', subtitle: 'Crear y gestionar pases de estacionamiento para invitados', create: 'Nuevo Pase', existing: 'Pases de Invitado', empty: 'Sin pases de invitado', formTitle: 'Crear Pase de Invitado', guestName: 'Nombre del invitado', guestEmail: 'Email del invitado', lot: 'Estacionamiento', slot: 'Plaza', selectLot: 'Seleccionar estacionamiento', selectSlot: 'Seleccionar plaza', startTime: 'Hora de inicio', endTime: 'Hora de fin', creating: 'Creando...', created: 'Pase creado', cancelled: 'Pase cancelado', cancel: 'Cancelar pase', passCreated: 'Pase Creado', shareInstructions: 'Comparte este pase con tu invitado', dateRange: 'Fecha y hora', code: 'Codigo de acceso', codeCopied: 'Codigo copiado', share: 'Compartir', shareTitle: 'Pase de Estacionamiento', shareText: 'Aqui esta tu pase para {{name}}. Codigo: {{code}}', linkCopied: 'Enlace copiado', requiredFields: 'Complete todos los campos obligatorios', status: { active: 'Activo', expired: 'Expirado', cancelled: 'Cancelado' } },
     swap: { title: 'Solicitudes de Intercambio', subtitle: 'Solicitar y gestionar intercambios de plazas', create: 'Nuevo Intercambio', createTitle: 'Crear Solicitud', empty: 'Sin solicitudes', emptyHint: 'Crea una solicitud para intercambiar plazas con un colega', yourSlot: 'Tu Plaza', theirSlot: 'Su Plaza', yourBooking: 'Tu Reserva', selectBooking: 'Seleccionar reserva', targetBookingId: 'ID de reserva destino', targetPlaceholder: 'Ingresa el ID de la reserva', messageLabel: 'Mensaje', messagePlaceholder: 'Mensaje opcional', send: 'Enviar', created: 'Solicitud enviada', accepted: 'Solicitud aceptada', declined: 'Solicitud rechazada', accept: 'Aceptar', decline: 'Rechazar', status: { pending: 'Pendiente', accepted: 'Aceptada', declined: 'Rechazada' } },
     webhookDashboard: { title: "Entregas Webhook", subtitle: "Rendimiento de entregas", help: "Rastrea historial, tasas de exito, tiempos de respuesta y reintenta entregas fallidas.", helpLabel: "Ayuda", deliveryTimeline: "Cronologia", successRate: "Tasa de exito", avgResponseTime: "Tiempo promedio", topErrors: "Errores frecuentes", replay: "Reintentar", replaying: "Reintentando...", replayed: "Reintentada", replayFailed: "Fallo", noDeliveries: "Sin entregas", stats: "Estadisticas", totalDeliveries: "Total", successCount: "Exitosas", failureCount: "Fallidas", responseTime: "{{ms}}ms", statusCode: "Estado {{code}}" },
+        tour: {
+        back: 'Atrás',
+        next: 'Siguiente',
+        skip: 'Omitir',
+        finish: 'Empezar',
+        complete: '¡Bienvenido! Su ParkHub está listo para usar.',
+        privacy: {
+          title: 'Plena transparencia sobre sus datos',
+          intro: 'Antes de empezar — así tratamos sus datos. Sin cláusulas ocultas, sin opt-outs escondidos en la letra pequeña.',
+          self: {
+            title: 'Autoalojado — sus datos se quedan con usted',
+            body: 'ParkHub se ejecuta en su propia infraestructura. No tenemos acceso a sus reservas, vehículos ni datos de usuarios — ni en directo ni en copias de seguridad.',
+          },
+          encryption: {
+            title: 'Cifrado por defecto',
+            body: 'Todas las conexiones en TLS 1.3. Contraseñas almacenadas como hashes Argon2. Tokens de sesión con rotación de familia y revocación Redis opcional para configuraciones multi-replica.',
+          },
+          gdpr: {
+            title: 'Conforme al RGPD desde el primer día',
+            body: 'Derecho de acceso (Art. 15), derecho de supresión (Art. 17), portabilidad de datos (Art. 20) como endpoints self-service. Registro de auditoría para cada acceso a datos. Páginas de aviso legal y política de privacidad integradas.',
+          },
+          minimization: {
+            title: 'Minimización de datos',
+            body: 'Solo lo necesario para la operación del aparcamiento: nombre, matrícula, hora de reserva. Sin cookies de seguimiento, sin analíticas de terceros, sin SDKs publicitarios.',
+          },
+        },
+        features: {
+          title: 'Elija las funciones que necesita',
+          intro: 'Cada módulo se puede desactivar. Las funciones desactivadas desaparecen de la navegación y no consumen recursos. Puede cambiar esto en cualquier momento desde Ajustes.',
+        },
+        trust: {
+          title: 'Por qué puede confiar en ParkHub',
+          intro: 'ParkHub se desarrolla de forma abierta. Cada línea de código, cada build, cada auditoría está disponible para su revisión. Sin promesas de marketing — aquí está la sustancia.',
+          openBadge: 'Open by default',
+          openBody: 'Código fuente en GitHub, auditorías de seguridad públicas, política de divulgación de vulnerabilidades activa. Pregunte a su equipo — o pregúntenos directamente.',
+        },
+      },
   },
 };

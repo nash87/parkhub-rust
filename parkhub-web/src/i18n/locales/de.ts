@@ -1361,5 +1361,42 @@ export default {
     guestBooking: { title: 'Gastausweis', subtitle: 'Gast-Parkausweise erstellen und verwalten', create: 'Neuer Gastausweis', existing: 'Gastausweise', empty: 'Noch keine Gastausweise', formTitle: 'Gastausweis erstellen', guestName: 'Gastname', guestEmail: 'Gast-E-Mail', lot: 'Parkplatz', slot: 'Stellplatz', selectLot: 'Parkplatz waehlen', selectSlot: 'Stellplatz waehlen', startTime: 'Startzeit', endTime: 'Endzeit', creating: 'Wird erstellt...', created: 'Gastausweis erstellt', cancelled: 'Gastausweis storniert', cancel: 'Ausweis stornieren', passCreated: 'Gastausweis erstellt', shareInstructions: 'Teilen Sie diesen Ausweis mit Ihrem Gast', dateRange: 'Datum & Zeit', code: 'Zugangscode', codeCopied: 'Code in Zwischenablage kopiert', share: 'Teilen', shareTitle: 'Gast-Parkausweis', shareText: 'Hier ist Ihr Gast-Parkausweis fuer {{name}}. Zugangscode: {{code}}', linkCopied: 'Link in Zwischenablage kopiert', requiredFields: 'Bitte alle Pflichtfelder ausfuellen', status: { active: 'Aktiv', expired: 'Abgelaufen', cancelled: 'Storniert' } },
     swap: { title: 'Tausch-Anfragen', subtitle: 'Parkplatz-Tausch anfragen und verwalten', create: 'Neuer Tausch', createTitle: 'Tausch-Anfrage erstellen', empty: 'Noch keine Tausch-Anfragen', emptyHint: 'Erstellen Sie eine Tausch-Anfrage, um Stellplaetze mit Kollegen zu tauschen', yourSlot: 'Ihr Stellplatz', theirSlot: 'Deren Stellplatz', yourBooking: 'Ihre Buchung', selectBooking: 'Buchung waehlen', targetBookingId: 'Ziel-Buchungs-ID', targetPlaceholder: 'Buchungs-ID zum Tauschen eingeben', messageLabel: 'Nachricht', messagePlaceholder: 'Optionale Nachricht fuer die andere Partei', send: 'Anfrage senden', created: 'Tausch-Anfrage gesendet', accepted: 'Tausch-Anfrage akzeptiert', declined: 'Tausch-Anfrage abgelehnt', accept: 'Akzeptieren', decline: 'Ablehnen', status: { pending: 'Ausstehend', accepted: 'Akzeptiert', declined: 'Abgelehnt' } },
     webhookDashboard: { title: "Webhook-Zustellungen", subtitle: "Webhook-Zustellungsleistung ueberwachen", help: "Verfolgen Sie Webhook-Zustellungsverlauf, Erfolgsraten, Antwortzeiten und wiederholen Sie fehlgeschlagene Zustellungen.", helpLabel: "Hilfe", deliveryTimeline: "Zustellungszeitlinie", successRate: "Erfolgsrate", avgResponseTime: "Durchschn. Antwortzeit", topErrors: "Haeufigste Fehler", replay: "Wiederholen", replaying: "Wiederholen...", replayed: "Zustellung wiederholt", replayFailed: "Wiederholung fehlgeschlagen", noDeliveries: "Noch keine Zustellungen", stats: "Statistiken", totalDeliveries: "Zustellungen gesamt", successCount: "Erfolgreich", failureCount: "Fehlgeschlagen", responseTime: "{{ms}}ms", statusCode: "Status {{code}}" },
+        tour: {
+        back: 'Zurück',
+        next: 'Weiter',
+        skip: 'Überspringen',
+        finish: 'Los geht\'s',
+        complete: 'Willkommen! Ihr ParkHub ist einsatzbereit.',
+        privacy: {
+          title: 'Volle Transparenz zu Ihren Daten',
+          intro: 'Bevor Sie starten — so gehen wir mit Ihren Daten um. Keine versteckten Klauseln, keine Opt-Outs im Kleingedruckten.',
+          self: {
+            title: 'Self-hosted — Ihre Daten bleiben bei Ihnen',
+            body: 'ParkHub läuft auf Ihrer eigenen Infrastruktur. Wir haben keinen Zugriff auf Ihre Buchungen, Fahrzeuge oder Nutzerdaten — weder live noch in Backups.',
+          },
+          encryption: {
+            title: 'Verschlüsselung by default',
+            body: 'Alle Verbindungen TLS 1.3. Passwörter als Argon2-Hashes. Session-Tokens mit Family-Rotation + optionaler Redis-Revocation für Multi-Replica.',
+          },
+          gdpr: {
+            title: 'GDPR-konform seit Tag 1',
+            body: 'Auskunftsrecht (Art. 15), Löschrecht (Art. 17), Datenportabilität (Art. 20) als Self-Service-Endpoints. Audit-Log für jeden Daten-Access. Impressum + Datenschutz-Seite integriert.',
+          },
+          minimization: {
+            title: 'Datensparsamkeit',
+            body: 'Nur was für den Parkbetrieb nötig ist: Name, Kennzeichen, Buchungszeit. Keine Tracking-Cookies, keine Drittanbieter-Analytics, keine Werbe-SDKs.',
+          },
+        },
+        features: {
+          title: 'Wählen Sie die Features die Sie brauchen',
+          intro: 'Jedes Modul ist abschaltbar. Deaktivierte Features verschwinden aus der Navigation und verbrauchen keine Ressourcen. Sie können das jederzeit unter Einstellungen ändern.',
+        },
+        trust: {
+          title: 'Warum Sie ParkHub vertrauen können',
+          intro: 'ParkHub wird öffentlich entwickelt. Jede Zeile Code, jeder Build, jeder Audit ist einsehbar. Keine Marketing-Claims — hier ist die Substanz.',
+          openBadge: 'Open by default',
+          openBody: 'Source auf GitHub, Security-Audits öffentlich, Vulnerability-Disclosure-Policy aktiv. Fragen Sie Ihr Team — oder uns direkt.',
+        },
+      },
   },
 };

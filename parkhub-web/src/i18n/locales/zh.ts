@@ -92,5 +92,42 @@ export default {
     guestBooking: { title: '访客通行证', subtitle: '创建和管理访客停车通行证', create: '新建通行证', existing: '访客通行证', empty: '暂无访客通行证', formTitle: '创建访客通行证', guestName: '访客姓名', guestEmail: '访客邮箱', lot: '停车场', slot: '车位', selectLot: '选择停车场', selectSlot: '选择车位', startTime: '开始时间', endTime: '结束时间', creating: '创建中...', created: '通行证已创建', cancelled: '通行证已取消', cancel: '取消', passCreated: '通行证已创建', shareInstructions: '将此通行证分享给您的访客', dateRange: '日期时间', code: '访问码', codeCopied: '已复制访问码', share: '分享', shareTitle: '访客停车通行证', shareText: '{{name}}的停车通行证。访问码：{{code}}', linkCopied: '链接已复制', requiredFields: '请填写所有必填项', status: { active: '有效', expired: '已过期', cancelled: '已取消' } },
     swap: { title: '交换请求', subtitle: '请求和管理车位交换', create: '新建交换', createTitle: '创建交换请求', empty: '暂无交换请求', emptyHint: '创建交换请求与同事交换车位', yourSlot: '您的车位', theirSlot: '对方车位', yourBooking: '您的预订', selectBooking: '选择预订', targetBookingId: '目标预订ID', targetPlaceholder: '输入要交换的预订ID', messageLabel: '留言', messagePlaceholder: '可选留言', send: '发送', created: '请求已发送', accepted: '请求已接受', declined: '请求已拒绝', accept: '接受', decline: '拒绝', status: { pending: '待处理', accepted: '已接受', declined: '已拒绝' } },
     webhookDashboard: { title: "Webhook投递", subtitle: "投递性能监控", help: "追踪历史记录、成功率、响应时间，重放失败的投递。", helpLabel: "帮助", deliveryTimeline: "时间线", successRate: "成功率", avgResponseTime: "平均响应时间", topErrors: "常见错误", replay: "重放", replaying: "重放中...", replayed: "已重放", replayFailed: "失败", noDeliveries: "暂无投递", stats: "统计", totalDeliveries: "总计", successCount: "成功", failureCount: "失败", responseTime: "{{ms}}ms", statusCode: "状态 {{code}}" },
+        tour: {
+        back: '返回',
+        next: '下一步',
+        skip: '跳过',
+        finish: '开始使用',
+        complete: '欢迎！您的 ParkHub 已准备就绪。',
+        privacy: {
+          title: '您的数据，完全透明',
+          intro: '开始之前 — 先了解我们如何处理您的数据。没有隐藏条款，也没有埋在细则里的选择退出。',
+          self: {
+            title: '自托管 — 您的数据始终在您手中',
+            body: 'ParkHub 运行在您自己的基础设施上。我们无法访问您的预订、车辆或用户数据 — 无论是实时数据还是备份。',
+          },
+          encryption: {
+            title: 'Encryption by default',
+            body: '所有连接均采用 TLS 1.3。密码以 Argon2 哈希形式存储。Session tokens 支持家族轮换，多副本部署可选 Redis 撤销机制。',
+          },
+          gdpr: {
+            title: '从第一天起即符合 GDPR',
+            body: '访问权（Art. 15）、删除权（Art. 17）、数据可携带权（Art. 20）均作为自助式端点提供。每一次数据访问都有审计日志。网站信息和隐私政策页面已内置。',
+          },
+          minimization: {
+            title: '数据最小化',
+            body: '仅收集停车业务所需的信息：姓名、车牌号、预订时间。无追踪 Cookie，无第三方分析，无广告 SDK。',
+          },
+        },
+        features: {
+          title: '选择您需要的功能',
+          intro: '每个模块都可以关闭。已停用的功能会从导航中消失，也不会占用任何资源。您可以随时在设置中更改。',
+        },
+        trust: {
+          title: '为什么您可以信任 ParkHub',
+          intro: 'ParkHub 在公开环境中开发。每一行代码、每一次构建、每一次审计都可供查看。没有营销口号 — 这里只讲实质。',
+          openBadge: 'Open by default',
+          openBody: '源代码托管在 GitHub，安全审计公开，漏洞披露政策持续有效。请向您的团队求证 — 或直接联系我们。',
+        },
+      },
   },
 };
