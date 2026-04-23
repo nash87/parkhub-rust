@@ -428,7 +428,7 @@ function TourInner() {
         flexDirection: 'column',
         alignItems: 'center',
         padding: '48px 20px',
-        fontFamily: "'Inter', system-ui, sans-serif",
+        fontFamily: "'Inter Variable', 'Inter', system-ui, sans-serif",
       }}
       data-testid="onboarding-tour"
     >

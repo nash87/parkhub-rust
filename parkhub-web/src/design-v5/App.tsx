@@ -90,7 +90,7 @@ function V5Shell() {
         background: 'var(--v5-bg)',
         color: 'var(--v5-txt)',
         overflow: 'hidden',
-        fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+        fontFamily: "'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
         fontFeatureSettings: '"cv11", "ss01"',
       }}
     >
