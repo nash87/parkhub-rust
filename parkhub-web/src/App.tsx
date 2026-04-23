@@ -8,6 +8,10 @@ import { FeaturesProvider } from './context/FeaturesContext';
 import { registerRoute, preloadRoutesIdle } from './lib/routePreload';
 import './i18n';
 import { loadTranslationOverrides } from './i18n';
+// v5 design-system bridge for the main-app shell (see parkhub-web/src/design-v5/)
+import './design-v5/fonts';
+import './design-v5/main-app-bridge.css';
+import { GlobalCommandPalette } from './design-v5/GlobalCommandPalette';
 
 // Eagerly loaded shell (ErrorBoundary must load synchronously to catch
 // errors during lazy-chunk fetch). Layout carries the nav+icon payload
@@ -32,6 +36,7 @@ const Layout = lazy(() => import('./components/Layout'), 'Layout');
 
 // Auth pages (small, on critical path for unauthenticated users)
 const WelcomePage = lazy(() => import('./views/Welcome'), 'WelcomePage', '/welcome');
+const OnboardingTourPage = lazy(() => import('./design-v5/OnboardingTour'), 'OnboardingTour', '/tour');
 const LoginPage = lazy(() => import('./views/Login'), 'LoginPage', '/login');
 const RegisterPage = lazy(() => import('./views/Register'), 'RegisterPage', '/register');
 const ForgotPasswordPage = lazy(() => import('./views/ForgotPassword'), 'ForgotPasswordPage', '/forgot-password');
@@ -207,6 +212,7 @@ function ViewTransitionRoutes() {
   return (
     <Routes location={location}>
       <Route path="/welcome" element={<SuspenseRoute><WelcomePage /></SuspenseRoute>} />
+      <Route path="/tour" element={<SuspenseRoute><OnboardingTourPage /></SuspenseRoute>} />
       <Route path="/login" element={<SuspenseRoute><LoginPage /></SuspenseRoute>} />
       <Route path="/register" element={<SuspenseRoute><RegisterPage /></SuspenseRoute>} />
       <Route path="/forgot-password" element={<SuspenseRoute><ForgotPasswordPage /></SuspenseRoute>} />
@@ -329,6 +335,8 @@ export function App() {
         <AuthProvider>
           <AppRoutes />
           <DeferredOverlays />
+          {/* v5 ⌘K palette — mounted globally, works on every route. */}
+          <GlobalCommandPalette />
           <Toaster
             position="bottom-center"
             toastOptions={{
