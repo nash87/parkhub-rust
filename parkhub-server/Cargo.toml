@@ -142,7 +142,10 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 subtle = "2.6.1"
 
 # PDF generation (invoices)
-printpdf = "0.9"
+# We only use the core PDF drawing APIs, not the optional HTML pipeline.
+# Keeping default-features off avoids the stale `kuchiki/html5ever/phf`
+# dependency chain that still pulls vulnerable `rand 0.7.x`.
+printpdf = { version = "0.9", default-features = false }
 web-push = { version = "0.11", features = ["hyper-client"] }
 
 [build-dependencies]

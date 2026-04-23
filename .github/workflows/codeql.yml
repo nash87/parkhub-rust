@@ -43,6 +43,9 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
+          config: |
+            paths-ignore:
+              - target/**
 
       - name: Install Rust
         if: matrix.language == 'rust'
