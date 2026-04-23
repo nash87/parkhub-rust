@@ -1,0 +1,38 @@
+---
+import '../styles/global.css';
+---
+
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; base-uri 'self'; form-action 'self';" />
+    <meta name="description" content="ParkHub v5 — the 2026 urban mobility command center. Dashboard, bookings, fleet, admin — all in one keyboard-first surface." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>ParkHub v5 — Command Center</title>
+    <script is:inline>
+      // Pre-hydration mode boot — avoids the light→dark flash when the stored
+      // mode is void or marble_dark. Mirrors ThemeProvider.readInitial exactly.
+      (function () {
+        var m = localStorage.getItem('ph-v5-mode');
+        if (!m) {
+          m = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'marble_dark'
+            : 'marble_light';
+        }
+        document.documentElement.setAttribute('data-ph-mode', m);
+      })();
+    </script>
+  </head>
+  <body style="margin:0;background:var(--v5-bg);color:var(--v5-txt);">
+    <div id="root"></div>
+    <script>
+      import { V5App } from '../design-v5/App';
+      import { createRoot } from 'react-dom/client';
+      import { createElement } from 'react';
+      const root = createRoot(document.getElementById('root')!);
+      root.render(createElement(V5App));
+    </script>
+  </body>
+</html>
