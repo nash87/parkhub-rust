@@ -4,6 +4,7 @@ import { Sparkle, Brain, CalendarBlank, Clock, TrendUp, CaretDown } from '@phosp
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
+import { useTheme } from '../context/ThemeContext';
 
 interface Lot {
   id: string;
@@ -89,6 +90,8 @@ function getLevel(pct: number): 'low' | 'medium' | 'high' {
 
 export function OccupancyPredictionPage() {
   const { t } = useTranslation();
+  const { designTheme } = useTheme();
+  const surfaceVariant = designTheme === 'void' ? 'void' : 'marble';
   const [lots, setLots] = useState<Lot[]>([]);
   const [selectedLot, setSelectedLot] = useState('');
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
@@ -189,6 +192,7 @@ export function OccupancyPredictionPage() {
       animate="show"
       className="space-y-6"
       data-testid="prediction-page"
+      data-surface={surfaceVariant}
     >
       {/* Header */}
       <motion.div variants={fadeUp} className="flex items-center justify-between flex-wrap gap-4">

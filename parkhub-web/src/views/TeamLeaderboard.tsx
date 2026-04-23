@@ -4,6 +4,7 @@ import { Trophy, Medal, Lightning, Star } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
+import { useTheme } from '../context/ThemeContext';
 
 interface TeamMember {
   id: string;
@@ -88,6 +89,8 @@ const MEDAL_COLORS = ['text-yellow-500', 'text-surface-400', 'text-amber-700'];
 
 export function TeamLeaderboardPage() {
   const { t } = useTranslation();
+  const { designTheme } = useTheme();
+  const surfaceVariant = designTheme === 'void' ? 'void' : 'marble';
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,7 +158,7 @@ export function TeamLeaderboardPage() {
 
   if (!leaderboard.length) {
     return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6" data-testid="leaderboard-page">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6" data-testid="leaderboard-page" data-surface={surfaceVariant}>
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
             <Trophy weight="fill" className="w-7 h-7 text-yellow-500" />
@@ -178,6 +181,7 @@ export function TeamLeaderboardPage() {
       animate="show"
       className="space-y-6"
       data-testid="leaderboard-page"
+      data-surface={surfaceVariant}
     >
       {/* Header */}
       <motion.div variants={fadeUp}>

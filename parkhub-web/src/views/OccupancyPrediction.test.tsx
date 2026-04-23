@@ -4,6 +4,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 
 // ── Mocks ──
 
+const mockUseTheme = vi.fn();
+
+vi.mock('../context/ThemeContext', () => ({
+  useTheme: () => mockUseTheme(),
+}));
+
 vi.mock('../api/client', () => ({
   api: {},
   getInMemoryToken: () => 'test-token',
@@ -80,6 +86,8 @@ const mockStats = {
 describe('OccupancyPredictionPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseTheme.mockReset();
+    mockUseTheme.mockReturnValue({ designTheme: 'marble' });
   });
 
   afterEach(() => {
