@@ -116,7 +116,8 @@ jobs:
             --workers=1 \
             --reporter=github \
             e2e/v5-visual.spec.ts \
-            e2e/v5-happy-paths.spec.ts
+            e2e/v5-happy-paths.spec.ts \
+            e2e/v5-a11y.spec.ts
 
       - name: Stop server
         if: always()

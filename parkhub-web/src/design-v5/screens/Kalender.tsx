@@ -175,102 +175,117 @@ export function KalenderV5({ navigate }: { navigate: (id: ScreenId) => void }) {
 
       <div className="v5-ani" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 12, animationDelay: '0.12s' }}>
         <Card style={{ overflow: 'hidden', padding: 0 }}>
-          <div
-            role="grid"
-            aria-label={`Kalender ${monthLabel}`}
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--v5-bor)' }}
-          >
-            {WEEKDAYS.map((label) => (
-              <div
-                key={label}
-                role="columnheader"
-                className="v5-mono"
-                style={{ padding: '10px 0', fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'center', color: 'var(--v5-mut)' }}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
-            {days.map((day, idx) => {
-              const inMonth = isSameMonth(day, currentMonth);
-              const isToday = isSameDay(day, today);
-              const selected = !!(selectedDate && isSameDay(day, selectedDate));
-              const dayEvents = eventsByDay.get(formatDateKey(day)) ?? [];
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  data-testid="kalender-day"
-                  aria-label={day.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
-                  aria-pressed={selected}
-                  onClick={() => setSelectedDate(day)}
-                  style={{
-                    minHeight: 82,
-                    padding: 6,
-                    background: selected ? 'var(--v5-acc-muted)' : 'transparent',
-                    border: 'none',
-                    borderRight: (idx + 1) % 7 === 0 ? 'none' : '1px solid var(--v5-bor)',
-                    borderBottom: idx < days.length - 7 ? '1px solid var(--v5-bor)' : 'none',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    opacity: inMonth ? 1 : 0.4,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                    fontFamily: 'inherit',
-                    color: 'inherit',
-                  }}
+          {/* WCAG `role="grid"` requires `role="row"` children, which in turn
+              wrap `role="columnheader"` and `role="gridcell"` (axe rules
+              aria-required-children / aria-required-parent). We keep the CSS
+              grid layout for visuals and add the ARIA row wrappers so the
+              semantics match the WAI-ARIA grid pattern. */}
+          <div role="grid" aria-label={`Kalender ${monthLabel}`}>
+            <div
+              role="row"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '1px solid var(--v5-bor)' }}
+            >
+              {WEEKDAYS.map((label) => (
+                <div
+                  key={label}
+                  role="columnheader"
+                  className="v5-mono"
+                  style={{ padding: '10px 0', fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', textAlign: 'center', color: 'var(--v5-mut)' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span
-                      className="v5-mono"
-                      style={{
-                        fontSize: 11,
-                        fontWeight: isToday ? 700 : 500,
-                        color: isToday ? 'var(--v5-accent-fg)' : selected ? 'var(--v5-acc)' : 'var(--v5-txt)',
-                        background: isToday ? 'var(--v5-acc)' : 'transparent',
-                        padding: isToday ? '2px 6px' : 0,
-                        borderRadius: isToday ? 999 : 0,
-                        minWidth: 18,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {day.getDate()}
-                    </span>
-                    {dayEvents.length > 0 && (
-                      <span className="v5-mono" style={{ fontSize: 9, color: 'var(--v5-mut)' }}>
-                        {dayEvents.length}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {dayEvents.slice(0, 2).map((e) => (
-                      <div
-                        key={e.id}
-                        title={`${e.title} (${e.status})`}
+                  {label}
+                </div>
+              ))}
+            </div>
+            {Array.from({ length: Math.ceil(days.length / 7) }).map((_, weekIdx) => (
+              <div
+                key={`week-${weekIdx}`}
+                role="row"
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}
+              >
+                {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, localIdx) => {
+                  const idx = weekIdx * 7 + localIdx;
+                  const inMonth = isSameMonth(day, currentMonth);
+                  const isToday = isSameDay(day, today);
+                  const selected = !!(selectedDate && isSameDay(day, selectedDate));
+                  const dayEvents = eventsByDay.get(formatDateKey(day)) ?? [];
+                  return (
+                    <div role="gridcell" key={idx} style={{ display: 'flex' }}>
+                      <button
+                        type="button"
+                        data-testid="kalender-day"
+                        aria-label={day.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        aria-pressed={selected}
+                        onClick={() => setSelectedDate(day)}
                         style={{
+                          minHeight: 82,
+                          width: '100%',
+                          padding: 6,
+                          background: selected ? 'var(--v5-acc-muted)' : 'transparent',
+                          border: 'none',
+                          borderRight: (localIdx + 1) % 7 === 0 ? 'none' : '1px solid var(--v5-bor)',
+                          borderBottom: idx < days.length - 7 ? '1px solid var(--v5-bor)' : 'none',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          opacity: inMonth ? 1 : 0.4,
                           display: 'flex',
-                          alignItems: 'center',
+                          flexDirection: 'column',
                           gap: 4,
-                          fontSize: 10,
-                          color: 'var(--v5-txt)',
-                          background: 'var(--v5-sur2)',
-                          borderRadius: 5,
-                          padding: '2px 5px',
+                          fontFamily: 'inherit',
+                          color: 'inherit',
                         }}
                       >
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor(e.status), flexShrink: 0 }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</span>
-                      </div>
-                    ))}
-                    {dayEvents.length > 2 && (
-                      <div style={{ fontSize: 9, color: 'var(--v5-mut)' }}>+{dayEvents.length - 2}</div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span
+                            className="v5-mono"
+                            style={{
+                              fontSize: 11,
+                              fontWeight: isToday ? 700 : 500,
+                              color: isToday ? 'var(--v5-accent-fg)' : selected ? 'var(--v5-acc)' : 'var(--v5-txt)',
+                              background: isToday ? 'var(--v5-acc)' : 'transparent',
+                              padding: isToday ? '2px 6px' : 0,
+                              borderRadius: isToday ? 999 : 0,
+                              minWidth: 18,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {day.getDate()}
+                          </span>
+                          {dayEvents.length > 0 && (
+                            <span className="v5-mono" style={{ fontSize: 9, color: 'var(--v5-mut)' }}>
+                              {dayEvents.length}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {dayEvents.slice(0, 2).map((e) => (
+                            <div
+                              key={e.id}
+                              title={`${e.title} (${e.status})`}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                fontSize: 10,
+                                color: 'var(--v5-txt)',
+                                background: 'var(--v5-sur2)',
+                                borderRadius: 5,
+                                padding: '2px 5px',
+                              }}
+                            >
+                              <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor(e.status), flexShrink: 0 }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</span>
+                            </div>
+                          ))}
+                          {dayEvents.length > 2 && (
+                            <div style={{ fontSize: 9, color: 'var(--v5-mut)' }}>+{dayEvents.length - 2}</div>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </Card>
 

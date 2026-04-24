@@ -163,7 +163,12 @@ export function EincheckenV5({ navigate }: { navigate: (id: ScreenId) => void })
   const isActing = checkInMutation.isPending || checkOutMutation.isPending;
 
   return (
-    <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div
+      role="region"
+      aria-label="Einchecken"
+      tabIndex={0}
+      style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}
+    >
       <div className="v5-ani" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Einchecken</span>
         <Badge variant={isCheckedIn ? 'success' : 'gray'} dot>
