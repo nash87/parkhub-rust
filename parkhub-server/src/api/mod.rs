@@ -183,6 +183,8 @@ pub mod sharing;
 mod snapshots;
 #[cfg(feature = "mod-social")]
 mod social;
+/// T-1946 — Server-Sent Events for realtime fleet updates.
+pub mod sse;
 #[cfg(feature = "mod-sso")]
 pub mod sso;
 #[cfg(feature = "mod-stripe")]
@@ -687,6 +689,12 @@ fn public_routes(state: &SharedState, rate_limiters: &EndpointRateLimiters) -> R
         // when the websocket module is compiled in.
         router = router.route("/api/v1/ws", get(ws::ws_handler));
     }
+
+    // T-1946 — Server-Sent Events for fleet screens (Einchecken/EV/Tausch).
+    // Auth is performed inside the handler (cookie OR bearer) because
+    // `auth_middleware` enforces an `X-Requested-With` CSRF header that
+    // browser `EventSource` cannot set.
+    router = router.route("/api/v1/events/fleet", get(sse::fleet_events_handler));
 
     // Setup wizard (multi-step onboarding) — public for initial setup
     #[cfg(feature = "mod-setup-wizard")]
@@ -2537,6 +2545,7 @@ mod tenant_scope_tests {
             mdns: None,
             scheduler: None,
             ws_events: crate::api::ws::EventBroadcaster::new(),
+            fleet_events: crate::api::sse::FleetEventBroadcaster::new(),
             revocation_store: crate::jwt::TokenRevocationList::new(),
         };
         StateHarness { state, _dir: dir }

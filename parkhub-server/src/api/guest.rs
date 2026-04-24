@@ -98,6 +98,15 @@ pub async fn create_guest_booking(
         );
     }
 
+    // T-1946: broadcast SSE fleet event AFTER DB commit.
+    let _ = state_guard
+        .fleet_events
+        .broadcast(parkhub_common::FleetEvent::guest_created(
+            guest_booking.id.to_string(),
+            Some(guest_booking.lot_id.to_string()),
+            auth_user.user_id.to_string(),
+        ));
+
     (
         StatusCode::CREATED,
         Json(ApiResponse::success(guest_booking)),
@@ -223,6 +232,15 @@ pub async fn admin_cancel_guest_booking(
             )),
         );
     }
+
+    // T-1946: broadcast SSE fleet event AFTER DB commit.
+    let _ = state_guard
+        .fleet_events
+        .broadcast(parkhub_common::FleetEvent::guest_cancelled(
+            booking.id.to_string(),
+            Some(booking.lot_id.to_string()),
+            auth_user.user_id.to_string(),
+        ));
 
     (StatusCode::OK, Json(ApiResponse::success(booking)))
 }

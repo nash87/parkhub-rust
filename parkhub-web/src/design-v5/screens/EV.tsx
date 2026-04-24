@@ -5,6 +5,7 @@ import { Badge, Card, V5NamedIcon } from '../primitives';
 import { useV5Toast } from '../Toast';
 import { api, type EvCharger, type ChargerConnector, type ChargerStatus, type ChargingSession } from '../../api/client';
 import type { ScreenId } from '../nav';
+import { useFleetEvents } from '../../hooks/useFleetEvents';
 
 const CONNECTOR_LABEL: Record<ChargerConnector, string> = {
   type2: 'Type 2',
@@ -101,6 +102,15 @@ export function EVV5({ navigate: _navigate }: { navigate: (id: ScreenId) => void
       toast('Laden beendet', 'success');
     },
     onError: (err: Error) => toast(err.message, 'error'),
+  });
+
+  // T-1946: SSE push updates. Polling (staleTime 15s) is preserved as
+  // fallback; SSE upgrades us to <1s latency when connected.
+  useFleetEvents({
+    invalidate: {
+      'ev.session.started': [['ev-chargers'], ['ev-sessions']],
+      'ev.session.stopped': [['ev-chargers'], ['ev-sessions']],
+    },
   });
 
   const isLoading = lotsQuery.isLoading || chargersQuery.isLoading || sessionsQuery.isLoading;

@@ -5,6 +5,7 @@ import { Badge, Card, V5NamedIcon } from '../primitives';
 import { useV5Toast } from '../Toast';
 import { api, type Booking, type SwapRequest } from '../../api/client';
 import type { ScreenId } from '../nav';
+import { useFleetEvents } from '../../hooks/useFleetEvents';
 
 const STATUS_LABEL: Record<SwapRequest['status'], string> = {
   pending: 'Offen',
@@ -144,6 +145,16 @@ export function TauschV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
     },
     staleTime: 30_000,
     refetchOnWindowFocus: true,
+  });
+
+  // T-1946: SSE push updates. Polling (staleTime 30s) is preserved as
+  // fallback; SSE upgrades us to <1s latency when connected.
+  useFleetEvents({
+    invalidate: {
+      'swap.requested': [['swap-requests'], ['swap-bookings']],
+      'swap.accepted': [['swap-requests'], ['swap-bookings']],
+      'swap.declined': [['swap-requests'], ['swap-bookings']],
+    },
   });
 
   const acceptMutation = useMutation({

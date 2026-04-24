@@ -22,6 +22,11 @@ vi.mock('../Toast', () => ({
   V5ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+const mockUseFleetEvents = vi.fn(() => ({ connected: false }));
+vi.mock('../../hooks/useFleetEvents', () => ({
+  useFleetEvents: (...a: unknown[]) => mockUseFleetEvents(...a),
+}));
+
 import { EincheckenV5 } from './Einchecken';
 
 function renderScreen(navigate = vi.fn()) {
@@ -126,5 +131,20 @@ describe('EincheckenV5', () => {
       expect(mockCheckOut).toHaveBeenCalledWith('b1');
       expect(mockToast).toHaveBeenCalledWith('Ausgecheckt', 'success');
     });
+  });
+
+  // T-1946 — SSE wiring
+  it('wires useFleetEvents with checkin invalidation map', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    renderScreen();
+    await waitFor(() => expect(mockUseFleetEvents).toHaveBeenCalled());
+    const opts = mockUseFleetEvents.mock.calls[0][0] as {
+      invalidate: Record<string, unknown[][]>;
+    };
+    expect(opts.invalidate['checkin.started']).toBeDefined();
+    expect(opts.invalidate['checkin.completed']).toBeDefined();
+    // Must invalidate the bookings query that the screen polls.
+    const allKeys = Object.values(opts.invalidate).flat() as unknown[][];
+    expect(allKeys.some((k) => k?.[0] === 'einchecken-bookings')).toBe(true);
   });
 });

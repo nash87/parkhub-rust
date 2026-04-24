@@ -157,6 +157,15 @@ pub async fn start_charging(
         );
     }
 
+    // T-1946: broadcast SSE fleet event AFTER DB commit.
+    let _ = state_guard
+        .fleet_events
+        .broadcast(parkhub_common::FleetEvent::ev_session_started(
+            session.id.to_string(),
+            Some(charger.lot_id.to_string()),
+            auth_user.user_id.to_string(),
+        ));
+
     (StatusCode::CREATED, Json(ApiResponse::success(session)))
 }
 
@@ -224,10 +233,20 @@ pub async fn stop_charging(
     }
 
     // Release charger
+    let lot_id_for_event = charger.as_ref().map(|c| c.lot_id.to_string());
     if let Some(mut c) = charger {
         c.status = EvChargerStatus::Available;
         let _ = state_guard.db.save_charger(&c).await;
     }
+
+    // T-1946: broadcast SSE fleet event AFTER DB commit.
+    let _ = state_guard
+        .fleet_events
+        .broadcast(parkhub_common::FleetEvent::ev_session_stopped(
+            session.id.to_string(),
+            lot_id_for_event,
+            auth_user.user_id.to_string(),
+        ));
 
     (StatusCode::OK, Json(ApiResponse::success(session)))
 }
