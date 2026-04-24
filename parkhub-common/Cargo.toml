@@ -18,6 +18,23 @@ uuid.workspace = true
 thiserror.workspace = true
 utoipa = { version = "5", features = ["chrono", "uuid"] }
 
+# ts-rs — emit TypeScript types from Rust source on the `gen-types` feature.
+# Optional so release binaries never depend on it. Derives are feature-gated
+# via #[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ...)] so regular
+# builds see no impact on compile time or binary size.
+# License: MIT OR Apache-2.0 (commercial-safe).
+# NOTE: the `format` feature transitively pulls dprint-plugin-typescript →
+# swc_common 0.33 → which references `serde::__private` that is no longer
+# public in serde 1.0.228+. Stick with the default (unformatted) output —
+# git-diff-based drift detection in CI doesn't need pretty formatting.
+ts-rs = { version = "10", optional = true, features = ["serde-compat", "no-serde-warnings", "chrono-impl", "uuid-impl", "serde-json-impl"] }
+
+[features]
+# Enable on-disk TypeScript export via #[derive(ts_rs::TS)]. Consumed by the
+# ts_export integration test in parkhub-server/tests/ts_export.rs. Default
+# builds leave this off so ts-rs is never compiled into the server binary.
+gen-types = ["dep:ts-rs"]
+
 [dev-dependencies]
 # Property-based round-trip tests for DTOs and enums. Pinned to a stable
 # release; only pulled in for `cargo test`, never in the release binary.

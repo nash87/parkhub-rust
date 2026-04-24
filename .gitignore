@@ -88,3 +88,11 @@ coverage/
 # only .snap.new (pending review) is ignored. See src/api/snapshots.rs.
 *.snap.new
 *.pending-snap
+
+# ts-rs default output: the `gen-types` feature writes additional copies of
+# external-crate bindings (e.g. serde_json::Value) to each crate's
+# `bindings/` directory regardless of the path passed to `export_all_to`.
+# Our authoritative output lives in parkhub-web/src/generated/types/ (which
+# the CI drift-gate watches); these stray copies are build byproducts.
+parkhub-server/bindings/
+parkhub-common/bindings/

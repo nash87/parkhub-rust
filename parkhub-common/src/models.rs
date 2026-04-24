@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 /// User account information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -53,6 +54,7 @@ const fn default_credits_quota() -> i32 {
 /// User role for access control
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum UserRole {
     #[default]
     User,
@@ -63,6 +65,7 @@ pub enum UserRole {
 
 /// User preferences stored on server
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct UserPreferences {
     pub default_duration_minutes: Option<i32>,
     pub favorite_slots: Vec<String>,
@@ -74,6 +77,7 @@ pub struct UserPreferences {
 
 /// Authentication tokens
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct AuthTokens {
     pub access_token: String,
     pub refresh_token: String,
@@ -87,6 +91,7 @@ pub struct AuthTokens {
 
 /// Parking lot information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ParkingLot {
     pub id: Uuid,
     pub name: String,
@@ -110,6 +115,7 @@ pub struct ParkingLot {
 
 /// Parking floor within a lot
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ParkingFloor {
     pub id: Uuid,
     pub lot_id: Uuid,
@@ -122,6 +128,7 @@ pub struct ParkingFloor {
 
 /// Individual parking slot
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ParkingSlot {
     pub id: Uuid,
     pub lot_id: Uuid,
@@ -142,6 +149,7 @@ pub struct ParkingSlot {
 /// Slot type classification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum SlotType {
     #[default]
     Standard,
@@ -157,6 +165,7 @@ pub enum SlotType {
 /// Slot availability status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum SlotStatus {
     #[default]
     Available,
@@ -168,6 +177,7 @@ pub enum SlotStatus {
 
 /// Brief booking info for slot display
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct SlotBookingInfo {
     pub booking_id: Uuid,
     pub user_id: Uuid,
@@ -180,6 +190,7 @@ pub struct SlotBookingInfo {
 /// Additional slot features
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum SlotFeature {
     NearExit,
     NearElevator,
@@ -193,6 +204,7 @@ pub enum SlotFeature {
 
 /// Physical position in the lot
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct SlotPosition {
     pub x: f32,
     pub y: f32,
@@ -204,6 +216,7 @@ pub struct SlotPosition {
 /// Lot operational status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum LotStatus {
     #[default]
     Open,
@@ -218,6 +231,7 @@ pub enum LotStatus {
 
 /// Pricing information for a lot
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct PricingInfo {
     pub currency: String,
     pub rates: Vec<PricingRate>,
@@ -227,6 +241,7 @@ pub struct PricingInfo {
 
 /// Individual pricing rate
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct PricingRate {
     pub duration_minutes: i32,
     pub price: f64,
@@ -235,6 +250,7 @@ pub struct PricingRate {
 
 /// Operating hours
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct OperatingHours {
     pub is_24h: bool,
     pub monday: Option<DayHours>,
@@ -248,6 +264,7 @@ pub struct OperatingHours {
 
 /// Hours for a specific day
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct DayHours {
     pub open: String,
     pub close: String,
@@ -261,6 +278,7 @@ pub struct DayHours {
 
 /// Dynamic pricing rules for occupancy-based surge/discount pricing per lot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct DynamicPricingRules {
     /// Whether dynamic pricing is enabled for this lot
     pub enabled: bool,
@@ -291,6 +309,7 @@ impl Default for DynamicPricingRules {
 
 /// Current dynamic price calculation result.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct DynamicPriceResult {
     /// The computed hourly price after applying any multiplier
     pub current_price: f64,
@@ -314,6 +333,7 @@ pub struct DynamicPriceResult {
 
 /// Credit transaction record
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct CreditTransaction {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -328,6 +348,7 @@ pub struct CreditTransaction {
 /// Credit transaction types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum CreditTransactionType {
     Grant,
     Deduction,
@@ -342,6 +363,7 @@ pub enum CreditTransactionType {
 
 /// Full booking information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct Booking {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -368,6 +390,7 @@ pub struct Booking {
 /// Booking status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum BookingStatus {
     #[default]
     Pending,
@@ -381,6 +404,7 @@ pub enum BookingStatus {
 
 /// Pricing details for a booking
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct BookingPricing {
     pub base_price: f64,
     pub discount: f64,
@@ -394,6 +418,7 @@ pub struct BookingPricing {
 /// Payment status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum PaymentStatus {
     #[default]
     Pending,
@@ -405,6 +430,7 @@ pub enum PaymentStatus {
 
 /// Vehicle information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct Vehicle {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -425,6 +451,7 @@ pub struct Vehicle {
 /// Vehicle type
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum VehicleType {
     #[default]
     Car,
@@ -443,6 +470,7 @@ pub enum VehicleType {
 /// `parkhub-server/src/api/co2.rs`.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum FuelType {
     #[default]
     Unknown,
@@ -489,6 +517,7 @@ pub struct BookingFilters {
 
 /// User notification
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct Notification {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -503,6 +532,7 @@ pub struct Notification {
 /// Notification type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum NotificationType {
     BookingConfirmed,
     BookingReminder,
@@ -599,6 +629,7 @@ pub enum LayoutElementType {
 /// Absence type classification
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum AbsenceType {
     Homeoffice,
     Vacation,
@@ -609,6 +640,7 @@ pub enum AbsenceType {
 
 /// Absence record (homeoffice, vacation, sick, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct Absence {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -622,6 +654,7 @@ pub struct Absence {
 
 /// Recurring absence pattern (e.g. homeoffice every Monday)
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct AbsencePattern {
     pub absence_type: AbsenceType,
     pub weekdays: Vec<u8>,
@@ -662,6 +695,7 @@ const fn default_waitlist_status() -> WaitlistStatus {
 
 /// Guest booking (visitor parking)
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct GuestBooking {
     pub id: Uuid,
     pub created_by: Uuid,
@@ -679,6 +713,7 @@ pub struct GuestBooking {
 
 /// Swap request between two bookings
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct SwapRequest {
     pub id: Uuid,
     pub requester_booking_id: Uuid,
@@ -693,6 +728,7 @@ pub struct SwapRequest {
 /// Swap request status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum SwapRequestStatus {
     Pending,
     Accepted,
@@ -719,6 +755,7 @@ pub struct RecurringBooking {
 
 /// System announcement
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct Announcement {
     pub id: Uuid,
     pub title: String,
@@ -733,6 +770,7 @@ pub struct Announcement {
 /// Announcement severity level
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum AnnouncementSeverity {
     Info,
     Warning,
@@ -747,6 +785,7 @@ pub enum AnnouncementSeverity {
 /// Status of a translation proposal
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum ProposalStatus {
     Pending,
     Approved,
@@ -755,6 +794,7 @@ pub enum ProposalStatus {
 
 /// A community-submitted translation proposal
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct TranslationProposal {
     pub id: Uuid,
     pub language: String,
@@ -786,6 +826,7 @@ pub struct TranslationVote {
 
 /// An approved translation override (applied at runtime)
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct TranslationOverride {
     pub language: String,
     pub key: String,
@@ -832,6 +873,7 @@ pub struct Visitor {
 /// EV Charger connector type
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum ConnectorType {
     Type2,
     Ccs,
@@ -842,6 +884,7 @@ pub enum ConnectorType {
 /// EV Charger status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum EvChargerStatus {
     Available,
     InUse,
@@ -851,6 +894,7 @@ pub enum EvChargerStatus {
 
 /// EV Charger in a parking lot
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct EvCharger {
     pub id: Uuid,
     pub lot_id: Uuid,
@@ -865,6 +909,7 @@ pub struct EvCharger {
 /// Charging session status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum ChargingSessionStatus {
     Active,
     Completed,
@@ -873,6 +918,7 @@ pub enum ChargingSessionStatus {
 
 /// EV Charging session
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ChargingSession {
     pub id: Uuid,
     pub charger_id: Uuid,

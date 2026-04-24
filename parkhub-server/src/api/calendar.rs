@@ -26,6 +26,10 @@ pub struct CalendarQuery {
 }
 
 /// Calendar event response
+//
+// TODO(T-1941 follow-up): derive `ts_rs::TS` here once parkhub-server exposes
+// a public lib surface the ts_export test can import. Blocked on the `api::*`
+// modules being bin-private. Tracked by T-1941 follow-up in the PR body.
 #[derive(Debug, Serialize)]
 pub struct CalendarEvent {
     pub id: String,

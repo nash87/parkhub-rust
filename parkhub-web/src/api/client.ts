@@ -1,10 +1,57 @@
 const BASE_URL = import.meta.env?.VITE_API_URL || '';
 
+// ──────────────────────────────────────────────────────────────────────
+// Auto-generated imports from the Rust API source of truth (T-1941).
+//
+// Types re-exported from parkhub-web/src/generated/types/ are emitted by
+// `cargo test --features gen-types -p parkhub-server --test ts_export` out
+// of parkhub-common/src/{models,protocol}.rs. The `types-drift` CI job
+// re-runs that command on every PR and fails if the committed TS drifts
+// from the Rust source.
+//
+// Scope of this migration: closed enums + protocol-error shapes only. Most
+// object types in client.ts still diverge structurally from the current
+// Rust DB models (the server projects to different shapes in handlers),
+// and migrating them requires matching API-handler-level DTOs on the Rust
+// side first. Tracked as a follow-up to T-1941.
+// ──────────────────────────────────────────────────────────────────────
+import type { ApiError as GeneratedApiError } from '../generated/types/ApiError';
+import type { SlotType as GeneratedSlotType } from '../generated/types/SlotType';
+import type { SlotFeature as GeneratedSlotFeature } from '../generated/types/SlotFeature';
+import type { LotStatus as GeneratedLotStatus } from '../generated/types/LotStatus';
+import type { AbsenceType as GeneratedAbsenceType } from '../generated/types/AbsenceType';
+import type { ProposalStatus as GeneratedProposalStatus } from '../generated/types/ProposalStatus';
+import type { SwapRequestStatus as GeneratedSwapRequestStatus } from '../generated/types/SwapRequestStatus';
+import type { AnnouncementSeverity as GeneratedAnnouncementSeverity } from '../generated/types/AnnouncementSeverity';
+import type { VehicleType as GeneratedVehicleType } from '../generated/types/VehicleType';
+import type { FuelType as GeneratedFuelType } from '../generated/types/FuelType';
+
+/**
+ * Standard API response wrapper.
+ *
+ * Shape closely matches `parkhub_common::protocol::ApiResponse<T>` in
+ * parkhub-common/src/protocol.rs. The Rust source also carries a `meta:
+ * ResponseMeta | null` field (pagination envelope) which we model as
+ * optional here so existing `request(...)` construction sites don't need
+ * to pass `meta: null`. `error` mirrors the generated `ApiError`.
+ */
 export interface ApiResponse<T> {
   success: boolean;
   data: T | null;
-  error?: { code: string; message: string; details?: unknown };
+  error?: GeneratedApiError;
+  meta?: unknown;
 }
+
+/** Re-export generated closed-enum types under their short TS names. */
+export type SlotType = GeneratedSlotType;
+export type SlotFeature = GeneratedSlotFeature;
+export type LotStatus = GeneratedLotStatus;
+export type AbsenceType = GeneratedAbsenceType;
+export type ProposalStatus = GeneratedProposalStatus;
+export type SwapRequestStatus = GeneratedSwapRequestStatus;
+export type AnnouncementSeverity = GeneratedAnnouncementSeverity;
+export type VehicleType = GeneratedVehicleType;
+export type FuelType = GeneratedFuelType;
 
 export interface RequestOptions extends Omit<RequestInit, 'signal'> {
   signal?: AbortSignal;
@@ -775,8 +822,10 @@ export interface OperatingHoursResponse extends OperatingHoursData {
   is_open_now: boolean;
 }
 
-export type SlotType = 'standard' | 'compact' | 'large' | 'handicap' | 'electric' | 'motorcycle' | 'reserved' | 'vip';
-export type SlotFeature = 'near_exit' | 'near_elevator' | 'near_stairs' | 'covered' | 'security_camera' | 'well_lit' | 'wide_lane' | 'charging_station';
+// `SlotType` and `SlotFeature` are re-exported from the generated types
+// at the top of this file (T-1941). The hand-written definitions that
+// used to live here were byte-for-byte identical to the generated ones;
+// removing them prevents drift.
 
 export interface ParkingSlot {
   id: string;
@@ -1012,7 +1061,8 @@ export interface Announcement {
   created_at: string;
 }
 
-export type LotStatus = 'open' | 'closed' | 'full' | 'maintenance';
+// `LotStatus` is re-exported from the generated types at the top of this
+// file (T-1941).
 
 export interface CreateLotRequest {
   name: string;
@@ -1072,7 +1122,8 @@ export interface UpdateLotRequest {
 
 // ── Translation Management ──
 
-export type ProposalStatus = 'pending' | 'approved' | 'rejected';
+// `ProposalStatus` is re-exported from the generated types at the top of
+// this file (T-1941).
 
 export interface TranslationProposal {
   id: string;
