@@ -148,6 +148,14 @@ subtle = "2.6.1"
 printpdf = { version = "0.9", default-features = false }
 web-push = { version = "0.11", features = ["hyper-client"] }
 
+# ts-rs — optional, enabled by the `gen-types` feature. Used only by the
+# ts_export integration test under tests/ts_export.rs to emit TypeScript
+# types for the frontend. NEVER pulled into release binaries.
+# License: MIT OR Apache-2.0 (commercial-safe).
+# See parkhub-common/Cargo.toml for the rationale behind dropping the
+# `format` feature (swc_common + serde 1.0.228 incompat).
+ts-rs = { version = "10", optional = true, features = ["serde-compat", "no-serde-warnings", "chrono-impl", "uuid-impl", "serde-json-impl"] }
+
 [build-dependencies]
 slint-build = { version = "1.15", optional = true }  # updated from 1.14
 
@@ -236,6 +244,10 @@ redis-revocation = ["dep:redis"]
 # Off by default: enables `src/lib.rs::fuzz_api` for cargo-fuzz harnesses.
 # Production builds NEVER enable this — see `fuzz/` for consumers.
 fuzzing = []
+# Enable the ts-rs dependency + forward into parkhub-common so derived
+# impls are available during `cargo test --features gen-types --test ts_export`.
+# Leaves release binaries untouched.
+gen-types = ["dep:ts-rs", "parkhub-common/gen-types"]
 mod-bookings = []
 mod-vehicles = []
 mod-absences = []

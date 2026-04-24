@@ -14,6 +14,7 @@ use crate::models::{AuthTokens, Booking, Notification, SlotBookingInfo, SlotStat
 
 /// Standard API response wrapper
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ApiResponse<T> {
     pub success: bool,
     pub data: Option<T>,
@@ -47,6 +48,7 @@ impl<T> ApiResponse<T> {
 
 /// API error details
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ApiError {
     pub code: String,
     pub message: String,
@@ -55,6 +57,7 @@ pub struct ApiError {
 
 /// Response metadata for pagination
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct ResponseMeta {
     pub page: Option<i32>,
     pub per_page: Option<i32>,
@@ -64,6 +67,7 @@ pub struct ResponseMeta {
 
 /// Paginated response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct PaginatedResponse<T> {
     pub items: Vec<T>,
     pub page: i32,
@@ -78,6 +82,7 @@ pub struct PaginatedResponse<T> {
 
 /// Login request
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -85,6 +90,7 @@ pub struct LoginRequest {
 
 /// Login response
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct LoginResponse {
     pub user: User,
     pub tokens: AuthTokens,
@@ -92,12 +98,14 @@ pub struct LoginResponse {
 
 /// Token refresh request
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 
 /// Register new user request
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct RegisterRequest {
     pub email: String,
     pub password: String,

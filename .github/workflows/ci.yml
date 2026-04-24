@@ -269,6 +269,62 @@ jobs:
         env:
           RUST_LOG: warn
 
+  types-drift:
+    name: TypeScript types drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          toolchain: 1.94.1
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Prepare embedded web placeholder
+        run: |
+          mkdir -p parkhub-web/dist
+          printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
+
+      # Runs the gen-types feature which triggers (a) ts-rs auto-generated
+      # hidden export_bindings_* tests that emit one .ts per Rust type, and
+      # (b) the explicit ts_export integration test that stamps a warning
+      # header on every file. See parkhub-server/tests/ts_export.rs.
+      - name: Regenerate TypeScript bindings from Rust
+        run: cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture
+
+      - name: Fail if generated types drifted
+        run: |
+          # Two checks cover both drift directions:
+          #   1. git diff --exit-code catches modifications + deletions of
+          #      tracked files (Rust struct field renamed, type removed
+          #      after ts_export purged its orphan, etc.).
+          #   2. git status --porcelain catches untracked files — a new
+          #      #[derive(TS)] + #[ts(export)] type where the resulting
+          #      .ts was never git-added. git diff would silently pass.
+          # Both must be empty for the gate to succeed.
+          drift=0
+          if ! git diff --exit-code parkhub-web/src/generated/; then
+            echo "::error::parkhub-web/src/generated/ has modified or deleted files (drift from Rust source)."
+            drift=1
+          fi
+          untracked="$(git status --porcelain parkhub-web/src/generated/)"
+          if [ -n "$untracked" ]; then
+            echo "::error::parkhub-web/src/generated/ has untracked or modified files not yet committed:"
+            printf '%s\n' "$untracked"
+            drift=1
+          fi
+          if [ "$drift" -ne 0 ]; then
+            echo "Regenerate locally with:"
+            echo "  cargo test --features gen-types -p parkhub-server --test ts_export -- --nocapture"
+            echo "and commit the updated files."
+            exit 1
+          fi
+          echo "Generated TypeScript types match the Rust source."
+
   openapi-drift:
     name: OpenAPI drift
     runs-on: ubuntu-latest
@@ -334,7 +390,7 @@ jobs:
   required:
     name: Required checks
     if: always()
-    needs: [actionlint, helm-validate, dependency-review, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift]
+    needs: [actionlint, helm-validate, dependency-review, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift, types-drift]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -352,8 +408,9 @@ jobs:
           CLIPPY: ${{ needs.clippy.result }}
           INTEGRATION: ${{ needs.integration.result }}
           OPENAPI_DRIFT: ${{ needs.openapi-drift.result }}
+          TYPES_DRIFT: ${{ needs.types-drift.result }}
         run: |
-          for check in ACTIONLINT HELM_VALIDATE CARGO_DENY CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT; do
+          for check in ACTIONLINT HELM_VALIDATE CARGO_DENY CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT TYPES_DRIFT; do
             if [[ "${!check}" != "success" ]]; then
               echo "REQUIRED: ${check} failed: ${!check}"
               exit 1

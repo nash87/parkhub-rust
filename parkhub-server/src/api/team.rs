@@ -14,6 +14,8 @@ use parkhub_common::{ApiResponse, BookingStatus};
 
 use super::{AuthUser, SharedState};
 
+// TODO(T-1941 follow-up): derive `ts_rs::TS` here — blocked on server lib
+// surface. See CalendarEvent for the full note.
 #[derive(Serialize)]
 pub struct TeamMemberStatus {
     user_id: Uuid,
@@ -106,6 +108,8 @@ pub async fn team_today(
     (StatusCode::OK, Json(ApiResponse::success(result)))
 }
 
+// TODO(T-1941 follow-up): derive `ts_rs::TS` here — blocked on server lib
+// surface. See CalendarEvent for the full note.
 #[derive(Serialize)]
 pub struct TeamMember {
     id: Uuid,
