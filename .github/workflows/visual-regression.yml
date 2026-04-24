@@ -26,10 +26,12 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  # `contents: write` only matters when `update_snapshots=true`; the
-  # commit-back step is gated on that input so the default scheduled
-  # run still behaves as read-only.
-  contents: write
+  # Default to read-only so nightly scheduled runs can never mutate the
+  # repo even if a dependency is compromised. The `visual` job below
+  # escalates to `contents: write` only when triggered manually via
+  # `workflow_dispatch` with `inputs.update_snapshots == true` — see
+  # the job-level `permissions:` block.
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -40,6 +42,13 @@ jobs:
     name: Playwright toHaveScreenshot
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Strict read-only for the heavy Playwright job. Any baseline refresh
+    # is staged here as an artifact and committed from a separate job
+    # (`commit-baselines` below) that only runs on manual dispatch — that
+    # way the `GITHUB_TOKEN` on scheduled + dispatch-dry-run executions
+    # can never mutate the repo even if a dependency is compromised.
+    permissions:
+      contents: read
     # Soft-fail: diffs surface as downloadable artifacts but don't block merge.
     continue-on-error: true
 
@@ -106,7 +115,7 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:18181
           CI: 'true'
-          UPDATE_SNAPSHOTS: ${{ inputs.update_snapshots == true && '1' || '' }}
+          UPDATE_SNAPSHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true && '1' || '' }}
         run: |
           args=(--project=chromium --workers=1 --reporter=github e2e/visual.spec.ts)
           [[ -n "$UPDATE_SNAPSHOTS" ]] && args+=(--update-snapshots)
@@ -122,26 +131,32 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:18181
           CI: 'true'
-          UPDATE_SNAPSHOTS: ${{ inputs.update_snapshots == true && '1' || '' }}
+          UPDATE_SNAPSHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true && '1' || '' }}
         run: |
           args=(--project=chromium --project=mobile-chrome --workers=1 --reporter=github e2e/v5-visual.spec.ts e2e/v5-happy-paths.spec.ts e2e/v5-a11y.spec.ts)
           [[ -n "$UPDATE_SNAPSHOTS" ]] && args+=(--update-snapshots)
           npx playwright test "${args[@]}"
 
-      - name: Commit updated baselines
-        if: ${{ inputs.update_snapshots == true && github.event_name == 'workflow_dispatch' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Stage refreshed baselines for commit job
+        # When running as `workflow_dispatch` with update_snapshots=true,
+        # tar up every PNG under e2e/ + parkhub-web/e2e/ so the separate
+        # `commit-baselines` job (which has `contents: write`) can check
+        # out main and replay the updates. Keeping the heavy Playwright
+        # job read-only is what makes this safe against supply-chain
+        # tampering on scheduled runs.
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A 'e2e/**/*.png' 'parkhub-web/e2e/**/*.png' || true
-          if git diff --cached --quiet; then
-            echo 'No baseline changes to commit.'
-            exit 0
-          fi
-          git commit -m 'chore(visual): refresh Playwright baselines from CI'
-          git push origin HEAD:${{ github.ref_name }}
+          mkdir -p /tmp/visual-baselines
+          find e2e parkhub-web/e2e -type f -name '*.png' -print0 \
+            | tar --null -cf /tmp/visual-baselines/baselines.tar --files-from=-
+
+      - name: Upload refreshed baselines artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: refreshed-visual-baselines
+          path: /tmp/visual-baselines/baselines.tar
+          retention-days: 1
 
       - name: Stop server
         if: always()
@@ -174,3 +189,42 @@ jobs:
             playwright-report/
             parkhub-web/playwright-report/
           retention-days: 7
+
+  commit-baselines:
+    # Isolated commit-back job. Only runs on manual dispatch with
+    # update_snapshots=true — never on the scheduled nightly trigger.
+    # Keeping `contents: write` scoped to this tiny job (no npm ci,
+    # no Playwright, no Cargo) dramatically narrows the supply-chain
+    # blast-radius compared to handing the heavy `visual` job a
+    # write-capable GITHUB_TOKEN.
+    name: Commit refreshed baselines
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
+    needs: visual
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download refreshed baselines
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v7
+        with:
+          name: refreshed-visual-baselines
+          path: /tmp/visual-baselines
+
+      - name: Apply baselines and push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tar -xf /tmp/visual-baselines/baselines.tar
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A 'e2e/**/*.png' 'parkhub-web/e2e/**/*.png' || true
+          if git diff --cached --quiet; then
+            echo 'No baseline changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore(visual): refresh Playwright baselines from CI'
+          git push origin HEAD:${{ github.ref_name }}
