@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -29,6 +32,10 @@ vi.mock('uplot', () => {
 vi.mock('uplot/dist/uPlot.min.css', () => ({}));
 
 import { AnalyticsV5 } from './Analytics';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const ANALYTICS_SRC = readFileSync(resolve(HERE, 'Analytics.tsx'), 'utf8');
+const PRIMITIVES_SRC = readFileSync(resolve(HERE, '../primitives/index.tsx'), 'utf8');
 
 const STATS = {
   total_users: 42,
@@ -93,5 +100,40 @@ describe('AnalyticsV5', () => {
     mockStats.mockResolvedValue({ success: true, data: STATS });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Analytics')).toBeInTheDocument());
+  });
+});
+
+describe('AnalyticsV5 — Lighthouse LCP budget (lazy uPlot)', () => {
+  it('Analytics.tsx dynamically imports UPlotChart via React.lazy', () => {
+    // Eager imports of UPlotChart bloat the initial JS bundle (+~40KB uPlot)
+    // and push LCP past the Lighthouse budget. The screen must instead use
+    // React.lazy so uPlot lands in its own chunk loaded only for admins.
+    expect(ANALYTICS_SRC).toMatch(
+      /lazy\(\s*\(\)\s*=>\s*import\(\s*['"]\.\.\/primitives\/UPlotChart['"]\s*\)/,
+    );
+    // No eager `UPlotChart` import from '../primitives' barrel either.
+    expect(ANALYTICS_SRC).not.toMatch(
+      /import\s*{[^}]*\bUPlotChart\b[^}]*}\s*from\s*['"]\.\.\/primitives['"]/,
+    );
+  });
+
+  it('Analytics.tsx wraps charts in <Suspense> with a skeleton fallback', () => {
+    // The lazy chunk needs a Suspense boundary to avoid the whole app
+    // collapsing while uPlot is in flight. Skeleton keeps LCP stable.
+    expect(ANALYTICS_SRC).toMatch(/\bSuspense\b/);
+    expect(ANALYTICS_SRC).toMatch(/ChartSkeleton/);
+  });
+
+  it('primitives barrel does NOT re-export UPlotChart as a runtime binding', () => {
+    // 20+ screens import from the primitives barrel; re-exporting UPlotChart
+    // there drags uPlot into every screen's module graph, defeating the
+    // whole lazy-load. Screens that actually need the chart must deep-import.
+    // Type-only re-exports (`export type { ... }`) are fine — they're erased.
+    expect(PRIMITIVES_SRC).not.toMatch(
+      /export\s*{[^}]*\bUPlotChart\b(?![A-Za-z])[^}]*}\s*from\s*['"]\.\/UPlotChart['"]/,
+    );
+    expect(PRIMITIVES_SRC).not.toMatch(
+      /import\s*{[^}]*\bUPlotChart\b(?![A-Za-z])[^}]*}\s*from\s*['"]\.\/UPlotChart['"]/,
+    );
   });
 });

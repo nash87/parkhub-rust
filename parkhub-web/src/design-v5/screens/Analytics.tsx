@@ -1,11 +1,39 @@
 import NumberFlow from '@number-flow/react';
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, SectionLabel, StatCard, UPlotChart, V5NamedIcon } from '../primitives';
+import { Card, SectionLabel, StatCard, V5NamedIcon } from '../primitives';
 import { api } from '../../api/client';
 import type { ScreenId } from '../nav';
 
+/* ───────────────────────────────────────────────────────────────────
+   uPlot (~40KB gz) is loaded lazily so non-admin routes never pay
+   its cost — keeps LCP inside the Lighthouse budget. Admin-only
+   Analytics screen is the sole consumer; the chunk materialises on
+   mount and is replayed from the HTTP cache on subsequent visits.
+   ─────────────────────────────────────────────────────────────────── */
+const UPlotChart = lazy(() =>
+  import('../primitives/UPlotChart').then((m) => ({ default: m.UPlotChart })),
+);
+
 const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+/** Skeleton placeholder matching UPlotChart's visual height (140) while the
+ *  lazy chunk streams in. Reuses the same ph-v5-pulse keyframe the screen's
+ *  loading-state skeleton blocks use, so fallback feels native. */
+function ChartSkeleton({ ariaLabel }: { ariaLabel: string }) {
+  return (
+    <div
+      role="img"
+      aria-label={ariaLabel}
+      style={{
+        height: 140,
+        borderRadius: 10,
+        background: 'var(--v5-sur2)',
+        animation: 'ph-v5-pulse 1.6s ease infinite',
+      }}
+    />
+  );
+}
 
 /** Canvas-rendered chart block backed by uPlot (MIT, ~40KB). */
 function ChartBlock({
@@ -23,6 +51,68 @@ function ChartBlock({
   stroke?: string;
   fill?: string;
 }) {
+  // Memoize data + options so the UPlotChart effect doesn't tear down
+  // and rebuild the canvas on every parent re-render (e.g. query status
+  // flips, layout toggles). Stable references → stable uPlot instance.
+  // Hooks MUST run unconditionally — the empty-data branch just skips render.
+  const data = useMemo<[number[], number[]]>(() => [xs, ys], [xs, ys]);
+  const options = useMemo<Partial<import('uplot').Options>>(
+    () => ({
+      series: [
+        {},
+        {
+          stroke,
+          fill,
+          width: 2,
+          paths: (u, sidx, i0, i1) => {
+            // Bar-style paths via uPlot's built-in bars plugin-style drawing.
+            const { ctx } = u;
+            const xVals = u.data[0] as number[];
+            const yVals = u.data[sidx] as number[];
+            const path = new Path2D();
+            const n = xVals.length;
+            if (n === 0) return null;
+            const span = n > 1 ? xVals[1]! - xVals[0]! : 1;
+            const barW = Math.max(2, u.valToPos(span, 'x', true) - u.valToPos(0, 'x', true) - 4);
+            const zeroY = u.valToPos(0, 'y', true);
+            for (let i = i0; i <= i1; i++) {
+              const cx = u.valToPos(xVals[i]!, 'x', true);
+              const cy = u.valToPos(yVals[i]!, 'y', true);
+              const h = zeroY - cy;
+              path.rect(cx - barW / 2, cy, barW, h);
+            }
+            ctx.save();
+            ctx.fillStyle = typeof fill === 'string' ? fill : 'currentColor';
+            ctx.fill(path);
+            ctx.restore();
+            return null;
+          },
+          points: { show: false },
+        },
+      ],
+      axes: [
+        {
+          stroke: 'var(--v5-mut)',
+          grid: { show: false },
+          ticks: { show: false },
+          values: (_u, splits) => splits.map((v) => tickLabels[Math.round(v)] ?? ''),
+          size: 22,
+        },
+        {
+          stroke: 'var(--v5-mut)',
+          grid: { stroke: 'var(--v5-bord)', width: 1 },
+          ticks: { show: false },
+          size: 32,
+        },
+      ],
+      scales: {
+        x: { time: false, range: [xs[0]! - 0.5, xs[xs.length - 1]! + 0.5] },
+        y: { range: (_u, _dMin, dMax) => [0, Math.max(dMax, 1) * 1.1] },
+      },
+    }),
+    [stroke, fill, tickLabels, xs],
+  );
+
   if (xs.length === 0) {
     return (
       <div>
@@ -38,64 +128,12 @@ function ChartBlock({
     );
   }
 
-  const options: Partial<import('uplot').Options> = {
-    series: [
-      {},
-      {
-        stroke,
-        fill,
-        width: 2,
-        paths: (u, sidx, i0, i1) => {
-          // Bar-style paths via uPlot's built-in bars plugin-style drawing.
-          const { ctx } = u;
-          const xVals = u.data[0] as number[];
-          const yVals = u.data[sidx] as number[];
-          const path = new Path2D();
-          const n = xVals.length;
-          if (n === 0) return null;
-          const span = n > 1 ? xVals[1]! - xVals[0]! : 1;
-          const barW = Math.max(2, u.valToPos(span, 'x', true) - u.valToPos(0, 'x', true) - 4);
-          const zeroY = u.valToPos(0, 'y', true);
-          for (let i = i0; i <= i1; i++) {
-            const cx = u.valToPos(xVals[i]!, 'x', true);
-            const cy = u.valToPos(yVals[i]!, 'y', true);
-            const h = zeroY - cy;
-            path.rect(cx - barW / 2, cy, barW, h);
-          }
-          ctx.save();
-          ctx.fillStyle = typeof fill === 'string' ? fill : 'currentColor';
-          ctx.fill(path);
-          ctx.restore();
-          return null;
-        },
-        points: { show: false },
-      },
-    ],
-    axes: [
-      {
-        stroke: 'var(--v5-mut)',
-        grid: { show: false },
-        ticks: { show: false },
-        values: (_u, splits) => splits.map((v) => tickLabels[Math.round(v)] ?? ''),
-        size: 22,
-      },
-      {
-        stroke: 'var(--v5-mut)',
-        grid: { stroke: 'var(--v5-bord)', width: 1 },
-        ticks: { show: false },
-        size: 32,
-      },
-    ],
-    scales: {
-      x: { time: false, range: [xs[0]! - 0.5, xs[xs.length - 1]! + 0.5] },
-      y: { range: (_u, _dMin, dMax) => [0, Math.max(dMax, 1) * 1.1] },
-    },
-  };
-
   return (
     <div>
       <SectionLabel>{label}</SectionLabel>
-      <UPlotChart data={[xs, ys]} options={options} ariaLabel={label} height={140} />
+      <Suspense fallback={<ChartSkeleton ariaLabel={label} />}>
+        <UPlotChart data={data} options={options} ariaLabel={label} height={140} />
+      </Suspense>
     </div>
   );
 }
