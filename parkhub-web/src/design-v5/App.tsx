@@ -9,8 +9,12 @@ import { V5AIPanel } from './AIPanel';
 import { breadcrumbFor, byId, type ScreenId } from './nav';
 import { DashboardV5 } from './screens/Dashboard';
 import { BuchungenV5 } from './screens/Buchungen';
+import { BuchenV5 } from './screens/Buchen';
 import { FahrzeugeV5 } from './screens/Fahrzeuge';
+import { KalenderV5 } from './screens/Kalender';
+import { KarteV5 } from './screens/Karte';
 import { CreditsV5 } from './screens/Credits';
+import { ProfilV5 } from './screens/Profil';
 import { PlaceholderV5 } from './screens/Placeholder';
 
 import './fonts';
@@ -24,8 +28,12 @@ import './tokens.css';
 const SCREENS: Partial<Record<ScreenId, ComponentType<{ navigate: (id: ScreenId) => void }>>> = {
   dashboard: DashboardV5,
   buchungen: BuchungenV5,
+  buchen: BuchenV5,
   fahrzeuge: FahrzeugeV5,
+  kalender: KalenderV5,
+  karte: KarteV5,
   credits: CreditsV5,
+  profil: ProfilV5,
 };
 
 const STORAGE_KEY = 'ph-v5-screen';
