@@ -161,6 +161,54 @@ describe('BuchenV5', () => {
     await waitFor(() => expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument());
   });
 
+  it('blocks confirm when startDate is cleared and toasts an error without calling createBooking', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [LOT_OPEN] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [SLOT_A] });
+    renderScreen();
+
+    await waitFor(() => expect(screen.getByText('Parkhaus Nord')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('buchen-lot-card'));
+    await waitFor(() => expect(screen.getByTestId('buchen-slot')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('buchen-slot'));
+
+    // Clear the datetime-local input — user empties the field before confirming.
+    const startInput = document.getElementById('buchen-start') as HTMLInputElement;
+    expect(startInput).toBeTruthy();
+    fireEvent.change(startInput, { target: { value: '' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Weiter/ }));
+    await waitFor(() => expect(screen.getByTestId('buchen-confirm')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('buchen-confirm'));
+
+    await waitFor(() =>
+      expect(mockToast).toHaveBeenCalledWith('Bitte gültige Zeiten angeben', 'error'),
+    );
+    expect(mockCreateBooking).not.toHaveBeenCalled();
+  });
+
+  it('sends calendarEvents-equivalent ISO datetime-local values to createBooking on valid confirm (regression guard)', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [LOT_OPEN] });
+    mockGetLotSlots.mockResolvedValue({ success: true, data: [SLOT_A] });
+    mockCreateBooking.mockResolvedValue({ success: true, data: { id: 'b-valid' } });
+    renderScreen();
+
+    await waitFor(() => expect(screen.getByText('Parkhaus Nord')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('buchen-lot-card'));
+    await waitFor(() => expect(screen.getByTestId('buchen-slot')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('buchen-slot'));
+    fireEvent.click(screen.getByRole('button', { name: /Weiter/ }));
+    await waitFor(() => expect(screen.getByTestId('buchen-confirm')).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('buchen-confirm'));
+
+    await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
+    const payload = mockCreateBooking.mock.calls[0][0];
+    // Default start is prefilled → toISOString() must succeed and produce a Z-suffixed ISO string.
+    expect(payload.start_time).toMatch(/\dT\d/);
+    expect(payload.end_time).toMatch(/\dT\d/);
+    expect(new Date(payload.start_time).valueOf()).not.toBeNaN();
+    expect(new Date(payload.end_time).valueOf()).not.toBeNaN();
+  });
+
   it('calls onError (no success toast) when createBooking responds success:false with INSUFFICIENT_CREDITS', async () => {
     mockGetLots.mockResolvedValue({ success: true, data: [LOT_OPEN] });
     mockGetLotSlots.mockResolvedValue({ success: true, data: [SLOT_A] });

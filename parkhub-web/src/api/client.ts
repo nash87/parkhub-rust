@@ -412,8 +412,14 @@ export const api = {
     request<void>(`/api/v1/notifications/center/${id}`, { method: 'DELETE' }),
 
   // ── Calendar ──
-  calendarEvents: (start: string, end: string) =>
-    request<CalendarEvent[]>(`/api/v1/calendar/events?start=${start}&end=${end}`),
+  // Backend (both rust `CalendarQuery` and PHP `BookingCalendarController::calendarEvents`)
+  // reads `from`/`to`. Sending `start`/`end` silently skips the filter → unbounded result set.
+  calendarEvents: (from: string, to: string) => {
+    const params = new URLSearchParams();
+    params.set('from', from);
+    params.set('to', to);
+    return request<CalendarEvent[]>(`/api/v1/calendar/events?${params.toString()}`);
+  },
   generateCalendarToken: () =>
     request<{ token: string; url: string }>('/api/v1/calendar/token', { method: 'POST' }),
 

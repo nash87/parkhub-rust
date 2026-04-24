@@ -787,13 +787,16 @@ describe('API client', () => {
     expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/notifications/read-all');
   });
 
-  it('calls calendarEvents with query params', async () => {
+  it('calls calendarEvents with from/to query params (not start/end — backend ignores those)', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.calendarEvents('2026-01-01', '2026-01-31');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/calendar/events?start=2026-01-01&end=2026-01-31');
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    expect(url).toBe('/api/v1/calendar/events?from=2026-01-01&to=2026-01-31');
+    expect(url).not.toMatch(/[?&]start=/);
+    expect(url).not.toMatch(/[?&]end=/);
   });
 
   it('calls generateCalendarToken', async () => {

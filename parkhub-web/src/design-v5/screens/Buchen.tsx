@@ -52,6 +52,17 @@ function defaultStart(): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
+/**
+ * A `datetime-local` input can be cleared to an empty string, and
+ * `new Date("").toISOString()` throws `RangeError: Invalid time value`.
+ * Guard the confirm path so the mutation is never called with an
+ * unparseable value (silent-fail bug surfaced by Codex on PR #373).
+ */
+function isValidDt(s: string | undefined | null): s is string {
+  if (!s) return false;
+  return Number.isFinite(new Date(s).valueOf());
+}
+
 function formatDateTime(d: Date): string {
   return d.toLocaleString('de-DE', {
     weekday: 'short', day: '2-digit', month: '2-digit',
@@ -173,6 +184,13 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
 
   function handleConfirm() {
     if (!selectedLot || !selectedSlot) return;
+    // Empty / unparseable datetime-local values produce Invalid Date, and
+    // `toISOString()` on those throws — the mutation would never fire and
+    // the user would see nothing happen. Surface a toast instead.
+    if (!isValidDt(startDate) || !Number.isFinite(end.valueOf())) {
+      toast('Bitte gültige Zeiten angeben', 'error');
+      return;
+    }
     createMutation.mutate({
       lot_id: selectedLot.id,
       slot_id: selectedSlot.id,
