@@ -17,7 +17,8 @@ import { format, formatDistanceToNow, isFuture } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 import { useWebSocket, type WsEvent } from '../hooks/useWebSocket';
-import { useUndoToast, UNDO_WINDOW_MS } from '../hooks/useUndoToast';
+import { useUndoToast } from '../hooks/useUndoToast';
+import { buildIcsEvent, downloadIcs } from '../utils/exportTable';
 
 export function BookingsPage() {
   const { t, i18n } = useTranslation();
@@ -377,16 +378,28 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
           >
             <FilePdf weight="bold" className="w-4 h-4" /> {t('bookings.downloadInvoice')}
           </a>
-          {/* Tier-2 item 9 — Zum Kalender hinzufügen (single-booking .ics). */}
-          <a
-            href={`${(import.meta as Record<string, any>).env?.VITE_API_URL || ''}/api/v1/bookings/${booking.id}.ics`}
-            download={`parkhub-booking-${booking.id}.ics`}
+          {/* Tier-2 item 9 — Zum Kalender hinzufügen. The bulk feed lives at
+              /api/v1/bookings/ical; for single-event downloads we build the
+              VEVENT/VCALENDAR client-side via buildIcsEvent so we don't need
+              a per-booking backend route on either runtime. */}
+          <button
+            type="button"
+            onClick={() => {
+              const ics = buildIcsEvent({
+                uid: `${booking.id}@parkhub`,
+                summary: `Parking: ${booking.lot_name} — Slot ${booking.slot_number}`,
+                location: booking.lot_name,
+                start: new Date(booking.start_time),
+                end: new Date(booking.end_time),
+              }, { standalone: true });
+              downloadIcs(`parkhub-booking-${booking.id}.ics`, ics);
+            }}
             className="btn btn-sm btn-ghost text-surface-600 hover:bg-surface-50 dark:hover:bg-surface-800"
             aria-label={`${t('bookings.addToCalendar', 'Zum Kalender hinzufügen')} ${booking.lot_name}`}
             data-testid={`ical-${booking.id}`}
           >
             <CalendarPlus weight="bold" className="w-4 h-4" /> {t('bookings.addToCalendar', 'Zum Kalender hinzufügen')}
-          </a>
+          </button>
           {isActiveOrConfirmed && (
             <button
               onClick={() => onCancel(booking.id)}

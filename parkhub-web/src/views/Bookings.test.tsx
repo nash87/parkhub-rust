@@ -458,15 +458,53 @@ describe('BookingsPage', () => {
     }));
   });
 
-  it('Tier-2 item 9 — renders Zum Kalender hinzufügen link pointing at /bookings/{id}.ics', async () => {
-    const booking = makeBooking({ id: 'bk-42', status: 'active' });
+  it('Tier-2 item 9 — clicking Zum Kalender hinzufügen downloads a client-built VCALENDAR .ics', async () => {
+    // The Rust backend (and the PHP backend it mirrors) only ships a bulk
+    // /api/v1/bookings/ical feed — no per-booking endpoint. To honour the
+    // Tier-2 single-booking download promise without adding a new route,
+    // the button generates the VEVENT client-side via buildIcsEvent +
+    // downloadIcs (RFC-5545 compliant).
+    const booking = makeBooking({
+      id: 'bk-42',
+      status: 'active',
+      lot_name: 'Alpha Lot',
+      slot_number: '7',
+      start_time: '2026-04-25T10:00:00Z',
+      end_time: '2026-04-25T12:00:00Z',
+    });
     mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
 
-    render(<BookingsPage />);
+    const captured: Blob[] = [];
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      captured.push(blob);
+      return 'blob:mock';
+    }) as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-    const link = await screen.findByTestId('ical-bk-42');
-    expect(link).toHaveAttribute('href', expect.stringContaining('/api/v1/bookings/bk-42.ics'));
-    expect(link).toHaveAttribute('download', 'parkhub-booking-bk-42.ics');
+    try {
+      render(<BookingsPage />);
+      const button = await screen.findByTestId('ical-bk-42');
+      const user = userEvent.setup();
+      await user.click(button);
+
+      expect(clickSpy).toHaveBeenCalled();
+      expect(captured).toHaveLength(1);
+      expect(captured[0].type).toBe('text/calendar;charset=utf-8');
+      const text = await captured[0].text();
+      expect(text).toContain('BEGIN:VCALENDAR');
+      expect(text).toContain('BEGIN:VEVENT');
+      expect(text).toContain('UID:bk-42@parkhub');
+      expect(text).toContain('SUMMARY:Parking: Alpha Lot — Slot 7');
+      expect(text).toContain('DTSTART:20260425T100000Z');
+      expect(text).toContain('DTEND:20260425T120000Z');
+    } finally {
+      URL.createObjectURL = originalCreate;
+      URL.revokeObjectURL = originalRevoke;
+      clickSpy.mockRestore();
+    }
   });
 });
