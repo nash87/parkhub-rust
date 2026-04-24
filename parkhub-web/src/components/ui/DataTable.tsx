@@ -8,8 +8,9 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretUp, CaretDown, DownloadSimple } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, DownloadSimple, FilePdf } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { downloadPdfTable, type CsvCell } from '../../utils/exportTable';
 
 interface DataTableProps<T> {
   data: T[];
@@ -97,17 +98,46 @@ export function DataTable<T>({
     URL.revokeObjectURL(url);
   }
 
+  /** Tier-2 item 10 — PDF export (lazy-loaded jspdf). */
+  async function handleExportPdf() {
+    if (!exportFilename) return;
+    const headerGroups = table.getHeaderGroups();
+    const visibleColumns = (headerGroups[0]?.headers ?? []).filter(h => h.column.columnDef.header);
+    const headers = visibleColumns.map(h => {
+      const rendered = h.column.columnDef.header;
+      return typeof rendered === 'function' ? h.column.id : String(rendered ?? h.column.id);
+    });
+    const dataRows: CsvCell[][] = rows.map(row =>
+      visibleColumns.map(h => {
+        const cell = row.getAllCells().find(c => c.column.id === h.column.id);
+        const val = cell?.getValue();
+        return typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean' ? val : String(val ?? '');
+      }),
+    );
+    await downloadPdfTable(exportFilename, exportFilename, headers, dataRows);
+  }
+
   return (
     <div className="card overflow-hidden">
       {exportFilename && (
-        <div className="flex justify-end px-5 pt-4">
+        <div className="flex justify-end gap-2 px-5 pt-4">
           <button
             onClick={handleExportCsv}
             className="btn btn-sm btn-secondary"
             aria-label={`Export ${exportFilename} as CSV`}
+            data-testid={`export-csv-${exportFilename}`}
           >
             <DownloadSimple weight="bold" className="w-4 h-4" />
-            CSV
+            Als CSV
+          </button>
+          <button
+            onClick={handleExportPdf}
+            className="btn btn-sm btn-secondary"
+            aria-label={`Export ${exportFilename} as PDF`}
+            data-testid={`export-pdf-${exportFilename}`}
+          >
+            <FilePdf weight="bold" className="w-4 h-4" />
+            Als PDF
           </button>
         </div>
       )}

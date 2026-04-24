@@ -23,12 +23,14 @@ Object.defineProperty(window, 'matchMedia', {
 const mockGetBookings = vi.fn();
 const mockGetVehicles = vi.fn();
 const mockCancelBooking = vi.fn();
+const mockCreateBooking = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
     getBookings: (...args: any[]) => mockGetBookings(...args),
     getVehicles: (...args: any[]) => mockGetVehicles(...args),
     cancelBooking: (...args: any[]) => mockCancelBooking(...args),
+    createBooking: (...args: any[]) => mockCreateBooking(...args),
   },
 }));
 
@@ -164,6 +166,7 @@ describe('BookingsPage', () => {
     mockGetBookings.mockClear();
     mockGetVehicles.mockClear();
     mockCancelBooking.mockClear();
+    mockCreateBooking.mockClear();
   });
 
   afterEach(() => {
@@ -428,5 +431,80 @@ describe('BookingsPage', () => {
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
     render(<BookingsPage />);
     await waitFor(() => expect(screen.getByText('Future Lot')).toBeInTheDocument());
+  });
+
+  it('Tier-2 item 11 — offers Rückgängig after cancel and calls createBooking inverse on click', async () => {
+    const user = userEvent.setup();
+    const booking = makeBooking({ id: 'b1', status: 'active' });
+    mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockCancelBooking.mockResolvedValue({ success: true, data: null });
+    mockCreateBooking.mockResolvedValue({ success: true, data: { id: 'b1-new' } });
+
+    render(<BookingsPage />);
+
+    const cancelBtn = await screen.findByLabelText(/cancel/i);
+    await user.click(cancelBtn);
+
+    const undoBtn = await screen.findByTestId('undo-button');
+    await user.click(undoBtn);
+
+    await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
+    expect(mockCreateBooking.mock.calls[0][0]).toEqual(expect.objectContaining({
+      lot_id: booking.lot_id,
+      slot_id: booking.slot_id,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+    }));
+  });
+
+  it('Tier-2 item 9 — clicking Zum Kalender hinzufügen downloads a client-built VCALENDAR .ics', async () => {
+    // The Rust backend (and the PHP backend it mirrors) only ships a bulk
+    // /api/v1/bookings/ical feed — no per-booking endpoint. To honour the
+    // Tier-2 single-booking download promise without adding a new route,
+    // the button generates the VEVENT client-side via buildIcsEvent +
+    // downloadIcs (RFC-5545 compliant).
+    const booking = makeBooking({
+      id: 'bk-42',
+      status: 'active',
+      lot_name: 'Alpha Lot',
+      slot_number: '7',
+      start_time: '2026-04-25T10:00:00Z',
+      end_time: '2026-04-25T12:00:00Z',
+    });
+    mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    const captured: Blob[] = [];
+    const originalCreate = URL.createObjectURL;
+    const originalRevoke = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      captured.push(blob);
+      return 'blob:mock';
+    }) as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    try {
+      render(<BookingsPage />);
+      const button = await screen.findByTestId('ical-bk-42');
+      const user = userEvent.setup();
+      await user.click(button);
+
+      expect(clickSpy).toHaveBeenCalled();
+      expect(captured).toHaveLength(1);
+      expect(captured[0].type).toBe('text/calendar;charset=utf-8');
+      const text = await captured[0].text();
+      expect(text).toContain('BEGIN:VCALENDAR');
+      expect(text).toContain('BEGIN:VEVENT');
+      expect(text).toContain('UID:bk-42@parkhub');
+      expect(text).toContain('SUMMARY:Parking: Alpha Lot — Slot 7');
+      expect(text).toContain('DTSTART:20260425T100000Z');
+      expect(text).toContain('DTEND:20260425T120000Z');
+    } finally {
+      URL.createObjectURL = originalCreate;
+      URL.revokeObjectURL = originalRevoke;
+      clickSpy.mockRestore();
+    }
   });
 });

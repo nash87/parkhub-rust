@@ -8,8 +8,9 @@ import {
   Lightning, Wheelchair, Motorcycle, Star,
   TrendUp, TrendDown,
 } from '@phosphor-icons/react';
-import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult, type OperatingHoursData } from '../api/client';
+import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult, type OperatingHoursData, type Booking } from '../api/client';
 import { SkeletonCard } from '../components/Skeleton';
+import { findOverlappingBooking } from '../hooks/useConflictCheck';
 import toast from 'react-hot-toast';
 
 type Step = 1 | 2 | 3;
@@ -36,6 +37,8 @@ export function BookPage() {
 
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null);
+  const [conflictBooking, setConflictBooking] = useState<Booking | null>(null);
+  const [existingBookings, setExistingBookings] = useState<Booking[]>([]);
   const [dynamicPrice, setDynamicPrice] = useState<DynamicPriceResult | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<string>('');
   const [startDate, setStartDate] = useState(() => {
@@ -47,13 +50,14 @@ export function BookPage() {
   const [duration, setDuration] = useState(2);
 
   useEffect(() => {
-    Promise.all([api.getLots(), api.getVehicles()]).then(([lRes, vRes]) => {
+    Promise.all([api.getLots(), api.getVehicles(), api.getBookings()]).then(([lRes, vRes, bRes]) => {
       if (lRes.success && lRes.data) setLots(lRes.data.filter(l => l.status === 'open'));
       if (vRes.success && vRes.data) {
         setVehicles(vRes.data);
         const def = vRes.data.find(v => v.is_default);
         if (def) setSelectedVehicle(def.id);
       }
+      if (bRes.success && bRes.data) setExistingBookings(bRes.data);
     }).finally(() => setLoadingLots(false));
   }, []);
 
@@ -80,11 +84,19 @@ export function BookPage() {
     else if (step === 3) setStep(2);
   }
 
-  async function handleConfirm() {
+  async function handleConfirm(options: { bypassConflict?: boolean } = {}) {
     if (!selectedLot || !selectedSlot) return;
-    setSubmitting(true);
     const start = new Date(startDate);
     const end = new Date(start.getTime() + duration * 60 * 60 * 1000);
+
+    // Tier-2 item 8 — pre-submit conflict detection.
+    if (!options.bypassConflict) {
+      const overlap = findOverlappingBooking(existingBookings, start, end);
+      if (overlap) { setConflictBooking(overlap as Booking); return; }
+    }
+
+    setConflictBooking(null);
+    setSubmitting(true);
     const payload: CreateBookingPayload = {
       lot_id: selectedLot.id, slot_id: selectedSlot.id,
       start_time: start.toISOString(), end_time: end.toISOString(),
@@ -195,10 +207,41 @@ export function BookPage() {
           <motion.div key="step3" custom={3} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
             <StepConfirm lot={selectedLot!} slot={selectedSlot!} start={start} end={end} duration={duration}
               estimatedCost={estimatedCost} vehicle={vehicles.find(v => v.id === selectedVehicle)}
-              submitting={submitting} onConfirm={handleConfirm} t={t} />
+              submitting={submitting} onConfirm={() => handleConfirm()} t={t} />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Tier-2 item 8 — pre-submit conflict confirmation. */}
+      {conflictBooking && (
+        <div role="dialog" aria-modal="true" aria-labelledby="conflict-title"
+             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white dark:bg-surface-900 p-6 shadow-2xl">
+            <h2 id="conflict-title" className="text-lg font-bold text-surface-900 dark:text-white mb-2">
+              {t('book.conflictTitle', 'Überschneidung erkannt')}
+            </h2>
+            <p className="text-sm text-surface-600 dark:text-surface-300 mb-4" data-testid="conflict-message">
+              {t('book.conflictMessage', {
+                defaultValue: 'Diese Zeit überschneidet mit Buchung #{{id}} ({{lot}} {{start}}–{{end}}). Trotzdem buchen?',
+                id: conflictBooking.id,
+                lot: conflictBooking.lot_name,
+                start: new Date(conflictBooking.start_time).toLocaleString(),
+                end: new Date(conflictBooking.end_time).toLocaleString(),
+              })}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setConflictBooking(null)}
+                      className="btn btn-secondary" data-testid="conflict-cancel">
+                {t('common.cancel', 'Abbrechen')}
+              </button>
+              <button type="button" onClick={() => handleConfirm({ bypassConflict: true })}
+                      className="btn btn-primary" data-testid="conflict-confirm">
+                {t('book.conflictConfirm', 'Bestätigen')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

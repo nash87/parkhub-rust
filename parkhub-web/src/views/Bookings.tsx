@@ -17,6 +17,8 @@ import { format, formatDistanceToNow, isFuture } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
 import { useWebSocket, type WsEvent } from '../hooks/useWebSocket';
+import { useUndoToast } from '../hooks/useUndoToast';
+import { buildIcsEvent, downloadIcs } from '../utils/exportTable';
 
 export function BookingsPage() {
   const { t, i18n } = useTranslation();
@@ -28,6 +30,7 @@ export function BookingsPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchLot, setSearchLot] = useState('');
   const [passBooking, setPassBooking] = useState<Booking | null>(null);
+  const undo = useUndoToast();
 
   // React 19 useOptimistic: the UI flips to cancelled the instant the user
   // clicks, server round-trip happens behind it, React auto-reverts if the
@@ -67,6 +70,7 @@ export function BookingsPage() {
 
   async function handleCancel(id: string) {
     setCancelling(id);
+    const prev = bookings.find(b => b.id === id);
     // useOptimistic + startTransition: the list flips instantly, then we
     // fire the real mutation. On success we commit to real state; on
     // failure the optimistic update rolls back automatically when the
@@ -74,10 +78,31 @@ export function BookingsPage() {
     startTransition(() => applyOptimistic({ type: 'cancel', id }));
     const res = await api.cancelBooking(id);
     if (res.success) {
-      setBookings((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)),
+      setBookings((prevList) =>
+        prevList.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)),
       );
       toast.success(t('bookings.cancelled'));
+      // Tier-2 item 11 — offer Rückgängig for UNDO_WINDOW_MS.
+      if (prev) {
+        undo.offer({
+          label: t('common.undo', 'Rückgängig'),
+          inverse: async () => {
+            const recreateRes = await api.createBooking({
+              lot_id: prev.lot_id,
+              slot_id: prev.slot_id,
+              start_time: prev.start_time,
+              end_time: prev.end_time,
+              vehicle_id: prev.vehicle_id ?? undefined,
+            });
+            if (recreateRes.success && recreateRes.data) {
+              setBookings(prevList => prevList.map(b => b.id === id ? { ...b, ...recreateRes.data!, status: 'active' } : b));
+              toast.success(t('bookings.restored', 'Buchung wiederhergestellt'));
+            } else {
+              toast.error(t('common.error', 'Aktion fehlgeschlagen'));
+            }
+          },
+        });
+      }
     } else {
       toast.error(t('bookings.cancelFailed'));
     }
@@ -185,6 +210,20 @@ export function BookingsPage() {
       </Section>
     </motion.div>
     {passBooking && <ParkingPass booking={passBooking} onClose={() => setPassBooking(null)} />}
+
+    {/* Tier-2 item 11 — undo toast. Active for UNDO_WINDOW_MS after a cancel. */}
+    {undo.active && (
+      <div role="status" aria-live="polite"
+           className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl bg-surface-900 text-white px-4 py-3 shadow-2xl"
+           data-testid="undo-toast">
+        <span className="text-sm">{t('bookings.cancelled', 'Buchung storniert')}</span>
+        <button type="button" onClick={undo.undo} data-testid="undo-button"
+                className="text-sm font-semibold text-primary-300 hover:text-primary-200"
+                aria-label={t('common.undo', 'Rückgängig')}>
+          {t('common.undo', 'Rückgängig')}
+        </button>
+      </div>
+    )}
     </AnimatePresence>
   );
 }
@@ -339,6 +378,28 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
           >
             <FilePdf weight="bold" className="w-4 h-4" /> {t('bookings.downloadInvoice')}
           </a>
+          {/* Tier-2 item 9 — Zum Kalender hinzufügen. The bulk feed lives at
+              /api/v1/bookings/ical; for single-event downloads we build the
+              VEVENT/VCALENDAR client-side via buildIcsEvent so we don't need
+              a per-booking backend route on either runtime. */}
+          <button
+            type="button"
+            onClick={() => {
+              const ics = buildIcsEvent({
+                uid: `${booking.id}@parkhub`,
+                summary: `Parking: ${booking.lot_name} — Slot ${booking.slot_number}`,
+                location: booking.lot_name,
+                start: new Date(booking.start_time),
+                end: new Date(booking.end_time),
+              }, { standalone: true });
+              downloadIcs(`parkhub-booking-${booking.id}.ics`, ics);
+            }}
+            className="btn btn-sm btn-ghost text-surface-600 hover:bg-surface-50 dark:hover:bg-surface-800"
+            aria-label={`${t('bookings.addToCalendar', 'Zum Kalender hinzufügen')} ${booking.lot_name}`}
+            data-testid={`ical-${booking.id}`}
+          >
+            <CalendarPlus weight="bold" className="w-4 h-4" /> {t('bookings.addToCalendar', 'Zum Kalender hinzufügen')}
+          </button>
           {isActiveOrConfirmed && (
             <button
               onClick={() => onCancel(booking.id)}

@@ -16,6 +16,12 @@ vi.mock('@phosphor-icons/react', () => ({
   CaretUp: (props: any) => <span data-testid="icon-caret-up" {...props} />,
   CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
   DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
+  FilePdf: (props: any) => <span data-testid="icon-pdf" {...props} />,
+}));
+
+const mockPdfDownload = vi.fn();
+vi.mock('../../utils/exportTable', () => ({
+  downloadPdfTable: (...args: any[]) => mockPdfDownload(...args),
 }));
 
 import { DataTable } from './DataTable';
@@ -111,12 +117,12 @@ describe('DataTable', () => {
 
   it('does not show CSV button when exportFilename is not provided', () => {
     render(<DataTable data={sampleData} columns={columns} />);
-    expect(screen.queryByText('CSV')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Als CSV/)).not.toBeInTheDocument();
   });
 
   it('shows CSV button when exportFilename is provided', () => {
     render(<DataTable data={sampleData} columns={columns} exportFilename="test-export" />);
-    expect(screen.getByText('CSV')).toBeInTheDocument();
+    expect(screen.getByText(/Als CSV/)).toBeInTheDocument();
   });
 
   it('exports CSV on button click', () => {
@@ -135,7 +141,7 @@ describe('DataTable', () => {
     });
 
     render(<DataTable data={sampleData} columns={columns} exportFilename="users" />);
-    fireEvent.click(screen.getByText('CSV'));
+    fireEvent.click(screen.getByText(/Als CSV/));
 
     expect(mockCreateObjectURL).toHaveBeenCalled();
     expect(mockClick).toHaveBeenCalled();
@@ -178,7 +184,7 @@ describe('DataTable', () => {
     });
 
     render(<DataTable data={dataWithSpecial} columns={columns} exportFilename="special" />);
-    fireEvent.click(screen.getByText('CSV'));
+    fireEvent.click(screen.getByText(/Als CSV/));
 
     expect(mockCreateObjectURL).toHaveBeenCalled();
   });
@@ -209,7 +215,26 @@ describe('DataTable', () => {
     });
 
     render(<DataTable data={[]} columns={columns} exportFilename="empty" />);
-    fireEvent.click(screen.getByText('CSV'));
+    fireEvent.click(screen.getByText(/Als CSV/));
     expect(mockClick).toHaveBeenCalled();
+  });
+
+  it('Tier-2 item 10 — renders "Als PDF" button when exportFilename is set', () => {
+    render(<DataTable data={sampleData} columns={columns} exportFilename="rows" />);
+    expect(screen.getByTestId('export-pdf-rows')).toBeInTheDocument();
+    expect(screen.getByText(/Als PDF/)).toBeInTheDocument();
+  });
+
+  it('Tier-2 item 10 — clicking "Als PDF" invokes downloadPdfTable with visible rows', async () => {
+    mockPdfDownload.mockClear();
+    mockPdfDownload.mockResolvedValue(undefined);
+    render(<DataTable data={sampleData} columns={columns} exportFilename="rows" />);
+    fireEvent.click(screen.getByTestId('export-pdf-rows'));
+    // Give the async handler a tick.
+    await Promise.resolve();
+    expect(mockPdfDownload).toHaveBeenCalledTimes(1);
+    const [filename, title] = mockPdfDownload.mock.calls[0];
+    expect(filename).toBe('rows');
+    expect(title).toBe('rows');
   });
 });
