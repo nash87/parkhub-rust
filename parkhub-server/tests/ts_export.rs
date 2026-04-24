@@ -166,10 +166,7 @@ fn clean_ts_output_removes_stale_files_but_keeps_dir() {
     // drift check on git-tracked content still passes because the stale
     // file is unchanged. clean_ts_output must purge those orphans so the
     // next export produces a tree that reflects only the current Rust DTOs.
-    let scratch = std::env::temp_dir().join(format!(
-        "ts_export_clean_test_{}",
-        std::process::id()
-    ));
+    let scratch = std::env::temp_dir().join(format!("ts_export_clean_test_{}", std::process::id()));
     let _ = fs::remove_dir_all(&scratch);
     fs::create_dir_all(&scratch).unwrap();
 
