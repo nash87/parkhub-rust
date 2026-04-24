@@ -248,11 +248,7 @@ async fn fleet_event_broadcast_without_subscribers_is_harmless() {
         s.fleet_events.clone()
     };
     // No subscribers — send returns 0 and must NOT panic.
-    let sent = broadcaster.broadcast(FleetEvent::guest_created(
-        "g-1",
-        None,
-        "u-1",
-    ));
+    let sent = broadcaster.broadcast(FleetEvent::guest_created("g-1", None, "u-1"));
     assert_eq!(sent, 0);
 }
 

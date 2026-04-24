@@ -66,9 +66,9 @@ mod integration_tests;
 #[cfg(all(test, feature = "full"))]
 mod mobile_tests;
 #[cfg(all(test, feature = "full"))]
-mod webhooks_v2_tests;
-#[cfg(all(test, feature = "full"))]
 mod sse_events_tests;
+#[cfg(all(test, feature = "full"))]
+mod webhooks_v2_tests;
 
 use bootstrap::cli::CliArgs;
 use bootstrap::health::perform_health_check;

@@ -959,7 +959,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::CheckinStarted, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::CheckinStarted,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn checkin_completed(
@@ -967,7 +972,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::CheckinCompleted, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::CheckinCompleted,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn swap_requested(
@@ -975,7 +985,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::SwapRequested, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::SwapRequested,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn swap_accepted(
@@ -983,7 +998,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::SwapAccepted, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::SwapAccepted,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn swap_declined(
@@ -991,7 +1011,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::SwapDeclined, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::SwapDeclined,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn ev_session_started(
@@ -999,7 +1024,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::EvSessionStarted, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::EvSessionStarted,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn ev_session_stopped(
@@ -1007,7 +1037,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::EvSessionStopped, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::EvSessionStopped,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn guest_created(
@@ -1015,7 +1050,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::GuestCreated, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::GuestCreated,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 
     pub fn guest_cancelled(
@@ -1023,7 +1063,12 @@ impl FleetEvent {
         lot_id: Option<String>,
         user_id: impl Into<String>,
     ) -> Self {
-        Self::new(FleetEventType::GuestCancelled, resource_id, lot_id, Some(user_id))
+        Self::new(
+            FleetEventType::GuestCancelled,
+            resource_id,
+            lot_id,
+            Some(user_id),
+        )
     }
 }
 
@@ -1734,9 +1779,18 @@ mod tests {
             "expected type field, got: {json}"
         );
         assert!(json.contains("\"timestamp\""), "expected timestamp: {json}");
-        assert!(json.contains("\"resource_id\":\"550e8400"), "expected resource_id: {json}");
-        assert!(json.contains("\"lot_id\":\"lot-1\""), "expected lot_id: {json}");
-        assert!(json.contains("\"user_id\":\"user-1\""), "expected user_id: {json}");
+        assert!(
+            json.contains("\"resource_id\":\"550e8400"),
+            "expected resource_id: {json}"
+        );
+        assert!(
+            json.contains("\"lot_id\":\"lot-1\""),
+            "expected lot_id: {json}"
+        );
+        assert!(
+            json.contains("\"user_id\":\"user-1\""),
+            "expected user_id: {json}"
+        );
     }
 
     #[test]

@@ -94,7 +94,9 @@ type SharedState = Arc<RwLock<AppState>>;
 /// from the auth cookie.
 fn extract_token(headers: &axum::http::HeaderMap) -> Option<String> {
     // Prefer Authorization header
-    if let Some(v) = headers.get(header::AUTHORIZATION).and_then(|h| h.to_str().ok())
+    if let Some(v) = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
         && let Some(rest) = v.strip_prefix("Bearer ")
         && !rest.is_empty()
     {

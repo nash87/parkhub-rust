@@ -168,13 +168,13 @@ pub async fn create_swap_request(
     }
 
     // T-1946: broadcast SSE fleet event AFTER DB commit.
-    let _ = state_guard.fleet_events.broadcast(
-        parkhub_common::FleetEvent::swap_requested(
+    let _ = state_guard
+        .fleet_events
+        .broadcast(parkhub_common::FleetEvent::swap_requested(
             swap_request.id.to_string(),
             Some(requester_booking.lot_id.to_string()),
             auth_user.user_id.to_string(),
-        ),
-    );
+        ));
 
     (
         StatusCode::CREATED,
@@ -334,22 +334,22 @@ pub async fn update_swap_request(
     // T-1946: broadcast SSE fleet event AFTER DB commit.
     match swap.status {
         SwapRequestStatus::Accepted => {
-            let _ = state_guard.fleet_events.broadcast(
-                parkhub_common::FleetEvent::swap_accepted(
+            let _ = state_guard
+                .fleet_events
+                .broadcast(parkhub_common::FleetEvent::swap_accepted(
                     swap.id.to_string(),
                     None,
                     auth_user.user_id.to_string(),
-                ),
-            );
+                ));
         }
         SwapRequestStatus::Declined => {
-            let _ = state_guard.fleet_events.broadcast(
-                parkhub_common::FleetEvent::swap_declined(
+            let _ = state_guard
+                .fleet_events
+                .broadcast(parkhub_common::FleetEvent::swap_declined(
                     swap.id.to_string(),
                     None,
                     auth_user.user_id.to_string(),
-                ),
-            );
+                ));
         }
         _ => {}
     }
