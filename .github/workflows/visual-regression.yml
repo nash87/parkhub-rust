@@ -127,11 +127,17 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: visual-regression-diffs
+          # v4 suite writes to repo-root test-results/; v5 suite (working-directory:
+          # parkhub-web) writes to parkhub-web/test-results/. Glob both roots.
           path: |
             test-results/**/*-diff.png
             test-results/**/*-actual.png
             test-results/**/*-expected.png
             playwright-report/
+            parkhub-web/test-results/**/*-diff.png
+            parkhub-web/test-results/**/*-actual.png
+            parkhub-web/test-results/**/*-expected.png
+            parkhub-web/playwright-report/
           retention-days: 14
 
       - name: Upload full Playwright report
@@ -139,5 +145,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-visual-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            parkhub-web/playwright-report/
           retention-days: 7
