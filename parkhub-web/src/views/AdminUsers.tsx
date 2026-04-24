@@ -49,7 +49,7 @@ export function AdminUsersPage() {
   async function loadUsers() {
     try {
       const res = await api.adminUsers();
-      if (res.success && res.data) setUsers(res.data);
+      if (res.success && res.data) setUsers(res.data.items);
     } finally {
       setLoading(false);
     }

@@ -220,11 +220,11 @@ test.describe('v5 happy paths', () => {
     await loginAsAdmin(page);
   });
 
-  // KNOWN_BROKEN: screens whose React tree throws during hydration on
-  // github/main and never emit <header><h1>. Surfaced by this PR; tracked
-  // as a follow-up fix. Tests stay declared (not deleted) so the moment
-  // the screen is repaired the anchor reactivates without a diff here.
-  const KNOWN_BROKEN = new Set<V5Screen>(['nutzer']);
+  // KNOWN_BROKEN: screens whose React tree throws during render on
+  // github/main and never emit <header><h1>. Tests stay declared (not
+  // deleted) so the moment the screen is repaired the anchor reactivates
+  // without a diff here. Empty once all v5 screens render.
+  const KNOWN_BROKEN = new Set<V5Screen>([]);
 
   for (const [screen, anchor] of Object.entries(ANCHORS) as Array<[V5Screen, Anchor]>) {
     test(`${screen} — ${anchor.note}`, async ({ page }) => {

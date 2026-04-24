@@ -35,7 +35,7 @@ export function NutzerV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
     queryFn: async () => {
       const res = await api.adminUsers();
       if (!res.success) throw new Error(res.error?.message ?? 'Nutzer konnten nicht geladen werden');
-      return res.data ?? [];
+      return res.data?.items ?? [];
     },
     staleTime: 30_000,
   });

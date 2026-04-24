@@ -138,10 +138,19 @@ const sampleUsers = [
   { id: 'u-2', name: 'Bob', email: 'bob@test.com', role: 'user', credits_balance: 3, credits_monthly_quota: 5, is_active: false },
 ];
 
+// Wire shape matches parkhub-common::protocol::PaginatedResponse<T>.
+const paginated = <T,>(items: T[]) => ({
+  items,
+  page: 1,
+  per_page: 50,
+  total: items.length,
+  total_pages: items.length === 0 ? 0 : 1,
+});
+
 describe('AdminUsersPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAdminUsers.mockResolvedValue({ success: true, data: sampleUsers });
+    mockAdminUsers.mockResolvedValue({ success: true, data: paginated(sampleUsers) });
   });
 
   afterEach(() => {
@@ -389,10 +398,10 @@ describe('AdminUsersPage', () => {
   it('shows role badges with correct text', async () => {
     mockAdminUsers.mockResolvedValue({
       success: true,
-      data: [
+      data: paginated([
         { id: 'u-3', name: 'Super', email: 's@test.com', role: 'superadmin', credits_balance: 0, credits_monthly_quota: 5, is_active: true },
         ...sampleUsers,
-      ],
+      ]),
     });
     render(<AdminUsersPage />);
     await waitFor(() => {
@@ -586,7 +595,7 @@ describe('AdminUsersPage', () => {
   });
 
   it('shows empty state with no search when no users', async () => {
-    mockAdminUsers.mockResolvedValue({ success: true, data: [] });
+    mockAdminUsers.mockResolvedValue({ success: true, data: paginated([]) });
     render(<AdminUsersPage />);
     await waitFor(() => {
       expect(screen.getByText('No users found.')).toBeInTheDocument();
