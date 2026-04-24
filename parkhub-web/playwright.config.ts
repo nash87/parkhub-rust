@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 // Three run modes:
 //
@@ -34,6 +34,11 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
+    // Pixel 5 viewport — v5 specs internally skip this project until the
+    // v5 responsive refactor lands (see docs/v5-test-coverage-plan.md).
+    // Listed here so non-v5 specs that DO opt into mobile-chrome can run
+    // it with `--project=mobile-chrome`, matching parkhub-php #343.
+    { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
   ],
   // Only start the Astro dev server when running in hermetic-local mode.
   // CI and cloud runs assume an already-running target.
