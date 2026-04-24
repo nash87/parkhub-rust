@@ -26,7 +26,7 @@ use axum::{
     },
 };
 use futures_util::Stream;
-use parkhub_common::{ApiResponse, FleetEvent};
+use parkhub_common::{ApiResponse, FleetEvent, UserRole};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{RwLock, broadcast};
@@ -81,6 +81,36 @@ impl FleetEventBroadcaster {
 impl Default for FleetEventBroadcaster {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RBAC visibility filter (Codex PR #378 finding)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Decide whether a given `FleetEvent` should be forwarded to a specific
+/// subscriber.
+///
+/// Rules:
+/// - **Admin / SuperAdmin**: sees every event. Operations/oversight roles
+///   need the full fleet view (check-ins, swaps, EV sessions, guest bookings).
+/// - **Regular user (User / Premium)**: sees only events whose `user_id`
+///   matches their own id.
+/// - Events with `user_id == None` are treated as system-scoped and visible
+///   to any authenticated subscriber — the broadcaster is already auth-gated
+///   at the handler, so this preserves the historical "public among
+///   authenticated users" semantics for non-attributed events.
+///
+/// This fix was introduced in response to the Codex review of PR #378, which
+/// flagged the previous unconditional fan-out as an authorization leak
+/// between tenants/users.
+fn is_event_visible(event: &FleetEvent, viewer_id: &str, viewer_role: &UserRole) -> bool {
+    match viewer_role {
+        UserRole::Admin | UserRole::SuperAdmin => true,
+        UserRole::User | UserRole::Premium => match event.user_id.as_deref() {
+            Some(owner) => owner == viewer_id,
+            None => true,
+        },
     }
 }
 
@@ -142,14 +172,17 @@ pub async fn fleet_events_handler(
     };
 
     // Validate session against DB (mirrors `auth_middleware`).
-    {
+    // Capture viewer identity + role so the stream can filter events
+    // per-subscriber (RBAC — Codex PR #378 finding).
+    let (viewer_id, viewer_role) = {
         let state_guard = state.read().await;
         match state_guard.db.get_session(&token).await {
             Ok(Some(s)) if !s.is_expired() => {
                 // Confirm user is still active.
                 match state_guard.db.get_user(&s.user_id.to_string()).await {
                     Ok(Some(u)) if u.is_active => {
-                        debug!(user_id = %s.user_id, "SSE authenticated");
+                        debug!(user_id = %s.user_id, role = ?u.role, "SSE authenticated");
+                        (u.id.to_string(), u.role)
                     }
                     _ => {
                         return Err((
@@ -172,7 +205,7 @@ pub async fn fleet_events_handler(
                 ));
             }
         }
-    }
+    };
 
     // Subscribe to the broadcast channel.
     let mut rx = {
@@ -184,6 +217,13 @@ pub async fn fleet_events_handler(
         loop {
             match rx.recv().await {
                 Ok(fleet_event) => {
+                    // RBAC gate: drop events the current subscriber must not
+                    // see (Codex PR #378). Skip serializes nothing — the SSE
+                    // connection stays open and will receive future allowed
+                    // events + keep-alives.
+                    if !is_event_visible(&fleet_event, &viewer_id, &viewer_role) {
+                        continue;
+                    }
                     // Serialize payload to JSON; skip if somehow unserializable.
                     let Ok(json) = serde_json::to_string(&fleet_event) else { continue };
                     // Expose the event type as SSE `event:` so clients can
@@ -219,6 +259,72 @@ pub async fn fleet_events_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use parkhub_common::UserRole;
+
+    // ── RBAC visibility filter (T-1946 Codex finding) ────────────────────────
+    //
+    // Regression tests for: "Restrict fleet SSE fan-out to authorized event
+    // scope." Prior to this fix `fleet_events_handler` forwarded every event
+    // to every authenticated subscriber regardless of ownership.
+    //
+    // Rules enforced by `is_event_visible`:
+    //   - Admin / SuperAdmin: sees everything.
+    //   - Regular user (User / Premium): sees ONLY events where the event's
+    //     `user_id` matches their own user id (plus any event carrying no
+    //     `user_id` — those are system-scoped and already public).
+
+    #[test]
+    fn visibility_admin_sees_event_from_other_user() {
+        let ev = FleetEvent::checkin_started("r-1", None, "other-user-id");
+        assert!(is_event_visible(&ev, "admin-id", &UserRole::Admin));
+    }
+
+    #[test]
+    fn visibility_super_admin_sees_event_from_other_user() {
+        let ev = FleetEvent::swap_requested("r-2", None, "other-user-id");
+        assert!(is_event_visible(&ev, "sa-id", &UserRole::SuperAdmin));
+    }
+
+    #[test]
+    fn visibility_regular_user_blocked_from_other_users_event() {
+        let ev = FleetEvent::checkin_started("r-3", None, "user-b");
+        assert!(!is_event_visible(&ev, "user-a", &UserRole::User));
+    }
+
+    #[test]
+    fn visibility_premium_user_blocked_from_other_users_event() {
+        let ev = FleetEvent::ev_session_started("r-4", None, "user-b");
+        assert!(!is_event_visible(&ev, "user-a", &UserRole::Premium));
+    }
+
+    #[test]
+    fn visibility_regular_user_sees_own_event() {
+        let ev = FleetEvent::checkin_completed("r-5", None, "user-a");
+        assert!(is_event_visible(&ev, "user-a", &UserRole::User));
+    }
+
+    #[test]
+    fn visibility_premium_user_sees_own_event() {
+        let ev = FleetEvent::guest_created("r-6", None, "user-a");
+        assert!(is_event_visible(&ev, "user-a", &UserRole::Premium));
+    }
+
+    #[test]
+    fn visibility_regular_user_sees_system_event_without_user_id() {
+        // Defensive: if an event is emitted with `user_id == None` (e.g. an
+        // admin-triggered action that doesn't attribute to a specific user),
+        // all authenticated subscribers should see it.  The broadcaster is
+        // already auth-gated, so this is the historical "public among
+        // authenticated users" behaviour.
+        let ev = FleetEvent {
+            event_type: parkhub_common::FleetEventType::CheckinStarted,
+            resource_id: "r-7".to_string(),
+            lot_id: None,
+            user_id: None,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        };
+        assert!(is_event_visible(&ev, "user-a", &UserRole::User));
+    }
 
     #[test]
     fn extract_token_reads_bearer_header() {
