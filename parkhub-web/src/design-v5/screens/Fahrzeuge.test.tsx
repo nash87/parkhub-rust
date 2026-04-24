@@ -140,4 +140,31 @@ describe('FahrzeugeV5', () => {
     });
     expect(mockToast).not.toHaveBeenCalledWith('Fahrzeug entfernt', 'success');
   });
+
+  it('optimistically removes the vehicle card before deleteVehicle resolves', async () => {
+    mockGetVehicles.mockResolvedValue({ success: true, data: [VEHICLE_BMW, VEHICLE_EV] });
+    let resolveDelete: (v: unknown) => void = () => {};
+    mockDeleteVehicle.mockImplementation(
+      () => new Promise((resolve) => { resolveDelete = resolve; }),
+    );
+    renderScreen();
+    await waitFor(() => screen.getByText('M-AB 123'));
+    expect(screen.getAllByTestId('fahrzeug-card')).toHaveLength(2);
+    fireEvent.click(screen.getByLabelText('Fahrzeug M-AB 123 löschen'));
+    // Card must disappear immediately — no awaiting the server response.
+    await waitFor(() => expect(screen.queryByText('M-AB 123')).not.toBeInTheDocument());
+    expect(screen.getAllByTestId('fahrzeug-card')).toHaveLength(1);
+    resolveDelete({ success: true, data: { id: 'v-001' } });
+  });
+
+  it('rolls back the optimistic delete when deleteVehicle rejects', async () => {
+    mockGetVehicles.mockResolvedValue({ success: true, data: [VEHICLE_BMW, VEHICLE_EV] });
+    mockDeleteVehicle.mockRejectedValue(new Error('network'));
+    renderScreen();
+    await waitFor(() => screen.getByText('M-AB 123'));
+    fireEvent.click(screen.getByLabelText('Fahrzeug M-AB 123 löschen'));
+    // Card reappears after rollback.
+    await waitFor(() => expect(screen.getByText('M-AB 123')).toBeInTheDocument());
+    expect(mockToast).toHaveBeenCalledWith('Löschen fehlgeschlagen', 'error');
+  });
 });

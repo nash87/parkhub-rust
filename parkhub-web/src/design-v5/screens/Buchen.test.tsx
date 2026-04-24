@@ -71,6 +71,10 @@ const SLOT_OCCUPIED = { id: 's-3', lot_id: 'lot-1', slot_number: 'A03', status: 
 describe('BuchenV5', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Smart defaults persist last-used lot + vehicle in localStorage.
+    // Clear between tests so the auto-advance to Step 2 doesn't leak
+    // between tests that need to start on the lot picker (Step 1).
+    window.localStorage.clear();
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
   });
 

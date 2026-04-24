@@ -43,7 +43,14 @@ export function KalenderV5({ navigate }: { navigate: (id: ScreenId) => void }) {
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  // Smart default: pre-select today's date on mount so the day-detail
+  // pane shows today's events without requiring a manual tap. Users
+  // can still click any other day to change the selection.
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
 
   const rangeStart = useMemo(() => {
     const d = new Date(currentMonth);

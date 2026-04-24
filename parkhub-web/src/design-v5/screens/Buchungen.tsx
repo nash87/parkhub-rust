@@ -62,17 +62,36 @@ export function BuchungenV5({ navigate }: { navigate: (id: ScreenId) => void }) 
     refetchOnWindowFocus: true,
   });
 
+  // Optimistic cancel: flip the booking to `cancelled` in the cache before
+  // the network round-trip completes so the badge + filter counts update
+  // instantly. If the server rejects, restore the pre-mutation snapshot.
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await api.cancelBooking(id);
       if (!res.success) throw new Error(res.error?.message ?? 'Stornierung fehlgeschlagen');
       return res.data;
     },
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({ queryKey: ['buchungen'] });
+      const previous = qc.getQueryData<Booking[]>(['buchungen']);
+      if (previous) {
+        qc.setQueryData<Booking[]>(
+          ['buchungen'],
+          previous.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)),
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['buchungen'], ctx.previous);
+      toast('Stornierung fehlgeschlagen', 'error');
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['buchungen'] });
       toast('Buchung storniert', 'success');
     },
-    onError: () => toast('Stornierung fehlgeschlagen', 'error'),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['buchungen'] });
+    },
   });
 
   const filtered = filter === 'alle' ? bookings : bookings.filter((b) => b.status === filter);
