@@ -111,6 +111,7 @@ export function Card({
   lift = true,
   as: Tag = 'div',
   onClick,
+  'data-testid': dataTestid,
 }: {
   children: ReactNode;
   style?: CSSProperties;
@@ -118,10 +119,12 @@ export function Card({
   lift?: boolean;
   as?: 'div' | 'button' | 'a';
   onClick?: () => void;
+  'data-testid'?: string;
 }) {
   return (
     <Tag
       onClick={onClick}
+      data-testid={dataTestid}
       className={`${lift ? 'v5-lift' : ''} ${className}`.trim()}
       style={{
         background: 'var(--v5-sur)',
