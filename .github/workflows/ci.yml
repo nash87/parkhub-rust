@@ -298,8 +298,26 @@ jobs:
 
       - name: Fail if generated types drifted
         run: |
+          # Two checks cover both drift directions:
+          #   1. git diff --exit-code catches modifications + deletions of
+          #      tracked files (Rust struct field renamed, type removed
+          #      after ts_export purged its orphan, etc.).
+          #   2. git status --porcelain catches untracked files — a new
+          #      #[derive(TS)] + #[ts(export)] type where the resulting
+          #      .ts was never git-added. git diff would silently pass.
+          # Both must be empty for the gate to succeed.
+          drift=0
           if ! git diff --exit-code parkhub-web/src/generated/; then
-            echo "::error::parkhub-web/src/generated/ is out of sync with the Rust API structs."
+            echo "::error::parkhub-web/src/generated/ has modified or deleted files (drift from Rust source)."
+            drift=1
+          fi
+          untracked="$(git status --porcelain parkhub-web/src/generated/)"
+          if [ -n "$untracked" ]; then
+            echo "::error::parkhub-web/src/generated/ has untracked or modified files not yet committed:"
+            printf '%s\n' "$untracked"
+            drift=1
+          fi
+          if [ "$drift" -ne 0 ]; then
             echo "Regenerate locally with:"
             echo "  cargo test --features gen-types -p parkhub-server --test ts_export -- --nocapture"
             echo "and commit the updated files."

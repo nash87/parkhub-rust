@@ -131,10 +131,74 @@ fn export<T: TS + 'static>(dir: &Path) -> std::io::Result<()> {
     <T as TS>::export_all_to(dir).map_err(|e| std::io::Error::other(format!("ts-rs export: {e}")))
 }
 
+/// Purge any previously-emitted `.ts` files from `dir` before the next
+/// export run. This is the deletion-drift half of the ts-rs gate: when a
+/// Rust type is renamed or removed, ts-rs never writes a "tombstone" — it
+/// just stops emitting the old file. Without this cleanup, the orphan
+/// `.ts` lingers on disk and the CI diff check reports "no drift" even
+/// though the generated tree is stale.
+///
+/// We keep the directory itself (so `export_all_to` doesn't recreate it
+/// with the wrong permissions) and remove only `.ts` files plus any
+/// subdirectories ts-rs may have created (e.g. `serde_json/`). Non-`.ts`
+/// files are preserved so we don't accidentally nuke unrelated tooling
+/// artefacts somebody might stash here.
+fn clean_ts_output(dir: &Path) -> std::io::Result<()> {
+    if !dir.exists() {
+        return Ok(());
+    }
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            fs::remove_dir_all(&path)?;
+        } else if path.extension().and_then(|s| s.to_str()) == Some("ts") {
+            fs::remove_file(&path)?;
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn clean_ts_output_removes_stale_files_but_keeps_dir() {
+    // Regression for Codex #377 P2: when a Rust type is removed or renamed,
+    // ts-rs stops emitting the old `.ts` file but never deletes it. The
+    // drift check on git-tracked content still passes because the stale
+    // file is unchanged. clean_ts_output must purge those orphans so the
+    // next export produces a tree that reflects only the current Rust DTOs.
+    let scratch = std::env::temp_dir().join(format!(
+        "ts_export_clean_test_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&scratch);
+    fs::create_dir_all(&scratch).unwrap();
+
+    let stale_type = scratch.join("RemovedType.ts");
+    fs::write(&stale_type, "// orphan from a deleted Rust type").unwrap();
+    let nested = scratch.join("serde_json");
+    fs::create_dir_all(&nested).unwrap();
+    fs::write(nested.join("JsonValue.ts"), "// orphan nested").unwrap();
+    let keep = scratch.join("README.md");
+    fs::write(&keep, "keep me — unrelated tooling file").unwrap();
+
+    clean_ts_output(&scratch).expect("clean_ts_output succeeds");
+
+    assert!(scratch.exists(), "directory itself must survive cleanup");
+    assert!(!stale_type.exists(), "stale .ts file must be removed");
+    assert!(!nested.exists(), "stale subdirectory must be removed");
+    assert!(keep.exists(), "non-.ts file must be preserved");
+
+    let _ = fs::remove_dir_all(&scratch);
+}
+
 #[test]
 fn export_all_types() {
     let dir = output_dir();
     fs::create_dir_all(&dir).expect("create output dir");
+    // Deletion-drift guard: purge last run's output so removed/renamed Rust
+    // types surface as a diff (`git status --porcelain` will show a
+    // disappeared file) instead of lingering forever as a stale orphan.
+    clean_ts_output(&dir).expect("clean previous ts output");
     println!("ts_export: writing to {}", dir.display());
 
     // ── Protocol wrappers ────────────────────────────────────────────────
