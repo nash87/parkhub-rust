@@ -206,17 +206,34 @@ export function FahrzeugeV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
     onError: () => toast('Hinzufügen fehlgeschlagen', 'error'),
   });
 
+  // Optimistic delete: drop the vehicle from the cache immediately so the
+  // card vanishes without waiting for the server. onError restores the
+  // previous snapshot + toasts; onSettled re-invalidates to pick up any
+  // server-side computed fields (e.g. `is_default` promotion).
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await api.deleteVehicle(id);
       if (!res.success) throw new Error(res.error?.message ?? 'Fahrzeug löschen fehlgeschlagen');
       return res.data;
     },
+    onMutate: async (id: string) => {
+      await qc.cancelQueries({ queryKey: ['fahrzeuge'] });
+      const previous = qc.getQueryData<Vehicle[]>(['fahrzeuge']);
+      if (previous) {
+        qc.setQueryData<Vehicle[]>(['fahrzeuge'], previous.filter((v) => v.id !== id));
+      }
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['fahrzeuge'], ctx.previous);
+      toast('Löschen fehlgeschlagen', 'error');
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['fahrzeuge'] });
       toast('Fahrzeug entfernt', 'success');
     },
-    onError: () => toast('Löschen fehlgeschlagen', 'error'),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['fahrzeuge'] });
+    },
   });
 
   if (isLoading) {

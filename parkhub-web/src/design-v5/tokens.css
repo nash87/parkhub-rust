@@ -115,11 +115,39 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ═════════ VIEW TRANSITIONS API ═════════
+   Chromium 111+/Safari 18+ cross-fade between screen states. The browser
+   snapshots the DOM before/after `document.startViewTransition()` and
+   animates ::view-transition-old/-new via the default CSS. We override
+   duration + easing to match the rest of the v5 motion system. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.22s;
+  animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
 /* Respect user motion preference — disable all v5 animations */
 @media (prefers-reduced-motion: reduce) {
+  /* Broad safety net: kill any still-configured animation/transition
+     on the v5 surface (covers 3rd-party libs + inline styles we can't
+     control like ph-v5-pulse skeletons). */
+  [data-ph-mode] *,
+  [data-ph-mode] *::before,
+  [data-ph-mode] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .v5-ani, .v5-aniR { animation: none !important; }
   .v5-btn, .v5-row, .v5-lift { transition: none !important; }
   .v5-btn:hover, .v5-lift:hover { transform: none !important; }
+  /* Turn off the view-transition cross-fade entirely so users who
+     opt out of motion don't see a flash. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
 }
 
 /* cmdk (command palette) structural styling only — theming via v5 tokens */

@@ -147,4 +147,31 @@ describe('EincheckenV5', () => {
     const allKeys = Object.values(opts.invalidate).flat() as unknown[][];
     expect(allKeys.some((k) => k?.[0] === 'einchecken-bookings')).toBe(true);
   });
+
+  it('renders a QR code with the parkhub://check-in/<id> deep-link on the ready card', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [activeBooking()] });
+    mockGetStatus.mockResolvedValue({
+      success: true,
+      data: { checked_in: false, checked_in_at: null, checked_out_at: null },
+    });
+    renderScreen();
+    const holder = await waitFor(() => screen.getByTestId('checkin-qr'));
+    // qrcode.react renders an <svg role="img"> labelled by our aria-label.
+    const svg = holder.querySelector('svg');
+    expect(svg).toBeTruthy();
+    expect(svg?.getAttribute('aria-label')).toBe('QR-Code für Buchung b1');
+    // Manual fallback button is still reachable.
+    expect(screen.getByTestId('checkin-btn')).toHaveTextContent('Manuell einchecken');
+  });
+
+  it('does not render the QR card once the user has checked in', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [activeBooking()] });
+    mockGetStatus.mockResolvedValue({
+      success: true,
+      data: { checked_in: true, checked_in_at: new Date().toISOString(), checked_out_at: null },
+    });
+    renderScreen();
+    await waitFor(() => expect(screen.getByTestId('checked-in-card')).toBeInTheDocument());
+    expect(screen.queryByTestId('checkin-qr')).not.toBeInTheDocument();
+  });
 });

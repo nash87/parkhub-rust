@@ -33,6 +33,9 @@ import { IntegrationsV5 } from './screens/Integrations';
 import { ApikeysV5 } from './screens/Apikeys';
 import { AuditV5 } from './screens/Audit';
 import { PoliciesV5 } from './screens/Policies';
+import { startViewTransition } from './viewTransitions';
+import { readScreenFromUrl, useSyncScreenToUrl } from './useDeepLink';
+import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 import './fonts';
 import './tokens.css';
@@ -92,10 +95,14 @@ function makeQueryClient() {
 }
 
 function V5Shell() {
+  // URL is source of truth; localStorage is a back-compat cache for users
+  // who load `/v5` bare. Priority: URL → localStorage → default.
   const [screen, setScreen] = useState<ScreenId>(() => {
     if (typeof window === 'undefined') return DEFAULT_SCREEN;
     const stored = window.localStorage.getItem(STORAGE_KEY) as ScreenId | null;
-    return stored && byId.has(stored) ? stored : DEFAULT_SCREEN;
+    const storedFallback: ScreenId =
+      stored && byId.has(stored) ? stored : DEFAULT_SCREEN;
+    return readScreenFromUrl(storedFallback);
   });
   const [cmdOpen, setCmdOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -104,27 +111,46 @@ function V5Shell() {
     window.localStorage.setItem(STORAGE_KEY, screen);
   }, [screen]);
 
-  // Keyboard shortcuts: ⌘K / Ctrl+K for palette, ? for AI panel.
+  // Keep browser URL + localStorage in lockstep with the in-memory screen,
+  // and restore screen state on back/forward.
+  useSyncScreenToUrl(screen, setScreen);
+
+  // Legacy shortcuts kept in a raw listener so Ctrl+K can intercept
+  // browser default. The new per-screen shortcut hook covers single-key
+  // bindings (n, /, Escape, ?) with input-focus safeguards.
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setCmdOpen((o) => !o);
-        return;
-      }
-      // Don't steal ? while the user is typing in a form
-      if (e.key === '?' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLSelectElement)) {
-        setAiOpen((o) => !o);
       }
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
 
+  // Global single-key shortcuts (opt-in per screen via future hook calls).
+  useKeyboardShortcuts({
+    '?': () => setAiOpen((o) => !o),
+    '/': (e) => {
+      e.preventDefault();
+      setCmdOpen(true);
+    },
+    Escape: () => {
+      setCmdOpen(false);
+      setAiOpen(false);
+    },
+  });
+
   const navigate = useCallback((id: ScreenId) => {
-    setScreen(id);
-    setCmdOpen(false);
+    // Wrap the state update in a View Transition so the browser
+    // cross-fades the old and new screen. Gracefully no-ops on
+    // Safari <18 / Firefox and under prefers-reduced-motion.
+    startViewTransition(() => {
+      setScreen(id);
+      setCmdOpen(false);
+    });
   }, []);
 
   const meta = byId.get(screen);

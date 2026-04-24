@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import NumberFlow from '@number-flow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge, Card, SectionLabel, V5NamedIcon } from '../primitives';
@@ -11,6 +11,7 @@ import {
   type CreateBookingPayload,
 } from '../../api/client';
 import type { ScreenId } from '../nav';
+import { readLastUsed, writeLastUsed } from '../lastUsed';
 
 type Step = 1 | 2 | 3;
 
@@ -56,7 +57,7 @@ function defaultStart(): string {
  * A `datetime-local` input can be cleared to an empty string, and
  * `new Date("").toISOString()` throws `RangeError: Invalid time value`.
  * Guard the confirm path so the mutation is never called with an
- * unparseable value (silent-fail bug surfaced by Codex on PR #373).
+ * unparseable value (silent-fail bug surfaced by Codex on parkhub-rust PR #373).
  */
 function isValidDt(s: string | undefined | null): s is string {
   if (!s) return false;
@@ -81,7 +82,12 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
   const [step, setStep] = useState<Step>(1);
   const [selectedLot, setSelectedLot] = useState<ParkingLot | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<string>('');
+  // Smart default: pre-fill the vehicle the user last booked with. The
+  // lot pre-select happens further down once the lots query resolves
+  // (we can't construct the ParkingLot object from an id alone).
+  const [selectedVehicle, setSelectedVehicle] = useState<string>(
+    () => readLastUsed('buchen:vehicle') ?? '',
+  );
   const [startDate, setStartDate] = useState<string>(defaultStart);
   const [duration, setDuration] = useState<number>(2);
 
@@ -114,6 +120,36 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
   const lots = useMemo(() => (lotsResp ?? []).filter((l) => l.status === 'open'), [lotsResp]);
   const vehicles: Vehicle[] = vehiclesResp ?? [];
 
+  // Reconcile persisted vehicle id against the freshly loaded vehicles.
+  // A stale id left over in localStorage (the vehicle was deleted or is
+  // no longer returned by getVehicles) would otherwise silently end up
+  // on the createBooking payload even though the <select> shows nothing
+  // selected — causing confusing server-side booking failures. Clear
+  // once the vehicles query has resolved and the id doesn't match.
+  useEffect(() => {
+    if (vehiclesResp === undefined) return; // query still loading
+    if (!selectedVehicle) return;
+    if (vehicles.some((v) => v.id === selectedVehicle)) return;
+    setSelectedVehicle('');
+    writeLastUsed('buchen:vehicle', null);
+  }, [vehiclesResp, vehicles, selectedVehicle]);
+
+  // Smart default: auto-advance to Step 2 if the user's last-used lot is
+  // still open. Silent no-op when the lot has been removed / closed /
+  // no prior selection exists. Only fires once (step === 1 guard) so
+  // hitting "← Zurück" doesn't bounce the user forward again.
+  useEffect(() => {
+    if (step !== 1) return;
+    if (selectedLot) return;
+    if (lots.length === 0) return;
+    const lastLotId = readLastUsed('buchen:lot');
+    if (!lastLotId) return;
+    const match = lots.find((l) => l.id === lastLotId);
+    if (!match) return;
+    setSelectedLot(match);
+    setStep(2);
+  }, [lots, step, selectedLot]);
+
   const { data: slotsResp, isLoading: slotsLoading } = useQuery({
     queryKey: ['buchen-slots', selectedLot?.id],
     enabled: !!selectedLot,
@@ -126,6 +162,11 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
   });
   const slots = slotsResp ?? [];
 
+  // Optimistic create: insert a pending placeholder into the bookings
+  // cache as soon as the user taps "Buchung bestätigen" so the list on
+  // /buchungen already shows the new row when we navigate there. The
+  // server response replaces the placeholder on invalidation; onError
+  // rolls back.
   const createMutation = useMutation({
     mutationFn: async (payload: CreateBookingPayload) => {
       const res = await api.createBooking(payload);
@@ -137,12 +178,52 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
       }
       return res.data;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['buchungen'] });
+    onMutate: async (payload: CreateBookingPayload) => {
+      await qc.cancelQueries({ queryKey: ['buchungen'] });
+      const previous = qc.getQueryData<Booking[]>(['buchungen']);
+      // Only insert the optimistic row when the list was already
+      // fetched. When `previous` is undefined (the user hasn't opened
+      // Buchungen yet), skipping the optimistic write avoids leaving
+      // a phantom row in cache on failure — onError can only restore
+      // `previous`, so a seeded `undefined` -> `[optimistic]` path
+      // would survive the rollback. onSettled's invalidate covers the
+      // refetch once Buchungen is opened.
+      if (previous === undefined) {
+        return { previous };
+      }
+      const optimistic: Booking = {
+        id: `optimistic-${Date.now()}`,
+        user_id: '',
+        lot_id: payload.lot_id,
+        slot_id: payload.slot_id,
+        lot_name: selectedLot?.name ?? '',
+        slot_number: selectedSlot?.slot_number ?? '',
+        start_time: payload.start_time,
+        end_time: payload.end_time,
+        status: 'confirmed',
+      };
+      qc.setQueryData<Booking[]>(['buchungen'], [optimistic, ...previous]);
+      return { previous };
+    },
+    onSuccess: (_data, payload) => {
+      // Persist smart defaults only on confirmed success — we don't
+      // want to pre-select a lot the server rejected.
+      writeLastUsed('buchen:lot', payload.lot_id);
+      if (payload.vehicle_id) writeLastUsed('buchen:vehicle', payload.vehicle_id);
       toast('Buchung bestätigt', 'success');
       navigate('buchungen');
     },
-    onError: (err: Error) => toast(err.message || 'Buchung fehlgeschlagen', 'error'),
+    onError: (err: Error, _payload, ctx) => {
+      // Always restore to the snapshot we took in onMutate — including
+      // the `undefined` case. Explicitly writing undefined to the cache
+      // is a no-op for cache that was never seeded, and wipes any
+      // optimistic row we set when prior data did exist.
+      qc.setQueryData(['buchungen'], ctx?.previous);
+      toast(err.message || 'Buchung fehlgeschlagen', 'error');
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['buchungen'] });
+    },
   });
 
   if (lotsLoading) {

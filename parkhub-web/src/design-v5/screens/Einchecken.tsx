@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QRCodeSVG } from 'qrcode.react';
 import { Badge, Card, V5NamedIcon } from '../primitives';
 import { useV5Toast } from '../Toast';
 import { api, type Booking } from '../../api/client';
 import type { ScreenId } from '../nav';
 import { useFleetEvents } from '../../hooks/useFleetEvents';
+
+/**
+ * Deep-link schema the terminal/kiosk app reads via camera scan.
+ * `parkhub://check-in/<booking-id>` is parsed by the paired native
+ * app (or any QR-reader that recognises the custom scheme). We keep
+ * it stable as a public contract — don't rename without rolling out
+ * a terminal firmware update.
+ */
+function checkInDeepLink(bookingId: string): string {
+  return `parkhub://check-in/${bookingId}`;
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -230,12 +242,38 @@ export function EincheckenV5({ navigate }: { navigate: (id: ScreenId) => void })
         </Card>
       ) : (
         <Card className="v5-ani" style={{ padding: 18, animationDelay: '0.12s', textAlign: 'center' }} data-testid="checkin-card">
-          <V5NamedIcon name="check" size={36} color="var(--v5-acc)" />
-          <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: 'var(--v5-txt)' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div
+              data-testid="checkin-qr"
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                background: 'var(--v5-sur)',
+                border: '1px solid var(--v5-bor)',
+                boxShadow: 'var(--v5-shadow-card)',
+                display: 'inline-flex',
+              }}
+            >
+              <QRCodeSVG
+                value={checkInDeepLink(activeBooking.id)}
+                size={240}
+                level="M"
+                marginSize={0}
+                // SVG renderer: scales crisply on retina and avoids the
+                // jsdom `getContext` warnings we'd get from <canvas>.
+                // Hex values only — qrcode.react does not resolve CSS
+                // custom properties (v5 tokens like var(--v5-txt)).
+                fgColor="#0f1013"
+                bgColor="#ffffff"
+                aria-label={`QR-Code für Buchung ${activeBooking.id}`}
+              />
+            </div>
+          </div>
+          <div style={{ marginTop: 12, fontSize: 13, fontWeight: 600, color: 'var(--v5-txt)' }}>
             Bereit zum Einchecken
           </div>
           <div style={{ fontSize: 11, color: 'var(--v5-mut)', marginTop: 4 }}>
-            Scannen Sie den QR-Code am Stellplatz oder tippen Sie auf Einchecken.
+            Scannen Sie mit der Terminal-App zum Einchecken oder tippen Sie unten auf Manuell einchecken.
           </div>
           <button
             type="button"
@@ -256,7 +294,7 @@ export function EincheckenV5({ navigate }: { navigate: (id: ScreenId) => void })
             }}
             data-testid="checkin-btn"
           >
-            {checkInMutation.isPending ? 'Einchecken…' : 'Einchecken'}
+            {checkInMutation.isPending ? 'Einchecken…' : 'Manuell einchecken'}
           </button>
         </Card>
       )}

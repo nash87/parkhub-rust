@@ -66,12 +66,14 @@ function makeEvents() {
 describe('KalenderV5', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('renders empty month with no events', async () => {
+  it('renders empty month with no events and auto-selects today', async () => {
     mockCalendarEvents.mockResolvedValue({ success: true, data: [] });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Kalender')).toBeInTheDocument());
-    // Empty selection placeholder is shown
-    expect(screen.getByText(/Klicken Sie auf ein Datum/)).toBeInTheDocument();
+    // Smart default: today is pre-selected so the day-detail pane shows
+    // today's events (or the short "Keine Einträge" placeholder when the
+    // day is empty), not the generic "pick a date" message.
+    expect(screen.getByText('Keine Einträge')).toBeInTheDocument();
   });
 
   it('renders error state on query failure', async () => {
