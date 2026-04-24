@@ -306,7 +306,11 @@ pub async fn update_my_settings(
     }
 
     let state_guard = state.read().await;
-    let mut user = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+    let mut user = match state_guard
+        .db
+        .get_user(&auth_user.user_id.to_string())
+        .await
+    {
         Ok(Some(u)) => u,
         Ok(None) => {
             return (

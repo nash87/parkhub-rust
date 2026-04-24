@@ -173,6 +173,7 @@ pub async fn setup_init(
         accessibility_needs: None,
         cost_center: None,
         department: None,
+        settings: None,
     };
 
     if let Err(e) = state_guard.db.save_user(&admin).await {

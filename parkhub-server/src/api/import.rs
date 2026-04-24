@@ -318,6 +318,7 @@ pub async fn import_users_csv(
             accessibility_needs: None,
             cost_center: None,
             department: None,
+            settings: None,
         };
 
         // Persist

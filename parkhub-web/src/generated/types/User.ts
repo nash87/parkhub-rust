@@ -27,4 +27,12 @@ cost_center: string | null,
 /**
  * Department for billing allocation
  */
-department: string | null, };
+department: string | null, 
+/**
+ * Per-user v5 customization blob (theme, sidebar variant, density,
+ * font, feature toggles, notifications, privacy). Schema is owned by
+ * the frontend (parkhub-web/src/design-v5/settings/settings.ts) and
+ * stored opaquely as JSON. `None` means "user has not customized";
+ * clients fall back to factory defaults defined in the frontend.
+ */
+settings: Record<string, unknown> | null, };

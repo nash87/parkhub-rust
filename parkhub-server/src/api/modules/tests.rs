@@ -545,6 +545,7 @@ async fn seed_user(state: &SharedState, role: UserRole) -> AuthUser {
         accessibility_needs: None,
         cost_center: None,
         department: None,
+        settings: None,
     };
     state
         .read()

@@ -98,6 +98,7 @@ mod tests {
             accessibility_needs: None,
             cost_center: None,
             department: None,
+            settings: None,
         }
     }
 

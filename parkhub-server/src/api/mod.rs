@@ -2580,6 +2580,7 @@ mod tenant_scope_tests {
             accessibility_needs: None,
             cost_center: None,
             department: None,
+            settings: None,
         }
     }
 

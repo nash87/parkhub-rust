@@ -46,6 +46,7 @@ pub(crate) async fn create_admin_user(db: &Database, config: &ServerConfig) -> R
         accessibility_needs: None,
         cost_center: None,
         department: Some("IT".to_string()),
+        settings: None,
     };
 
     db.save_user(&admin_user).await?;
@@ -246,6 +247,7 @@ pub(crate) async fn generate_dummy_users(
                     accessibility_needs: None,
                     cost_center: None,
                     department: None,
+                    settings: None,
                 }
             })
             .collect()
@@ -692,6 +694,7 @@ pub(crate) async fn seed_demo_data(db: &Database) -> Result<()> {
                     accessibility_needs: None,
                     cost_center: None,
                     department: None,
+                    settings: None,
                 }
             })
             .collect()
