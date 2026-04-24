@@ -21,3 +21,12 @@ describe('DashboardV5 — credits progressbar a11y', () => {
     expect(meter).toHaveAttribute('aria-valuemax', '40');
   });
 });
+
+describe('DashboardV5 — recommendation card branding', () => {
+  it('renders pattern-based recommendation card without AI/KI branding', () => {
+    render(<DashboardV5 navigate={vi.fn()} />);
+    expect(screen.getByText('Empfehlung')).toBeInTheDocument();
+    expect(screen.queryByText('KI-Empfehlung')).toBeNull();
+    expect(screen.queryByText(/^KI$/)).toBeNull();
+  });
+});

@@ -50,7 +50,7 @@ const DEFAULT_STATS: readonly { label: string; value: string; color: string }[] 
   { label: 'CO₂ gespart', value: '142 kg', color: 'var(--v5-ok)' },
 ];
 
-export function V5AIPanel({
+export function V5AssistantPanel({
   open,
   suggestions = DEFAULT_SUGGESTIONS,
   stats = DEFAULT_STATS,
@@ -64,7 +64,7 @@ export function V5AIPanel({
 
   return (
     <aside
-      aria-label="KI-Assistent"
+      aria-label="Assistent"
       className="v5-aniR"
       style={{
         width: 260,
@@ -86,7 +86,7 @@ export function V5AIPanel({
           gap: 7,
         }}
       >
-        <V5NamedIcon name="ai" size={14} color="var(--v5-acc)" />
+        <V5NamedIcon name="assistant" size={14} color="var(--v5-acc)" />
         <span
           style={{
             fontSize: 13,
@@ -95,7 +95,7 @@ export function V5AIPanel({
             letterSpacing: '-0.2px',
           }}
         >
-          KI-Assistent
+          Assistent
         </span>
         <Badge variant="primary">Beta</Badge>
         <span style={{ marginLeft: 'auto' }}>

@@ -104,10 +104,11 @@ describe('VorhersagenV5', () => {
     await waitFor(() => expect(screen.getAllByText(/% Konfidenz/i).length).toBe(7));
   });
 
-  it('shows KI label in header', async () => {
+  it('shows Smart label in header without AI/KI branding', async () => {
     mockGetStats.mockResolvedValue({ success: true, data: STATS_BASE });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Vorhersagen')).toBeInTheDocument());
-    expect(screen.getByText('KI')).toBeInTheDocument();
+    expect(screen.getByText('Smart')).toBeInTheDocument();
+    expect(screen.queryByText('KI')).toBeNull();
   });
 });

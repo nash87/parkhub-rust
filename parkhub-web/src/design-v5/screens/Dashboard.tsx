@@ -146,7 +146,7 @@ export function DashboardV5({ navigate }: { navigate: (id: ScreenId) => void }) 
         </div>
       </Card>
 
-      {/* AI recommendation card */}
+      {/* Smart recommendation card (pattern-based) */}
       <Card
         style={{
           padding: 16,
@@ -156,8 +156,8 @@ export function DashboardV5({ navigate }: { navigate: (id: ScreenId) => void }) 
         className="v5-ani"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-          <V5NamedIcon name="ai" size={13} color="var(--v5-acc)" />
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--v5-acc)' }}>KI-Empfehlung</span>
+          <V5NamedIcon name="assistant" size={13} color="var(--v5-acc)" />
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--v5-acc)' }}>Empfehlung</span>
           <Badge variant="primary">NEU</Badge>
         </div>
         <p

@@ -78,8 +78,8 @@ const FEATURES: readonly FeatureToggle[] = [
     defaultOn: true,
   },
   {
-    id: 'ai_suggestions',
-    label: 'KI-Empfehlungen',
+    id: 'smart_suggestions',
+    label: 'Empfehlungen',
     description: 'Vorschläge zu Buchungszeiten und EV-Plänen. Läuft lokal im Browser.',
     defaultOn: false,
   },

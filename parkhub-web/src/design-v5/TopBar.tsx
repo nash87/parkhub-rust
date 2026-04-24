@@ -5,14 +5,14 @@ export function V5TopBar({
   title,
   breadcrumb,
   onOpenCommand,
-  onToggleAI,
-  aiOpen,
+  onToggleAssistant,
+  assistantOpen,
 }: {
   title: string;
   breadcrumb: string;
   onOpenCommand: () => void;
-  onToggleAI: () => void;
-  aiOpen: boolean;
+  onToggleAssistant: () => void;
+  assistantOpen: boolean;
 }) {
   const { mode, setMode } = useV5Theme();
 
@@ -129,27 +129,27 @@ export function V5TopBar({
 
       <button
         type="button"
-        onClick={onToggleAI}
-        aria-pressed={aiOpen}
-        aria-label="KI-Assistent umschalten"
+        onClick={onToggleAssistant}
+        aria-pressed={assistantOpen}
+        aria-label="Assistent umschalten"
         style={{
           height: 30,
           padding: '0 10px',
           borderRadius: 20,
-          background: aiOpen ? 'var(--v5-acc-muted)' : 'transparent',
-          border: `1px solid ${aiOpen ? 'var(--v5-acc)' : 'var(--v5-bor)'}`,
+          background: assistantOpen ? 'var(--v5-acc-muted)' : 'transparent',
+          border: `1px solid ${assistantOpen ? 'var(--v5-acc)' : 'var(--v5-bor)'}`,
           display: 'flex',
           alignItems: 'center',
           gap: 5,
           cursor: 'pointer',
           fontSize: 10,
           fontWeight: 600,
-          color: aiOpen ? 'var(--v5-acc)' : 'var(--v5-mut)',
+          color: assistantOpen ? 'var(--v5-acc)' : 'var(--v5-mut)',
           transition: 'all 0.15s',
         }}
       >
-        <V5NamedIcon name="ai" size={12} color={aiOpen ? 'var(--v5-acc)' : 'var(--v5-mut)'} />
-        AI
+        <V5NamedIcon name="assistant" size={12} color={assistantOpen ? 'var(--v5-acc)' : 'var(--v5-mut)'} />
+        Smart
       </button>
     </header>
   );
