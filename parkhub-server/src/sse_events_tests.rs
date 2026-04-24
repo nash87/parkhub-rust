@@ -29,6 +29,10 @@ use crate::db::{Database, DatabaseConfig};
 
 struct SseHarness {
     state: Arc<RwLock<AppState>>,
+    /// Random per-harness admin password — prevents hard-coded-credential lint
+    /// (rust/hard-coded-cryptographic-value CWE-798) and gives each test run
+    /// a fresh, unguessable secret.
+    admin_password: String,
     _dir: tempfile::TempDir,
 }
 
@@ -52,8 +56,9 @@ async fn sse_harness() -> SseHarness {
     };
     let db = Database::open(&db_config).expect("open test db");
 
+    let admin_password = uuid::Uuid::new_v4().to_string();
     let config = ServerConfig {
-        admin_password_hash: hash_password_for_test("admin123"),
+        admin_password_hash: hash_password_for_test(&admin_password),
         allow_self_registration: true,
         ..ServerConfig::default()
     };
@@ -75,7 +80,11 @@ async fn sse_harness() -> SseHarness {
             .expect("seed admin");
     }
 
-    SseHarness { state, _dir: dir }
+    SseHarness {
+        state,
+        admin_password,
+        _dir: dir,
+    }
 }
 
 fn router_for(state: Arc<RwLock<AppState>>) -> axum::Router {
@@ -99,9 +108,12 @@ async fn body_json(response: http::Response<Body>) -> serde_json::Value {
     serde_json::from_slice(&bytes).expect("parse JSON")
 }
 
-async fn admin_token(state: Arc<RwLock<AppState>>) -> String {
-    let app = router_for(state);
-    let body = serde_json::json!({"username": "admin", "password": "admin123"});
+async fn admin_token(harness: &SseHarness) -> String {
+    let app = router_for(harness.state.clone());
+    let body = serde_json::json!({
+        "username": "admin",
+        "password": harness.admin_password,
+    });
     let resp = app
         .oneshot(
             Request::post("/api/v1/auth/login")
@@ -146,7 +158,7 @@ async fn fleet_sse_requires_auth_without_token() {
 #[tokio::test]
 async fn fleet_sse_accepts_bearer_auth() {
     let h = sse_harness().await;
-    let token = admin_token(h.state.clone()).await;
+    let token = admin_token(&h).await;
     let app = router_for(h.state.clone());
 
     let resp = app
@@ -174,7 +186,7 @@ async fn fleet_sse_accepts_bearer_auth() {
 #[tokio::test]
 async fn fleet_sse_accepts_cookie_auth() {
     let h = sse_harness().await;
-    let token = admin_token(h.state.clone()).await;
+    let token = admin_token(&h).await;
     let app = router_for(h.state.clone());
 
     let resp = app
@@ -336,7 +348,7 @@ async fn create_booking(
 #[tokio::test]
 async fn checkin_handler_emits_checkin_completed_after_commit() {
     let h = sse_harness().await;
-    let admin_tok = admin_token(h.state.clone()).await;
+    let admin_tok = admin_token(&h).await;
     let (lot_id, slot_id) = setup_lot_and_slot(h.state.clone(), &admin_tok).await;
     let booking_id = create_booking(h.state.clone(), &admin_tok, &lot_id, &slot_id).await;
 
@@ -370,7 +382,7 @@ async fn checkin_handler_emits_checkin_completed_after_commit() {
 #[tokio::test]
 async fn swap_create_emits_swap_requested() {
     let h = sse_harness().await;
-    let admin_tok = admin_token(h.state.clone()).await;
+    let admin_tok = admin_token(&h).await;
     let (lot_id, slot_id) = setup_lot_and_slot(h.state.clone(), &admin_tok).await;
     let booking_id = create_booking(h.state.clone(), &admin_tok, &lot_id, &slot_id).await;
 
@@ -446,7 +458,7 @@ async fn swap_create_emits_swap_requested() {
 #[tokio::test]
 async fn create_guest_booking_emits_guest_created() {
     let h = sse_harness().await;
-    let admin_tok = admin_token(h.state.clone()).await;
+    let admin_tok = admin_token(&h).await;
     let (lot_id, slot_id) = setup_lot_and_slot(h.state.clone(), &admin_tok).await;
 
     // Enable guest bookings setting via admin settings endpoint
