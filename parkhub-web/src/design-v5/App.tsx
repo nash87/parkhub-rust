@@ -33,17 +33,16 @@ import { IntegrationsV5 } from './screens/Integrations';
 import { ApikeysV5 } from './screens/Apikeys';
 import { AuditV5 } from './screens/Audit';
 import { PoliciesV5 } from './screens/Policies';
-import { PlaceholderV5 } from './screens/Placeholder';
 
 import './fonts';
 import './tokens.css';
 
 /**
- * Registry of fully-ported v5 screens. Screens missing from this map fall
- * back to <PlaceholderV5 />, which links out to the legacy v4 route so
- * navigation never dead-ends during the migration.
+ * Registry of all 26 v5 screens. Every `NavItem.id` in `./nav.ts` maps
+ * to a concrete component here — the former placeholder fallback was
+ * retired in v5.1 once the last screen port landed.
  */
-const SCREENS: Partial<Record<ScreenId, ComponentType<{ navigate: (id: ScreenId) => void }>>> = {
+const SCREENS: Record<ScreenId, ComponentType<{ navigate: (id: ScreenId) => void }>> = {
   dashboard: DashboardV5,
   buchungen: BuchungenV5,
   buchen: BuchenV5,
@@ -173,11 +172,7 @@ function V5Shell() {
               minWidth: 0,
             }}
           >
-            {ScreenComponent ? (
-              <ScreenComponent navigate={navigate} />
-            ) : (
-              <PlaceholderV5 id={screen} />
-            )}
+            <ScreenComponent navigate={navigate} />
           </main>
           <V5AIPanel open={aiOpen} />
         </div>

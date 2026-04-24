@@ -9,7 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-_No unreleased changes._
+### Changed
+
+- **Design v5 rollout complete**: all 26 navigation screens now ship as real v5 components; the `<PlaceholderV5>` fallback has been retired and `SCREENS` is typed as a total `Record<ScreenId, …>` so missing screens become compile-time errors instead of runtime fallbacks.
+- **Visual regression workflow**: `workflow_dispatch` now accepts an `update_snapshots` boolean input — when `true`, Playwright runs with `--update-snapshots` and refreshed baselines are committed back to `main` by a gated bot step.
+
+### Added
+
+- **v5 coverage**: SSE-backed Fleet event stream (`/api/v1/events/stream`), uPlot live chart primitive, ts-rs-generated `FleetEvent` types, and axe-core a11y coverage across every v5 route.
 
 ---
 
