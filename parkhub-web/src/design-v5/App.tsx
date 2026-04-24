@@ -22,6 +22,17 @@ import { TauschV5 } from './screens/Tausch';
 import { EincheckenV5 } from './screens/Einchecken';
 import { VorhersagenV5 } from './screens/Vorhersagen';
 import { GaestepassV5 } from './screens/Gaestepass';
+import { AnalyticsV5 } from './screens/Analytics';
+import { NutzerV5 } from './screens/Nutzer';
+import { BillingV5 } from './screens/Billing';
+import { LobbyV5 } from './screens/Lobby';
+import { BenachrichtigungenV5 } from './screens/Benachrichtigungen';
+import { EinstellungenV5 } from './screens/Einstellungen';
+import { StandorteV5 } from './screens/Standorte';
+import { IntegrationsV5 } from './screens/Integrations';
+import { ApikeysV5 } from './screens/Apikeys';
+import { AuditV5 } from './screens/Audit';
+import { PoliciesV5 } from './screens/Policies';
 import { PlaceholderV5 } from './screens/Placeholder';
 
 import './fonts';
@@ -48,6 +59,17 @@ const SCREENS: Partial<Record<ScreenId, ComponentType<{ navigate: (id: ScreenId)
   einchecken: EincheckenV5,
   vorhersagen: VorhersagenV5,
   gaestepass: GaestepassV5,
+  analytics: AnalyticsV5,
+  nutzer: NutzerV5,
+  billing: BillingV5,
+  lobby: LobbyV5,
+  benachrichtigungen: BenachrichtigungenV5,
+  einstellungen: EinstellungenV5,
+  standorte: StandorteV5,
+  integrations: IntegrationsV5,
+  apikeys: ApikeysV5,
+  audit: AuditV5,
+  policies: PoliciesV5,
 };
 
 const STORAGE_KEY = 'ph-v5-screen';

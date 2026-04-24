@@ -362,6 +362,14 @@ export const api = {
   adminUpdateSettings: (data: Record<string, string>) =>
     request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
+  // ── Admin Cost-Center Billing (parkhub-server/src/api/billing.rs) ──
+  // Admin-only aggregates for tenant-wide finance reporting. The v5 Billing
+  // screen surfaces these instead of the personal `/payments/history` feed.
+  adminBillingByCostCenter: () =>
+    request<AdminCostCenterSummary[]>('/api/v1/admin/billing/by-cost-center'),
+  adminBillingByDepartment: () =>
+    request<AdminDepartmentSummary[]>('/api/v1/admin/billing/by-department'),
+
   // ── Admin Modules (T-1720 v2 — runtime enable/disable) ──
   patchModule: (name: string, runtime_enabled: boolean) =>
     request<ModuleInfo>(`/api/v1/admin/modules/${encodeURIComponent(name)}`, {
@@ -652,7 +660,83 @@ export const api = {
     request<GuestBooking>('/api/v1/bookings/guest', { method: 'POST', body: JSON.stringify(data) }),
   cancelGuestBooking: (id: string) =>
     request<void>(`/api/v1/bookings/guest/${id}`, { method: 'DELETE' }),
+
+  // ── API Keys (v5 Wave 4) ──
+  getApiKeys: () => request<ApiKey[]>('/api/v1/admin/api-keys'),
+  createApiKey: (label: string) =>
+    request<CreatedApiKey>('/api/v1/admin/api-keys', {
+      method: 'POST', body: JSON.stringify({ label }),
+    }),
+  rotateApiKey: (id: string) =>
+    request<CreatedApiKey>(`/api/v1/admin/api-keys/${id}/rotate`, { method: 'POST' }),
+  revokeApiKey: (id: string) =>
+    request<void>(`/api/v1/admin/api-keys/${id}`, { method: 'DELETE' }),
+
+  // ── Integrations (v5 Wave 4) ──
+  getIntegrations: () => request<Integration[]>('/api/v1/admin/integrations'),
+  connectIntegration: (id: string) =>
+    request<Integration>(`/api/v1/admin/integrations/${id}/connect`, { method: 'POST' }),
+  disconnectIntegration: (id: string) =>
+    request<Integration>(`/api/v1/admin/integrations/${id}/disconnect`, { method: 'POST' }),
+
+  // ── Policies (v5 Wave 4) ──
+  getPolicies: () => request<Policy[]>('/api/v1/admin/policies'),
+  updatePolicy: (id: string, body: string) =>
+    request<Policy>(`/api/v1/admin/policies/${id}`, {
+      method: 'PUT', body: JSON.stringify({ body }),
+    }),
+
+  // ── Lobby Display (v5 Wave 4) ──
+  getLobbyConfig: () => request<LobbyConfig>('/api/v1/admin/lobby'),
+  updateLobbyConfig: (data: Partial<LobbyConfig>) =>
+    request<LobbyConfig>('/api/v1/admin/lobby', {
+      method: 'PUT', body: JSON.stringify(data),
+    }),
 };
+
+// ── API Keys ──
+export interface ApiKey {
+  id: string;
+  label: string;
+  masked_key: string;
+  last_used_at: string | null;
+  created_at: string;
+}
+
+export interface CreatedApiKey extends ApiKey {
+  /** Full key — returned exactly once on create/rotate. */
+  token: string;
+}
+
+// ── Integrations ──
+export interface Integration {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+  connected: boolean;
+  connected_at: string | null;
+  account_label: string | null;
+}
+
+// ── Policies ──
+export interface Policy {
+  id: string;
+  title: string;
+  slug: string;
+  body: string;
+  updated_at: string;
+}
+
+// ── Lobby Display ──
+export type LobbyScreenKey = 'queue' | 'map' | 'announcements' | 'welcome';
+
+export interface LobbyConfig {
+  active_screen: LobbyScreenKey;
+  rotate_interval_seconds: number;
+  show_clock: boolean;
+  show_weather: boolean;
+}
 
 // ── Types ──
 
@@ -887,6 +971,34 @@ export interface PaymentHistoryEntry {
 export interface StripeConfigResponse {
   publishable_key?: string;
   configured: boolean;
+}
+
+/**
+ * Admin cost-center billing aggregate — matches `CostCenterSummary` in
+ * `parkhub-server/src/api/billing.rs`. Amount is in whole currency units
+ * (f64 euros), not cents like PaymentHistoryEntry.
+ */
+export interface AdminCostCenterSummary {
+  cost_center: string;
+  department: string;
+  user_count: number;
+  total_bookings: number;
+  total_credits_used: number;
+  total_amount: number;
+  currency: string;
+}
+
+/**
+ * Admin department billing aggregate — matches `DepartmentSummary` in
+ * `parkhub-server/src/api/billing.rs`.
+ */
+export interface AdminDepartmentSummary {
+  department: string;
+  user_count: number;
+  total_bookings: number;
+  total_credits_used: number;
+  total_amount: number;
+  currency: string;
 }
 
 export interface UserStats {
