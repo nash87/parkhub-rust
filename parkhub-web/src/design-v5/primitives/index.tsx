@@ -1,6 +1,8 @@
 import { type CSSProperties, type ReactNode } from 'react';
 import { icons, type IconKey } from '../icons';
 
+export { UPlotChart, type UPlotChartProps } from './UPlotChart';
+
 /* ═════════════════════════════════════════════════════════════
    v5 Primitives — thin, tokenized, composable
    All surfaces read from CSS custom properties (--v5-*) so a

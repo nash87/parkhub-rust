@@ -13,6 +13,21 @@ vi.mock('@number-flow/react', () => ({
   default: ({ value }: { value: number }) => <span>{value}</span>,
 }));
 
+// uPlot needs a real 2D canvas context; jsdom has none. Mock uplot and its CSS
+// so the Analytics screen renders deterministically inside the test env.
+vi.mock('uplot', () => {
+  class FakeUPlot {
+    constructor(_opts: unknown, _data: unknown, target: HTMLElement) {
+      const canvas = document.createElement('canvas');
+      target.appendChild(canvas);
+    }
+    destroy() {}
+    setSize() {}
+  }
+  return { default: FakeUPlot };
+});
+vi.mock('uplot/dist/uPlot.min.css', () => ({}));
+
 import { AnalyticsV5 } from './Analytics';
 
 const STATS = {
@@ -53,28 +68,25 @@ describe('AnalyticsV5', () => {
     expect(screen.getByText('Aktive Buchungen')).toBeInTheDocument();
   });
 
-  it('renders both bar charts', async () => {
+  it('renders both charts as uPlot canvases with aria-labels', async () => {
     mockStats.mockResolvedValue({ success: true, data: STATS });
-    renderScreen();
-    await waitFor(() => expect(screen.getAllByTestId('analytics-chart')).toHaveLength(2));
-  });
-
-  it('hour chart renders 24 bars', async () => {
-    mockStats.mockResolvedValue({ success: true, data: STATS });
-    renderScreen();
-    await waitFor(() => expect(screen.getAllByTestId('analytics-chart').length).toBeGreaterThan(0));
-    const charts = screen.getAllByTestId('analytics-chart');
-    // hour chart should have rects for 24 hours
-    const hourRects = charts[0].querySelectorAll('rect');
-    expect(hourRects.length).toBe(24);
+    const { container } = renderScreen();
+    await waitFor(() =>
+      expect(screen.getByRole('img', { name: /Auslastung nach Stunde/ })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('img', { name: /Auslastung nach Wochentag/ })).toBeInTheDocument();
+    // uPlot renders canvas, not inline-SVG <rect>s — guard the regression.
+    expect(container.querySelectorAll('canvas').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelectorAll('[data-testid="analytics-chart"] rect').length).toBe(0);
   });
 
   it('gracefully handles missing occupancy data', async () => {
     mockStats.mockResolvedValue({ success: true, data: { total_users: 1, total_lots: 1, total_bookings: 1, active_bookings: 1 } });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Nutzer')).toBeInTheDocument());
-    // Should still render chart containers (with 0 values)
-    expect(screen.getAllByTestId('analytics-chart')).toHaveLength(2);
+    // Chart containers still present for both hour + day series (values may be 0, not empty).
+    expect(screen.getByRole('img', { name: /Auslastung nach Stunde/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /Auslastung nach Wochentag/ })).toBeInTheDocument();
   });
 
   it('renders title', async () => {

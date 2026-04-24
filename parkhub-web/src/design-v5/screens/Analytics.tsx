@@ -1,68 +1,104 @@
 import NumberFlow from '@number-flow/react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, SectionLabel, StatCard, V5NamedIcon } from '../primitives';
+import { Card, SectionLabel, StatCard, UPlotChart, V5NamedIcon } from '../primitives';
 import { api } from '../../api/client';
 import type { ScreenId } from '../nav';
 
-function BarChart({ data, label, color = 'var(--v5-acc)' }: {
-  data: { label: string; value: number }[];
+const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+/** Canvas-rendered chart block backed by uPlot (MIT, ~40KB). */
+function ChartBlock({
+  label,
+  xs,
+  ys,
+  tickLabels,
+  stroke = 'var(--v5-acc)',
+  fill = 'var(--v5-acc-muted)',
+}: {
   label: string;
-  color?: string;
+  xs: number[];
+  ys: number[];
+  tickLabels: string[];
+  stroke?: string;
+  fill?: string;
 }) {
-  if (data.length === 0) {
+  if (xs.length === 0) {
     return (
-      <div style={{ fontSize: 11, color: 'var(--v5-mut)', padding: '14px 0' }}>Keine Daten</div>
+      <div>
+        <SectionLabel>{label}</SectionLabel>
+        <div
+          role="img"
+          aria-label={label}
+          style={{ fontSize: 11, color: 'var(--v5-mut)', padding: '14px 0' }}
+        >
+          Keine Daten
+        </div>
+      </div>
     );
   }
-  const max = Math.max(...data.map((d) => d.value), 1);
-  const width = 520;
-  const height = 120;
-  const pad = 6;
-  const barW = (width - pad * 2) / data.length;
+
+  const options: Partial<import('uplot').Options> = {
+    series: [
+      {},
+      {
+        stroke,
+        fill,
+        width: 2,
+        paths: (u, sidx, i0, i1) => {
+          // Bar-style paths via uPlot's built-in bars plugin-style drawing.
+          const { ctx } = u;
+          const xVals = u.data[0] as number[];
+          const yVals = u.data[sidx] as number[];
+          const path = new Path2D();
+          const n = xVals.length;
+          if (n === 0) return null;
+          const span = n > 1 ? xVals[1]! - xVals[0]! : 1;
+          const barW = Math.max(2, u.valToPos(span, 'x', true) - u.valToPos(0, 'x', true) - 4);
+          const zeroY = u.valToPos(0, 'y', true);
+          for (let i = i0; i <= i1; i++) {
+            const cx = u.valToPos(xVals[i]!, 'x', true);
+            const cy = u.valToPos(yVals[i]!, 'y', true);
+            const h = zeroY - cy;
+            path.rect(cx - barW / 2, cy, barW, h);
+          }
+          ctx.save();
+          ctx.fillStyle = typeof fill === 'string' ? fill : 'currentColor';
+          ctx.fill(path);
+          ctx.restore();
+          return null;
+        },
+        points: { show: false },
+      },
+    ],
+    axes: [
+      {
+        stroke: 'var(--v5-mut)',
+        grid: { show: false },
+        ticks: { show: false },
+        values: (_u, splits) => splits.map((v) => tickLabels[Math.round(v)] ?? ''),
+        size: 22,
+      },
+      {
+        stroke: 'var(--v5-mut)',
+        grid: { stroke: 'var(--v5-bord)', width: 1 },
+        ticks: { show: false },
+        size: 32,
+      },
+    ],
+    scales: {
+      x: { time: false, range: [xs[0]! - 0.5, xs[xs.length - 1]! + 0.5] },
+      y: { range: (_u, _dMin, dMax) => [0, Math.max(dMax, 1) * 1.1] },
+    },
+  };
+
   return (
     <div>
       <SectionLabel>{label}</SectionLabel>
-      <svg
-        viewBox={`0 0 ${width} ${height + 24}`}
-        style={{ width: '100%', height: 'auto', display: 'block' }}
-        role="img"
-        aria-label={label}
-        data-testid="analytics-chart"
-      >
-        {data.map((d, i) => {
-          const h = (d.value / max) * height;
-          const x = pad + i * barW;
-          const y = height - h;
-          return (
-            <g key={`${d.label}-${i}`}>
-              <rect
-                x={x + 2}
-                y={y}
-                width={barW - 4}
-                height={h}
-                fill={color}
-                rx={3}
-                opacity={0.85}
-              />
-              <text
-                x={x + barW / 2}
-                y={height + 14}
-                fontSize="9"
-                fill="var(--v5-mut)"
-                textAnchor="middle"
-                fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-              >
-                {d.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <UPlotChart data={[xs, ys]} options={options} ariaLabel={label} height={140} />
     </div>
   );
 }
-
-const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
 export function AnalyticsV5({ navigate: _navigate }: { navigate: (id: ScreenId) => void }) {
   const { data: stats, isLoading, isError } = useQuery({
@@ -74,6 +110,32 @@ export function AnalyticsV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
     },
     staleTime: 60_000,
   });
+
+  const hourData = useMemo(() => {
+    const byHour = stats?.occupancy_by_hour ?? {};
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const ticks: string[] = [];
+    for (let h = 0; h < 24; h++) {
+      const key = String(h).padStart(2, '0');
+      xs.push(h);
+      ys.push(Number(byHour[key] ?? byHour[String(h)] ?? 0));
+      ticks.push(key);
+    }
+    return { xs, ys, ticks };
+  }, [stats]);
+
+  const dayData = useMemo(() => {
+    const byDay = stats?.occupancy_by_day ?? {};
+    const xs: number[] = [];
+    const ys: number[] = [];
+    DAY_LABELS.forEach((lbl, i) => {
+      const entry = byDay[lbl] ?? byDay[String(i)] ?? null;
+      xs.push(i);
+      ys.push(entry ? entry.avg_percentage : 0);
+    });
+    return { xs, ys, ticks: DAY_LABELS };
+  }, [stats]);
 
   if (isLoading) {
     return (
@@ -96,19 +158,6 @@ export function AnalyticsV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
     );
   }
 
-  const byHour = stats.occupancy_by_hour ?? {};
-  const hourBars: { label: string; value: number }[] = [];
-  for (let h = 0; h < 24; h++) {
-    const key = String(h).padStart(2, '0');
-    hourBars.push({ label: key, value: Number(byHour[key] ?? byHour[String(h)] ?? 0) });
-  }
-
-  const byDay = stats.occupancy_by_day ?? {};
-  const dayBars = DAY_LABELS.map((lbl, i) => {
-    const entry = byDay[lbl] ?? byDay[String(i)] ?? null;
-    return { label: lbl, value: entry ? entry.avg_percentage : 0 };
-  });
-
   return (
     <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="v5-ani" style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Analytics</div>
@@ -121,16 +170,24 @@ export function AnalyticsV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
       </div>
 
       <Card className="v5-ani" style={{ padding: 16, animationDelay: '0.12s' }}>
-        <BarChart data={hourBars} label="Auslastung nach Stunde (%)" />
+        <ChartBlock
+          label="Auslastung nach Stunde (%)"
+          xs={hourData.xs}
+          ys={hourData.ys}
+          tickLabels={hourData.ticks}
+        />
       </Card>
 
       <Card className="v5-ani" style={{ padding: 16, animationDelay: '0.18s' }}>
-        <BarChart data={dayBars} label="Auslastung nach Wochentag (%)" color="var(--v5-ok, oklch(0.65 0.17 160))" />
+        <ChartBlock
+          label="Auslastung nach Wochentag (%)"
+          xs={dayData.xs}
+          ys={dayData.ys}
+          tickLabels={dayData.ticks}
+          stroke="var(--v5-ok, oklch(0.65 0.17 160))"
+          fill="var(--v5-ok-muted, oklch(0.65 0.17 160 / 0.25))"
+        />
       </Card>
-
-      <div className="v5-ani" style={{ fontSize: 10, color: 'var(--v5-mut)' }}>
-        Interaktive Charts (uPlot) folgen in separater PR.
-      </div>
     </div>
   );
 }
