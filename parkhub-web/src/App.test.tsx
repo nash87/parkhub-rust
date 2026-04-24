@@ -577,4 +577,13 @@ describe('App', () => {
       });
     });
   }
+
+  it('imports OfflineIndicator from components/PWAEnhanced so it can mount at the app shell', async () => {
+    // Direct named-import wiring check: the App module must pull
+    // OfflineIndicator from components/PWAEnhanced. If it does not,
+    // the offline banner never reaches the user when navigator.onLine flips.
+    const appSource = await import('./App?raw');
+    expect(appSource.default).toMatch(/from ['"]\.\/components\/PWAEnhanced['"]/);
+    expect(appSource.default).toMatch(/OfflineIndicator/);
+  });
 });
