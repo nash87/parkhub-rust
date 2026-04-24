@@ -596,6 +596,62 @@ export const api = {
     }),
   getWidgetData: (widgetId: string) =>
     request<WidgetDataResponse>(`/api/v1/admin/widgets/data/${widgetId}`),
+
+  // ── Team / Fleet (v5 Wave 3) ──
+  getTeam: () => request<TeamMember[]>('/api/v1/team'),
+  getAdminStatsExtended: () => request<AdminStatsExtended>('/api/v1/admin/stats'),
+
+  // ── EV Chargers (v5 Wave 3) ──
+  getLotChargers: (lotId: string) => request<EvCharger[]>(`/api/v1/lots/${lotId}/chargers`),
+  getChargerSessions: () => request<ChargingSession[]>('/api/v1/chargers/sessions'),
+  startCharging: (chargerId: string) =>
+    request<void>(`/api/v1/chargers/${chargerId}/start`, { method: 'POST', body: JSON.stringify({}) }),
+  stopCharging: (chargerId: string) =>
+    request<void>(`/api/v1/chargers/${chargerId}/stop`, { method: 'POST' }),
+
+  // ── Swap Requests (v5 Wave 3) ──
+  // Rust backend uses `PUT /api/v1/swap-requests/{id}` with `{action}` body,
+  // not separate POST /accept and /decline endpoints like PHP. The client
+  // method signatures stay identical so the screens remain byte-identical
+  // with the PHP mirror — only the URL shape below diverges.
+  getSwapRequests: () => request<SwapRequest[]>('/api/v1/swap-requests'),
+  acceptSwap: (id: string) =>
+    request<void>(`/api/v1/swap-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'accept' }),
+    }),
+  declineSwap: (id: string) =>
+    request<void>(`/api/v1/swap-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ action: 'decline' }),
+    }),
+  createSwapRequest: (sourceBookingId: string, targetBookingId: string, message: string | null) =>
+    request<SwapRequest>(`/api/v1/bookings/${sourceBookingId}/swap-request`, {
+      method: 'POST',
+      body: JSON.stringify({ target_booking_id: targetBookingId, message }),
+    }),
+
+  // ── Check-in (v5 Wave 3) ──
+  // Rust backend exposes `POST /api/v1/bookings/{id}/checkin` (no dash);
+  // the separate `GET …/check-in` status probe and `POST …/check-out` are
+  // PHP-only surfaces that still resolve via the 404 fallback path in the
+  // screen. Method signatures stay identical for parity.
+  getCheckInStatus: (bookingId: string) =>
+    request<CheckInStatus>(`/api/v1/bookings/${bookingId}/check-in`),
+  checkIn: (bookingId: string) =>
+    request<void>(`/api/v1/bookings/${bookingId}/checkin`, { method: 'POST' }),
+  checkOut: (bookingId: string) =>
+    request<void>(`/api/v1/bookings/${bookingId}/check-out`, { method: 'POST' }),
+
+  // ── Guest Passes (v5 Wave 3) ──
+  // `DELETE …/bookings/guest/{id}` is PHP-only today; rust ships only the
+  // admin PATCH cancel. We keep the user-side signature for parity and let
+  // the 404 surface as a toast until the rust handler lands.
+  getGuestBookings: () => request<GuestBooking[]>('/api/v1/bookings/guest'),
+  createGuestBooking: (data: CreateGuestBookingPayload) =>
+    request<GuestBooking>('/api/v1/bookings/guest', { method: 'POST', body: JSON.stringify(data) }),
+  cancelGuestBooking: (id: string) =>
+    request<void>(`/api/v1/bookings/guest/${id}`, { method: 'DELETE' }),
 };
 
 // ── Types ──
@@ -1260,4 +1316,135 @@ export interface WidgetDataResponse {
   widget_type: string;
   title: string;
   data: Record<string, unknown>;
+}
+
+// ── v5 Wave 3: Fleet ──
+
+export interface TeamMember {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+}
+
+export interface UserBookingStats {
+  total: number;
+  this_month: number;
+  ev_count: number;
+  morning_count: number;
+  swaps_accepted: number;
+  no_shows: number;
+  avg_duration_hours: number;
+}
+
+export interface DayOccupancy {
+  avg_percentage: number;
+  peak_hour: number;
+  peak_percentage: number;
+  bookings: number;
+}
+
+/**
+ * Runtime-extended shape of `GET /api/v1/admin/stats`. The base
+ * {@link AdminStats} interface only declares the guaranteed fields, while
+ * the Wave 3 Fleet screens (Rangliste, Vorhersagen) consume optional
+ * aggregates that the backend returns opportunistically.
+ */
+export interface AdminStatsExtended extends AdminStats {
+  ev_bookings?: number;
+  morning_bookings?: number;
+  swap_requests_accepted?: number;
+  no_shows?: number;
+  bookings_by_user?: Record<string, UserBookingStats>;
+  occupancy_by_day?: Record<string, DayOccupancy>;
+  occupancy_by_hour?: Record<string, number>;
+}
+
+export type ChargerConnector = 'type2' | 'ccs' | 'chademo' | 'tesla';
+export type ChargerStatus = 'available' | 'in_use' | 'offline' | 'maintenance';
+
+export interface EvCharger {
+  id: string;
+  lot_id: string;
+  label: string;
+  connector_type: ChargerConnector;
+  power_kw: number;
+  status: ChargerStatus;
+  location_hint: string | null;
+}
+
+export interface ChargingSession {
+  id: string;
+  charger_id: string;
+  user_id: string;
+  start_time: string;
+  end_time: string | null;
+  kwh_consumed: number;
+  status: 'active' | 'completed' | 'cancelled';
+}
+
+export interface SwapBookingSummary {
+  lot_name: string;
+  slot_number: string;
+  start_time: string;
+  end_time: string;
+}
+
+export interface SwapRequest {
+  id: string;
+  requester_id: string;
+  source_booking_id: string;
+  target_booking_id: string;
+  source_booking: SwapBookingSummary;
+  target_booking: SwapBookingSummary;
+  message: string | null;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+}
+
+export interface CheckInStatus {
+  checked_in: boolean;
+  checked_in_at: string | null;
+  checked_out_at: string | null;
+}
+
+/**
+ * Guest booking payload returned by `GET /api/v1/bookings/guest`.
+ *
+ * The `status` union mirrors the Rust backend's `BookingStatus` enum
+ * (`parkhub-common::models::BookingStatus`) which is serialised as the full
+ * snake_case set. In particular, newly created passes land in `confirmed`
+ * (see `parkhub-server::api::guest::create_guest_booking`) and only flip to
+ * `active` once the booking window opens, so clients MUST accept the full
+ * set to render and act on fresh records.
+ */
+export interface GuestBooking {
+  id: string;
+  lot_id: string;
+  lot_name: string;
+  slot_id: string;
+  slot_number: string;
+  guest_name: string;
+  guest_email: string | null;
+  guest_code: string;
+  start_time: string;
+  end_time: string;
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'active'
+    | 'completed'
+    | 'expired'
+    | 'cancelled'
+    | 'no_show';
+  created_at: string;
+}
+
+export interface CreateGuestBookingPayload {
+  lot_id: string;
+  slot_id: string;
+  start_time: string;
+  end_time: string;
+  guest_name: string;
+  guest_email: string | null;
 }

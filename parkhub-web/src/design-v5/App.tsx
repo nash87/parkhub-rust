@@ -15,6 +15,13 @@ import { KalenderV5 } from './screens/Kalender';
 import { KarteV5 } from './screens/Karte';
 import { CreditsV5 } from './screens/Credits';
 import { ProfilV5 } from './screens/Profil';
+import { TeamV5 } from './screens/Team';
+import { RanglisteV5 } from './screens/Rangliste';
+import { EVV5 } from './screens/EV';
+import { TauschV5 } from './screens/Tausch';
+import { EincheckenV5 } from './screens/Einchecken';
+import { VorhersagenV5 } from './screens/Vorhersagen';
+import { GaestepassV5 } from './screens/Gaestepass';
 import { PlaceholderV5 } from './screens/Placeholder';
 
 import './fonts';
@@ -34,6 +41,13 @@ const SCREENS: Partial<Record<ScreenId, ComponentType<{ navigate: (id: ScreenId)
   karte: KarteV5,
   credits: CreditsV5,
   profil: ProfilV5,
+  team: TeamV5,
+  rangliste: RanglisteV5,
+  ev: EVV5,
+  tausch: TauschV5,
+  einchecken: EincheckenV5,
+  vorhersagen: VorhersagenV5,
+  gaestepass: GaestepassV5,
 };
 
 const STORAGE_KEY = 'ph-v5-screen';
