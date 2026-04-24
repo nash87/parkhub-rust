@@ -28,6 +28,11 @@ vi.mock('../Toast', () => ({
   V5ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+const mockUseFleetEvents = vi.fn(() => ({ connected: false }));
+vi.mock('../../hooks/useFleetEvents', () => ({
+  useFleetEvents: (...a: unknown[]) => mockUseFleetEvents(...a),
+}));
+
 import { TauschV5 } from './Tausch';
 
 function renderScreen(navigate = vi.fn()) {
@@ -144,5 +149,21 @@ describe('TauschV5', () => {
       expect(mockCreate).toHaveBeenCalledWith('b1', 'b2', null);
       expect(mockToast).toHaveBeenCalledWith('Tauschanfrage gesendet', 'success');
     });
+  });
+
+  // T-1946 — SSE wiring
+  it('wires useFleetEvents with swap invalidation map', async () => {
+    mockGetSwaps.mockResolvedValue({ success: true, data: [] });
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    renderScreen();
+    await waitFor(() => expect(mockUseFleetEvents).toHaveBeenCalled());
+    const opts = mockUseFleetEvents.mock.calls[0][0] as {
+      invalidate: Record<string, unknown[][]>;
+    };
+    expect(opts.invalidate['swap.requested']).toBeDefined();
+    expect(opts.invalidate['swap.accepted']).toBeDefined();
+    expect(opts.invalidate['swap.declined']).toBeDefined();
+    const allKeys = Object.values(opts.invalidate).flat() as unknown[][];
+    expect(allKeys.some((k) => k?.[0] === 'swap-requests')).toBe(true);
   });
 });

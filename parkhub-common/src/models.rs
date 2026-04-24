@@ -885,6 +885,148 @@ pub struct ChargingSession {
     pub created_at: DateTime<Utc>,
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// FLEET SSE EVENTS (T-1946)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Discriminant for `FleetEvent` — matches the wire contract for the
+/// `/api/v1/events/fleet` SSE stream (snake_case variant → dotted wire type).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FleetEventType {
+    #[serde(rename = "checkin.started")]
+    CheckinStarted,
+    #[serde(rename = "checkin.completed")]
+    CheckinCompleted,
+    #[serde(rename = "swap.requested")]
+    SwapRequested,
+    #[serde(rename = "swap.accepted")]
+    SwapAccepted,
+    #[serde(rename = "swap.declined")]
+    SwapDeclined,
+    #[serde(rename = "ev.session.started")]
+    EvSessionStarted,
+    #[serde(rename = "ev.session.stopped")]
+    EvSessionStopped,
+    #[serde(rename = "guest.created")]
+    GuestCreated,
+    #[serde(rename = "guest.cancelled")]
+    GuestCancelled,
+}
+
+/// Realtime fleet event broadcast over the SSE stream
+/// (`GET /api/v1/events/fleet`). Emitted AFTER DB commit by mutation handlers
+/// for Einchecken / EV / Tausch / Gäste workflows.
+///
+/// Wire format (stable):
+/// ```json
+/// {
+///   "type": "checkin.started",
+///   "resource_id": "<uuid>",
+///   "lot_id": "<uuid|null>",
+///   "user_id": "<uuid|null>",
+///   "timestamp": "<RFC3339>"
+/// }
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FleetEvent {
+    #[serde(rename = "type")]
+    pub event_type: FleetEventType,
+    pub resource_id: String,
+    pub lot_id: Option<String>,
+    pub user_id: Option<String>,
+    pub timestamp: String,
+}
+
+impl FleetEvent {
+    /// Build an event with the current UTC timestamp.
+    fn new(
+        event_type: FleetEventType,
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: Option<impl Into<String>>,
+    ) -> Self {
+        Self {
+            event_type,
+            resource_id: resource_id.into(),
+            lot_id,
+            user_id: user_id.map(Into::into),
+            timestamp: Utc::now().to_rfc3339(),
+        }
+    }
+
+    pub fn checkin_started(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::CheckinStarted, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn checkin_completed(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::CheckinCompleted, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn swap_requested(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::SwapRequested, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn swap_accepted(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::SwapAccepted, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn swap_declined(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::SwapDeclined, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn ev_session_started(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::EvSessionStarted, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn ev_session_stopped(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::EvSessionStopped, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn guest_created(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::GuestCreated, resource_id, lot_id, Some(user_id))
+    }
+
+    pub fn guest_cancelled(
+        resource_id: impl Into<String>,
+        lot_id: Option<String>,
+        user_id: impl Into<String>,
+    ) -> Self {
+        Self::new(FleetEventType::GuestCancelled, resource_id, lot_id, Some(user_id))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1575,5 +1717,85 @@ mod tests {
         assert!(back.notifications_enabled);
         assert_eq!(back.language, "de");
         assert_eq!(back.theme, "dark");
+    }
+
+    // ── FleetEvent (T-1946 SSE) ───────────────────────────────────────────────
+
+    #[test]
+    fn fleet_event_checkin_started_serializes_with_type_and_timestamp() {
+        let e = FleetEvent::checkin_started(
+            "550e8400-e29b-41d4-a716-446655440000",
+            Some("lot-1".to_string()),
+            "user-1",
+        );
+        let json = serde_json::to_string(&e).unwrap();
+        assert!(
+            json.contains("\"type\":\"checkin.started\""),
+            "expected type field, got: {json}"
+        );
+        assert!(json.contains("\"timestamp\""), "expected timestamp: {json}");
+        assert!(json.contains("\"resource_id\":\"550e8400"), "expected resource_id: {json}");
+        assert!(json.contains("\"lot_id\":\"lot-1\""), "expected lot_id: {json}");
+        assert!(json.contains("\"user_id\":\"user-1\""), "expected user_id: {json}");
+    }
+
+    #[test]
+    fn fleet_event_checkin_completed_has_correct_type() {
+        let e = FleetEvent::checkin_completed("bkg-1", Some("lot-1".to_string()), "u-1");
+        let json = serde_json::to_string(&e).unwrap();
+        assert!(json.contains("\"type\":\"checkin.completed\""));
+    }
+
+    #[test]
+    fn fleet_event_swap_variants_have_correct_types() {
+        let req = FleetEvent::swap_requested("swap-1", None, "u-1");
+        let acc = FleetEvent::swap_accepted("swap-1", None, "u-1");
+        let dec = FleetEvent::swap_declined("swap-1", None, "u-1");
+        let req_j = serde_json::to_string(&req).unwrap();
+        let acc_j = serde_json::to_string(&acc).unwrap();
+        let dec_j = serde_json::to_string(&dec).unwrap();
+        assert!(req_j.contains("\"type\":\"swap.requested\""));
+        assert!(acc_j.contains("\"type\":\"swap.accepted\""));
+        assert!(dec_j.contains("\"type\":\"swap.declined\""));
+    }
+
+    #[test]
+    fn fleet_event_ev_session_variants() {
+        let start = FleetEvent::ev_session_started("sess-1", Some("lot-1".to_string()), "u-1");
+        let stop = FleetEvent::ev_session_stopped("sess-1", Some("lot-1".to_string()), "u-1");
+        let s_j = serde_json::to_string(&start).unwrap();
+        let p_j = serde_json::to_string(&stop).unwrap();
+        assert!(s_j.contains("\"type\":\"ev.session.started\""));
+        assert!(p_j.contains("\"type\":\"ev.session.stopped\""));
+    }
+
+    #[test]
+    fn fleet_event_guest_variants() {
+        let cre = FleetEvent::guest_created("g-1", Some("lot-1".to_string()), "u-1");
+        let can = FleetEvent::guest_cancelled("g-1", Some("lot-1".to_string()), "u-1");
+        let cr_j = serde_json::to_string(&cre).unwrap();
+        let ca_j = serde_json::to_string(&can).unwrap();
+        assert!(cr_j.contains("\"type\":\"guest.created\""));
+        assert!(ca_j.contains("\"type\":\"guest.cancelled\""));
+    }
+
+    #[test]
+    fn fleet_event_lot_id_and_user_id_can_be_null() {
+        let e = FleetEvent::swap_requested("r-1", None, "u-1");
+        let json = serde_json::to_string(&e).unwrap();
+        // When lot_id is None it should serialize as null (per spec)
+        assert!(
+            json.contains("\"lot_id\":null"),
+            "expected lot_id:null when absent, got {json}"
+        );
+    }
+
+    #[test]
+    fn fleet_event_timestamp_is_rfc3339() {
+        let e = FleetEvent::checkin_started("r-1", Some("l".to_string()), "u");
+        let json: serde_json::Value = serde_json::to_value(&e).unwrap();
+        let ts = json["timestamp"].as_str().expect("timestamp is string");
+        // RFC3339 / ISO8601 must parse
+        let _ = chrono::DateTime::parse_from_rfc3339(ts).expect("timestamp parses as RFC3339");
     }
 }

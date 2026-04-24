@@ -67,6 +67,8 @@ mod integration_tests;
 mod mobile_tests;
 #[cfg(all(test, feature = "full"))]
 mod webhooks_v2_tests;
+#[cfg(all(test, feature = "full"))]
+mod sse_events_tests;
 
 use bootstrap::cli::CliArgs;
 use bootstrap::health::perform_health_check;
@@ -105,6 +107,11 @@ pub struct AppState {
     pub scheduler: Option<tokio_cron_scheduler::JobScheduler>,
     /// Broadcast channel for WebSocket real-time events.
     pub ws_events: api::ws::EventBroadcaster,
+    /// T-1946 — Broadcast channel for Server-Sent fleet events.
+    /// Consumed by `/api/v1/events/fleet` subscribers; produced by the
+    /// check-in / swap / EV-charging / guest-booking mutation handlers AFTER
+    /// their DB commit.
+    pub fleet_events: api::sse::FleetEventBroadcaster,
     /// JWT revocation store — backed by either an in-memory HashMap
     /// (single-replica default) or Redis (when the `redis-revocation`
     /// feature is enabled AND `PARKHUB_REDIS_URL` is set).
@@ -407,6 +414,7 @@ async fn main() -> Result<()> {
         mdns,
         scheduler: None,
         ws_events: api::ws::EventBroadcaster::new(),
+        fleet_events: api::sse::FleetEventBroadcaster::new(),
         revocation_store: revocation_store.clone(),
     }));
 

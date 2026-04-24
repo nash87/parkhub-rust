@@ -51,6 +51,7 @@ async fn test_harness() -> TestHarness {
         mdns: None,
         scheduler: None,
         ws_events: crate::api::ws::EventBroadcaster::new(),
+        fleet_events: crate::api::sse::FleetEventBroadcaster::new(),
         revocation_store: crate::jwt::TokenRevocationList::new(),
     }));
 

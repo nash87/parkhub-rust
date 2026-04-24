@@ -1573,6 +1573,15 @@ pub async fn booking_checkin(
         .details(serde_json::json!({"action": "checkin"}))
         .log();
 
+    // T-1946: broadcast SSE fleet event AFTER DB commit. `.ok()` swallows
+    // the send result — zero subscribers is fine, the fleet screens will
+    // fall back to their 30s polling interval.
+    let _ = state_guard.fleet_events.broadcast(parkhub_common::FleetEvent::checkin_completed(
+        booking.id.to_string(),
+        Some(booking.lot_id.to_string()),
+        booking.user_id.to_string(),
+    ));
+
     (StatusCode::OK, Json(ApiResponse::success(booking)))
 }
 

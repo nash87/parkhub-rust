@@ -28,6 +28,11 @@ vi.mock('../Toast', () => ({
   V5ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+const mockUseFleetEvents = vi.fn(() => ({ connected: false }));
+vi.mock('../../hooks/useFleetEvents', () => ({
+  useFleetEvents: (...a: unknown[]) => mockUseFleetEvents(...a),
+}));
+
 import { EVV5 } from './EV';
 
 function renderScreen(navigate = vi.fn()) {
@@ -134,5 +139,22 @@ describe('EVV5', () => {
       expect(mockStop).toHaveBeenCalledWith('c2');
       expect(mockToast).toHaveBeenCalledWith('Laden beendet', 'success');
     });
+  });
+
+  // T-1946 — SSE wiring
+  it('wires useFleetEvents with ev.session invalidation map', async () => {
+    mockGetLots.mockResolvedValue({ success: true, data: [LOT] });
+    mockGetChargers.mockResolvedValue({ success: true, data: [] });
+    mockGetSessions.mockResolvedValue({ success: true, data: [] });
+    renderScreen();
+    await waitFor(() => expect(mockUseFleetEvents).toHaveBeenCalled());
+    const opts = mockUseFleetEvents.mock.calls[0][0] as {
+      invalidate: Record<string, unknown[][]>;
+    };
+    expect(opts.invalidate['ev.session.started']).toBeDefined();
+    expect(opts.invalidate['ev.session.stopped']).toBeDefined();
+    const allKeys = Object.values(opts.invalidate).flat() as unknown[][];
+    expect(allKeys.some((k) => k?.[0] === 'ev-chargers')).toBe(true);
+    expect(allKeys.some((k) => k?.[0] === 'ev-sessions')).toBe(true);
   });
 });

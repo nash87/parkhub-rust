@@ -4,6 +4,7 @@ import { Badge, Card, V5NamedIcon } from '../primitives';
 import { useV5Toast } from '../Toast';
 import { api, type Booking } from '../../api/client';
 import type { ScreenId } from '../nav';
+import { useFleetEvents } from '../../hooks/useFleetEvents';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -88,6 +89,15 @@ export function EincheckenV5({ navigate }: { navigate: (id: ScreenId) => void })
       toast('Ausgecheckt', 'success');
     },
     onError: (err: Error) => toast(err.message, 'error'),
+  });
+
+  // T-1946: SSE push updates. Polling (staleTime 30s) is preserved as
+  // fallback; SSE upgrades us to <1s latency when connected.
+  useFleetEvents({
+    invalidate: {
+      'checkin.started': [['einchecken-bookings'], ['checkin-status']],
+      'checkin.completed': [['einchecken-bookings'], ['checkin-status']],
+    },
   });
 
   const status = statusQuery.data;
