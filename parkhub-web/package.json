@@ -53,6 +53,7 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.14.0",
     "tailwindcss": "^4.2.1",
+    "uplot": "1.6.32",
     "zod": "^4.3.6"
   },
   "devDependencies": {

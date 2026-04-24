@@ -1,6 +1,13 @@
 import { type CSSProperties, type ReactNode } from 'react';
 import { icons, type IconKey } from '../icons';
 
+// UPlotChart is deliberately NOT re-exported here: pulling it through the
+// barrel drags the uplot runtime (~40KB gz) into every screen's module
+// graph, which tanks LCP on non-admin routes. Admin screens that need the
+// chart must deep-import from './UPlotChart' directly (and preferably via
+// React.lazy) — see screens/Analytics.tsx for the canonical pattern.
+export type { UPlotChartProps } from './UPlotChart';
+
 /* ═════════════════════════════════════════════════════════════
    v5 Primitives — thin, tokenized, composable
    All surfaces read from CSS custom properties (--v5-*) so a
