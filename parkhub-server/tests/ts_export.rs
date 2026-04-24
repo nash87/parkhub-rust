@@ -38,11 +38,11 @@ use parkhub_common::models::{
     Absence, AbsencePattern, AbsenceType, Announcement, AnnouncementSeverity, AuthTokens, Booking,
     BookingPricing, BookingStatus, ChargingSession, ChargingSessionStatus, ConnectorType,
     CreditTransaction, CreditTransactionType, DayHours, DynamicPriceResult, DynamicPricingRules,
-    EvCharger, EvChargerStatus, FuelType, GuestBooking, LotStatus, Notification, NotificationType,
-    OperatingHours, ParkingFloor, ParkingLot, ParkingSlot, PaymentStatus, PricingInfo, PricingRate,
-    ProposalStatus, SlotBookingInfo, SlotFeature, SlotPosition, SlotStatus, SlotType, SwapRequest,
-    SwapRequestStatus, TranslationOverride, TranslationProposal, User, UserPreferences, UserRole,
-    Vehicle, VehicleType,
+    EvCharger, EvChargerStatus, FleetEvent, FleetEventType, FuelType, GuestBooking, LotStatus,
+    Notification, NotificationType, OperatingHours, ParkingFloor, ParkingLot, ParkingSlot,
+    PaymentStatus, PricingInfo, PricingRate, ProposalStatus, SlotBookingInfo, SlotFeature,
+    SlotPosition, SlotStatus, SlotType, SwapRequest, SwapRequestStatus, TranslationOverride,
+    TranslationProposal, User, UserPreferences, UserRole, Vehicle, VehicleType,
 };
 use parkhub_common::protocol::{
     ApiError, ApiResponse, LoginRequest, LoginResponse, PaginatedResponse, RefreshTokenRequest,
@@ -159,6 +159,76 @@ fn clean_ts_output(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Remove the stray `bindings/` directories that ts-rs writes next to each
+/// crate regardless of the path passed to `export_all_to`. Upstream ts-rs
+/// emits external-crate helpers (e.g. `serde_json/JsonValue.ts`, chrono,
+/// uuid glue) into `<crate_manifest_dir>/bindings/` in addition to the
+/// directory we actually ask for — so `parkhub-server/bindings/` and
+/// `parkhub-common/bindings/` get repopulated every run. They are already
+/// gitignored, but we purge them here so local disks don't slowly
+/// accumulate stale external-type copies and `git status` stays tidy.
+///
+/// The function is idempotent: missing directories are a no-op, existing
+/// ones get removed. Called BEFORE the next export so the very next run
+/// starts from a clean slate.
+fn clean_stray_crate_bindings(workspace_root: &Path) -> std::io::Result<()> {
+    for crate_name in ["parkhub-server", "parkhub-common"] {
+        let stray = workspace_root.join(crate_name).join("bindings");
+        if stray.exists() {
+            fs::remove_dir_all(&stray)?;
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn clean_stray_crate_bindings_is_idempotent_and_removes_dirs() {
+    // Regression guard for the ts-rs "external-crate helpers land in
+    // `<crate>/bindings/` regardless of export_all_to()" quirk. The
+    // cleanup must: (a) no-op when the dirs don't exist, (b) remove the
+    // dirs and their contents when they do, (c) never touch anything
+    // outside `bindings/`.
+    let scratch = std::env::temp_dir().join(format!(
+        "ts_export_stray_bindings_test_{}",
+        std::process::id()
+    ));
+    let _ = fs::remove_dir_all(&scratch);
+    fs::create_dir_all(&scratch).unwrap();
+
+    // (a) idempotent no-op: no `bindings/` dirs present.
+    clean_stray_crate_bindings(&scratch).expect("no-op when dirs missing");
+
+    // (b) both crate bindings dirs get removed when present.
+    let server_bindings = scratch.join("parkhub-server").join("bindings");
+    let common_bindings = scratch.join("parkhub-common").join("bindings");
+    fs::create_dir_all(&server_bindings).unwrap();
+    fs::create_dir_all(&common_bindings).unwrap();
+    fs::write(server_bindings.join("JsonValue.ts"), "// stray").unwrap();
+    fs::write(common_bindings.join("Uuid.ts"), "// stray").unwrap();
+
+    // (c) an unrelated sibling file must survive.
+    let keep = scratch.join("parkhub-server").join("src.rs");
+    fs::create_dir_all(keep.parent().unwrap()).unwrap();
+    fs::write(&keep, "// unrelated").unwrap();
+
+    clean_stray_crate_bindings(&scratch).expect("removes stray bindings dirs");
+
+    assert!(
+        !server_bindings.exists(),
+        "parkhub-server/bindings/ must be removed"
+    );
+    assert!(
+        !common_bindings.exists(),
+        "parkhub-common/bindings/ must be removed"
+    );
+    assert!(keep.exists(), "unrelated sibling file must be preserved");
+
+    // (d) calling again after removal is still a no-op.
+    clean_stray_crate_bindings(&scratch).expect("idempotent after removal");
+
+    let _ = fs::remove_dir_all(&scratch);
+}
+
 #[test]
 fn clean_ts_output_removes_stale_files_but_keeps_dir() {
     // Regression for Codex #377 P2: when a Rust type is removed or renamed,
@@ -196,6 +266,11 @@ fn export_all_types() {
     // types surface as a diff (`git status --porcelain` will show a
     // disappeared file) instead of lingering forever as a stale orphan.
     clean_ts_output(&dir).expect("clean previous ts output");
+    // Pre-run stray-bindings cleanup so the ts-rs quirk of writing
+    // external-crate helpers into `<crate>/bindings/` doesn't leave stale
+    // copies on disk across iterations (the dirs are gitignored, but we
+    // don't want them accumulating locally).
+    clean_stray_crate_bindings(&workspace_root()).expect("clean stray crate bindings (pre-run)");
     println!("ts_export: writing to {}", dir.display());
 
     // ── Protocol wrappers ────────────────────────────────────────────────
@@ -266,6 +341,12 @@ fn export_all_types() {
     export::<ChargingSessionStatus>(&dir).unwrap();
     export::<ChargingSession>(&dir).unwrap();
 
+    // ── Fleet SSE events (T-1946) ───────────────────────────────────────
+    // Follow-up from #378: derive landed after #377 (ts-rs gen), so the
+    // wire contract for `/api/v1/events/fleet` needs its TS bindings too.
+    export::<FleetEvent>(&dir).unwrap();
+    export::<FleetEventType>(&dir).unwrap();
+
     // Note: server-side DTOs in parkhub-server/src/api/{calendar,team}.rs
     // (CalendarEvent, TeamMember, TeamMemberStatus) also derive `TS` and
     // emit via the hidden `export_bindings_<type>` test that ts-rs adds
@@ -291,4 +372,27 @@ fn export_all_types() {
         dir.display(),
     );
     println!("ts_export: stamped warning header on {stamped} files");
+
+    // ── Per-type presence guards ────────────────────────────────────────
+    // `stamped >= MIN_EXPECTED_FILES` only catches wholesale regressions.
+    // Specific follow-up types (FleetEvent/FleetEventType from #378) get
+    // their own existence guards so a missing derive surfaces as a clear
+    // failure instead of a silent drop inside the 30-file floor.
+    for expected in ["FleetEvent.ts", "FleetEventType.ts"] {
+        let p = dir.join(expected);
+        assert!(
+            p.exists(),
+            "expected {} to be emitted by ts-rs; missing at {}",
+            expected,
+            p.display(),
+        );
+    }
+
+    // ── Post-run stray-bindings cleanup ─────────────────────────────────
+    // ts-rs writes a second copy of external-crate types (serde_json,
+    // chrono, uuid glue) into `<crate>/bindings/` during export_all_to,
+    // regardless of the destination path. Purge them so they don't
+    // accumulate on disk between runs. Already gitignored; this keeps
+    // `git status` tidy for developers running the test locally.
+    clean_stray_crate_bindings(&workspace_root()).expect("clean stray crate bindings (post-run)");
 }

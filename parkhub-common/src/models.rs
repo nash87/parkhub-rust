@@ -938,6 +938,7 @@ pub struct ChargingSession {
 /// Discriminant for `FleetEvent` — matches the wire contract for the
 /// `/api/v1/events/fleet` SSE stream (snake_case variant → dotted wire type).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum FleetEventType {
     #[serde(rename = "checkin.started")]
     CheckinStarted,
@@ -974,8 +975,10 @@ pub enum FleetEventType {
 /// }
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub struct FleetEvent {
     #[serde(rename = "type")]
+    #[cfg_attr(feature = "gen-types", ts(rename = "type"))]
     pub event_type: FleetEventType,
     pub resource_id: String,
     pub lot_id: Option<String>,
