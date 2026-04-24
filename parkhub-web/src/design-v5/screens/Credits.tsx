@@ -24,6 +24,7 @@ export function CreditsV5({ navigate: _navigate }: { navigate: (id: ScreenId) =>
     queryKey: ['credits'],
     queryFn: async () => {
       const res = await api.getUserCredits();
+      if (!res.success) throw new Error(res.error?.message ?? 'Credits konnten nicht geladen werden');
       return res.data;
     },
     staleTime: 30_000,
@@ -31,11 +32,15 @@ export function CreditsV5({ navigate: _navigate }: { navigate: (id: ScreenId) =>
   });
 
   const buyMutation = useMutation({
-    mutationFn: () => api.createCheckout(10),
-    onSuccess: (res) => {
-      if (res.data?.checkout_url) {
+    mutationFn: async () => {
+      const res = await api.createCheckout(10);
+      if (!res.success) throw new Error(res.error?.message ?? 'Credits kaufen fehlgeschlagen');
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data?.checkout_url) {
         toast('Weiterleitung zur Kasse…', 'info');
-        window.location.href = res.data.checkout_url;
+        window.location.href = data.checkout_url;
       } else {
         toast('Keine Checkout-URL erhalten', 'error');
       }

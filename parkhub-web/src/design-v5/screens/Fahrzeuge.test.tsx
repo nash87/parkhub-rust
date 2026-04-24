@@ -106,4 +106,38 @@ describe('FahrzeugeV5', () => {
       expect(mockToast).toHaveBeenCalledWith('Fahrzeug entfernt', 'success');
     });
   });
+
+  it('surfaces query error when success:false', async () => {
+    mockGetVehicles.mockResolvedValue({ success: false, data: null, error: { code: 'FORBIDDEN', message: 'denied' } });
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument());
+  });
+
+  it('calls onError (no success toast) when createVehicle responds success:false', async () => {
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockCreateVehicle.mockResolvedValue({ success: false, data: null, error: { code: 'VALIDATION', message: 'invalid plate' } });
+    renderScreen();
+    await waitFor(() => screen.getByText('Noch keine Fahrzeuge'));
+    fireEvent.click(screen.getAllByText(/Hinzufügen|hinzufügen/).pop()!);
+    fireEvent.change(screen.getByPlaceholderText('M-AB 1234'), { target: { value: 'M-AB 123' } });
+    fireEvent.click(screen.getByText('Speichern'));
+    await waitFor(() => {
+      expect(mockCreateVehicle).toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith('Hinzufügen fehlgeschlagen', 'error');
+    });
+    expect(mockToast).not.toHaveBeenCalledWith('Fahrzeug hinzugefügt', 'success');
+  });
+
+  it('calls onError (no success toast) when deleteVehicle responds success:false', async () => {
+    mockGetVehicles.mockResolvedValue({ success: true, data: [VEHICLE_BMW] });
+    mockDeleteVehicle.mockResolvedValue({ success: false, data: null, error: { code: 'NOT_FOUND', message: 'gone' } });
+    renderScreen();
+    await waitFor(() => screen.getByText('M-AB 123'));
+    fireEvent.click(screen.getByLabelText('Fahrzeug M-AB 123 löschen'));
+    await waitFor(() => {
+      expect(mockDeleteVehicle).toHaveBeenCalledWith('v-001');
+      expect(mockToast).toHaveBeenCalledWith('Löschen fehlgeschlagen', 'error');
+    });
+    expect(mockToast).not.toHaveBeenCalledWith('Fahrzeug entfernt', 'success');
+  });
 });

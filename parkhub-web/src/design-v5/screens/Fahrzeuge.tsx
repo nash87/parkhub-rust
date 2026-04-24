@@ -185,6 +185,7 @@ export function FahrzeugeV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
     queryKey: ['fahrzeuge'],
     queryFn: async () => {
       const res = await api.getVehicles();
+      if (!res.success) throw new Error(res.error?.message ?? 'Fahrzeuge konnten nicht geladen werden');
       return res.data ?? [];
     },
     staleTime: 30_000,
@@ -192,7 +193,11 @@ export function FahrzeugeV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
   });
 
   const addMutation = useMutation({
-    mutationFn: (payload: CreateVehiclePayload) => api.createVehicle(payload),
+    mutationFn: async (payload: CreateVehiclePayload) => {
+      const res = await api.createVehicle(payload);
+      if (!res.success) throw new Error(res.error?.message ?? 'Fahrzeug hinzufügen fehlgeschlagen');
+      return res.data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fahrzeuge'] });
       toast('Fahrzeug hinzugefügt', 'success');
@@ -202,7 +207,11 @@ export function FahrzeugeV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.deleteVehicle(id),
+    mutationFn: async (id: string) => {
+      const res = await api.deleteVehicle(id);
+      if (!res.success) throw new Error(res.error?.message ?? 'Fahrzeug löschen fehlgeschlagen');
+      return res.data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fahrzeuge'] });
       toast('Fahrzeug entfernt', 'success');

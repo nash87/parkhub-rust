@@ -103,4 +103,23 @@ describe('BuchungenV5', () => {
     expect(navigate).toHaveBeenCalledWith('einchecken');
     expect(mockToast).toHaveBeenCalledWith('Einchecken geöffnet', 'info');
   });
+
+  it('surfaces query error when success:false', async () => {
+    mockGetBookings.mockResolvedValue({ success: false, data: null, error: { code: 'FORBIDDEN', message: 'denied' } });
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument());
+  });
+
+  it('calls onError (no success toast) when cancel mutation responds success:false', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [BOOKING_CONFIRMED] });
+    mockCancelBooking.mockResolvedValue({ success: false, data: null, error: { code: 'CONFLICT', message: 'already cancelled' } });
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('Storno')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Storno'));
+    await waitFor(() => {
+      expect(mockCancelBooking).toHaveBeenCalledWith('b-conf-001');
+      expect(mockToast).toHaveBeenCalledWith('Stornierung fehlgeschlagen', 'error');
+    });
+    expect(mockToast).not.toHaveBeenCalledWith('Buchung storniert', 'success');
+  });
 });

@@ -55,6 +55,7 @@ export function BuchungenV5({ navigate }: { navigate: (id: ScreenId) => void }) 
     queryKey: ['buchungen'],
     queryFn: async () => {
       const res = await api.getBookings();
+      if (!res.success) throw new Error(res.error?.message ?? 'Buchungen konnten nicht geladen werden');
       return res.data ?? [];
     },
     staleTime: 30_000,
@@ -62,7 +63,11 @@ export function BuchungenV5({ navigate }: { navigate: (id: ScreenId) => void }) 
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (id: string) => api.cancelBooking(id),
+    mutationFn: async (id: string) => {
+      const res = await api.cancelBooking(id);
+      if (!res.success) throw new Error(res.error?.message ?? 'Stornierung fehlgeschlagen');
+      return res.data;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['buchungen'] });
       toast('Buchung storniert', 'success');

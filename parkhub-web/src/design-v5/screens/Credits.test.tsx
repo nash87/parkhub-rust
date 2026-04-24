@@ -105,4 +105,24 @@ describe('CreditsV5', () => {
       expect(meter).toHaveAttribute('aria-valuemax', '10');
     });
   });
+
+  it('surfaces query error when success:false', async () => {
+    mockGetUserCredits.mockResolvedValue({ success: false, data: null, error: { code: 'FORBIDDEN', message: 'denied' } });
+    renderScreen();
+    await waitFor(() => expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument());
+  });
+
+  it('calls onError (no redirect) when createCheckout responds success:false', async () => {
+    mockGetUserCredits.mockResolvedValue({ success: true, data: CREDITS });
+    mockCreateCheckout.mockResolvedValue({ success: false, data: null, error: { code: 'STRIPE', message: 'provider down' } });
+    renderScreen();
+    await waitFor(() => screen.getByText('+ Credits kaufen'));
+    fireEvent.click(screen.getByText('+ Credits kaufen'));
+    await waitFor(() => {
+      expect(mockCreateCheckout).toHaveBeenCalledWith(10);
+      expect(mockToast).toHaveBeenCalledWith('Credits kaufen fehlgeschlagen', 'error');
+    });
+    expect(mockToast).not.toHaveBeenCalledWith('Weiterleitung zur Kasse…', 'info');
+    expect(window.location.href).toBe('');
+  });
 });
