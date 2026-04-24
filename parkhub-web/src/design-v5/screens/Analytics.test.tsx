@@ -103,6 +103,43 @@ describe('AnalyticsV5', () => {
   });
 });
 
+describe('AnalyticsV5 — stable uPlot data reference (Codex #379)', () => {
+  // Regression for Codex review comment 3136478619 on PR #379:
+  // "ChartBlock passes a fresh array literal ([xs, ys]) on every render, and
+  //  UPlotChart's effect depends on data, so any parent re-render tears down
+  //  and recreates the uPlot instance even when the series values are
+  //  unchanged."
+  //
+  // Two layers of defence:
+  //   1. Source-text check: `data` must flow through `useMemo` with `[xs, ys]`
+  //      (or equivalent value-equal deps). Inline `[xs, ys]` as a JSX prop is
+  //      the banned pattern.
+  //   2. Same for `options` — another stable-ref hot-path.
+  //
+  // Runtime behaviour is also exercised by the KPI/canvas tests above
+  // (which would throw if the Suspense chunk collapsed under constant
+  // re-mounts).
+
+  it('ChartBlock memoizes the `data` tuple with [xs, ys] deps', () => {
+    // data must be useMemo-d with xs + ys as deps so a query-status re-render
+    // with unchanged values preserves the tuple identity.
+    expect(ANALYTICS_SRC).toMatch(
+      /const\s+data\s*=\s*useMemo\s*<\s*\[\s*number\[\]\s*,\s*number\[\]\s*\]\s*>\s*\(\s*\(\s*\)\s*=>\s*\[\s*xs\s*,\s*ys\s*\]\s*,\s*\[\s*xs\s*,\s*ys\s*\]\s*\)/,
+    );
+  });
+
+  it('ChartBlock does NOT pass an inline [xs, ys] array to UPlotChart', () => {
+    // The banned pattern: `data={[xs, ys]}` as a JSX attribute value.
+    expect(ANALYTICS_SRC).not.toMatch(/data=\{\s*\[\s*xs\s*,\s*ys\s*\]\s*\}/);
+  });
+
+  it('ChartBlock memoizes the `options` object', () => {
+    // Options holds closures over stroke/fill/tickLabels; memo keeps the
+    // reference stable so UPlotChart's effect does not re-run.
+    expect(ANALYTICS_SRC).toMatch(/const\s+options\s*=\s*useMemo\s*</);
+  });
+});
+
 describe('AnalyticsV5 — Lighthouse LCP budget (lazy uPlot)', () => {
   it('Analytics.tsx dynamically imports UPlotChart via React.lazy', () => {
     // Eager imports of UPlotChart bloat the initial JS bundle (+~40KB uPlot)
