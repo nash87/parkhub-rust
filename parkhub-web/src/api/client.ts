@@ -25,6 +25,9 @@ import type { SwapRequestStatus as GeneratedSwapRequestStatus } from '../generat
 import type { AnnouncementSeverity as GeneratedAnnouncementSeverity } from '../generated/types/AnnouncementSeverity';
 import type { VehicleType as GeneratedVehicleType } from '../generated/types/VehicleType';
 import type { FuelType as GeneratedFuelType } from '../generated/types/FuelType';
+import type { PaginatedResponse } from '../generated/types/PaginatedResponse';
+
+export type { PaginatedResponse };
 
 /**
  * Standard API response wrapper.
@@ -394,7 +397,7 @@ export const api = {
 
   // ── Admin ──
   adminStats: () => request<AdminStats>('/api/v1/admin/stats'),
-  adminUsers: () => request<User[]>('/api/v1/admin/users'),
+  adminUsers: () => request<PaginatedResponse<User>>('/api/v1/admin/users'),
   adminUpdateUser: (id: string, data: UpdateUserPayload) => request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteUser: (id: string) => request<void>(`/api/v1/admin/users/${id}`, { method: 'DELETE' }),
   adminUpdateUserRole: (id: string, role: string) =>

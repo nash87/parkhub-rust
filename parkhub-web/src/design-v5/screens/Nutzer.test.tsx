@@ -26,6 +26,15 @@ import { NutzerV5 } from './Nutzer';
 const U1 = { id: 'u1', username: 'flo', email: 'flo@e', name: 'Flo', role: 'admin' as const, preferences: {}, is_active: true, credits_balance: 0, credits_monthly_quota: 0 };
 const U2 = { id: 'u2', username: 'anna', email: 'anna@e', name: 'Anna', role: 'user' as const, preferences: {}, is_active: false, credits_balance: 0, credits_monthly_quota: 0 };
 
+// Wire shape matches parkhub-common::protocol::PaginatedResponse<T>.
+const paginated = <T,>(items: T[]) => ({
+  items,
+  page: 1,
+  per_page: 50,
+  total: items.length,
+  total_pages: items.length === 0 ? 0 : 1,
+});
+
 function renderScreen() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -39,7 +48,7 @@ describe('NutzerV5', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders empty state', async () => {
-    mockList.mockResolvedValue({ success: true, data: [] });
+    mockList.mockResolvedValue({ success: true, data: paginated([]) });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Keine Nutzer gefunden')).toBeInTheDocument());
   });
@@ -51,7 +60,7 @@ describe('NutzerV5', () => {
   });
 
   it('renders rows with role and status badges', async () => {
-    mockList.mockResolvedValue({ success: true, data: [U1, U2] });
+    mockList.mockResolvedValue({ success: true, data: paginated([U1, U2]) });
     renderScreen();
     await waitFor(() => expect(screen.getAllByTestId('nutzer-row')).toHaveLength(2));
     expect(screen.getByText('Flo')).toBeInTheDocument();
@@ -60,7 +69,7 @@ describe('NutzerV5', () => {
   });
 
   it('filters to admins', async () => {
-    mockList.mockResolvedValue({ success: true, data: [U1, U2] });
+    mockList.mockResolvedValue({ success: true, data: paginated([U1, U2]) });
     renderScreen();
     await waitFor(() => expect(screen.getAllByTestId('nutzer-row')).toHaveLength(2));
     fireEvent.click(screen.getByRole('button', { name: 'Admins' }));
@@ -68,7 +77,7 @@ describe('NutzerV5', () => {
   });
 
   it('suspend button calls update with is_active:false', async () => {
-    mockList.mockResolvedValue({ success: true, data: [U1] });
+    mockList.mockResolvedValue({ success: true, data: paginated([U1]) });
     mockUpdate.mockResolvedValue({ success: true, data: { ...U1, is_active: false } });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Sperren')).toBeInTheDocument());
@@ -80,7 +89,7 @@ describe('NutzerV5', () => {
   });
 
   it('activate mutation error surfaces via toast', async () => {
-    mockList.mockResolvedValue({ success: true, data: [U2] });
+    mockList.mockResolvedValue({ success: true, data: paginated([U2]) });
     mockUpdate.mockResolvedValue({ success: false, data: null, error: { code: 'X', message: 'nope' } });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Aktivieren')).toBeInTheDocument());
@@ -89,7 +98,7 @@ describe('NutzerV5', () => {
   });
 
   it('search filters by name', async () => {
-    mockList.mockResolvedValue({ success: true, data: [U1, U2] });
+    mockList.mockResolvedValue({ success: true, data: paginated([U1, U2]) });
     renderScreen();
     await waitFor(() => expect(screen.getAllByTestId('nutzer-row')).toHaveLength(2));
     fireEvent.change(screen.getByTestId('nutzer-search'), { target: { value: 'anna' } });
