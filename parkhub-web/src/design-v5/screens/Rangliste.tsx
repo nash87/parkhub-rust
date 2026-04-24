@@ -58,11 +58,23 @@ export function RanglisteV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
     refetchOnWindowFocus: true,
   });
 
+  // Admin stats are optional decoration on the leaderboard — `/api/v1/admin/stats`
+  // is admin-gated on both the Rust (`check_admin`) and PHP (admin middleware)
+  // backends, so non-admin users predictably receive FORBIDDEN. We degrade
+  // gracefully: the leaderboard still renders with team data only, every
+  // entry falling through to EMPTY_STATS (no badges, score = 0). Network or
+  // other non-auth failures continue to be treated as hard errors so they
+  // surface in the UI.
   const statsQuery = useQuery({
     queryKey: ['admin-stats-extended'],
     queryFn: async () => {
       const res = await api.getAdminStatsExtended();
-      if (!res.success) throw new Error(res.error?.message ?? 'Statistiken konnten nicht geladen werden');
+      if (!res.success) {
+        if (res.error?.code === 'FORBIDDEN' || res.error?.code === 'HTTP_403') {
+          return null;
+        }
+        throw new Error(res.error?.message ?? 'Statistiken konnten nicht geladen werden');
+      }
       return res.data;
     },
     staleTime: 30_000,

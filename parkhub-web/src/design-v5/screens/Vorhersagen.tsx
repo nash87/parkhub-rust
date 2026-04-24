@@ -62,11 +62,22 @@ function fallbackPrediction(idx: number): { predicted: number; peakHour: number;
 }
 
 export function VorhersagenV5({ navigate: _navigate }: { navigate: (id: ScreenId) => void }) {
+  // Admin stats are optional inputs — `/api/v1/admin/stats` is admin-gated on
+  // both the Rust (`check_admin`) and PHP (admin middleware) backends. Non-admin
+  // users predictably receive FORBIDDEN; in that case we degrade gracefully
+  // and let the deterministic weekday/weekend fallback drive the forecast
+  // (confidence = 40%). Network or other non-auth failures continue to surface
+  // as hard errors.
   const statsQuery = useQuery({
     queryKey: ['admin-stats-forecast'],
     queryFn: async () => {
       const res = await api.getAdminStatsExtended();
-      if (!res.success) throw new Error(res.error?.message ?? 'Vorhersagen konnten nicht geladen werden');
+      if (!res.success) {
+        if (res.error?.code === 'FORBIDDEN' || res.error?.code === 'HTTP_403') {
+          return null;
+        }
+        throw new Error(res.error?.message ?? 'Vorhersagen konnten nicht geladen werden');
+      }
       return res.data;
     },
     staleTime: 60_000,

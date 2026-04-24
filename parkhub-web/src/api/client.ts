@@ -1408,6 +1408,16 @@ export interface CheckInStatus {
   checked_out_at: string | null;
 }
 
+/**
+ * Guest booking payload returned by `GET /api/v1/bookings/guest`.
+ *
+ * The `status` union mirrors the Rust backend's `BookingStatus` enum
+ * (`parkhub-common::models::BookingStatus`) which is serialised as the full
+ * snake_case set. In particular, newly created passes land in `confirmed`
+ * (see `parkhub-server::api::guest::create_guest_booking`) and only flip to
+ * `active` once the booking window opens, so clients MUST accept the full
+ * set to render and act on fresh records.
+ */
 export interface GuestBooking {
   id: string;
   lot_id: string;
@@ -1419,7 +1429,14 @@ export interface GuestBooking {
   guest_code: string;
   start_time: string;
   end_time: string;
-  status: 'active' | 'expired' | 'cancelled';
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'active'
+    | 'completed'
+    | 'expired'
+    | 'cancelled'
+    | 'no_show';
   created_at: string;
 }
 

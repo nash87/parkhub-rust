@@ -12,18 +12,39 @@ import {
 } from '../../api/client';
 import type { ScreenId } from '../nav';
 
+// Backend (Rust `BookingStatus`, PHP `Booking::STATUS_*`) can return the full
+// booking status enum for guest passes. Rust creates fresh guest bookings with
+// `BookingStatus::Confirmed`, so `confirmed` is the most common newly-created
+// status. `pending`, `completed` and `no_show` are rare but legal, and we map
+// them to sensible visual fallbacks so the row is never blank.
 const STATUS_LABEL: Record<GuestBooking['status'], string> = {
+  pending: 'Ausstehend',
+  confirmed: 'Bestätigt',
   active: 'Aktiv',
+  completed: 'Abgeschlossen',
   expired: 'Abgelaufen',
   cancelled: 'Storniert',
+  no_show: 'Nicht erschienen',
 };
 
 function statusVariant(s: GuestBooking['status']) {
   switch (s) {
+    case 'pending': return 'warning' as const;
+    case 'confirmed': return 'info' as const;
     case 'active': return 'success' as const;
+    case 'completed': return 'gray' as const;
     case 'expired': return 'gray' as const;
     case 'cancelled': return 'error' as const;
+    case 'no_show': return 'error' as const;
   }
+}
+
+// A guest pass is "open" (pre-use or in-use) when it is still actionable from
+// the user's perspective — fresh passes land in `confirmed`, then flip to
+// `active` while the time window is open. Both states should count as active
+// and expose the Storno action.
+function isOpenStatus(s: GuestBooking['status']): boolean {
+  return s === 'confirmed' || s === 'active' || s === 'pending';
 }
 
 function formatRange(start: string, end: string): string {
@@ -135,7 +156,7 @@ function CreateGuestModal({
             <select value={slotId} onChange={(e) => setSlotId(e.target.value)} disabled={!lotId} style={inputStyle} data-testid="guest-slot">
               <option value="">{lotId ? 'Bitte wählen…' : 'Erst Parkhaus wählen'}</option>
               {availableSlots.map((s) => (
-                <option key={s.id} value={s.id}>{s.number}</option>
+                <option key={s.id} value={s.id}>{s.slot_number}</option>
               ))}
             </select>
           </Field>
@@ -242,7 +263,7 @@ export function GaestepassV5({ navigate: _navigate }: { navigate: (id: ScreenId)
 
   const bookings: GuestBooking[] = bookingsQuery.data ?? [];
   const lots: ParkingLot[] = lotsQuery.data ?? [];
-  const activeCount = useMemo(() => bookings.filter((b) => b.status === 'active').length, [bookings]);
+  const activeCount = useMemo(() => bookings.filter((b) => isOpenStatus(b.status)).length, [bookings]);
 
   function copyCode(code: string) {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -404,7 +425,7 @@ export function GaestepassV5({ navigate: _navigate }: { navigate: (id: ScreenId)
                     <Badge variant={statusVariant(b.status)} dot>{STATUS_LABEL[b.status]}</Badge>
                     <span style={{ fontSize: 10, color: 'var(--v5-mut)' }}>{formatRange(b.start_time, b.end_time)}</span>
                   </div>
-                  {b.status === 'active' ? (
+                  {isOpenStatus(b.status) ? (
                     <button
                       type="button"
                       disabled={isCancelling}
