@@ -120,6 +120,20 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
   const lots = useMemo(() => (lotsResp ?? []).filter((l) => l.status === 'open'), [lotsResp]);
   const vehicles: Vehicle[] = vehiclesResp ?? [];
 
+  // Reconcile persisted vehicle id against the freshly loaded vehicles.
+  // A stale id left over in localStorage (the vehicle was deleted or is
+  // no longer returned by getVehicles) would otherwise silently end up
+  // on the createBooking payload even though the <select> shows nothing
+  // selected — causing confusing server-side booking failures. Clear
+  // once the vehicles query has resolved and the id doesn't match.
+  useEffect(() => {
+    if (vehiclesResp === undefined) return; // query still loading
+    if (!selectedVehicle) return;
+    if (vehicles.some((v) => v.id === selectedVehicle)) return;
+    setSelectedVehicle('');
+    writeLastUsed('buchen:vehicle', null);
+  }, [vehiclesResp, vehicles, selectedVehicle]);
+
   // Smart default: auto-advance to Step 2 if the user's last-used lot is
   // still open. Silent no-op when the lot has been removed / closed /
   // no prior selection exists. Only fires once (step === 1 guard) so
@@ -167,6 +181,16 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
     onMutate: async (payload: CreateBookingPayload) => {
       await qc.cancelQueries({ queryKey: ['buchungen'] });
       const previous = qc.getQueryData<Booking[]>(['buchungen']);
+      // Only insert the optimistic row when the list was already
+      // fetched. When `previous` is undefined (the user hasn't opened
+      // Buchungen yet), skipping the optimistic write avoids leaving
+      // a phantom row in cache on failure — onError can only restore
+      // `previous`, so a seeded `undefined` -> `[optimistic]` path
+      // would survive the rollback. onSettled's invalidate covers the
+      // refetch once Buchungen is opened.
+      if (previous === undefined) {
+        return { previous };
+      }
       const optimistic: Booking = {
         id: `optimistic-${Date.now()}`,
         user_id: '',
@@ -178,7 +202,7 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
         end_time: payload.end_time,
         status: 'confirmed',
       };
-      qc.setQueryData<Booking[]>(['buchungen'], [optimistic, ...(previous ?? [])]);
+      qc.setQueryData<Booking[]>(['buchungen'], [optimistic, ...previous]);
       return { previous };
     },
     onSuccess: (_data, payload) => {
@@ -190,7 +214,11 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
       navigate('buchungen');
     },
     onError: (err: Error, _payload, ctx) => {
-      if (ctx?.previous) qc.setQueryData(['buchungen'], ctx.previous);
+      // Always restore to the snapshot we took in onMutate — including
+      // the `undefined` case. Explicitly writing undefined to the cache
+      // is a no-op for cache that was never seeded, and wipes any
+      // optimistic row we set when prior data did exist.
+      qc.setQueryData(['buchungen'], ctx?.previous);
       toast(err.message || 'Buchung fehlgeschlagen', 'error');
     },
     onSettled: () => {
