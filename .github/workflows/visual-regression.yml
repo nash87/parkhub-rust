@@ -97,7 +97,19 @@ jobs:
         env:
           E2E_BASE_URL: http://127.0.0.1:18181
           CI: 'true'
-        run: npx playwright test --project=chromium --workers=1 --reporter=github e2e/visual.spec.ts
+        # v4 blade surfaces (existing) + v5 visual + v5 happy-paths.
+        # Mirror of parkhub-php PR #343. v5 specs are chromium-only
+        # (mobile-chrome lands with the v5 responsive refactor).
+        # workers=1 matches the rust server's single-process assumption
+        # for e2e — concurrent logins race without rate-limit bypass.
+        run: |
+          npx playwright test \
+            --project=chromium \
+            --workers=1 \
+            --reporter=github \
+            e2e/visual.spec.ts \
+            e2e/v5-visual.spec.ts \
+            e2e/v5-happy-paths.spec.ts
 
       - name: Stop server
         if: always()
