@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { buildCsv, buildIcsEvent } from './exportTable';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { buildCsv, buildIcsEvent, downloadPdfTable } from './exportTable';
 
 describe('buildCsv', () => {
   it('emits header row + data rows joined by newline', () => {
@@ -47,5 +47,37 @@ describe('buildIcsEvent', () => {
     expect(ics.startsWith('BEGIN:VCALENDAR')).toBe(true);
     expect(ics.trimEnd().endsWith('END:VCALENDAR')).toBe(true);
     expect(ics).toContain('VERSION:2.0');
+  });
+});
+
+describe('downloadPdfTable — pdf-lib backend', () => {
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
+    vi.restoreAllMocks();
+  });
+
+  it('produces an application/pdf blob with a %PDF header and downloads it', async () => {
+    const captured: Blob[] = [];
+    URL.createObjectURL = vi.fn((blob: Blob) => {
+      captured.push(blob);
+      return 'blob:mock';
+    }) as typeof URL.createObjectURL;
+    URL.revokeObjectURL = vi.fn() as typeof URL.revokeObjectURL;
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    await downloadPdfTable('rows', 'Parking report', ['name', 'count'], [['Alpha', 3], ['Beta', 7]]);
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].type).toBe('application/pdf');
+    // Every valid PDF starts with the %PDF- magic; ensures pdf-lib actually
+    // produced a document and we didn't regress to a zero-byte/text blob.
+    const head = new Uint8Array(await captured[0].slice(0, 5).arrayBuffer());
+    const headText = String.fromCharCode(...head);
+    expect(headText).toBe('%PDF-');
   });
 });

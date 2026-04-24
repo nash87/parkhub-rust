@@ -6,7 +6,15 @@
  *    "Zum Kalender hinzufügen" action on bookings. Server-side bulk feeds
  *    still come from the backend endpoints — this helper covers the
  *    client-side single-event download path.
- *  * downloadPdfTable(): lazy-loaded jspdf PDF export for admin tables.
+ *  * downloadPdfTable(): lazy-loaded pdf-lib PDF export for admin tables.
+ *
+ * PDF backend swapped from jspdf@3.0.4 → pdf-lib@^1.17 on 2026-04-25.
+ * jspdf 3.x has 8 outstanding GHSA advisories (path traversal, HTML
+ * injection in new-window paths, BMP/GIF DoS, AcroForm + addJS PDF object
+ * injection, FreeText color injection) with no patched release. pdf-lib
+ * is MIT-licensed, pure TypeScript, zero outstanding advisories, and
+ * ships smaller when lazy-imported. Contract (arguments + async void
+ * return) is unchanged so DataTable + tests need no changes.
  */
 
 export type CsvCell = string | number | boolean | null | undefined;
@@ -85,8 +93,32 @@ export function downloadIcs(filename: string, ics: string): void {
 }
 
 /**
- * Lazy PDF export — jspdf is ~200 KB, so we dynamic-import on the first
- * click to keep it out of the main bundle.
+ * Split a line into chunks that fit the page width using the supplied font.
+ * pdf-lib does not ship a line-breaker, so we measure greedily — the API is
+ * small enough to keep inline rather than introduce another dep.
+ */
+function wrapLine(text: string, font: import('pdf-lib').PDFFont, size: number, maxWidth: number): string[] {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return [text];
+  const out: string[] = [];
+  const words = text.split(/(\s+)/);
+  let current = '';
+  for (const token of words) {
+    const candidate = current + token;
+    if (font.widthOfTextAtSize(candidate, size) > maxWidth && current.length > 0) {
+      out.push(current.trimEnd());
+      current = token.trimStart();
+    } else {
+      current = candidate;
+    }
+  }
+  if (current.length > 0) out.push(current.trimEnd());
+  return out;
+}
+
+/**
+ * Lazy PDF export — pdf-lib is dynamic-imported on first click to keep
+ * it out of the main bundle. A4 portrait, Helvetica, pipe-separated rows
+ * matching the previous jspdf layout so admins see no visual regression.
  */
 export async function downloadPdfTable(
   filename: string,
@@ -94,20 +126,47 @@ export async function downloadPdfTable(
   headers: readonly string[],
   rows: readonly (readonly CsvCell[])[],
 ): Promise<void> {
-  const { jsPDF } = await import('jspdf');
-  const doc = new jsPDF();
-  doc.setFontSize(14);
-  doc.text(title, 14, 16);
-  doc.setFontSize(9);
-  let y = 26;
-  doc.text(headers.join(' | '), 14, y);
-  y += 6;
+  const { PDFDocument, StandardFonts } = await import('pdf-lib');
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  // A4 portrait at 72 dpi: 595 × 842 pt. Match the jspdf coordinate
+  // system (top-origin) by tracking `y` in top-down pt values.
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const marginX = 40;
+  const maxWidth = pageWidth - marginX * 2;
+  const bodySize = 9;
+  const bodyLineHeight = 12;
+
+  let page = pdf.addPage([pageWidth, pageHeight]);
+  page.drawText(title, { x: marginX, y: pageHeight - 46, size: 14, font });
+  page.drawText(headers.join(' | '), { x: marginX, y: pageHeight - 74, size: bodySize, font });
+  let yFromTop = 88;
+
+  const drawLine = (text: string): void => {
+    if (yFromTop > pageHeight - 30) {
+      page = pdf.addPage([pageWidth, pageHeight]);
+      yFromTop = 46;
+    }
+    page.drawText(text, { x: marginX, y: pageHeight - yFromTop, size: bodySize, font });
+    yFromTop += bodyLineHeight;
+  };
+
   for (const row of rows) {
-    const line = row.map(c => (c === null || c === undefined ? '' : String(c))).join(' | ');
-    const split = doc.splitTextToSize(line, 180);
-    doc.text(split, 14, y);
-    y += 5 * split.length;
-    if (y > 280) { doc.addPage(); y = 16; }
+    const cells = row.map(c => (c === null || c === undefined ? '' : String(c)));
+    const wrapped = wrapLine(cells.join(' | '), font, bodySize, maxWidth);
+    for (const line of wrapped) drawLine(line);
   }
-  doc.save(filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+
+  const bytes = await pdf.save();
+  const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
