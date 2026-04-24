@@ -93,11 +93,30 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run visual regression suite
+      - name: Run visual regression suite (root — rust server surfaces)
         env:
           E2E_BASE_URL: http://127.0.0.1:18181
           CI: 'true'
         run: npx playwright test --project=chromium --workers=1 --reporter=github e2e/visual.spec.ts
+
+      - name: Run v5 visual + happy-paths (parkhub-web config)
+        # v5 specs live in parkhub-web/e2e/ and target the Astro bundle
+        # served by parkhub-server itself (embedded via rust_embed at
+        # /v5/index.html). v5-visual.spec.ts internally skips every
+        # project except chromium; v5-happy-paths.spec.ts skips
+        # mobile-chrome — see docs/v5-test-coverage-plan.md.
+        working-directory: parkhub-web
+        env:
+          E2E_BASE_URL: http://127.0.0.1:18181
+          CI: 'true'
+        run: |
+          npx playwright test \
+            --project=chromium \
+            --project=mobile-chrome \
+            --workers=1 \
+            --reporter=github \
+            e2e/v5-visual.spec.ts \
+            e2e/v5-happy-paths.spec.ts
 
       - name: Stop server
         if: always()
@@ -108,11 +127,17 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: visual-regression-diffs
+          # v4 suite writes to repo-root test-results/; v5 suite (working-directory:
+          # parkhub-web) writes to parkhub-web/test-results/. Glob both roots.
           path: |
             test-results/**/*-diff.png
             test-results/**/*-actual.png
             test-results/**/*-expected.png
             playwright-report/
+            parkhub-web/test-results/**/*-diff.png
+            parkhub-web/test-results/**/*-actual.png
+            parkhub-web/test-results/**/*-expected.png
+            parkhub-web/playwright-report/
           retention-days: 14
 
       - name: Upload full Playwright report
@@ -120,5 +145,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-visual-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            parkhub-web/playwright-report/
           retention-days: 7
