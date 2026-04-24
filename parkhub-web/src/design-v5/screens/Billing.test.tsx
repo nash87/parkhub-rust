@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const mockHistory = vi.fn();
+const mockCostCenter = vi.fn();
+const mockDepartment = vi.fn();
 const mockConfig = vi.fn();
 vi.mock('../../api/client', () => ({
   api: {
-    getPaymentHistory: (...a: unknown[]) => mockHistory(...a),
+    adminBillingByCostCenter: (...a: unknown[]) => mockCostCenter(...a),
+    adminBillingByDepartment: (...a: unknown[]) => mockDepartment(...a),
     getStripeConfig: (...a: unknown[]) => mockConfig(...a),
   },
 }));
@@ -17,8 +19,35 @@ vi.mock('@number-flow/react', () => ({
 
 import { BillingV5 } from './Billing';
 
-const P1 = { id: 'p-abcdefghij12345', amount: 1200, credits: 10, currency: 'EUR', status: 'completed' as const, created_at: '2026-04-01T10:00:00Z' };
-const P2 = { id: 'p-pending000000', amount: 500, credits: 5, currency: 'EUR', status: 'pending' as const, created_at: '2026-04-20T10:00:00Z' };
+// Tenant-wide billing fixtures (admin view): aggregates per cost-center and
+// per-department as returned by /api/v1/admin/billing/by-cost-center +
+// /by-department. Amount is euros (f64), NOT cents as in personal payment
+// history — that's the server-side schema from parkhub-server/src/api/billing.rs.
+const CC_ROWS = [
+  {
+    cost_center: 'CC-100', department: 'Engineering',
+    user_count: 12, total_bookings: 180,
+    total_credits_used: 1800, total_amount: 3600.50,
+    currency: 'EUR',
+  },
+  {
+    cost_center: 'CC-200', department: 'Sales',
+    user_count: 6, total_bookings: 40,
+    total_credits_used: 400, total_amount: 800.00,
+    currency: 'EUR',
+  },
+];
+
+const DEPT_ROWS = [
+  {
+    department: 'Engineering', user_count: 12, total_bookings: 180,
+    total_credits_used: 1800, total_amount: 3600.50, currency: 'EUR',
+  },
+  {
+    department: 'Sales', user_count: 6, total_bookings: 40,
+    total_credits_used: 400, total_amount: 800.00, currency: 'EUR',
+  },
+];
 
 function renderScreen() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -29,50 +58,52 @@ function renderScreen() {
   );
 }
 
-describe('BillingV5', () => {
+describe('BillingV5 (admin)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConfig.mockResolvedValue({ success: true, data: { configured: true } });
+    mockCostCenter.mockResolvedValue({ success: true, data: CC_ROWS });
+    mockDepartment.mockResolvedValue({ success: true, data: DEPT_ROWS });
   });
 
-  it('renders empty history message', async () => {
-    mockHistory.mockResolvedValue({ success: true, data: [] });
+  it('renders empty state when no cost centers are configured', async () => {
+    mockCostCenter.mockResolvedValue({ success: true, data: [] });
+    mockDepartment.mockResolvedValue({ success: true, data: [] });
     renderScreen();
-    await waitFor(() => expect(screen.getByText('Noch keine Zahlungen')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/keine Kostenstellen/i)).toBeInTheDocument());
   });
 
-  it('renders error state when history fails', async () => {
-    mockHistory.mockResolvedValue({ success: false, data: null, error: { code: 'X', message: 'denied' } });
+  it('renders error state when cost-center query fails', async () => {
+    mockCostCenter.mockResolvedValue({ success: false, data: null, error: { code: 'X', message: 'denied' } });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument());
   });
 
-  it('renders payment rows with status badges', async () => {
-    mockHistory.mockResolvedValue({ success: true, data: [P1, P2] });
+  it('renders one row per cost center', async () => {
     renderScreen();
-    await waitFor(() => expect(screen.getAllByTestId('billing-row')).toHaveLength(2));
-    expect(screen.getByText('Bezahlt')).toBeInTheDocument();
-    expect(screen.getByText('Ausstehend')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByTestId('billing-row')).toHaveLength(CC_ROWS.length));
+    expect(screen.getByText('CC-100')).toBeInTheDocument();
+    expect(screen.getByText('CC-200')).toBeInTheDocument();
+  });
+
+  it('shows aggregate totals across all cost centers', async () => {
+    renderScreen();
+    await waitFor(() => expect(screen.getAllByTestId('billing-row')).toHaveLength(CC_ROWS.length));
+    // Total = 3600.50 + 800.00 = 4400.50 EUR
+    expect(screen.getAllByText(/4\.400,50/).length).toBeGreaterThan(0);
+    // Total bookings = 220
+    expect(screen.getAllByText(/220/).length).toBeGreaterThan(0);
+  });
+
+  it('calls the admin billing endpoints on mount (not the personal payment history)', async () => {
+    renderScreen();
+    await waitFor(() => expect(mockCostCenter).toHaveBeenCalled());
+    expect(mockDepartment).toHaveBeenCalled();
   });
 
   it('surfaces Stripe configured badge from config', async () => {
-    mockHistory.mockResolvedValue({ success: true, data: [] });
     mockConfig.mockResolvedValue({ success: true, data: { configured: false } });
     renderScreen();
     await waitFor(() => expect(screen.getByText('Nicht konfiguriert')).toBeInTheDocument());
-  });
-
-  it('computes total paid only from completed payments', async () => {
-    mockHistory.mockResolvedValue({ success: true, data: [P1, P2] });
-    renderScreen();
-    await waitFor(() => expect(screen.getAllByTestId('billing-row')).toHaveLength(2));
-    // 1200 cents / EUR => 12,00 €
-    expect(screen.getAllByText(/12,00/).length).toBeGreaterThan(0);
-  });
-
-  it('renders loading skeleton initially then replaces with content', async () => {
-    mockHistory.mockResolvedValue({ success: true, data: [P1] });
-    renderScreen();
-    await waitFor(() => expect(screen.getAllByTestId('billing-row')).toHaveLength(1));
   });
 });

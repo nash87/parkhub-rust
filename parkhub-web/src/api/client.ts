@@ -362,6 +362,14 @@ export const api = {
   adminUpdateSettings: (data: Record<string, string>) =>
     request('/api/v1/admin/settings', { method: 'PUT', body: JSON.stringify(data) }),
 
+  // ── Admin Cost-Center Billing (parkhub-server/src/api/billing.rs) ──
+  // Admin-only aggregates for tenant-wide finance reporting. The v5 Billing
+  // screen surfaces these instead of the personal `/payments/history` feed.
+  adminBillingByCostCenter: () =>
+    request<AdminCostCenterSummary[]>('/api/v1/admin/billing/by-cost-center'),
+  adminBillingByDepartment: () =>
+    request<AdminDepartmentSummary[]>('/api/v1/admin/billing/by-department'),
+
   // ── Admin Modules (T-1720 v2 — runtime enable/disable) ──
   patchModule: (name: string, runtime_enabled: boolean) =>
     request<ModuleInfo>(`/api/v1/admin/modules/${encodeURIComponent(name)}`, {
@@ -963,6 +971,34 @@ export interface PaymentHistoryEntry {
 export interface StripeConfigResponse {
   publishable_key?: string;
   configured: boolean;
+}
+
+/**
+ * Admin cost-center billing aggregate — matches `CostCenterSummary` in
+ * `parkhub-server/src/api/billing.rs`. Amount is in whole currency units
+ * (f64 euros), not cents like PaymentHistoryEntry.
+ */
+export interface AdminCostCenterSummary {
+  cost_center: string;
+  department: string;
+  user_count: number;
+  total_bookings: number;
+  total_credits_used: number;
+  total_amount: number;
+  currency: string;
+}
+
+/**
+ * Admin department billing aggregate — matches `DepartmentSummary` in
+ * `parkhub-server/src/api/billing.rs`.
+ */
+export interface AdminDepartmentSummary {
+  department: string;
+  user_count: number;
+  total_bookings: number;
+  total_credits_used: number;
+  total_amount: number;
+  currency: string;
 }
 
 export interface UserStats {

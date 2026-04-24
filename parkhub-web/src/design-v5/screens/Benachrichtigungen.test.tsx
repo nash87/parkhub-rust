@@ -2,14 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+// v5 Benachrichtigungen is an admin-nav entry — it broadcasts
+// system-wide announcements to the whole tenant. It must call the
+// /api/v1/admin/announcements endpoints, NOT the per-user notification
+// inbox (that feed is surfaced by the bell dropdown + NotificationCenter).
 const mockList = vi.fn();
-const mockRead = vi.fn();
-const mockReadAll = vi.fn();
+const mockCreate = vi.fn();
+const mockUpdate = vi.fn();
+const mockDelete = vi.fn();
 vi.mock('../../api/client', () => ({
   api: {
-    getNotifications: (...a: unknown[]) => mockList(...a),
-    markNotificationRead: (...a: unknown[]) => mockRead(...a),
-    markAllNotificationsRead: (...a: unknown[]) => mockReadAll(...a),
+    adminListAnnouncements: (...a: unknown[]) => mockList(...a),
+    adminCreateAnnouncement: (...a: unknown[]) => mockCreate(...a),
+    adminUpdateAnnouncement: (...a: unknown[]) => mockUpdate(...a),
+    adminDeleteAnnouncement: (...a: unknown[]) => mockDelete(...a),
   },
 }));
 
@@ -25,8 +31,14 @@ vi.mock('../Toast', () => ({
 
 import { BenachrichtigungenV5 } from './Benachrichtigungen';
 
-const N1 = { id: 'n1', title: 'Neue Buchung', message: 'Platz A3', notification_type: 'booking', read: false, created_at: '2026-04-23T10:00:00Z' };
-const N2 = { id: 'n2', title: 'Tauschanfrage', message: 'Swap', notification_type: 'swap', read: true, created_at: '2026-04-22T10:00:00Z' };
+const A1 = {
+  id: 'a1', title: 'Wartung 1. Mai', message: 'Lot 3 geschlossen',
+  severity: 'warning', active: true, created_at: '2026-04-23T10:00:00Z',
+};
+const A2 = {
+  id: 'a2', title: 'Alte Info', message: 'Ignorieren',
+  severity: 'info', active: false, created_at: '2026-04-10T10:00:00Z',
+};
 
 function renderScreen() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -37,13 +49,13 @@ function renderScreen() {
   );
 }
 
-describe('BenachrichtigungenV5', () => {
+describe('BenachrichtigungenV5 (admin)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('renders empty state', async () => {
     mockList.mockResolvedValue({ success: true, data: [] });
     renderScreen();
-    await waitFor(() => expect(screen.getByText('Keine Benachrichtigungen')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Keine Ankündigungen')).toBeInTheDocument());
   });
 
   it('renders error when query fails', async () => {
@@ -52,51 +64,52 @@ describe('BenachrichtigungenV5', () => {
     await waitFor(() => expect(screen.getByText('Fehler beim Laden')).toBeInTheDocument());
   });
 
-  it('renders rows and shows unread count', async () => {
-    mockList.mockResolvedValue({ success: true, data: [N1, N2] });
+  it('renders one row per announcement with active + inactive badges', async () => {
+    mockList.mockResolvedValue({ success: true, data: [A1, A2] });
     renderScreen();
     await waitFor(() => expect(screen.getAllByTestId('benach-row')).toHaveLength(2));
-    expect(screen.getByText('1 ungelesen')).toBeInTheDocument();
+    expect(screen.getByText('Wartung 1. Mai')).toBeInTheDocument();
+    expect(screen.getByText('Alte Info')).toBeInTheDocument();
   });
 
-  it('filters to unread only', async () => {
-    mockList.mockResolvedValue({ success: true, data: [N1, N2] });
+  it('creates a new announcement via adminCreateAnnouncement', async () => {
+    mockList.mockResolvedValue({ success: true, data: [] });
+    mockCreate.mockResolvedValue({ success: true, data: { ...A1, id: 'a-new' } });
     renderScreen();
-    await waitFor(() => expect(screen.getAllByTestId('benach-row')).toHaveLength(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Ungelesen' }));
-    await waitFor(() => expect(screen.getAllByTestId('benach-row')).toHaveLength(1));
-  });
-
-  it('mark-read mutation fires for individual item', async () => {
-    mockList.mockResolvedValue({ success: true, data: [N1] });
-    mockRead.mockResolvedValue({ success: true, data: null });
-    renderScreen();
-    await waitFor(() => expect(screen.getByLabelText('Benachrichtigung n1 als gelesen markieren')).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText('Benachrichtigung n1 als gelesen markieren'));
+    await waitFor(() => expect(screen.getByTestId('benach-new-title')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('benach-new-title'), { target: { value: 'Neu' } });
+    fireEvent.change(screen.getByTestId('benach-new-message'), { target: { value: 'Hallo Team' } });
+    fireEvent.click(screen.getByTestId('benach-new-submit'));
     await waitFor(() => {
-      expect(mockRead).toHaveBeenCalledWith('n1');
-      expect(mockToast).toHaveBeenCalledWith('Als gelesen markiert', 'success');
+      expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Neu',
+        message: 'Hallo Team',
+        active: true,
+      }));
+      expect(mockToast).toHaveBeenCalledWith('Ankündigung erstellt', 'success');
     });
   });
 
-  it('mark-read error surfaces via toast', async () => {
-    mockList.mockResolvedValue({ success: true, data: [N1] });
-    mockRead.mockResolvedValue({ success: false, data: null, error: { code: 'X', message: 'fail' } });
+  it('surfaces create error when success:false', async () => {
+    mockList.mockResolvedValue({ success: true, data: [] });
+    mockCreate.mockResolvedValue({ success: false, data: null, error: { code: 'E', message: 'fail' } });
     renderScreen();
-    await waitFor(() => expect(screen.getByLabelText('Benachrichtigung n1 als gelesen markieren')).toBeInTheDocument());
-    fireEvent.click(screen.getByLabelText('Benachrichtigung n1 als gelesen markieren'));
+    await waitFor(() => expect(screen.getByTestId('benach-new-title')).toBeInTheDocument());
+    fireEvent.change(screen.getByTestId('benach-new-title'), { target: { value: 'x' } });
+    fireEvent.change(screen.getByTestId('benach-new-message'), { target: { value: 'y' } });
+    fireEvent.click(screen.getByTestId('benach-new-submit'));
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('fail', 'error'));
   });
 
-  it('mark-all button calls markAllNotificationsRead', async () => {
-    mockList.mockResolvedValue({ success: true, data: [N1, N2] });
-    mockReadAll.mockResolvedValue({ success: true, data: null });
+  it('deletes an announcement via adminDeleteAnnouncement', async () => {
+    mockList.mockResolvedValue({ success: true, data: [A1] });
+    mockDelete.mockResolvedValue({ success: true, data: null });
     renderScreen();
-    await waitFor(() => expect(screen.getByTestId('benach-mark-all')).toBeInTheDocument());
-    fireEvent.click(screen.getByTestId('benach-mark-all'));
+    await waitFor(() => expect(screen.getByLabelText('Ankündigung a1 löschen')).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText('Ankündigung a1 löschen'));
     await waitFor(() => {
-      expect(mockReadAll).toHaveBeenCalled();
-      expect(mockToast).toHaveBeenCalledWith('Alle als gelesen markiert', 'success');
+      expect(mockDelete).toHaveBeenCalledWith('a1');
+      expect(mockToast).toHaveBeenCalledWith('Ankündigung gelöscht', 'success');
     });
   });
 });

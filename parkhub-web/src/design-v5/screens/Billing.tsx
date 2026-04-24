@@ -1,36 +1,41 @@
 import NumberFlow from '@number-flow/react';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Card, V5NamedIcon, type BadgeVariant } from '../primitives';
-import { api, type PaymentHistoryEntry } from '../../api/client';
+import { Badge, Card, V5NamedIcon } from '../primitives';
+import { api, type AdminCostCenterSummary } from '../../api/client';
 import type { ScreenId } from '../nav';
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+/**
+ * Billing — admin view of tenant-wide finance.
+ *
+ * v5 mirrors the legacy `views/AdminBilling.tsx` workflow: cost-center +
+ * department aggregates from `/api/v1/admin/billing/*`, NOT the personal
+ * `/payments/history` feed (that lives on the user-facing Kredits screen).
+ *
+ * Codex #376: the v5 draft originally wired this admin-nav entry to
+ * `api.getPaymentHistory()`, which broke the tenant finance workflow
+ * (cost-center rollups + CSV export) for operators.
+ */
 
 function formatMoney(amount: number, currency: string): string {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency || 'EUR' }).format(amount / 100);
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: currency || 'EUR' }).format(amount);
 }
-
-function statusVariant(s: PaymentHistoryEntry['status']): BadgeVariant {
-  switch (s) {
-    case 'completed': return 'success';
-    case 'pending': return 'warning';
-    case 'failed': return 'error';
-    default: return 'gray';
-  }
-}
-
-const STATUS_LABEL: Record<PaymentHistoryEntry['status'], string> = {
-  completed: 'Bezahlt', pending: 'Ausstehend', failed: 'Fehlgeschlagen', expired: 'Abgelaufen',
-};
 
 export function BillingV5({ navigate: _navigate }: { navigate: (id: ScreenId) => void }) {
-  const { data: history = [], isLoading, isError } = useQuery({
-    queryKey: ['billing-history'],
+  const costCenterQuery = useQuery({
+    queryKey: ['admin-billing-cost-center'],
     queryFn: async () => {
-      const res = await api.getPaymentHistory();
-      if (!res.success) throw new Error(res.error?.message ?? 'Zahlungsverlauf konnte nicht geladen werden');
+      const res = await api.adminBillingByCostCenter();
+      if (!res.success) throw new Error(res.error?.message ?? 'Kostenstellen konnten nicht geladen werden');
+      return res.data ?? [];
+    },
+    staleTime: 30_000,
+  });
+
+  const departmentQuery = useQuery({
+    queryKey: ['admin-billing-department'],
+    queryFn: async () => {
+      const res = await api.adminBillingByDepartment();
+      if (!res.success) throw new Error(res.error?.message ?? 'Abteilungen konnten nicht geladen werden');
       return res.data ?? [];
     },
     staleTime: 30_000,
@@ -46,12 +51,21 @@ export function BillingV5({ navigate: _navigate }: { navigate: (id: ScreenId) =>
     staleTime: 60_000,
   });
 
-  const totalPaid = history
-    .filter((h) => h.status === 'completed')
-    .reduce((sum, h) => sum + h.amount, 0);
-  const totalCredits = history
-    .filter((h) => h.status === 'completed')
-    .reduce((sum, h) => sum + h.credits, 0);
+  const isLoading = costCenterQuery.isLoading || departmentQuery.isLoading;
+  const isError = costCenterQuery.isError || departmentQuery.isError;
+  const ccRows: AdminCostCenterSummary[] = costCenterQuery.data ?? [];
+
+  const totalAmount = ccRows.reduce((sum, r) => sum + r.total_amount, 0);
+  const totalBookings = ccRows.reduce((sum, r) => sum + r.total_bookings, 0);
+  const totalUsers = ccRows.reduce((sum, r) => sum + r.user_count, 0);
+  const currency = ccRows[0]?.currency ?? 'EUR';
+
+  async function handleExport() {
+    // Triggers the CSV endpoint so the browser handles the file download.
+    // Kept as a plain anchor rather than api.* because the endpoint returns
+    // raw CSV bytes, not the ApiResponse<T> envelope.
+    window.location.assign('/api/v1/admin/billing/export');
+  }
 
   if (isLoading) {
     return (
@@ -74,20 +88,33 @@ export function BillingV5({ navigate: _navigate }: { navigate: (id: ScreenId) =>
     );
   }
 
-  const currency = history[0]?.currency ?? 'EUR';
-
   return (
     <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="v5-ani" style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Abrechnung</div>
+      <div className="v5-ani" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Abrechnung</span>
+        <button
+          type="button"
+          onClick={handleExport}
+          data-testid="billing-export"
+          style={{
+            padding: '7px 14px', borderRadius: 9, background: 'var(--v5-acc)', color: 'var(--v5-accent-fg)',
+            border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          }}
+        >CSV Export</button>
+      </div>
 
-      <div className="v5-ani" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, animationDelay: '0.06s' }}>
+      <div className="v5-ani" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, animationDelay: '0.06s' }}>
         <Card style={{ padding: 14 }}>
-          <div className="v5-mono" style={{ fontSize: 9, letterSpacing: 1.3, color: 'var(--v5-mut)', textTransform: 'uppercase' }}>Gesamt bezahlt</div>
-          <div className="v5-mono" style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', marginTop: 4 }}>{formatMoney(totalPaid, currency)}</div>
+          <div className="v5-mono" style={{ fontSize: 9, letterSpacing: 1.3, color: 'var(--v5-mut)', textTransform: 'uppercase' }}>Gesamt</div>
+          <div className="v5-mono" style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', marginTop: 4 }}>{formatMoney(totalAmount, currency)}</div>
         </Card>
         <Card style={{ padding: 14 }}>
-          <div className="v5-mono" style={{ fontSize: 9, letterSpacing: 1.3, color: 'var(--v5-mut)', textTransform: 'uppercase' }}>Credits erworben</div>
-          <div className="v5-mono" style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', marginTop: 4 }}><NumberFlow value={totalCredits} /></div>
+          <div className="v5-mono" style={{ fontSize: 9, letterSpacing: 1.3, color: 'var(--v5-mut)', textTransform: 'uppercase' }}>Buchungen</div>
+          <div className="v5-mono" style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', marginTop: 4 }}><NumberFlow value={totalBookings} /></div>
+        </Card>
+        <Card style={{ padding: 14 }}>
+          <div className="v5-mono" style={{ fontSize: 9, letterSpacing: 1.3, color: 'var(--v5-mut)', textTransform: 'uppercase' }}>Nutzer</div>
+          <div className="v5-mono" style={{ fontSize: 22, fontWeight: 700, color: 'var(--v5-txt)', marginTop: 4 }}><NumberFlow value={totalUsers} /></div>
         </Card>
         <Card style={{ padding: 14 }}>
           <div className="v5-mono" style={{ fontSize: 9, letterSpacing: 1.3, color: 'var(--v5-mut)', textTransform: 'uppercase' }}>Stripe</div>
@@ -101,37 +128,37 @@ export function BillingV5({ navigate: _navigate }: { navigate: (id: ScreenId) =>
 
       <Card className="v5-ani" style={{ padding: 16, animationDelay: '0.12s' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--v5-txt)' }}>Zahlungsverlauf</span>
-          <Badge variant="gray">{history.length}</Badge>
+          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--v5-txt)' }}>Kostenstellen</span>
+          <Badge variant="gray">{ccRows.length}</Badge>
         </div>
-        {history.length === 0 ? (
+        {ccRows.length === 0 ? (
           <div style={{ padding: 24, textAlign: 'center', fontSize: 12, color: 'var(--v5-mut)' }}>
-            Noch keine Zahlungen
+            Noch keine Kostenstellen konfiguriert
           </div>
         ) : (
           <div>
             <div className="v5-mono" style={{
-              display: 'grid', gridTemplateColumns: '110px 1fr 100px 120px 110px',
+              display: 'grid', gridTemplateColumns: '120px 1fr 80px 90px 120px',
               padding: '6px 4px', fontSize: 9, letterSpacing: 1.2, textTransform: 'uppercase',
               color: 'var(--v5-mut)', borderBottom: '1px solid var(--v5-bor)',
             }}>
-              <span>Datum</span><span>ID</span><span>Credits</span><span>Betrag</span><span>Status</span>
+              <span>Kostenstelle</span><span>Abteilung</span><span>Nutzer</span><span>Buchungen</span><span>Betrag</span>
             </div>
-            {history.map((h, i) => (
+            {ccRows.map((r, i) => (
               <div
-                key={h.id} data-testid="billing-row"
+                key={r.cost_center} data-testid="billing-row"
                 style={{
-                  display: 'grid', gridTemplateColumns: '110px 1fr 100px 120px 110px',
+                  display: 'grid', gridTemplateColumns: '120px 1fr 80px 90px 120px',
                   padding: '10px 4px', alignItems: 'center',
-                  borderBottom: i < history.length - 1 ? '1px solid var(--v5-bor)' : 'none',
+                  borderBottom: i < ccRows.length - 1 ? '1px solid var(--v5-bor)' : 'none',
                   fontSize: 11, color: 'var(--v5-txt)',
                 }}
               >
-                <span>{formatDate(h.created_at)}</span>
-                <span className="v5-mono" style={{ fontSize: 10, color: 'var(--v5-mut)' }} title={h.id}>{h.id.slice(0, 14)}…</span>
-                <span className="v5-mono"><NumberFlow value={h.credits} /></span>
-                <span className="v5-mono" style={{ fontWeight: 500 }}>{formatMoney(h.amount, h.currency)}</span>
-                <Badge variant={statusVariant(h.status)} dot>{STATUS_LABEL[h.status]}</Badge>
+                <span className="v5-mono">{r.cost_center}</span>
+                <span>{r.department}</span>
+                <span className="v5-mono"><NumberFlow value={r.user_count} /></span>
+                <span className="v5-mono"><NumberFlow value={r.total_bookings} /></span>
+                <span className="v5-mono" style={{ fontWeight: 500 }}>{formatMoney(r.total_amount, r.currency)}</span>
               </div>
             ))}
           </div>
