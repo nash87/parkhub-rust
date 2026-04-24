@@ -23,12 +23,14 @@ Object.defineProperty(window, 'matchMedia', {
 const mockGetBookings = vi.fn();
 const mockGetVehicles = vi.fn();
 const mockCancelBooking = vi.fn();
+const mockCreateBooking = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
     getBookings: (...args: any[]) => mockGetBookings(...args),
     getVehicles: (...args: any[]) => mockGetVehicles(...args),
     cancelBooking: (...args: any[]) => mockCancelBooking(...args),
+    createBooking: (...args: any[]) => mockCreateBooking(...args),
   },
 }));
 
@@ -164,6 +166,7 @@ describe('BookingsPage', () => {
     mockGetBookings.mockClear();
     mockGetVehicles.mockClear();
     mockCancelBooking.mockClear();
+    mockCreateBooking.mockClear();
   });
 
   afterEach(() => {
@@ -428,5 +431,42 @@ describe('BookingsPage', () => {
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
     render(<BookingsPage />);
     await waitFor(() => expect(screen.getByText('Future Lot')).toBeInTheDocument());
+  });
+
+  it('Tier-2 item 11 — offers Rückgängig after cancel and calls createBooking inverse on click', async () => {
+    const user = userEvent.setup();
+    const booking = makeBooking({ id: 'b1', status: 'active' });
+    mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockCancelBooking.mockResolvedValue({ success: true, data: null });
+    mockCreateBooking.mockResolvedValue({ success: true, data: { id: 'b1-new' } });
+
+    render(<BookingsPage />);
+
+    const cancelBtn = await screen.findByLabelText(/cancel/i);
+    await user.click(cancelBtn);
+
+    const undoBtn = await screen.findByTestId('undo-button');
+    await user.click(undoBtn);
+
+    await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
+    expect(mockCreateBooking.mock.calls[0][0]).toEqual(expect.objectContaining({
+      lot_id: booking.lot_id,
+      slot_id: booking.slot_id,
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+    }));
+  });
+
+  it('Tier-2 item 9 — renders Zum Kalender hinzufügen link pointing at /bookings/{id}.ics', async () => {
+    const booking = makeBooking({ id: 'bk-42', status: 'active' });
+    mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookingsPage />);
+
+    const link = await screen.findByTestId('ical-bk-42');
+    expect(link).toHaveAttribute('href', expect.stringContaining('/api/v1/bookings/bk-42.ics'));
+    expect(link).toHaveAttribute('download', 'parkhub-booking-bk-42.ics');
   });
 });
