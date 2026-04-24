@@ -153,7 +153,15 @@ export function TeamV5({ navigate: _navigate }: { navigate: (id: ScreenId) => vo
   const presentCount = Math.max(0, members.length - todayEntries.length);
 
   return (
-    <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    // tabIndex=0 + aria-label satisfies axe `scrollable-region-focusable`:
+    // scrollable containers need a keyboard entry point so non-mouse users
+    // can reach overflowing content. Region role surfaces the scope to AT.
+    <div
+      role="region"
+      aria-label="Team-Übersicht"
+      tabIndex={0}
+      style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}
+    >
       <div className="v5-ani" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Team</span>

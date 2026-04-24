@@ -289,8 +289,12 @@ export function DashboardV5({ navigate }: { navigate: (id: ScreenId) => void }) 
           von {creditsMax} · kein Ablauf
         </div>
         <div
-          style={{ height: 3, background: 'var(--v5-bor)', borderRadius: 3 }}
+          role="progressbar"
           aria-label={`${credits} von ${creditsMax} Credits`}
+          aria-valuenow={credits}
+          aria-valuemin={0}
+          aria-valuemax={creditsMax}
+          style={{ height: 3, background: 'var(--v5-bor)', borderRadius: 3 }}
         >
           <div
             style={{

@@ -28,10 +28,25 @@ const inputStyle: CSSProperties = {
   fontFamily: 'inherit',
 };
 
-function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
+function Field({
+  label,
+  children,
+  hint,
+  htmlFor,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: ReactNode;
+  /** id of the form control this label describes — required for WCAG 2.1 AA
+   *  `label` rule. Callers pass the same value as the rendered input's `id`. */
+  htmlFor?: string;
+}) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, fontWeight: 500, color: 'var(--v5-mut)', display: 'inline-flex', alignItems: 'center' }}>
+      <label
+        htmlFor={htmlFor}
+        style={{ fontSize: 11, fontWeight: 500, color: 'var(--v5-mut)', display: 'inline-flex', alignItems: 'center' }}
+      >
         {label}
         {hint}
       </label>
@@ -155,7 +170,7 @@ export function ProfilV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
           <SectionLabel>Kontoinformation</SectionLabel>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <Field label="Name">
+          <Field label="Name" htmlFor="profil-name">
             <input
               id="profil-name"
               type="text"
@@ -166,6 +181,7 @@ export function ProfilV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
           </Field>
           <Field
             label="E-Mail"
+            htmlFor="profil-email"
             hint={
               <HelpTip label="Hinweis zur E-Mail">
                 E-Mail-Bestätigung erforderlich
@@ -231,8 +247,9 @@ export function ProfilV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
         </div>
         {pwOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <Field label="Aktuelles Passwort">
+            <Field label="Aktuelles Passwort" htmlFor="profil-pw-current">
               <input
+                id="profil-pw-current"
                 type="password"
                 value={pwCurrent}
                 onChange={(e) => setPwCurrent(e.target.value)}
@@ -241,8 +258,9 @@ export function ProfilV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
               />
             </Field>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <Field label="Neues Passwort">
+              <Field label="Neues Passwort" htmlFor="profil-pw-new">
                 <input
+                  id="profil-pw-new"
                   type="password"
                   value={pwNew}
                   onChange={(e) => setPwNew(e.target.value)}
@@ -250,8 +268,9 @@ export function ProfilV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
                   autoComplete="new-password"
                 />
               </Field>
-              <Field label="Bestätigen">
+              <Field label="Bestätigen" htmlFor="profil-pw-confirm">
                 <input
+                  id="profil-pw-confirm"
                   type="password"
                   value={pwConfirm}
                   onChange={(e) => setPwConfirm(e.target.value)}
