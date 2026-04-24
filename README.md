@@ -37,6 +37,27 @@
 
 ---
 
+## Design v5 Showcase
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/v5/dashboard-marble-light.png" alt="Dashboard — Marble Light"></td>
+    <td><img src="docs/screenshots/v5/dashboard-void.png" alt="Dashboard — Void"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/v5/buchungen-marble-light.png" alt="Buchungen — Marble Light"></td>
+    <td><img src="docs/screenshots/v5/buchen-void.png" alt="Buchen — Void"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/v5/analytics-marble-light.png" alt="Analytics — Marble Light"></td>
+    <td><img src="docs/screenshots/v5/buchen-marble-light.png" alt="Buchen — Marble Light"></td>
+  </tr>
+</table>
+
+> Live demo: <a href="https://parkhub-rust-demo.onrender.com">parkhub-rust-demo.onrender.com</a> · drücke <kbd>⌘K</kbd> / <kbd>Ctrl</kbd>+<kbd>K</kbd> für die Command-Palette · <kbd>?</kbd> blendet das Help-Overlay ein.
+
+---
+
 ## Design v5 Status (26 / 26 screens shipped)
 
 | Surface | Status |
