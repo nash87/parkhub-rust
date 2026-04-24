@@ -377,8 +377,9 @@ pub use misc::{
     get_impressum, get_impressum_admin, public_display, public_occupancy, update_impressum,
 };
 pub use users::{
-    change_password, gdpr_delete_account, gdpr_export_data, get_current_user, get_user,
-    get_user_preferences, update_current_user, update_user_preferences, user_stats,
+    change_password, gdpr_delete_account, gdpr_export_data, get_current_user, get_my_settings,
+    get_user, get_user_preferences, update_current_user, update_my_settings,
+    update_user_preferences, user_stats,
 };
 
 /// User ID extracted from auth token.
@@ -865,6 +866,12 @@ fn user_core_routes() -> Router<SharedState> {
         )
         // Alias: frontend may call /api/v1/me — keep both paths working
         .route("/api/v1/me", get(get_current_user).put(update_current_user))
+        // v5 customization: opaque per-user settings JSON (theme, sidebar
+        // variant, density, font, feature toggles, notifications, privacy).
+        .route(
+            "/api/v1/me/settings",
+            get(get_my_settings).put(update_my_settings),
+        )
         .route("/api/v1/users/me/export", get(gdpr_export_data))
         .route("/api/v1/users/me/delete", delete(gdpr_delete_account))
         .route(

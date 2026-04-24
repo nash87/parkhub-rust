@@ -286,6 +286,26 @@ export const api = {
   updateMe: (data: Partial<User>) =>
     request<User>('/api/v1/users/me', { method: 'PUT', body: JSON.stringify(data) }),
 
+  /**
+   * Per-user v5 customization settings (theme, sidebar variant, density,
+   * font, feature toggles, notifications, privacy). Backed by the
+   * `users.settings` JSON column. Returns `null` for users who haven't
+   * customized yet — caller should fall back to client defaults.
+   */
+  getSettings: () =>
+    request<Record<string, unknown> | null>('/api/v1/me/settings'),
+
+  /**
+   * Replace the current user's settings JSON blob. Server validates only
+   * that the body is valid JSON; structural validation lives on the
+   * client (V5SettingsProvider.migrate).
+   */
+  updateSettings: (settings: Record<string, unknown>) =>
+    request<Record<string, unknown>>('/api/v1/me/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ settings }),
+    }),
+
   setAccessibilityNeeds: (accessibility_needs: string) =>
     request<User>('/api/v1/users/me/accessibility-needs', {
       method: 'PUT',

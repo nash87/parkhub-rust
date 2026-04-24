@@ -204,6 +204,142 @@ pub async fn update_current_user(
     (StatusCode::OK, Json(ApiResponse::success(user)))
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// V5 CUSTOMIZATION SETTINGS — opaque JSON blob per user
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Maximum payload size for the settings JSON blob. Same cap as the PHP
+/// implementation — protects the column from runaway clients without
+/// constraining the schema (which the frontend owns).
+const SETTINGS_MAX_BYTES: usize = 32 * 1024;
+
+/// `GET /api/v1/me/settings` — return the current user's v5 settings blob.
+///
+/// Returns `null` for users who have never customized; clients fall back
+/// to factory defaults defined in
+/// `parkhub-web/src/design-v5/settings/settings.ts`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/me/settings",
+    tag = "Users",
+    summary = "Get current user v5 customization settings",
+    description = "Returns the per-user settings blob (theme, sidebar variant, font, density, feature toggles).",
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "Settings blob (or null if not customized)"),
+        (status = 404, description = "User not found")
+    )
+)]
+pub async fn get_my_settings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+) -> (StatusCode, Json<ApiResponse<Option<serde_json::Value>>>) {
+    let state = state.read().await;
+    match state.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(user)) => (StatusCode::OK, Json(ApiResponse::success(user.settings))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(ApiResponse::error("NOT_FOUND", "User not found")),
+        ),
+        Err(e) => {
+            tracing::error!(error = %e, "Failed to fetch user settings");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            )
+        }
+    }
+}
+
+/// Body for `PUT /api/v1/me/settings`.
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
+pub struct UpdateMySettingsRequest {
+    /// Opaque settings object — schema is owned by the frontend's
+    /// V5SettingsProvider.migrate() helper.
+    pub settings: serde_json::Value,
+}
+
+/// `PUT /api/v1/me/settings` — replace the user's v5 settings blob.
+///
+/// Validation is structural only: must be a JSON object, capped at 32 KB
+/// serialized. Schema correctness is enforced client-side by
+/// `migrate()` so the server stays decoupled from the version cadence.
+#[utoipa::path(
+    put,
+    path = "/api/v1/me/settings",
+    tag = "Users",
+    summary = "Replace current user v5 settings",
+    description = "Replaces the v5 customization blob. Payload must be a JSON object ≤ 32 KB.",
+    security(("bearer_auth" = [])),
+    responses(
+        (status = 200, description = "Settings persisted"),
+        (status = 400, description = "Invalid payload"),
+        (status = 413, description = "Payload too large"),
+        (status = 404, description = "User not found")
+    )
+)]
+pub async fn update_my_settings(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<UpdateMySettingsRequest>,
+) -> (StatusCode, Json<ApiResponse<serde_json::Value>>) {
+    if !req.settings.is_object() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "INVALID_INPUT",
+                "settings must be a JSON object",
+            )),
+        );
+    }
+    let serialized_size = serde_json::to_string(&req.settings)
+        .map(|s| s.len())
+        .unwrap_or(usize::MAX);
+    if serialized_size > SETTINGS_MAX_BYTES {
+        return (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(ApiResponse::error(
+                "PAYLOAD_TOO_LARGE",
+                "Settings payload must be ≤ 32 KB",
+            )),
+        );
+    }
+
+    let state_guard = state.read().await;
+    let mut user = match state_guard.db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(u)) => u,
+        Ok(None) => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(ApiResponse::error("NOT_FOUND", "User not found")),
+            );
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "Database error fetching user for settings update");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ApiResponse::error("SERVER_ERROR", "Internal server error")),
+            );
+        }
+    };
+
+    user.settings = Some(req.settings.clone());
+    user.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_user(&user).await {
+        tracing::error!(error = %e, "Failed to save user settings");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to update settings",
+            )),
+        );
+    }
+
+    (StatusCode::OK, Json(ApiResponse::success(req.settings)))
+}
+
 /// Retrieve a user by ID.
 ///
 /// Restricted to Admin and `SuperAdmin` roles. Regular users must use
