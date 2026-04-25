@@ -155,22 +155,12 @@ function V5Shell() {
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, screen);
-    // Feature: deepLinking — reflect screen in URL hash so links share-able.
-    if (settings.features.deepLinking && typeof window !== 'undefined') {
-      const target = `#/v5/${screen}`;
-      if (window.location.hash !== target) {
-        try {
-          window.history.replaceState(null, '', target);
-        } catch {
-          /* security errors in some sandboxes — ignore */
-        }
-      }
-    }
-  }, [screen, settings.features.deepLinking]);
+  }, [screen]);
 
   // Keep browser URL + localStorage in lockstep with the in-memory screen,
-  // and restore screen state on back/forward.
-  useSyncScreenToUrl(screen, setScreen);
+  // and restore screen state on back/forward — gated by the deepLinking feature toggle
+  // so disabling it stops history pushes and popstate handling entirely.
+  useSyncScreenToUrl(screen, setScreen, settings.features.deepLinking);
 
   // Legacy shortcuts kept in a raw listener so Ctrl+K can intercept
   // browser default. The new per-screen shortcut hook covers single-key
