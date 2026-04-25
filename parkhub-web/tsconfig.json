@@ -5,7 +5,9 @@
     "**/*"
   ],
   "exclude": [
-    "dist"
+    "dist",
+    "**/*.stories.tsx",
+    "**/*.stories.ts"
   ],
   "compilerOptions": {
     "jsx": "react-jsx",
