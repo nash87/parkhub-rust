@@ -25,24 +25,34 @@ class MockWebSocket {
 beforeEach(() => { MockWebSocket.instances = []; vi.stubGlobal('WebSocket', MockWebSocket); vi.useFakeTimers(); });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
+// noUncheckedIndexedAccess types `MockWebSocket.instances[N]` as undefined-able;
+// the helper throws loudly when the indexed instance is missing so the test
+// fails for the right reason instead of dying on `Cannot read of undefined`.
+function wsAt(idx: number): MockWebSocket {
+  const ws = MockWebSocket.instances[idx];
+  if (!ws) throw new Error(`MockWebSocket.instances[${idx}] not present (have ${MockWebSocket.instances.length})`);
+  return ws;
+}
+
+
 describe('useWebSocket', () => {
   it('connects to default ws URL', () => {
     renderHook(() => useWebSocket());
     expect(MockWebSocket.instances).toHaveLength(1);
-    expect(MockWebSocket.instances[0].url).toContain('/api/v1/ws');
+    expect(wsAt(0).url).toContain('/api/v1/ws');
   });
 
   it('reports connected state after open', () => {
     const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
     expect(result.current.connected).toBe(false);
-    act(() => MockWebSocket.instances[0].simulateOpen());
+    act(() => wsAt(0).simulateOpen());
     expect(result.current.connected).toBe(true);
   });
 
   it('receives events and calls onEvent callback', () => {
     const onEvent = vi.fn();
     const { result } = renderHook(() => useWebSocket({ onEvent, autoReconnect: false }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
     act(() => ws.simulateOpen());
     const event: WsEvent = { event: 'booking_created', data: { booking_id: 'abc' }, timestamp: '2026-03-21T10:00:00Z' };
     act(() => ws.simulateMessage(event));
@@ -52,7 +62,7 @@ describe('useWebSocket', () => {
 
   it('auto-reconnects with exponential backoff', () => {
     renderHook(() => useWebSocket({ reconnectDelay: 100 }));
-    const ws1 = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+    const ws1 = wsAt(MockWebSocket.instances.length - 1);
     act(() => ws1.simulateOpen());
     act(() => ws1.simulateClose());
     const countAfterClose = MockWebSocket.instances.length;
@@ -63,27 +73,27 @@ describe('useWebSocket', () => {
 
   it('does not reconnect when autoReconnect is false', () => {
     renderHook(() => useWebSocket({ autoReconnect: false }));
-    act(() => MockWebSocket.instances[0].simulateOpen());
-    act(() => MockWebSocket.instances[0].simulateClose());
+    act(() => wsAt(0).simulateOpen());
+    act(() => wsAt(0).simulateClose());
     act(() => vi.advanceTimersByTime(60_000));
     expect(MockWebSocket.instances).toHaveLength(1);
   });
 
   it('cleans up on unmount', () => {
     const { unmount } = renderHook(() => useWebSocket({ autoReconnect: false }));
-    act(() => MockWebSocket.instances[0].simulateOpen());
+    act(() => wsAt(0).simulateOpen());
     unmount();
-    expect(MockWebSocket.instances[0].close).toHaveBeenCalled();
+    expect(wsAt(0).close).toHaveBeenCalled();
   });
 
   it('resets retry count on successful connection', () => {
     renderHook(() => useWebSocket({ reconnectDelay: 100 }));
-    act(() => MockWebSocket.instances[0].simulateOpen());
-    act(() => MockWebSocket.instances[0].simulateClose());
+    act(() => wsAt(0).simulateOpen());
+    act(() => wsAt(0).simulateClose());
     act(() => vi.advanceTimersByTime(100));
     expect(MockWebSocket.instances).toHaveLength(2);
-    act(() => MockWebSocket.instances[1].simulateOpen());
-    act(() => MockWebSocket.instances[1].simulateClose());
+    act(() => wsAt(1).simulateOpen());
+    act(() => wsAt(1).simulateClose());
     act(() => vi.advanceTimersByTime(100));
     expect(MockWebSocket.instances).toHaveLength(3);
   });
@@ -91,24 +101,24 @@ describe('useWebSocket', () => {
   it('ignores non-JSON messages', () => {
     const onEvent = vi.fn();
     renderHook(() => useWebSocket({ onEvent, autoReconnect: false }));
-    act(() => MockWebSocket.instances[0].simulateOpen());
-    act(() => MockWebSocket.instances[0].onmessage?.({ data: 'not json' }));
+    act(() => wsAt(0).simulateOpen());
+    act(() => wsAt(0).onmessage?.({ data: 'not json' }));
     expect(onEvent).not.toHaveBeenCalled();
   });
 
   it('uses custom URL when provided', () => {
     renderHook(() => useWebSocket({ url: 'ws://custom:8080/ws' }));
-    expect(MockWebSocket.instances[0].url).toBe('ws://custom:8080/ws');
+    expect(wsAt(0).url).toBe('ws://custom:8080/ws');
   });
 
   it('appends token to URL as query parameter', () => {
     renderHook(() => useWebSocket({ token: 'my-session-token' }));
-    expect(MockWebSocket.instances[0].url).toContain('?token=my-session-token');
+    expect(wsAt(0).url).toContain('?token=my-session-token');
   });
 
   it('returns occupancy map updated by occupancy_changed events', () => {
     const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
     act(() => ws.simulateOpen());
     const event: WsEvent = {
       event: 'occupancy_changed',
@@ -123,7 +133,7 @@ describe('useWebSocket', () => {
 
   it('accumulates occupancy for multiple lots', () => {
     const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
     act(() => ws.simulateOpen());
     act(() => ws.simulateMessage({
       event: 'occupancy_changed',
@@ -136,18 +146,18 @@ describe('useWebSocket', () => {
       timestamp: '2026-03-21T10:01:00Z',
     }));
     expect(Object.keys(result.current.occupancy)).toHaveLength(2);
-    expect(result.current.occupancy['lot-1'].available).toBe(3);
-    expect(result.current.occupancy['lot-2'].available).toBe(8);
+    expect(result.current.occupancy['lot-1']?.available).toBe(3);
+    expect(result.current.occupancy['lot-2']?.available).toBe(8);
   });
 
   it('caps reconnect delay at maxReconnectDelay', () => {
     renderHook(() => useWebSocket({ reconnectDelay: 1000, maxReconnectDelay: 5000 }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
     act(() => ws.simulateOpen());
 
     // Simulate multiple close/reconnect cycles
     for (let i = 0; i < 5; i++) {
-      const last = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+      const last = wsAt(MockWebSocket.instances.length - 1);
       act(() => last.simulateClose());
       // After capped delay, reconnect should happen
       act(() => vi.advanceTimersByTime(5001));
@@ -158,7 +168,7 @@ describe('useWebSocket', () => {
 
   it('does not reconnect after unmount', () => {
     const { unmount } = renderHook(() => useWebSocket({ reconnectDelay: 100 }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
     act(() => ws.simulateOpen());
     unmount();
     act(() => ws.simulateClose());
@@ -169,7 +179,7 @@ describe('useWebSocket', () => {
 
   it('sends heartbeat pings while the socket is open', () => {
     renderHook(() => useWebSocket({ autoReconnect: false, heartbeatInterval: 1000 }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
 
     act(() => ws.simulateOpen());
     act(() => vi.advanceTimersByTime(1000));
@@ -179,7 +189,7 @@ describe('useWebSocket', () => {
 
   it('stops heartbeat pings after the socket closes', () => {
     renderHook(() => useWebSocket({ autoReconnect: false, heartbeatInterval: 1000 }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
 
     act(() => ws.simulateOpen());
     act(() => ws.simulateClose());
@@ -190,7 +200,7 @@ describe('useWebSocket', () => {
 
   it('ignores occupancy updates with invalid lot ids', () => {
     const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
 
     act(() => ws.simulateOpen());
     act(() => ws.simulateMessage({
@@ -206,7 +216,7 @@ describe('useWebSocket', () => {
     const { result } = renderHook(() =>
       useWebSocket({ reconnectDelay: 100, maxRetries: 0 })
     );
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
 
     act(() => ws.simulateOpen());
     act(() => ws.simulateClose());
@@ -220,7 +230,7 @@ describe('useWebSocket', () => {
     const { result } = renderHook(() =>
       useWebSocket({ reconnectDelay: 100, maxRetries: 0 })
     );
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
 
     act(() => ws.simulateOpen());
     act(() => ws.simulateClose());
@@ -234,7 +244,7 @@ describe('useWebSocket', () => {
 
   it('closes an existing socket before reconnecting manually', () => {
     const { result } = renderHook(() => useWebSocket({ autoReconnect: false }));
-    const ws = MockWebSocket.instances[0];
+    const ws = wsAt(0);
 
     act(() => ws.simulateOpen());
     act(() => result.current.reconnect());
