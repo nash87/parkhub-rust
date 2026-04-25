@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { V5ThemeProvider, useV5Theme } from './ThemeProvider';
 import { V5ToastProvider } from './Toast';
-import { V5SettingsProvider, useV5Settings, type UserSettings } from './settings';
+import { V5SettingsProvider, useV5Settings } from './settings';
+import { syncSettingsToServer } from './settings/syncToServer';
 import { applyFontVariant } from './fonts/fontVariants';
 import { V5Sidebar } from './sidebar';
 import { api } from '../api/client';
@@ -269,16 +270,10 @@ function V5Shell() {
   );
 }
 
-async function syncSettingsToServer(settings: UserSettings): Promise<unknown> {
-  // Best-effort: backend is optional. Any error is swallowed here so the
-  // SettingsProvider's syncState reflects the failure but the client UI
-  // keeps working with localStorage as canonical.
-  try {
-    return await api.updateSettings(settings as unknown as Record<string, unknown>);
-  } catch (err) {
-    return Promise.reject(err);
-  }
-}
+// Settings sync helper lives in `./settings/syncToServer` so it can be
+// unit-tested independently — see `syncToServer.test.ts`. It throws when
+// the API resolves with `success: false` so the provider correctly flips
+// to `error` rather than masking 401/404/413 as `saved`.
 
 export function V5App() {
   // Lazy client creation keeps SSR & test environments from booting a query

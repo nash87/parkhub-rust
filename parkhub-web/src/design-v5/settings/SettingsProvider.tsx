@@ -89,6 +89,12 @@ export function V5SettingsProvider({
   const [syncState, setSyncState] = useState<V5SettingsSyncState>('idle');
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSeq = useRef(0); // stale-callback guard
+  // Race guard: don't push the initial (default/local) state to the server
+  // before either remote hydration or an explicit user action. Otherwise a
+  // fresh browser would overwrite previously saved server settings with
+  // defaults on first paint. Flips true once user-action setters or
+  // `hydrateRemote` run.
+  const syncArmed = useRef(false);
 
   // Apply document attributes immediately on every change so the UI
   // reflects the new tokens without an extra render pass.
@@ -100,6 +106,9 @@ export function V5SettingsProvider({
   // Debounced backend sync (disabled when no syncToServer provided).
   useEffect(() => {
     if (!syncToServer) return;
+    // Skip sync until we have either hydrated from the server or seen a
+    // user-driven change — see `syncArmed` above.
+    if (!syncArmed.current) return;
     if (syncTimer.current) clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(() => {
       const seq = ++syncSeq.current;
@@ -134,6 +143,7 @@ export function V5SettingsProvider({
 
   const updateSection = useCallback(
     <K extends keyof UserSettings>(section: K, patch: Partial<UserSettings[K]>) => {
+      syncArmed.current = true;
       setSettings((prev) => ({
         ...prev,
         [section]: { ...prev[section], ...patch },
@@ -148,6 +158,7 @@ export function V5SettingsProvider({
       key: P,
       value: UserSettings[K][P],
     ) => {
+      syncArmed.current = true;
       setSettings((prev) => ({
         ...prev,
         [section]: { ...prev[section], [key]: value },
@@ -157,11 +168,15 @@ export function V5SettingsProvider({
   );
 
   const resetSettings = useCallback(() => {
+    syncArmed.current = true;
     setSettings({ ...DEFAULT_SETTINGS });
   }, []);
 
   const hydrateRemote = useCallback((remote: unknown) => {
     if (remote == null) return;
+    // Server is canonical; arm the sync loop so subsequent local changes
+    // get persisted. The hydrate itself does not need to round-trip back.
+    syncArmed.current = true;
     setSettings((prev) => {
       const incoming = migrate(remote);
       // Don't overwrite locally-changed appearance with stale server data

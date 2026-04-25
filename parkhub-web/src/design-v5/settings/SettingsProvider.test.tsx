@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   V5SettingsProvider,
@@ -154,5 +154,18 @@ describe('<V5SettingsProvider>', () => {
     }
     render(<FeatureProbe />);
     expect(screen.getByTestId('voice').textContent).toBe('false');
+  });
+
+  it('does not sync defaults before hydrate or user action (race guard)', async () => {
+    const sync = vi.fn().mockResolvedValue(undefined);
+    render(
+      <V5SettingsProvider syncToServer={sync} syncDebounceMs={20}>
+        <Probe />
+      </V5SettingsProvider>,
+    );
+    // Wait past the debounce window — no user action, no hydrate happened
+    // yet, so the provider must NOT push defaults to the server.
+    await new Promise((r) => setTimeout(r, 80));
+    expect(sync).not.toHaveBeenCalled();
   });
 });

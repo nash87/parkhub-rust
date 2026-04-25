@@ -213,6 +213,16 @@ pub async fn update_current_user(
 /// constraining the schema (which the frontend owns).
 const SETTINGS_MAX_BYTES: usize = 32 * 1024;
 
+/// Build the audit entry for a successful settings change. Pure function
+/// so we can test the wiring without bringing up the whole HTTP stack.
+fn build_settings_changed_audit(user_id: Uuid, username: &str) -> AuditEntry {
+    AuditEntry::new(AuditEventType::SettingsChanged)
+        .user(user_id, username)
+        .resource("user_settings", &user_id.to_string())
+        .detail("v5 customization settings updated via /api/v1/me/settings")
+        .log()
+}
+
 /// `GET /api/v1/me/settings` — return the current user's v5 settings blob.
 ///
 /// Returns `null` for users who have never customized; clients fall back
@@ -340,6 +350,10 @@ pub async fn update_my_settings(
             )),
         );
     }
+
+    // Record the change so user-data modifications are visible in the
+    // audit trail, matching every other write endpoint on this resource.
+    build_settings_changed_audit(user.id, &user.username);
 
     (StatusCode::OK, Json(ApiResponse::success(req.settings)))
 }
@@ -892,5 +906,17 @@ mod tests {
         assert_eq!(req.notifications_enabled, Some(false));
         assert!(req.email_reminders.is_none());
         assert!(req.default_duration_minutes.is_none());
+    }
+
+    #[test]
+    fn test_build_settings_changed_audit_carries_user_and_resource() {
+        let uid = Uuid::new_v4();
+        let entry = build_settings_changed_audit(uid, "alice@example.com");
+        assert!(matches!(entry.event_type, AuditEventType::SettingsChanged));
+        assert_eq!(entry.user_id, Some(uid));
+        assert_eq!(entry.username.as_deref(), Some("alice@example.com"));
+        assert_eq!(entry.resource_type.as_deref(), Some("user_settings"));
+        assert_eq!(entry.resource_id.as_deref(), Some(uid.to_string().as_str()));
+        assert!(entry.success);
     }
 }
