@@ -36,7 +36,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@number-flow/react": "^0.6.0",
     "@phosphor-icons/react": "^2.1.10",
-    "@tailwindcss/vite": "^4.2.2",
+    "@tailwindcss/vite": "4.2.2",
     "@tanstack/react-query": "^5.99.2",
     "@tanstack/react-table": "^8.21.3",
     "@types/leaflet": "^1.9.21",
@@ -58,7 +58,7 @@
     "react-i18next": "^17.0.4",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.14.1",
-    "tailwindcss": "^4.2.1",
+    "tailwindcss": "4.2.2",
     "uplot": "1.6.32",
     "zod": "^4.3.6"
   },
