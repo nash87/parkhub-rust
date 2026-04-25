@@ -25,6 +25,15 @@ updates:
       npm-deps:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      # tailwindcss 4.2.4 / @tailwindcss/vite 4.2.4 ship a vite build
+      # regression: "Missing field tsconfigPaths on
+      # BindingViteResolvePluginConfig.resolveOptions". Pin past it
+      # until 4.2.5+ is released. Drop these entries once upstream ships.
+      - dependency-name: "tailwindcss"
+        versions: ["4.2.4"]
+      - dependency-name: "@tailwindcss/vite"
+        versions: ["4.2.4"]
     labels: ["dependencies", "frontend"]
     open-pull-requests-limit: 5
 
