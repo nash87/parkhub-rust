@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 
 // We can't directly import `request` since it's not exported — but we can test
 // the behaviour through the public `api` object which calls `request` internally.
@@ -6,6 +6,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // We need to import after mocks are set up
 const { api, setInMemoryToken, getInMemoryToken } = await import('./client');
+
+import type { NotificationPreferences } from './client';
+
+// Test helpers — make `mock.calls[n]` non-nullable for noUncheckedIndexedAccess.
+// If the indexed call is missing the helper throws, so the assertion still fails loudly.
+// We tighten body/headers to the concrete shapes the api client always sends
+// (string body, Record<string,string> headers) so downstream JSON.parse(opts.body)
+// and opts.headers['Authorization'] don't trip on the wider DOM types.
+type FetchMock = MockInstance<typeof globalThis.fetch>;
+type CallOpts = RequestInit & { body: string; headers: Record<string, string> };
+const fetchMock = (): FetchMock => globalThis.fetch as unknown as FetchMock;
+const nthCall = (n: number): [string, CallOpts] => {
+  const call = fetchMock().mock.calls[n];
+  if (!call) throw new Error(`fetch was not called ${n + 1} time(s)`);
+  return call as unknown as [string, CallOpts];
+};
+const firstCall = (): [string, CallOpts] => nthCall(0);
+
 
 describe('API client', () => {
   const originalFetch = globalThis.fetch;
@@ -39,7 +57,7 @@ describe('API client', () => {
     await api.getLots();
 
     expect(globalThis.fetch).toHaveBeenCalledOnce();
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/lots');
     expect(opts.headers['Content-Type']).toBe('application/json');
     expect(opts.headers['Accept']).toBe('application/json');
@@ -58,7 +76,7 @@ describe('API client', () => {
 
     await api.me();
 
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(opts.headers['Authorization']).toBe('Bearer test-jwt-token');
   });
 
@@ -71,7 +89,7 @@ describe('API client', () => {
 
     await api.getLots();
 
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(opts.headers['Authorization']).toBeUndefined();
   });
 
@@ -84,7 +102,7 @@ describe('API client', () => {
 
     await api.login('admin', 'demo');
 
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/auth/login');
     expect(opts.method).toBe('POST');
     expect(JSON.parse(opts.body)).toEqual({ username: 'admin', password: 'demo' });
@@ -203,7 +221,7 @@ describe('API client', () => {
     const result = await api.setup2FA();
     expect(result.success).toBe(true);
     expect(result.data?.secret).toBe('ABC');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/auth/2fa/setup');
+    expect(firstCall()[0]).toBe('/api/v1/auth/2fa/setup');
   });
 
   it('calls 2FA verify endpoint with code', async () => {
@@ -213,7 +231,7 @@ describe('API client', () => {
     });
     const result = await api.verify2FA('123456');
     expect(result.success).toBe(true);
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(JSON.parse(opts.body)).toEqual({ code: '123456' });
   });
 
@@ -224,7 +242,7 @@ describe('API client', () => {
     });
     const result = await api.disable2FA('mypassword');
     expect(result.success).toBe(true);
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(JSON.parse(opts.body)).toEqual({ current_password: 'mypassword' });
   });
 
@@ -267,7 +285,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.revokeSession('abc123...');
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/auth/sessions/abc123...');
     expect(opts.method).toBe('DELETE');
   });
@@ -285,14 +303,14 @@ describe('API client', () => {
   });
 
   it('calls update notification preferences', async () => {
-    const prefs = { email_booking_confirm: false, email_booking_reminder: true, email_swap_request: false, push_enabled: true };
+    const prefs: NotificationPreferences = { email_booking_confirm: false, email_booking_reminder: true, email_swap_request: false, push_enabled: true, sms_booking_confirm: false, sms_booking_reminder: false, sms_booking_cancelled: false, whatsapp_booking_confirm: false, whatsapp_booking_reminder: false, whatsapp_booking_cancelled: false };
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: prefs }),
     });
     const result = await api.updateNotificationPreferences(prefs);
     expect(result.success).toBe(true);
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(JSON.parse(opts.body).email_booking_confirm).toBe(false);
   });
 
@@ -315,7 +333,7 @@ describe('API client', () => {
     });
     const result = await api.adminBulkDelete(['id1']);
     expect(result.success).toBe(true);
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(JSON.parse(opts.body).user_ids).toEqual(['id1']);
   });
 
@@ -328,7 +346,7 @@ describe('API client', () => {
     });
     const result = await api.logout();
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/auth/logout');
     expect(opts.method).toBe('POST');
     expect(opts.credentials).toBe('include');
@@ -436,7 +454,7 @@ describe('API client', () => {
     });
     const result = await api.register({ name: 'Test', email: 'test@example.com', password: 'pass1234', password_confirmation: 'pass1234' });
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/auth/register');
     expect(opts.method).toBe('POST');
   });
@@ -448,7 +466,7 @@ describe('API client', () => {
     });
     const result = await api.forgotPassword('test@example.com');
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/auth/forgot-password');
     expect(JSON.parse(opts.body)).toEqual({ email: 'test@example.com' });
   });
@@ -460,7 +478,7 @@ describe('API client', () => {
     });
     const result = await api.resetPassword('tok123', 'newpass');
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/auth/reset-password');
     expect(JSON.parse(opts.body)).toEqual({ token: 'tok123', password: 'newpass' });
   });
@@ -472,7 +490,7 @@ describe('API client', () => {
     });
     const result = await api.updateMe({ name: 'New Name' });
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/users/me');
     expect(opts.method).toBe('PUT');
   });
@@ -484,7 +502,7 @@ describe('API client', () => {
     });
     const result = await api.changePassword('old', 'new', 'new');
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/users/me/password');
     expect(opts.method).toBe('PUT');
     expect(JSON.parse(opts.body)).toEqual({ current_password: 'old', password: 'new', password_confirmation: 'new' });
@@ -497,7 +515,7 @@ describe('API client', () => {
     });
     const result = await api.deleteMyAccount();
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/users/me/delete');
     expect(opts.method).toBe('DELETE');
   });
@@ -518,7 +536,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'l1', name: 'Test Lot' } }),
     });
     await api.createLot({ name: 'Test Lot', total_slots: 10 } as any);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/lots');
     expect(opts.method).toBe('POST');
 
@@ -527,7 +545,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.deleteLot('l1');
-    const [url2, opts2] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url2, opts2] = firstCall();
     expect(url2).toBe('/api/v1/lots/l1');
     expect(opts2.method).toBe('DELETE');
   });
@@ -538,7 +556,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'l1' } }),
     });
     await api.updateLot('l1', { name: 'Updated' } as any);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/lots/l1');
     expect(opts.method).toBe('PUT');
   });
@@ -549,7 +567,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getLotSlots('l1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/lots/l1/slots');
+    expect(firstCall()[0]).toBe('/api/v1/lots/l1/slots');
   });
 
   it('calls booking endpoints', async () => {
@@ -558,14 +576,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getBookings();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/bookings');
+    expect(firstCall()[0]).toBe('/api/v1/bookings');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'b1' } }),
     });
     await api.createBooking({ lot_id: 'l1', slot_id: 's1' } as any);
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(opts.method).toBe('POST');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -573,7 +591,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.cancelBooking('b1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('DELETE');
+    expect(firstCall()[1].method).toBe('DELETE');
   });
 
   it('calls vehicle endpoints', async () => {
@@ -582,21 +600,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getVehicles();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/vehicles');
+    expect(firstCall()[0]).toBe('/api/v1/vehicles');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'v1' } }),
     });
     await api.createVehicle({ plate: 'ABC-123' } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.deleteVehicle('v1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('DELETE');
+    expect(firstCall()[1].method).toBe('DELETE');
   });
 
   it('calls absence endpoints', async () => {
@@ -605,14 +623,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.listAbsences();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/absences');
+    expect(firstCall()[0]).toBe('/api/v1/absences');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'a1' } }),
     });
     await api.createAbsence('homeoffice', '2026-01-01', '2026-01-01', 'test');
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(opts.method).toBe('POST');
     expect(JSON.parse(opts.body).absence_type).toBe('homeoffice');
 
@@ -621,7 +639,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.deleteAbsence('a1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('DELETE');
+    expect(firstCall()[1].method).toBe('DELETE');
   });
 
   it('calls teamAbsences and absencePattern endpoints', async () => {
@@ -630,21 +648,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.teamAbsences();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/absences/team');
+    expect(firstCall()[0]).toBe('/api/v1/absences/team');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getAbsencePattern();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/absences/pattern');
+    expect(firstCall()[0]).toBe('/api/v1/absences/pattern');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { user_id: 'u1' } }),
     });
     await api.setAbsencePattern('homeoffice', [1, 3, 5]);
-    const body = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    const body = JSON.parse(firstCall()[1].body);
     expect(body.absence_type).toBe('homeoffice');
     expect(body.weekdays).toEqual([1, 3, 5]);
   });
@@ -655,29 +673,29 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.adminUsers();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/users');
+    expect(firstCall()[0]).toBe('/api/v1/admin/users');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'u1' } }),
     });
     await api.adminUpdateUser('u1', { is_active: false } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminDeleteUser('u1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('DELETE');
+    expect(firstCall()[1].method).toBe('DELETE');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'u1' } }),
     });
     await api.adminUpdateUserRole('u1', 'admin');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/users/u1/role');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PATCH');
+    expect(firstCall()[0]).toBe('/api/v1/admin/users/u1/role');
+    expect(firstCall()[1].method).toBe('PATCH');
   });
 
   it('calls adminGrantCredits and adminRefillAll', async () => {
@@ -686,7 +704,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminGrantCredits('u1', 10, 'bonus');
-    const body = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    const body = JSON.parse(firstCall()[1].body);
     expect(body.amount).toBe(10);
     expect(body.description).toBe('bonus');
 
@@ -695,7 +713,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminRefillAll(5);
-    const body2 = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    const body2 = JSON.parse(firstCall()[1].body);
     expect(body2.amount).toBe(5);
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -703,7 +721,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminRefillAll();
-    const body3 = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    const body3 = JSON.parse(firstCall()[1].body);
     expect(body3).toEqual({});
   });
 
@@ -713,7 +731,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'u1' } }),
     });
     await api.adminUpdateUserQuota('u1', 20);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/admin/users/u1/quota');
     expect(JSON.parse(opts.body).monthly_quota).toBe(20);
   });
@@ -724,14 +742,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { key: 'value' } }),
     });
     await api.adminGetSettings();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/settings');
+    expect(firstCall()[0]).toBe('/api/v1/admin/settings');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminUpdateSettings({ key: 'newvalue' });
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls announcement CRUD endpoints', async () => {
@@ -740,28 +758,28 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.adminListAnnouncements();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/announcements');
+    expect(firstCall()[0]).toBe('/api/v1/admin/announcements');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'ann1' } }),
     });
     await api.adminCreateAnnouncement({ title: 'T', message: 'M', severity: 'info', active: true });
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'ann1' } }),
     });
     await api.adminUpdateAnnouncement('ann1', { title: 'T2', message: 'M2', severity: 'warning', active: false });
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminDeleteAnnouncement('ann1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('DELETE');
+    expect(firstCall()[1].method).toBe('DELETE');
   });
 
   it('calls notification endpoints', async () => {
@@ -770,21 +788,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getNotifications();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/notifications');
+    expect(firstCall()[0]).toBe('/api/v1/notifications');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.markNotificationRead('n1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/notifications/n1/read');
+    expect(firstCall()[0]).toBe('/api/v1/notifications/n1/read');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.markAllNotificationsRead();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/notifications/read-all');
+    expect(firstCall()[0]).toBe('/api/v1/notifications/read-all');
   });
 
   it('calls calendarEvents with from/to query params (not start/end — backend ignores those)', async () => {
@@ -793,7 +811,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.calendarEvents('2026-01-01', '2026-01-31');
-    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+    const url = firstCall()[0] as string;
     expect(url).toBe('/api/v1/calendar/events?from=2026-01-01&to=2026-01-31');
     expect(url).not.toMatch(/[?&]start=/);
     expect(url).not.toMatch(/[?&]end=/);
@@ -807,7 +825,7 @@ describe('API client', () => {
     const result = await api.generateCalendarToken();
     expect(result.success).toBe(true);
     expect(result.data?.token).toBe('abc');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
   });
 
   it('calls getDesignThemePreference and updateDesignThemePreference', async () => {
@@ -816,14 +834,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { design_theme: 'dark' } }),
     });
     await api.getDesignThemePreference();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/preferences/theme');
+    expect(firstCall()[0]).toBe('/api/v1/preferences/theme');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { design_theme: 'light' } }),
     });
     await api.updateDesignThemePreference('light');
-    expect(JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body).design_theme).toBe('light');
+    expect(JSON.parse(firstCall()[1].body).design_theme).toBe('light');
   });
 
   it('calls favorites endpoints', async () => {
@@ -832,22 +850,22 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getFavorites();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/user/favorites');
+    expect(firstCall()[0]).toBe('/api/v1/user/favorites');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { slot_id: 's1' } }),
     });
     await api.addFavorite('s1', 'l1');
-    expect(JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body)).toEqual({ slot_id: 's1', lot_id: 'l1' });
+    expect(JSON.parse(firstCall()[1].body)).toEqual({ slot_id: 's1', lot_id: 'l1' });
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.removeFavorite('s1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/user/favorites/s1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('DELETE');
+    expect(firstCall()[0]).toBe('/api/v1/user/favorites/s1');
+    expect(firstCall()[1].method).toBe('DELETE');
   });
 
   it('calls map endpoints', async () => {
@@ -856,14 +874,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getMapMarkers();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/lots/map');
+    expect(firstCall()[0]).toBe('/api/v1/lots/map');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.setLotLocation('l1', 48.1, 11.5);
-    expect(JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body)).toEqual({ latitude: 48.1, longitude: 11.5 });
+    expect(JSON.parse(firstCall()[1].body)).toEqual({ latitude: 48.1, longitude: 11.5 });
   });
 
   it('calls stripe/payment endpoints', async () => {
@@ -872,7 +890,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'ch1', checkout_url: 'http://...' } }),
     });
     await api.createCheckout(10, 1.5);
-    const body = JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    const body = JSON.parse(firstCall()[1].body);
     expect(body.credits).toBe(10);
     expect(body.price_per_credit).toBe(1.5);
 
@@ -881,14 +899,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getPaymentHistory();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/payments/history');
+    expect(firstCall()[0]).toBe('/api/v1/payments/history');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { publishable_key: 'pk_test' } }),
     });
     await api.getStripeConfig();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/payments/config');
+    expect(firstCall()[0]).toBe('/api/v1/payments/config');
   });
 
   it('calls rate limit endpoints', async () => {
@@ -897,14 +915,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: {} }),
     });
     await api.getRateLimitStats();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/rate-limits');
+    expect(firstCall()[0]).toBe('/api/v1/admin/rate-limits');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: {} }),
     });
     await api.getRateLimitHistory();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/rate-limits/history');
+    expect(firstCall()[0]).toBe('/api/v1/admin/rate-limits/history');
   });
 
   it('calls getAuditLog with query params', async () => {
@@ -913,7 +931,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { entries: [], total: 0 } }),
     });
     await api.getAuditLog({ page: 2, per_page: 10, action: 'LoginSuccess', user: 'admin', from: '2026-01-01', to: '2026-12-31' });
-    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = firstCall()[0];
     expect(url).toContain('page=2');
     expect(url).toContain('per_page=10');
     expect(url).toContain('action=LoginSuccess');
@@ -928,7 +946,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { entries: [], total: 0 } }),
     });
     await api.getAuditLog();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/audit-log');
+    expect(firstCall()[0]).toBe('/api/v1/admin/audit-log');
   });
 
   it('exportAuditLog builds URL with params', () => {
@@ -949,21 +967,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.listTenants();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/tenants');
+    expect(firstCall()[0]).toBe('/api/v1/admin/tenants');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 't1' } }),
     });
     await api.createTenant({ name: 'Tenant A' } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 't1' } }),
     });
     await api.updateTenant('t1', { name: 'Tenant B' } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls getBookingHistory with params', async () => {
@@ -972,7 +990,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { entries: [], total: 0 } }),
     });
     await api.getBookingHistory({ lot_id: 'l1', from: '2026-01-01', to: '2026-12-31', page: 1, per_page: 25 });
-    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const url = firstCall()[0];
     expect(url).toContain('lot_id=l1');
     expect(url).toContain('from=2026-01-01');
   });
@@ -983,7 +1001,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { total_bookings: 10 } }),
     });
     await api.getBookingStats();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/bookings/stats');
+    expect(firstCall()[0]).toBe('/api/v1/bookings/stats');
   });
 
   it('calls geofence endpoints', async () => {
@@ -992,21 +1010,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { checked_in: true } }),
     });
     await api.geofenceCheckIn(48.1, 11.5);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { enabled: true } }),
     });
     await api.getLotGeofence('l1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/lots/l1/geofence');
+    expect(firstCall()[0]).toBe('/api/v1/lots/l1/geofence');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.adminSetGeofence('l1', { center_lat: 48.1, center_lng: 11.5, radius_meters: 100, enabled: true });
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls absence approval endpoints', async () => {
@@ -1015,35 +1033,35 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'ar1' } }),
     });
     await api.submitAbsenceRequest({ absence_type: 'vacation', start_date: '2026-01-01', end_date: '2026-01-05', reason: 'Holiday' });
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.myAbsenceRequests();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/absences/my');
+    expect(firstCall()[0]).toBe('/api/v1/absences/my');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.pendingAbsenceRequests();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/absences/pending');
+    expect(firstCall()[0]).toBe('/api/v1/admin/absences/pending');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'ar1' } }),
     });
     await api.approveAbsenceRequest('ar1', 'ok');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'ar1' } }),
     });
     await api.rejectAbsenceRequest('ar1', 'nope');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls rescheduleBooking', async () => {
@@ -1052,8 +1070,8 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { booking_id: 'b1', success: true } }),
     });
     await api.rescheduleBooking('b1', '2026-04-15T08:00:00Z', '2026-04-15T17:00:00Z');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/bookings/b1/reschedule');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[0]).toBe('/api/v1/bookings/b1/reschedule');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls widget endpoints', async () => {
@@ -1062,21 +1080,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { user_id: 'u1', widgets: [] } }),
     });
     await api.getWidgetLayout();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/widgets');
+    expect(firstCall()[0]).toBe('/api/v1/admin/widgets');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.saveWidgetLayout([]);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { widget_id: 'w1', data: {} } }),
     });
     await api.getWidgetData('w1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/widgets/data/w1');
+    expect(firstCall()[0]).toBe('/api/v1/admin/widgets/data/w1');
   });
 
   it('calls dynamic pricing endpoints', async () => {
@@ -1085,21 +1103,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { current_price: 3.5 } }),
     });
     await api.getDynamicPrice('l1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/lots/l1/pricing/dynamic');
+    expect(firstCall()[0]).toBe('/api/v1/lots/l1/pricing/dynamic');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { enabled: true } }),
     });
     await api.getAdminDynamicPricing('l1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/lots/l1/pricing/dynamic');
+    expect(firstCall()[0]).toBe('/api/v1/admin/lots/l1/pricing/dynamic');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { enabled: true } }),
     });
     await api.updateAdminDynamicPricing('l1', { enabled: true } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls operating hours endpoints', async () => {
@@ -1108,14 +1126,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { is_24h: true } }),
     });
     await api.getLotHours('l1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/lots/l1/hours');
+    expect(firstCall()[0]).toBe('/api/v1/lots/l1/hours');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { is_24h: false } }),
     });
     await api.updateAdminLotHours('l1', { is_24h: false } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls translation endpoints', async () => {
@@ -1124,21 +1142,21 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getTranslationOverrides();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/translations/overrides');
+    expect(firstCall()[0]).toBe('/api/v1/translations/overrides');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getTranslationProposals('pending');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/translations/proposals?status=pending');
+    expect(firstCall()[0]).toBe('/api/v1/translations/proposals?status=pending');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: [] }),
     });
     await api.getTranslationProposals();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/translations/proposals');
+    expect(firstCall()[0]).toBe('/api/v1/translations/proposals');
   });
 
   it('calls voteOnProposal and reviewProposal', async () => {
@@ -1147,14 +1165,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'p1' } }),
     });
     await api.voteOnProposal('p1', 'up');
-    expect(JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body).vote).toBe('up');
+    expect(JSON.parse(firstCall()[1].body).vote).toBe('up');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { id: 'p1' } }),
     });
     await api.reviewProposal('p1', { status: 'approved' } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('PUT');
+    expect(firstCall()[1].method).toBe('PUT');
   });
 
   it('calls getDemoConfig and getDemoStatus', async () => {
@@ -1189,7 +1207,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.voteDemoReset();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
   });
 
   it('calls getUserCredits and getUserStats', async () => {
@@ -1198,14 +1216,14 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { balance: 10 } }),
     });
     await api.getUserCredits();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/user/credits');
+    expect(firstCall()[0]).toBe('/api/v1/user/credits');
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true, status: 200,
       json: () => Promise.resolve({ success: true, data: { total_bookings: 5 } }),
     });
     await api.getUserStats();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/user/stats');
+    expect(firstCall()[0]).toBe('/api/v1/user/stats');
   });
 
   it('calls adminStats', async () => {
@@ -1214,7 +1232,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { total_users: 100 } }),
     });
     await api.adminStats();
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/admin/stats');
+    expect(firstCall()[0]).toBe('/api/v1/admin/stats');
   });
 
   it('calls completeSetup', async () => {
@@ -1223,8 +1241,8 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.completeSetup({ admin_password: 'test' } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/setup/complete');
+    expect(firstCall()[1].method).toBe('POST');
+    expect(firstCall()[0]).toBe('/api/v1/setup/complete');
   });
 
   it('calls createTranslationProposal', async () => {
@@ -1233,7 +1251,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'p1' } }),
     });
     await api.createTranslationProposal({ key: 'test.key', value: 'Test' } as any);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].method).toBe('POST');
+    expect(firstCall()[1].method).toBe('POST');
   });
 
   it('calls getTranslationProposal', async () => {
@@ -1242,7 +1260,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: { id: 'p1' } }),
     });
     await api.getTranslationProposal('p1');
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/translations/proposals/p1');
+    expect(firstCall()[0]).toBe('/api/v1/translations/proposals/p1');
   });
 
   // ── Retry behavior edge cases ──
@@ -1326,7 +1344,7 @@ describe('API client', () => {
     expect(result.success).toBe(false);
     expect(result.error?.code).toBe('UNAUTHORIZED');
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
-    const refreshCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[1];
+    const refreshCall = nthCall(1);
     expect(String(refreshCall[0])).toContain('/auth/refresh');
   });
 
@@ -1346,7 +1364,7 @@ describe('API client', () => {
     });
     const result = await api.importAbsenceIcal(mockFile);
     expect(result.success).toBe(true);
-    const [url, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [url, opts] = firstCall();
     expect(url).toBe('/api/v1/absences/import');
     expect(opts.method).toBe('POST');
     expect(opts.body).toBeInstanceOf(FormData);
@@ -1360,7 +1378,7 @@ describe('API client', () => {
       json: () => Promise.resolve({ success: true, data: null }),
     });
     await api.importAbsenceIcal(mockFile);
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(opts.headers['Authorization']).toBe('Bearer my-token');
   });
 
@@ -1374,7 +1392,7 @@ describe('API client', () => {
     });
     const result = await api.exportMyData();
     expect(result).toBe(mockBlob);
-    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('/api/v1/user/export');
+    expect(firstCall()[0]).toBe('/api/v1/user/export');
   });
 
   it('exportMyData throws on non-OK response', async () => {
@@ -1392,7 +1410,7 @@ describe('API client', () => {
       blob: () => Promise.resolve(new Blob()),
     });
     await api.exportMyData();
-    const [, opts] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const [, opts] = firstCall();
     expect(opts.headers['Authorization']).toBe('Bearer blob-token');
     expect(opts.headers['X-Requested-With']).toBe('XMLHttpRequest');
   });
