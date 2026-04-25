@@ -106,20 +106,22 @@ jobs:
           sarif_file: trivy-results.sarif
 
   secret-scan:
-    name: Secret scan (trufflehog)
+    name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          # Full history so trufflehog scans the entire git log for
+          # Full history so gitleaks scans the entire git log for
           # historical secret leaks, not just the working tree.
           fetch-depth: 0
 
-      # trufflehog is MIT-licensed and runs verified-only by default
-      # (only reports credentials it can live-verify), so false-positive
-      # rate is near zero.
-      - name: Run trufflehog
-        uses: trufflesecurity/trufflehog@47e7b7cd74f578e1e3145d48f669f22fd1330ca6 # v3.94.3
-        with:
-          extra_args: --results=verified,unknown
+      # gitleaks-action is MIT-licensed and replaces trufflehog, which
+      # relicensed to AGPL-3.0 in 3.95.x and is incompatible with our
+      # commercial-safe doctrine (see feedback_license_commercial_safe.md).
+      # GITLEAKS_LICENSE is only required for GitHub Organizations; this
+      # repo is owned by a personal account, so the env var is omitted.
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
