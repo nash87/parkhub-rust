@@ -84,7 +84,7 @@ describe('AdminWebhooksPage', () => {
     render(<AdminWebhooksPage />);
     await waitFor(() => {
       const editBtns = screen.getAllByLabelText('webhooksV2.edit');
-      fireEvent.click(editBtns[0]);
+      fireEvent.click(editBtns[0]!!);
     });
     expect(screen.getByText('webhooksV2.editWebhook')).toBeInTheDocument();
   });
@@ -93,7 +93,7 @@ describe('AdminWebhooksPage', () => {
     render(<AdminWebhooksPage />);
     await waitFor(() => {
       const delBtns = screen.getAllByLabelText('webhooksV2.delete');
-      fireEvent.click(delBtns[0]);
+      fireEvent.click(delBtns[0]!!);
     });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('webhooksV2.deleted'));
   });
@@ -102,7 +102,7 @@ describe('AdminWebhooksPage', () => {
     render(<AdminWebhooksPage />);
     await waitFor(() => {
       const testBtns = screen.getAllByLabelText('webhooksV2.test');
-      fireEvent.click(testBtns[0]);
+      fireEvent.click(testBtns[0]!!);
     });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('webhooksV2.testSuccess'));
   });
@@ -121,7 +121,7 @@ describe('AdminWebhooksPage', () => {
     render(<AdminWebhooksPage />);
     await waitFor(() => {
       const delivBtns = screen.getAllByLabelText('webhooksV2.deliveries');
-      fireEvent.click(delivBtns[0]);
+      fireEvent.click(delivBtns[0]!!);
     });
     await waitFor(() => expect(screen.getByText('webhooksV2.deliveryLog')).toBeInTheDocument());
   });

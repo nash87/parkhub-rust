@@ -89,7 +89,7 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     const editBtns = screen.getAllByLabelText(/common.edit/);
-    fireEvent.click(editBtns[0]);
+    fireEvent.click(editBtns[0]!!);
     await waitFor(() => expect(screen.getByDisplayValue('Maintenance')).toBeInTheDocument());
   });
 
@@ -104,7 +104,7 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     const delBtns = screen.getAllByLabelText(/common.delete/);
-    fireEvent.click(delBtns[0]);
+    fireEvent.click(delBtns[0]!!);
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('ConfirmDel'));
     await waitFor(() => expect(mockDeleteAnnouncement).toHaveBeenCalledWith('a1'));
@@ -197,11 +197,11 @@ describe('AdminAnnouncementsPage', () => {
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     // Edit the first announcement
     const editBtns = screen.getAllByLabelText(/common.edit/);
-    fireEvent.click(editBtns[0]);
+    fireEvent.click(editBtns[0]!!);
     await waitFor(() => expect(screen.getByDisplayValue('Maintenance')).toBeInTheDocument());
     // Delete it
     const delBtns = screen.getAllByLabelText(/common.delete/);
-    fireEvent.click(delBtns[0]);
+    fireEvent.click(delBtns[0]!!);
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('ConfirmDel'));
     await waitFor(() => expect(mockDeleteAnnouncement).toHaveBeenCalled());

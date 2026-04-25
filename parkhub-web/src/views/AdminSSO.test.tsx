@@ -171,12 +171,12 @@ describe('AdminSSOPage', () => {
 
     // Fill in form fields
     const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], { target: { value: 'test-sso' } }); // slug
-    fireEvent.change(inputs[1], { target: { value: 'Test SSO' } }); // display name
-    fireEvent.change(inputs[2], { target: { value: 'https://idp.test' } }); // entity id
-    fireEvent.change(inputs[3], { target: { value: 'https://idp.test/sso' } }); // sso url
-    fireEvent.change(inputs[4], { target: { value: 'https://idp.test/metadata' } }); // metadata url
-    fireEvent.change(inputs[5], { target: { value: 'MIIC...' } }); // certificate
+    fireEvent.change(inputs[0]!!, { target: { value: 'test-sso' } }); // slug
+    fireEvent.change(inputs[1]!!, { target: { value: 'Test SSO' } }); // display name
+    fireEvent.change(inputs[2]!!, { target: { value: 'https://idp.test' } }); // entity id
+    fireEvent.change(inputs[3]!!, { target: { value: 'https://idp.test/sso' } }); // sso url
+    fireEvent.change(inputs[4]!!, { target: { value: 'https://idp.test/metadata' } }); // metadata url
+    fireEvent.change(inputs[5]!!, { target: { value: 'MIIC...' } }); // certificate
 
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => {
@@ -275,11 +275,11 @@ describe('AdminSSOPage', () => {
     render(<AdminSSOPage />);
     await waitFor(() => fireEvent.click(screen.getByText('Add Provider')));
     const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], { target: { value: 'test' } });
-    fireEvent.change(inputs[1], { target: { value: 'Test' } });
-    fireEvent.change(inputs[2], { target: { value: 'https://e' } });
-    fireEvent.change(inputs[3], { target: { value: 'https://s' } });
-    fireEvent.change(inputs[5], { target: { value: 'CERT' } });
+    fireEvent.change(inputs[0]!!, { target: { value: 'test' } });
+    fireEvent.change(inputs[1]!!, { target: { value: 'Test' } });
+    fireEvent.change(inputs[2]!!, { target: { value: 'https://e' } });
+    fireEvent.change(inputs[3]!!, { target: { value: 'https://s' } });
+    fireEvent.change(inputs[5]!!, { target: { value: 'CERT' } });
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Duplicate slug'));
   });
@@ -293,11 +293,11 @@ describe('AdminSSOPage', () => {
     render(<AdminSSOPage />);
     await waitFor(() => fireEvent.click(screen.getByText('Add Provider')));
     const inputs = screen.getAllByRole('textbox');
-    fireEvent.change(inputs[0], { target: { value: 'test' } });
-    fireEvent.change(inputs[1], { target: { value: 'Test' } });
-    fireEvent.change(inputs[2], { target: { value: 'https://e' } });
-    fireEvent.change(inputs[3], { target: { value: 'https://s' } });
-    fireEvent.change(inputs[5], { target: { value: 'CERT' } });
+    fireEvent.change(inputs[0]!!, { target: { value: 'test' } });
+    fireEvent.change(inputs[1]!!, { target: { value: 'Test' } });
+    fireEvent.change(inputs[2]!!, { target: { value: 'https://e' } });
+    fireEvent.change(inputs[3]!!, { target: { value: 'https://s' } });
+    fireEvent.change(inputs[5]!!, { target: { value: 'CERT' } });
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
   });
