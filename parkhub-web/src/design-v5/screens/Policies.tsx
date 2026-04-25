@@ -36,8 +36,12 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
   const active = policies.find((p) => p.id === activeId) ?? null;
 
   useEffect(() => {
-    if (active) { setDraft(active.body); setPreview(false); }
-  }, [active]);
+    const p = policies.find((x) => x.id === activeId);
+    if (p) { setDraft(p.body); setPreview(false); }
+    // Only depend on activeId: refetches produce a new policies array, which
+    // would otherwise clobber the user's in-flight draft on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId]);
 
   const save = useMutation({
     mutationFn: async (payload: { id: string; body: string }) => {
