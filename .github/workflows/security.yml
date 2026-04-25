@@ -109,19 +109,40 @@ jobs:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          # Full history so gitleaks scans the entire git log for
-          # historical secret leaks, not just the working tree.
           fetch-depth: 0
 
-      # gitleaks-action is MIT-licensed and replaces trufflehog, which
-      # relicensed to AGPL-3.0 in 3.95.x and is incompatible with our
-      # commercial-safe doctrine (see feedback_license_commercial_safe.md).
-      # GITLEAKS_LICENSE is only required for GitHub Organizations; this
-      # repo is owned by a personal account, so the env var is omitted.
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+      # We invoke the gitleaks binary directly (MIT, github.com/gitleaks/gitleaks).
+      # The wrapper action gitleaks/gitleaks-action is published under a proprietary
+      # EULA since v2 and would violate our commercial-safe license doctrine.
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            gitleaks detect --source=. --redact --verbose --no-banner \
+              --log-opts="--no-merges $BASE_SHA..$HEAD_SHA"
+          else
+            gitleaks detect --source=. --redact --verbose --no-banner
+          fi
