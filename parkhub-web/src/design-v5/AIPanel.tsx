@@ -98,6 +98,9 @@ export function V5AIPanel({
           KI-Assistent
         </span>
         <Badge variant="primary">Beta</Badge>
+        <span style={{ marginLeft: 'auto' }}>
+          <Badge variant="purple">Lokal</Badge>
+        </span>
       </div>
 
       <div
@@ -120,7 +123,7 @@ export function V5AIPanel({
             marginBottom: 2,
           }}
         >
-          Empfehlungen
+          Vorschläge
         </div>
         {suggestions.map((s, i) => {
           const color = TYPE_COLOR[s.type];
@@ -216,6 +219,22 @@ export function V5AIPanel({
           </div>
         ))}
       </div>
+
+      <footer
+        style={{
+          padding: '12px 18px',
+          borderTop: '1px solid var(--v5-bor)',
+          fontSize: 9,
+          fontWeight: 500,
+          color: 'var(--v5-mut)',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          textAlign: 'center',
+          flexShrink: 0,
+        }}
+      >
+        Lokal · Keine Daten verlassen den Server
+      </footer>
     </aside>
   );
 }
