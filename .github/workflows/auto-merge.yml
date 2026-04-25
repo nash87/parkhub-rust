@@ -1,0 +1,49 @@
+name: Auto-merge on label
+
+# Native auto-merge workflow — when a PR is labelled `auto-merge` (and
+# the label is still present after each push), enable GitHub's native
+# auto-merge so the PR merges itself once all required status checks
+# pass and required reviews are approved. Replaces the third-party
+# Mergify SaaS to keep the merge path under repo control.
+#
+# Repo prerequisites (one-time, see CONTRIBUTING.md#merge-queue):
+#   1. Settings → General → Pull Requests → "Allow auto-merge" enabled.
+#   2. Branch protection on `main` requires the `Required checks` job
+#      and (optionally) `CodeQL` as required status checks.
+#   3. Optional: enable "Require merge queue" on `main` — auto-merge
+#      will then queue PRs into the native merge queue automatically.
+#
+# Security note: only `github.event.pull_request.number` (an integer)
+# and labels (filtered above) are referenced — no untrusted strings
+# from issue/PR bodies reach a `run:` block.
+
+on:
+  pull_request_target:
+    # Listen only on `labeled` (and `reopened` so a closed-then-reopened PR
+    # with the label still attached re-arms once). NOT `synchronize` —
+    # GitHub deliberately disables auto-merge after pushes from contributors
+    # without write access, and we don't want to defeat that safety.
+    types: [labeled, reopened]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enable-auto-merge:
+    if: >-
+      !github.event.pull_request.draft
+      && contains(github.event.pull_request.labels.*.name, 'auto-merge')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable native auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr merge --auto --squash "$PR_NUMBER"

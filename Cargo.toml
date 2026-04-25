@@ -15,6 +15,16 @@ authors = ["nash87"]
 license = "MIT"
 repository = "https://github.com/nash87/parkhub-rust"
 
+# Local-first CI hint for new contributors. `cargo metadata` exposes
+# this under workspace_metadata so tooling (e.g. a build.rs printer or
+# a dev-shell motd) can surface the install reminder. Kept minimal —
+# the build itself never depends on or fails on missing hooks.
+[workspace.metadata.local-ci]
+hooks-tool = "lefthook"
+install-command = "npx lefthook install"
+config-file = "lefthook.yml"
+docs = "CONTRIBUTING.md#local-ci"
+
 [workspace.dependencies]
 # Shared dependencies across crates
 serde = { version = "1", features = ["derive"] }

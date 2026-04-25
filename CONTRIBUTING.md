@@ -14,6 +14,7 @@ you need to get from zero to a merged pull request.
 - [Module System (Feature Flags)](#module-system-feature-flags)
 - [Running Tests](#running-tests)
 - [Code Style](#code-style)
+- [Local CI](#local-ci)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Adding a New API Endpoint](#adding-a-new-api-endpoint)
 - [Reporting Bugs](#reporting-bugs)
@@ -402,6 +403,146 @@ Prefix suggestions for clarity:
 | `test:` | Adding or updating tests |
 | `chore:` | Tooling, deps, CI |
 | `security:` | Security fix (coordinate via private advisory first) |
+
+---
+
+## Local CI
+
+We run a local-first CI workflow on top of the GitHub Actions pipeline.
+The goal: catch 90 %+ of CI failures before you push, replacing the
+15-30 minute remote feedback loop with a near-instant local one.
+
+### Cautionary tale
+
+A single PR once landed with a 12-fail compile cascade because 15
+`User { ..settings: None }` field initializers were missing. `cargo
+check` would have caught it in five seconds. Local CI exists so that
+class of failure is impossible to push.
+
+### One-time setup
+
+After cloning the repo and installing the Rust toolchain + Node deps,
+install the git hooks:
+
+```bash
+npm install                   # parkhub-web deps (node_modules)
+cargo build                   # warm cargo + Slint cache
+npx lefthook install          # install pre-commit + pre-push hooks
+```
+
+The first `cargo build` after cloning surfaces a yellow `cargo:warning`
+reminding you to install the hooks. Once installed, the warning
+disappears.
+
+### What runs and when
+
+| Hook | Speed | Gates |
+|------|-------|-------|
+| `pre-commit` | < 5 s | `cargo fmt --check`, ESLint (if configured), `tsc --noEmit` |
+| `pre-push` | 1-3 min cached | `cargo check`, `cargo clippy`, `cargo test --lib`, `vitest --changed`, OpenAPI drift, ts-rs types drift |
+
+The pre-push gate set is the local mirror of the `Required checks`
+job in `.github/workflows/ci.yml`. If pre-push is green, GitHub CI
+should be green too.
+
+### Replay locally without committing or pushing
+
+```bash
+lefthook run pre-commit       # fast, only on staged files
+lefthook run pre-push         # full gates
+```
+
+You can also run individual scripts directly:
+
+```bash
+./scripts/check-openapi-drift.sh
+./scripts/check-types-drift.sh
+```
+
+### Drift-gate quick reference
+
+If `openapi-drift` or `types-drift` fails, regenerate locally and
+commit the result:
+
+```bash
+# OpenAPI drift — start the server, then dump the spec:
+cargo run --no-default-features --features 'full,headless' \
+    -p parkhub-server -- --headless --port 18181
+# (in another terminal)
+./scripts/dump-openapi.sh 18181
+git add docs/openapi/rust.json
+
+# ts-rs TypeScript types drift:
+cargo test --features gen-types -p parkhub-server --test ts_export -- --nocapture
+git add parkhub-web/src/generated/
+```
+
+### Bypassing in emergencies
+
+For a true emergency (e.g. broken upstream dep blocking a hotfix), you
+can bypass the gates:
+
+```bash
+git push --no-verify
+```
+
+This is logged to your local `lefthook.log` and is frowned upon —
+please open a follow-up issue describing why the gate was bypassed.
+Per-gate bypasses also exist for the slow drift scripts:
+
+```bash
+SKIP_OPENAPI_DRIFT=1 git push
+SKIP_TYPES_DRIFT=1 git push
+```
+
+### Merge Queue
+
+We use **GitHub's native merge queue** (no third-party SaaS, no
+push-access from external services). Activate it once via:
+
+> Settings → Branches → Branch protection rules → `main` →
+> "Require merge queue" → Enable.
+
+While the queue is active, GitHub batches PRs into a serialised lane,
+re-runs required checks against the merge candidate, and merges when
+green. No `.mergify.yml` or other config in the repo is required.
+
+### Auto-merge
+
+Add the **`auto-merge`** label to a PR and the workflow at
+`.github/workflows/auto-merge.yml` enables GitHub's native auto-merge
+(squash strategy). The PR will then merge itself once:
+
+- All required status checks pass (Required checks, CodeQL).
+- All required reviews are approved.
+- The PR is not in draft state.
+
+Auto-merge respects branch protection — it does not bypass any gate.
+To cancel, remove the label or click "Disable auto-merge" on the PR.
+
+Repo prerequisites (one-time):
+
+1. Settings → General → Pull Requests → "Allow auto-merge" enabled.
+2. Branch protection on `main` lists `Required checks` (and CodeQL,
+   if enabled) as required status checks.
+
+### Operator action required (one-time, post-merge)
+
+Three pieces of post-merge configuration cannot be expressed purely in
+repo files:
+
+1. **Lefthook hooks per contributor** — every contributor must run
+   `npx lefthook install` on first clone. The cargo build script
+   prints a reminder; documenting it here keeps it discoverable.
+
+2. **Allow auto-merge in repo settings** — Settings → General → Pull
+   Requests → "Allow auto-merge" must be enabled for the auto-merge
+   workflow to take effect.
+
+3. **Branch protection alignment** — branch protection on `main`
+   should list `Required checks` (matching the aggregator job in
+   `.github/workflows/ci.yml`) as a required status check, with
+   "Require merge queue" enabled if you want serialised merges.
 
 ---
 
