@@ -130,7 +130,7 @@ function mockFetch(overrides: Record<string, any> = {}) {
 
 describe('AdminUpdatesPage', () => {
   beforeEach(() => {
-    global.fetch = mockFetch();
+    (global as any).fetch = mockFetch();
   });
 
   afterEach(() => {
@@ -177,7 +177,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('shows update available banner when update exists', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       check: {
         success: true,
         data: {
@@ -220,7 +220,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('shows empty state for update history when none', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       history: { success: true, data: [] },
     });
     render(<AdminUpdatesPage />);
@@ -239,7 +239,7 @@ describe('AdminUpdatesPage', () => {
 
   it('toggles auto-update and calls settings API', async () => {
     const fetchMock = mockFetch();
-    global.fetch = fetchMock;
+    (global as any).fetch = fetchMock;
 
     render(<AdminUpdatesPage />);
     await waitFor(() => expect(screen.getByTestId('auto-update-toggle')).toBeInTheDocument());
@@ -248,7 +248,7 @@ describe('AdminUpdatesPage', () => {
 
     await waitFor(() => {
       const settingsCalls = fetchMock.mock.calls.filter(
-        ([url, opts]: [string, any]) => url.includes('/admin/settings') && opts?.method === 'POST'
+        ([url, opts]: any) => url.includes('/admin/settings') && opts?.method === 'POST'
       );
       expect(settingsCalls.length).toBeGreaterThan(0);
     });
@@ -256,7 +256,7 @@ describe('AdminUpdatesPage', () => {
 
   it('switches channel to beta', async () => {
     const fetchMock = mockFetch();
-    global.fetch = fetchMock;
+    (global as any).fetch = fetchMock;
 
     render(<AdminUpdatesPage />);
     await waitFor(() => expect(screen.getByTestId('channel-beta')).toBeInTheDocument());
@@ -265,7 +265,7 @@ describe('AdminUpdatesPage', () => {
 
     await waitFor(() => {
       const settingsCalls = fetchMock.mock.calls.filter(
-        ([url, opts]: [string, any]) => url.includes('/admin/settings') && opts?.method === 'POST'
+        ([url, opts]: any) => url.includes('/admin/settings') && opts?.method === 'POST'
       );
       const betaCall = settingsCalls.find(([_, opts]: any) => {
         const body = JSON.parse(opts.body);
@@ -276,7 +276,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('applies update and shows progress state', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       check: {
         success: true,
         data: {
@@ -308,7 +308,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('shows error state when apply fails', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       check: {
         success: true,
         data: {
@@ -337,7 +337,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('shows error when check update API fails', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       check: { success: false, error: { message: 'Server error' } },
     });
 
@@ -359,7 +359,7 @@ describe('AdminUpdatesPage', () => {
       if (url.includes('/updates/check')) return Promise.reject(new Error('Network'));
       return mockFetch()(url);
     });
-    global.fetch = fetchMock;
+    (global as any).fetch = fetchMock;
 
     render(<AdminUpdatesPage />);
     await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
@@ -389,7 +389,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('handles version info without optional fields', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       version: { success: true, data: { version: '1.0.0' } },
     });
     render(<AdminUpdatesPage />);
@@ -409,7 +409,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('toggles auto-update off after on', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       settings: { success: true, data: { auto_update: true, update_channel: 'stable' } },
     });
     render(<AdminUpdatesPage />);
@@ -432,7 +432,7 @@ describe('AdminUpdatesPage', () => {
       }
       return mockFetch()(url, opts);
     });
-    global.fetch = fetchMock;
+    (global as any).fetch = fetchMock;
 
     render(<AdminUpdatesPage />);
     await waitFor(() => expect(screen.getByTestId('auto-update-toggle')).toBeInTheDocument());
@@ -446,7 +446,7 @@ describe('AdminUpdatesPage', () => {
   });
 
   it('shows release URL link and published date when available', async () => {
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       check: {
         success: true,
         data: {
@@ -498,7 +498,7 @@ describe('AdminUpdatesPage', () => {
         },
       })(url, opts);
     });
-    global.fetch = fetchMock;
+    (global as any).fetch = fetchMock;
 
     render(<AdminUpdatesPage />);
     await waitFor(() => expect(screen.getByTestId('check-btn')).toBeInTheDocument());
@@ -515,7 +515,7 @@ describe('AdminUpdatesPage', () => {
 
   it('formatUptime handles hours-only range', async () => {
     // 3720 seconds = 0d 1h 2m → should show "1h 2m"
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       version: { success: true, data: { ...mockVersion, uptime_seconds: 3720 } },
     });
     render(<AdminUpdatesPage />);
@@ -524,7 +524,7 @@ describe('AdminUpdatesPage', () => {
 
   it('formatUptime handles minutes-only range', async () => {
     // 120 seconds = 0d 0h 2m → should show "2m"
-    global.fetch = mockFetch({
+    (global as any).fetch = mockFetch({
       version: { success: true, data: { ...mockVersion, uptime_seconds: 120 } },
     });
     render(<AdminUpdatesPage />);
