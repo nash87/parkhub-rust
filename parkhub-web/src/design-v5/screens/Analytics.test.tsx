@@ -82,8 +82,13 @@ describe('AnalyticsV5', () => {
       expect(screen.getByRole('img', { name: /Auslastung nach Stunde/ })).toBeInTheDocument(),
     );
     expect(screen.getByRole('img', { name: /Auslastung nach Wochentag/ })).toBeInTheDocument();
+    // UPlotChart is lazy()-loaded and the Suspense fallback shares the
+    // aria-label, so the role match alone can land on the placeholder.
+    // Wait for the actual canvases to ensure the chunk has resolved.
     // uPlot renders canvas, not inline-SVG <rect>s — guard the regression.
-    expect(container.querySelectorAll('canvas').length).toBeGreaterThanOrEqual(2);
+    await waitFor(() =>
+      expect(container.querySelectorAll('canvas').length).toBeGreaterThanOrEqual(2),
+    );
     expect(container.querySelectorAll('[data-testid="analytics-chart"] rect').length).toBe(0);
   });
 
