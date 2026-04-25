@@ -17,6 +17,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Added
 
 - **v5 coverage**: SSE-backed Fleet event stream (`/api/v1/events/stream`), uPlot live chart primitive, ts-rs-generated `FleetEvent` types, and axe-core a11y coverage across every v5 route.
+- **Customization Framework v5** — settings, sidebar variants, density, fonts, feature toggles, `deepLinking` gate (#392).
+- **Branding alignment** — user-facing v5 strings switched from "KI"/"AI" to "Assistent" (#394).
+- **CI security swap** — trufflehog (AGPL) replaced by gitleaks binary direct (MIT) (#403).
+- **CodeQL** — actions language analysis split into its own job (#402).
+- **Deps** — tailwind pinned past 4.2.4 vite regression (#404); trivy-action SHA-pinned to v0.36 (#408).
+- **Policies fix** — `Policies.tsx` draft effect re-keyed on `activeId` only; previous dependency on the `active` object reference clobbered in-flight edits on every render (#407).
 
 ---
 
