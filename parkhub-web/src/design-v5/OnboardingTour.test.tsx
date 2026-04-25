@@ -66,6 +66,14 @@ describe('OnboardingTour', () => {
     expect(hasSeenOnboardingTour()).toBe(true);
   });
 
+  it('lists Empfehlungen feature on the features step without AI/KI branding', () => {
+    renderTour();
+    // advance to the features step
+    fireEvent.click(screen.getByRole('button', { name: /Weiter/i }));
+    expect(screen.getByText('Empfehlungen')).toBeInTheDocument();
+    expect(screen.queryByText(/KI-Empfehlungen/)).toBeNull();
+  });
+
   it('feature toggles persist to localStorage', () => {
     renderTour();
     // advance to the features step
