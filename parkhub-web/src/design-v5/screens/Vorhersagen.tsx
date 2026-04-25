@@ -4,9 +4,14 @@ import { Badge, Card, V5NamedIcon } from '../primitives';
 import { api } from '../../api/client';
 import type { ScreenId } from '../nav';
 
-const DAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-const DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const DAY_KEY_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const DAYS_FULL = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'] as const;
+const DAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as const;
+const DAY_KEY_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const DAYS = DAYS_FULL.map((name, idx) => ({
+  name,
+  short: DAYS_SHORT[idx] ?? name,
+  key: DAY_KEY_EN[idx] ?? String(idx),
+}));
 
 type Level = 'low' | 'medium' | 'high';
 
@@ -88,8 +93,8 @@ export function VorhersagenV5({ navigate: _navigate }: { navigate: (id: ScreenId
     const byDay = statsQuery.data?.occupancy_by_day ?? {};
     const byHour = statsQuery.data?.occupancy_by_hour ?? {};
     const hasHourly = Object.keys(byHour).length > 0;
-    return DAYS_FULL.map((name, idx) => {
-      const dayData = byDay[String(idx)] ?? byDay[DAY_KEY_EN[idx]] ?? byDay[name.toLowerCase()];
+    return DAYS.map(({ name, short, key }, idx) => {
+      const dayData = byDay[String(idx)] ?? byDay[key] ?? byDay[name.toLowerCase()];
       let predicted: number;
       let peakHour: number;
       let offPeakHour: number;
@@ -109,7 +114,7 @@ export function VorhersagenV5({ navigate: _navigate }: { navigate: (id: ScreenId
       return {
         dayIndex: idx,
         dayName: name,
-        dayShort: DAYS_SHORT[idx],
+        dayShort: short,
         predicted,
         confidence,
         peakHour,
@@ -122,6 +127,7 @@ export function VorhersagenV5({ navigate: _navigate }: { navigate: (id: ScreenId
   const recommendation = useMemo(() => {
     if (!predictions.length) return null;
     const best = [...predictions].sort((a, b) => a.predicted - b.predicted)[0];
+    if (!best) return null;
     return {
       day: best.dayName,
       timeSlot: `${formatHour(best.offPeakHour)}–${formatHour(best.offPeakHour + 2)}`,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import {
   Translate, SpinnerGap, Check, X, Clock, Eye,
   ThumbsUp, ThumbsDown, ChatCircleDots, ArrowsClockwise,
@@ -375,7 +375,7 @@ export function AdminTranslationsPage() {
       {/* Proposals Table */}
       <DataTable
         data={filteredProposals}
-        columns={columns}
+        columns={columns as ColumnDef<TranslationProposal, unknown>[]}
         searchValue=""
         emptyMessage={t('translations.noProposals')}
       />

@@ -92,7 +92,9 @@ function parseSlotFloor(slotNumber: string): { floor: string; number: string } |
   if (!slotNumber) return null;
   const parts = slotNumber.split(/[^A-Za-z0-9]+/).filter(Boolean);
   if (parts.length < 2) return null;
-  return { floor: parts[0], number: parts.slice(1).join('-') };
+  const [floor, ...numberParts] = parts;
+  if (!floor) return null;
+  return { floor, number: numberParts.join('-') };
 }
 
 interface FloorSummary {

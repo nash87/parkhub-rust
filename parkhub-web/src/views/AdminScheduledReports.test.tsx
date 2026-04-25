@@ -79,7 +79,7 @@ describe('AdminScheduledReportsPage', () => {
   it('edits schedule', async () => {
     render(<AdminScheduledReportsPage />);
     await waitFor(() => expect(screen.getAllByTestId('edit-btn').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('edit-btn')[0]);
+    fireEvent.click(screen.getAllByTestId('edit-btn')[0]!);
     await waitFor(() => expect(screen.getByTestId('schedule-form')).toBeInTheDocument());
     expect((screen.getByTestId('form-name') as HTMLInputElement).value).toBe('Daily Occ');
   });
@@ -87,14 +87,14 @@ describe('AdminScheduledReportsPage', () => {
   it('deletes schedule', async () => {
     render(<AdminScheduledReportsPage />);
     await waitFor(() => expect(screen.getAllByTestId('delete-btn').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('delete-btn')[0]);
+    fireEvent.click(screen.getAllByTestId('delete-btn')[0]!);
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('scheduledReports.deleted'));
   });
 
   it('send now', async () => {
     render(<AdminScheduledReportsPage />);
     await waitFor(() => expect(screen.getAllByTestId('send-now-btn').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]);
+    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]!);
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('scheduledReports.sentNow'));
   });
 
@@ -157,7 +157,7 @@ describe('AdminScheduledReportsPage', () => {
     render(<AdminScheduledReportsPage />);
 
     await waitFor(() => expect(screen.getAllByTestId('send-now-btn').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]);
+    fireEvent.click(screen.getAllByTestId('send-now-btn')[0]!);
 
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/v1/admin/reports/schedules/s1/send-now',
@@ -172,7 +172,7 @@ describe('AdminScheduledReportsPage', () => {
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
     }) as any;
     render(<AdminScheduledReportsPage />);
-    await waitFor(() => fireEvent.click(screen.getAllByTestId('delete-btn')[0]));
+    await waitFor(() => fireEvent.click(screen.getAllByTestId('delete-btn')[0]!));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 
@@ -182,7 +182,7 @@ describe('AdminScheduledReportsPage', () => {
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
     }) as any;
     render(<AdminScheduledReportsPage />);
-    await waitFor(() => fireEvent.click(screen.getAllByTestId('send-now-btn')[0]));
+    await waitFor(() => fireEvent.click(screen.getAllByTestId('send-now-btn')[0]!));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 });

@@ -264,7 +264,7 @@ describe('UseCaseSelectorPage', () => {
 
     const infoButtons = screen.getAllByLabelText('More info');
     expect(infoButtons.length).toBeGreaterThan(0);
-    await act(async () => { infoButtons[0].click(); });
+    await act(async () => { infoButtons[0]!.click(); });
     // Help text expanded
     const helpTexts = screen.getAllByText(/features\.modules\..+\.help/);
     expect(helpTexts.length).toBeGreaterThan(0);

@@ -809,7 +809,7 @@ describe('BookPage', () => {
 
   it('isLotOpenNow: lot with operating hours - currently open shows openNow badge', async () => {
     const now = new Date();
-    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()];
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()]!;
     const lot = makeLot({
       operating_hours: {
         is_24h: false,
@@ -824,7 +824,7 @@ describe('BookPage', () => {
 
   it('isLotOpenNow: lot with closed-day operating hours shows closedNow', async () => {
     const now = new Date();
-    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()];
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()]!;
     const lot = makeLot({
       operating_hours: {
         is_24h: false,
@@ -839,7 +839,7 @@ describe('BookPage', () => {
 
   it('isLotOpenNow: lot with overnight hours (closes after midnight)', async () => {
     const now = new Date();
-    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()];
+    const dayName = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][now.getDay()]!;
     const lot = makeLot({
       operating_hours: {
         is_24h: false,

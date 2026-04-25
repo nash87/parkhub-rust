@@ -34,8 +34,8 @@ import {
 
 export interface V5SettingsCtx {
   settings: UserSettings;
-  updateSection: <K extends keyof UserSettings>(section: K, patch: Partial<UserSettings[K]>) => void;
-  updateSetting: <K extends keyof UserSettings, P extends keyof UserSettings[K]>(
+  updateSection: <K extends UserSettingsSection>(section: K, patch: Partial<UserSettings[K]>) => void;
+  updateSetting: <K extends UserSettingsSection, P extends keyof UserSettings[K]>(
     section: K,
     key: P,
     value: UserSettings[K][P],
@@ -47,6 +47,8 @@ export interface V5SettingsCtx {
 }
 
 export type V5SettingsSyncState = 'idle' | 'saving' | 'saved' | 'error';
+
+type UserSettingsSection = Exclude<keyof UserSettings, 'version'>;
 
 const Ctx = createContext<V5SettingsCtx | null>(null);
 
@@ -142,7 +144,7 @@ export function V5SettingsProvider({
   }, []);
 
   const updateSection = useCallback(
-    <K extends keyof UserSettings>(section: K, patch: Partial<UserSettings[K]>) => {
+    <K extends UserSettingsSection>(section: K, patch: Partial<UserSettings[K]>) => {
       syncArmed.current = true;
       setSettings((prev) => ({
         ...prev,
@@ -153,7 +155,7 @@ export function V5SettingsProvider({
   );
 
   const updateSetting = useCallback(
-    <K extends keyof UserSettings, P extends keyof UserSettings[K]>(
+    <K extends UserSettingsSection, P extends keyof UserSettings[K]>(
       section: K,
       key: P,
       value: UserSettings[K][P],

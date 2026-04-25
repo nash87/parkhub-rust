@@ -26,9 +26,9 @@ import { OfflineIndicator } from './components/PWAEnhanced';
 
 // Lazy helper — wraps named exports for React.lazy and auto-registers
 // the module loader for hover-intent prefetching.
-function lazy<T extends Record<string, React.ComponentType>>(
+function lazy<T extends Record<string, unknown>, K extends keyof T>(
   loader: () => Promise<T>,
-  name: keyof T,
+  name: K,
   path?: string,
 ) {
   if (path) registerRoute(path, loader);

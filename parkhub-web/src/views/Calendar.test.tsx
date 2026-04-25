@@ -863,7 +863,7 @@ describe('CalendarPage', () => {
     unmount();
     // Resolving the aborted call should hit the abort-check return paths
     await act(async () => {
-      calls[0].resolve({ success: true, data: [{ id: 'x', type: 'booking', title: 'X', start: '2026-01-01', end: '2026-01-01', status: 'confirmed' }] });
+      calls[0]!.resolve({ success: true, data: [{ id: 'x', type: 'booking', title: 'X', start: '2026-01-01', end: '2026-01-01', status: 'confirmed' }] });
     });
     expect(mockCalendarEvents).toHaveBeenCalledTimes(1);
   });
@@ -880,7 +880,7 @@ describe('CalendarPage', () => {
     unmount();
     // After unmount, the controller is aborted. Reject the promise.
     await act(async () => {
-      calls[0].reject(new Error('aborted'));
+      calls[0]!.reject(new Error('aborted'));
     });
     expect(mockCalendarEvents).toHaveBeenCalledTimes(1);
   });

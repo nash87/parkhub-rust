@@ -7,6 +7,7 @@ import { ABSENCE_CONFIG, type AbsenceType } from '../constants/absenceConfig';
 
 export function TeamPage() {
   const { t } = useTranslation();
+  const translate = t as (k: string, f?: string) => string;
   const [entries, setEntries] = useState<TeamAbsenceEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,10 +31,10 @@ export function TeamPage() {
   // Group by user
   function groupByUser(list: TeamAbsenceEntry[]) {
     const groups: Record<string, TeamAbsenceEntry[]> = {};
-    for (const e of list) {
-      if (!groups[e.user_name]) groups[e.user_name] = [];
-      groups[e.user_name].push(e);
-    }
+	    for (const e of list) {
+	      if (!groups[e.user_name]) groups[e.user_name] = [];
+	      groups[e.user_name]?.push(e);
+	    }
     return groups;
   }
 
@@ -70,7 +71,7 @@ export function TeamPage() {
         ) : (
           <div>
             {Object.entries(todayByUser).map(([name, items]) => (
-              <TeamMemberCard key={name} name={name} entries={items} t={t} />
+              <TeamMemberCard key={name} name={name} entries={items} t={translate} />
             ))}
           </div>
         )}
@@ -88,7 +89,7 @@ export function TeamPage() {
         ) : (
           <div>
             {Object.entries(upcomingByUser).map(([name, items]) => (
-              <TeamMemberCard key={name} name={name} entries={items} t={t} />
+              <TeamMemberCard key={name} name={name} entries={items} t={translate} />
             ))}
           </div>
         )}

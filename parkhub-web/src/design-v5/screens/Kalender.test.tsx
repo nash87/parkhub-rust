@@ -108,7 +108,7 @@ describe('KalenderV5', () => {
     expect(targetCell).toBeTruthy();
     fireEvent.click(targetCell!);
     await waitFor(() => expect(screen.getAllByTestId('kalender-detail').length).toBeGreaterThan(0));
-    const detail = screen.getAllByTestId('kalender-detail')[0];
+    const detail = screen.getAllByTestId('kalender-detail')[0]!;
     expect(within(detail).getByText('Buchung')).toBeInTheDocument();
   });
 
@@ -125,10 +125,10 @@ describe('KalenderV5', () => {
     mockCalendarEvents.mockResolvedValue({ success: true, data: [] });
     renderScreen();
     await waitFor(() => expect(screen.getByLabelText('Nächster Monat')).toBeInTheDocument());
-    const initialStart = mockCalendarEvents.mock.calls[0][0];
+    const initialStart = mockCalendarEvents.mock.calls[0]![0];
     fireEvent.click(screen.getByLabelText('Nächster Monat'));
     await waitFor(() => expect(mockCalendarEvents.mock.calls.length).toBeGreaterThan(1));
-    const nextStart = mockCalendarEvents.mock.calls[mockCalendarEvents.mock.calls.length - 1][0];
+    const nextStart = mockCalendarEvents.mock.calls[mockCalendarEvents.mock.calls.length - 1]![0];
     expect(nextStart).not.toBe(initialStart);
   });
 

@@ -222,6 +222,7 @@ function ModuleCard({ m, t, isAdmin, onModuleChange, onOpenConfig }: ModuleCardP
 
 export function AdminModulesPage() {
   const { t } = useTranslation();
+  const translate = t as unknown as (k: string, d?: string, o?: Record<string, unknown>) => string;
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 
@@ -325,7 +326,7 @@ export function AdminModulesPage() {
           <option value="all">{t('admin.modules.allCategories', 'All categories')}</option>
           {CATEGORY_ORDER.map((c) => (
             <option key={c} value={c}>
-              {categoryLabel(t, c)}
+              {categoryLabel(translate, c)}
             </option>
           ))}
         </select>
@@ -353,7 +354,7 @@ export function AdminModulesPage() {
               id={`cat-${cat}`}
               className="text-lg font-semibold mb-3 text-surface-700 dark:text-surface-300"
             >
-              {categoryLabel(t, cat)}{' '}
+              {categoryLabel(translate, cat)}{' '}
               <span className="text-xs text-surface-500 font-normal">({mods.length})</span>
             </h2>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
@@ -361,7 +362,7 @@ export function AdminModulesPage() {
                 <ModuleCard
                   key={m.name}
                   m={m}
-                  t={t}
+                  t={translate}
                   isAdmin={isAdmin}
                   onModuleChange={handleModuleChange}
                   onOpenConfig={(name) => setConfigOpenFor(name)}

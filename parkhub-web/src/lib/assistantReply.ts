@@ -90,6 +90,7 @@ export async function buildLiveReply(q: string, opts: BuildOpts = {}): Promise<s
           .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
         if (upcoming.length === 0) return 'No upcoming bookings on your account.';
         const next = upcoming[0];
+        if (!next) return 'No upcoming bookings on your account.';
         const hrs = Math.round((new Date(next.end_time).getTime() - new Date(next.start_time).getTime()) / 36e5);
         return `Next booking: ${fmtDateRange(next, opts.locale)} at ${next.lot_name ?? 'the lot'}${next.slot_number ? ` slot ${next.slot_number}` : ''} (${hrs}h).`;
       }
@@ -104,6 +105,7 @@ export async function buildLiveReply(q: string, opts: BuildOpts = {}): Promise<s
           .sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime());
         if (past.length === 0) return 'No past bookings yet.';
         const last = past[0];
+        if (!last) return 'No past bookings yet.';
         return `Last booking was ${fmtDayRelative(last.end_time, opts.locale)} — ${last.lot_name ?? 'a lot'}${last.slot_number ? ` slot ${last.slot_number}` : ''} for ${Math.round((new Date(last.end_time).getTime() - new Date(last.start_time).getTime()) / 36e5)}h.`;
       }
 

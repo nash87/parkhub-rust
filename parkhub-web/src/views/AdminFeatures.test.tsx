@@ -162,7 +162,7 @@ describe('AdminFeaturesPage', () => {
       btn => btn.getAttribute('aria-label')?.startsWith('features.modules.')
     );
     if (toggles.length > 0) {
-      await user.click(toggles[0]);
+      await user.click(toggles[0]!);
       // Save Changes button should appear since local state differs from features
       expect(screen.getByText('Save Changes')).toBeInTheDocument();
     }
@@ -175,7 +175,7 @@ describe('AdminFeaturesPage', () => {
     const infoButtons = screen.getAllByLabelText('More info');
     expect(infoButtons.length).toBeGreaterThan(0);
 
-    await user.click(infoButtons[0]);
+    await user.click(infoButtons[0]!);
     // Help text section is now shown
     const helpText = screen.getAllByText(/features\.modules\..+\.help/);
     expect(helpText.length).toBeGreaterThan(0);
@@ -189,7 +189,7 @@ describe('AdminFeaturesPage', () => {
     const toggles = screen.getAllByRole('button').filter(
       btn => btn.getAttribute('aria-label')?.startsWith('features.modules.')
     );
-    await user.click(toggles[0]);
+    await user.click(toggles[0]!);
 
     const saveBtn = screen.getByText('Save Changes');
     await user.click(saveBtn);
@@ -239,7 +239,7 @@ describe('AdminFeaturesPage', () => {
     const toggles = screen.getAllByRole('button').filter(
       btn => btn.getAttribute('aria-label')?.startsWith('features.modules.')
     );
-    await user.click(toggles[0]);
+    await user.click(toggles[0]!);
     await user.click(screen.getByText('Save Changes'));
     expect(mockToastSuccess).toHaveBeenCalled();
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 2000);

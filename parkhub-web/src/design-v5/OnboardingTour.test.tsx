@@ -82,7 +82,7 @@ describe('OnboardingTour', () => {
     const switches = screen.getAllByRole('switch');
     // there should be one switch per non-required feature
     expect(switches.length).toBeGreaterThan(0);
-    fireEvent.click(switches[0]);
+    fireEvent.click(switches[0]!);
     const stored = JSON.parse(window.localStorage.getItem('parkhub_onboarding_v5_prefs') || '{}');
     expect(Object.keys(stored).length).toBeGreaterThan(0);
   });

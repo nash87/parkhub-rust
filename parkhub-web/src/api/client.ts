@@ -26,6 +26,7 @@ import type { AnnouncementSeverity as GeneratedAnnouncementSeverity } from '../g
 import type { VehicleType as GeneratedVehicleType } from '../generated/types/VehicleType';
 import type { FuelType as GeneratedFuelType } from '../generated/types/FuelType';
 import type { PaginatedResponse } from '../generated/types/PaginatedResponse';
+import type { JsonValue } from '../generated/types/serde_json/JsonValue';
 
 export type { PaginatedResponse };
 
@@ -81,6 +82,24 @@ const RETRY_BASE_MS = 300;
 
 function isTransientError(status: number): boolean {
   return status === 502 || status === 503 || status === 504 || status === 429;
+}
+
+function apiError(code: string, message: string, details: JsonValue | null = null): GeneratedApiError {
+  return { code, message, details };
+}
+
+function normalizeApiError(error: unknown, fallback: GeneratedApiError): GeneratedApiError {
+  if (error && typeof error === 'object') {
+    const candidate = error as Partial<GeneratedApiError>;
+    if (typeof candidate.code === 'string' && typeof candidate.message === 'string') {
+      return {
+        code: candidate.code,
+        message: candidate.message,
+        details: candidate.details ?? null,
+      };
+    }
+  }
+  return fallback;
 }
 
 // Single-flight token refresh. All concurrent 401s share one refresh call
@@ -141,7 +160,7 @@ async function requestOnce<T>(path: string, opts: RequestInit): Promise<ApiRespo
   const isLoginPath = path.includes('/auth/login');
   const isRefreshPath = path.includes('/auth/refresh');
   if (res.status === 401 && !isLoginPath && !isRefreshPath) {
-    return { success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Session expired' } };
+    return { success: false, data: null, error: apiError('UNAUTHORIZED', 'Session expired') };
   }
 
   const json = await res.json().catch(() => null);
@@ -150,7 +169,7 @@ async function requestOnce<T>(path: string, opts: RequestInit): Promise<ApiRespo
     return {
       success: false,
       data: null,
-      error: json?.error || { code: `HTTP_${res.status}`, message: res.statusText },
+      error: normalizeApiError(json?.error, apiError(`HTTP_${res.status}`, res.statusText)),
     };
   }
 
@@ -230,16 +249,16 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<ApiR
         return result;
       } catch (e) {
         if (e instanceof DOMException && e.name === 'AbortError') {
-          return { success: false, data: null, error: { code: 'ABORTED', message: 'Request aborted' } };
+          return { success: false, data: null, error: apiError('ABORTED', 'Request aborted') };
         }
         if (attempt < retries) {
           await new Promise(r => setTimeout(r, RETRY_BASE_MS * 2 ** attempt));
           continue;
         }
-        return { success: false, data: null, error: { code: 'NETWORK', message: 'Network error' } };
+        return { success: false, data: null, error: apiError('NETWORK', 'Network error') };
       }
     }
-    return { success: false, data: null, error: { code: 'NETWORK', message: 'Network error' } };
+    return { success: false, data: null, error: apiError('NETWORK', 'Network error') };
   };
 
   const promise = execute();
@@ -830,13 +849,38 @@ export interface ModuleInfo {
 export interface ModuleConfigResponse {
   schema: {
     type: 'object';
-    properties: Record<string, unknown>;
+    properties: Record<string, ModuleConfigProperty>;
     required?: string[];
     title?: string;
     description?: string;
   };
   values: Record<string, unknown>;
 }
+
+export type ModuleConfigProperty =
+  | {
+      type: 'string';
+      enum?: string[];
+      format?: 'email' | 'time' | string;
+      maxLength?: number;
+      title?: string;
+      description?: string;
+      default?: string;
+    }
+  | {
+      type: 'boolean';
+      title?: string;
+      description?: string;
+      default?: boolean;
+    }
+  | {
+      type: 'integer';
+      minimum?: number;
+      maximum?: number;
+      title?: string;
+      description?: string;
+      default?: number;
+    };
 
 export interface User {
   id: string;
@@ -957,6 +1001,7 @@ export interface Booking {
   user_id: string;
   lot_id: string;
   slot_id: string;
+  vehicle_id?: string | null;
   lot_name: string;
   slot_number: string;
   vehicle_plate?: string;

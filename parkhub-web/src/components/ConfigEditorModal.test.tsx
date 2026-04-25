@@ -103,8 +103,8 @@ describe('ConfigEditorModal', () => {
     fireEvent.click(screen.getByTestId('config-editor-save'));
 
     await waitFor(() => expect(patchModuleConfigMock).toHaveBeenCalledTimes(1));
-    expect(patchModuleConfigMock.mock.calls[0][0]).toBe('sample');
-    expect(patchModuleConfigMock.mock.calls[0][1]).toEqual({ mode: 'pro', active: true });
+    expect(patchModuleConfigMock.mock.calls[0]![0]).toBe('sample');
+    expect(patchModuleConfigMock.mock.calls[0]![1]).toEqual({ mode: 'pro', active: true });
 
     await waitFor(() => expect(toastSuccessMock).toHaveBeenCalled());
     expect(onClose).toHaveBeenCalled();

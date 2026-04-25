@@ -20,6 +20,8 @@ const CYCLE_GREETINGS = [
   { lang: 'zh', text: '欢迎', flag: '🇨🇳' },
 ];
 
+const DEFAULT_GREETING = { lang: 'en', text: 'Welcome', flag: '🇬🇧' };
+
 export function WelcomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -48,7 +50,7 @@ export function WelcomePage() {
     navigate(toured ? '/login' : '/tour');
   }
 
-  const greeting = CYCLE_GREETINGS[greetingIdx];
+  const greeting = CYCLE_GREETINGS[greetingIdx] ?? DEFAULT_GREETING;
 
   return (
     <div className="min-h-dvh mesh-gradient-animated relative overflow-hidden">

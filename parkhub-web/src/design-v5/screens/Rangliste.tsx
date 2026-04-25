@@ -166,7 +166,11 @@ export function RanglisteV5({ navigate: _navigate }: { navigate: (id: ScreenId) 
       value: [...leaderboard].sort((a, b) => a.noShows - b.noShows || b.ecoScore - a.ecoScore)[0],
       suffix: (e: LeaderboardEntry) => `${e.noShows} Ausfälle`,
     },
-  ];
+  ].filter((highlight): highlight is {
+    label: string;
+    value: LeaderboardEntry;
+    suffix: (e: LeaderboardEntry) => string;
+  } => highlight.value !== undefined);
 
   return (
     <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>

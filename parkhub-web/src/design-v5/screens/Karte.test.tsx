@@ -83,10 +83,10 @@ describe('KarteV5', () => {
     mockGetMapMarkers.mockResolvedValue({ success: true, data: [MARKER_NORD, MARKER_SUED] });
     renderScreen();
     await waitFor(() => expect(screen.getAllByTestId('karte-marker')).toHaveLength(2));
-    fireEvent.click(screen.getAllByTestId('karte-marker')[1]);
+    fireEvent.click(screen.getAllByTestId('karte-marker')[1]!);
     await waitFor(() => expect(screen.getByText('Voll')).toBeInTheDocument());
     // Active marker aria-pressed is true
-    expect(screen.getAllByTestId('karte-marker')[1]).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByTestId('karte-marker')[1]!).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('navigates to buchen when the "Platz buchen" button is clicked', async () => {

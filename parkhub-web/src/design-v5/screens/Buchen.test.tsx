@@ -125,7 +125,7 @@ describe('BuchenV5', () => {
     await waitFor(() => expect(screen.getByText('Parkhaus Nord')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('buchen-lot-card'));
     await waitFor(() => expect(screen.getAllByTestId('buchen-slot').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('buchen-slot')[0]);
+    fireEvent.click(screen.getAllByTestId('buchen-slot')[0]!);
     fireEvent.click(screen.getByRole('button', { name: /Weiter/ }));
 
     await waitFor(() => expect(screen.getByTestId('buchen-confirm')).toBeInTheDocument());
@@ -136,7 +136,7 @@ describe('BuchenV5', () => {
       expect(mockToast).toHaveBeenCalledWith('Buchung bestätigt', 'success');
       expect(navigate).toHaveBeenCalledWith('buchungen');
     });
-    const payload = mockCreateBooking.mock.calls[0][0];
+    const payload = mockCreateBooking.mock.calls[0]![0];
     expect(payload.lot_id).toBe('lot-1');
     expect(payload.slot_id).toBe('s-1');
   });
@@ -205,7 +205,7 @@ describe('BuchenV5', () => {
     fireEvent.click(screen.getByTestId('buchen-confirm'));
 
     await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
-    const payload = mockCreateBooking.mock.calls[0][0];
+    const payload = mockCreateBooking.mock.calls[0]![0];
     // Default start is prefilled → toISOString() must succeed and produce a Z-suffixed ISO string.
     expect(payload.start_time).toMatch(/\dT\d/);
     expect(payload.end_time).toMatch(/\dT\d/);
@@ -245,7 +245,7 @@ describe('BuchenV5', () => {
     fireEvent.click(screen.getByTestId('buchen-confirm'));
 
     await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
-    const payload = mockCreateBooking.mock.calls[0][0];
+    const payload = mockCreateBooking.mock.calls[0]![0];
     expect(payload.vehicle_id).toBeUndefined();
   });
 

@@ -80,14 +80,14 @@ describe('AbsencesPage', () => {
   it('opens add absence modal', async () => {
     render(<AbsencesPage />);
     await waitFor(() => expect(screen.getAllByText('Eintragen').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByText('Eintragen')[0]);
+    fireEvent.click(screen.getAllByText('Eintragen')[0]!);
     await waitFor(() => expect(screen.getByText('Abwesenheit eintragen')).toBeInTheDocument());
   });
 
   it('closes add modal', async () => {
     render(<AbsencesPage />);
     await waitFor(() => expect(screen.getAllByText('Eintragen').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByText('Eintragen')[0]);
+    fireEvent.click(screen.getAllByText('Eintragen')[0]!);
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByLabelText('Close'));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
@@ -97,7 +97,7 @@ describe('AbsencesPage', () => {
     const user = userEvent.setup();
     render(<AbsencesPage />);
     await waitFor(() => expect(screen.getAllByText('Eintragen').length).toBeGreaterThan(0));
-    await user.click(screen.getAllByText('Eintragen')[0]);
+    await user.click(screen.getAllByText('Eintragen')[0]!);
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Heute'));
     // The submit button inside the modal dialog
@@ -113,7 +113,7 @@ describe('AbsencesPage', () => {
     const user = userEvent.setup();
     render(<AbsencesPage />);
     await waitFor(() => expect(screen.getAllByText('Eintragen').length).toBeGreaterThan(0));
-    await user.click(screen.getAllByText('Eintragen')[0]);
+    await user.click(screen.getAllByText('Eintragen')[0]!);
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('Heute'));
     const btns = screen.getAllByText('Eintragen');
@@ -126,7 +126,7 @@ describe('AbsencesPage', () => {
     render(<AbsencesPage />);
     await waitFor(() => expect(screen.getByText('Anstehend')).toBeInTheDocument());
     const delBtns = screen.getAllByLabelText('Delete absence entry');
-    fireEvent.click(delBtns[0]);
+    fireEvent.click(delBtns[0]!);
     await waitFor(() => expect(mockDeleteAbsence).toHaveBeenCalled());
     expect(toast.success).toHaveBeenCalledWith('Abwesenheit gelöscht');
   });
@@ -139,7 +139,7 @@ describe('AbsencesPage', () => {
     await waitFor(() => expect(screen.getByText('Wähle deine festen Homeoffice-Tage')).toBeInTheDocument());
     // Click a weekday button
     const dayBtns = screen.getAllByRole('button').filter(b => b.getAttribute('aria-pressed') !== null);
-    if (dayBtns.length > 0) fireEvent.click(dayBtns[0]);
+    if (dayBtns.length > 0) fireEvent.click(dayBtns[0]!);
     await waitFor(() => expect(mockSetAbsencePattern).toHaveBeenCalled());
   });
 

@@ -44,6 +44,12 @@ const statusConfig: Record<string, { color: string; icon: typeof CheckCircle; la
   non_compliant: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: XCircle, label: 'Non-Compliant' },
 };
 
+const fallbackStatusConfig = statusConfig.warning ?? {
+  color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  icon: Warning,
+  label: 'Warning',
+};
+
 export function AdminCompliancePage() {
   const { t } = useTranslation();
   const [report, setReport] = useState<ComplianceReport | null>(null);
@@ -104,7 +110,7 @@ export function AdminCompliancePage() {
   const compliantCount = report.checks.filter(c => c.status === 'compliant').length;
   const warningCount = report.checks.filter(c => c.status === 'warning').length;
   const nonCompliantCount = report.checks.filter(c => c.status === 'non_compliant').length;
-  const overallConfig = statusConfig[report.overall_status] || statusConfig.warning;
+  const overallConfig = statusConfig[report.overall_status] ?? fallbackStatusConfig;
   const OverallIcon = overallConfig.icon;
 
   return (
@@ -225,7 +231,7 @@ export function AdminCompliancePage() {
           {t('compliance.checksTitle')}
         </h2>
         {report.checks.map(check => {
-          const config = statusConfig[check.status] || statusConfig.warning;
+          const config = statusConfig[check.status] ?? fallbackStatusConfig;
           const StatusIcon = config.icon;
           return (
             <motion.div

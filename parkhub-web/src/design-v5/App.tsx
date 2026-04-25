@@ -201,7 +201,7 @@ function V5Shell() {
   }, []);
 
   const meta = byId.get(screen);
-  const ScreenComponent = SCREENS[screen];
+  const ScreenComponent = SCREENS[screen] ?? SCREENS[DEFAULT_SCREEN]!;
 
   return (
     <div

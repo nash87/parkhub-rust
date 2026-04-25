@@ -105,7 +105,9 @@ describe('ProfilV5', () => {
     fireEvent.click(screen.getByTestId('profil-pw-toggle'));
     const pwInputs = document.querySelectorAll<HTMLInputElement>('input[type="password"]');
     expect(pwInputs.length).toBe(3);
-    const [currentPw, newPw, confirmPw] = pwInputs;
+    const currentPw = pwInputs[0]!;
+    const newPw = pwInputs[1]!;
+    const confirmPw = pwInputs[2]!;
     fireEvent.change(currentPw, { target: { value: 'old-pass-12345' } });
     fireEvent.change(newPw, { target: { value: 'brand-new-pass-12345' } });
     fireEvent.change(confirmPw, { target: { value: 'brand-new-pass-12345' } });
@@ -127,10 +129,10 @@ describe('ProfilV5', () => {
     renderScreen();
     await waitFor(() => expect(screen.getByText('Mein Profil')).toBeInTheDocument());
     const langBtns = screen.getAllByTestId('profil-lang');
-    fireEvent.click(langBtns[1]); // English
+    fireEvent.click(langBtns[1]!); // English
     expect(mockToast).toHaveBeenCalledWith('Sprache aktualisiert', 'success');
     const themeBtns = screen.getAllByTestId('profil-theme');
-    fireEvent.click(themeBtns[2]); // void
+    fireEvent.click(themeBtns[2]!); // void
     expect(mockSetMode).toHaveBeenCalledWith('void');
   });
 
@@ -161,7 +163,9 @@ describe('ProfilV5', () => {
     await waitFor(() => expect(screen.getByText('Mein Profil')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('profil-pw-toggle'));
     const pwInputs = document.querySelectorAll<HTMLInputElement>('input[type="password"]');
-    const [currentPw, newPw, confirmPw] = pwInputs;
+    const currentPw = pwInputs[0]!;
+    const newPw = pwInputs[1]!;
+    const confirmPw = pwInputs[2]!;
     fireEvent.change(currentPw, { target: { value: 'old-pass-12345' } });
     fireEvent.change(newPw, { target: { value: 'brand-new-pass-12345' } });
     fireEvent.change(confirmPw, { target: { value: 'brand-new-pass-12345' } });

@@ -33,8 +33,8 @@ describe('BarChart', () => {
     const texts = container.querySelectorAll('text');
     // Each item has 2 text elements: label + value
     expect(texts.length).toBe(6);
-    expect(texts[0].textContent).toBe('Mon');
-    expect(texts[1].textContent).toBe('10');
+    expect(texts[0]!.textContent).toBe('Mon');
+    expect(texts[1]!.textContent).toBe('10');
   });
 
   it('accepts a custom color', () => {
@@ -107,6 +107,6 @@ describe('DonutChart', () => {
     const { container } = render(<DonutChart slices={sampleSlices} />);
     const titles = container.querySelectorAll('title');
     expect(titles.length).toBe(sampleSlices.length);
-    expect(titles[0].textContent).toContain('Lot A');
+    expect(titles[0]!.textContent).toContain('Lot A');
   });
 });

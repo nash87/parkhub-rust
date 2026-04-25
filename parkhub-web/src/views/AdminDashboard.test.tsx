@@ -202,7 +202,7 @@ describe('AdminDashboardPage', () => {
     // Click any widget toggle button - should not throw
     const widgetButtons = screen.getAllByRole('button').filter(b => b.className.includes('rounded-lg border'));
     if (widgetButtons.length > 0) {
-      await user.click(widgetButtons[0]);
+      await user.click(widgetButtons[0]!);
     }
     // Layout still null, no errors
     expect(mockSaveWidgetLayout).not.toHaveBeenCalled();
@@ -276,7 +276,7 @@ describe('AdminDashboardPage', () => {
 
     // Click remove button on a widget
     const removeBtns = screen.getAllByTitle('Remove');
-    await user.click(removeBtns[0]);
+    await user.click(removeBtns[0]!);
 
     await waitFor(() => {
       expect(mockSaveWidgetLayout).toHaveBeenCalled();

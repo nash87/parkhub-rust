@@ -7,7 +7,7 @@ import {
   ArrowClockwise, Warning,
   MagnifyingGlass, Funnel, QrCode, FilePdf, CalendarPlus,
 } from '@phosphor-icons/react';
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { api, type Booking, type Vehicle } from '../api/client';
 import { BookingsSkeleton } from '../components/Skeleton';
 import { ParkingPass } from '../components/ParkingPass';
@@ -307,13 +307,13 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
   const isExpiring = isActiveOrConfirmed && new Date(booking.end_time).getTime() - now < 30 * 60 * 1000;
   const isUpcoming = isActiveOrConfirmed && isFuture(new Date(booking.start_time));
 
-  const statusCfg: Record<string, { label: string; cls: string }> = {
+  const statusCfg: Record<Booking['status'], { label: string; cls: string }> = {
     active: { label: t('bookings.statusActive'), cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
     confirmed: { label: t('bookings.statusActive'), cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
     completed: { label: t('bookings.statusCompleted'), cls: 'bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-400' },
     cancelled: { label: t('bookings.statusCancelled'), cls: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
   };
-  const cfg = statusCfg[booking.status] || statusCfg.active;
+  const cfg = statusCfg[booking.status];
 
   const borderColor = isPast
     ? 'border-l-surface-300 dark:border-l-surface-600'

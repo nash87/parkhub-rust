@@ -89,7 +89,7 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     const editBtns = screen.getAllByLabelText(/common.edit/);
-    fireEvent.click(editBtns[0]);
+    fireEvent.click(editBtns[0]!);
     await waitFor(() => expect(screen.getByDisplayValue('Maintenance')).toBeInTheDocument());
   });
 
@@ -104,7 +104,7 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     const delBtns = screen.getAllByLabelText(/common.delete/);
-    fireEvent.click(delBtns[0]);
+    fireEvent.click(delBtns[0]!);
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('ConfirmDel'));
     await waitFor(() => expect(mockDeleteAnnouncement).toHaveBeenCalledWith('a1'));
@@ -116,7 +116,7 @@ describe('AdminAnnouncementsPage', () => {
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     // Open create form
     const newBtns = screen.getAllByText('admin.newAnnouncement');
-    fireEvent.click(newBtns[newBtns.length - 1]);
+    fireEvent.click(newBtns[newBtns.length - 1]!);
     await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
     // Find severity buttons by type="button" attribute
     const allBtns = screen.getAllByRole('button');
@@ -130,7 +130,7 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     const newBtns = screen.getAllByText('admin.newAnnouncement');
-    fireEvent.click(newBtns[newBtns.length - 1]);
+    fireEvent.click(newBtns[newBtns.length - 1]!);
     await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
     // The active toggle is a type="button" with text "admin.active"
     const allBtns = screen.getAllByRole('button');
@@ -197,11 +197,11 @@ describe('AdminAnnouncementsPage', () => {
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     // Edit the first announcement
     const editBtns = screen.getAllByLabelText(/common.edit/);
-    fireEvent.click(editBtns[0]);
+    fireEvent.click(editBtns[0]!);
     await waitFor(() => expect(screen.getByDisplayValue('Maintenance')).toBeInTheDocument());
     // Delete it
     const delBtns = screen.getAllByLabelText(/common.delete/);
-    fireEvent.click(delBtns[0]);
+    fireEvent.click(delBtns[0]!);
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('ConfirmDel'));
     await waitFor(() => expect(mockDeleteAnnouncement).toHaveBeenCalled());

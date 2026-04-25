@@ -241,7 +241,7 @@ describe('AdminZonesPage', () => {
       if (opts?.method === 'PUT') return Promise.resolve(putResp);
       if (typeof url === 'string' && url.includes('/zones/pricing')) return Promise.resolve(zonesResp);
       return Promise.resolve(lotsResp);
-    });
+    }) as unknown as typeof fetch;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
@@ -266,7 +266,7 @@ describe('AdminZonesPage', () => {
       if (opts?.method === 'PUT') return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: false, error: { message: 'Invalid' } }) }) as any;
       if (typeof url === 'string' && url.includes('/zones/pricing')) return Promise.resolve(zonesResp);
       return Promise.resolve(lotsResp);
-    });
+    }) as unknown as typeof fetch;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());

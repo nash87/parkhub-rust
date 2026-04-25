@@ -260,7 +260,7 @@ describe('TranslationsPage', () => {
     const user = userEvent.setup();
     mockVoteOnProposal.mockResolvedValue({
       success: true,
-      data: { ...MOCK_PROPOSALS[0], votes_for: 4, user_vote: 'up' },
+      data: { ...MOCK_PROPOSALS[0]!, votes_for: 4, user_vote: 'up' },
     });
     render(<TranslationsPage />);
 
@@ -426,7 +426,7 @@ describe('TranslationsPage', () => {
 
     const suggestBtns = screen.getAllByText('Suggest Change');
     expect(suggestBtns.length).toBeGreaterThan(0);
-    await user.click(suggestBtns[0]);
+    await user.click(suggestBtns[0]!);
 
     expect(screen.getByText('New Proposal')).toBeInTheDocument();
   });

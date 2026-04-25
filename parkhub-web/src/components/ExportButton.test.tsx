@@ -54,9 +54,10 @@ describe('ExportButton download', () => {
     vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('b:x'), revokeObjectURL: vi.fn() });
     render(<ExportButton />); fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId('export-bookings'));
     await waitFor(() => expect(fm).toHaveBeenCalledTimes(1));
-    expect(fm.mock.calls[0][0]).toContain('/api/v1/admin/export/bookings');
-    expect(fm.mock.calls[0][1].headers.Authorization).toBe('Bearer tok');
-    expect(fm.mock.calls[0][1].credentials).toBe('include');
+    const call = fm.mock.calls[0]!;
+    expect(call[0]).toContain('/api/v1/admin/export/bookings');
+    expect(call[1].headers.Authorization).toBe('Bearer tok');
+    expect(call[1].credentials).toBe('include');
   });
   it('correct URL per type', async () => {
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });
@@ -65,7 +66,7 @@ describe('ExportButton download', () => {
       fm.mockClear(); const { unmount } = render(<ExportButton />);
       fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId(`export-${t}`));
       await waitFor(() => expect(fm).toHaveBeenCalledTimes(1));
-      expect(fm.mock.calls[0][0]).toContain(`/api/v1/admin/export/${t}`); unmount();
+      expect(fm.mock.calls[0]![0]).toContain(`/api/v1/admin/export/${t}`); unmount();
     }
   });
   it('handles error', async () => {
@@ -79,14 +80,15 @@ describe('ExportButton download', () => {
     vi.stubGlobal('fetch', fm); vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('b:x'), revokeObjectURL: vi.fn() });
     render(<ExportButton />); fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId('export-revenue'));
     await waitFor(() => expect(fm).toHaveBeenCalledTimes(1));
-    expect(fm.mock.calls[0][1].headers['X-Requested-With']).toBe('XMLHttpRequest');
-    expect(fm.mock.calls[0][1].headers.Authorization).toBeUndefined();
-    expect(fm.mock.calls[0][1].credentials).toBe('include');
+    const call = fm.mock.calls[0]!;
+    expect(call[1].headers['X-Requested-With']).toBe('XMLHttpRequest');
+    expect(call[1].headers.Authorization).toBeUndefined();
+    expect(call[1].credentials).toBe('include');
   });
   it('custom baseUrl', async () => {
     const fm = vi.fn().mockResolvedValue({ ok: true, blob: () => Promise.resolve(new Blob([''])) });
     vi.stubGlobal('fetch', fm); vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('b:x'), revokeObjectURL: vi.fn() });
     render(<ExportButton baseUrl="https://api.test.com" />); fireEvent.click(screen.getByTestId('export-toggle')); fireEvent.click(screen.getByTestId('export-bookings'));
-    await waitFor(() => expect(fm).toHaveBeenCalledTimes(1)); expect(fm.mock.calls[0][0]).toMatch(/^https:\/\/api\.test\.com\//);
+    await waitFor(() => expect(fm).toHaveBeenCalledTimes(1)); expect(fm.mock.calls[0]![0]).toMatch(/^https:\/\/api\.test\.com\//);
   });
 });

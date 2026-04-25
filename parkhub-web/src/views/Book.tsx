@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   ArrowLeft, MapPin, Clock, Car, SpinnerGap, Check,
   Lightning, Wheelchair, Motorcycle, Star,
   TrendUp, TrendDown,
 } from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
 import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult, type OperatingHoursData, type Booking } from '../api/client';
 import { SkeletonCard } from '../components/Skeleton';
 import { findOverlappingBooking } from '../hooks/useConflictCheck';
@@ -254,8 +255,8 @@ function isLotOpenNow(hours?: OperatingHoursData): boolean {
   const dayKey = days[now.getDay()];
   const dayHours = hours[dayKey as keyof OperatingHoursData] as { open: string; close: string; closed: boolean } | undefined;
   if (!dayHours || dayHours.closed) return false;
-  const [oh, om] = dayHours.open.split(':').map(Number);
-  const [ch, cm] = dayHours.close.split(':').map(Number);
+  const [oh = 0, om = 0] = dayHours.open.split(':').map(Number);
+  const [ch = 0, cm = 0] = dayHours.close.split(':').map(Number);
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const openMin = oh * 60 + om;
   const closeMin = ch * 60 + cm;
@@ -396,7 +397,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
   );
 }
 
-const SLOT_TYPE_ICON: Record<string, React.ComponentType<{ weight?: string; className?: string }>> = {
+const SLOT_TYPE_ICON: Record<string, Icon> = {
   electric: Lightning, handicap: Wheelchair, motorcycle: Motorcycle, vip: Star,
 };
 

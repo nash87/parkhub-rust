@@ -111,7 +111,7 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('link', { name: /SSO & roles/i })).toHaveAttribute('href', '/admin/sso');
 
     await user.click(screen.getByRole('button', { name: 'Metro' }));
-    await user.click(screen.getAllByRole('button', { name: 'Dark mode' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Dark mode' })[0]!);
     await user.click(screen.getByRole('button', { name: 'Compact' }));
     await user.click(screen.getByRole('button', { name: 'Choose classic' }));
 

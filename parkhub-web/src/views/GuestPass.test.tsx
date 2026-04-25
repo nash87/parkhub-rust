@@ -128,7 +128,7 @@ describe('GuestPassPage', () => {
     // Share an existing booking
     await waitFor(() => expect(screen.getByText('Alice')).toBeInTheDocument());
     const shareBtns = screen.getAllByTitle('guestBooking.share');
-    fireEvent.click(shareBtns[0]);
+    fireEvent.click(shareBtns[0]!);
     await waitFor(() => expect(navigator.share).toHaveBeenCalled());
   });
 

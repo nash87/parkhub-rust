@@ -52,7 +52,7 @@ describe('SidebarV3', () => {
     getBookingsMock.mockReset();
     getLotsMock.mockReset();
     getLotSlotsMock.mockReset();
-    vi.spyOn(window, 'setInterval').mockImplementation(() => 1 as unknown as number);
+    vi.spyOn(window, 'setInterval').mockImplementation(() => 1 as unknown as ReturnType<typeof window.setInterval>);
     vi.spyOn(window, 'clearInterval').mockImplementation(() => undefined);
   });
 

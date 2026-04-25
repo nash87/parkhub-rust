@@ -183,11 +183,11 @@ describe('OccupancyHeatmapPage', () => {
     const cells = screen.getAllByRole('gridcell');
     expect(cells.length).toBe(168);
 
-    fireEvent.mouseEnter(cells[0]);
+    fireEvent.mouseEnter(cells[0]!);
     await waitFor(() => expect(screen.getByTestId('heatmap-tooltip')).toBeInTheDocument());
 
     // Trigger mouseLeave — onMouseLeave={() => setTooltip(null)}
-    fireEvent.mouseLeave(cells[0]);
+    fireEvent.mouseLeave(cells[0]!);
     // The tooltip clear may be flushed — verify the handler fired (state updates async)
     // This ensures the onMouseLeave callback is exercised even if React batching delays the state update
   });

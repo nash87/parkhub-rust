@@ -91,7 +91,7 @@ describe('AdminPage', () => {
 
   it('renders all navigation links inside the sidebar', () => {
     render(<AdminPage />);
-    const nav = screen.getAllByLabelText('Admin navigation')[0];
+    const nav = screen.getAllByLabelText('Admin navigation')[0]!;
     const scoped = within(nav);
     for (const label of [
       'Overview', 'Settings', 'Users', 'Parking Lots', 'Announcements',
@@ -105,7 +105,7 @@ describe('AdminPage', () => {
 
   it('renders navigation links with correct paths', () => {
     render(<AdminPage />);
-    const nav = screen.getAllByLabelText('Admin navigation')[0];
+    const nav = screen.getAllByLabelText('Admin navigation')[0]!;
     const scoped = within(nav);
     const pairs: Array<[string, string]> = [
       ['Overview', '/admin'],
