@@ -1,0 +1,88 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ParkHub v5 — Density tokens
+   Three steps that tune row padding, card padding, and inter-element gaps.
+   Selected by `[data-ph-density="..."]` on <html>, set by V5SettingsProvider.
+   v5 primitives + screens read from --v5-row-pad / --v5-card-pad / --v5-gap
+   instead of hard-coding spacing.
+
+   We also re-tune `--v5-font-size-base` so that when "compact" is selected the
+   default body font drops a half-step. Combined with the per-user font-scale
+   the framework supports both layout density AND font-size accessibility.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:where([data-ph-density]) {
+  /* Default tuning — applied even when no attribute is set yet. */
+  --v5-row-pad: 10px 14px;
+  --v5-card-pad: 16px;
+  --v5-gap: 10px;
+  --v5-section-gap: 14px;
+  --v5-control-h: 34px;
+  --v5-control-pad-x: 12px;
+  --v5-font-size-base: 12px;
+  --v5-font-size-sm: 11px;
+  --v5-font-scale: 1;
+}
+
+[data-ph-density="compact"] {
+  --v5-row-pad: 6px 10px;
+  --v5-card-pad: 12px;
+  --v5-gap: 6px;
+  --v5-section-gap: 10px;
+  --v5-control-h: 28px;
+  --v5-control-pad-x: 10px;
+  --v5-font-size-base: 11px;
+  --v5-font-size-sm: 10px;
+}
+
+[data-ph-density="comfortable"] {
+  --v5-row-pad: 10px 14px;
+  --v5-card-pad: 16px;
+  --v5-gap: 10px;
+  --v5-section-gap: 14px;
+  --v5-control-h: 34px;
+  --v5-control-pad-x: 12px;
+  --v5-font-size-base: 12px;
+  --v5-font-size-sm: 11px;
+}
+
+[data-ph-density="spacious"] {
+  --v5-row-pad: 14px 18px;
+  --v5-card-pad: 24px;
+  --v5-gap: 14px;
+  --v5-section-gap: 22px;
+  --v5-control-h: 40px;
+  --v5-control-pad-x: 14px;
+  --v5-font-size-base: 13px;
+  --v5-font-size-sm: 12px;
+}
+
+/* High-contrast — boost border + accent strength regardless of mode. */
+[data-ph-high-contrast="true"] {
+  --v5-bor: oklch(0.42 0.012 80);
+}
+[data-ph-high-contrast="true"][data-ph-mode="marble_dark"],
+[data-ph-high-contrast="true"][data-ph-mode="void"] {
+  --v5-bor: oklch(0.6 0.012 260);
+  --v5-mut: oklch(0.78 0.01 260);
+}
+
+/* Reduced-motion — kill all v5 animations regardless of OS pref. */
+[data-ph-reduced-motion="true"] .v5-ani,
+[data-ph-reduced-motion="true"] .v5-aniR,
+[data-ph-reduced-motion="true"] .v5-btn,
+[data-ph-reduced-motion="true"] .v5-row,
+[data-ph-reduced-motion="true"] .v5-lift {
+  animation: none !important;
+  transition: none !important;
+}
+[data-ph-reduced-motion="true"] .v5-btn:hover,
+[data-ph-reduced-motion="true"] .v5-lift:hover {
+  transform: none !important;
+}
+
+/* Apply the per-user font scale to the body. We keep absolute font-size on
+   primitives (e.g. nav labels) but multiply via `font-size-adjust` cascade
+   where consumers opt in via `font: var(--v5-font-base, ...)`. */
+html {
+  font-size: calc(16px * var(--v5-font-scale, 1));
+}

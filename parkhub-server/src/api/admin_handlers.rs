@@ -1066,6 +1066,7 @@ pub async fn admin_reset(
         accessibility_needs: None,
         cost_center: None,
         department: None,
+        settings: admin.settings,
     };
 
     if let Err(e) = state_guard.db.save_user(&admin_user).await {
@@ -2014,6 +2015,7 @@ mod tests {
             accessibility_needs: None,
             cost_center: None,
             department: None,
+            settings: None,
         }
     }
 

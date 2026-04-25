@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { V5ThemeProvider } from './ThemeProvider';
+import { V5ThemeProvider, useV5Theme } from './ThemeProvider';
 import { V5ToastProvider } from './Toast';
-import { V5Sidebar } from './Sidebar';
+import { V5SettingsProvider, useV5Settings } from './settings';
+import { syncSettingsToServer } from './settings/syncToServer';
+import { applyFontVariant } from './fonts/fontVariants';
+import { V5Sidebar } from './sidebar';
+import { api } from '../api/client';
 import { V5TopBar } from './TopBar';
 import { V5CommandPalette } from './CommandPalette';
 import { V5AssistantPanel } from './AssistantPanel';
@@ -39,6 +43,7 @@ import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 
 import './fonts';
 import './tokens.css';
+import './density/density.css';
 
 /**
  * Registry of all 26 v5 screens. Every `NavItem.id` in `./nav.ts` maps
@@ -94,9 +99,50 @@ function makeQueryClient() {
   });
 }
 
+/**
+ * Bridge: keep V5ThemeProvider mode in sync with the settings store,
+ * lazy-load font CSS as the user picks variants, and hydrate settings
+ * from the server on mount. The settings store is canonical; the legacy
+ * ThemeProvider remains so existing components (Sidebar, screens) keep
+ * their `useV5Theme()` hook contract.
+ */
+function SettingsBridge() {
+  const { settings, hydrateRemote } = useV5Settings();
+  const { mode, setMode } = useV5Theme();
+
+  useEffect(() => {
+    if (settings.appearance.mode !== mode) setMode(settings.appearance.mode);
+  }, [settings.appearance.mode, mode, setMode]);
+
+  useEffect(() => {
+    void applyFontVariant(settings.appearance.font);
+  }, [settings.appearance.font]);
+
+  // One-shot hydration on mount — silently fail if endpoint is missing.
+  useEffect(() => {
+    let cancelled = false;
+    void api
+      .getSettings()
+      .then((res) => {
+        if (cancelled || !res.success || !res.data) return;
+        hydrateRemote(res.data);
+      })
+      .catch(() => {
+        /* endpoint may not be deployed yet */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return null;
+}
+
 function V5Shell() {
   // URL is source of truth; localStorage is a back-compat cache for users
   // who load `/v5` bare. Priority: URL → localStorage → default.
+  const { settings } = useV5Settings();
   const [screen, setScreen] = useState<ScreenId>(() => {
     if (typeof window === 'undefined') return DEFAULT_SCREEN;
     const stored = window.localStorage.getItem(STORAGE_KEY) as ScreenId | null;
@@ -112,8 +158,9 @@ function V5Shell() {
   }, [screen]);
 
   // Keep browser URL + localStorage in lockstep with the in-memory screen,
-  // and restore screen state on back/forward.
-  useSyncScreenToUrl(screen, setScreen);
+  // and restore screen state on back/forward — gated by the deepLinking feature toggle
+  // so disabling it stops history pushes and popstate handling entirely.
+  useSyncScreenToUrl(screen, setScreen, settings.features.deepLinking);
 
   // Legacy shortcuts kept in a raw listener so Ctrl+K can intercept
   // browser default. The new per-screen shortcut hook covers single-key
@@ -165,7 +212,7 @@ function V5Shell() {
         background: 'var(--v5-bg)',
         color: 'var(--v5-txt)',
         overflow: 'hidden',
-        fontFamily: "'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+        fontFamily: "var(--v5-font-family, 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif)",
         fontFeatureSettings: '"cv11", "ss01"',
       }}
     >
@@ -189,7 +236,8 @@ function V5Shell() {
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           <main
             key={screen}
-            className="v5-ani"
+            // Feature: viewTransitions — apply fade-up animation only when on.
+            className={settings.features.viewTransitions ? 'v5-ani' : undefined}
             style={{
               flex: 1,
               overflow: 'hidden',
@@ -212,6 +260,11 @@ function V5Shell() {
   );
 }
 
+// Settings sync helper lives in `./settings/syncToServer` so it can be
+// unit-tested independently — see `syncToServer.test.ts`. It throws when
+// the API resolves with `success: false` so the provider correctly flips
+// to `error` rather than masking 401/404/413 as `saved`.
+
 export function V5App() {
   // Lazy client creation keeps SSR & test environments from booting a query
   // store they'll never use. One store per app instance is intentional.
@@ -220,9 +273,12 @@ export function V5App() {
   return (
     <QueryClientProvider client={queryClient}>
       <V5ThemeProvider>
-        <V5ToastProvider>
-          <V5Shell />
-        </V5ToastProvider>
+        <V5SettingsProvider syncToServer={syncSettingsToServer}>
+          <V5ToastProvider>
+            <SettingsBridge />
+            <V5Shell />
+          </V5ToastProvider>
+        </V5SettingsProvider>
       </V5ThemeProvider>
     </QueryClientProvider>
   );

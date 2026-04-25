@@ -632,6 +632,7 @@ fn make_user(username: &str, email: &str) -> User {
         accessibility_needs: None,
         cost_center: None,
         department: None,
+        settings: None,
     }
 }
 

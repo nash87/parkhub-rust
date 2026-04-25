@@ -45,6 +45,14 @@ pub struct User {
     /// Department for billing allocation
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub department: Option<String>,
+    /// Per-user v5 customization blob (theme, sidebar variant, density,
+    /// font, feature toggles, notifications, privacy). Schema is owned by
+    /// the frontend (parkhub-web/src/design-v5/settings/settings.ts) and
+    /// stored opaquely as JSON. `None` means "user has not customized";
+    /// clients fall back to factory defaults defined in the frontend.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "gen-types", ts(type = "Record<string, unknown> | null"))]
+    pub settings: Option<serde_json::Value>,
 }
 
 const fn default_credits_quota() -> i32 {

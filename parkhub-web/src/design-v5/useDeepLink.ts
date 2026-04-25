@@ -58,17 +58,20 @@ export function writeScreenToUrl(screen: ScreenId): void {
 export function useSyncScreenToUrl(
   screen: ScreenId,
   onPopState: (screen: ScreenId) => void,
+  enabled: boolean = true,
 ): void {
   useEffect(() => {
+    if (!enabled) return;
     writeScreenToUrl(screen);
-  }, [screen]);
+  }, [screen, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (typeof window === 'undefined') return;
     const handler = () => {
       onPopState(readScreenFromUrl(screen));
     };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
-  }, [screen, onPopState]);
+  }, [screen, onPopState, enabled]);
 }
