@@ -1,42 +1,49 @@
 version: 2
 updates:
-  # GitHub Actions — group all action bumps into one PR
+  # GitHub Actions — group all minor + patch action bumps. Major bumps
+  # remain individual so workflow YAML can be reviewed action-by-action.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
     groups:
-      actions:
+      github-actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     labels: ["dependencies", "ci"]
     open-pull-requests-limit: 5
 
-  # npm (frontend)
+  # npm (frontend, parkhub-web). Major-version updates kept ungrouped
+  # so React 19 -> 20, Astro 6 -> 7, etc. each get their own review.
   - package-ecosystem: "npm"
     directory: "/parkhub-web"
     schedule:
       interval: "weekly"
       day: "monday"
     groups:
-      npm-minor-patch:
+      npm-deps:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
     labels: ["dependencies", "frontend"]
     open-pull-requests-limit: 5
 
-  # Rust / Cargo
+  # Rust / Cargo (workspace root). Major-version updates kept ungrouped
+  # so axum 0.x bumps, tokio breaking changes, etc. get individual review.
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
     groups:
-      cargo-minor-patch:
+      rust-deps:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
     labels: ["dependencies", "rust"]
     open-pull-requests-limit: 5
 
-  # Docker
+  # Docker base images. Tag bumps stay individual — base image upgrades
+  # are infrequent and security-sensitive.
   - package-ecosystem: "docker"
     directory: "/"
     schedule:

@@ -1,0 +1,155 @@
+# parkhub-rust — Lefthook git-hook config
+#
+# Local-first CI: shift gates left so 90%+ of CI failures are caught
+# before push, eliminating the 15-30 min GitHub feedback loop on
+# trivially-local-detectable failures (cargo fmt, cargo check,
+# OpenAPI/types drift, etc.).
+#
+# Reference plan: ~/Obsidian/Forge/Plans/2026-04-25-parkhub-local-first-ci-workflow.md
+#
+# One-time setup (after `npm install` and Rust toolchain):
+#
+#     npx lefthook install
+#
+# (or install the standalone binary: https://github.com/evilmartians/lefthook)
+#
+# Replay full local CI without committing/pushing:
+#
+#     lefthook run pre-commit   # fast, staged-files only
+#     lefthook run pre-push     # full gates (clippy, drift, vitest)
+#
+# Bypass in emergencies (logged + frowned-upon — open a follow-up):
+#
+#     git push --no-verify
+#
+# Hook commands intentionally call `cargo` / `npx` directly (not `fop`)
+# because contributors may not have fop installed. fop users can run
+# `fop build` / `fop test` manually before pushing.
+---
+min_version: 1.10.0
+
+# pre-commit: fast, only on staged files. Designed to add < 5s on typical commits.
+pre-commit:
+  parallel: true
+  commands:
+    fmt-rust:
+      glob: "**/*.rs"
+      run: cargo fmt --all -- --check
+      stage_fixed: true
+      fail_text: |
+        cargo fmt found unformatted Rust files.
+        Fix with: cargo fmt --all
+
+    lint-ts:
+      # Biome (Rust-native, MIT) handles linting + formatting in one
+      # pass — replaces the eslint + prettier combo. ~25× faster than
+      # eslint, single config (parkhub-web/biome.json). `biome check`
+      # runs both lint and format-check together. `stage_fixed: true`
+      # re-stages files Biome auto-fixes.
+      glob: "parkhub-web/**/*.{ts,tsx,js,jsx,mjs,cjs}"
+      root: "parkhub-web/"
+      # Skip cleanly until Biome is installed (`npm install`). Once
+      # node_modules/@biomejs/biome exists the gate becomes active.
+      skip:
+        - run: test ! -d parkhub-web/node_modules/@biomejs/biome
+      run: npx --no-install biome check --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+      fail_text: |
+        Biome found lint or format violations.
+        Auto-fix with: cd parkhub-web && npx biome check --write src/
+
+    typecheck-ts:
+      # `astro check` is the canonical type-checker for Astro projects:
+      # it walks .astro + .ts(x) files using the project's tsconfig.
+      # Project-wide because tsc cannot type-check a single file in
+      # isolation. Only fires when at least one TS/TSX file is staged.
+      # Skipped cleanly if parkhub-web/node_modules is missing — this
+      # keeps the gate non-fatal on fresh clones until contributors run
+      # `npm install` (the failure message points them there).
+      glob: "parkhub-web/**/*.{ts,tsx,astro}"
+      root: "parkhub-web/"
+      skip:
+        - run: test ! -d parkhub-web/node_modules
+      run: npx astro check
+      fail_text: |
+        TypeScript type errors. Fix and re-commit.
+        If `astro check` fails to start, run `cd parkhub-web && npm install` first.
+
+# pre-push: full local replica of the GitHub Actions "required" gates.
+# Catches the 12-fail compile cascade, drift, clippy violations, vitest
+# failures — all locally before the 15-30 min CI loop.
+pre-push:
+  parallel: true
+  commands:
+    cargo-check:
+      # The exact gate that would have caught the 12-fail compile
+      # cascade where 15 `User { ..settings: None }` field
+      # initializers were missing. Mirrors `.github/workflows/ci.yml`
+      # `check` and `client-check` jobs — parkhub-common + parkhub-
+      # server (headless) + parkhub-client. parkhub-desktop is
+      # excluded here because it pulls in tauri+webkit2gtk system deps
+      # that not every dev box has installed.
+      run: |
+        mkdir -p parkhub-web/dist
+        [ -f parkhub-web/dist/index.html ] || \
+          printf '%s' '<!doctype html><html><body></body></html>' \
+          > parkhub-web/dist/index.html
+        cargo check --locked -p parkhub-common --all-targets
+        cargo check --locked -p parkhub-server \
+          --no-default-features --features headless --all-targets
+        cargo check --locked -p parkhub-client --all-targets
+      fail_text: |
+        cargo check failed. Fix compile errors before pushing.
+        Tip: this is the gate that catches missing struct fields and
+        type errors instantly — push only when this passes.
+
+    cargo-clippy:
+      # Mirrors `.github/workflows/ci.yml#clippy` headless lints.
+      # Same scope as cargo-check above (no parkhub-desktop / tauri).
+      run: |
+        mkdir -p parkhub-web/dist
+        [ -f parkhub-web/dist/index.html ] || \
+          printf '%s' '<!doctype html><html><body></body></html>' \
+          > parkhub-web/dist/index.html
+        cargo clippy --locked -p parkhub-common --all-targets -- -D warnings
+        cargo clippy --locked -p parkhub-server \
+          --no-default-features --features headless --all-targets -- \
+          -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
+      fail_text: |
+        Clippy violations. Fix or annotate with `#[allow(...)]` + reason.
+
+    cargo-test-fast:
+      # Lib-only tests — fast feedback. Integration + e2e run on CI.
+      # Mirrors `.github/workflows/ci.yml#test` headless scope so pre-
+      # push stays under ~2 min on cached builds.
+      run: |
+        mkdir -p parkhub-web/dist
+        [ -f parkhub-web/dist/index.html ] || \
+          printf '%s' '<!doctype html><html><body></body></html>' \
+          > parkhub-web/dist/index.html
+        cargo test --locked -p parkhub-common --lib
+        cargo test --locked -p parkhub-server \
+          --no-default-features --features headless --lib
+      fail_text: |
+        Library tests failing. Run locally to debug:
+          cargo test -p parkhub-common --lib
+          cargo test -p parkhub-server --no-default-features --features headless --lib
+
+    vitest:
+      # Fast loop: only run vitest specs for files changed since main.
+      # Use `npx vitest --run` (no --changed) on rebases to cover all.
+      root: "parkhub-web/"
+      run: npx vitest --run --changed
+      fail_text: |
+        Frontend tests failing. Run locally to debug:
+          cd parkhub-web && npx vitest --run
+
+    openapi-drift:
+      run: scripts/check-openapi-drift.sh
+      fail_text: |
+        OpenAPI snapshot drifted. See script output for the regen command.
+
+    types-drift:
+      run: scripts/check-types-drift.sh
+      fail_text: |
+        ts-rs TypeScript bindings drifted. See script output for the regen command.
