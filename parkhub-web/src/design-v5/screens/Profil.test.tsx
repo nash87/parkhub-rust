@@ -172,4 +172,29 @@ describe('ProfilV5', () => {
     });
     expect(mockToast).not.toHaveBeenCalledWith('Passwort geändert', 'success');
   });
+
+  it('associates each Field label with its input via htmlFor + matching id (WCAG 2.1 AA)', async () => {
+    mockMe.mockResolvedValue({ success: true, data: USER });
+    const { container } = renderScreen();
+    await waitFor(() => expect(screen.getByDisplayValue('Florian Kaiser')).toBeInTheDocument());
+    // Open password panel so all 5 form inputs are present
+    fireEvent.click(screen.getByTestId('profil-pw-toggle'));
+    await waitFor(() => {
+      expect(document.querySelectorAll('input[type="password"]').length).toBe(3);
+    });
+
+    const labels = container.querySelectorAll<HTMLLabelElement>('label[for]');
+    expect(labels.length).toBeGreaterThanOrEqual(5);
+    for (const label of labels) {
+      const forId = label.getAttribute('for')!;
+      const input = container.querySelector(`#${forId}`);
+      expect(input, `label[for="${forId}"] must point at a real input`).not.toBeNull();
+      expect(input?.tagName).toBe('INPUT');
+    }
+    // Sanity-check the five expected ids are present
+    for (const id of ['profil-name', 'profil-email', 'profil-pw-current', 'profil-pw-new', 'profil-pw-confirm']) {
+      expect(container.querySelector(`#${id}`), `expected input id "${id}"`).not.toBeNull();
+      expect(container.querySelector(`label[for="${id}"]`), `expected label for "${id}"`).not.toBeNull();
+    }
+  });
 });

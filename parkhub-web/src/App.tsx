@@ -19,6 +19,10 @@ import { GlobalCommandPalette } from './design-v5/GlobalCommandPalette';
 // (login, welcome, register) never pay its ~150KB cost in the main chunk.
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPaletteProvider } from './components/CommandPaletteProvider';
+// PWA offline banner — eager so it can fire the moment connectivity drops.
+// Component is tiny (≈1KB after gzip) and gates on navigator.onLine, so it
+// renders nothing on the happy path.
+import { OfflineIndicator } from './components/PWAEnhanced';
 
 // Lazy helper — wraps named exports for React.lazy and auto-registers
 // the module loader for hover-intent prefetching.
@@ -333,6 +337,9 @@ export function App() {
         <UseCaseProvider>
         <FeaturesProvider>
         <AuthProvider>
+          {/* PWA offline banner — mounted top-level, no idle defer, so the
+              user is told the moment connectivity drops. role="alert". */}
+          <OfflineIndicator />
           <AppRoutes />
           <DeferredOverlays />
           {/* v5 ⌘K palette — mounted globally, works on every route. */}
