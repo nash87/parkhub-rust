@@ -51,7 +51,9 @@ pre-commit:
       # Skip cleanly until Biome is installed (`npm install`). Once
       # node_modules/@biomejs/biome exists the gate becomes active.
       skip:
-        - run: test ! -d parkhub-web/node_modules/@biomejs/biome
+        # Path is relative to root: parkhub-web/. Don't include the
+        # parkhub-web/ prefix or it nests to parkhub-web/parkhub-web/...
+        - run: test ! -d node_modules/@biomejs/biome
       run: npx --no-install biome check --no-errors-on-unmatched {staged_files}
       stage_fixed: true
       fail_text: |
@@ -69,7 +71,8 @@ pre-commit:
       glob: "parkhub-web/**/*.{ts,tsx,astro}"
       root: "parkhub-web/"
       skip:
-        - run: test ! -d parkhub-web/node_modules
+        # Relative to root: parkhub-web/. See note above.
+        - run: test ! -d node_modules
       run: npx astro check
       fail_text: |
         TypeScript type errors. Fix and re-commit.

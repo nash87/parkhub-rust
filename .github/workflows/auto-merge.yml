@@ -19,7 +19,11 @@ name: Auto-merge on label
 
 on:
   pull_request_target:
-    types: [labeled, synchronize, opened, reopened, ready_for_review]
+    # Listen only on `labeled` (and `reopened` so a closed-then-reopened PR
+    # with the label still attached re-arms once). NOT `synchronize` —
+    # GitHub deliberately disables auto-merge after pushes from contributors
+    # without write access, and we don't want to defeat that safety.
+    types: [labeled, reopened]
 
 permissions:
   pull-requests: write
