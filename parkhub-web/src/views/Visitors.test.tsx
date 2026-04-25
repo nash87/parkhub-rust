@@ -110,7 +110,7 @@ const sampleVisitors = [
 
 describe('VisitorsPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn((url: string) => {
+    (global as any).fetch = vi.fn((url: string) => {
       if (typeof url === 'string' && url.includes('/api/v1/visitors')) {
         return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
       }
@@ -156,7 +156,7 @@ describe('VisitorsPage', () => {
 
 describe('AdminVisitorsPage', () => {
   beforeEach(() => {
-    global.fetch = vi.fn(() =>
+    (global as any).fetch = vi.fn(() =>
       Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response)
     );
   });
@@ -175,7 +175,7 @@ describe('AdminVisitorsPage', () => {
   });
 
   it('shows empty state when no visitors', async () => {
-    global.fetch = vi.fn(() =>
+    (global as any).fetch = vi.fn(() =>
       Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) } as Response)
     );
     render(<AdminVisitorsPage />);
@@ -222,7 +222,7 @@ describe('AdminVisitorsPage', () => {
 
 describe('VisitorsPage - extended', () => {
   beforeEach(() => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/api/v1/visitors') && !url.includes('admin')) {
         return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
       }
@@ -285,15 +285,15 @@ describe('VisitorsPage - extended', () => {
     const dateInput = form!.querySelector('input[type="datetime-local"]');
 
     // name
-    fireEvent.change(textInputs[0], { target: { value: 'Test Visitor' } });
+    fireEvent.change(textInputs[0]!, { target: { value: 'Test Visitor' } });
     // email
     if (emailInput) fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
     // date
     if (dateInput) fireEvent.change(dateInput, { target: { value: '2026-04-20T10:00' } });
     // vehicle plate (optional)
-    if (textInputs[1]) fireEvent.change(textInputs[1], { target: { value: 'XY-999' } });
+    if (textInputs[1]) fireEvent.change(textInputs[1]!, { target: { value: 'XY-999' } });
     // purpose (optional)
-    if (textInputs[2]) fireEvent.change(textInputs[2], { target: { value: 'Meeting' } });
+    if (textInputs[2]) fireEvent.change(textInputs[2]!, { target: { value: 'Meeting' } });
 
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => {
@@ -323,7 +323,7 @@ describe('VisitorsPage - extended', () => {
   it('shows error when registration server returns failure', async () => {
     const toast = await import('react-hot-toast');
     const errSpy = vi.spyOn(toast.default, 'error');
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/visitors/register')) {
         return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Server fail' } }) } as Response);
       }
@@ -339,7 +339,7 @@ describe('VisitorsPage - extended', () => {
     const textInputs = form.querySelectorAll('input[type="text"]');
     const emailInput = form.querySelector('input[type="email"]');
     const dateInput = form.querySelector('input[type="datetime-local"]');
-    fireEvent.change(textInputs[0], { target: { value: 'X' } });
+    fireEvent.change(textInputs[0]!, { target: { value: 'X' } });
     if (emailInput) fireEvent.change(emailInput, { target: { value: 'x@x.com' } });
     if (dateInput) fireEvent.change(dateInput, { target: { value: '2026-04-20T10:00' } });
     fireEvent.click(screen.getByText('Save'));
@@ -352,7 +352,7 @@ describe('VisitorsPage - extended', () => {
   it('catches network errors during registration', async () => {
     const toast = await import('react-hot-toast');
     const errSpy = vi.spyOn(toast.default, 'error');
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/visitors/register')) {
         return Promise.reject(new Error('boom'));
       }
@@ -368,7 +368,7 @@ describe('VisitorsPage - extended', () => {
     const textInputs = form.querySelectorAll('input[type="text"]');
     const emailInput = form.querySelector('input[type="email"]');
     const dateInput = form.querySelector('input[type="datetime-local"]');
-    fireEvent.change(textInputs[0], { target: { value: 'X' } });
+    fireEvent.change(textInputs[0]!, { target: { value: 'X' } });
     if (emailInput) fireEvent.change(emailInput, { target: { value: 'x@x.com' } });
     if (dateInput) fireEvent.change(dateInput, { target: { value: '2026-04-20T10:00' } });
     fireEvent.click(screen.getByText('Save'));
@@ -394,7 +394,7 @@ describe('VisitorsPage - extended', () => {
     await waitFor(() => screen.getByText('Alice Smith'));
     // Alice has qr_code
     const qrBtns = screen.getAllByTitle('Show QR');
-    fireEvent.click(qrBtns[0]);
+    fireEvent.click(qrBtns[0]!);
     expect(screen.getByText('Visitor QR Code')).toBeTruthy();
   });
 
@@ -402,7 +402,7 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const qrBtns = screen.getAllByTitle('Show QR');
-    fireEvent.click(qrBtns[0]);
+    fireEvent.click(qrBtns[0]!);
     expect(screen.getByText('Visitor QR Code')).toBeTruthy();
     // Click backdrop
     const backdrop = screen.getByText('Visitor QR Code').closest('.fixed');
@@ -416,7 +416,7 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const qrBtns = screen.getAllByTitle('Show QR');
-    fireEvent.click(qrBtns[0]);
+    fireEvent.click(qrBtns[0]!);
     fireEvent.click(screen.getByText('Close'));
     await waitFor(() => {
       expect(screen.queryByText('Visitor QR Code')).toBeNull();
@@ -427,7 +427,7 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const checkInBtns = screen.getAllByTitle('Check In');
-    fireEvent.click(checkInBtns[0]);
+    fireEvent.click(checkInBtns[0]!);
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/v1/visitors/v1/check-in',
@@ -440,7 +440,7 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const cancelBtns = screen.getAllByTitle('Cancel');
-    fireEvent.click(cancelBtns[0]);
+    fireEvent.click(cancelBtns[0]!);
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/v1/visitors/v1',
@@ -471,7 +471,7 @@ describe('VisitorsPage - extended', () => {
   });
 
   it('handles check-in error', async () => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/api/v1/visitors') && !opts?.method) {
         return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
       }
@@ -483,12 +483,12 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const checkInBtns = screen.getAllByTitle('Check In');
-    fireEvent.click(checkInBtns[0]);
+    fireEvent.click(checkInBtns[0]!);
     // Error toast would be shown
   });
 
   it('handles cancel error', async () => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/api/v1/visitors') && !opts?.method) {
         return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
       }
@@ -500,12 +500,12 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const cancelBtns = screen.getAllByTitle('Cancel');
-    fireEvent.click(cancelBtns[0]);
+    fireEvent.click(cancelBtns[0]!);
     // Error toast would be shown
   });
 
   it('handles network failure on check-in', async () => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/api/v1/visitors') && !opts?.method) {
         return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
       }
@@ -517,12 +517,12 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const checkInBtns = screen.getAllByTitle('Check In');
-    fireEvent.click(checkInBtns[0]);
+    fireEvent.click(checkInBtns[0]!);
     // Should not crash
   });
 
   it('handles network failure on cancel', async () => {
-    global.fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, opts?: any) => {
       if (typeof url === 'string' && url.includes('/api/v1/visitors') && !opts?.method) {
         return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleVisitors }) } as Response);
       }
@@ -534,12 +534,12 @@ describe('VisitorsPage - extended', () => {
     render(<VisitorsPage />);
     await waitFor(() => screen.getByText('Alice Smith'));
     const cancelBtns = screen.getAllByTitle('Cancel');
-    fireEvent.click(cancelBtns[0]);
+    fireEvent.click(cancelBtns[0]!);
     // Should not crash
   });
 
   it('shows loading state initially', () => {
-    global.fetch = vi.fn(() => new Promise(() => {})); // Never resolves
+    (global as any).fetch = vi.fn(() => new Promise(() => {})); // Never resolves
     render(<VisitorsPage />);
     expect(screen.getByText('Visitor Pre-Registration')).toBeTruthy();
   });
