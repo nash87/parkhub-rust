@@ -9,6 +9,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [4.15.0] - 2026-04-25
+
+Minor bump landing the 2026-04-25 release wave: v5 customization framework,
+branding alignment, broad CI/security/test-infrastructure cleanup, and
+~236 fewer typecheck-ts errors via Phase 1–4b. Aligns with parkhub-php
+4.14.0 release per `docs/parity-governance.md` (parkhub-php catches the
+4.14 baseline; both runtimes ship 4.15 in lockstep next cycle).
+
 ### Changed
 
 - **Design v5 rollout complete**: all 26 navigation screens now ship as real v5 components; the `<PlaceholderV5>` fallback has been retired and `SCREENS` is typed as a total `Record<ScreenId, …>` so missing screens become compile-time errors instead of runtime fallbacks.
@@ -20,9 +30,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Customization Framework v5** — settings, sidebar variants, density, fonts, feature toggles, `deepLinking` gate (#392).
 - **Branding alignment** — user-facing v5 strings switched from "KI"/"AI" to "Assistent" (#394).
 - **CI security swap** — trufflehog (AGPL) replaced by gitleaks binary direct (MIT) (#403).
-- **CodeQL** — actions language analysis split into its own job (#402).
-- **Deps** — tailwind pinned past 4.2.4 vite regression (#404); trivy-action SHA-pinned to v0.36 (#408).
+- **CodeQL** — actions language analysis split into its own job (#402); `required_status_checks` migrated from legacy `CodeQL` aggregate to language-specific `Analyze (rust|javascript-typescript|actions)` to eliminate the NEUTRAL-blocks-merge edge case.
+- **Deps** — tailwind pinned past 4.2.4 vite regression (#404); trivy-action SHA-pinned to v0.36 (#408); Dependabot cooldown defaults 5/10/15-day (#409).
 - **Policies fix** — `Policies.tsx` draft effect re-keyed on `activeId` only; previous dependency on the `active` object reference clobbered in-flight edits on every render (#407).
+- **Analytics test fix** — wait for lazy `UPlotChart` canvases before counting (#416).
+- **typescript devDep + @astrojs/check** installed so `npx tsc` / `astro check` actually run instead of silently passing on missing tools (#414, lefthook hardening #412).
+- **Phase 1–4b tsc cleanup** — typed `firstCall`/`nthCall` helpers in `client.test.ts` (#415), `wsAt` helper in `useWebSocket.test.ts` (#417), Phase 4a/4b view-test pattern triple `(global as any).fetch + arr[N]! + ([url,opts]:any)` across Visitors/AdminUpdates/AdminSSO/AdminWebhooks/EVCharging/AdminZones/AdminAnnouncements/NotificationPreferences (#418, #419). Drives parkhub-web tsc baseline from 558 → ~322 errors.
+- **parity-governance.md** aligned across both runtimes (#413).
+- **parkhub-web README** — replaced Astro starter boilerplate with real workspace overview (#411).
 
 ---
 
