@@ -25,6 +25,8 @@ feature set with explicitly documented runtime-sensitive exceptions**.
 - Shared REST paths, payload envelopes, and error codes.
 - Module toggle/config surfaces used by the shared frontend.
 - Public README / API / FEATURES claims about what ParkHub ships.
+- Release-facing version surfaces (package metadata, health/version
+  endpoints, and release tags) when a runtime is cut.
 
 ## Allowed differences
 
@@ -34,6 +36,10 @@ Allowed differences are implementation details, not product drift:
 - framework/library choices
 - packaging/distribution model
 - deployment ergonomics
+
+Release-channel mechanics may differ between runtimes, but they must stay
+explicitly documented. A runtime must not publish a tag whose public version
+surfaces still report a different version.
 
 Customer-visible differences are only acceptable when all three are true:
 
@@ -55,5 +61,8 @@ contract, or public product claim, it must also:
 
 No release should claim "same feature set" unless README, API docs, FEATURES
 docs, and the parity doc all agree.
-Release tags must also match the checked-in version surfaces in
-`Cargo.toml`, root `package.json`, and `parkhub-web/package.json`.
+
+No `v*` release tag should ship unless the tag version matches the runtime's
+public version surfaces (`Cargo.toml`, root `package.json`, and
+`parkhub-web/package.json`). The release workflow enforces this gate before
+the pre-release test job runs.
