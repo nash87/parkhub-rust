@@ -27,7 +27,7 @@ utoipa = { version = "5", features = ["chrono", "uuid"] }
 # swc_common 0.33 → which references `serde::__private` that is no longer
 # public in serde 1.0.228+. Stick with the default (unformatted) output —
 # git-diff-based drift detection in CI doesn't need pretty formatting.
-ts-rs = { version = "10", optional = true, features = ["serde-compat", "no-serde-warnings", "chrono-impl", "uuid-impl", "serde-json-impl"] }
+ts-rs = { version = "12", optional = true, features = ["serde-compat", "no-serde-warnings", "chrono-impl", "uuid-impl", "serde-json-impl"] }
 
 [features]
 # Enable on-disk TypeScript export via #[derive(ts_rs::TS)]. Consumed by the

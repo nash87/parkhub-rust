@@ -156,7 +156,7 @@ web-push = { version = "0.11", features = ["hyper-client"] }
 # License: MIT OR Apache-2.0 (commercial-safe).
 # See parkhub-common/Cargo.toml for the rationale behind dropping the
 # `format` feature (swc_common + serde 1.0.228 incompat).
-ts-rs = { version = "10", optional = true, features = ["serde-compat", "no-serde-warnings", "chrono-impl", "uuid-impl", "serde-json-impl"] }
+ts-rs = { version = "12", optional = true, features = ["serde-compat", "no-serde-warnings", "chrono-impl", "uuid-impl", "serde-json-impl"] }
 
 [build-dependencies]
 slint-build = { version = "1.15", optional = true }  # updated from 1.14
