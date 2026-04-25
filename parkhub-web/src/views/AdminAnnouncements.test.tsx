@@ -159,7 +159,7 @@ describe('AdminAnnouncementsPage', () => {
   it('delete failure shows error', async () => {
     mockDeleteAnnouncement.mockResolvedValue({ success: false, error: { message: 'Cannot delete' } });
     render(<AdminAnnouncementsPage />);
-    await waitFor(() => fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]));
+    await waitFor(() => fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]!));
     fireEvent.click(screen.getByText('ConfirmDel'));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Cannot delete'));
   });
@@ -173,7 +173,7 @@ describe('AdminAnnouncementsPage', () => {
   it('cancels delete confirmation dialog', async () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
-    fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]);
+    fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]!);
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('CancelDel'));
     await waitFor(() => {

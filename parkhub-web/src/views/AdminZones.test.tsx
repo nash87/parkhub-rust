@@ -94,7 +94,7 @@ describe('AdminZonesPage', () => {
   it('renders title and subtitle', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     expect(screen.getByText('Parking Zones')).toBeDefined();
@@ -104,7 +104,7 @@ describe('AdminZonesPage', () => {
   it('renders zone cards with tier badges', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -116,7 +116,7 @@ describe('AdminZonesPage', () => {
   it('shows tier display names', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -128,7 +128,7 @@ describe('AdminZonesPage', () => {
   it('shows multiplier values', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -139,7 +139,7 @@ describe('AdminZonesPage', () => {
 
   it('shows empty state', async () => {
     globalThis.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [] }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [] }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -159,7 +159,7 @@ describe('AdminZonesPage', () => {
   it('shows description for zones that have one', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -170,7 +170,7 @@ describe('AdminZonesPage', () => {
   it('shows max capacity values', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -182,7 +182,7 @@ describe('AdminZonesPage', () => {
   it('renders zone names from API response', async () => {
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => {
@@ -194,7 +194,7 @@ describe('AdminZonesPage', () => {
     const user = (await import('@testing-library/user-event')).default.setup();
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Parking Zones')).toBeInTheDocument());
@@ -215,13 +215,13 @@ describe('AdminZonesPage', () => {
     const user = (await import('@testing-library/user-event')).default.setup();
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
 
     const editBtns = screen.getAllByTitle('Edit Pricing');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     await waitFor(() => {
       expect(screen.getByText('Tier')).toBeInTheDocument();
@@ -247,7 +247,7 @@ describe('AdminZonesPage', () => {
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
 
     const editBtns = screen.getAllByTitle('Edit Pricing');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     await waitFor(() => expect(screen.getByText('Save')).toBeInTheDocument());
     await user.click(screen.getByText('Save'));
@@ -263,7 +263,7 @@ describe('AdminZonesPage', () => {
     const zonesResp = { ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) };
 
     globalThis.fetch = vi.fn((url: string, opts?: any) => {
-      if (opts?.method === 'PUT') return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: false, error: { message: 'Invalid' } }) });
+      if (opts?.method === 'PUT') return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: false, error: { message: 'Invalid' } }) }) as any;
       if (typeof url === 'string' && url.includes('/zones/pricing')) return Promise.resolve(zonesResp);
       return Promise.resolve(lotsResp);
     });
@@ -272,7 +272,7 @@ describe('AdminZonesPage', () => {
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
 
     const editBtns = screen.getAllByTitle('Edit Pricing');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     await user.click(screen.getByText('Save'));
 
@@ -285,13 +285,13 @@ describe('AdminZonesPage', () => {
     const user = (await import('@testing-library/user-event')).default.setup();
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
 
     const editBtns = screen.getAllByTitle('Edit Pricing');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     await waitFor(() => expect(screen.getByText('Cancel')).toBeInTheDocument());
     await user.click(screen.getByText('Cancel'));
@@ -305,13 +305,13 @@ describe('AdminZonesPage', () => {
     const user = (await import('@testing-library/user-event')).default.setup();
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleZones }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
 
     const editBtns = screen.getAllByTitle('Edit Pricing');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     await waitFor(() => expect(screen.getByText('PREMIUM')).toBeInTheDocument());
     await user.click(screen.getByText('PREMIUM'));
@@ -325,7 +325,7 @@ describe('AdminZonesPage', () => {
     }];
     globalThis.fetch = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: sampleLots }) })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: zonesNoCapacity }) });
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: zonesNoCapacity }) }) as any;
 
     render(<AdminZonesPage />);
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
@@ -344,7 +344,7 @@ describe('AdminZonesPage', () => {
     await waitFor(() => expect(screen.getByText('Economy Section')).toBeInTheDocument());
 
     const editBtns = screen.getAllByTitle('Edit Pricing');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
     await user.click(screen.getByText('Save'));
 
     await waitFor(() => {

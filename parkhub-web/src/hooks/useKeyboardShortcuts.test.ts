@@ -28,7 +28,7 @@ describe('useKeyboardShortcuts', () => {
   }
 
   it('navigates to /book on Ctrl+B', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('b', { ctrlKey: true });
 
@@ -36,7 +36,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('navigates to /book on Meta+B (macOS)', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('b', { metaKey: true });
 
@@ -44,7 +44,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('toggles command palette on Ctrl+K', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('k', { ctrlKey: true });
 
@@ -52,7 +52,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('toggles command palette on Meta+K (macOS)', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('k', { metaKey: true });
 
@@ -60,7 +60,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('does not navigate on B without modifier', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('b');
 
@@ -68,7 +68,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('does not toggle command palette on K without modifier', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('k');
 
@@ -76,7 +76,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('does not respond to unrelated keys with modifier', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('a', { ctrlKey: true });
 
@@ -86,7 +86,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('cleans up event listener on unmount', () => {
     const removeSpy = vi.spyOn(window, 'removeEventListener');
-    const { unmount } = renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    const { unmount } = renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     unmount();
 
@@ -94,7 +94,7 @@ describe('useKeyboardShortcuts', () => {
   });
 
   it('handles multiple rapid key presses', () => {
-    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette }));
+    renderHook(() => useKeyboardShortcuts({ onToggleCommandPalette: onToggleCommandPalette as any }));
 
     fireKey('k', { ctrlKey: true });
     fireKey('k', { ctrlKey: true });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -39,7 +39,7 @@ const columns = [
   columnHelper.accessor('name', { header: 'Name', enableSorting: true }),
   columnHelper.accessor('email', { header: 'Email', enableSorting: true }),
   columnHelper.accessor('role', { header: () => 'Role', enableSorting: false }),
-];
+] as ColumnDef<TestRow, unknown>[];
 
 const sampleData: TestRow[] = [
   { id: '1', name: 'Alice', email: 'alice@test.com', role: 'admin' },
