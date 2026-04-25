@@ -171,7 +171,7 @@ primitives ([docs.github.com/en/actions](https://docs.github.com/en/actions)):
 - **Desktop client compile check** — `ci.yml` now runs a dedicated
   `parkhub-client` compile gate on Linux PRs so Slint/UI breakage is caught
   before release packaging.
-- **Secret scan** — trufflehog on every PR.
+- **Secret scan** — `gitleaks` (MIT) on every PR over the full git history. Replaced trufflehog (AGPL) on 2026-04-25 (#403).
 - **Artifact attestations** — `docker/build-push-action@v7` chains
   `actions/attest-build-provenance@v4` to publish SLSA v1 provenance for every
   pushed image. See

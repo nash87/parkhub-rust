@@ -66,7 +66,7 @@
 | **Themes** | OKLCH tokens across `marble_light`, `marble_dark`, `void` — self-hosted Inter-Variable keeps the LCP budget green. |
 | **Command Palette** | cmdk-powered, mounted globally, reachable from every route with `⌘K` / `Ctrl+K`. |
 | **Realtime** | Live cells hydrate from `/api/v1/events/stream` (SSE) with a polling fallback; charts render via uPlot. |
-| **Accessibility** | axe-core runs in CI on every v5 route; keyboard-only nav verified for the full shell + AI panel. |
+| **Accessibility** | axe-core runs in CI on every v5 route; keyboard-only nav verified for the full shell + Assistent panel. |
 | **Types** | `ts-rs` generates `src/generated/types/*` from the Rust backend so Fleet events stay type-safe end-to-end. |
 
 Live demo: <https://parkhub-rust-demo.onrender.com>.
