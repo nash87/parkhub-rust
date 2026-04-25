@@ -65,15 +65,21 @@ pre-commit:
       # it walks .astro + .ts(x) files using the project's tsconfig.
       # Project-wide because tsc cannot type-check a single file in
       # isolation. Only fires when at least one TS/TSX file is staged.
-      # Skipped cleanly if parkhub-web/node_modules is missing — this
-      # keeps the gate non-fatal on fresh clones until contributors run
-      # `npm install` (the failure message points them there).
+      # Skipped cleanly if @astrojs/check or typescript is missing — without
+      # these the previous `npx astro check` would silently exit 0 in
+      # non-TTY contexts because the install prompt falls through.
       glob: "parkhub-web/**/*.{ts,tsx,astro}"
       root: "parkhub-web/"
       skip:
-        # Relative to root: parkhub-web/. See note above.
+        # All paths relative to root: parkhub-web/.
         - run: test ! -d node_modules
-      run: npx astro check
+        - run: test ! -d node_modules/@astrojs/check
+        - run: test ! -d node_modules/typescript
+      env:
+        # Disable astro's interactive "install @astrojs/check?" prompt so
+        # missing tools fail loudly instead of exiting 0 silently.
+        CI: "1"
+      run: npx --no-install astro check
       fail_text: |
         TypeScript type errors. Fix and re-commit.
         If `astro check` fails to start, run `cd parkhub-web && npm install` first.
@@ -141,8 +147,12 @@ pre-push:
     vitest:
       # Fast loop: only run vitest specs for files changed since main.
       # Use `npx vitest --run` (no --changed) on rebases to cover all.
+      # `--no-install` avoids npx silently downloading a same-named
+      # registry package if vitest happens to be missing locally.
       root: "parkhub-web/"
-      run: npx vitest --run --changed
+      skip:
+        - run: test ! -d node_modules/vitest
+      run: npx --no-install vitest --run --changed
       fail_text: |
         Frontend tests failing. Run locally to debug:
           cd parkhub-web && npx vitest --run
