@@ -4,6 +4,12 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      publish_version_tags:
+        description: 'Also publish Cargo version tags from the selected ref.'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -43,17 +49,70 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract image metadata
+      - name: Prepare image metadata
         id: meta
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=sha-
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          PUBLISH_VERSION_TAGS: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_version_tags == true }}
+        run: |
+          set -euo pipefail
+          docker_tag_re='^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'
+          semver_re='^[0-9]+[.][0-9]+[.][0-9]+([.-][0-9A-Za-z.-]+)?$'
+          cargo_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          if [[ ! "${cargo_version}" =~ ${semver_re} ]]; then
+            echo "::error::Cargo.toml version is not a Docker-tag-safe semver: ${cargo_version}"
+            exit 1
+          fi
+          short_sha="${GITHUB_SHA::7}"
+          release_version=""
+          ref_tag=""
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ ! "${GITHUB_REF_NAME}" =~ ^v(${semver_re#^}) ]]; then
+              echo "::error::Release tag must be v<semver>, got: ${GITHUB_REF_NAME}"
+              exit 1
+            fi
+            release_version="${BASH_REMATCH[1]}"
+            if [[ "${release_version}" != "${cargo_version}" ]]; then
+              echo "::error::Git tag version (${release_version}) does not match Cargo.toml (${cargo_version})"
+              exit 1
+            fi
+            ref_tag="${GITHUB_REF_NAME}"
+          elif [[ "${PUBLISH_VERSION_TAGS}" == "true" ]]; then
+            release_version="${cargo_version}"
+          fi
+
+          if [[ -n "${ref_tag}" && ! "${ref_tag}" =~ ${docker_tag_re} ]]; then
+            echo "::error::Git tag is not a valid Docker tag: ${ref_tag}"
+            exit 1
+          fi
+          if [[ -n "${release_version}" && ! "${release_version}" =~ ${docker_tag_re} ]]; then
+            echo "::error::Release version is not a valid Docker tag: ${release_version}"
+            exit 1
+          fi
+
+          {
+            echo "tags<<EOF"
+            echo "${IMAGE_REF}:sha-${short_sha}"
+            if [[ "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
+              echo "${IMAGE_REF}:latest"
+            fi
+            if [[ -n "${ref_tag}" ]]; then
+              echo "${IMAGE_REF}:${ref_tag}"
+            fi
+            if [[ -n "${release_version}" ]]; then
+              major_minor="$(printf '%s\n' "${release_version}" | awk -F. '{ print $1 "." $2 }')"
+              echo "${IMAGE_REF}:${release_version}"
+              echo "${IMAGE_REF}:${major_minor}"
+            fi
+            echo "EOF"
+            echo "labels<<EOF"
+            echo "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            echo "org.opencontainers.image.revision=${GITHUB_SHA}"
+            echo "org.opencontainers.image.version=${release_version:-${cargo_version}}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         id: push

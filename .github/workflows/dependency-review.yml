@@ -22,6 +22,8 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        # Advisory until GitHub Dependency Graph is consistently available for this repo.
+        continue-on-error: true
         with:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
