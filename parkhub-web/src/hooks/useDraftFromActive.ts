@@ -8,7 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * "Discard changes" affordances without re-implementing the comparison.
  */
 export interface UseDraftFromActiveMeta<TDraft> {
-  /** True when the current draft differs from the snapshot taken on init. */
+  /** True when the draft has been seeded AND differs from the snapshot. */
   isDirty: boolean;
   /** Re-snapshot the draft from `active` (or clear it if `active` is undefined). */
   reset: () => void;
@@ -18,14 +18,19 @@ export interface UseDraftFromActiveMeta<TDraft> {
 
 export interface UseDraftFromActiveOptions<TActive, TDraft, TKey extends keyof TActive> {
   /**
-   * Property used as the active item's stable discriminator. Defaults to `'id'`
-   * — when active items lack an `id`, pass e.g. `idKey: 'slug'`.
+   * Property used as the active item's stable discriminator.
+   *
+   * When omitted, the hook tries `active.id` if present, then falls back to
+   * reference equality (`Object.is(active, last)`). Reference fallback is
+   * correct when callers always pass a stable object reference for the same
+   * logical item — typical for state that lives in a parent ref or selector.
    */
   idKey?: TKey;
   /**
    * Project the active item into the draft shape. Defaults to a shallow copy
-   * of `active` (or `active` itself when it is a primitive). Override when the
-   * draft only mirrors a subset of the active item (e.g. `(p) => p.body`).
+   * — `[...arr]` for arrays, `{ ...obj }` for objects, `value` for primitives.
+   * Override when the draft only mirrors a subset of the active item
+   * (e.g. `(p) => p.body`).
    *
    * MUST be stable across renders (wrap in `useCallback` upstream). The hook
    * does not memoise it for you.
@@ -40,11 +45,15 @@ export type UseDraftFromActiveResult<TDraft> = [
 ];
 
 function defaultDerive<TActive, TDraft>(active: TActive): TDraft {
-  // Shallow-clone objects so callers can mutate the draft without touching
-  // upstream state; pass primitives through verbatim.
+  // Arrays must be cloned with [...arr] — object spread on an array produces
+  // `{ '0': ..., '1': ... }` which is silently wrong.
+  if (Array.isArray(active)) {
+    return [...active] as unknown as TDraft;
+  }
   if (active !== null && typeof active === 'object') {
     return { ...(active as object) } as unknown as TDraft;
   }
+  // Primitives pass through verbatim.
   return active as unknown as TDraft;
 }
 
@@ -65,7 +74,8 @@ function defaultDerive<TActive, TDraft>(active: TActive): TDraft {
  * draft.
  *
  * Generic over the discriminator key so callers using `slug`, `uuid`, etc.
- * can plug in without falling back to `any`.
+ * can plug in without falling back to `any`. When the type has neither `id`
+ * nor a custom `idKey`, the hook falls back to reference equality.
  *
  * @example Mirror a string body (the Policies screen)
  * ```ts
@@ -78,24 +88,43 @@ function defaultDerive<TActive, TDraft>(active: TActive): TDraft {
  * ```ts
  * const [draft, setDraft, { isDirty, reset }] = useDraftFromActive(active);
  * ```
+ *
+ * @example Custom discriminator
+ * ```ts
+ * useDraftFromActive(active, { idKey: 'slug', derive: (p) => p.body });
+ * ```
  */
 export function useDraftFromActive<
   TActive extends object,
   TDraft = TActive,
-  TKey extends keyof TActive = 'id' extends keyof TActive ? 'id' : keyof TActive,
+  TKey extends keyof TActive = keyof TActive,
 >(
   active: TActive | null | undefined,
   options?: UseDraftFromActiveOptions<TActive, TDraft, TKey>,
 ): UseDraftFromActiveResult<TDraft> {
-  const idKey = (options?.idKey ?? ('id' as TKey)) as TKey;
+  const idKey = options?.idKey;
   const derive = options?.derive ?? (defaultDerive as (a: TActive) => TDraft);
-  // `idKey` is `keyof TActive`, but interfaces don't satisfy
-  // `Record<string, unknown>` — cast through `unknown` to read by string.
+
+  // Discriminator strategy:
+  //   1. Explicit `idKey` → read that property.
+  //   2. No `idKey` but `active.id` exists at runtime → use it.
+  //   3. Neither → reference equality on `active` itself (correct when the
+  //      caller passes a stable parent-owned reference per logical item).
   const readId = useCallback(
-    (a: TActive): unknown => (a as unknown as Record<string, unknown>)[idKey as string],
+    (a: TActive): unknown => {
+      if (idKey !== undefined) {
+        return (a as unknown as Record<string, unknown>)[idKey as string];
+      }
+      const maybeId = (a as unknown as { id?: unknown }).id;
+      return maybeId !== undefined ? maybeId : a;
+    },
     [idKey],
   );
 
+  // `seededRef` distinguishes "never seeded" from "seeded with a value that
+  // happens to be undefined" — `pristineRef.current === undefined` alone is
+  // ambiguous when the draft is intentionally undefined.
+  const seededRef = useRef(false);
   const pristineRef = useRef<TDraft | undefined>(undefined);
   const lastIdRef = useRef<unknown>(undefined);
 
@@ -104,6 +133,7 @@ export function useDraftFromActive<
       const seed = derive(active);
       pristineRef.current = seed;
       lastIdRef.current = readId(active);
+      seededRef.current = true;
       return seed;
     }
     return undefined;
@@ -111,34 +141,37 @@ export function useDraftFromActive<
 
   useEffect(() => {
     const nextId: unknown = active != null ? readId(active) : undefined;
-    if (lastIdRef.current === nextId) {
-      // Same id (or both undefined): preserve in-flight edits.
+    if (lastIdRef.current === nextId && seededRef.current === (active != null)) {
+      // Same id (or both null) AND seeding state matches: preserve in-flight edits.
       return;
     }
     lastIdRef.current = nextId;
     if (active == null) {
       pristineRef.current = undefined;
+      seededRef.current = false;
       setDraft(undefined);
       return;
     }
     const seed = derive(active);
     pristineRef.current = seed;
+    seededRef.current = true;
     setDraft(seed);
   }, [active, derive, readId]);
 
   const reset = useCallback(() => {
     if (active == null) {
       pristineRef.current = undefined;
+      seededRef.current = false;
       setDraft(undefined);
       return;
     }
     const seed = derive(active);
     pristineRef.current = seed;
+    seededRef.current = true;
     setDraft(seed);
   }, [active, derive]);
 
-  const isDirty =
-    pristineRef.current !== undefined && !Object.is(draft, pristineRef.current);
+  const isDirty = seededRef.current && !Object.is(draft, pristineRef.current);
 
   return [draft, setDraft, { isDirty, reset, pristine: pristineRef.current }];
 }
