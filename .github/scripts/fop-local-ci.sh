@@ -29,6 +29,11 @@ Environment:
   FOP_CAPACITY_WAIT_MAX_SECS  fop build queue capacity-wait timeout (default
                               1800s when MemAvailable < 6GB, else fop default)
   FOP_LOCAL_CI_RUN_LINTERS=1  run actionlint + zizmor (if installed) on workflows
+  FOP_LOCAL_CI_DIRECT=1       bypass fop build queue entirely (kernel + earlyoom
+                              handle memory). Use only when fop queue is
+                              unreachable (bootstrap chicken-and-egg) or when
+                              queueing behind cross-tab cargo builds would
+                              starve a frontend-only run for >10 min.
 EOF
 }
 
@@ -260,6 +265,16 @@ write_report() {
 EOF
 }
 
+# run_step: light fop queue allocation (~2 GB) — frontend/tsc/vitest/astro/npm
+# run_step_heavy: heavy allocation (~6 GB) — cargo {fmt,check,clippy,test,build}
+# Backports parkhub-php's --resource-profile pattern (PR #385) to fix the
+# multi-tab capacity contention where parkhub-php's CI port was starved by
+# blanket 6 GB requests for npm-class steps.
+#
+# FOP_LOCAL_CI_DIRECT=1 bypasses the fop queue entirely (kernel handles memory).
+# Use only when the queue is unreachable (bootstrap chicken-and-egg, fop service
+# down, or for short frontend-only runs where the kernel + earlyoom are safer
+# than queueing behind a 1+ hour cargo build in another tab).
 run_step() {
   local name="$1"
   local command="$2"
@@ -268,7 +283,26 @@ run_step() {
     printf 'DRY-RUN: %s\n' "$command"
     return 0
   fi
-  fop build --backend local . --preset custom -- bash -euo pipefail -c "$command"
+  if [[ "${FOP_LOCAL_CI_DIRECT:-}" == "1" ]]; then
+    bash -euo pipefail -c "$command"
+    return $?
+  fi
+  fop build --backend local --resource-profile interactive-small . --preset custom -- bash -euo pipefail -c "$command"
+}
+
+run_step_heavy() {
+  local name="$1"
+  local command="$2"
+  printf '\n==> %s\n' "$name"
+  if [[ "$dry_run" -eq 1 ]]; then
+    printf 'DRY-RUN: %s\n' "$command"
+    return 0
+  fi
+  if [[ "${FOP_LOCAL_CI_DIRECT:-}" == "1" ]]; then
+    bash -euo pipefail -c "$command"
+    return $?
+  fi
+  fop build --backend local --resource-profile batch-medium . --preset custom -- bash -euo pipefail -c "$command"
 }
 
 run_direct() {
@@ -313,9 +347,9 @@ fi
 
 # ─── Stage 3: Rust headless checks (skip if no .rs touched OR pre-push reused) ───
 if (( diff_touch_rust )) && (( ! prepush_validated )); then
-  run_step "cargo fmt" "cargo fmt --all -- --check"
-  run_step "cargo check headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo check --locked --package parkhub-common --all-targets && cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets"
-  run_step "cargo clippy headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones"
+  run_step_heavy "cargo fmt" "cargo fmt --all -- --check"
+  run_step_heavy "cargo check headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo check --locked --package parkhub-common --all-targets && cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets"
+  run_step_heavy "cargo clippy headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones"
 elif (( prepush_validated )); then
   skip_step "cargo fmt" "validated by lefthook pre-push"
   skip_step "cargo check headless" "validated by lefthook pre-push"
@@ -338,20 +372,20 @@ fi
 
 # ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───
 if (( diff_touch_ts_export )); then
-  run_step "typescript bindings drift" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"\$(git status --porcelain parkhub-web/src/generated/)\""
+  run_step_heavy "typescript bindings drift" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"\$(git status --porcelain parkhub-web/src/generated/)\""
 else
   skip_step "typescript bindings drift" "diff-aware: no Rust + no parkhub-web/src/generated/ touched"
 fi
 
 # ─── Stage 6: full profile extras (always full when invoked) ─────────────────
 if [[ "$profile" == "full" ]]; then
-  run_step "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { ./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
-  run_step "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true ./target/release/parkhub-server --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
+  run_step_heavy "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { ./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
+  run_step_heavy "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true ./target/release/parkhub-server --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
 fi
 
 # ─── Stage 7: cd profile extras ──────────────────────────────────────────────
 if [[ "$profile" == "cd" ]]; then
-  run_step "release image preflight" "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
+  run_step_heavy "release image preflight" "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
 fi
 
 write_report "success"
