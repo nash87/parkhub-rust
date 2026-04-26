@@ -13,9 +13,22 @@ profile. The GitHub PR attestation gate expects this exact command:
 
 Profiles:
   pr    Fast PR gate: format, Rust headless checks, frontend tests/build,
-        TypeScript typecheck, generated type drift.
-  full  PR gate plus OpenAPI drift and Playwright smoke/e2e.
-  cd    Release-oriented build and supply-chain preflight.
+        TypeScript typecheck, generated type drift. Diff-aware: skips
+        Rust steps if no .rs/Cargo.{toml,lock} touched, skips frontend
+        if no parkhub-web/ touched. Set FOP_LOCAL_CI_NO_DIFF_AWARE=1
+        to force every step.
+  full  PR gate plus OpenAPI drift and Playwright smoke/e2e (always full).
+  cd    Release-oriented build and supply-chain preflight (always full).
+
+Environment:
+  FOP_LOCAL_CI_STATUS_REPO    override owner/repo for status post
+  FOP_LOCAL_CI_NO_DIFF_AWARE=1 disable diff-aware skipping (pr profile)
+  FOP_LOCAL_CI_REUSE_PREPUSH=1 skip Rust steps already validated by lefthook
+                              pre-push hook (.fop/pre-push-validated-<sha>.json)
+  FOP_LOCAL_CI_NO_AUTO_HEAL=1 disable astro sync auto-run on missing types
+  FOP_CAPACITY_WAIT_MAX_SECS  fop build queue capacity-wait timeout (default
+                              1800s when MemAvailable < 6GB, else fop default)
+  FOP_LOCAL_CI_RUN_LINTERS=1  run actionlint + zizmor (if installed) on workflows
 EOF
 }
 
@@ -66,6 +79,124 @@ report_dir="$repo_root/.fop/reports"
 report_path="$report_dir/local-ci-${profile}-${sha}.json"
 started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+# ─── capacity-aware: extend fop's queue timeout when other tabs dominate RAM ───
+mem_avail_gb="$(awk '/MemAvailable/ {print int($2/1024/1024)}' /proc/meminfo 2>/dev/null || echo 8)"
+if (( mem_avail_gb < 6 )) && [[ -z "${FOP_CAPACITY_WAIT_MAX_SECS:-}" ]]; then
+  export FOP_CAPACITY_WAIT_MAX_SECS=1800
+  printf 'ℹ capacity-aware: MemAvailable=%dGB tight; extending FOP_CAPACITY_WAIT_MAX_SECS=%ss\n' "$mem_avail_gb" "$FOP_CAPACITY_WAIT_MAX_SECS"
+fi
+
+# ─── diff-aware step gating (pr profile only) ───
+diff_paths=""
+diff_touch_rust=0
+diff_touch_frontend=0
+diff_touch_ts_export=0
+diff_touch_workflows=0
+diff_touch_php=0
+
+compute_diff_paths() {
+  if [[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] || [[ "$profile" != "pr" ]]; then
+    diff_touch_rust=1
+    diff_touch_frontend=1
+    diff_touch_ts_export=1
+    diff_touch_workflows=1
+    diff_touch_php=1
+    return 0
+  fi
+
+  local base_ref
+  for candidate in github/main upstream/main origin/main main; do
+    if git rev-parse --verify --quiet "$candidate" >/dev/null; then
+      base_ref="$candidate"
+      break
+    fi
+  done
+
+  if [[ -z "${base_ref:-}" ]]; then
+    printf 'ℹ diff-aware: no base ref resolvable; running full pr profile\n'
+    diff_touch_rust=1
+    diff_touch_frontend=1
+    diff_touch_ts_export=1
+    diff_touch_workflows=1
+    diff_touch_php=1
+    return 0
+  fi
+
+  local merge_base
+  merge_base="$(git merge-base "$base_ref" HEAD 2>/dev/null || echo "$base_ref")"
+  diff_paths="$(git diff --name-only "${merge_base}..HEAD" 2>/dev/null || true)"
+
+  if [[ -z "$diff_paths" ]]; then
+    printf 'ℹ diff-aware: empty diff vs %s; running full pr profile\n' "$base_ref"
+    diff_touch_rust=1
+    diff_touch_frontend=1
+    diff_touch_ts_export=1
+    diff_touch_workflows=1
+    diff_touch_php=1
+    return 0
+  fi
+
+  if grep -qE '\.rs$|^Cargo\.(toml|lock)$|^.+/Cargo\.toml$|^rust-toolchain' <<<"$diff_paths"; then
+    diff_touch_rust=1
+  fi
+  if grep -qE '^parkhub-web/' <<<"$diff_paths"; then
+    diff_touch_frontend=1
+  fi
+  # ts_export drift can be triggered by Rust changes (server types) OR generated/ overrides
+  if (( diff_touch_rust )) || grep -qE '^parkhub-web/src/generated/' <<<"$diff_paths"; then
+    diff_touch_ts_export=1
+  fi
+  if grep -qE '^\.github/(workflows|scripts|actions)/' <<<"$diff_paths"; then
+    diff_touch_workflows=1
+  fi
+  if grep -qE '\.php$|^composer\.(json|lock)$' <<<"$diff_paths"; then
+    diff_touch_php=1
+  fi
+
+  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d (%d files)\n' \
+    "$base_ref" "$diff_touch_rust" "$diff_touch_frontend" "$diff_touch_ts_export" \
+    "$diff_touch_workflows" "$diff_touch_php" "$(wc -l <<<"$diff_paths")"
+}
+
+# ─── pre-push hook result re-use (opt-in via FOP_LOCAL_CI_REUSE_PREPUSH=1) ───
+prepush_marker="$repo_root/.fop/pre-push-validated-${sha}.json"
+prepush_validated=0
+if [[ "${FOP_LOCAL_CI_REUSE_PREPUSH:-}" == "1" ]] && [[ -f "$prepush_marker" ]]; then
+  # Marker must be < 1 hour old to be trustworthy
+  if (( $(date +%s) - $(stat -c %Y "$prepush_marker") < 3600 )); then
+    prepush_validated=1
+    printf 'ℹ pre-push reuse: %s validated; skipping cargo fmt/check/clippy\n' "$prepush_marker"
+  fi
+fi
+
+# ─── astro auto-heal: regenerate .astro/types.d.ts if missing or stale ───
+ensure_astro_types() {
+  if [[ "${FOP_LOCAL_CI_NO_AUTO_HEAL:-}" == "1" ]]; then return 0; fi
+  if [[ ! -d parkhub-web ]]; then return 0; fi
+  local types_file="parkhub-web/.astro/types.d.ts"
+  local needs_sync=0
+  if [[ ! -f "$types_file" ]]; then
+    needs_sync=1
+  else
+    # Stale if any source/config file is newer than types.d.ts (skips dist/, node_modules/)
+    local newest_src
+    newest_src="$(find parkhub-web/src parkhub-web/astro.config.* parkhub-web/tsconfig.json -type f -newer "$types_file" 2>/dev/null | head -1)"
+    if [[ -n "$newest_src" ]]; then needs_sync=1; fi
+  fi
+  if (( needs_sync )); then
+    if [[ -x parkhub-web/node_modules/.bin/astro ]]; then
+      printf '\n==> astro sync (auto-heal: %s missing or stale)\n' "$types_file"
+      if [[ "$dry_run" -eq 0 ]]; then
+        ( cd parkhub-web && ./node_modules/.bin/astro sync )
+      else
+        printf 'DRY-RUN: cd parkhub-web && ./node_modules/.bin/astro sync\n'
+      fi
+    else
+      printf 'ℹ astro auto-heal skipped: parkhub-web/node_modules/.bin/astro not found (run npm ci first)\n'
+    fi
+  fi
+}
+
 status_repo() {
   if [[ -n "${FOP_LOCAL_CI_STATUS_REPO:-}" ]]; then
     printf '%s\n' "$FOP_LOCAL_CI_STATUS_REPO"
@@ -107,14 +238,24 @@ write_report() {
   mkdir -p "$report_dir"
   cat > "$report_path" <<EOF
 {
-  "schema": "parkhub.local-ci.v1",
+  "schema": "parkhub.local-ci.v2",
   "profile": "$profile",
   "state": "$state",
   "commit": "$sha",
   "started_at": "$started_at",
   "finished_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "failed_step": "$failed_step",
-  "context": "$context"
+  "context": "$context",
+  "diff_aware": {
+    "enabled": $([[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] && echo false || echo true),
+    "rust": $([[ $diff_touch_rust == 1 ]] && echo true || echo false),
+    "frontend": $([[ $diff_touch_frontend == 1 ]] && echo true || echo false),
+    "ts_export": $([[ $diff_touch_ts_export == 1 ]] && echo true || echo false),
+    "workflows": $([[ $diff_touch_workflows == 1 ]] && echo true || echo false),
+    "php": $([[ $diff_touch_php == 1 ]] && echo true || echo false)
+  },
+  "prepush_reused": $([[ $prepush_validated == 1 ]] && echo true || echo false),
+  "memory_available_gb": $mem_avail_gb
 }
 EOF
 }
@@ -141,6 +282,10 @@ run_direct() {
   bash -euo pipefail -c "$command"
 }
 
+skip_step() {
+  printf '\n==> %s [SKIP: %s]\n' "$1" "$2"
+}
+
 mark_failure() {
   local line="$1"
   write_report "failure" "line:${line}"
@@ -148,27 +293,63 @@ mark_failure() {
 }
 trap 'mark_failure "$LINENO"' ERR
 
+compute_diff_paths
+
 post_commit_status "pending" "fop local ${profile} running"
 
+# ─── Stage 1: working tree hygiene (always) ─────────────────────────────────
 run_direct "working tree whitespace" "git diff --check"
 
-run_step "cargo fmt" "cargo fmt --all -- --check"
+# ─── Stage 2: workflow + GHA security (when workflows touched) ──────────────
+if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; then
+  if command -v actionlint >/dev/null 2>&1; then
+    run_direct "actionlint" "actionlint -color"
+  fi
+  if command -v zizmor >/dev/null 2>&1; then
+    # Audit-mode: surface findings, don't fail the gate yet
+    run_direct "zizmor (audit)" "zizmor --no-progress --persona auditor .github/workflows/ || true"
+  fi
+fi
 
-run_step "cargo check headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo check --locked --package parkhub-common --all-targets && cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets"
+# ─── Stage 3: Rust headless checks (skip if no .rs touched OR pre-push reused) ───
+if (( diff_touch_rust )) && (( ! prepush_validated )); then
+  run_step "cargo fmt" "cargo fmt --all -- --check"
+  run_step "cargo check headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo check --locked --package parkhub-common --all-targets && cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets"
+  run_step "cargo clippy headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones"
+elif (( prepush_validated )); then
+  skip_step "cargo fmt" "validated by lefthook pre-push"
+  skip_step "cargo check headless" "validated by lefthook pre-push"
+  skip_step "cargo clippy headless" "validated by lefthook pre-push"
+else
+  skip_step "cargo fmt" "diff-aware: no Rust files touched"
+  skip_step "cargo check headless" "diff-aware: no Rust files touched"
+  skip_step "cargo clippy headless" "diff-aware: no Rust files touched"
+fi
 
-run_step "cargo clippy headless" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones"
+# ─── Stage 4: Frontend (skip if parkhub-web/ untouched) ──────────────────────
+if (( diff_touch_frontend )); then
+  ensure_astro_types
+  run_step "frontend typecheck" "cd parkhub-web && ./node_modules/.bin/tsc --noEmit"
+  run_step "frontend test and build" "cd parkhub-web && npm test && npm run build"
+else
+  skip_step "frontend typecheck" "diff-aware: parkhub-web/ untouched"
+  skip_step "frontend test and build" "diff-aware: parkhub-web/ untouched"
+fi
 
-run_step "frontend typecheck" "cd parkhub-web && ./node_modules/.bin/tsc --noEmit"
+# ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───
+if (( diff_touch_ts_export )); then
+  run_step "typescript bindings drift" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"\$(git status --porcelain parkhub-web/src/generated/)\""
+else
+  skip_step "typescript bindings drift" "diff-aware: no Rust + no parkhub-web/src/generated/ touched"
+fi
 
-run_step "frontend test and build" "cd parkhub-web && npm test && npm run build"
-
-run_step "typescript bindings drift" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"\$(git status --porcelain parkhub-web/src/generated/)\""
-
+# ─── Stage 6: full profile extras (always full when invoked) ─────────────────
 if [[ "$profile" == "full" ]]; then
   run_step "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { ./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
   run_step "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true ./target/release/parkhub-server --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
 fi
 
+# ─── Stage 7: cd profile extras ──────────────────────────────────────────────
 if [[ "$profile" == "cd" ]]; then
   run_step "release image preflight" "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
 fi
