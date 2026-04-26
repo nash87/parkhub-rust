@@ -1,15 +1,6 @@
 name: OpenAPI Drift
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'parkhub-server/**'
-      - 'parkhub-common/**'
-      - 'docs/openapi/**'
-      - 'scripts/dump-openapi.sh'
-      - 'scripts/diff-openapi.sh'
-      - '.github/workflows/openapi-drift.yml'
   push:
     branches: [main]
   workflow_dispatch:

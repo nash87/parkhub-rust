@@ -79,6 +79,43 @@ jobs:
           fail-on-severity: high
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
 
+  local-ci-attestation:
+    name: fop local CI attestation
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      statuses: read
+    steps:
+      - name: Require fop local CI commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
+          CONTEXT: fop/local-ci/pr
+        run: |
+          status=""
+          for attempt in $(seq 1 18); do
+            status="$(
+              gh api "repos/${REPO}/commits/${SHA}/status" \
+                --jq ".statuses[] | select(.context == \"${CONTEXT}\") | .state" \
+                | head -n 1
+            )"
+            if [[ "$status" == "success" ]]; then
+              break
+            fi
+            echo "Waiting for ${CONTEXT} status on ${SHA} (${attempt}/18)..."
+            sleep 10
+          done
+          if [[ "$status" != "success" ]]; then
+            echo "::error::Missing successful ${CONTEXT} status for ${SHA}."
+            echo "Run locally:"
+            echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
+            exit 1
+          fi
+          echo "${CONTEXT}=${status}"
+
   cargo-deny:
     name: Cargo Deny
     runs-on: ubuntu-latest
@@ -102,6 +139,7 @@ jobs:
 
   fmt:
     name: Cargo Format Check
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -118,6 +156,7 @@ jobs:
 
   check:
     name: Cargo Check (headless)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -142,6 +181,7 @@ jobs:
 
   client-check:
     name: Desktop Client Check
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -165,6 +205,7 @@ jobs:
 
   clippy:
     name: Cargo Clippy (headless)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -191,6 +232,7 @@ jobs:
 
   test:
     name: Cargo Test (headless)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [check]
@@ -216,6 +258,7 @@ jobs:
 
   frontend:
     name: Frontend Build & Test
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -242,6 +285,7 @@ jobs:
 
   integration:
     name: Integration Tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [test]
@@ -271,6 +315,7 @@ jobs:
 
   types-drift:
     name: TypeScript types drift
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -327,6 +372,7 @@ jobs:
 
   openapi-drift:
     name: OpenAPI drift
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -390,7 +436,7 @@ jobs:
   required:
     name: Required checks
     if: always()
-    needs: [actionlint, helm-validate, dependency-review, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift, types-drift]
+    needs: [actionlint, helm-validate, dependency-review, local-ci-attestation, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift, types-drift]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -399,6 +445,9 @@ jobs:
           ACTIONLINT: ${{ needs.actionlint.result }}
           HELM_VALIDATE: ${{ needs.helm-validate.result }}
           DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
+          LOCAL_CI: ${{ needs.local-ci-attestation.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
           CARGO_DENY: ${{ needs.cargo-deny.result }}
           CHECK: ${{ needs.check.result }}
           CLIENT_CHECK: ${{ needs.client-check.result }}
@@ -410,10 +459,23 @@ jobs:
           OPENAPI_DRIFT: ${{ needs.openapi-drift.result }}
           TYPES_DRIFT: ${{ needs.types-drift.result }}
         run: |
-          for check in ACTIONLINT HELM_VALIDATE CARGO_DENY CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT TYPES_DRIFT; do
+          for check in ACTIONLINT HELM_VALIDATE CARGO_DENY; do
             if [[ "${!check}" != "success" ]]; then
               echo "REQUIRED: ${check} failed: ${!check}"
               exit 1
+            fi
+          done
+          if [[ "${EVENT_NAME}" == "pull_request" && "${SAME_REPO_PR}" == "true" && "${LOCAL_CI}" != "success" ]]; then
+            echo "REQUIRED: LOCAL_CI failed: ${LOCAL_CI}"
+            exit 1
+          fi
+          for check in CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT TYPES_DRIFT; do
+            if [[ "${!check}" != "success" && "${!check}" != "skipped" ]]; then
+              echo "REQUIRED: ${check} failed: ${!check}"
+              exit 1
+            fi
+            if [[ "${!check}" == "skipped" ]]; then
+              echo "LOCAL-FIRST: ${check} skipped on PR; covered by fop/local-ci/pr"
             fi
           done
           if [[ "${DEPENDENCY_REVIEW}" != "success" && "${DEPENDENCY_REVIEW}" != "skipped" ]]; then
