@@ -83,38 +83,52 @@ jobs:
     name: fop local CI attestation
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Hard cap of 14 min accommodates the adaptive backoff schedule (~12 min)
+    # plus GHA queue/runner startup. Previous 3 min window collapsed Required
+    # checks for clean PRs when local-CI ran under multi-tab fop queue load.
+    timeout-minutes: 14
     permissions:
       contents: read
       statuses: read
     steps:
-      - name: Require fop local CI commit status
+      - name: Require fop local CI commit status (adaptive backoff)
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.pull_request.head.sha }}
           REPO: ${{ github.repository }}
           CONTEXT: fop/local-ci/pr
         run: |
+          # Adaptive backoff: short polls early (catch fast posts), longer
+          # polls later (avoid API hammering during real waits).
+          # Total ~12 min: 5+5+10+10+20+30+60×11 = 740s.
+          # Fail-fast on explicit failure/error states (don't wait the full window).
+          delays=(5 5 10 10 20 30 60 60 60 60 60 60 60 60 60 60 60)
           status=""
-          for attempt in $(seq 1 18); do
+          for delay in "${delays[@]}"; do
             status="$(
               gh api "repos/${REPO}/commits/${SHA}/status" \
                 --jq ".statuses[] | select(.context == \"${CONTEXT}\") | .state" \
                 | head -n 1
             )"
-            if [[ "$status" == "success" ]]; then
-              break
-            fi
-            echo "Waiting for ${CONTEXT} status on ${SHA} (${attempt}/18)..."
-            sleep 10
+            case "$status" in
+              success)
+                echo "${CONTEXT}=success after ${SECONDS}s"
+                exit 0
+                ;;
+              failure|error)
+                echo "::error::${CONTEXT}=${status} — local-CI explicitly failed; see commit status for details"
+                gh api "repos/${REPO}/commits/${SHA}/status" \
+                  --jq ".statuses[] | select(.context == \"${CONTEXT}\") | {state, description, target_url, created_at}"
+                exit 1
+                ;;
+            esac
+            echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, elapsed=${SECONDS}s)..."
+            sleep "$delay"
           done
-          if [[ "$status" != "success" ]]; then
-            echo "::error::Missing successful ${CONTEXT} status for ${SHA}."
-            echo "Run locally:"
-            echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
-            exit 1
-          fi
-          echo "${CONTEXT}=${status}"
+          echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
+          echo "Run locally:"
+          echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
+          exit 1
 
   cargo-deny:
     name: Cargo Deny
