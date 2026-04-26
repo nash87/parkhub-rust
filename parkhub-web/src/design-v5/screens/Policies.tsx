@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, SectionLabel, V5NamedIcon } from '../primitives';
 import { useV5Toast } from '../Toast';
 import { api, type Policy } from '../../api/client';
+import { useDraftFromActive } from '../../hooks/useDraftFromActive';
 import type { ScreenId } from '../nav';
 
 function formatWhen(iso: string): string {
@@ -16,7 +17,6 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
   const toast = useV5Toast();
   const qc = useQueryClient();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
   const [preview, setPreview] = useState(false);
 
   const { data: policies = [], isLoading, isError } = useQuery({
@@ -35,12 +35,16 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
 
   const active = policies.find((p) => p.id === activeId) ?? null;
 
+  // Mirrors `active.body` into a local draft. Re-init only fires when the
+  // policy id actually changes (followup #3 of the 2026-04-25 merge-train
+  // session note — replaces the previous useEffect+eslint-disable).
+  const [draft, setDraft] = useDraftFromActive<Policy, string>(active, {
+    derive: (p) => p.body,
+  });
+
+  // Reset the preview flag whenever we switch to a new policy.
   useEffect(() => {
-    const p = policies.find((x) => x.id === activeId);
-    if (p) { setDraft(p.body); setPreview(false); }
-    // Only depend on activeId: refetches produce a new policies array, which
-    // would otherwise clobber the user's in-flight draft on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setPreview(false);
   }, [activeId]);
 
   const save = useMutation({
@@ -75,7 +79,10 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
     );
   }
 
-  const isDirty = active && draft !== active.body;
+  // `draft` mirrors `active`, so when `active` is set the hook has already
+  // seeded `draft`. Normalise the undefined edge for callsites below.
+  const draftBody = draft ?? '';
+  const isDirty = active && draftBody !== active.body;
 
   return (
     <div style={{ padding: 16, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -130,7 +137,7 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
                     <button
                       type="button"
                       disabled={!isDirty || save.isPending}
-                      onClick={() => save.mutate({ id: active.id, body: draft })}
+                      onClick={() => save.mutate({ id: active.id, body: draftBody })}
                       data-testid="policies-save"
                       style={{
                         padding: '6px 14px', borderRadius: 8, background: 'var(--v5-acc)', color: 'var(--v5-accent-fg)',
@@ -151,11 +158,11 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
                       fontSize: 12, color: 'var(--v5-txt)', whiteSpace: 'pre-wrap',
                       fontFamily: 'inherit', lineHeight: 1.55,
                     }}
-                  >{draft || '(leer)'}</div>
+                  >{draftBody || '(leer)'}</div>
                 ) : (
                   <textarea
                     data-testid="policies-editor"
-                    value={draft}
+                    value={draftBody}
                     onChange={(e) => setDraft(e.target.value)}
                     style={{
                       flex: 1, padding: 12, borderRadius: 9,
