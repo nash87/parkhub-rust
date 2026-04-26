@@ -20,6 +20,7 @@ function isSameDay(a: Date, b: Date) {
 
 export function AbsencesPage() {
   const { t } = useTranslation();
+  const translate = t as (key: string, fallback?: string) => string;
   const [entries, setEntries] = useState<AbsenceEntry[]>([]);
   const [patterns, setPatterns] = useState<AbsencePattern[]>([]);
   const [loading, setLoading] = useState(true);
@@ -264,7 +265,7 @@ export function AbsencesPage() {
 
       {/* Add absence modal */}
       <AnimatePresence>
-        {showAdd && <AddAbsenceModal onClose={() => setShowAdd(false)} onAdd={handleAdd} t={t} />}
+        {showAdd && <AddAbsenceModal onClose={() => setShowAdd(false)} onAdd={handleAdd} t={translate} />}
       </AnimatePresence>
     </motion.div>
   );

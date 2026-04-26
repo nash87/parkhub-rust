@@ -13,7 +13,7 @@ vi.mock('@phosphor-icons/react', () => ({
 import { ErrorBoundary } from './ErrorBoundary';
 
 // A component that throws an error
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.ReactNode {
   throw new Error(message);
 }
 

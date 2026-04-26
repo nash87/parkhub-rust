@@ -78,7 +78,7 @@ describe('LobbyV5', () => {
     renderScreen();
     await waitFor(() => expect(screen.getByText('Uhr anzeigen')).toBeInTheDocument());
     const toggles = screen.getAllByRole('switch');
-    fireEvent.click(toggles[0]);
+    fireEvent.click(toggles[0]!);
     await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith({ show_clock: false }));
   });
 

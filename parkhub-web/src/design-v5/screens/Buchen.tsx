@@ -8,6 +8,7 @@ import {
   type ParkingLot,
   type ParkingSlot,
   type Vehicle,
+  type Booking,
   type CreateBookingPayload,
 } from '../../api/client';
 import type { ScreenId } from '../nav';

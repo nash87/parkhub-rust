@@ -61,7 +61,7 @@ export function KpiCard({
   const padding = size === 'sm' ? 'p-4' : size === 'lg' ? 'p-6' : 'p-5';
   const valueSize = size === 'sm' ? 'text-2xl' : size === 'lg' ? 'text-4xl' : 'text-3xl';
 
-  const isPositive = delta && delta.value >= 0;
+  const isPositive = delta ? delta.value >= 0 : false;
   const DeltaIcon = isPositive ? ArrowUp : ArrowDown;
 
   return (

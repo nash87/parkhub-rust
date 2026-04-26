@@ -41,8 +41,8 @@ interface Recommendation {
   reason: string;
 }
 
-const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
+const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
 function authHeaders(): Record<string, string> {
   const token = getInMemoryToken();
@@ -147,7 +147,7 @@ export function OccupancyPredictionPage() {
       return {
         dayIndex: idx,
         dayName: name,
-        dayShort: DAYS_SHORT[idx],
+        dayShort: DAYS_SHORT[idx] ?? name.slice(0, 3),
         predicted,
         confidence,
         peakHour,
@@ -163,6 +163,9 @@ export function OccupancyPredictionPage() {
     }
     // Find the day with lowest predicted occupancy
     const best = [...predictions].sort((a, b) => a.predicted - b.predicted)[0];
+    if (!best) {
+      return { day: '-', timeSlot: '-', reason: '' };
+    }
     return {
       day: best.dayName,
       timeSlot: `${formatHour(best.offPeakHour)} - ${formatHour(best.offPeakHour + 2)}`,

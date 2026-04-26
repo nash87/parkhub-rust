@@ -91,7 +91,7 @@ describe('AdminRolesPage', () => {
     render(<AdminRolesPage />);
     await waitFor(() => {
       const editBtns = screen.getAllByTitle('rbac.edit');
-      fireEvent.click(editBtns[0]);
+      fireEvent.click(editBtns[0]!);
     });
     expect(screen.getByText('rbac.editRole')).toBeInTheDocument();
   });
@@ -100,7 +100,7 @@ describe('AdminRolesPage', () => {
     render(<AdminRolesPage />);
     await waitFor(() => {
       const delBtns = screen.getAllByTitle('rbac.delete');
-      fireEvent.click(delBtns[0]); // Viewer (not built-in)
+      fireEvent.click(delBtns[0]!); // Viewer (not built-in)
     });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('rbac.deleted'));
   });
@@ -115,8 +115,8 @@ describe('AdminRolesPage', () => {
     render(<AdminRolesPage />);
     await waitFor(() => fireEvent.click(screen.getByText('rbac.createRole')));
     const checkboxes = screen.getAllByRole('checkbox');
-    fireEvent.click(checkboxes[0]); // toggle on
-    fireEvent.click(checkboxes[0]); // toggle off
+    fireEvent.click(checkboxes[0]!); // toggle on
+    fireEvent.click(checkboxes[0]!); // toggle off
   });
 
   it('cancel form', async () => {
@@ -157,7 +157,7 @@ describe('AdminRolesPage', () => {
     render(<AdminRolesPage />);
     await waitFor(() => {
       const delBtns = screen.getAllByTitle('rbac.delete');
-      fireEvent.click(delBtns[0]);
+      fireEvent.click(delBtns[0]!);
     });
     // Should not call delete API
     expect(globalThis.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/roles/r2'), expect.objectContaining({ method: 'DELETE' }));
@@ -169,7 +169,7 @@ describe('AdminRolesPage', () => {
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
     }) as any;
     render(<AdminRolesPage />);
-    await waitFor(() => fireEvent.click(screen.getAllByTitle('rbac.delete')[0]));
+    await waitFor(() => fireEvent.click(screen.getAllByTitle('rbac.delete')[0]!));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('In use'));
   });
 
@@ -179,7 +179,7 @@ describe('AdminRolesPage', () => {
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
     }) as any;
     render(<AdminRolesPage />);
-    await waitFor(() => fireEvent.click(screen.getAllByTitle('rbac.delete')[0]));
+    await waitFor(() => fireEvent.click(screen.getAllByTitle('rbac.delete')[0]!));
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 

@@ -93,7 +93,7 @@ describe('ConfigEditor', () => {
     fireEvent.click(screen.getByTestId('config-editor-save'));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    const arg = onSave.mock.calls[0][0];
+    const arg = onSave.mock.calls[0]![0];
     expect(arg.active).toBe(false);
     expect(arg.max_slots).toBe(7);
     expect(arg.label).toBe('other');

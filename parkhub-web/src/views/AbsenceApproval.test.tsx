@@ -232,8 +232,8 @@ describe('AbsenceApprovalPage', () => {
 
     // Fill start date
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2026-05-05' } });
+    fireEvent.change(dateInputs[0]!, { target: { value: '2026-05-01' } });
+    fireEvent.change(dateInputs[1]!, { target: { value: '2026-05-05' } });
 
     // Fill reason
     const textarea = screen.getByPlaceholderText('Why do you need this absence?');
@@ -273,8 +273,8 @@ describe('AbsenceApprovalPage', () => {
     await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
 
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2026-05-05' } });
+    fireEvent.change(dateInputs[0]!, { target: { value: '2026-05-01' } });
+    fireEvent.change(dateInputs[1]!, { target: { value: '2026-05-05' } });
     fireEvent.change(screen.getByPlaceholderText('Why do you need this absence?'), { target: { value: 'Reason' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));
@@ -290,8 +290,8 @@ describe('AbsenceApprovalPage', () => {
     await waitFor(() => screen.getByText('Submit Request', { selector: 'h3' }));
 
     const dateInputs = document.querySelectorAll('input[type="date"]');
-    fireEvent.change(dateInputs[0], { target: { value: '2026-05-01' } });
-    fireEvent.change(dateInputs[1], { target: { value: '2026-05-05' } });
+    fireEvent.change(dateInputs[0]!, { target: { value: '2026-05-01' } });
+    fireEvent.change(dateInputs[1]!, { target: { value: '2026-05-05' } });
     fireEvent.change(screen.getByPlaceholderText('Why do you need this absence?'), { target: { value: 'Reason' } });
 
     fireEvent.click(screen.getByRole('button', { name: /Submit Request/i }));

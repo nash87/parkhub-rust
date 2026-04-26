@@ -206,7 +206,8 @@ export function DashboardPage() {
         />
         <KpiCard
           label={t('dashboard.co2Saved', 'CO₂ Saved (30d)')}
-          value={co2 ? `${co2.saved_kg.toFixed(1)} kg` : '—'}
+          value={co2?.saved_kg ?? 0}
+          suffix=" kg"
           icon={<Leaf weight="bold" />}
           data-testid="kpi-co2-saved"
         />
@@ -363,4 +364,3 @@ export function DashboardPage() {
     </AnimatePresence>
   );
 }
-

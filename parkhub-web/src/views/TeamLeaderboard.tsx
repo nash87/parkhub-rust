@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Medal, Lightning, Star } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
 
@@ -67,7 +68,7 @@ function computeEcoScore(stats: UserBookingStats): number {
   return Math.round(bookingScore + evScore + durationScore + reliabilityScore);
 }
 
-function computeBadges(stats: UserBookingStats, t: (k: string, f?: string) => string): Badge[] {
+function computeBadges(stats: UserBookingStats, t: TFunction): Badge[] {
   const badges: Badge[] = [];
   if (stats.ev_count > 0) {
     badges.push({ key: 'ev', label: t('leaderboard.badgeEv', 'EV Driver'), color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' });
@@ -130,16 +131,23 @@ export function TeamLeaderboardPage() {
   }, [members, adminStats, t]);
 
   const mostActive = useMemo(() =>
-    leaderboard.length > 0 ? [...leaderboard].sort((a, b) => b.bookingsThisMonth - a.bookingsThisMonth)[0] : null,
+    leaderboard.length > 0 ? [...leaderboard].sort((a, b) => b.bookingsThisMonth - a.bookingsThisMonth)[0] ?? null : null,
   [leaderboard]);
 
   const greenest = useMemo(() =>
-    leaderboard.length > 0 ? [...leaderboard].sort((a, b) => b.evPercentage - a.evPercentage)[0] : null,
+    leaderboard.length > 0 ? [...leaderboard].sort((a, b) => b.evPercentage - a.evPercentage)[0] ?? null : null,
   [leaderboard]);
 
   const mostReliable = useMemo(() =>
-    leaderboard.length > 0 ? [...leaderboard].sort((a, b) => a.noShows - b.noShows || b.ecoScore - a.ecoScore)[0] : null,
+    leaderboard.length > 0 ? [...leaderboard].sort((a, b) => a.noShows - b.noShows || b.ecoScore - a.ecoScore)[0] ?? null : null,
   [leaderboard]);
+
+  const podiumEntries = useMemo(() => {
+    const first = leaderboard[0];
+    const second = leaderboard[1];
+    const third = leaderboard[2];
+    return first && second && third ? { first, second, third } : null;
+  }, [leaderboard]);
 
   if (loading) {
     return (
@@ -229,15 +237,15 @@ export function TeamLeaderboardPage() {
       </motion.div>
 
       {/* Podium — top 3 */}
-      {leaderboard.length >= 3 && (
+      {podiumEntries && (
         <motion.div variants={fadeUp} className="glass-card p-6" data-testid="podium">
           <div className="flex items-end justify-center gap-4 h-40">
             {/* 2nd place */}
-            <PodiumSlot entry={leaderboard[1]} rank={2} height="h-24" t={t} />
+            <PodiumSlot entry={podiumEntries.second} rank={2} height="h-24" t={t} />
             {/* 1st place */}
-            <PodiumSlot entry={leaderboard[0]} rank={1} height="h-32" t={t} />
+            <PodiumSlot entry={podiumEntries.first} rank={1} height="h-32" t={t} />
             {/* 3rd place */}
-            <PodiumSlot entry={leaderboard[2]} rank={3} height="h-20" t={t} />
+            <PodiumSlot entry={podiumEntries.third} rank={3} height="h-20" t={t} />
           </div>
         </motion.div>
       )}
@@ -306,7 +314,7 @@ function PodiumSlot({ entry, rank, height, t }: {
   entry: LeaderboardEntry;
   rank: number;
   height: string;
-  t: (k: string, f?: string) => string;
+  t: TFunction;
 }) {
   return (
     <div className="flex flex-col items-center w-24" data-testid={`podium-${rank}`}>

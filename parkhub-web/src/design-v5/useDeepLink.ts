@@ -32,7 +32,9 @@ export function readScreenFromUrl(fallback: ScreenId): ScreenId {
   // Accept both `/v5/<id>` and `/v5/<id>/`, trim query + hash.
   const match = path.match(/^\/v5\/([a-z][a-z0-9_-]*)\/?$/i);
   if (!match) return fallback;
-  const id = match[1].toLowerCase();
+  const rawId = match[1];
+  if (!rawId) return fallback;
+  const id = rawId.toLowerCase();
   return byId.has(id) ? (id as ScreenId) : fallback;
 }
 

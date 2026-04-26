@@ -307,7 +307,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const currentDesignTheme = DESIGN_THEMES.find(t => t.id === designTheme) || DESIGN_THEMES[0];
+  const defaultDesignTheme = DESIGN_THEMES[0];
+  if (!defaultDesignTheme) throw new Error('At least one design theme must be configured');
+  const currentDesignTheme = DESIGN_THEMES.find(t => t.id === designTheme) ?? defaultDesignTheme;
 
   return (
     <ThemeContext.Provider value={{

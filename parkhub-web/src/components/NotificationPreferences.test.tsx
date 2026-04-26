@@ -143,7 +143,7 @@ describe('NotificationPreferencesComponent', () => {
 
     // Click the first toggle switch (email_booking_confirm)
     const switches = screen.getAllByRole('switch');
-    await user.click(switches[0]);
+    await user.click(switches[0]!);
 
     expect(screen.getByText('Save Preferences')).toBeInTheDocument();
   });
@@ -161,7 +161,7 @@ describe('NotificationPreferencesComponent', () => {
 
     // Toggle a switch to make form dirty
     const switches = screen.getAllByRole('switch');
-    await user.click(switches[0]);
+    await user.click(switches[0]!);
 
     await user.click(screen.getByText('Save Preferences'));
 
@@ -183,7 +183,7 @@ describe('NotificationPreferencesComponent', () => {
     });
 
     const switches = screen.getAllByRole('switch');
-    await user.click(switches[0]);
+    await user.click(switches[0]!);
     await user.click(screen.getByText('Save Preferences'));
 
     await waitFor(() => {
@@ -203,7 +203,7 @@ describe('NotificationPreferencesComponent', () => {
     });
 
     const switches = screen.getAllByRole('switch');
-    await user.click(switches[0]);
+    await user.click(switches[0]!);
 
     expect(screen.getByText('Save Preferences')).toBeInTheDocument();
 
@@ -270,7 +270,7 @@ describe('NotificationPreferencesComponent', () => {
 
     const switches = screen.getAllByRole('switch');
 
-    await user.click(switches[3]); // push_enabled
+    await user.click(switches[3]!); // push_enabled
     fireEvent.click(switches[4]!); // sms_booking_confirm
     fireEvent.click(switches[5]!); // sms_booking_reminder
     fireEvent.click(switches[6]!); // sms_booking_cancelled
@@ -305,8 +305,8 @@ describe('NotificationPreferencesComponent', () => {
     });
 
     const switches = screen.getAllByRole('switch');
-    await user.click(switches[1]);
-    await user.click(switches[2]);
+    await user.click(switches[1]!);
+    await user.click(switches[2]!);
 
     await user.click(screen.getByText('Save Preferences'));
 

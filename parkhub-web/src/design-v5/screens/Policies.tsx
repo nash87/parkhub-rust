@@ -30,7 +30,7 @@ export function PoliciesV5({ navigate: _navigate }: { navigate: (id: ScreenId) =
   });
 
   useEffect(() => {
-    if (!activeId && policies.length > 0) setActiveId(policies[0].id);
+    if (!activeId && policies.length > 0) setActiveId(policies[0]!.id);
   }, [policies, activeId]);
 
   const active = policies.find((p) => p.id === activeId) ?? null;

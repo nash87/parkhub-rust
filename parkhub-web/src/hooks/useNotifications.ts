@@ -88,7 +88,7 @@ export function useNotifications() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        applicationServerKey: urlBase64ToArrayBuffer(vapidKey),
       });
 
       // Send subscription to server
@@ -170,10 +170,15 @@ export function useNotifications() {
   };
 }
 
-/** Convert a base64url-encoded string to a Uint8Array (for applicationServerKey). */
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+/** Convert a base64url-encoded string to an ArrayBuffer (for applicationServerKey). */
+function urlBase64ToArrayBuffer(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = atob(base64);
-  return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
+  const output = new ArrayBuffer(rawData.length);
+  const view = new Uint8Array(output);
+  for (let i = 0; i < rawData.length; i += 1) {
+    view[i] = rawData.charCodeAt(i);
+  }
+  return output;
 }

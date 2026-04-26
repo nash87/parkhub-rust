@@ -107,7 +107,7 @@ describe('AdminMaintenancePage', () => {
     await waitFor(() => expect(screen.getAllByTestId('maintenance-row').length).toBeGreaterThan(0));
     // Find delete buttons
     const rows = screen.getAllByTestId('maintenance-row');
-    const deleteBtn = rows[0].querySelectorAll('button')[1]; // second button is delete
+    const deleteBtn = rows[0]!.querySelectorAll('button')[1]!; // second button is delete
     fireEvent.click(deleteBtn);
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
   });
@@ -116,7 +116,7 @@ describe('AdminMaintenancePage', () => {
     render(<AdminMaintenancePage />);
     await waitFor(() => expect(screen.getAllByTestId('maintenance-row').length).toBeGreaterThan(0));
     const rows = screen.getAllByTestId('maintenance-row');
-    const editBtn = rows[0].querySelectorAll('button')[0];
+    const editBtn = rows[0]!.querySelectorAll('button')[0]!;
     fireEvent.click(editBtn);
     await waitFor(() => expect(screen.getByTestId('maintenance-form')).toBeInTheDocument());
   });
@@ -158,7 +158,7 @@ describe('AdminMaintenancePage', () => {
     render(<AdminMaintenancePage />);
     await waitFor(() => expect(screen.getAllByTestId('maintenance-row').length).toBeGreaterThan(0));
     const rows = screen.getAllByTestId('maintenance-row');
-    fireEvent.click(rows[0].querySelectorAll('button')[1]);
+    fireEvent.click(rows[0]!.querySelectorAll('button')[1]!);
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Cannot delete'));
   });
 

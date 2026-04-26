@@ -42,7 +42,6 @@ describe('v5 NAV registry', () => {
   });
 
   it('breadcrumbFor returns empty string for unknown id', () => {
-    // @ts-expect-error intentional bad id
     expect(breadcrumbFor('not-a-real-screen')).toBe('');
   });
 });

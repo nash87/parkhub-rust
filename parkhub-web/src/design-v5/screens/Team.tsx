@@ -45,8 +45,8 @@ function statusVariant(s: TeamMemberStatus) {
 function groupByUser(list: TeamAbsenceEntry[]): Record<string, TeamAbsenceEntry[]> {
   const groups: Record<string, TeamAbsenceEntry[]> = {};
   for (const entry of list) {
-    if (!groups[entry.user_name]) groups[entry.user_name] = [];
-    groups[entry.user_name].push(entry);
+    const bucket = groups[entry.user_name] ?? (groups[entry.user_name] = []);
+    bucket.push(entry);
   }
   return groups;
 }

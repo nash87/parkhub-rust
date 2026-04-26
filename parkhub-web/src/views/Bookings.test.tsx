@@ -450,7 +450,7 @@ describe('BookingsPage', () => {
     await user.click(undoBtn);
 
     await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
-    expect(mockCreateBooking.mock.calls[0][0]).toEqual(expect.objectContaining({
+    expect(mockCreateBooking.mock.calls[0]![0]).toEqual(expect.objectContaining({
       lot_id: booking.lot_id,
       slot_id: booking.slot_id,
       start_time: booking.start_time,
@@ -493,8 +493,8 @@ describe('BookingsPage', () => {
 
       expect(clickSpy).toHaveBeenCalled();
       expect(captured).toHaveLength(1);
-      expect(captured[0].type).toBe('text/calendar;charset=utf-8');
-      const text = await captured[0].text();
+      expect(captured[0]!.type).toBe('text/calendar;charset=utf-8');
+      const text = await captured[0]!.text();
       expect(text).toContain('BEGIN:VCALENDAR');
       expect(text).toContain('BEGIN:VEVENT');
       expect(text).toContain('UID:bk-42@parkhub');

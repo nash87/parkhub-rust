@@ -73,10 +73,11 @@ describe('downloadPdfTable — pdf-lib backend', () => {
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(captured).toHaveLength(1);
-    expect(captured[0].type).toBe('application/pdf');
     // Every valid PDF starts with the %PDF- magic; ensures pdf-lib actually
     // produced a document and we didn't regress to a zero-byte/text blob.
-    const head = new Uint8Array(await captured[0].slice(0, 5).arrayBuffer());
+    const first = captured[0]!;
+    expect(first.type).toBe('application/pdf');
+    const head = new Uint8Array(await first.slice(0, 5).arrayBuffer());
     const headText = String.fromCharCode(...head);
     expect(headText).toBe('%PDF-');
   });

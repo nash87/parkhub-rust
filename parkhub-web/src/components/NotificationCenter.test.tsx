@@ -78,7 +78,7 @@ const mockGetCenter = vi.fn();
 const mockMarkAllRead = vi.fn();
 const mockMarkRead = vi.fn();
 const mockDelete = vi.fn();
-const mockGetInMemoryToken = vi.fn(() => 'test-token');
+const mockGetInMemoryToken = vi.fn<() => string | null>(() => 'test-token');
 
 vi.mock('../api/client', () => ({
   api: {
@@ -148,7 +148,9 @@ const sampleNotifications = [
   },
 ];
 
-function seedMocks(overrides?: { unreadCount?: number; items?: typeof sampleNotifications }) {
+type SampleNotification = (typeof sampleNotifications)[number];
+
+function seedMocks(overrides?: { unreadCount?: number; items?: SampleNotification[] }) {
   const items = overrides?.items ?? sampleNotifications;
   const unreadCount = overrides?.unreadCount ?? 2;
   mockGetUnreadCount.mockResolvedValue({ success: true, data: { count: unreadCount } });
@@ -275,7 +277,7 @@ describe('NotificationCenter', () => {
     await waitFor(() => screen.getByText('Booking Confirmed'));
     // Find the close button (the X icon parent button)
     const closeButtons = screen.getAllByTestId('icon-x');
-    const closeBtn = closeButtons[0].closest('button');
+    const closeBtn = closeButtons[0]!.closest('button');
     if (closeBtn) fireEvent.click(closeBtn);
     await waitFor(() => {
       expect(screen.queryByText('Booking Confirmed')).not.toBeInTheDocument();
@@ -330,7 +332,7 @@ describe('NotificationCenter', () => {
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => screen.getByText('Booking Confirmed'));
     const trashIcons = screen.getAllByTitle('Delete');
-    fireEvent.click(trashIcons[0]);
+    fireEvent.click(trashIcons[0]!);
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith('n1');
       expect(mockToastSuccess).toHaveBeenCalledWith('Deleted');
@@ -342,7 +344,7 @@ describe('NotificationCenter', () => {
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => screen.getByText('Booking Confirmed'));
     const markReadBtns = screen.getAllByTitle('Mark as read');
-    fireEvent.click(markReadBtns[0]);
+    fireEvent.click(markReadBtns[0]!);
     await waitFor(() => {
       expect(mockMarkRead).toHaveBeenCalledWith('n1');
     });
@@ -437,7 +439,7 @@ describe('NotificationCenter', () => {
     fireEvent.click(screen.getByLabelText('Notifications'));
     await waitFor(() => screen.getByText('Booking Confirmed'));
     const trashBtns = screen.getAllByTitle('Delete');
-    fireEvent.click(trashBtns[0]);
+    fireEvent.click(trashBtns[0]!);
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith('Error');
     });
@@ -503,7 +505,7 @@ describe('NotificationCenter', () => {
 
   it('formats timeAgo as "just now" for very recent notifications', async () => {
     const justNowItem = {
-      ...sampleNotifications[0],
+      ...sampleNotifications[0]!,
       id: 'now',
       created_at: new Date(Date.now() - 5 * 1000).toISOString(),
     };

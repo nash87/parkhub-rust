@@ -58,12 +58,13 @@ function defaultCommands(
 export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const translate = t as (k: string, d?: string) => string;
   const { user, logout } = useAuth();
 
   // Seed the core default commands whenever user/locale identity shifts.
   useEffect(() => {
     const unregister = commandRegistry.registerMany(
-      defaultCommands((p) => navigate(p), t, () => logout()),
+      defaultCommands((p) => navigate(p), translate, () => logout()),
     );
     return unregister;
     // isAdmin is captured via the `when` predicate read at search time,

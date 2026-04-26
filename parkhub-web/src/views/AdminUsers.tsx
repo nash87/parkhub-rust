@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import {
   SpinnerGap, MagnifyingGlass, Coins,
   PencilSimple, X, Check, UserMinus, UserPlus,
@@ -434,7 +434,7 @@ export function AdminUsersPage() {
       {/* Users Table — TanStack Table with sorting */}
       <DataTable
         data={users}
-        columns={columns}
+        columns={columns as ColumnDef<User, unknown>[]}
         searchValue={debouncedSearch}
         emptyMessage={search ? t('admin.noUsersMatch') : t('admin.noUsersFound')}
         exportFilename="users"

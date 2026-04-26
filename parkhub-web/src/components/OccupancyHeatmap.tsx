@@ -70,7 +70,10 @@ export function computeHeatmapData(
       if (h >= HOUR_START && h < HOUR_END) {
         const jsDay = cursor.getDay();
         const day = jsDay === 0 ? 6 : jsDay - 1;
-        counts[day][h - HOUR_START]++;
+        const dayCounts = counts[day];
+        if (dayCounts) {
+          dayCounts[h - HOUR_START] = (dayCounts[h - HOUR_START] ?? 0) + 1;
+        }
       }
       cursor.setHours(cursor.getHours() + 1);
     }
@@ -81,8 +84,8 @@ export function computeHeatmapData(
 
   for (let day = 0; day < 7; day++) {
     for (let hi = 0; hi < HOUR_END - HOUR_START; hi++) {
-      const rawCount = counts[day][hi];
-      const weeks = Math.max(weekdayCounts[day], 1);
+      const rawCount = counts[day]?.[hi] ?? 0;
+      const weeks = Math.max(weekdayCounts[day] ?? 0, 1);
       const avgCount = rawCount / weeks;
       const pct = Math.min(Math.round((avgCount / slotsOrOne) * 100), 100);
       cells.push({

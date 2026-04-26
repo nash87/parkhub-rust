@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning } from '@phosphor-icons/react';
+import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning, type Icon } from '@phosphor-icons/react';
 import { api, type AdminStats, type Booking, type ParkingLot } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
@@ -8,7 +8,7 @@ import { OccupancyHeatmap } from '../components/OccupancyHeatmap';
 import { ExportButton } from '../components/ExportButton';
 
 function StatCard({ icon: Icon, label, value }: {
-  icon: React.ComponentType<{ weight?: string; className?: string }>;
+  icon: Icon;
   label: string;
   value: number;
   color?: string;
@@ -47,7 +47,7 @@ function weeklyBookingData(totalBookings: number, t: (key: string) => string): {
   const weights = [0.18, 0.20, 0.22, 0.19, 0.15, 0.04, 0.02];
   return dayKeys.map((key, i) => ({
     label: t(`reports.weekdays.${key}`),
-    value: Math.round(totalBookings * weights[i]),
+    value: Math.round(totalBookings * (weights[i] ?? 0)),
   }));
 }
 

@@ -116,7 +116,7 @@ describe('AdminAnnouncementsPage', () => {
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     // Open create form
     const newBtns = screen.getAllByText('admin.newAnnouncement');
-    fireEvent.click(newBtns[newBtns.length - 1]);
+    fireEvent.click(newBtns[newBtns.length - 1]!);
     await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
     // Find severity buttons by type="button" attribute
     const allBtns = screen.getAllByRole('button');
@@ -130,7 +130,7 @@ describe('AdminAnnouncementsPage', () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
     const newBtns = screen.getAllByText('admin.newAnnouncement');
-    fireEvent.click(newBtns[newBtns.length - 1]);
+    fireEvent.click(newBtns[newBtns.length - 1]!);
     await waitFor(() => expect(screen.getByPlaceholderText('admin.announcementTitle')).toBeInTheDocument());
     // The active toggle is a type="button" with text "admin.active"
     const allBtns = screen.getAllByRole('button');
@@ -159,7 +159,7 @@ describe('AdminAnnouncementsPage', () => {
   it('delete failure shows error', async () => {
     mockDeleteAnnouncement.mockResolvedValue({ success: false, error: { message: 'Cannot delete' } });
     render(<AdminAnnouncementsPage />);
-    await waitFor(() => fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]));
+    await waitFor(() => fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]!));
     fireEvent.click(screen.getByText('ConfirmDel'));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Cannot delete'));
   });
@@ -173,7 +173,7 @@ describe('AdminAnnouncementsPage', () => {
   it('cancels delete confirmation dialog', async () => {
     render(<AdminAnnouncementsPage />);
     await waitFor(() => expect(screen.getByText('Maintenance')).toBeInTheDocument());
-    fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]);
+    fireEvent.click(screen.getAllByLabelText(/common.delete/)[0]!);
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
     fireEvent.click(screen.getByText('CancelDel'));
     await waitFor(() => {

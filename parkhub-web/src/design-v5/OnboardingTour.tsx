@@ -394,7 +394,8 @@ function TourInner() {
       setTimeout(() => navigate('/', { replace: true }), 600);
       return;
     }
-    setStep(STEPS[idx + 1]);
+    const nextStep = STEPS[idx + 1];
+    if (nextStep) setStep(nextStep);
   };
 
   const skip = () => {
@@ -465,7 +466,10 @@ function TourInner() {
           {idx > 0 && (
             <button
               type="button"
-              onClick={() => setStep(STEPS[idx - 1])}
+              onClick={() => {
+                const previousStep = STEPS[idx - 1];
+                if (previousStep) setStep(previousStep);
+              }}
               style={{
                 padding: '9px 16px',
                 borderRadius: 10,

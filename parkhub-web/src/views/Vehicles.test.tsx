@@ -152,7 +152,7 @@ describe('VehiclesPage', () => {
 
     // Click the inline add button in the empty state
     const addButtons = screen.getAllByText('Hinzufügen');
-    await user.click(addButtons[0]);
+    await user.click(addButtons[0]!);
 
     expect(screen.getByText('Neues Fahrzeug')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('M-AB 1234')).toBeInTheDocument();
@@ -174,7 +174,7 @@ describe('VehiclesPage', () => {
     });
 
     const addButtons = screen.getAllByText('Hinzufügen');
-    await user.click(addButtons[0]);
+    await user.click(addButtons[0]!);
 
     await user.type(screen.getByPlaceholderText('M-AB 1234'), 'M-XX 9999');
     await user.type(screen.getByPlaceholderText('BMW'), 'VW');

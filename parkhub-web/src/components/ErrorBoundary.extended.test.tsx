@@ -15,7 +15,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 
 // ── Test components ──
 
-function ThrowingComponent({ message }: { message: string }) {
+function ThrowingComponent({ message }: { message: string }): React.ReactElement {
   throw new Error(message);
 }
 
@@ -23,7 +23,7 @@ function GoodComponent() {
   return <div data-testid="good-component">All good</div>;
 }
 
-function ThrowingWithStackComponent() {
+function ThrowingWithStackComponent(): React.ReactElement {
   const err = new Error('Stack trace error');
   err.stack = 'Error: Stack trace error\n    at ThrowingWithStackComponent (file.tsx:1:1)';
   throw err;

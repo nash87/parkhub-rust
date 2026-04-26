@@ -146,7 +146,8 @@ describe('QRCheckInPage', () => {
     const booking = makeActiveBooking();
     mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
 
-    global.fetch = vi.fn((url: string) => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
       if (typeof url === 'string' && url.includes('/check-in') && !url.includes('POST')) {
         return Promise.resolve({
           json: () => Promise.resolve({
@@ -164,7 +165,7 @@ describe('QRCheckInPage', () => {
       return Promise.resolve({
         json: () => Promise.resolve({ success: true, data: {} }),
       } as Response);
-    });
+    }) as typeof fetch;
 
     render(<QRCheckInPage />);
     await waitFor(() => {
@@ -177,7 +178,8 @@ describe('QRCheckInPage', () => {
     const booking = makeActiveBooking();
     mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
 
-    global.fetch = vi.fn((url: string) => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
       if (typeof url === 'string' && url.includes('/check-in')) {
         return Promise.resolve({
           json: () => Promise.resolve({
@@ -195,7 +197,7 @@ describe('QRCheckInPage', () => {
       return Promise.resolve({
         json: () => Promise.resolve({ success: true, data: {} }),
       } as Response);
-    });
+    }) as typeof fetch;
 
     render(<QRCheckInPage />);
     await waitFor(() => {
@@ -209,7 +211,8 @@ describe('QRCheckInPage', () => {
     mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
 
     const checkedInAt = new Date(Date.now() - 1800000).toISOString(); // 30 min ago
-    global.fetch = vi.fn((url: string) => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
       if (typeof url === 'string' && url.includes('/check-in')) {
         return Promise.resolve({
           json: () => Promise.resolve({
@@ -227,7 +230,7 @@ describe('QRCheckInPage', () => {
       return Promise.resolve({
         json: () => Promise.resolve({ success: true, data: {} }),
       } as Response);
-    });
+    }) as typeof fetch;
 
     render(<QRCheckInPage />);
     await waitFor(() => {
@@ -241,7 +244,8 @@ describe('QRCheckInPage', () => {
     const booking = makeActiveBooking();
     mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
 
-    const fetchMock = vi.fn((url: string, opts?: any) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, opts?: RequestInit) => {
+      const url = String(input);
       if (typeof url === 'string' && url.includes('/check-in') && opts?.method === 'POST') {
         return Promise.resolve({
           json: () => Promise.resolve({ success: true, data: {} }),
@@ -264,7 +268,7 @@ describe('QRCheckInPage', () => {
       return Promise.resolve({
         json: () => Promise.resolve({ success: true, data: {} }),
       } as Response);
-    });
+    }) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
     global.fetch = fetchMock;
 
     render(<QRCheckInPage />);
@@ -287,7 +291,8 @@ describe('QRCheckInPage', () => {
     mockGetBookings.mockResolvedValue({ success: true, data: [booking] });
 
     const checkedInAt = new Date(Date.now() - 600000).toISOString();
-    const fetchMock = vi.fn((url: string, opts?: any) => {
+    const fetchMock = vi.fn((input: RequestInfo | URL, opts?: RequestInit) => {
+      const url = String(input);
       if (typeof url === 'string' && url.includes('/check-out') && opts?.method === 'POST') {
         return Promise.resolve({
           json: () => Promise.resolve({ success: true, data: {} }),
@@ -310,7 +315,7 @@ describe('QRCheckInPage', () => {
       return Promise.resolve({
         json: () => Promise.resolve({ success: true, data: {} }),
       } as Response);
-    });
+    }) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
     global.fetch = fetchMock;
 
     render(<QRCheckInPage />);

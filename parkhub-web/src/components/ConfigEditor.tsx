@@ -203,6 +203,10 @@ export function ConfigEditor({
     setLocalErrors((prev) => prev.filter((e) => e.field !== name));
   }, []);
 
+  const captureFirstField = useCallback((node: HTMLElement | null) => {
+    if (node) firstFieldRef.current = node;
+  }, []);
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const errs = validateShape(schema, local);
@@ -260,7 +264,7 @@ export function ConfigEditor({
         if (describedBy) commonAriaProps['aria-describedby'] = describedBy;
         if (isRequired) commonAriaProps['aria-required'] = true;
 
-        const inputRefProp = idx === 0 ? { ref: firstFieldRef as React.RefObject<HTMLElement> } : {};
+        const inputRefProp = idx === 0 ? { ref: captureFirstField } : {};
 
         let control: ReactNode;
 

@@ -174,7 +174,7 @@ export function SwapRequestsPage() {
           <div className="space-y-3">
             <AnimatePresence>
               {requests.map(req => {
-                const cfg = statusConfig[req.status] || statusConfig.pending;
+                const cfg = statusConfig[req.status] ?? statusConfig.pending!;
                 return (
                   <motion.div
                     key={req.id}

@@ -155,7 +155,7 @@ describe('AdminTenantsPage', () => {
 
     // Click edit on first tenant
     const editBtns = screen.getAllByLabelText('Edit');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     await waitFor(() => {
       expect(screen.getByText('Edit Tenant')).toBeInTheDocument();
@@ -166,12 +166,12 @@ describe('AdminTenantsPage', () => {
 
   it('updates a tenant successfully', async () => {
     const user = userEvent.setup();
-    mockUpdateTenant.mockResolvedValue({ success: true, data: { ...sampleTenants[0], name: 'Updated' } });
+    mockUpdateTenant.mockResolvedValue({ success: true, data: { ...sampleTenants[0]!, name: 'Updated' } });
     render(<AdminTenantsPage />);
     await waitFor(() => expect(screen.getByText('Acme Corp')).toBeInTheDocument());
 
     const editBtns = screen.getAllByLabelText('Edit');
-    await user.click(editBtns[0]);
+    await user.click(editBtns[0]!);
 
     const nameInput = screen.getByTestId('tenant-name-input');
     await user.clear(nameInput);

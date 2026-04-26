@@ -26,7 +26,7 @@ describe('syncSettingsToServer', () => {
     vi.mocked(api.updateSettings).mockResolvedValue({
       success: false,
       data: null,
-      error: { code: 'PAYLOAD_TOO_LARGE', message: 'too big' },
+      error: { code: 'PAYLOAD_TOO_LARGE', message: 'too big', details: null },
     });
     await expect(syncSettingsToServer(DEFAULT_SETTINGS)).rejects.toThrow(
       /PAYLOAD_TOO_LARGE/,

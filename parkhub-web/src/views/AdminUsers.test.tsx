@@ -729,7 +729,7 @@ describe('AdminUsersPage', () => {
       // The role select appears
       const roleSelects = screen.getAllByLabelText('Edit role');
       // The new bulk role select is the dropdown
-      await user.selectOptions(roleSelects[0], 'admin');
+      await user.selectOptions(roleSelects[0]!, 'admin');
       await user.click(screen.getByText('Apply'));
       await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
       await user.click(screen.getByText('Confirm'));

@@ -125,8 +125,8 @@ describe('SWUpdatePrompt', () => {
 
     render(<SWUpdatePrompt />);
     expect(controllerChangeListeners.length).toBeGreaterThan(0);
-    act(() => { controllerChangeListeners[0](); });
-    act(() => { controllerChangeListeners[0](); });
+    act(() => { controllerChangeListeners[0]!(); });
+    act(() => { controllerChangeListeners[0]!(); });
     expect(window.location.reload).toHaveBeenCalledTimes(1);
 
     Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });

@@ -62,7 +62,7 @@ describe('UPlotChart', () => {
   it('constructs uPlot with the provided aligned data', () => {
     render(<UPlotChart data={[[1, 2, 3], [10, 20, 30]]} />);
     expect(ctorSpy).toHaveBeenCalledTimes(1);
-    const [, data] = ctorSpy.mock.calls[0];
+    const [, data] = ctorSpy.mock.calls[0]!;
     expect(data).toEqual([[1, 2, 3], [10, 20, 30]]);
   });
 

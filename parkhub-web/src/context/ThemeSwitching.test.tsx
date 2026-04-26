@@ -45,7 +45,7 @@ vi.hoisted(() => {
   });
 });
 
-const updateDesignThemePreferenceSpy = vi.fn(() =>
+const updateDesignThemePreferenceSpy = vi.fn((_: string) =>
   Promise.resolve({ success: true, data: { design_theme: 'classic' } })
 );
 vi.mock('../api/client', () => ({

@@ -79,7 +79,7 @@ export function ParkingHistoryPage() {
               <p className="text-surface-500 dark:text-surface-400 mt-0.5">{t('history.subtitle')}</p>
             </div>
           </div>
-          <OnboardingHint hintKey="history" text={t('history.help')} />
+          <OnboardingHint id="parking-history" message={t('history.help')} />
         </motion.div>
 
         {/* Stats Cards */}

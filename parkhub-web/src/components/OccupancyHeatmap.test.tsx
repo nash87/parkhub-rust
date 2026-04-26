@@ -159,7 +159,7 @@ describe('OccupancyHeatmap component', () => {
     render(<OccupancyHeatmap bookings={[]} totalSlots={10} />);
     const rowHeaders = screen.getAllByRole('rowheader');
     expect(rowHeaders).toHaveLength(16);
-    expect(rowHeaders[0]).toHaveTextContent('6:00');
+    expect(rowHeaders[0]!).toHaveTextContent('6:00');
     expect(rowHeaders[15]).toHaveTextContent('21:00');
   });
 
@@ -185,10 +185,10 @@ describe('OccupancyHeatmap component', () => {
 
     // Find a cell and hover over it
     const cells = screen.getAllByRole('gridcell');
-    fireEvent.mouseEnter(cells[0]);
+    fireEvent.mouseEnter(cells[0]!);
     // The tooltip should appear for cells with data; for empty cells it may not
     // Just verify no crash
-    fireEvent.mouseLeave(cells[0]);
+    fireEvent.mouseLeave(cells[0]!);
   });
 
   it('displays color legend', () => {

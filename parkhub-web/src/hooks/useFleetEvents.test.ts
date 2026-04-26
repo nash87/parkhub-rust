@@ -90,8 +90,8 @@ describe('useFleetEvents', () => {
     renderHook(() => useFleetEvents({ invalidate: {} }), { wrapper: wrapper(qc) });
     expect(MockEventSource.instances).toHaveLength(1);
     const es = MockEventSource.instances[0];
-    expect(es.url).toContain('/api/v1/events/fleet');
-    expect(es.withCredentials).toBe(true);
+    expect(es!.url).toContain('/api/v1/events/fleet');
+    expect(es!.withCredentials).toBe(true);
   });
 
   it('reports connected=true after open', () => {
@@ -100,7 +100,7 @@ describe('useFleetEvents', () => {
       wrapper: wrapper(qc),
     });
     expect(result.current.connected).toBe(false);
-    act(() => MockEventSource.instances[0].simulateOpen());
+    act(() => MockEventSource.instances[0]!.simulateOpen());
     expect(result.current.connected).toBe(true);
   });
 
@@ -118,9 +118,9 @@ describe('useFleetEvents', () => {
       { wrapper: wrapper(qc) },
     );
 
-    act(() => MockEventSource.instances[0].simulateOpen());
+    act(() => MockEventSource.instances[0]!.simulateOpen());
     act(() =>
-      MockEventSource.instances[0].fire('checkin.completed', {
+      MockEventSource.instances[0]!.fire('checkin.completed', {
         resource_id: 'b-1',
         lot_id: 'lot-1',
         user_id: 'u-1',
@@ -143,9 +143,9 @@ describe('useFleetEvents', () => {
         }),
       { wrapper: wrapper(qc) },
     );
-    act(() => MockEventSource.instances[0].simulateOpen());
+    act(() => MockEventSource.instances[0]!.simulateOpen());
     act(() =>
-      MockEventSource.instances[0].fire('guest.created', {
+      MockEventSource.instances[0]!.fire('guest.created', {
         resource_id: 'g-1',
         lot_id: 'lot-1',
         user_id: 'u-1',
@@ -165,16 +165,16 @@ describe('useFleetEvents', () => {
         }),
       { wrapper: wrapper(qc) },
     );
-    act(() => MockEventSource.instances[0].simulateOpen());
+    act(() => MockEventSource.instances[0]!.simulateOpen());
     act(() =>
-      MockEventSource.instances[0].fire('swap.accepted', {
+      MockEventSource.instances[0]!.fire('swap.accepted', {
         resource_id: 'swap-1',
         lot_id: null,
         user_id: 'u-1',
       }),
     );
     expect(onEvent).toHaveBeenCalledTimes(1);
-    const ev = onEvent.mock.calls[0][0] as FleetEvent;
+    const ev = onEvent.mock.calls[0]![0] as FleetEvent;
     expect(ev.type).toBe('swap.accepted');
     expect(ev.resource_id).toBe('swap-1');
   });
@@ -185,9 +185,9 @@ describe('useFleetEvents', () => {
       wrapper: wrapper(qc),
     });
     const es = MockEventSource.instances[0];
-    act(() => es.simulateOpen());
+    act(() => es!.simulateOpen());
     unmount();
-    expect(es.close).toHaveBeenCalled();
+    expect(es!.close).toHaveBeenCalled();
   });
 
   it('reports connected=false after error', () => {
@@ -195,9 +195,9 @@ describe('useFleetEvents', () => {
     const { result } = renderHook(() => useFleetEvents({ invalidate: {} }), {
       wrapper: wrapper(qc),
     });
-    act(() => MockEventSource.instances[0].simulateOpen());
+    act(() => MockEventSource.instances[0]!.simulateOpen());
     expect(result.current.connected).toBe(true);
-    act(() => MockEventSource.instances[0].simulateError());
+    act(() => MockEventSource.instances[0]!.simulateError());
     expect(result.current.connected).toBe(false);
   });
 

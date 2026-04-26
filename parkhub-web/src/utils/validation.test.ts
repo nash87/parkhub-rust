@@ -35,8 +35,8 @@ describe('Login schema', () => {
     const result = loginSchema.safeParse({ username: '', password: 'demo' });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toEqual(['username']);
-      expect(result.error.issues[0].message).toBe('Required');
+      expect(result.error.issues[0]!.path).toEqual(['username']);
+      expect(result.error.issues[0]!.message).toBe('Required');
     }
   });
 
@@ -44,7 +44,7 @@ describe('Login schema', () => {
     const result = loginSchema.safeParse({ username: 'admin', password: '' });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].path).toEqual(['password']);
+      expect(result.error.issues[0]!.path).toEqual(['password']);
     }
   });
 

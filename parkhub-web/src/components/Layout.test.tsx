@@ -299,7 +299,7 @@ describe('Layout', () => {
 
     // Toggle Settings open
     const settingsHeaders = screen.getAllByRole('button', { name: /Settings/ });
-    const firstSettings = settingsHeaders[0];
+    const firstSettings = settingsHeaders[0]!;
     if (!firstSettings) throw new Error('Settings header not found');
     await user.click(firstSettings);
     expect(screen.getAllByText('Profile').length).toBeGreaterThanOrEqual(1);
@@ -309,13 +309,13 @@ describe('Layout', () => {
     const user = userEvent.setup();
     render(<Layout />);
     const settingsHeaders = screen.getAllByRole('button', { name: /Settings/ });
-    const firstSettings = settingsHeaders[0];
+    const firstSettings = settingsHeaders[0]!;
     if (!firstSettings) throw new Error('Settings header not found');
     await user.click(firstSettings);
     expect(window.localStorage.getItem('parkhub_sidebar_settings_open')).toBe('true');
 
     const fleetHeaders = screen.getAllByRole('button', { name: /Fleet/ });
-    const firstFleet = fleetHeaders[0];
+    const firstFleet = fleetHeaders[0]!;
     if (!firstFleet) throw new Error('Fleet header not found');
     await user.click(firstFleet);
     expect(window.localStorage.getItem('parkhub_sidebar_fleet_open')).toBe('false');
@@ -343,7 +343,7 @@ describe('Layout', () => {
 
     // Multiple logout buttons (desktop sidebar + possibly mobile)
     const logoutButtons = screen.getAllByText('Log Out');
-    await user.click(logoutButtons[0]);
+    await user.click(logoutButtons[0]!);
 
     expect(mockLogout).toHaveBeenCalledOnce();
     expect(mockNavigate).toHaveBeenCalledWith('/welcome');
@@ -618,7 +618,7 @@ describe('Layout', () => {
 
   it('skips notification fetch when no token is available', () => {
     const fetchSpy = vi.fn();
-    mockGetInMemoryToken.mockReturnValue(null);
+    mockGetInMemoryToken.mockReturnValue(null as unknown as string);
     vi.stubGlobal('fetch', fetchSpy);
 
     render(<Layout />);

@@ -22,7 +22,7 @@ vi.mock('../Toast', () => ({
   V5ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-const mockUseFleetEvents = vi.fn(() => ({ connected: false }));
+const mockUseFleetEvents = vi.fn((..._args: unknown[]) => ({ connected: false }));
 vi.mock('../../hooks/useFleetEvents', () => ({
   useFleetEvents: (...a: unknown[]) => mockUseFleetEvents(...a),
 }));
@@ -138,7 +138,7 @@ describe('EincheckenV5', () => {
     mockGetBookings.mockResolvedValue({ success: true, data: [] });
     renderScreen();
     await waitFor(() => expect(mockUseFleetEvents).toHaveBeenCalled());
-    const opts = mockUseFleetEvents.mock.calls[0][0] as {
+    const opts = mockUseFleetEvents.mock.calls[0]![0] as {
       invalidate: Record<string, unknown[][]>;
     };
     expect(opts.invalidate['checkin.started']).toBeDefined();

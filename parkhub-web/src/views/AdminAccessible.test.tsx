@@ -147,7 +147,7 @@ describe('AdminAccessiblePage', () => {
     await waitFor(() => expect(screen.getByTestId('slot-list')).toBeInTheDocument());
 
     const toggles = screen.getAllByTestId('slot-toggle');
-    fireEvent.click(toggles[2]); // Toggle slot 3 (not accessible) -> accessible
+    fireEvent.click(toggles[2]!); // Toggle slot 3 (not accessible) -> accessible
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -188,7 +188,7 @@ describe('AdminAccessiblePage', () => {
     fireEvent.change(screen.getByTestId('lot-selector'), { target: { value: 'lot-1' } });
     await waitFor(() => expect(screen.getByTestId('slot-list')).toBeInTheDocument());
     const toggles = screen.getAllByTestId('slot-toggle');
-    fireEvent.click(toggles[0]);
+    fireEvent.click(toggles[0]!);
     // No throw, function completes
   });
 
@@ -214,7 +214,7 @@ describe('AdminAccessiblePage', () => {
     fireEvent.change(screen.getByTestId('lot-selector'), { target: { value: 'lot-1' } });
     await waitFor(() => expect(screen.getByTestId('slot-list')).toBeInTheDocument());
     const toggles = screen.getAllByTestId('slot-toggle');
-    fireEvent.click(toggles[0]);
+    fireEvent.click(toggles[0]!);
     // No throw
   });
 });

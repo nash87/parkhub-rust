@@ -165,9 +165,13 @@ export function PullToRefresh({
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (window.scrollY === 0) {
-      const startY = e.touches[0].clientY;
+      const startTouch = e.touches[0];
+      if (!startTouch) return;
+      const startY = startTouch.clientY;
       const handleTouchMove = (moveEvent: TouchEvent) => {
-        const diff = moveEvent.touches[0].clientY - startY;
+        const moveTouch = moveEvent.touches[0];
+        if (!moveTouch) return;
+        const diff = moveTouch.clientY - startY;
         if (diff > 0 && window.scrollY === 0) {
           const nextDistance = Math.min(diff, threshold * 1.5);
           setPulling(true);

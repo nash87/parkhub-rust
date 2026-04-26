@@ -78,7 +78,7 @@ const perfBoostIntegration = {
       //    classes apply, triggering a new LCP event), so we stick with a
       //    prioritized render-blocking link.
       const primaryCssRe = /<link rel="stylesheet" href="(\/_astro\/index@_@astro\.[^"]+\.css)">/;
-      html = html.replace(primaryCssRe, (_all, href) =>
+      html = html.replace(primaryCssRe, (/** @type {string} */ _all, /** @type {string} */ href) =>
         `<link rel="stylesheet" href="${href}" fetchpriority="high">`);
 
       // 1b. Hoist the entry `<script type="module">` to <head> with
@@ -101,6 +101,7 @@ const perfBoostIntegration = {
       //    we let the entry script's static <link modulepreload> graph cover
       //    those.
       const criticalBases = ['Welcome'];
+      /** @type {string[]} */
       const hints = [];
       for (const base of criticalBases) {
         const match = files.find(f => f.startsWith(`${base}.`) && f.endsWith('.js'));
@@ -119,7 +120,7 @@ export default defineConfig({
   output: 'static',
   integrations: [react({ babel: { plugins: [reactCompiler] } }), swBuildHashIntegration, perfBoostIntegration],
   vite: {
-    plugins: [tailwindcss()],
+    plugins: /** @type {any[]} */ ([tailwindcss()]),
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || ''),
       'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
@@ -140,7 +141,7 @@ export default defineConfig({
       },
     },
   },
-  fonts: process.env.CI || process.env.DOCKER ? [] : [
+  fonts: /** @type {any} */ (process.env.CI || process.env.DOCKER ? [] : [
     {
       name: 'Outfit',
       cssVariable: '--font-outfit',
@@ -159,5 +160,5 @@ export default defineConfig({
       subsets: ['latin'],
       fallbacks: ['system-ui', 'sans-serif'],
     },
-  ],
+  ]),
 });

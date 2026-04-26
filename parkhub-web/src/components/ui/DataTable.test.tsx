@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -39,7 +39,7 @@ const columns = [
   columnHelper.accessor('name', { header: 'Name', enableSorting: true }),
   columnHelper.accessor('email', { header: 'Email', enableSorting: true }),
   columnHelper.accessor('role', { header: () => 'Role', enableSorting: false }),
-];
+] as ColumnDef<TestRow, unknown>[];
 
 const sampleData: TestRow[] = [
   { id: '1', name: 'Alice', email: 'alice@test.com', role: 'admin' },
@@ -112,7 +112,7 @@ describe('DataTable', () => {
     render(<DataTable data={sampleData} columns={columns} onRowClick={onClick} />);
     const aliceRow = screen.getByText('Alice').closest('tr')!;
     fireEvent.click(aliceRow);
-    expect(onClick).toHaveBeenCalledWith(sampleData[0]);
+    expect(onClick).toHaveBeenCalledWith(sampleData[0]!);
   });
 
   it('does not show CSV button when exportFilename is not provided', () => {
@@ -233,7 +233,7 @@ describe('DataTable', () => {
     // Give the async handler a tick.
     await Promise.resolve();
     expect(mockPdfDownload).toHaveBeenCalledTimes(1);
-    const [filename, title] = mockPdfDownload.mock.calls[0];
+    const [filename, title] = mockPdfDownload.mock.calls[0]!;
     expect(filename).toBe('rows');
     expect(title).toBe('rows');
   });

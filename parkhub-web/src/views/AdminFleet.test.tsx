@@ -83,7 +83,7 @@ describe('AdminFleetPage', () => {
     render(<AdminFleetPage />);
     await waitFor(() => expect(screen.getAllByTestId('flag-btn').length).toBeGreaterThan(0));
     const flagBtns = screen.getAllByTestId('flag-btn');
-    fireEvent.click(flagBtns[0]); // flag unflagged vehicle
+    fireEvent.click(flagBtns[0]!); // flag unflagged vehicle
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('/flag'), expect.anything()));
   });
 
@@ -95,7 +95,7 @@ describe('AdminFleetPage', () => {
     }) as any;
     render(<AdminFleetPage />);
     await waitFor(() => expect(screen.getAllByTestId('flag-btn').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('flag-btn')[0]);
+    fireEvent.click(screen.getAllByTestId('flag-btn')[0]!);
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
   });
 
@@ -107,7 +107,7 @@ describe('AdminFleetPage', () => {
     }) as any;
     render(<AdminFleetPage />);
     await waitFor(() => expect(screen.getAllByTestId('flag-btn').length).toBeGreaterThan(0));
-    fireEvent.click(screen.getAllByTestId('flag-btn')[0]);
+    fireEvent.click(screen.getAllByTestId('flag-btn')[0]!);
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
   });
 

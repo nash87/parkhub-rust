@@ -197,7 +197,7 @@ describe('SwapRequestsPage', () => {
     await waitFor(() => expect(screen.getByTestId('swap-modal')).toBeInTheDocument());
     const modal = screen.getByTestId('swap-modal');
     const xButtons = modal.querySelectorAll('button.btn-ghost');
-    if (xButtons.length > 0) fireEvent.click(xButtons[0]);
+    if (xButtons.length > 0) fireEvent.click(xButtons[0]!);
     await waitFor(() => expect(screen.queryByTestId('swap-modal')).not.toBeInTheDocument());
   });
 
