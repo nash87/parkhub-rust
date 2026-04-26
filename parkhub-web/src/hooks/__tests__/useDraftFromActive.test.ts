@@ -144,4 +144,59 @@ describe('useDraftFromActive', () => {
     expect(result.current[0]).toBe('Alter Text');
     expect(result.current[2].isDirty).toBe(false);
   });
+
+  // ─── Hardening (PR #424 follow-up: copilot review edge cases) ───
+
+  it('default derive handles arrays via spread (not object-spread)', () => {
+    // Object-spread on an array would produce { '0': 'a', '1': 'b' } silently.
+    const arr: { id: string; tags: string[] } = { id: 'x', tags: ['a', 'b'] };
+    const { result } = renderHook(() => useDraftFromActive(arr, { derive: (p) => p.tags }));
+    const [draft] = result.current;
+    expect(Array.isArray(draft)).toBe(true);
+    expect(draft).toEqual(['a', 'b']);
+  });
+
+  it('falls back to reference equality when active has no id and no idKey', () => {
+    // Use objects without an `id` field — the hook must not seed-loop on the
+    // same reference when the parent rerenders.
+    interface Anon { kind: 'anon'; body: string }
+    const a: Anon = { kind: 'anon', body: 'one' };
+    const b: Anon = { kind: 'anon', body: 'two' };
+
+    const { result, rerender } = renderHook(
+      ({ active }: { active: Anon }) =>
+        useDraftFromActive<Anon, string>(active, { derive: (p) => p.body }),
+      { initialProps: { active: a } },
+    );
+    act(() => result.current[1]('user typed'));
+    // Rerender with the SAME reference — should not clobber edit.
+    rerender({ active: a });
+    expect(result.current[0]).toBe('user typed');
+    // New reference — should re-seed.
+    rerender({ active: b });
+    expect(result.current[0]).toBe('two');
+  });
+
+  it('isDirty stays false when active is undefined (seeded sentinel)', () => {
+    // Without the `seededRef`, `pristineRef.current === undefined` would be
+    // ambiguous: was the draft never seeded, or seeded with undefined?
+    const { result, rerender } = renderHook(
+      ({ active }: { active: Policy | undefined }) =>
+        useDraftFromActive<Policy, string>(active, { derive: (p) => p.body }),
+      { initialProps: { active: undefined as Policy | undefined } },
+    );
+    expect(result.current[2].isDirty).toBe(false);
+
+    rerender({ active: P1 });
+    expect(result.current[2].isDirty).toBe(false);
+    expect(result.current[2].pristine).toBe('Alter Text');
+
+    act(() => result.current[1]('edited'));
+    expect(result.current[2].isDirty).toBe(true);
+
+    rerender({ active: undefined });
+    // Cleared back to unseeded — isDirty false even though draft is undefined.
+    expect(result.current[2].isDirty).toBe(false);
+    expect(result.current[2].pristine).toBeUndefined();
+  });
 });
