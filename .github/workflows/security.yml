@@ -146,3 +146,35 @@ jobs:
           else
             gitleaks detect --source=. --redact --verbose --no-banner
           fi
+
+  typos:
+    name: Typos (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Advisory until typo backlog is cleared. Promote to required once green.
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Run typos
+        uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
+
+  zizmor:
+    name: Zizmor (GHA SAST, audit-mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Audit-mode: surface findings as informational; do NOT fail the gate yet.
+    # Promote findings to errors once the workflow inventory has been triaged.
+    continue-on-error: true
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+        with:
+          # auditor persona surfaces low-severity findings useful for hardening
+          # without flooding the PR with regular-user noise.
+          persona: auditor
