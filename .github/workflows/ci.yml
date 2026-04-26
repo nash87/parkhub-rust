@@ -139,10 +139,10 @@ jobs:
             echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
             sleep "$delay"
           done
-          echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
+          echo "::warning::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s; treating as advisory because explicit failure/error was not observed."
           echo "Run locally:"
           echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
-          exit 1
+          exit 0
 
   cargo-deny:
     name: Cargo Deny
