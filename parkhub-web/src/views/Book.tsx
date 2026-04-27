@@ -119,7 +119,8 @@ export function BookPage() {
   const start = new Date(startDate);
   const end = new Date(start.getTime() + duration * 60 * 60 * 1000);
   const effectiveRate = dynamicPrice?.dynamic_pricing_active ? dynamicPrice.current_price : selectedLot?.hourly_rate;
-  const estimatedCost = effectiveRate != null ? (Number(effectiveRate) * duration).toFixed(2) : null;
+  const effectiveRateNum = effectiveRate != null ? Number(effectiveRate) : null;
+  const estimatedCost = effectiveRateNum != null && isFinite(effectiveRateNum) ? (effectiveRateNum * duration).toFixed(2) : null;
 
   const slideVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),

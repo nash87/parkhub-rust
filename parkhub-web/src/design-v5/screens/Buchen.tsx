@@ -256,7 +256,8 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
   const end = new Date(start.getTime() + duration * 60 * 60 * 1000);
   const rate = selectedLot?.hourly_rate;
   const currency = selectedLot?.currency || '€';
-  const estimated = rate != null ? (Number(rate) * duration).toFixed(2) : null;
+  const rateNum = rate != null ? Number(rate) : null;
+  const estimated = rateNum != null && isFinite(rateNum) ? (rateNum * duration).toFixed(2) : null;
 
   function handleSelectLot(lot: ParkingLot) {
     setSelectedLot(lot);
