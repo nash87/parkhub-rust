@@ -1,0 +1,25 @@
+title = "parkhub-rust gitleaks allowlist"
+description = "Webhook endpoint paths + test fixture URLs are not secrets"
+
+[allowlist]
+description = "Endpoint path identifiers, test fixture URLs, and example webhook hosts"
+regexes = [
+	# Webhook URL path segments are endpoint identifiers, not auth tokens.
+	# Same false-positive class as fop-web-ui T-2275.
+	'''hooks/[a-z0-9_-]+''',
+	'''/webhooks?(?:/[a-z0-9_-]+)?''',
+	# Example/test hostnames in webhooks_v2_tests + plugin/db tests — never
+	# real endpoints, never carry real credentials.
+	'''https?://(?:example\.com|other\.io|hooks\.example\.com)''',
+	# RFC 5737/RFC 6890 reserved IPs used in SSRF guard tests
+	# (validate_webhook_url asserts these are blocked).
+	'''https?://(?:10|127|169\.254|172\.(?:1[6-9]|2[0-9]|3[0-1])|192\.168|0)\.\d+\.\d+\.\d+''',
+]
+paths = [
+	# Test fixtures and visual baselines never carry real secrets.
+	'''parkhub-web/e2e/fixtures/''',
+	'''e2e/__screenshots__/''',
+	# Lockfiles
+	'''(?:^|/)Cargo\.lock$''',
+	'''(?:^|/)package-lock\.json$''',
+]

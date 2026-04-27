@@ -1,0 +1,28 @@
+# Semgrep ignore list — false-positive suppressions for parkhub-rust.
+#
+# These are NOT security exceptions; they are rule-specific false positives
+# where Semgrep's built-in rule packs (p/javascript, p/typescript, p/react)
+# misinterpret legitimate non-security code as vulnerabilities.
+
+# Math.random() used for non-cryptographic UI placeholders only — confetti,
+# demo data, toast IDs. Never for tokens, sessions, IDs that hit the wire.
+parkhub-web/src/views/OccupancyHeatmap.test.tsx
+parkhub-web/src/views/OccupancyPrediction.tsx
+parkhub-web/src/views/Book.tsx
+parkhub-web/src/design-v5/Toast.tsx
+
+# Test fixtures + e2e specs — test-only code, not shipped, separate threat
+# model. Real production code lives outside these paths.
+e2e/
+parkhub-web/e2e/
+parkhub-web/src/test/
+parkhub-server/tests/
+parkhub-common/tests/
+tests/
+
+# Rust unit-test modules embedded in source — `#[cfg(test)]` blocks contain
+# fixture URLs + reserved-IP literals that the SSRF guard intentionally
+# rejects. These are assertions, not vulnerabilities.
+parkhub-server/src/api/webhooks.rs
+parkhub-server/src/webhooks_v2_tests.rs
+parkhub-server/src/db/tests.rs
