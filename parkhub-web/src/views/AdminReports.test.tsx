@@ -5,13 +5,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 // ── Mocks ──
 
 const mockAdminStats = vi.fn();
-const mockGetBookings = vi.fn();
+const mockAdminBookings = vi.fn();
 const mockGetLots = vi.fn();
 
 vi.mock('../api/client', () => ({
   api: {
     adminStats: (...args: any[]) => mockAdminStats(...args),
-    getBookings: (...args: any[]) => mockGetBookings(...args),
+    adminBookings: (...args: any[]) => mockAdminBookings(...args),
     getLots: (...args: any[]) => mockGetLots(...args),
   },
 }));
@@ -83,9 +83,12 @@ import { AdminReportsPage } from './AdminReports';
 describe('AdminReportsPage', () => {
   beforeEach(() => {
     mockAdminStats.mockClear();
-    mockGetBookings.mockClear();
+    mockAdminBookings.mockClear();
     mockGetLots.mockClear();
-    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockAdminBookings.mockResolvedValue({
+      success: true,
+      data: { items: [], page: 1, per_page: 500, total: 0, total_pages: 0 },
+    });
     mockGetLots.mockResolvedValue({ success: true, data: [] });
   });
 
@@ -95,7 +98,7 @@ describe('AdminReportsPage', () => {
 
   it('shows loading spinner initially', () => {
     mockAdminStats.mockReturnValue(new Promise(() => {}));
-    mockGetBookings.mockReturnValue(new Promise(() => {}));
+    mockAdminBookings.mockReturnValue(new Promise(() => {}));
     render(<AdminReportsPage />);
     expect(screen.getByTestId('icon-spinner')).toBeInTheDocument();
   });
@@ -103,7 +106,7 @@ describe('AdminReportsPage', () => {
   it('renders Reports heading after loading', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 50, total_lots: 3, total_bookings: 200, active_bookings: 15 },
+      data: { total_users: 50, total_lots: 3, total_slots: 60, total_bookings: 200, active_bookings: 15, occupancy_percent: 25 },
     });
 
     render(<AdminReportsPage />);
@@ -116,7 +119,7 @@ describe('AdminReportsPage', () => {
   it('renders stat cards with correct values', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 50, total_lots: 3, total_bookings: 200, active_bookings: 15 },
+      data: { total_users: 50, total_lots: 3, total_slots: 60, total_bookings: 200, active_bookings: 15, occupancy_percent: 25 },
     });
 
     render(<AdminReportsPage />);
@@ -136,7 +139,7 @@ describe('AdminReportsPage', () => {
   it('renders overview summary section', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 50, total_lots: 3, total_bookings: 200, active_bookings: 15 },
+      data: { total_users: 50, total_lots: 3, total_slots: 60, total_bookings: 200, active_bookings: 15, occupancy_percent: 25 },
     });
 
     render(<AdminReportsPage />);
@@ -152,7 +155,30 @@ describe('AdminReportsPage', () => {
   it('renders bar chart component', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 10, total_lots: 2, total_bookings: 50, active_bookings: 5 },
+      data: { total_users: 10, total_lots: 2, total_slots: 40, total_bookings: 50, active_bookings: 5, occupancy_percent: 12.5 },
+    });
+    mockAdminBookings.mockResolvedValue({
+      success: true,
+      data: {
+        items: [
+          {
+            id: 'b1',
+            user_id: 'u1',
+            lot_id: 'l1',
+            slot_id: 's1',
+            lot_name: 'Lot A',
+            slot_number: 'S01',
+            start_time: '2026-04-20T08:00:00Z',
+            end_time: '2026-04-20T17:00:00Z',
+            status: 'confirmed',
+            created_at: '2026-04-01T12:00:00Z',
+          },
+        ],
+        page: 1,
+        per_page: 500,
+        total: 1,
+        total_pages: 1,
+      },
     });
 
     render(<AdminReportsPage />);
@@ -165,7 +191,7 @@ describe('AdminReportsPage', () => {
   it('renders donut chart when lots exist', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 10, total_lots: 3, total_bookings: 50, active_bookings: 5 },
+      data: { total_users: 10, total_lots: 3, total_slots: 65, total_bookings: 50, active_bookings: 5, occupancy_percent: 8 },
     });
     mockGetLots.mockResolvedValue({
       success: true,
@@ -186,7 +212,54 @@ describe('AdminReportsPage', () => {
   it('renders occupancy heatmap section', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 10, total_lots: 2, total_bookings: 50, active_bookings: 5 },
+      data: { total_users: 10, total_lots: 2, total_slots: 40, total_bookings: 50, active_bookings: 5, occupancy_percent: 12.5 },
+    });
+    mockAdminBookings.mockResolvedValue({
+      success: true,
+      data: {
+        items: [
+          {
+            id: 'b1',
+            user_id: 'u1',
+            lot_id: 'l1',
+            slot_id: 's1',
+            lot_name: 'Lot A',
+            slot_number: 'S01',
+            start_time: '2026-04-20T08:00:00Z',
+            end_time: '2026-04-20T17:00:00Z',
+            status: 'confirmed',
+            created_at: '2026-04-19T12:00:00Z',
+          },
+          {
+            id: 'b2',
+            user_id: 'u1',
+            lot_id: 'l1',
+            slot_id: 's2',
+            lot_name: 'Lot A',
+            slot_number: 'S02',
+            start_time: '2026-04-20T09:00:00Z',
+            end_time: '2026-04-20T17:00:00Z',
+            status: 'pending',
+            created_at: '2026-04-19T12:00:00Z',
+          },
+          {
+            id: 'b3',
+            user_id: 'u1',
+            lot_id: 'l1',
+            slot_id: 's3',
+            lot_name: 'Lot A',
+            slot_number: 'S03',
+            start_time: '2026-04-20T10:00:00Z',
+            end_time: '2026-04-20T17:00:00Z',
+            status: 'expired',
+            created_at: '2026-04-19T12:00:00Z',
+          },
+        ],
+        page: 1,
+        per_page: 500,
+        total: 3,
+        total_pages: 1,
+      },
     });
 
     render(<AdminReportsPage />);
@@ -194,20 +267,21 @@ describe('AdminReportsPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('occupancy-heatmap')).toBeInTheDocument();
     });
+    expect(mockAdminBookings).toHaveBeenCalledWith(500);
     expect(screen.getByText('Occupancy Heatmap')).toBeInTheDocument();
+    expect(screen.getByText('heatmap: 1 bookings, 40 slots')).toBeInTheDocument();
   });
 
-  it('calculates correct utilization rate', async () => {
+  it('uses backend occupancy percent for utilization rate', async () => {
     mockAdminStats.mockResolvedValue({
       success: true,
-      data: { total_users: 10, total_lots: 5, total_bookings: 100, active_bookings: 3 },
+      data: { total_users: 10, total_lots: 5, total_slots: 100, total_bookings: 100, active_bookings: 3, occupancy_percent: 3 },
     });
 
     render(<AdminReportsPage />);
 
     await waitFor(() => {
-      // 3 / 5 = 60%
-      expect(screen.getByText('60%')).toBeInTheDocument();
+      expect(screen.getAllByText('3%').length).toBeGreaterThanOrEqual(1);
     });
   });
 });

@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning, type Icon } from '@phosphor-icons/react';
-import { api, type AdminStats, type Booking, type ParkingLot } from '../api/client';
+import { api, type AdminBooking, type AdminStats, type ParkingLot } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
 import { OccupancyHeatmap } from '../components/OccupancyHeatmap';
 import { ExportButton } from '../components/ExportButton';
+
+const HEATMAP_STATUSES = new Set(['confirmed', 'active', 'completed']);
 
 function StatCard({ icon: Icon, label, value }: {
   icon: Icon;
@@ -40,39 +42,50 @@ function lotOccupancyFromData(lots: ParkingLot[]): DonutSlice[] {
   });
 }
 
-/** Build mock "bookings this week" from total bookings to show a plausible distribution. */
-function weeklyBookingData(totalBookings: number, t: (key: string) => string): { label: string; value: number }[] {
+/** Build real booking totals for each weekday from booking start times. */
+function weeklyBookingData(bookings: AdminBooking[], t: (key: string) => string): { label: string; value: number }[] {
   const dayKeys = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-  // Weights simulate typical office-parking week pattern
-  const weights = [0.18, 0.20, 0.22, 0.19, 0.15, 0.04, 0.02];
+  const counts = new Map<number, number>(dayKeys.map((_, index) => [index, 0]));
+  for (const booking of bookings) {
+    if (!HEATMAP_STATUSES.has(booking.status)) continue;
+    const date = new Date(booking.start_time);
+    if (Number.isNaN(date.valueOf())) continue;
+    const mondayFirstIndex = date.getDay() === 0 ? 6 : date.getDay() - 1;
+    counts.set(mondayFirstIndex, (counts.get(mondayFirstIndex) ?? 0) + 1);
+  }
   return dayKeys.map((key, i) => ({
     label: t(`reports.weekdays.${key}`),
-    value: Math.round(totalBookings * (weights[i] ?? 0)),
+    value: counts.get(i) ?? 0,
   }));
 }
 
 export function AdminReportsPage() {
   const { t } = useTranslation();
   const [stats, setStats] = useState<AdminStats | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [lots, setLots] = useState<ParkingLot[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       api.adminStats(),
-      api.getBookings(),
+      api.adminBookings(500),
       api.getLots(),
     ]).then(([statsRes, bookingsRes, lotsRes]) => {
       if (statsRes.success && statsRes.data) setStats(statsRes.data);
-      if (bookingsRes.success && bookingsRes.data) setBookings(bookingsRes.data);
+      if (bookingsRes.success && bookingsRes.data) setBookings(bookingsRes.data.items ?? []);
       if (lotsRes.success && lotsRes.data) setLots(lotsRes.data);
     }).finally(() => setLoading(false));
   }, []);
 
   const weeklyData = useMemo(
-    () => weeklyBookingData(stats?.total_bookings ?? 0, t),
-    [stats?.total_bookings, t],
+    () => weeklyBookingData(bookings, t),
+    [bookings, t],
+  );
+
+  const heatmapBookings = useMemo(
+    () => bookings.filter(booking => HEATMAP_STATUSES.has(booking.status)),
+    [bookings],
   );
 
   const lotOccupancy = useMemo(
@@ -81,8 +94,8 @@ export function AdminReportsPage() {
   );
 
   const totalSlots = useMemo(
-    () => lots.reduce((sum, l) => sum + l.total_slots, 0) || 20,
-    [lots],
+    () => lots.reduce((sum, l) => sum + l.total_slots, 0) || stats?.total_slots || 0,
+    [lots, stats?.total_slots],
   );
 
   if (loading) {
@@ -136,8 +149,8 @@ export function AdminReportsPage() {
           <div className="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
             <span className="text-sm text-surface-600 dark:text-surface-400">{t('admin.utilizationRate')}</span>
             <span className="text-sm font-semibold text-surface-900 dark:text-white">
-              {stats && stats.total_lots > 0
-                ? `${Math.round((stats.active_bookings / Math.max(stats.total_lots, 1)) * 100)}%`
+              {stats && Number.isFinite(stats.occupancy_percent)
+                ? `${Math.round(stats.occupancy_percent)}%`
                 : '0%'}
             </span>
           </div>
@@ -207,7 +220,7 @@ export function AdminReportsPage() {
         <p className="text-xs text-surface-500 dark:text-surface-400 mb-4">
           {t('heatmap.subtitle')}
         </p>
-        <OccupancyHeatmap bookings={bookings} totalSlots={totalSlots} />
+        <OccupancyHeatmap bookings={heatmapBookings} totalSlots={totalSlots} />
       </div>
     </motion.div>
   );

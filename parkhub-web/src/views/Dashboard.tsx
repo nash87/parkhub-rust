@@ -21,6 +21,18 @@ import {
   type SensorEntry,
 } from '../components/KineticObservatory';
 
+function finiteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function getCo2SavedKg(summary: Co2Summary | null): number | null {
+  if (!summary) return null;
+  const savedKg = finiteNumber(summary.saved_kg);
+  if (savedKg !== null) return savedKg;
+  const savedG = finiteNumber(summary.saved_g);
+  return savedG !== null ? savedG / 1000 : null;
+}
+
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -62,6 +74,7 @@ export function DashboardPage() {
   const timeOfDay = hour < 12 ? t('dashboard.morning') : hour < 18 ? t('dashboard.afternoon') : t('dashboard.evening');
   const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'confirmed');
   const name = user?.name?.split(' ')[0] || user?.username || '';
+  const co2SavedKg = getCo2SavedKg(co2);
 
   // Trend period selector
   const [trendPeriod, setTrendPeriod] = useState<'7d' | '30d'>('7d');
@@ -206,7 +219,7 @@ export function DashboardPage() {
         />
         <KpiCard
           label={t('dashboard.co2Saved', 'CO₂ Saved (30d)')}
-          value={co2?.saved_kg ?? 0}
+          value={co2SavedKg ?? 0}
           suffix=" kg"
           icon={<Leaf weight="bold" />}
           data-testid="kpi-co2-saved"

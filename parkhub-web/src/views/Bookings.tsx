@@ -308,10 +308,13 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
   const isUpcoming = isActiveOrConfirmed && isFuture(new Date(booking.start_time));
 
   const statusCfg: Record<Booking['status'], { label: string; cls: string }> = {
+    pending: { label: t('bookings.statusPending', 'Ausstehend'), cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' },
     active: { label: t('bookings.statusActive'), cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
     confirmed: { label: t('bookings.statusActive'), cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' },
     completed: { label: t('bookings.statusCompleted'), cls: 'bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-400' },
     cancelled: { label: t('bookings.statusCancelled'), cls: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
+    expired: { label: t('bookings.statusExpired', 'Abgelaufen'), cls: 'bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-400' },
+    no_show: { label: t('bookings.statusNoShow', 'Nicht erschienen'), cls: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' },
   };
   const cfg = statusCfg[booking.status];
 

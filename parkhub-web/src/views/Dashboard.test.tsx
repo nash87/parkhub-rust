@@ -119,7 +119,7 @@ vi.mock('@phosphor-icons/react', () => ({
 }));
 
 vi.mock('../components/KineticObservatory', () => ({
-  KpiCard: ({ label, value, live, delta, ...rest }: any) => {
+  KpiCard: ({ label, value, suffix, live, delta, ...rest }: any) => {
     // Honor a caller-provided data-testid (Dashboard sets kpi-active-bookings,
     // kpi-credits, kpi-this-month, kpi-total, kpi-co2-saved). Fall back to a
     // label-derived id so tests can still find ad-hoc cards by label.
@@ -127,7 +127,7 @@ vi.mock('../components/KineticObservatory', () => ({
     return (
       <div data-testid={testid}>
         <span>{label}</span>
-        <span>{value}</span>
+        <span>{value}{suffix ?? ''}</span>
         {live && <span data-testid="live-badge">Live</span>}
         {delta && <span data-testid="delta-badge">{delta.value}{delta.suffix || '%'}</span>}
       </div>
@@ -262,6 +262,81 @@ describe('DashboardPage', () => {
     expect(within(screen.getByTestId('kpi-total')).getByText('10')).toBeInTheDocument();
     // This Month from userStats
     expect(within(screen.getByTestId('kpi-this-month')).getByText('3')).toBeInTheDocument();
+  });
+
+  it('renders CO2 saved_kg directly when the API provides it', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetUserStats.mockResolvedValue({ success: true, data: null });
+    mockGetCo2Summary.mockResolvedValue({
+      success: true,
+      data: {
+        from: '2026-03-18T00:00:00Z',
+        to: '2026-04-17T00:00:00Z',
+        bookings_counted: 2,
+        total_km: 48,
+        emitted_g: 1200,
+        counterfactual_g: 2900,
+        saved_g: 1700,
+        carpool_saved_g: 0,
+        saved_kg: 1.7,
+      },
+    });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId('kpi-co2-saved')).getByText('1.7 kg')).toBeInTheDocument();
+    });
+  });
+
+  it('falls back from CO2 saved_g to kilograms when saved_kg is missing', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetUserStats.mockResolvedValue({ success: true, data: null });
+    mockGetCo2Summary.mockResolvedValue({
+      success: true,
+      data: {
+        from: '2026-03-18T00:00:00Z',
+        to: '2026-04-17T00:00:00Z',
+        bookings_counted: 2,
+        total_km: 48,
+        emitted_g: 1200,
+        counterfactual_g: 2900,
+        saved_g: 1700,
+        carpool_saved_g: 0,
+      },
+    });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId('kpi-co2-saved')).getByText('1.7 kg')).toBeInTheDocument();
+    });
+  });
+
+  it('does not render NaN for malformed CO2 values', async () => {
+    mockGetBookings.mockResolvedValue({ success: true, data: [] });
+    mockGetUserStats.mockResolvedValue({ success: true, data: null });
+    mockGetCo2Summary.mockResolvedValue({
+      success: true,
+      data: {
+        from: '2026-03-18T00:00:00Z',
+        to: '2026-04-17T00:00:00Z',
+        bookings_counted: 2,
+        total_km: 48,
+        emitted_g: 1200,
+        counterfactual_g: 2900,
+        saved_g: Number.NaN,
+        carpool_saved_g: 0,
+        saved_kg: Number.NaN,
+      },
+    });
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId('kpi-co2-saved')).getByText('0 kg')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('NaN kg')).not.toBeInTheDocument();
   });
 
   it('shows empty state when no active bookings', async () => {

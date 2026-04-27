@@ -29,10 +29,13 @@ function statusVariant(s: Booking['status']): BadgeVariant {
 }
 
 const STATUS_LABEL: Record<Booking['status'], string> = {
+  pending: 'Ausstehend',
   active: 'Aktiv',
   confirmed: 'Bestätigt',
   completed: 'Abgeschlossen',
   cancelled: 'Storniert',
+  expired: 'Abgelaufen',
+  no_show: 'Nicht erschienen',
 };
 
 function formatDateTime(iso: string): string {
