@@ -306,4 +306,14 @@ describe('BuchenV5', () => {
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('Nicht genug Credits', 'error'));
     expect(mockToast).not.toHaveBeenCalledWith('Buchung bestätigt', 'success');
   });
+
+  it('renders lot hourly_rate correctly when API returns it as a string (regression: toFixed is not a function)', async () => {
+    const lotWithStringRate = { ...LOT_OPEN, hourly_rate: '2.50' as unknown as number };
+    mockGetLots.mockResolvedValue({ success: true, data: [lotWithStringRate] });
+    renderScreen();
+
+    await waitFor(() => expect(screen.getByText('Parkhaus Nord')).toBeInTheDocument());
+    // Rate must display as formatted decimal, not crash with "toFixed is not a function"
+    expect(screen.getByText(/€2\.50\/h/)).toBeInTheDocument();
+  });
 });

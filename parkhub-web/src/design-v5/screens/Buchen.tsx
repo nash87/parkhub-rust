@@ -256,7 +256,7 @@ export function BuchenV5({ navigate }: { navigate: (id: ScreenId) => void }) {
   const end = new Date(start.getTime() + duration * 60 * 60 * 1000);
   const rate = selectedLot?.hourly_rate;
   const currency = selectedLot?.currency || '€';
-  const estimated = rate != null ? (rate * duration).toFixed(2) : null;
+  const estimated = rate != null ? (Number(rate) * duration).toFixed(2) : null;
 
   function handleSelectLot(lot: ParkingLot) {
     setSelectedLot(lot);
@@ -459,7 +459,7 @@ function StepLot({
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--v5-mut)' }}>
               <span>
-                {lot.hourly_rate != null ? `${lot.currency || '€'}${lot.hourly_rate.toFixed(2)}/h` : 'Preis auf Anfrage'}
+                {lot.hourly_rate != null ? `${lot.currency || '€'}${Number(lot.hourly_rate).toFixed(2)}/h` : 'Preis auf Anfrage'}
               </span>
               <span style={{ color: 'var(--v5-acc)', fontWeight: 500 }}>Auswählen →</span>
             </div>
@@ -630,7 +630,7 @@ function StepSlot({
         <SummaryRow label="Dauer" value={`${duration}h`} />
         <SummaryRow
           label="Tarif"
-          value={lot.hourly_rate != null ? `${currency}${lot.hourly_rate.toFixed(2)}/h` : '—'}
+          value={lot.hourly_rate != null ? `${currency}${Number(lot.hourly_rate).toFixed(2)}/h` : '—'}
         />
         <SummaryRow
           label="Kosten"
@@ -704,7 +704,7 @@ function StepConfirm({
         <SummaryTile label="Fahrzeug" value={vehicle ? vehicle.plate : '—'} />
         <SummaryTile
           label="Tarif"
-          value={lot.hourly_rate != null ? `${currency}${lot.hourly_rate.toFixed(2)}/h` : '—'}
+          value={lot.hourly_rate != null ? `${currency}${Number(lot.hourly_rate).toFixed(2)}/h` : '—'}
         />
         <SummaryTile
           label="Geschätzte Kosten"

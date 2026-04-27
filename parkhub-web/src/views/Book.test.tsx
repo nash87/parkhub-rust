@@ -509,6 +509,20 @@ describe('BookPage', () => {
     });
   });
 
+  it('renders hourly rate correctly when API returns it as a string (regression: toFixed is not a function)', async () => {
+    mockGetLots.mockResolvedValue({
+      success: true,
+      data: [makeLot({ hourly_rate: '3.50' as unknown as number, currency: '€' })],
+    });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+
+    render(<BookPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('€3.50/h')).toBeInTheDocument();
+    });
+  });
+
   it('back button from step 3 returns to step 2', async () => {
     const user = userEvent.setup();
     const lot = makeLot();

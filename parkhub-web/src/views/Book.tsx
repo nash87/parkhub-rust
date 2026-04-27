@@ -119,7 +119,7 @@ export function BookPage() {
   const start = new Date(startDate);
   const end = new Date(start.getTime() + duration * 60 * 60 * 1000);
   const effectiveRate = dynamicPrice?.dynamic_pricing_active ? dynamicPrice.current_price : selectedLot?.hourly_rate;
-  const estimatedCost = effectiveRate ? (effectiveRate * duration).toFixed(2) : null;
+  const estimatedCost = effectiveRate != null ? (Number(effectiveRate) * duration).toFixed(2) : null;
 
   const slideVariants = {
     enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
@@ -388,7 +388,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
             {lot.available_slots === 0 && <span className="text-xs font-medium text-red-600 dark:text-red-400">{t('book.full')}</span>}
           </div>
           {lot.hourly_rate != null && (
-            <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">{lot.currency || '€'}{lot.hourly_rate.toFixed(2)}/h</p>
+            <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">{lot.currency || '€'}{Number(lot.hourly_rate).toFixed(2)}/h</p>
           )}
         </motion.button>
       ))}
