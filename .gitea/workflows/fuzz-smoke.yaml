@@ -1,0 +1,65 @@
+name: Fuzz smoke (nightly)
+
+# Gitea mirror of `.github/workflows/fuzz-smoke.yml`. Runs cargo-fuzz against
+# the JWT parse + webhook HMAC targets for 60s each on a nightly cron.
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: fuzz-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  FUZZ_SECONDS: '60'
+
+jobs:
+  fuzz:
+    name: cargo-fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [jwt_parse, webhook_hmac]
+
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable action, nightly toolchain below
+        with:
+          toolchain: nightly
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: |
+            .
+            parkhub-server/fuzz
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --version '^0.12' --locked
+
+      - name: Run fuzz target
+        working-directory: parkhub-server
+        env:
+          FUZZ_TARGET: ${{ matrix.target }}
+        run: cargo +nightly fuzz run "$FUZZ_TARGET" -- -max_total_time="$FUZZ_SECONDS"
+
+      - name: Upload fuzz artifacts on failure
+        if: failure()
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: |
+            parkhub-server/fuzz/artifacts/
+            parkhub-server/fuzz/corpus/
+          retention-days: 14
+          if-no-files-found: ignore

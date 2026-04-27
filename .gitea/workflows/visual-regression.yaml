@@ -1,0 +1,191 @@
+name: Visual Regression
+
+# Gitea mirror of `.github/workflows/visual-regression.yml`. Nightly visual
+# regression against `main`; manual `workflow_dispatch` with
+# `update_snapshots: true` rebases baselines.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 03:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      update_snapshots:
+        description: 'Rebase visual baselines and commit updated PNGs back to main'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: visual-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22.12.0'
+
+jobs:
+  visual:
+    name: Playwright toHaveScreenshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    continue-on-error: true
+
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            parkhub-web/package-lock.json
+
+      - name: Build frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build server (headless + e2e-bypass)
+        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass'
+
+      - name: Start server in background
+        shell: bash
+        env:
+          DEMO_MODE: 'true'
+          PARKHUB_ADMIN_PASSWORD: 'demo'
+          PARKHUB_DISABLE_RATE_LIMITS: 'true'
+        run: |
+          ./target/release/parkhub-server --headless --unattended --port 18181 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          READY=0
+          for i in $(seq 1 45); do
+            if curl -sf http://127.0.0.1:18181/health > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy in time'
+            exit 1
+          fi
+
+      - name: Install Playwright dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run visual regression suite (root — rust server surfaces)
+        env:
+          E2E_BASE_URL: http://127.0.0.1:18181
+          CI: 'true'
+          UPDATE_SNAPSHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true && '1' || '' }}
+        run: |
+          args=(--project=chromium --workers=1 --reporter=github e2e/visual.spec.ts)
+          [[ -n "$UPDATE_SNAPSHOTS" ]] && args+=(--update-snapshots)
+          npx playwright test "${args[@]}"
+
+      - name: Run v5 visual + happy-paths (parkhub-web config)
+        working-directory: parkhub-web
+        env:
+          E2E_BASE_URL: http://127.0.0.1:18181
+          CI: 'true'
+          UPDATE_SNAPSHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true && '1' || '' }}
+        run: |
+          args=(--project=chromium --project=mobile-chrome --workers=1 --reporter=github e2e/v5-visual.spec.ts e2e/v5-happy-paths.spec.ts e2e/v5-a11y.spec.ts)
+          [[ -n "$UPDATE_SNAPSHOTS" ]] && args+=(--update-snapshots)
+          npx playwright test "${args[@]}"
+
+      - name: Stage refreshed baselines for commit job
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
+        run: |
+          mkdir -p /tmp/visual-baselines
+          find e2e parkhub-web/e2e -type f -name '*.png' -print0 \
+            | tar --null -cf /tmp/visual-baselines/baselines.tar --files-from=-
+
+      - name: Upload refreshed baselines artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: refreshed-visual-baselines
+          path: /tmp/visual-baselines/baselines.tar
+          retention-days: 1
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true
+
+      - name: Upload diff artifacts
+        if: failure()
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: visual-regression-diffs
+          path: |
+            test-results/**/*-diff.png
+            test-results/**/*-actual.png
+            test-results/**/*-expected.png
+            playwright-report/
+            parkhub-web/test-results/**/*-diff.png
+            parkhub-web/test-results/**/*-actual.png
+            parkhub-web/test-results/**/*-expected.png
+            parkhub-web/playwright-report/
+          retention-days: 14
+
+      - name: Upload full Playwright report
+        if: always()
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-visual-report
+          path: |
+            playwright-report/
+            parkhub-web/playwright-report/
+          retention-days: 7
+
+  commit-baselines:
+    name: Commit refreshed baselines
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
+    needs: visual
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Download refreshed baselines
+        uses: http://192.168.178.212:3000/actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v7
+        with:
+          name: refreshed-visual-baselines
+          path: /tmp/visual-baselines
+
+      - name: Apply baselines and push
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          tar -xf /tmp/visual-baselines/baselines.tar
+          git config user.name 'gitea-actions[bot]'
+          git config user.email 'gitea-actions[bot]@users.noreply.localhost'
+          git add -A 'e2e/**/*.png' 'parkhub-web/e2e/**/*.png' || true
+          if git diff --cached --quiet; then
+            echo 'No baseline changes to commit.'
+            exit 0
+          fi
+          git commit -m 'chore(visual): refresh Playwright baselines from CI'
+          git push origin HEAD:${{ github.ref_name }}

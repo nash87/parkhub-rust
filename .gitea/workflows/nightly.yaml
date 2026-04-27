@@ -1,0 +1,192 @@
+name: Nightly Assurance
+
+# Gitea mirror of `.github/workflows/nightly.yml`.
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22.12.0'
+
+jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@055f5df8c3f65ea01cd41e9dc855becd88953486 # v2.75.18
+        with:
+          tool: cargo-audit
+
+      - name: Audit Cargo dependencies
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2024-0412 \
+            --ignore RUSTSEC-2024-0413 \
+            --ignore RUSTSEC-2024-0415 \
+            --ignore RUSTSEC-2024-0416 \
+            --ignore RUSTSEC-2024-0418 \
+            --ignore RUSTSEC-2024-0419 \
+            --ignore RUSTSEC-2024-0420 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2024-0370 \
+            --ignore RUSTSEC-2023-0071 \
+            --ignore RUSTSEC-2025-0057 \
+            --ignore RUSTSEC-2023-0019 \
+            --ignore RUSTSEC-2024-0384 \
+            --ignore RUSTSEC-2026-0097
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Audit npm dependencies
+        run: npm audit --prefix parkhub-web --package-lock-only --omit=dev --audit-level=high
+
+  build-server:
+    name: Build server binary
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build frontend
+        run: cd parkhub-web && npm ci && npm run build
+
+      - name: Build server (with e2e-bypass feature)
+        run: cargo build --release --locked --package parkhub-server --no-default-features --features headless,full,e2e-bypass
+
+      - name: Upload server binary
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-server-binary
+          path: target/release/parkhub-server
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload frontend dist
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-web-dist
+          path: parkhub-web/dist/
+          retention-days: 1
+          if-no-files-found: error
+
+  full-e2e:
+    name: Full cross-browser E2E
+    needs: [build-server]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium, mobile-chrome, mobile-safari]
+        shard: [1, 2, 3, 4]
+
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Download server binary
+        uses: http://192.168.178.212:3000/actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: parkhub-server-binary
+          path: target/release
+
+      - name: Download frontend dist
+        uses: http://192.168.178.212:3000/actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: parkhub-web-dist
+          path: parkhub-web/dist
+
+      - name: Make server binary executable
+        run: chmod +x target/release/parkhub-server
+
+      - name: Run Playwright shard ${{ matrix.shard }}/4 on ${{ matrix.project }}
+        env:
+          CI: true
+          DEMO_MODE: 'true'
+          PARKHUB_ADMIN_PASSWORD: demo
+          PARKHUB_DISABLE_RATE_LIMITS: 'true'
+          E2E_BASE_URL: http://localhost:8081
+          APP_URL: http://localhost:8081
+        run: |
+          ./target/release/parkhub-server --headless --unattended --port 8081 \
+            > "/tmp/parkhub-nightly-${{ matrix.project }}-${{ matrix.shard }}.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
+
+          for _i in $(seq 1 45); do
+            if curl -sf http://localhost:8081/health; then break; fi
+            sleep 1
+          done
+
+          npx playwright test \
+            --project="${{ matrix.project }}" \
+            --shard="${{ matrix.shard }}/4"
+
+      - name: Upload Playwright report (${{ matrix.project }} shard ${{ matrix.shard }})
+        if: always()
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: nightly-playwright-report-${{ matrix.project }}-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload server log (${{ matrix.project }} shard ${{ matrix.shard }})
+        if: always()
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: nightly-server-log-${{ matrix.project }}-${{ matrix.shard }}
+          path: /tmp/parkhub-nightly-${{ matrix.project }}-${{ matrix.shard }}.log
+          retention-days: 7
+          if-no-files-found: ignore

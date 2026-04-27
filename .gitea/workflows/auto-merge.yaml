@@ -1,0 +1,40 @@
+name: Auto-merge on label
+
+# Gitea mirror of `.github/workflows/auto-merge.yml`.
+#
+# NOTE: Gitea Actions does NOT yet implement GitHub's native auto-merge API
+# (`gh pr merge --auto`). This workflow is mirrored for parity but the
+# `enable-auto-merge` step will need to be replaced with a Gitea-native
+# equivalent (e.g. `tea pr merge` once Gitea supports queued auto-merge,
+# or a polling job). Tracked as future work — the workflow is kept here
+# as a structural placeholder so the trigger semantics stay aligned with
+# the GitHub side.
+
+on:
+  pull_request_target:
+    types: [labeled, reopened]
+
+permissions:
+  pull-requests: write
+  contents: write
+
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  enable-auto-merge:
+    if: >-
+      !github.event.pull_request.draft
+      && contains(github.event.pull_request.labels.*.name, 'auto-merge')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enable native auto-merge (squash) — TODO: replace with Gitea equivalent
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITEA_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Gitea native auto-merge not yet implemented — PR #${PR_NUMBER} flagged for manual merge."
+          # Once Gitea ships queued auto-merge API, replace with `tea pr merge --auto --squash $PR_NUMBER`.

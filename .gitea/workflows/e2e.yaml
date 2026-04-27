@@ -1,0 +1,98 @@
+name: E2E Tests
+
+# Gitea mirror of `.github/workflows/e2e.yml`.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22.12.0'
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            parkhub-web/package-lock.json
+
+      - name: Build frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build server (headless + e2e-bypass)
+        run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass'
+
+      - name: Start server in background
+        shell: bash
+        run: |
+          ./target/release/parkhub-server --headless --unattended --port 8081 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          READY=0
+          for i in $(seq 1 45); do
+            if curl -sf http://localhost:8081/health > /dev/null 2>&1; then
+              echo "Server ready after ${i}s"
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy in time'
+            exit 1
+          fi
+        env:
+          DEMO_MODE: 'true'
+          PARKHUB_ADMIN_PASSWORD: 'demo'
+          PARKHUB_DISABLE_RATE_LIMITS: 'true'
+
+      - name: Install Playwright dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test --project=chromium
+        env:
+          E2E_BASE_URL: http://localhost:8081
+          CI: true
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true
+
+      - name: Upload test report
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

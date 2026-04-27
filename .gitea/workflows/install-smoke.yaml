@@ -1,0 +1,45 @@
+name: Install Smoke
+
+# Gitea mirror of `.github/workflows/install-smoke.yml`. Cold-clones the repo
+# from Gitea, follows INSTALLATION.md, and verifies `/health/ready` flips green.
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 07:00 UTC nightly
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker-compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - name: Cold clone
+        run: |
+          # NOTE: clones from the Gitea mirror — switch to `git clone --depth 1
+          # http://192.168.178.212:3000/florian/parkhub-rust.git /tmp/smoke` once
+          # the mirror is canonical for this workflow.
+          git clone --depth 1 https://github.com/nash87/parkhub-rust.git /tmp/smoke
+      - name: Follow INSTALLATION.md Docker Compose steps
+        working-directory: /tmp/smoke
+        run: |
+          echo "PARKHUB_ADMIN_PASSWORD=$(openssl rand -base64 24)" > .env
+          docker compose up -d
+          for i in {1..60}; do
+            if curl -sf http://localhost:8080/health/ready >/dev/null 2>&1; then
+              echo "READY after ${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: /health/ready never green"
+          docker compose logs
+          exit 1
+      - name: Teardown
+        if: always()
+        working-directory: /tmp/smoke
+        run: docker compose down -v

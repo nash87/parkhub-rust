@@ -1,0 +1,68 @@
+name: Storybook
+
+# Builds the Storybook static site on every PR / main push so reviewers can
+# fetch a snapshot of the component library without running it locally. Also
+# runs the a11y addon's automated checks during build.
+#
+# Future: publish the static bundle to the homelab S3-compatible store
+# (zot/seaweedfs) and link the URL into PR comments.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'parkhub-web/.storybook/**'
+      - 'parkhub-web/src/**/*.stories.@(ts|tsx|mdx)'
+      - 'parkhub-web/package.json'
+      - 'parkhub-web/package-lock.json'
+      - '.gitea/workflows/storybook.yaml'
+  pull_request:
+    paths:
+      - 'parkhub-web/.storybook/**'
+      - 'parkhub-web/src/**/*.stories.@(ts|tsx|mdx)'
+      - 'parkhub-web/package.json'
+      - 'parkhub-web/package-lock.json'
+      - '.gitea/workflows/storybook.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: storybook-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22.12.0'
+
+jobs:
+  build:
+    name: Build Storybook static
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: parkhub-web
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Storybook
+        run: npx storybook build --output-dir storybook-static
+
+      - name: Upload Storybook static
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: storybook-static
+          path: parkhub-web/storybook-static
+          retention-days: 14
+          if-no-files-found: error
