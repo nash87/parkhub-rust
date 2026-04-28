@@ -156,3 +156,95 @@ jobs:
           else
             gitleaks detect --source=. --redact --verbose --no-banner
           fi
+
+  zizmor:
+    name: Zizmor (GHA SAST, audit-mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Audit-mode: surface findings as informational; do NOT fail the gate yet.
+    # Promote findings to errors once the workflow inventory has been triaged.
+    continue-on-error: true
+    permissions:
+      contents: read   # read-only — zizmor only needs to parse workflow YAMLs
+    env:
+      ZIZMOR_VERSION: 1.24.1
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      # zizmor binary directly (MIT, github.com/zizmorcore/zizmor). Same pattern
+      # as gitleaks above — install from upstream releases.
+      - name: Install zizmor
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp zizmor
+          sudo mv /tmp/zizmor /usr/local/bin/zizmor
+          zizmor --version
+
+      - name: Run zizmor
+        run: |
+          set -euo pipefail
+          # auditor persona surfaces low-severity findings; --no-online-audits
+          # avoids GitHub API rate-limit issues when running from Gitea.
+          zizmor --persona=auditor --no-online-audits .github/workflows/ .gitea/workflows/ || true
+
+  osv-scanner:
+    name: OSV-Scanner (supply-chain)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Supply-chain advisory mode: known transitive advisories are documented
+    # in deny.toml; OSV findings are surfaced informationally for now.
+    continue-on-error: true
+    permissions:
+      contents: read   # read-only — only parses lockfiles
+    env:
+      OSV_SCANNER_VERSION: 2.3.5
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      - name: Install osv-scanner
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /usr/local/bin/osv-scanner \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Run osv-scanner
+        run: |
+          set -euo pipefail
+          osv-scanner scan source --recursive --no-config . || true
+
+  grype:
+    name: Grype (vuln scan, defense-in-depth)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read   # read-only — Grype scans the filesystem
+    env:
+      GRYPE_VERSION: 0.111.1
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      - name: Install grype
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /tmp grype
+          sudo mv /tmp/grype /usr/local/bin/grype
+          grype --version
+
+      - name: Run grype
+        run: |
+          set -euo pipefail
+          grype dir:. --fail-on critical || true
