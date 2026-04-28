@@ -206,35 +206,14 @@ pre-push:
         Triage upstream advisory or document the suppression with reason.
 
     post-attestation:
-      # Posts `fop/local-ci/pr=success` to GitHub so the
-      # local-ci-attestation gate in .github/workflows/ci.yml clears
-      # automatically — no manual `make ci-post` follow-up needed.
-      # Lefthook only continues to this command if every earlier
-      # parallel gate has succeeded — so reaching here means the local
-      # gate is clean. Skip cleanly when gh isn't on PATH (offline
-      # pushes, fresh clones, or CI where this hook also runs).
+      # Forks a deferred poll-and-post that waits until the SHA shows
+      # up on GitHub (after `git push` transmits the commit) and then
+      # publishes fop/local-ci/pr=success. Returns immediately so
+      # lefthook isn't blocked. The local-ci-attestation gate in
+      # .github/workflows/ci.yml typically clears within ~10s of the
+      # status post — no manual `make ci-post` follow-up needed.
+      # Skip cleanly when gh isn't on PATH (offline pushes, fresh
+      # clones, or CI where this hook also runs).
       skip:
         - run: ! command -v gh >/dev/null 2>&1
-      run: |
-        sha=$(git rev-parse HEAD)
-        repo=""
-        for remote in github upstream origin; do
-          url=$(git remote get-url "$remote" 2>/dev/null || true)
-          if [[ "$url" =~ github.com[:/]([^/]+/[^/.]+)(\.git)?$ ]]; then
-            repo="${BASH_REMATCH[1]}"
-            break
-          fi
-        done
-        if [ -z "$repo" ]; then
-          echo "Could not derive GitHub owner/repo from remotes; skipping status post."
-          exit 0
-        fi
-        gh api --method POST "repos/${repo}/statuses/${sha}" \
-          -f state="success" \
-          -f context="fop/local-ci/pr" \
-          -f description="Local-first attestation: lefthook pre-push gates clean" >/dev/null \
-          || echo "Status post failed (advisory)."
-      fail_text: |
-        Failed to post fop/local-ci/pr status. Push proceeds anyway;
-        the local-ci-attestation gate will fall back to its 12-min
-        timeout. Check `gh auth status`.
+      run: 'bash scripts/post-attestation-deferred.sh success "Local-first attestation - lefthook pre-push gates clean (rust)"'
