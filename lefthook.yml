@@ -87,8 +87,16 @@ pre-commit:
 # pre-push: full local replica of the GitHub Actions "required" gates.
 # Catches the 12-fail compile cascade, drift, clippy violations, vitest
 # failures — all locally before the 15-30 min CI loop.
+#
+# Sequential (parallel: false) so the final `post-attestation` command
+# runs only after every prior gate succeeds — that guarantees the
+# fop/local-ci/pr commit status is only posted on a clean local CI,
+# eliminating the race window where a parallel post would publish
+# success while a slower gate later fails. Trade-off: pre-push goes
+# from ~2 min parallel to ~5-7 min sequential. Worth it for zero
+# manual `make ci-post` intervention on the GitHub side.
 pre-push:
-  parallel: true
+  parallel: false
   commands:
     cargo-check:
       # The exact gate that would have caught the 12-fail compile
@@ -166,3 +174,67 @@ pre-push:
       run: scripts/check-types-drift.sh
       fail_text: |
         ts-rs TypeScript bindings drifted. See script output for the regen command.
+
+    trivy-fs:
+      # Trivy filesystem scan (Apache-2.0). Mirrors security.yml trivy-fs
+      # job. Findings under .trivyignore are filtered. Skipped cleanly if
+      # trivy isn't on PATH (contributors w/o the binary keep working).
+      skip:
+        - run: ! command -v trivy >/dev/null 2>&1
+      run: trivy fs --quiet --exit-code 1 --scanners=vuln,misconfig --severity=CRITICAL,HIGH --ignorefile .trivyignore --skip-dirs=node_modules,target,parkhub-web/node_modules,.claude/worktrees .
+      fail_text: |
+        Trivy found CRITICAL/HIGH findings not in .trivyignore.
+        Triage with: trivy fs --severity=CRITICAL,HIGH --ignorefile .trivyignore .
+
+    zizmor:
+      # zizmor (MIT, GHA SAST). Advisory — surfaces findings without
+      # failing pre-push so workflow refactors stay unblocked while the
+      # remaining informational inventory drains.
+      skip:
+        - run: ! command -v zizmor >/dev/null 2>&1
+      run: zizmor --persona=auditor --min-severity=high --no-online-audits .github/workflows/ .gitea/workflows/ || true
+
+    osv-scanner:
+      # OSV-Scanner (Apache-2.0, supply chain). Gating — osv-scanner.toml
+      # at repo root mirrors deny.toml's documented advisory ignores, so
+      # any failure here is a NEW vuln on a direct dependency.
+      skip:
+        - run: ! command -v osv-scanner >/dev/null 2>&1
+      run: osv-scanner scan source --recursive --config=osv-scanner.toml .
+      fail_text: |
+        OSV-Scanner found a vulnerability not in osv-scanner.toml.
+        Triage upstream advisory or document the suppression with reason.
+
+    post-attestation:
+      # Posts `fop/local-ci/pr=success` to GitHub so the
+      # local-ci-attestation gate in .github/workflows/ci.yml clears
+      # automatically — no manual `make ci-post` follow-up needed.
+      # Lefthook only continues to this command if every earlier
+      # parallel gate has succeeded — so reaching here means the local
+      # gate is clean. Skip cleanly when gh isn't on PATH (offline
+      # pushes, fresh clones, or CI where this hook also runs).
+      skip:
+        - run: ! command -v gh >/dev/null 2>&1
+      run: |
+        sha=$(git rev-parse HEAD)
+        repo=""
+        for remote in github upstream origin; do
+          url=$(git remote get-url "$remote" 2>/dev/null || true)
+          if [[ "$url" =~ github.com[:/]([^/]+/[^/.]+)(\.git)?$ ]]; then
+            repo="${BASH_REMATCH[1]}"
+            break
+          fi
+        done
+        if [ -z "$repo" ]; then
+          echo "Could not derive GitHub owner/repo from remotes; skipping status post."
+          exit 0
+        fi
+        gh api --method POST "repos/${repo}/statuses/${sha}" \
+          -f state="success" \
+          -f context="fop/local-ci/pr" \
+          -f description="Local-first attestation: lefthook pre-push gates clean" >/dev/null \
+          || echo "Status post failed (advisory)."
+      fail_text: |
+        Failed to post fop/local-ci/pr status. Push proceeds anyway;
+        the local-ci-attestation gate will fall back to its 12-min
+        timeout. Check `gh auth status`.

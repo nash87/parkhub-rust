@@ -23,7 +23,7 @@ MAKEFLAGS += --no-print-directory
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
 
-.PHONY: help ci fmt clippy check client-check test lint drift frontend integration embed act pre-push clean
+.PHONY: help ci ci-post fmt clippy check client-check test lint drift frontend integration embed act pre-push clean
 
 help:
 	@echo "parkhub-rust local CI mirror (see .github/workflows/*.yml)"
@@ -99,6 +99,14 @@ drift: embed
 ci: fmt clippy check client-check test frontend drift
 	@echo ""
 	@echo "Core local gate passed. Run 'make act' for the full workflow YAML."
+
+## Full local PR gate + post `fop/local-ci/pr` commit status to GitHub.
+## Used by lefthook pre-push so the local-ci-attestation gate clears
+## without manual `make ci-post` follow-up. Mirrors parkhub-php pattern.
+## fop-local-ci.sh runs the whole gate (cargo + frontend + trivy + zizmor +
+## osv-scanner) inside fop's queue + posts the success status when clean.
+ci-post:
+	.github/scripts/fop-local-ci.sh --profile pr --post-status
 
 pre-push: ci
 
