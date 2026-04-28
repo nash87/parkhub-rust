@@ -407,6 +407,22 @@ else
   skip_step "trivy filesystem scan" "trivy not on PATH (install: https://aquasecurity.github.io/trivy/)"
 fi
 
+# ─── Stage 9: zizmor (GitHub Actions SAST, advisory) ────────────────────────
+# Mirrors .github/workflows/security.yml zizmor job. MIT license. Replaces
+# CodeQL's `actions/missing-workflow-permissions` coverage and adds 30+ rules
+# for CI/CD hardening (template injection, cache poisoning, persist-credentials,
+# excessive-permissions). Uses --persona=auditor to match the workflow.
+#
+# Advisory mode: matches workflow's `continue-on-error: true` — zizmor surfaces
+# findings as informational but does NOT fail the gate. Promote to a hard
+# failure (drop the `|| true`) once the open-finding inventory is at zero.
+# Suppressions live in zizmor.yml with per-rule justification.
+if command -v zizmor >/dev/null 2>&1; then
+  run_step "zizmor (GHA SAST, advisory)" "zizmor --persona=auditor --min-severity=high --no-online-audits .github/workflows/ .gitea/workflows/ || echo 'zizmor returned non-zero (advisory — see findings above)'"
+else
+  skip_step "zizmor (GHA SAST)" "zizmor not on PATH (install: cargo install zizmor or https://docs.zizmor.sh)"
+fi
+
 write_report "success"
 post_commit_status "success" "fop local ${profile} passed"
 
