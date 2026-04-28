@@ -83,7 +83,7 @@ jobs:
 
   local-ci-attestation:
     name: fop local CI attestation
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
     # Hard cap of 14 min accommodates the adaptive backoff schedule (~12 min)
     # plus GHA queue/runner startup. Previous 3 min window collapsed Required
@@ -475,7 +475,7 @@ jobs:
           DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
           LOCAL_CI: ${{ needs.local-ci-attestation.result }}
           EVENT_NAME: ${{ github.event_name }}
-          SAME_REPO_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+          LOCAL_CI_REQUIRED: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot' }}
           CARGO_DENY: ${{ needs.cargo-deny.result }}
           CHECK: ${{ needs.check.result }}
           CLIENT_CHECK: ${{ needs.client-check.result }}
@@ -493,9 +493,12 @@ jobs:
               exit 1
             fi
           done
-          if [[ "${EVENT_NAME}" == "pull_request" && "${SAME_REPO_PR}" == "true" && "${LOCAL_CI}" != "success" ]]; then
+          if [[ "${LOCAL_CI_REQUIRED}" == "true" && "${LOCAL_CI}" != "success" ]]; then
             echo "REQUIRED: LOCAL_CI failed: ${LOCAL_CI}"
             exit 1
+          fi
+          if [[ "${EVENT_NAME}" == "pull_request" && "${LOCAL_CI_REQUIRED}" != "true" ]]; then
+            echo "LOCAL-FIRST: local CI attestation skipped for bot or fork PR"
           fi
           for check in CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT TYPES_DRIFT; do
             if [[ "${!check}" != "success" && "${!check}" != "skipped" ]]; then
