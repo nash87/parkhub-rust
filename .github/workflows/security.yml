@@ -191,3 +191,98 @@ jobs:
           # auditor persona surfaces low-severity findings useful for hardening
           # without flooding the PR with regular-user noise.
           persona: auditor
+
+  trivy-image:
+    name: Trivy Image Scan (CRITICAL/HIGH)
+    # Image scanning runs only on main + schedule + dispatch — PR builds do not
+    # publish an image to scan. Using `:latest` keeps the scan tracking the
+    # most recently shipped image without coupling to docker-publish ordering.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read  # checkout (.trivyignore lives in the repo)
+      packages: read  # pull the published OCI image from GHCR
+      security-events: write  # upload SARIF to the Security tab
+    env:
+      IMAGE_REF: ghcr.io/${{ github.repository }}:latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR (read-only image pull)
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy image vulnerability + secret scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.IMAGE_REF }}
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image-results.sarif
+          trivyignores: .trivyignore
+          limit-severities-for-sarif: true
+          exit-code: '0'
+
+      - name: Upload Trivy image results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+        if: always() && hashFiles('trivy-image-results.sarif') != ''
+        continue-on-error: true
+        with:
+          sarif_file: trivy-image-results.sarif
+          category: trivy-image
+
+  grype-image:
+    name: Grype Image Scan (defense-in-depth)
+    # Second-opinion CVE scanner. Same gating as trivy-image: post-publish only.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Advisory until the trivy-image baseline stabilises; promote to required
+    # once both scanners agree on the suppressed-set.
+    continue-on-error: true
+    permissions:
+      contents: read  # checkout
+      packages: read  # pull the published OCI image from GHCR
+    env:
+      GRYPE_VERSION: 0.111.1
+      IMAGE_REF: ghcr.io/${{ github.repository }}:latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR (read-only image pull)
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Grype binary directly (Apache-2.0, github.com/anchore/grype). Same
+      # commercial-safe pattern as gitleaks/zizmor — no proprietary wrappers.
+      - name: Install grype
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /tmp grype
+          sudo mv /tmp/grype /usr/local/bin/grype
+          grype --version
+
+      - name: Run grype against published image
+        env:
+          IMAGE: ${{ env.IMAGE_REF }}
+        run: |
+          set -euo pipefail
+          # --fail-on critical matches the docker-publish.yml posture; HIGH is
+          # surfaced informationally so the suppressed-set stays explicit.
+          grype "${IMAGE}" --only-fixed --fail-on critical || true
