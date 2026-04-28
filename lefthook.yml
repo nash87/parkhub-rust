@@ -180,7 +180,7 @@ pre-push:
       # job. Findings under .trivyignore are filtered. Skipped cleanly if
       # trivy isn't on PATH (contributors w/o the binary keep working).
       skip:
-        - run: ! command -v trivy >/dev/null 2>&1
+        - run: 'test ! -x "$(command -v trivy 2>/dev/null)"'
       run: trivy fs --quiet --exit-code 1 --scanners=vuln,misconfig --severity=CRITICAL,HIGH --ignorefile .trivyignore --skip-dirs=node_modules,target,parkhub-web/node_modules,.claude/worktrees .
       fail_text: |
         Trivy found CRITICAL/HIGH findings not in .trivyignore.
@@ -191,7 +191,7 @@ pre-push:
       # failing pre-push so workflow refactors stay unblocked while the
       # remaining informational inventory drains.
       skip:
-        - run: ! command -v zizmor >/dev/null 2>&1
+        - run: 'test ! -x "$(command -v zizmor 2>/dev/null)"'
       run: zizmor --persona=auditor --min-severity=high --no-online-audits .github/workflows/ .gitea/workflows/ || true
 
     osv-scanner:
@@ -199,7 +199,7 @@ pre-push:
       # at repo root mirrors deny.toml's documented advisory ignores, so
       # any failure here is a NEW vuln on a direct dependency.
       skip:
-        - run: ! command -v osv-scanner >/dev/null 2>&1
+        - run: 'test ! -x "$(command -v osv-scanner 2>/dev/null)"'
       run: osv-scanner scan source --recursive --config=osv-scanner.toml .
       fail_text: |
         OSV-Scanner found a vulnerability not in osv-scanner.toml.
@@ -215,5 +215,5 @@ pre-push:
       # Skip cleanly when gh isn't on PATH (offline pushes, fresh
       # clones, or CI where this hook also runs).
       skip:
-        - run: ! command -v gh >/dev/null 2>&1
+        - run: 'test ! -x "$(command -v gh 2>/dev/null)"'
       run: 'bash scripts/post-attestation-deferred.sh success "Local-first attestation - lefthook pre-push gates clean (rust)"'
