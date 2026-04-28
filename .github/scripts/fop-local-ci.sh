@@ -388,6 +388,25 @@ if [[ "$profile" == "cd" ]]; then
   run_step_heavy "release image preflight" "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
 fi
 
+# ─── Stage 8: trivy filesystem scan ─────────────────────────────────────────
+# Mirrors .github/workflows/security.yml trivy-fs job. Apache-2.0 license.
+# Skips gracefully on `pr` profile if trivy isn't on PATH (so contributors
+# without trivy installed can still pass the local gate); always required on
+# `cd`/`full` profiles. Findings under .trivyignore (with justification
+# comments) are filtered. Severity matches the workflow: CRITICAL,HIGH only.
+trivy_required=0
+[[ "$profile" == "cd" || "$profile" == "full" ]] && trivy_required=1
+if command -v trivy >/dev/null 2>&1; then
+  run_step "trivy filesystem scan" "trivy fs --quiet --exit-code 1 --scanners=vuln,misconfig --severity=CRITICAL,HIGH --ignorefile .trivyignore --skip-dirs=node_modules,target,parkhub-web/node_modules,.claude/worktrees ."
+elif [[ $trivy_required -eq 1 ]]; then
+  echo "✗ trivy filesystem scan FAILED: trivy not on PATH (required for ${profile} profile)" >&2
+  write_report "failure" "trivy filesystem scan"
+  post_commit_status "failure" "fop local ${profile} failed: trivy not installed"
+  exit 1
+else
+  skip_step "trivy filesystem scan" "trivy not on PATH (install: https://aquasecurity.github.io/trivy/)"
+fi
+
 write_report "success"
 post_commit_status "success" "fop local ${profile} passed"
 

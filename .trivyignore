@@ -1,0 +1,9 @@
+# Trivy ignore file
+# Documented exceptions for the parkhub-rust monorepo. Each entry must
+# carry an explicit justification — review on every workflow refresh.
+
+# KSV-0109: "ConfigMap stores secrets in key MODULE_PARKING_PASS"
+# False positive — `MODULE_PARKING_PASS` is a boolean feature flag for the
+# Parking Pass module (helm/parkhub/values.yaml: `parkingPass: true`), not
+# a credential. Trivy's secret heuristic matches the substring "PASS".
+KSV-0109
