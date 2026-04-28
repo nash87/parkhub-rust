@@ -1,0 +1,356 @@
+name: Security
+
+# Gitea mirror of `.github/workflows/security.yml`. SARIF upload to GitHub
+# Security tab is GitHub-only — substituted with artifact uploads here.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo-deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@055f5df8c3f65ea01cd41e9dc855becd88953486 # v2.75.18
+        with:
+          tool: cargo-deny
+
+      - name: Run cargo-deny
+        run: cargo deny check advisories bans licenses sources
+
+  cargo-audit:
+    name: Cargo Audit
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@055f5df8c3f65ea01cd41e9dc855becd88953486 # v2.75.18
+        with:
+          tool: cargo-audit
+
+      - name: Run cargo audit
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2024-0412 \
+            --ignore RUSTSEC-2024-0413 \
+            --ignore RUSTSEC-2024-0415 \
+            --ignore RUSTSEC-2024-0416 \
+            --ignore RUSTSEC-2024-0418 \
+            --ignore RUSTSEC-2024-0419 \
+            --ignore RUSTSEC-2024-0420 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2024-0370 \
+            --ignore RUSTSEC-2023-0071 \
+            --ignore RUSTSEC-2025-0057 \
+            --ignore RUSTSEC-2023-0019 \
+            --ignore RUSTSEC-2024-0384 \
+            --ignore RUSTSEC-2026-0097
+
+  trivy-fs:
+    name: Trivy Filesystem Scan
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        continue-on-error: true
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
+
+      # NOTE: SARIF upload to Security tab is GitHub-only — substituted with
+      # an artifact upload so triage can still pull the report.
+      - name: Upload Trivy results as artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          retention-days: 30
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      # gitleaks binary directly (MIT, github.com/gitleaks/gitleaks). The
+      # wrapper action gitleaks/gitleaks-action ships under a proprietary EULA
+      # since v2 — banned by the commercial-safe license doctrine.
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Scan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            gitleaks detect --source=. --redact --verbose --no-banner \
+              --log-opts="--no-merges $BASE_SHA..$HEAD_SHA"
+          else
+            gitleaks detect --source=. --redact --verbose --no-banner
+          fi
+
+  zizmor:
+    name: Zizmor (GHA SAST, audit-mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Audit-mode: surface findings as informational; do NOT fail the gate yet.
+    # Promote findings to errors once the workflow inventory has been triaged.
+    continue-on-error: true
+    permissions:
+      contents: read   # read-only — zizmor only needs to parse workflow YAMLs
+    env:
+      ZIZMOR_VERSION: 1.24.1
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      # zizmor binary directly (MIT, github.com/zizmorcore/zizmor). Same pattern
+      # as gitleaks above — install from upstream releases.
+      - name: Install zizmor
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp zizmor
+          sudo mv /tmp/zizmor /usr/local/bin/zizmor
+          zizmor --version
+
+      - name: Run zizmor
+        run: |
+          set -euo pipefail
+          # auditor persona surfaces low-severity findings; --no-online-audits
+          # avoids GitHub API rate-limit issues when running from Gitea.
+          zizmor --persona=auditor --no-online-audits .github/workflows/ .gitea/workflows/ || true
+
+  osv-scanner:
+    name: OSV-Scanner (supply-chain)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Supply-chain advisory mode: known transitive advisories are documented
+    # in deny.toml; OSV findings are surfaced informationally for now.
+    continue-on-error: true
+    permissions:
+      contents: read   # read-only — only parses lockfiles
+    env:
+      OSV_SCANNER_VERSION: 2.3.5
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      - name: Install osv-scanner
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /usr/local/bin/osv-scanner \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Run osv-scanner
+        run: |
+          set -euo pipefail
+          osv-scanner scan source --recursive --no-config . || true
+
+  grype:
+    name: Grype (vuln scan, defense-in-depth)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read   # read-only — Grype scans the filesystem
+    env:
+      GRYPE_VERSION: 0.111.1
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      - name: Install grype
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /tmp grype
+          sudo mv /tmp/grype /usr/local/bin/grype
+          grype --version
+
+      - name: Generate VEX
+        run: |
+          set -euo pipefail
+          bash scripts/generate-vex.sh cargo-audit > /tmp/vex.csaf.json
+          test -s /tmp/vex.csaf.json
+
+      - name: Run grype with VEX
+        run: |
+          set -euo pipefail
+          grype dir:. --fail-on critical --vex /tmp/vex.csaf.json || true
+
+      - name: Upload VEX artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('/tmp/vex.csaf.json') != ''
+        with:
+          name: vex-csaf
+          path: /tmp/vex.csaf.json
+          retention-days: 90
+
+  trivy-image:
+    name: Trivy Image Scan (CRITICAL/HIGH)
+    # Image scanning runs only on main + schedule + dispatch — PR builds do not
+    # publish an image to scan. Mirror of `.github/workflows/security.yml`.
+    # NOTE: docker-publish.yaml currently still targets ghcr.io until the
+    # homelab Zot signing identity is wired; once the registry env switches to
+    # 192.168.178.250:5000, update IMAGE_REF below in lock-step.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read   # checkout (.trivyignore lives in the repo)
+      packages: read   # pull the published OCI image
+    env:
+      IMAGE_REF: ghcr.io/${{ github.repository }}:latest
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      - name: Log in to GHCR (read-only image pull)
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Run Trivy image vulnerability + secret scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.IMAGE_REF }}
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image-results.sarif
+          trivyignores: .trivyignore
+          limit-severities-for-sarif: true
+          exit-code: '0'
+
+      # NOTE: SARIF upload to Security tab is GitHub-only — substituted with an
+      # artifact upload so triage can still pull the report.
+      - name: Upload Trivy image results as artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('trivy-image-results.sarif') != ''
+        with:
+          name: trivy-image-results
+          path: trivy-image-results.sarif
+          retention-days: 30
+
+  grype-image:
+    name: Grype Image Scan (defense-in-depth)
+    # Mirror of `.github/workflows/security.yml::grype-image`.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    permissions:
+      contents: read   # checkout
+      packages: read   # pull the published OCI image
+    env:
+      GRYPE_VERSION: 0.111.1
+      IMAGE_REF: ghcr.io/${{ github.repository }}:latest
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false   # zizmor: ignore[artipacked] — read-only
+
+      - name: Log in to GHCR (read-only image pull)
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Install grype
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/grype.tar.gz \
+            "https://github.com/anchore/grype/releases/download/v${GRYPE_VERSION}/grype_${GRYPE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf /tmp/grype.tar.gz -C /tmp grype
+          sudo mv /tmp/grype /usr/local/bin/grype
+          grype --version
+
+      - name: Run grype against published image
+        env:
+          IMAGE: ${{ env.IMAGE_REF }}
+        run: |
+          set -euo pipefail
+          grype "${IMAGE}" --only-fixed --fail-on critical || true

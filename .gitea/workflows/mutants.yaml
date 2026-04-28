@@ -1,11 +1,7 @@
 name: Mutation Testing (nightly)
 
-# Runs cargo-mutants against parkhub-common on a nightly cron. Reports
-# escaped mutants as artifacts for morning triage. Not a blocking gate —
-# surfaces coverage gaps, doesn't gate merges. See T-1734.
-#
-# v1 scope: parkhub-common only. parkhub-server is too big for a single
-# 3-hour nightly run; expand scope later once baseline kill rate is known.
+# Gitea mirror of `.github/workflows/mutants.yml`. Runs cargo-mutants against
+# parkhub-common nightly; surfaces escaped mutants as artifacts.
 
 on:
   schedule:
@@ -29,9 +25,7 @@ jobs:
     timeout-minutes: 180
     continue-on-error: true
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -40,7 +34,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '22.12.0'
           cache: npm
@@ -57,7 +51,7 @@ jobs:
 
       - name: Upload mutants report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: cargo-mutants-report
           path: mutants.out/

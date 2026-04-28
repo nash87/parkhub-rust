@@ -1,34 +1,34 @@
 name: Copilot Setup Steps
 
+# Gitea mirror of `.github/workflows/copilot-setup-steps.yml`. The "copilot"
+# brand is GitHub-specific; this stays in Gitea as a generic dependency-prep
+# smoke so PRs touching the workflow itself rebuild the cache via the local
+# action mirror.
+
 on:
   workflow_dispatch:
   push:
     paths:
+      - .gitea/workflows/copilot-setup-steps.yaml
       - .github/workflows/copilot-setup-steps.yml
   pull_request:
     paths:
+      - .gitea/workflows/copilot-setup-steps.yaml
       - .github/workflows/copilot-setup-steps.yml
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Workflow-level permissions intentionally empty; the single
-# `copilot-setup-steps` job declares the read-only contents perm it needs.
-permissions: {}
-
 jobs:
   copilot-setup-steps:
-    name: Copilot setup steps
     runs-on: ubuntu-latest
     permissions:
       contents: read
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+        uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -37,7 +37,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: '22'
           cache: npm

@@ -1,0 +1,123 @@
+name: Cosign Verify
+
+# Verify the most recently published main-branch image carries a valid
+# Sigstore signature AND a SPDX SBOM attestation, both produced by
+# `.github/workflows/docker-publish.yml`. Runs on PR + push so
+# regressions in the supply-chain wiring surface before tag time.
+#
+# First-PR caveat: when no `:latest` exists yet, the verify steps log a
+# notice and exit 0 — they only fail if an image exists but lacks a
+# signature/attestation matching the expected identity.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: cosign-verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify cosign signature + SBOM attestation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read   # checkout
+      packages: read   # pull image manifest + signatures from GHCR
+    env:
+      IMAGE_REF: ghcr.io/${{ github.repository }}:latest
+      # Identity expected for keyless cosign signatures: the docker-publish
+      # workflow on the main branch of this repository, signed via the
+      # GitHub-hosted Sigstore Fulcio issuer.
+      EXPECTED_IDENTITY_REGEX: ^https://github.com/${{ github.repository }}/.github/workflows/docker-publish.yml@refs/(heads|tags)/.+$
+      EXPECTED_OIDC_ISSUER: https://token.actions.githubusercontent.com
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR (read-only)
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Resolve image digest
+        id: digest
+        env:
+          IMAGE: ${{ env.IMAGE_REF }}
+        run: |
+          set -euo pipefail
+          # Skip cleanly when no image has been published yet (first PR on a
+          # fresh repo): cosign verify against a missing tag would otherwise
+          # block the PR with a confusing "manifest unknown" error.
+          if ! digest=$(docker buildx imagetools inspect --format '{{json .Manifest.Digest}}' "${IMAGE}" 2>/dev/null | tr -d '"'); then
+            echo "::notice::No image at ${IMAGE} yet — skipping cosign verify."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${digest}" ] || [ "${digest}" = "null" ]; then
+            echo "::notice::Could not resolve digest for ${IMAGE} — skipping cosign verify."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Verify cosign signature (keyless)
+        if: steps.digest.outputs.skip != 'true'
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE: ${{ env.IMAGE_REF }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          IDENTITY_REGEX: ${{ env.EXPECTED_IDENTITY_REGEX }}
+          ISSUER: ${{ env.EXPECTED_OIDC_ISSUER }}
+        run: |
+          set -euo pipefail
+          # Strip image tag (we pin to the resolved digest below).
+          repo="${IMAGE%:*}"
+          cosign verify \
+            --certificate-identity-regexp "${IDENTITY_REGEX}" \
+            --certificate-oidc-issuer "${ISSUER}" \
+            "${repo}@${DIGEST}"
+
+      - name: Verify SPDX SBOM attestation (keyless, advisory until first signed)
+        # Advisory: the SBOM attestation step in docker-publish.yml was only
+        # added in this PR — the existing :latest image was published before
+        # SBOM signing was wired, so the attestation won't exist on the
+        # current image. Once a fresh image is built post-merge with SBOM
+        # signing enabled, this step will start passing and can be promoted
+        # to required (drop continue-on-error).
+        if: steps.digest.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE: ${{ env.IMAGE_REF }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          IDENTITY_REGEX: ${{ env.EXPECTED_IDENTITY_REGEX }}
+          ISSUER: ${{ env.EXPECTED_OIDC_ISSUER }}
+        run: |
+          set -euo pipefail
+          repo="${IMAGE%:*}"
+          if ! cosign verify-attestation \
+            --type spdx \
+            --certificate-identity-regexp "${IDENTITY_REGEX}" \
+            --certificate-oidc-issuer "${ISSUER}" \
+            "${repo}@${DIGEST}" 2>&1; then
+            echo "::notice::SBOM attestation not yet present (advisory). First image built after merge will produce it."
+          fi

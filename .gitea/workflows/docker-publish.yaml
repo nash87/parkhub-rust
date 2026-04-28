@@ -1,0 +1,149 @@
+name: Release Container
+
+# Gitea mirror of `.github/workflows/docker-publish.yml`.
+#
+# NOTE: this workflow targets `ghcr.io` and depends on GitHub OIDC + cosign
+# keyless attestation. The Gitea-side equivalent should publish to the homelab
+# Zot registry at `192.168.178.250:5000` and use cosign with a pre-staged key
+# from Vault. Kept as a parity placeholder — the cosign + attest steps are
+# left intact so the structure is reviewable, but they will need rewiring to
+# the homelab signing identity before this can run end-to-end on a Gitea
+# runner.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  attestations: write
+  contents: read
+  id-token: write
+  packages: write
+  security-events: write
+
+env:
+  IMAGE_NAME: ${{ github.repository }}
+  REGISTRY: ghcr.io  # TODO: switch to 192.168.178.250:5000 once homelab signing identity is ready
+
+jobs:
+  publish:
+    name: Build, scan, and publish image
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-docker-amd64
+          cache-to: type=gha,scope=release-docker-amd64,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        continue-on-error: true
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          limit-severities-for-sarif: true
+          exit-code: '0'
+
+      # NOTE: SARIF upload to GitHub Security tab is GitHub-only — skipped here.
+      # Gitea exposes the artifact via the workflow run summary instead.
+      - name: Upload Trivy results as artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          retention-days: 30
+
+      # NOTE: actions/attest-build-provenance is GitHub-only — replaced with
+      # cosign attest from local key (TODO: wire homelab signing identity).
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Sign container image (TODO: keyed signing with homelab identity)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          echo "TODO: cosign sign --key <vault-fetched-key> ${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      # SOTA-2026 supply-chain: generate SPDX SBOM with Syft (Apache-2.0).
+      # The sbom-action download-syft step ships a pinned Syft binary; we run
+      # syft directly so the SBOM file is available as both an artifact and
+      # (once homelab keyed cosign identity is wired) a cosign attestation.
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
+
+      - name: Generate SPDX SBOM
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          syft "${IMAGE_REF}@${IMAGE_DIGEST}" \
+            -o spdx-json=sbom.spdx.json
+          test -s sbom.spdx.json
+          python3 -c "import json,sys; json.load(open('sbom.spdx.json'))"
+
+      - name: Attach SBOM as cosign attestation (TODO: homelab keyed signing)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          echo "TODO: cosign attest --key <vault-fetched-key> --type spdx --predicate sbom.spdx.json ${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      - name: Upload SBOM artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('sbom.spdx.json') != ''
+        with:
+          name: sbom-spdx-${{ github.sha }}
+          path: sbom.spdx.json
+          retention-days: 90

@@ -1,5 +1,15 @@
 name: CI
 
+# Gitea mirror of `.github/workflows/ci.yml`. Mirrored from the COMMITTED
+# version (the working-tree edit on `chore/local-first-ci-cd-attestation-2026`
+# carries pilot fop local-first PR attestation work that lives in `.gitea/
+# workflows/ci.yml` separately — keep the two sources of truth split until
+# the pilot lands).
+#
+# Action-ref rewrite policy: `actions/*` → Gitea local mirror at
+# 192.168.178.212:3000/actions/*. Third-party actions stay on github.com so the
+# Gitea runner pulls them directly.
+
 on:
   push:
     branches: [main]
@@ -12,8 +22,8 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read  # workflow-wide checkout default; per-job perms override where stricter
-  pull-requests: read  # required-checks job reads PR check status to determine green/red gating
+  contents: read
+  pull-requests: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -27,9 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Run actionlint
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
@@ -47,9 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Helm
         uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5
@@ -69,95 +75,19 @@ jobs:
               list(yaml.safe_load_all(path.read_text()))
           PY
 
-  dependency-review:
-    name: Dependency review
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+  # NOTE: dependency-review intentionally NOT mirrored — actions/dependency-review-action
+  # is a GitHub-only API. Gitea-side coverage is handled by `cargo deny` below.
 
-      - name: Dependency Review
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
-        # Advisory until GitHub Dependency Graph is consistently available for this repo.
-        continue-on-error: true
-        with:
-          fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
-
-  local-ci-attestation:
-    name: fop local CI attestation
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot'
-    runs-on: ubuntu-latest
-    # Hard cap of 14 min accommodates the adaptive backoff schedule (~12 min)
-    # plus GHA queue/runner startup. Previous 3 min window collapsed Required
-    # checks for clean PRs when local-CI ran under multi-tab fop queue load.
-    timeout-minutes: 14
-    permissions:
-      contents: read  # checkout-only (no writes from this gate job)
-      statuses: read  # poll the `fop/local-ci/pr` commit status posted by the local CI gate
-    steps:
-      - name: Require fop local CI commit status (adaptive backoff)
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event.pull_request.head.sha }}
-          REPO: ${{ github.repository }}
-          CONTEXT: fop/local-ci/pr
-        run: |
-          # Adaptive backoff: short polls early (catch fast posts), longer
-          # polls later (avoid API hammering during real waits).
-          # Total ~12 min: 5+5+10+10+20+30+60×11 = 740s.
-          # Fail-fast on explicit failure/error states (don't wait the full window).
-          delays=(5 5 10 10 20 30 60 60 60 60 60 60 60 60 60 60 60)
-          status=""
-          combined=""
-          for delay in "${delays[@]}"; do
-            status_line="$(
-              gh api "repos/${REPO}/commits/${SHA}/status" \
-                --jq "[.state, (([.statuses[] | select(.context == \"${CONTEXT}\")] | sort_by(.created_at) | reverse | .[0].state) // \"\")] | @tsv" \
-                || true
-            )"
-            combined="${status_line%%$'\t'*}"
-            status="${status_line#*$'\t'}"
-            if [[ "${status_line}" != *$'\t'* ]]; then
-              status=""
-            fi
-            echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
-            case "$status" in
-              success)
-                echo "${CONTEXT}=success after ${SECONDS}s"
-                exit 0
-                ;;
-              failure|error)
-                echo "::error::${CONTEXT}=${status} — local-CI explicitly failed; see commit status for details"
-                gh api "repos/${REPO}/commits/${SHA}/status" \
-                  --jq ".statuses[] | select(.context == \"${CONTEXT}\") | {state, description, target_url, created_at}" \
-                  || true
-                exit 1
-                ;;
-            esac
-            if [[ "${combined}" == "success" ]]; then
-              echo "Combined commit status is success after ${SECONDS}s"
-              exit 0
-            fi
-            echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
-            sleep "$delay"
-          done
-          echo "::warning::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s; treating as advisory because explicit failure/error was not observed."
-          echo "Run locally:"
-          echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
-          exit 0
+  # NOTE: local-ci-attestation intentionally NOT mirrored — depends on
+  # GitHub commit-status API + gh CLI auth. The pilot fop local-first
+  # attestation lives in `.gitea/workflows/ci.yml` (uncommitted) separately.
 
   cargo-deny:
     name: Cargo Deny
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -166,7 +96,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@481c34c1cf3a84c68b5e46f4eccfc82af798415a # v2.75.23
+        uses: taiki-e/install-action@58e862542551f667fa44c8a2a4a1d64ad477c96a # v2.75.17
         with:
           tool: cargo-deny
 
@@ -175,13 +105,10 @@ jobs:
 
   fmt:
     name: Cargo Format Check
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -194,13 +121,10 @@ jobs:
 
   check:
     name: Cargo Check (headless)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -221,13 +145,10 @@ jobs:
 
   client-check:
     name: Desktop Client Check
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -247,13 +168,10 @@ jobs:
 
   clippy:
     name: Cargo Clippy (headless)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -276,14 +194,11 @@ jobs:
 
   test:
     name: Cargo Test (headless)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [check]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -304,19 +219,16 @@ jobs:
 
   frontend:
     name: Frontend Build & Test
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
       run:
         working-directory: parkhub-web
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -333,14 +245,11 @@ jobs:
 
   integration:
     name: Integration Tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [test]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -365,13 +274,10 @@ jobs:
 
   types-drift:
     name: TypeScript types drift
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -386,23 +292,11 @@ jobs:
           mkdir -p parkhub-web/dist
           printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html
 
-      # Runs the gen-types feature which triggers (a) ts-rs auto-generated
-      # hidden export_bindings_* tests that emit one .ts per Rust type, and
-      # (b) the explicit ts_export integration test that stamps a warning
-      # header on every file. See parkhub-server/tests/ts_export.rs.
       - name: Regenerate TypeScript bindings from Rust
         run: cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture
 
       - name: Fail if generated types drifted
         run: |
-          # Two checks cover both drift directions:
-          #   1. git diff --exit-code catches modifications + deletions of
-          #      tracked files (Rust struct field renamed, type removed
-          #      after ts_export purged its orphan, etc.).
-          #   2. git status --porcelain catches untracked files — a new
-          #      #[derive(TS)] + #[ts(export)] type where the resulting
-          #      .ts was never git-added. git diff would silently pass.
-          # Both must be empty for the gate to succeed.
           drift=0
           if ! git diff --exit-code parkhub-web/src/generated/; then
             echo "::error::parkhub-web/src/generated/ has modified or deleted files (drift from Rust source)."
@@ -424,13 +318,10 @@ jobs:
 
   openapi-drift:
     name: OpenAPI drift
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -439,7 +330,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: http://192.168.178.212:3000/actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -490,7 +381,7 @@ jobs:
   required:
     name: Required checks
     if: always()
-    needs: [actionlint, helm-validate, dependency-review, local-ci-attestation, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift, types-drift]
+    needs: [actionlint, helm-validate, cargo-deny, fmt, check, client-check, clippy, test, frontend, integration, openapi-drift, types-drift]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -498,10 +389,6 @@ jobs:
         env:
           ACTIONLINT: ${{ needs.actionlint.result }}
           HELM_VALIDATE: ${{ needs.helm-validate.result }}
-          DEPENDENCY_REVIEW: ${{ needs.dependency-review.result }}
-          LOCAL_CI: ${{ needs.local-ci-attestation.result }}
-          EVENT_NAME: ${{ github.event_name }}
-          LOCAL_CI_REQUIRED: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot' }}
           CARGO_DENY: ${{ needs.cargo-deny.result }}
           CHECK: ${{ needs.check.result }}
           CLIENT_CHECK: ${{ needs.client-check.result }}
@@ -519,27 +406,12 @@ jobs:
               exit 1
             fi
           done
-          if [[ "${LOCAL_CI_REQUIRED}" == "true" && "${LOCAL_CI}" != "success" ]]; then
-            echo "REQUIRED: LOCAL_CI failed: ${LOCAL_CI}"
-            exit 1
-          fi
-          if [[ "${EVENT_NAME}" == "pull_request" && "${LOCAL_CI_REQUIRED}" != "true" ]]; then
-            echo "LOCAL-FIRST: local CI attestation skipped for bot or fork PR"
-          fi
           for check in CHECK CLIENT_CHECK TEST FRONTEND FMT CLIPPY OPENAPI_DRIFT TYPES_DRIFT; do
             if [[ "${!check}" != "success" && "${!check}" != "skipped" ]]; then
               echo "REQUIRED: ${check} failed: ${!check}"
               exit 1
             fi
-            if [[ "${!check}" == "skipped" ]]; then
-              echo "LOCAL-FIRST: ${check} skipped on PR; covered by fop/local-ci/pr"
-            fi
           done
-          if [[ "${DEPENDENCY_REVIEW}" != "success" && "${DEPENDENCY_REVIEW}" != "skipped" ]]; then
-            echo "REQUIRED: DEPENDENCY_REVIEW failed: ${DEPENDENCY_REVIEW}"
-            exit 1
-          fi
-          # TODO(make-required-once-stabilized): integration has 1 real failure in last 24h (cancellation_produces_correct_booking_status)
           if [[ "${INTEGRATION}" != "success" ]]; then
             echo "ADVISORY: INTEGRATION: ${INTEGRATION}"
           fi

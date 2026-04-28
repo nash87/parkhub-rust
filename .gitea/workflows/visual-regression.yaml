@@ -1,14 +1,8 @@
 name: Visual Regression
 
-# Nightly visual regression. Runs against `main` once per day so baseline
-# drift is caught within 24h without surfacing flaky red X's on every PR.
-# GitHub-hosted runners render with slight anti-aliasing / font-hinting
-# differences from local baselines, which made the per-PR gate noisy
-# without providing matching merge-blocking value (the job was already
-# `continue-on-error: true`).
-#
-# Run manually via `workflow_dispatch` when intentionally rebasing
-# baselines.
+# Gitea mirror of `.github/workflows/visual-regression.yml`. Nightly visual
+# regression against `main`; manual `workflow_dispatch` with
+# `update_snapshots: true` rebases baselines.
 
 on:
   schedule:
@@ -26,11 +20,6 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  # Default to read-only so nightly scheduled runs can never mutate the
-  # repo even if a dependency is compromised. The `visual` job below
-  # escalates to `contents: write` only when triggered manually via
-  # `workflow_dispatch` with `inputs.update_snapshots == true` — see
-  # the job-level `permissions:` block.
   contents: read
 
 env:
@@ -42,20 +31,12 @@ jobs:
     name: Playwright toHaveScreenshot
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Strict read-only for the heavy Playwright job. Any baseline refresh
-    # is staged here as an artifact and committed from a separate job
-    # (`commit-baselines` below) that only runs on manual dispatch — that
-    # way the `GITHUB_TOKEN` on scheduled + dispatch-dry-run executions
-    # can never mutate the repo even if a dependency is compromised.
     permissions:
       contents: read
-    # Soft-fail: diffs surface as downloadable artifacts but don't block merge.
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
@@ -64,7 +45,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -79,9 +60,6 @@ jobs:
           npm run build
 
       - name: Build server (headless + e2e-bypass)
-        # Matches e2e.yml — `e2e-bypass` is required so
-        # PARKHUB_DISABLE_RATE_LIMITS actually disables the per-IP login
-        # limiter. Without it, 28 sequential logins trip the 5/min bucket.
         run: cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass'
 
       - name: Start server in background
@@ -124,11 +102,6 @@ jobs:
           npx playwright test "${args[@]}"
 
       - name: Run v5 visual + happy-paths (parkhub-web config)
-        # v5 specs live in parkhub-web/e2e/ and target the Astro bundle
-        # served by parkhub-server itself (embedded via rust_embed at
-        # /v5/index.html). v5-visual.spec.ts internally skips every
-        # project except chromium; v5-happy-paths.spec.ts skips
-        # mobile-chrome — see docs/v5-test-coverage-plan.md.
         working-directory: parkhub-web
         env:
           E2E_BASE_URL: http://127.0.0.1:18181
@@ -140,12 +113,6 @@ jobs:
           npx playwright test "${args[@]}"
 
       - name: Stage refreshed baselines for commit job
-        # When running as `workflow_dispatch` with update_snapshots=true,
-        # tar up every PNG under e2e/ + parkhub-web/e2e/ so the separate
-        # `commit-baselines` job (which has `contents: write`) can check
-        # out main and replay the updates. Keeping the heavy Playwright
-        # job read-only is what makes this safe against supply-chain
-        # tampering on scheduled runs.
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
         run: |
           mkdir -p /tmp/visual-baselines
@@ -154,7 +121,7 @@ jobs:
 
       - name: Upload refreshed baselines artifact
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: refreshed-visual-baselines
           path: /tmp/visual-baselines/baselines.tar
@@ -166,11 +133,9 @@ jobs:
 
       - name: Upload diff artifacts
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: visual-regression-diffs
-          # v4 suite writes to repo-root test-results/; v5 suite (working-directory:
-          # parkhub-web) writes to parkhub-web/test-results/. Glob both roots.
           path: |
             test-results/**/*-diff.png
             test-results/**/*-actual.png
@@ -184,7 +149,7 @@ jobs:
 
       - name: Upload full Playwright report
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: playwright-visual-report
           path: |
@@ -193,46 +158,34 @@ jobs:
           retention-days: 7
 
   commit-baselines:
-    # Isolated commit-back job. Only runs on manual dispatch with
-    # update_snapshots=true — never on the scheduled nightly trigger.
-    # Keeping `contents: write` scoped to this tiny job (no npm ci,
-    # no Playwright, no Cargo) dramatically narrows the supply-chain
-    # blast-radius compared to handing the heavy `visual` job a
-    # write-capable GITHUB_TOKEN.
     name: Commit refreshed baselines
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_snapshots == true }}
     needs: visual
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write  # required to push the refreshed baselines back to the PR branch
+      contents: write
 
     steps:
-      # Justification (artipacked): Persisted credentials are intentional
-      # here — the `Apply baselines and push` step below runs
-      # `git push origin HEAD:${BRANCH}`, which needs the GITHUB_TOKEN in
-      # .git/config. Other checkouts in this workflow already opt out
-      # (the read-only `visual` job). Suppression sits on the `uses:` line.
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6 # zizmor: ignore[artipacked] git push needs GITHUB_TOKEN persisted
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Download refreshed baselines
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v7
+        uses: http://192.168.178.212:3000/actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v7
         with:
           name: refreshed-visual-baselines
           path: /tmp/visual-baselines
 
       - name: Apply baselines and push
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: ${{ github.ref_name }}
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
           tar -xf /tmp/visual-baselines/baselines.tar
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name 'gitea-actions[bot]'
+          git config user.email 'gitea-actions[bot]@users.noreply.localhost'
           git add -A 'e2e/**/*.png' 'parkhub-web/e2e/**/*.png' || true
           if git diff --cached --quiet; then
             echo 'No baseline changes to commit.'
             exit 0
           fi
           git commit -m 'chore(visual): refresh Playwright baselines from CI'
-          git push origin "HEAD:${BRANCH}"
+          git push origin HEAD:${{ github.ref_name }}

@@ -1,4 +1,8 @@
 name: Install Smoke
+
+# Gitea mirror of `.github/workflows/install-smoke.yml`. Cold-clones the repo
+# from Gitea, follows INSTALLATION.md, and verifies `/health/ready` flips green.
+
 on:
   schedule:
     - cron: '0 7 * * *'  # 07:00 UTC nightly
@@ -8,32 +12,23 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Workflow-level permissions intentionally empty; the single docker-compose
-# job declares the minimum (contents: read) it needs.
-permissions: {}
-
 jobs:
   docker-compose:
-    name: Docker Compose install smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      contents: read  # required for actions/checkout to fetch the workflow ref
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Cold clone
         run: |
+          # NOTE: clones from the Gitea mirror — switch to `git clone --depth 1
+          # http://192.168.178.212:3000/florian/parkhub-rust.git /tmp/smoke` once
+          # the mirror is canonical for this workflow.
           git clone --depth 1 https://github.com/nash87/parkhub-rust.git /tmp/smoke
       - name: Follow INSTALLATION.md Docker Compose steps
         working-directory: /tmp/smoke
         run: |
-          # Step 2 — set admin password
           echo "PARKHUB_ADMIN_PASSWORD=$(openssl rand -base64 24)" > .env
-          # Step 4 — start
           docker compose up -d
-          # Step 5 — verify
           for i in {1..60}; do
             if curl -sf http://localhost:8080/health/ready >/dev/null 2>&1; then
               echo "READY after ${i}s"

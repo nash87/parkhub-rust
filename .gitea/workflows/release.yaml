@@ -1,0 +1,238 @@
+name: Release
+
+# Gitea mirror of `.github/workflows/release.yml`.
+#
+# NOTE: macOS + Windows runners are not generally available on Gitea Actions
+# (the homelab runner pool is Linux x64 + Linux arm64). Those build legs are
+# kept here for reviewability but will be skipped at runtime — the practical
+# Gitea-side coverage is `build-linux` + `build-linux-arm64`. The `release`
+# job uses `softprops/action-gh-release` which is GitHub-specific; replace
+# with a Gitea release call (`tea release create`) before this can publish
+# end-to-end on Gitea.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22.12.0'
+
+jobs:
+  validate-tag:
+    name: Validate release ref + version surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Require v* tag ref
+        run: |
+          if [[ ! "${GITHUB_REF}" =~ ^refs/tags/v ]]; then
+            echo "workflow_dispatch must target a v* tag ref"
+            exit 1
+          fi
+
+      - name: Require tag and version surfaces to match
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import tomllib
+
+          root = pathlib.Path(".")
+          release_tag = os.environ["RELEASE_TAG"]
+          if not release_tag.startswith("v"):
+              raise SystemExit(f"release ref must be a v* tag, got: {release_tag}")
+
+          expected_version = release_tag[1:]
+          cargo_version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+          root_package_version = json.loads((root / "package.json").read_text())["version"]
+          web_package_version = json.loads((root / "parkhub-web" / "package.json").read_text())["version"]
+
+          versions = {
+              "git tag": expected_version,
+              "Cargo.toml [workspace.package].version": cargo_version,
+              "package.json version": root_package_version,
+              "parkhub-web/package.json version": web_package_version,
+          }
+
+          mismatches = {name: value for name, value in versions.items() if value != expected_version}
+          if mismatches:
+              print("Release version parity check failed:")
+              for name, value in versions.items():
+                  print(f"  {name}: {value}")
+              raise SystemExit(1)
+
+          print(f"Release version parity verified: {expected_version}")
+          PY
+
+  build-linux:
+    name: Build Linux
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build web frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build server (headless)
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
+
+      - name: Build client
+        run: cargo build --locked --release --package parkhub-client
+
+      - name: Create portable package
+        run: |
+          mkdir -p parkhub-linux-x64
+          cp target/release/parkhub-server parkhub-linux-x64/
+          cp target/release/parkhub parkhub-linux-x64/
+          cp README.md LICENSE parkhub-linux-x64/
+          mkdir -p parkhub-linux-x64/parkhub-data
+          touch parkhub-linux-x64/parkhub-data/.portable
+          tar -czvf parkhub-linux-x64.tar.gz parkhub-linux-x64
+
+      - name: Upload artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-linux-x64
+          path: parkhub-linux-x64.tar.gz
+          retention-days: 14
+
+  build-linux-arm64:
+    name: Build Linux ARM64
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    # NOTE: arm64 runners on Gitea require a self-hosted aarch64 worker
+    # (homelab pi5 / proxmox arm). Skipped on default runner pool.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+
+      - name: Setup Node.js
+        uses: http://192.168.178.212:3000/actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      - name: Build web frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build server (headless)
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
+
+      - name: Build client
+        run: cargo build --locked --release --package parkhub-client
+
+      - name: Create portable package
+        run: |
+          mkdir -p parkhub-linux-arm64
+          cp target/release/parkhub-server parkhub-linux-arm64/
+          cp target/release/parkhub parkhub-linux-arm64/
+          cp README.md LICENSE parkhub-linux-arm64/
+          mkdir -p parkhub-linux-arm64/parkhub-data
+          touch parkhub-linux-arm64/parkhub-data/.portable
+          tar -czvf parkhub-linux-arm64.tar.gz parkhub-linux-arm64
+
+      - name: Upload artifact
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-linux-arm64
+          path: parkhub-linux-arm64.tar.gz
+          retention-days: 14
+
+  # NOTE: build-macos + build-windows intentionally skipped — Gitea homelab
+  # runner pool is Linux-only. Cross-platform release artifacts continue to
+  # come from the GitHub mirror at `.github/workflows/release.yml`.
+
+  release:
+    name: Create Release
+    needs: [build-linux, build-linux-arm64]
+    if: always() && needs.build-linux.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux x64 artifact
+        uses: http://192.168.178.212:3000/actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: parkhub-linux-x64
+
+      - name: Download Linux ARM64 artifact
+        uses: http://192.168.178.212:3000/actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-linux-arm64
+
+      - name: Generate checksums
+        run: |
+          set -e
+          for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" >> checksums.txt
+            fi
+          done
+          cat checksums.txt
+
+      # NOTE: softprops/action-gh-release is GitHub-only. Replace with a
+      # Gitea release upload (`tea release create` or REST POST to
+      # /repos/{owner}/{repo}/releases) before this can run end-to-end.
+      - name: Create Gitea Release (TODO)
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          echo "TODO: replace with tea release create or REST POST to Gitea release API"
+          echo "Artifacts queued for release: parkhub-linux-x64.tar.gz, parkhub-linux-arm64.tar.gz, checksums.txt"

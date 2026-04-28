@@ -1,0 +1,103 @@
+# OSV-Scanner ignore configuration for parkhub-rust.
+# Mirrors the [advisories.ignore] list in deny.toml so that promoting
+# OSV-Scanner from advisory to gating doesn't break on already-documented
+# transitive advisories.
+#
+# Format: https://google.github.io/osv-scanner/configuration/
+# Each entry:
+#   - id          OSV / RUSTSEC / GHSA identifier
+#   - reason      One-line justification (sync with deny.toml comments)
+#   - ignoreUntil Optional date — re-evaluate quarterly
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0071"
+reason = "rsa Marvin Attack (transitive dep); not exposed via parkhub-server's surface"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+reason = "proc-macro-error unmaintained (transitive build dep)"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0411"
+reason = "glib unmaintained (gtk-rs core); blocked on Tauri GTK4/WebKitGTK 6 migration"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0412"
+reason = "atk unmaintained (gtk-rs GTK3 binding); same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0413"
+reason = "gdk unmaintained (gtk-rs GTK3 binding); same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0414"
+reason = "gio unmaintained (gtk-rs); same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0415"
+reason = "gdk-pixbuf unmaintained; same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0416"
+reason = "gdk-sys unmaintained; same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0417"
+reason = "pango unmaintained (gtk-rs); same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0418"
+reason = "gtk unmaintained (gtk-rs GTK3); same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0419"
+reason = "gtk-sys unmaintained; same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0420"
+reason = "gtk3-macros unmaintained; same Tauri-transitive lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0436"
+reason = "paste unmaintained (transitive build dep)"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0057"
+reason = "fxhash unmaintained (transitive via selectors)"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0075"
+reason = "soup2/webkit2gtk transitive unmaintained; Tauri lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0080"
+reason = "unic-common unmaintained; Slint 1.16 plans icu-based replacement"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0081"
+reason = "soup2/webkit2gtk transitive unmaintained; Tauri lock-in"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0098"
+reason = "unic-* family unmaintained; Slint 1.16 plans replacement"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0100"
+reason = "unic-* family unmaintained; Slint 1.16 plans replacement"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2025-0141"
+reason = "bincode unmaintained (transitive via hyphenation -> printpdf 0.9)"
+
+# npm transitive (parkhub-web)
+[[IgnoredVulns]]
+id = "GHSA-48c2-rrv3-qjmp"
+reason = "yaml dev-dep CVE; non-prod; bumping in next dependabot wave"
+
+[[IgnoredVulns]]
+id = "GHSA-wrw7-89jp-8q8g"
+reason = "glib gtk-rs unchecked-callback PSK leak; not used by parkhub-server (Tauri-side only)"
+
+[[IgnoredVulns]]
+id = "GHSA-cq8v-f236-94qc"
+reason = "rand 0.7.3 transitive; bumped where direct, locked elsewhere"

@@ -2,9 +2,9 @@ name: Dependabot auto-merge
 
 on: pull_request
 
-permissions:
-  contents: write
-  pull-requests: write
+# Workflow-level permissions intentionally empty; the dependabot job below
+# declares the minimum it needs.
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,8 +12,12 @@ concurrency:
 
 jobs:
   dependabot:
+    name: Auto-merge Dependabot patch and minor updates
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    permissions:
+      contents: write  # needed so the squash merge is permitted
+      pull-requests: write  # needed to call `gh pr merge --auto`
     steps:
       - name: Dependabot metadata
         id: metadata

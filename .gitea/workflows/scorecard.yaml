@@ -1,0 +1,62 @@
+name: OpenSSF Scorecard
+# Supply-chain posture scoring via OpenSSF Scorecard.
+# Scores: Binary-Artifacts, Branch-Protection, Code-Review,
+#         Dependency-Update-Tool, Maintained, Signed-Releases,
+#         Security-Policy, Token-Permissions, Vulnerabilities.
+#
+# Local run (requires PAT with repo:read):
+#   docker run -e GITHUB_AUTH_TOKEN=$PAT gcr.io/openssf/scorecard:stable \
+#     --repo=github.com/<org>/parkhub-rust --format json
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Monday 06:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: scorecard-${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  scorecard:
+    name: OpenSSF Scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write  # Needed for SARIF upload (GitHub-only)
+    steps:
+      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Run Scorecard
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        continue-on-error: true
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: false  # GitHub-only API; we keep SARIF as artifact
+
+      - name: Upload Scorecard SARIF
+        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('scorecard-results.sarif') != ''
+        with:
+          name: scorecard-results
+          path: scorecard-results.sarif
+          retention-days: 90
+
+      - name: Score summary (human-readable)
+        run: |
+          set -euo pipefail
+          if command -v scorecard >/dev/null 2>&1; then
+            scorecard --repo="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" --format=short
+          else
+            echo "Scorecard CLI not available in PATH; SARIF artifact uploaded above."
+          fi
+        continue-on-error: true
