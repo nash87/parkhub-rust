@@ -217,6 +217,7 @@ jobs:
       - name: Apply baselines and push
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
         run: |
           tar -xf /tmp/visual-baselines/baselines.tar
           git config user.name 'github-actions[bot]'
@@ -227,4 +228,4 @@ jobs:
             exit 0
           fi
           git commit -m 'chore(visual): refresh Playwright baselines from CI'
-          git push origin HEAD:${{ github.ref_name }}
+          git push origin "HEAD:${BRANCH}"
