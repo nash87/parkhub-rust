@@ -432,7 +432,9 @@ fi
 # OSV-Scanner findings are surfaced informationally and do NOT fail the gate.
 # Promote to gating once an osv-scanner.toml ignore list mirrors deny.toml.
 if command -v osv-scanner >/dev/null 2>&1; then
-  run_step "osv-scanner (supply-chain, advisory)" "osv-scanner scan source --recursive --no-config . 2>&1 | tail -50 || echo 'osv-scanner found vulns (advisory)'"
+  # osv-scanner.toml at repo root mirrors the deny.toml advisory ignore list,
+  # so this step is now gating (failure = real vuln, not a documented one).
+  run_step "osv-scanner (supply-chain)" "osv-scanner scan source --recursive --config=osv-scanner.toml ."
 else
   skip_step "osv-scanner" "osv-scanner not on PATH (install: https://google.github.io/osv-scanner/installation/)"
 fi
