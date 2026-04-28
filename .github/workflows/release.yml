@@ -94,11 +94,18 @@ jobs:
           sudo apt-get install -y cmake libfontconfig1-dev
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        # No `cache: npm` — release tags must not consume or populate caches
+        # that PR runs can write to, or a malicious PR could poison a tag
+        # build via the shared cache key. Cold install is acceptable on the
+        # release path.
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: parkhub-web/package-lock.json
 
       - name: Build web frontend
         working-directory: parkhub-web
@@ -153,11 +160,18 @@ jobs:
           sudo apt-get install -y cmake libfontconfig1-dev
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        # No `cache: npm` — release tags must not consume or populate caches
+        # that PR runs can write to, or a malicious PR could poison a tag
+        # build via the shared cache key. Cold install is acceptable on the
+        # release path.
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: parkhub-web/package-lock.json
 
       - name: Build web frontend
         working-directory: parkhub-web
@@ -217,8 +231,13 @@ jobs:
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
           rustup target list --installed
 
+      # Justification (cache-poisoning): lookup-only: true means the cache
+      # is read-only for this run and never written. A malicious PR therefore
+      # cannot poison this tag build's cache (PR builds do not share the
+      # `macos-release` cache key, and this step never saves). Suppression
+      # is on the `uses:` line below.
       - name: Rust cache (macOS)
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2 # zizmor: ignore[cache-poisoning] lookup-only: true; never writes
         with:
           workspaces: "."
           key: macos-release
@@ -230,11 +249,18 @@ jobs:
       # x86_64 leg of the universal build anyway.
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        # No `cache: npm` — release tags must not consume or populate caches
+        # that PR runs can write to, or a malicious PR could poison a tag
+        # build via the shared cache key. Cold install is acceptable on the
+        # release path.
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: parkhub-web/package-lock.json
 
       - name: Build web frontend
         working-directory: parkhub-web
@@ -290,8 +316,13 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
+      # Justification (cache-poisoning): lookup-only: true means the cache
+      # is read-only for this run and never written. A malicious PR therefore
+      # cannot poison this tag build's cache (PR builds do not share the
+      # `windows-release` cache key, and this step never saves). Suppression
+      # is on the `uses:` line below.
       - name: Rust cache (Windows)
-        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2 # zizmor: ignore[cache-poisoning] lookup-only: true; never writes
         with:
           workspaces: "."
           key: windows-release
@@ -304,11 +335,18 @@ jobs:
           echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
 
       - name: Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        # No `cache: npm` — release tags must not consume or populate caches
+        # that PR runs can write to, or a malicious PR could poison a tag
+        # build via the shared cache key. Cold install is acceptable on the
+        # release path.
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: parkhub-web/package-lock.json
 
       - name: Build web frontend
         working-directory: parkhub-web
@@ -356,9 +394,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: write
-      attestations: write
-      id-token: write
+      contents: write  # required to publish a GitHub Release with assets
+      attestations: write  # required by actions/attest-build-provenance for release artifacts
+      id-token: write  # required for OIDC-based attestation signing
     steps:
       - name: Download Linux x64 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8

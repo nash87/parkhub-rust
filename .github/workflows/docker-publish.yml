@@ -15,12 +15,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-permissions:
-  attestations: write
-  contents: read
-  id-token: write
-  packages: write
-  security-events: write
+# Workflow-level permissions intentionally empty; each job declares the
+# minimum set it needs (publish needs OIDC + GHCR push + SARIF upload;
+# deploy-demo needs nothing beyond the secrets it consumes).
+permissions: {}
 
 env:
   IMAGE_NAME: ${{ github.repository }}
@@ -31,6 +29,13 @@ jobs:
     name: Build, scan, and publish image
     runs-on: ubuntu-latest
     timeout-minutes: 90
+
+    permissions:
+      contents: read  # required for actions/checkout on a private repo
+      packages: write  # required to push the OCI image to GHCR
+      id-token: write  # required for keyless cosign signing + OIDC build provenance
+      attestations: write  # required by actions/attest-build-provenance
+      security-events: write  # required to upload the Trivy SARIF result to the Security tab
 
     outputs:
       digest: ${{ steps.push.outputs.digest }}
@@ -180,6 +185,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: {}
+    # Bind the Render secrets to a dedicated GitHub environment so they can
+    # be scoped (and optionally protection-ruled) instead of leaking via the
+    # default repo secret store. The environment name `demo` should exist in
+    # repo Settings → Environments; if it doesn't, the workflow will fail
+    # closed (which is the desired behaviour — better than silently using
+    # default-scope secrets).
+    environment: demo
     env:
       RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
       RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}

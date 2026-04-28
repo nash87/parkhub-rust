@@ -205,15 +205,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: write  # required to push the refreshed baselines back to the PR branch
 
     steps:
-      # zizmor: ignore[artipacked]
-      # Persisted credentials are intentional here — the `Apply baselines
-      # and push` step below runs `git push origin HEAD:${BRANCH}`, which
-      # needs the GITHUB_TOKEN in .git/config. Other checkouts in this
-      # workflow already opt out (the read-only `visual` job).
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      # Justification (artipacked): Persisted credentials are intentional
+      # here — the `Apply baselines and push` step below runs
+      # `git push origin HEAD:${BRANCH}`, which needs the GITHUB_TOKEN in
+      # .git/config. Other checkouts in this workflow already opt out
+      # (the read-only `visual` job). Suppression sits on the `uses:` line.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6 # zizmor: ignore[artipacked] git push needs GITHUB_TOKEN persisted
 
       - name: Download refreshed baselines
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v7

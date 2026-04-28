@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
-  pull-requests: read
+  contents: read  # workflow-wide checkout default; per-job perms override where stricter
+  pull-requests: read  # required-checks job reads PR check status to determine green/red gating
 
 env:
   CARGO_TERM_COLOR: always
@@ -96,8 +96,8 @@ jobs:
     # checks for clean PRs when local-CI ran under multi-tab fop queue load.
     timeout-minutes: 14
     permissions:
-      contents: read
-      statuses: read
+      contents: read  # checkout-only (no writes from this gate job)
+      statuses: read  # poll the `fop/local-ci/pr` commit status posted by the local CI gate
     steps:
       - name: Require fop local CI commit status (adaptive backoff)
         env:

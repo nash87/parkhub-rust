@@ -17,17 +17,24 @@ name: Auto-merge on label
 # and labels (filtered above) are referenced — no untrusted strings
 # from issue/PR bodies reach a `run:` block.
 
+# Justification (dangerous-triggers): pull_request_target is the documented
+# GitHub pattern for label-gated auto-merge. We listen ONLY on `labeled` and
+# `reopened`, NEVER on `synchronize`, so a fork-PR push cannot rerun this
+# workflow with the elevated token. No PR body / branch-name / title is
+# interpolated into any `run:` block — only the integer PR number flows
+# through `env:`. Suppression sits on the `pull_request_target:` line.
 on:
-  pull_request_target:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] label-gated; types limited to labeled+reopened, no untrusted-string interp
     # Listen only on `labeled` (and `reopened` so a closed-then-reopened PR
     # with the label still attached re-arms once). NOT `synchronize` —
     # GitHub deliberately disables auto-merge after pushes from contributors
     # without write access, and we don't want to defeat that safety.
     types: [labeled, reopened]
 
-permissions:
-  pull-requests: write
-  contents: write
+# Workflow-level permissions intentionally empty; the single `enable-auto-merge`
+# job declares the minimum it needs (pull-requests: write to enable auto-merge,
+# contents: write so the squash merge itself is permitted).
+permissions: {}
 
 concurrency:
   group: auto-merge-${{ github.event.pull_request.number }}
@@ -35,11 +42,15 @@ concurrency:
 
 jobs:
   enable-auto-merge:
+    name: Enable native auto-merge for labelled PRs
     if: >-
       !github.event.pull_request.draft
       && contains(github.event.pull_request.labels.*.name, 'auto-merge')
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      pull-requests: write  # required to call `gh pr merge --auto`
+      contents: write  # required so the eventual squash merge succeeds
     steps:
       - name: Enable native auto-merge (squash)
         env:

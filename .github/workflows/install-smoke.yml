@@ -8,10 +8,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Workflow-level permissions intentionally empty; the single docker-compose
+# job declares the minimum (contents: read) it needs.
+permissions: {}
+
 jobs:
   docker-compose:
+    name: Docker Compose install smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read  # required for actions/checkout to fetch the workflow ref
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:

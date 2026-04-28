@@ -183,9 +183,11 @@ jobs:
           # on localhost. Without this the session vanishes between
           # page.goto()s and every ProtectedRoute redirects to /welcome.
           APP_URL: http://localhost:8081
+          MATRIX_PROJECT: ${{ matrix.project }}
+          MATRIX_SHARD: ${{ matrix.shard }}
         run: |
           ./target/release/parkhub-server --headless --unattended --port 8081 \
-            > "/tmp/parkhub-nightly-${{ matrix.project }}-${{ matrix.shard }}.log" 2>&1 &
+            > "/tmp/parkhub-nightly-${MATRIX_PROJECT}-${MATRIX_SHARD}.log" 2>&1 &
           server_pid=$!
           trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
 
@@ -195,8 +197,8 @@ jobs:
           done
 
           npx playwright test \
-            --project="${{ matrix.project }}" \
-            --shard="${{ matrix.shard }}/4"
+            --project="${MATRIX_PROJECT}" \
+            --shard="${MATRIX_SHARD}/4"
 
       - name: Upload Playwright report (${{ matrix.project }} shard ${{ matrix.shard }})
         if: always()

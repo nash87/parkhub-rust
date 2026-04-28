@@ -13,8 +13,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Workflow-level permissions intentionally empty; the single
+# `copilot-setup-steps` job declares the read-only contents perm it needs.
+permissions: {}
+
 jobs:
   copilot-setup-steps:
+    name: Copilot setup steps
     runs-on: ubuntu-latest
     permissions:
       contents: read
