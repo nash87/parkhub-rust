@@ -423,6 +423,30 @@ else
   skip_step "zizmor (GHA SAST)" "zizmor not on PATH (install: cargo install zizmor or https://docs.zizmor.sh)"
 fi
 
+# ─── Stage 10: OSV-Scanner (supply-chain via OSV database) ──────────────────
+# OSV-Scanner v2 (Apache-2.0, Google) reads Cargo.lock + package-lock.json
+# directly and matches against the OSV database (broader than RUSTSEC alone:
+# also catches GHSA + CVE entries). Complements cargo-deny advisories on the
+# Rust side and npm audit on the frontend.
+# Advisory mode: known transitive advisories are documented in deny.toml;
+# OSV-Scanner findings are surfaced informationally and do NOT fail the gate.
+# Promote to gating once an osv-scanner.toml ignore list mirrors deny.toml.
+if command -v osv-scanner >/dev/null 2>&1; then
+  run_step "osv-scanner (supply-chain, advisory)" "osv-scanner scan source --recursive --no-config . 2>&1 | tail -50 || echo 'osv-scanner found vulns (advisory)'"
+else
+  skip_step "osv-scanner" "osv-scanner not on PATH (install: https://google.github.io/osv-scanner/installation/)"
+fi
+
+# ─── Stage 11: Grype (vuln scanner, defense-in-depth) ───────────────────────
+# Grype (Apache-2.0, Anchore) is a complementary vuln scanner to Trivy.
+# Different DB sources catch different findings — defense-in-depth on the
+# supply chain. Advisory only on `cd` profile (release path); skipped on `pr`.
+if [[ "$profile" == "cd" ]] && command -v grype >/dev/null 2>&1; then
+  run_step "grype (defense-in-depth, advisory)" "grype dir:. --fail-on critical --quiet 2>&1 | tail -20 || echo 'grype found vulns (advisory)'"
+elif [[ "$profile" == "cd" ]]; then
+  skip_step "grype" "grype not on PATH (install: https://github.com/anchore/grype#installation)"
+fi
+
 write_report "success"
 post_commit_status "success" "fop local ${profile} passed"
 
