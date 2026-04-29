@@ -10,6 +10,16 @@ import '../styles/global.css';
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; base-uri 'self'; form-action 'self';" />
     <meta name="description" content="ParkHub v5 — the 2026 urban mobility command center. Dashboard, bookings, fleet, admin — all in one keyboard-first surface." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- PWA manifest (design-v5: red #dc2626 / dark #0f0f0f). Service
+         worker registration lives in index.astro for the marketing root;
+         v5 is the React command-center surface and inherits the same SW. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#dc2626" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ParkHub" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <title>ParkHub v5 — Command Center</title>
     <script is:inline>
       // Pre-hydration mode boot — avoids the light→dark flash when the stored

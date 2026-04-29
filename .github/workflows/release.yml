@@ -379,6 +379,251 @@ jobs:
           path: parkhub-windows-x64.zip
           retention-days: 14
 
+  # ─── Tauri desktop installers ─────────────────────────────────────────────
+  # The headless `parkhub-server` portable bundles above (build-linux*,
+  # build-macos, build-windows) ship the server-side artefact. The three
+  # `tauri-*` jobs below build the full ParkHub *desktop app* (Tauri 2 shell
+  # wrapping the Astro/React frontend) and produce native installers:
+  #   Linux   → .deb + .rpm + .AppImage
+  #   macOS   → .dmg + .app bundle (universal binary via two-target lipo)
+  #   Windows → .msi (WiX) + .exe (NSIS)
+  # tauri-action runs `cargo tauri build` which honours
+  # `parkhub-desktop/tauri.conf.json::build.beforeBuildCommand` to compile
+  # the web frontend first. tauri-action is MIT licensed (commercially safe).
+  # Windows code-signing intentionally skipped — no Authenticode cert
+  # available; the installer is still produced and works, just SmartScreen
+  # will prompt on first run until a cert is wired in (issue: future task).
+  # macOS is unsigned/unnotarised for the same reason; users must run
+  # `xattr -d com.apple.quarantine ParkHub.app` on first launch.
+
+  tauri-linux:
+    name: Tauri desktop (Linux)
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Install Tauri Linux dependencies
+        # webkit2gtk + ayatana-appindicator are the runtime libs Tauri 2
+        # links against on Linux; the rest are the AppImage / .deb / .rpm
+        # toolchain `cargo tauri build` shells out to.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm \
+            file
+
+      - name: Setup Node.js
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install web dependencies
+        # tauri-action's beforeBuildCommand runs `npm run build` but does
+        # not install deps; we do that here so the cargo tauri build can
+        # find a populated node_modules.
+        working-directory: parkhub-web
+        run: npm ci
+
+      - name: Build Tauri bundles
+        # tauri-action@v0.6.2 — MIT licensed.
+        # `projectPath` points at the Tauri crate; `args: --bundles deb,rpm,appimage`
+        # enumerates the three Linux targets explicitly so the build never
+        # depends on host-detection heuristics.
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        with:
+          projectPath: parkhub-desktop
+          args: --bundles deb,rpm,appimage
+
+      - name: Stage installers
+        # Tauri writes into target/release/bundle/{deb,rpm,appimage}/. We
+        # collect everything into a single zip so it survives the GitHub
+        # artifact upload as one logical unit.
+        run: |
+          set -euo pipefail
+          mkdir -p parkhub-desktop-linux-x64
+          # `find` rather than glob: bundle layout differs slightly between
+          # cargo-tauri versions and we'd rather pick up *.deb/*.rpm/*.AppImage
+          # wherever they land.
+          find target/release/bundle -type f \
+            \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) \
+            -exec cp {} parkhub-desktop-linux-x64/ \;
+          ls -la parkhub-desktop-linux-x64/
+
+      - name: Package installers
+        run: |
+          zip -r parkhub-desktop-linux-x64.zip parkhub-desktop-linux-x64/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-desktop-linux-x64
+          path: parkhub-desktop-linux-x64.zip
+          retention-days: 14
+
+  tauri-macos:
+    name: Tauri desktop (macOS universal)
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    runs-on: macos-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust (universal targets)
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Ensure both macOS targets installed
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          rustup target list --installed
+
+      - name: Setup Node.js
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install web dependencies
+        working-directory: parkhub-web
+        run: npm ci
+
+      - name: Build Tauri bundles (universal)
+        # `--target universal-apple-darwin` instructs cargo-tauri to build
+        # for both arm64 + x86_64 and lipo them into a single .app/.dmg.
+        # No code-signing or notarisation: ASC cert + team-id env vars are
+        # absent. Users must run `xattr -d com.apple.quarantine ParkHub.app`
+        # to bypass Gatekeeper on first launch — documented in the release
+        # notes generator (TODO future task: hook up codesign + notarytool).
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        with:
+          projectPath: parkhub-desktop
+          args: --target universal-apple-darwin --bundles dmg,app
+
+      - name: Stage installers
+        run: |
+          set -euo pipefail
+          mkdir -p parkhub-desktop-macos
+          find target/universal-apple-darwin/release/bundle -type f \
+            \( -name '*.dmg' \) \
+            -exec cp {} parkhub-desktop-macos/ \;
+          # The .app is a directory — tar it so we can ship it inside the
+          # outer zip without losing the bundle structure.
+          find target/universal-apple-darwin/release/bundle/macos -maxdepth 1 -type d -name '*.app' \
+            | while read -r appdir; do
+                tar -czf "parkhub-desktop-macos/$(basename "$appdir").tar.gz" -C "$(dirname "$appdir")" "$(basename "$appdir")"
+              done
+          ls -la parkhub-desktop-macos/
+
+      - name: Package installers
+        run: |
+          zip -r parkhub-desktop-macos.dmg.zip parkhub-desktop-macos/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-desktop-macos
+          path: parkhub-desktop-macos.dmg.zip
+          retention-days: 14
+
+  tauri-windows:
+    name: Tauri desktop (Windows)
+    needs: [validate-tag]
+    if: always() && (needs.validate-tag.result == 'success' || needs.validate-tag.result == 'skipped')
+    runs-on: windows-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Install OpenSSL (vcpkg)
+        run: |
+          vcpkg install openssl:x64-windows-static-md
+          echo "OPENSSL_DIR=C:\vcpkg\installed\x64-windows-static-md" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+
+      - name: Setup Node.js
+        # Justification (cache-poisoning): cache: npm is intentionally NOT set;
+        # setup-node v6 only enables npm caching when the `cache:` input is
+        # provided. With no `cache:` key here, the action does not read or
+        # write any cache, so the tag-build cache-poisoning attack class
+        # does not apply. Suppression is on the `uses:` line below.
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O on release path
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install web dependencies
+        working-directory: parkhub-web
+        run: npm ci
+
+      - name: Build Tauri bundles
+        # No `WINDOWS_CERTIFICATE` / `WINDOWS_CERTIFICATE_PASSWORD` env vars
+        # are passed in — the Authenticode signing step is skipped. The .msi
+        # and .exe are produced unsigned; SmartScreen will prompt on first
+        # run until a cert is wired in (future task: import EV cert into
+        # repo Secrets).
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0.6.2
+        with:
+          projectPath: parkhub-desktop
+          args: --bundles msi,nsis
+
+      - name: Stage installers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path parkhub-desktop-windows-x64
+          Get-ChildItem -Path target/release/bundle -Recurse -Include *.msi,*.exe `
+            | Copy-Item -Destination parkhub-desktop-windows-x64/
+          Get-ChildItem parkhub-desktop-windows-x64/
+
+      - name: Package installers
+        shell: pwsh
+        run: |
+          Compress-Archive -Path parkhub-desktop-windows-x64 -DestinationPath parkhub-desktop-windows-x64.msi.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-desktop-windows-x64
+          path: parkhub-desktop-windows-x64.msi.zip
+          retention-days: 14
+
   release:
     name: Create Release
     # `needs:` here enforces *timing*, not gating: it ensures every build
@@ -389,7 +634,7 @@ jobs:
     # below use `continue-on-error: true`, so missing artifacts are
     # silently skipped and the release still publishes with whatever
     # platforms succeeded.
-    needs: [build-linux, build-linux-arm64, build-macos, build-windows]
+    needs: [build-linux, build-linux-arm64, build-macos, build-windows, tauri-linux, tauri-macos, tauri-windows]
     if: always() && needs.build-linux.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -421,13 +666,38 @@ jobs:
         with:
           name: parkhub-windows-x64
 
+      - name: Download Tauri Linux installers
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-desktop-linux-x64
+
+      - name: Download Tauri macOS installers
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-desktop-macos
+
+      - name: Download Tauri Windows installers
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-desktop-windows-x64
+
       - name: Generate checksums
         # Sum every archive that actually made it through the matrix. The
         # wildcard + `2>/dev/null || true` pattern keeps us from exploding
         # when (say) macOS failed to produce its tarball.
         run: |
           set -e
-          for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz parkhub-macos-universal.tar.gz parkhub-windows-x64.zip; do
+          for f in \
+              parkhub-linux-x64.tar.gz \
+              parkhub-linux-arm64.tar.gz \
+              parkhub-macos-universal.tar.gz \
+              parkhub-windows-x64.zip \
+              parkhub-desktop-linux-x64.zip \
+              parkhub-desktop-macos.dmg.zip \
+              parkhub-desktop-windows-x64.msi.zip; do
             if [ -f "$f" ]; then
               sha256sum "$f" >> checksums.txt
             fi
@@ -450,5 +720,8 @@ jobs:
             parkhub-linux-arm64.tar.gz
             parkhub-macos-universal.tar.gz
             parkhub-windows-x64.zip
+            parkhub-desktop-linux-x64.zip
+            parkhub-desktop-macos.dmg.zip
+            parkhub-desktop-windows-x64.msi.zip
             checksums.txt
           generate_release_notes: true

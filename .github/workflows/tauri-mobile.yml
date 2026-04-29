@@ -1,0 +1,82 @@
+name: Tauri Mobile (placeholder)
+
+# Stub workflow that documents the *surface* for Tauri 2 mobile builds
+# (iOS .ipa via Xcode + Apple Developer signing, Android .apk/.aab via
+# Gradle + signing keystore). Both legs require manual cert/keystore
+# bootstrap that lives in repo Secrets — until those are wired in, the
+# jobs simply print a TODO and exit 0 so the workflow never fails the
+# release pipeline.
+#
+# Trigger is workflow_dispatch only — there is no automatic run on tag
+# push, so this file does not interact with the v* release path until
+# we explicitly opt in.
+#
+# tauri-action does support mobile via `tauriScript: cargo tauri ios build`
+# / `cargo tauri android build`; the actual implementation will land
+# alongside:
+#   iOS:     APPLE_API_KEY_ID + APPLE_API_KEY + APPLE_API_ISSUER
+#            (App Store Connect API key) + provisioning profile
+#   Android: ANDROID_KEY_ALIAS + ANDROID_KEY_PASSWORD + ANDROID_STORE_FILE
+#            (base64 keystore) + ANDROID_STORE_PASSWORD
+#
+# Note: the run: blocks below contain only static echo strings — no
+# untrusted GitHub event context is interpolated, so there is no
+# injection surface here. When real build steps are added, follow the
+# `env:` + `"$VAR"` pattern from the rest of this repo.
+
+on:
+  workflow_dispatch:
+
+# Workflow-level permissions intentionally empty — placeholder jobs
+# don't checkout, push, or sign anything.
+permissions: {}
+
+concurrency:
+  group: tauri-mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: iOS placeholder
+    runs-on: macos-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Document manual setup
+        run: |
+          echo "::notice::Tauri 2 iOS build placeholder."
+          echo "manual setup pending: Apple Developer cert + provisioning profile"
+          echo ""
+          echo "Required Secrets (not yet configured):"
+          echo "  APPLE_API_KEY_ID      App Store Connect API key id"
+          echo "  APPLE_API_KEY         base64 encoded .p8 private key"
+          echo "  APPLE_API_ISSUER      App Store Connect issuer id"
+          echo "  APPLE_TEAM_ID         Apple Developer team id"
+          echo "  IOS_CERTIFICATE       base64 encoded .p12 distribution cert"
+          echo "  IOS_CERTIFICATE_PWD   .p12 password"
+          echo "  IOS_PROVISION_PROFILE base64 encoded .mobileprovision"
+          echo ""
+          echo "Implementation target: cargo tauri ios build via tauri-action"
+          exit 0
+
+  android:
+    name: Android placeholder
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Document manual setup
+        run: |
+          echo "::notice::Tauri 2 Android build placeholder."
+          echo "manual setup pending: Android keystore"
+          echo ""
+          echo "Required Secrets (not yet configured):"
+          echo "  ANDROID_KEY_ALIAS      keystore alias"
+          echo "  ANDROID_KEY_PASSWORD   alias password"
+          echo "  ANDROID_STORE_FILE     base64 encoded .keystore"
+          echo "  ANDROID_STORE_PASSWORD keystore password"
+          echo ""
+          echo "Implementation target: cargo tauri android build via tauri-action"
+          exit 0
