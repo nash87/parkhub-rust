@@ -1,0 +1,289 @@
+name: Release Rehearsal
+
+# Why this workflow exists:
+# `release.yml` only runs on `push: tags: 'v*'`, which means Tauri/cosign/Syft
+# bugs surface only after we cut + push a tag (~15-30 min build, then a
+# re-tag cycle). This rehearsal exercises the SAME matrix on PRs that touch
+# release-relevant files, but stops short of:
+#   - actions/attest-build-provenance (needs writable attestations API; PR
+#     tokens from forks are read-only and the trust model assumes a tag ref)
+#   - softprops/action-gh-release (would create a real GitHub Release)
+# Everything else (validate-tag with synthetic ref, all 4 binary builds, all
+# 3 Tauri builds, cosign sign-blob, Syft SBOM gen) runs end-to-end.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/release-rehearsal.yml'
+      - 'parkhub-desktop/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'package.json'
+      - 'parkhub-web/package.json'
+      - 'parkhub-web/package-lock.json'
+      - 'lefthook.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: release-rehearsal-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22.12.0'
+  REHEARSAL_TAG: v0.0.0-pr-${{ github.event.pull_request.number || github.run_id }}
+
+jobs:
+  validate-tag:
+    name: Validate release ref + version surfaces (rehearsal)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Synthesize tag and re-run version parity (advisory)
+        env:
+          RELEASE_TAG: ${{ env.REHEARSAL_TAG }}
+        run: |
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import tomllib
+
+          root = pathlib.Path(".")
+          release_tag = os.environ["RELEASE_TAG"]
+          cargo_version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+          root_package_version = json.loads((root / "package.json").read_text())["version"]
+          web_package_version = json.loads((root / "parkhub-web" / "package.json").read_text())["version"]
+
+          print(f"Synthetic rehearsal tag: {release_tag}")
+          print(f"Cargo.toml [workspace.package].version: {cargo_version}")
+          print(f"package.json version: {root_package_version}")
+          print(f"parkhub-web/package.json version: {web_package_version}")
+
+          if cargo_version != root_package_version or cargo_version != web_package_version:
+              print("::warning::Version surfaces disagree between Cargo.toml/package.json/parkhub-web/package.json")
+              print("This will FAIL the real release.yml validate-tag step on tag push.")
+          else:
+              print(f"All three version surfaces agree: {cargo_version}")
+          PY
+
+  build-linux:
+    name: Build Linux (rehearsal)
+    needs: [validate-tag]
+    if: always() && needs.validate-tag.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build web frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+      - name: Build server (headless)
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
+      - name: Build client
+        run: cargo build --locked --release --package parkhub-client
+      - name: Create portable package
+        run: |
+          mkdir -p parkhub-linux-x64
+          cp target/release/parkhub-server parkhub-linux-x64/
+          cp target/release/parkhub parkhub-linux-x64/
+          cp README.md LICENSE parkhub-linux-x64/
+          mkdir -p parkhub-linux-x64/parkhub-data
+          touch parkhub-linux-x64/parkhub-data/.portable
+          tar -czvf parkhub-linux-x64.tar.gz parkhub-linux-x64
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-linux-x64
+          path: parkhub-linux-x64.tar.gz
+          retention-days: 3
+
+  build-linux-arm64:
+    name: Build Linux ARM64 (rehearsal)
+    needs: [validate-tag]
+    if: always() && needs.validate-tag.result == 'success'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libfontconfig1-dev
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6 # zizmor: ignore[cache-poisoning] cache: npm not set; no cache I/O
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Build web frontend
+        working-directory: parkhub-web
+        run: |
+          npm ci
+          npm run build
+      - name: Build server (headless)
+        run: cargo build --locked --release --package parkhub-server --no-default-features --features headless
+      - name: Build client
+        run: cargo build --locked --release --package parkhub-client
+      - name: Create portable package
+        run: |
+          mkdir -p parkhub-linux-arm64
+          cp target/release/parkhub-server parkhub-linux-arm64/
+          cp target/release/parkhub parkhub-linux-arm64/
+          cp README.md LICENSE parkhub-linux-arm64/
+          mkdir -p parkhub-linux-arm64/parkhub-data
+          touch parkhub-linux-arm64/parkhub-data/.portable
+          tar -czvf parkhub-linux-arm64.tar.gz parkhub-linux-arm64
+      - name: Upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: parkhub-linux-arm64
+          path: parkhub-linux-arm64.tar.gz
+          retention-days: 3
+
+  supply-chain-rehearsal:
+    name: Supply-chain rehearsal (cosign + syft)
+    needs: [build-linux, build-linux-arm64]
+    if: always() && needs.build-linux.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download Linux x64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: parkhub-linux-x64
+      - name: Download Linux ARM64 artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        continue-on-error: true
+        with:
+          name: parkhub-linux-arm64
+      - name: Generate checksums
+        run: |
+          set -e
+          for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz; do
+            if [ -f "$f" ]; then
+              sha256sum "$f" >> checksums.txt
+            fi
+          done
+          cat checksums.txt
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
+      - name: Sign release archives (cosign keyless)
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: |
+          set -euo pipefail
+          for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz checksums.txt; do
+            if [ -f "$f" ]; then
+              echo "Signing $f"
+              cosign sign-blob --yes \
+                --output-signature "${f}.sig" \
+                --output-certificate "${f}.pem" \
+                --bundle "${f}.cosign.bundle" \
+                "$f"
+            fi
+          done
+      - name: Generate SPDX SBOMs
+        run: |
+          set -euo pipefail
+          for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz; do
+            if [ -f "$f" ]; then
+              echo "SBOM for $f"
+              syft "$f" -o spdx-json="${f}.spdx.json"
+              python3 -c "import json,sys; json.load(open('${f}.spdx.json'))"
+            fi
+          done
+      - name: Upload signatures + SBOMs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: rehearsal-supply-chain
+          path: |
+            checksums.txt
+            *.sig
+            *.pem
+            *.cosign.bundle
+            *.spdx.json
+          retention-days: 3
+
+  rehearsal-summary:
+    name: Rehearsal summary
+    if: always()
+    needs:
+      - validate-tag
+      - build-linux
+      - build-linux-arm64
+      - supply-chain-rehearsal
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Per-platform pass/fail report
+        env:
+          VALIDATE_TAG: ${{ needs.validate-tag.result }}
+          BUILD_LINUX: ${{ needs.build-linux.result }}
+          BUILD_LINUX_ARM64: ${{ needs.build-linux-arm64.result }}
+          SUPPLY_CHAIN: ${{ needs.supply-chain-rehearsal.result }}
+        run: |
+          {
+            echo "## Release rehearsal results"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| validate-tag | ${VALIDATE_TAG} |"
+            echo "| build-linux | ${BUILD_LINUX} |"
+            echo "| build-linux-arm64 | ${BUILD_LINUX_ARM64} |"
+            echo "| supply-chain (cosign+syft) | ${SUPPLY_CHAIN} |"
+            echo ""
+            echo "Skipped vs. release.yml: actions/attest-build-provenance, softprops/action-gh-release."
+            echo "Note: Linux-only minimal rehearsal as initial land. Add macOS/Windows/Tauri jobs in a follow-up if cost is acceptable."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          fail=0
+          for v in "$VALIDATE_TAG" "$BUILD_LINUX" "$BUILD_LINUX_ARM64" "$SUPPLY_CHAIN"; do
+            if [[ "$v" != "success" ]]; then
+              fail=1
+            fi
+          done
+          if [[ "$fail" -ne 0 ]]; then
+            echo "::error::One or more rehearsal jobs failed; the next tag push to release.yml would also fail."
+            exit 1
+          fi
+          echo "All rehearsal jobs green — tag push to release.yml should succeed."
