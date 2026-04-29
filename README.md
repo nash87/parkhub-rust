@@ -148,6 +148,29 @@ cargo build --release --package parkhub-server --features gui
 
 ---
 
+## Verify your download
+
+Headless/server release archives for v5.0.5 and newer are signed with [cosign](https://github.com/sigstore/cosign) using GitHub's keyless OIDC flow — the signing identity is the `release.yml` workflow on this repo, so you can verify provenance without any pre-shared key. The matching `*.cosign.bundle` is published next to each signed archive on the [Releases page](https://github.com/nash87/parkhub-rust/releases/latest).
+
+```sh
+curl -LO https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-linux-x64.tar.gz
+curl -LO https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-linux-x64.tar.gz.cosign.bundle
+
+cosign verify-blob \
+  --certificate-identity-regexp '^https://github\.com/nash87/parkhub-rust/\.github/workflows/release\.yml@refs/tags/v.*$' \
+  --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+  --bundle parkhub-linux-x64.tar.gz.cosign.bundle \
+  parkhub-linux-x64.tar.gz
+```
+
+`parkhub-linux-arm64.tar.gz`, `parkhub-macos-universal.tar.gz`, `parkhub-windows-x64.zip`, and `checksums.txt` each ship with their own `*.cosign.bundle` and verify the same way — just swap the filenames.
+
+For software composition, each platform archive also publishes a SPDX SBOM (`*.spdx.json`) listing every dependency, version, and license.
+
+cosign itself is Apache-2.0 licensed, so verification adds no proprietary dependencies to your toolchain.
+
+---
+
 ## ✨ Feature Highlights
 
 ### 🏢 Core Platform
