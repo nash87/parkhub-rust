@@ -297,7 +297,10 @@ run_step() {
     printf 'DRY-RUN: %s\n' "$command"
     return 0
   fi
-  if [[ "${FOP_LOCAL_CI_DIRECT:-}" == "1" ]]; then
+  if [[ "${FOP_LOCAL_CI_DIRECT:-}" == "1" ]] || ! command -v fop >/dev/null 2>&1; then
+    # Direct mode: explicit opt-in OR fop binary not on PATH (GitHub
+    # Actions runners, fresh contributor boxes). Kernel + earlyoom
+    # handle resource pressure when fop queue is unavailable.
     bash -euo pipefail -c "$command"
     return $?
   fi
@@ -312,7 +315,7 @@ run_step_heavy() {
     printf 'DRY-RUN: %s\n' "$command"
     return 0
   fi
-  if [[ "${FOP_LOCAL_CI_DIRECT:-}" == "1" ]]; then
+  if [[ "${FOP_LOCAL_CI_DIRECT:-}" == "1" ]] || ! command -v fop >/dev/null 2>&1; then
     bash -euo pipefail -c "$command"
     return $?
   fi
