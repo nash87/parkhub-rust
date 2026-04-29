@@ -199,7 +199,7 @@ export function OccupancyHeatmap({ bookings, totalSlots }: OccupancyHeatmapProps
               still adding the ARIA row landmark for assistive tech. */}
           <div role="row" style={{ display: 'contents' }}>
             {/* Top-left empty corner */}
-            <div />
+            <div role="presentation" aria-hidden="true" />
 
             {/* Day column headers */}
             {dayLabels.map((label, i) => (
@@ -230,23 +230,23 @@ export function OccupancyHeatmap({ bookings, totalSlots }: OccupancyHeatmapProps
 
                 {/* 7 cells for this hour */}
                 {Array.from({ length: 7 }, (_, day) => {
-                const cell = cells.find(c => c.day === day && c.hour === hour);
-                const pct = cell?.percentage ?? 0;
-                return (
-                  <div
-                    key={`cell-${day}-${hour}`}
-                    role="gridcell"
-                    aria-label={`${dayLabels[day]} ${hour}:00 - ${pct}%`}
-                    className="rounded-md cursor-pointer transition-transform hover:scale-110 hover:z-10"
-                    style={{
-                      backgroundColor: heatmapColor(pct, isDark),
-                      opacity: pct === 0 ? 0.25 : 0.4 + 0.6 * (pct / maxPct),
-                    }}
-                    onMouseEnter={cell ? (e) => handleMouseEnter(e, cell) : undefined}
-                    onMouseLeave={handleMouseLeave}
-                  />
-                );
-              })}
+                  const cell = cells.find(c => c.day === day && c.hour === hour);
+                  const pct = cell?.percentage ?? 0;
+                  return (
+                    <div
+                      key={`cell-${day}-${hour}`}
+                      role="gridcell"
+                      aria-label={`${dayLabels[day]} ${hour}:00 - ${pct}%`}
+                      className="rounded-md cursor-pointer transition-transform hover:scale-110 hover:z-10"
+                      style={{
+                        backgroundColor: heatmapColor(pct, isDark),
+                        opacity: pct === 0 ? 0.25 : 0.4 + 0.6 * (pct / maxPct),
+                      }}
+                      onMouseEnter={cell ? (e) => handleMouseEnter(e, cell) : undefined}
+                      onMouseLeave={handleMouseLeave}
+                    />
+                  );
+                })}
               </div>
             </Fragment>
           ))}
