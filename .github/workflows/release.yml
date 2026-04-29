@@ -705,6 +705,12 @@ jobs:
           cat checksums.txt
 
       - name: Attest release artifacts
+        # GHA installation API rate-limit hits this step intermittently
+        # (v5.0.6 release.yml run 25108343017 failed here, then v5.0.4
+        # before that). Make it advisory so cosign signing + Syft SBOM
+        # + Create Release still publish the artifacts even when the
+        # SLSA attestations API is rate-limited.
+        continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-path: |
