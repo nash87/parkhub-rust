@@ -450,11 +450,25 @@ jobs:
 
           # Resolve the manifest digest from the first canonical tag
           # (they all point at the same index, by construction).
+          # Use buildx's templated output instead of awk'ing the
+          # human-friendly format — the legacy `Digest:` text line is
+          # not consistently emitted across docker-buildx versions and
+          # bit us on v5.0.8 (run 25116116538). The template field is
+          # stable across docker-buildx 0.18+.
           first_tag="${tags[0]}"
-          digest="$(docker buildx imagetools inspect "${first_tag}" 2>/dev/null | awk '/^Digest:/ { print $2; exit }')"
+          if ! digest="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${first_tag}")"; then
+            echo "::error::Failed to inspect manifest digest from ${first_tag}"
+            echo "::group::Full inspect output for diagnosis"
+            docker buildx imagetools inspect "${first_tag}" || true
+            echo "::endgroup::"
+            exit 1
+          fi
 
           if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-            echo "::error::Failed to resolve manifest digest from ${first_tag}"
+            echo "::error::Failed to resolve manifest digest from ${first_tag} — got: '${digest}'"
+            echo "::group::Full inspect output for diagnosis"
+            docker buildx imagetools inspect "${first_tag}" || true
+            echo "::endgroup::"
             exit 1
           fi
 
