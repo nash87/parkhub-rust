@@ -193,34 +193,43 @@ export function OccupancyHeatmap({ bookings, totalSlots }: OccupancyHeatmapProps
           role="grid"
           aria-label={t('heatmap.title')}
         >
-          {/* Top-left empty corner */}
-          <div />
+          {/* Header row — wrap in role="row" so role="grid" has the
+              required role="row" → role="columnheader" parent chain.
+              `display: contents` keeps the CSS Grid layout intact while
+              still adding the ARIA row landmark for assistive tech. */}
+          <div role="row" style={{ display: 'contents' }}>
+            {/* Top-left empty corner */}
+            <div />
 
-          {/* Day column headers */}
-          {dayLabels.map((label, i) => (
-            <div
-              key={`day-${i}`}
-              className="text-xs font-medium text-surface-500 dark:text-surface-400 text-center py-1 select-none"
-              role="columnheader"
-            >
-              {label}
-            </div>
-          ))}
+            {/* Day column headers */}
+            {dayLabels.map((label, i) => (
+              <div
+                key={`day-${i}`}
+                className="text-xs font-medium text-surface-500 dark:text-surface-400 text-center py-1 select-none"
+                role="columnheader"
+              >
+                {label}
+              </div>
+            ))}
+          </div>
 
           {/* Rows: one per hour */}
           {hours.map(hour => (
             <Fragment key={`row-${hour}`}>
-              {/* Hour label */}
-              <div
-                key={`hour-label-${hour}`}
-                className="text-xs font-medium text-surface-500 dark:text-surface-400 text-right pr-2 flex items-center justify-end select-none tabular-nums"
-                role="rowheader"
-              >
-                {`${hour}:00`}
-              </div>
+              {/* `display: contents` again — keeps the inline-grid auto-flow
+                  while the role="row" wrapper completes the ARIA chain. */}
+              <div role="row" style={{ display: 'contents' }}>
+                {/* Hour label */}
+                <div
+                  key={`hour-label-${hour}`}
+                  className="text-xs font-medium text-surface-500 dark:text-surface-400 text-right pr-2 flex items-center justify-end select-none tabular-nums"
+                  role="rowheader"
+                >
+                  {`${hour}:00`}
+                </div>
 
-              {/* 7 cells for this hour */}
-              {Array.from({ length: 7 }, (_, day) => {
+                {/* 7 cells for this hour */}
+                {Array.from({ length: 7 }, (_, day) => {
                 const cell = cells.find(c => c.day === day && c.hour === hour);
                 const pct = cell?.percentage ?? 0;
                 return (
@@ -238,6 +247,7 @@ export function OccupancyHeatmap({ bookings, totalSlots }: OccupancyHeatmapProps
                   />
                 );
               })}
+              </div>
             </Fragment>
           ))}
         </div>

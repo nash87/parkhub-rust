@@ -41,7 +41,7 @@ export function Breadcrumb() {
     <nav aria-label={t('ui.breadcrumb')} className="flex items-center gap-1.5 text-sm mb-4">
       <Link
         to="/"
-        className="text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors font-medium"
+        className="text-surface-600 dark:text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors font-medium"
         aria-current={pathname === '/' ? 'page' : undefined}
       >
         {t('nav.dashboard')}
@@ -56,7 +56,7 @@ export function Breadcrumb() {
           ) : (
             <Link
               to={crumb.path}
-              className="text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors font-medium"
+              className="text-surface-600 dark:text-surface-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors font-medium"
             >
               {crumb.label}
             </Link>
