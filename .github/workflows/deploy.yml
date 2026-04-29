@@ -1,0 +1,215 @@
+name: Deploy
+
+# Fires after a GitHub Release is published (softprops/action-gh-release in
+# release.yml creates the release once all builds + signatures complete).
+# Using `release: published` instead of `workflow_run` because:
+#   1. zizmor flags workflow_run as a dangerous-trigger (correctly: privileged
+#      context). release.published runs in the same privileged context but
+#      without the inherited-context concern from arbitrary upstream workflows.
+#   2. Tag pushes by an attacker can't reach this trigger — release creation
+#      requires writeable Releases API perms, which only authenticated repo
+#      collaborators have.
+#
+# DORMANT-BY-DEFAULT: every job has `if: vars.DEPLOY_TO_<TARGET> == 'true'`,
+# and unset repo variables evaluate to '' so jobs are skipped until an
+# operator opts in by creating the matching repo variable.
+#
+# TODO before activating any target:
+#   1. Render: vars.DEPLOY_TO_RENDER=true; secrets RENDER_DEPLOY_HOOK_URL
+#      (preferred) or RENDER_API_KEY+RENDER_SERVICE_ID in `render` Environment.
+#   2. Fly.io: vars.DEPLOY_TO_FLY=true; secrets FLY_API_TOKEN in `fly` Env;
+#      pin FLYCTL_VERSION + FLYCTL_SHA256 (or use pinned setup-flyctl@<sha>).
+#   3. Koyeb: vars.DEPLOY_TO_KOYEB=true; secrets KOYEB_TOKEN in `koyeb` Env;
+#      pin KOYEB_CLI_VERSION + KOYEB_CLI_SHA256 from
+#      github.com/koyeb/koyeb-cli/releases.
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: deploy-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+permissions: {}
+
+env:
+  IMAGE_REF: ghcr.io/${{ github.repository }}
+  TAG: ${{ github.event.release.tag_name }}
+
+jobs:
+  gate:
+    name: Gate (validate tag shape)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - name: Validate v-semver tag
+        id: resolve
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${RELEASE_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Release tag is not a v-semver: ${RELEASE_TAG}"
+            exit 1
+          fi
+          echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+
+  render:
+    name: Deploy to Render
+    needs: gate
+    if: vars.DEPLOY_TO_RENDER == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions: {}
+    environment: render
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+      RENDER_HEALTH_URL: ${{ vars.RENDER_HEALTH_URL }}
+    steps:
+      - name: Trigger Render deploy (webhook preferred)
+        run: |
+          set -euo pipefail
+          if [[ -n "${RENDER_DEPLOY_HOOK_URL}" ]]; then
+            echo "Render: triggering via deploy hook for tag ${TAG}"
+            curl -fsS -X POST "${RENDER_DEPLOY_HOOK_URL}" -d ''
+          elif [[ -n "${RENDER_API_KEY}" && -n "${RENDER_SERVICE_ID}" ]]; then
+            echo "Render: triggering via API for tag ${TAG}"
+            curl -fsS -X POST "https://api.render.com/v1/services/${RENDER_SERVICE_ID}/deploys" \
+              -H "Authorization: Bearer ${RENDER_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d '{"clearCache":"do_not_clear"}'
+          else
+            echo "::error::DEPLOY_TO_RENDER=true but neither RENDER_DEPLOY_HOOK_URL nor RENDER_API_KEY+RENDER_SERVICE_ID set"
+            exit 1
+          fi
+      - name: Probe Render /health
+        if: vars.RENDER_HEALTH_URL != ''
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 300 ))
+          while (( $(date +%s) < deadline )); do
+            if curl -fsS --max-time 10 "${RENDER_HEALTH_URL}" >/dev/null; then
+              echo "Render health OK"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Render health probe timed out after 5 min"
+          exit 1
+
+  fly:
+    name: Deploy to Fly.io
+    needs: gate
+    if: vars.DEPLOY_TO_FLY == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    environment: fly
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      FLY_HEALTH_URL: ${{ vars.FLY_HEALTH_URL }}
+    steps:
+      - name: Checkout (for fly.toml)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.gate.outputs.tag }}
+          persist-credentials: false
+      - name: Install flyctl (fail closed until pinned)
+        env:
+          FLYCTL_VERSION: '0.0.0'
+          FLYCTL_SHA256: '0000000000000000000000000000000000000000000000000000000000000000'
+        run: |
+          set -euo pipefail
+          if [[ "${FLYCTL_VERSION}" == "0.0.0" || "${FLYCTL_SHA256}" =~ ^0+$ ]]; then
+            echo "::error::flyctl install intentionally unpinned. Pin FLYCTL_VERSION + FLYCTL_SHA256 from github.com/superfly/flyctl/releases (or replace step with superfly/flyctl-actions/setup-flyctl@40-char-sha) before enabling DEPLOY_TO_FLY."
+            exit 1
+          fi
+          tmp=$(mktemp -d)
+          curl -fsSL -o "${tmp}/flyctl.tgz" "https://github.com/superfly/flyctl/releases/download/v${FLYCTL_VERSION}/flyctl_${FLYCTL_VERSION}_Linux_x86_64.tar.gz"
+          echo "${FLYCTL_SHA256}  ${tmp}/flyctl.tgz" | sha256sum -c -
+          tar -xzf "${tmp}/flyctl.tgz" -C "${tmp}"
+          sudo mv "${tmp}/flyctl" /usr/local/bin/flyctl
+          flyctl version
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          flyctl deploy --config fly.toml --image "${IMAGE_REF}:${TAG#v}" --strategy rolling --wait-timeout 600
+      - name: Probe Fly /health
+        if: vars.FLY_HEALTH_URL != ''
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 120 ))
+          while (( $(date +%s) < deadline )); do
+            if curl -fsS --max-time 10 "${FLY_HEALTH_URL}" >/dev/null; then
+              echo "Fly health OK"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Fly health probe timed out after 2 min"
+          exit 1
+
+  koyeb:
+    name: Deploy to Koyeb
+    needs: gate
+    if: vars.DEPLOY_TO_KOYEB == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    environment: koyeb
+    env:
+      TAG: ${{ needs.gate.outputs.tag }}
+      KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+      KOYEB_APP: ${{ vars.KOYEB_APP }}
+      KOYEB_SERVICE: ${{ vars.KOYEB_SERVICE }}
+      KOYEB_HEALTH_URL: ${{ vars.KOYEB_HEALTH_URL }}
+      KOYEB_CLI_VERSION: '0.0.0'
+      KOYEB_CLI_SHA256: '0000000000000000000000000000000000000000000000000000000000000000'
+    steps:
+      - name: Install koyeb CLI (fail closed until pinned)
+        run: |
+          set -euo pipefail
+          if [[ "${KOYEB_CLI_VERSION}" == "0.0.0" || "${KOYEB_CLI_SHA256}" =~ ^0+$ ]]; then
+            echo "::error::koyeb CLI install intentionally unpinned. Pin KOYEB_CLI_VERSION + KOYEB_CLI_SHA256 from github.com/koyeb/koyeb-cli/releases before enabling DEPLOY_TO_KOYEB."
+            exit 1
+          fi
+          tmp=$(mktemp -d)
+          curl -fsSL -o "${tmp}/koyeb.tar.gz" "https://github.com/koyeb/koyeb-cli/releases/download/v${KOYEB_CLI_VERSION}/koyeb-cli_${KOYEB_CLI_VERSION}_linux_amd64.tar.gz"
+          echo "${KOYEB_CLI_SHA256}  ${tmp}/koyeb.tar.gz" | sha256sum -c -
+          tar -xzf "${tmp}/koyeb.tar.gz" -C "${tmp}"
+          sudo mv "${tmp}/koyeb" /usr/local/bin/koyeb
+          koyeb version
+      - name: Configure koyeb auth
+        run: |
+          set -euo pipefail
+          mkdir -p "${HOME}/.config/koyeb"
+          umask 077
+          printf 'token: %s\n' "${KOYEB_TOKEN}" > "${HOME}/.config/koyeb/config.yaml"
+      - name: Update image tag and redeploy
+        run: |
+          set -euo pipefail
+          koyeb service update "${KOYEB_APP}/${KOYEB_SERVICE}" --docker "${IMAGE_REF}:${TAG#v}"
+          koyeb service redeploy "${KOYEB_APP}/${KOYEB_SERVICE}"
+      - name: Probe Koyeb /health
+        if: vars.KOYEB_HEALTH_URL != ''
+        run: |
+          set -euo pipefail
+          deadline=$(( $(date +%s) + 300 ))
+          while (( $(date +%s) < deadline )); do
+            if curl -fsS --max-time 10 "${KOYEB_HEALTH_URL}" >/dev/null; then
+              echo "Koyeb health OK"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Koyeb health probe timed out after 5 min"
+          exit 1
