@@ -1,6 +1,6 @@
 {
   "name": "parkhub",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "description": "Open source parking lot management system with client-server architecture.",
   "scripts": {
     "test:e2e": "npx playwright test",
