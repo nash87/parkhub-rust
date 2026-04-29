@@ -160,3 +160,15 @@ codegen-units = 1
 strip = true
 opt-level = "z"
 panic = "abort"
+
+# Container build profile — drops fat LTO + single codegen unit to keep the
+# Dockerfile build (cold cargo-chef cook) inside the GHA 90-minute timeout.
+# Used by the Dockerfile via `--profile release-container` for cargo chef
+# cook + cargo build. Binary ends up ~10-15 % larger than `release` but
+# CI builds in ~15 min instead of timing out at 90+.
+# Native release tarballs in release.yml still use the strict `release`
+# profile for smallest binary size.
+[profile.release-container]
+inherits = "release"
+lto = "thin"
+codegen-units = 16

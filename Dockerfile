@@ -47,7 +47,7 @@ FROM chef AS deps
 COPY --from=planner /app/recipe.json recipe.json
 COPY Cargo.toml Cargo.lock ./
 RUN sed -i -e '/"parkhub-client"/d' -e '/"parkhub-desktop"/d' Cargo.toml
-RUN cargo chef cook --release --recipe-path recipe.json \
+RUN cargo chef cook --profile release-container --recipe-path recipe.json \
     --package parkhub-server --no-default-features --features headless
 
 # ---------------------------------------------------------------------------
@@ -64,9 +64,9 @@ COPY parkhub-server/ ./parkhub-server/
 COPY --from=web-builder /app/dist ./parkhub-web/dist/
 # Touch sources to invalidate fingerprints, then build
 RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
-    cargo build --release --package parkhub-server \
+    cargo build --profile release-container --package parkhub-server \
         --no-default-features --features headless && \
-    strip /app/target/release/parkhub-server
+    strip /app/target/release-container/parkhub-server
 
 # ---------------------------------------------------------------------------
 # Stage 6: Data-directory scaffold
@@ -93,7 +93,7 @@ FROM gcr.io/distroless/cc-debian13@sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447
 WORKDIR /app
 
 # Copy binary
-COPY --from=builder --chown=65532:65532 /app/target/release/parkhub-server /app/parkhub-server
+COPY --from=builder --chown=65532:65532 /app/target/release-container/parkhub-server /app/parkhub-server
 
 # Copy pre-created /data directory (owned by nonroot UID 65532).
 # --chown is required: COPY --from defaults to root:root regardless of
