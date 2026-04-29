@@ -6550,7 +6550,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-client"
-version = "5.0.7"
+version = "5.0.8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6577,7 +6577,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-common"
-version = "5.0.7"
+version = "5.0.8"
 dependencies = [
  "chrono",
  "proptest",
@@ -6591,7 +6591,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-desktop"
-version = "5.0.7"
+version = "5.0.8"
 dependencies = [
  "directories",
  "serde",
@@ -6615,7 +6615,7 @@ dependencies = [
 
 [[package]]
 name = "parkhub-server"
-version = "5.0.7"
+version = "5.0.8"
 dependencies = [
  "aes-gcm",
  "anyhow",
