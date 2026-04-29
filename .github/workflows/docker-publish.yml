@@ -16,8 +16,9 @@ concurrency:
   cancel-in-progress: true
 
 # Workflow-level permissions intentionally empty; each job declares the
-# minimum set it needs (publish needs OIDC + GHCR push + SARIF upload;
-# deploy-demo needs nothing beyond the secrets it consumes).
+# minimum set it needs. publish-amd64 / publish-arm64 / manifest each need
+# OIDC + GHCR push + (manifest) SARIF upload; deploy-demo needs nothing
+# beyond the secrets it consumes.
 permissions: {}
 
 env:
@@ -25,44 +26,30 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  publish:
-    name: Build, scan, and publish image
+  # ------------------------------------------------------------------
+  # meta — compute the canonical, validated tag list ONCE.
+  # The per-arch publish jobs consume `tags_csv` to derive their
+  # arch-suffixed intermediate tag; the `manifest` job consumes the same
+  # CSV to fan a single image manifest out to all final tags.
+  # ------------------------------------------------------------------
+  meta:
+    name: Compute image metadata
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-
+    timeout-minutes: 15
     permissions:
-      contents: read  # required for actions/checkout on a private repo
-      packages: write  # required to push the OCI image to GHCR
-      id-token: write  # required for keyless cosign signing + OIDC build provenance
-      attestations: write  # required by actions/attest-build-provenance
-      security-events: write  # required to upload the Trivy SARIF result to the Security tab
-
+      contents: read  # required for actions/checkout to read Cargo.toml
     outputs:
-      digest: ${{ steps.push.outputs.digest }}
-
+      tags_csv: ${{ steps.meta.outputs.tags_csv }}
+      labels: ${{ steps.meta.outputs.labels }}
+      image_ref: ${{ steps.meta.outputs.image_ref }}
+      short_sha: ${{ steps.meta.outputs.short_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
-      # QEMU is required so buildx can emulate linux/arm64 on the
-      # ubuntu-latest amd64 runner. Apache-2.0 licensed; pinned to
-      # v4.0.0 (commit ce360397dd3f832beb865e1373c09c0e9f86d70a).
-      - name: Set up QEMU (multi-arch emulation)
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Prepare image metadata
+      - name: Compute tags + labels
         id: meta
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
@@ -105,58 +92,398 @@ jobs:
             exit 1
           fi
 
+          # Build the canonical tag list (final manifest tags, NOT arch-suffixed).
+          tags=()
+          tags+=("${IMAGE_REF}:sha-${short_sha}")
+          if [[ "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
+            tags+=("${IMAGE_REF}:latest")
+          fi
+          if [[ -n "${ref_tag}" ]]; then
+            tags+=("${IMAGE_REF}:${ref_tag}")
+          fi
+          if [[ -n "${release_version}" ]]; then
+            major_minor="$(printf '%s\n' "${release_version}" | awk -F. '{ print $1 "." $2 }')"
+            tags+=("${IMAGE_REF}:${release_version}")
+            tags+=("${IMAGE_REF}:${major_minor}")
+          fi
+
+          # CSV for manifest fan-out (tags are validated against
+          # docker_tag_re above, so commas are impossible).
+          tags_csv="$(IFS=,; echo "${tags[*]}")"
+
           {
-            echo "tags<<EOF"
-            echo "${IMAGE_REF}:sha-${short_sha}"
-            if [[ "${GITHUB_REF_TYPE}" == "branch" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
-              echo "${IMAGE_REF}:latest"
-            fi
-            if [[ -n "${ref_tag}" ]]; then
-              echo "${IMAGE_REF}:${ref_tag}"
-            fi
-            if [[ -n "${release_version}" ]]; then
-              major_minor="$(printf '%s\n' "${release_version}" | awk -F. '{ print $1 "." $2 }')"
-              echo "${IMAGE_REF}:${release_version}"
-              echo "${IMAGE_REF}:${major_minor}"
-            fi
-            echo "EOF"
+            echo "tags_csv=${tags_csv}"
             echo "labels<<EOF"
             echo "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
             echo "org.opencontainers.image.revision=${GITHUB_SHA}"
             echo "org.opencontainers.image.version=${release_version:-${cargo_version}}"
             echo "EOF"
+            echo "image_ref=${IMAGE_REF}"
+            echo "short_sha=${short_sha}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build and push (amd64 only)
+  # ------------------------------------------------------------------
+  # publish-amd64 — native amd64 build on ubuntu-latest.
+  # Pushes ONE arch-suffixed intermediate tag (`:sha-<short>-amd64`) that
+  # the manifest job stitches together. The arch-suffixed tag is left
+  # published for forensics (REVIEW option a, negligible storage).
+  # ------------------------------------------------------------------
+  publish-amd64:
+    name: Build + push amd64
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read       # actions/checkout on a private repo
+      packages: write      # push image to GHCR
+      id-token: write      # keyless cosign signing + OIDC build provenance
+      attestations: write  # actions/attest-build-provenance
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      arch_tag: ${{ steps.arch_tag.outputs.arch_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute arch-suffixed tag
+        id: arch_tag
+        env:
+          IMAGE_REF: ${{ needs.meta.outputs.image_ref }}
+          SHORT_SHA: ${{ needs.meta.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          arch_tag="${IMAGE_REF}:sha-${SHORT_SHA}-amd64"
+          echo "arch_tag=${arch_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push (amd64, native)
         id: push
-        # ARM64 dropped from container build — Rust release profile
-        # (lto=fat + codegen-units=1 + opt-level=z) under QEMU emulation
-        # exceeds the 90-minute job timeout. v5.0.5 docker-publish run
-        # 25100278382 was cancelled at the 90 min mark on the buildx step.
-        # Users wanting an ARM64 build can pull the signed tarball from the
-        # GitHub Release (parkhub-linux-arm64.tar.gz; built natively on
-        # ubuntu-24.04-arm in release.yml, verifiable with cosign verify-blob
-        # against the published .cosign.bundle).
-        # TODO: split into amd64 + arm64 native jobs (mirroring release.yml
-        # pattern) and combine via `docker buildx imagetools create` for a
-        # multi-arch manifest list. Tracked as a follow-up.
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
         with:
           context: .
           push: true
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.arch_tag.outputs.arch_tag }}
+          labels: ${{ needs.meta.outputs.labels }}
           cache-from: type=gha,scope=release-docker-amd64
           cache-to: type=gha,scope=release-docker-amd64,mode=max
           provenance: mode=max
           sbom: true
 
-      - name: Run Trivy vulnerability scan
+      - name: Attest image provenance (amd64)
+        # GHA installation API rate-limit hits this step intermittently
+        # (observed v5.0.6 runs 25108343024 + 25108620933 on the same SHA).
+        # Make it advisory so cosign signing + Syft SBOM still complete.
+        continue-on-error: true
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Sign amd64 image (keyless OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          cosign sign --yes "${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
+
+      - name: Generate SPDX SBOM (amd64)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          syft "${IMAGE_REF}@${IMAGE_DIGEST}" \
+            -o spdx-json=sbom.spdx.json
+          test -s sbom.spdx.json
+          python3 -c "import json,sys; json.load(open('sbom.spdx.json'))"
+
+      - name: Attach SBOM as cosign attestation (amd64, keyless OIDC)
+        # cosign 3.0.6 hardened in-toto predicate validation (sigstore/cosign
+        # GHSA-w6c6-c85g-mmv6 + the v3.0.6 release-note "Fix parsing of
+        # in-toto for string predicates"). The shortname `--type spdx` maps
+        # to the SPDX *tag-value* predicate (plain text); syft emits
+        # SPDX-JSON via `-o spdx-json=...`. Use `--type spdxjson` to declare
+        # JSON predicate type. Per-arch attest stays continue-on-error
+        # pending cosign 3.x SBOM regression fix (PR #460); drop once we
+        # observe a green run.
+        id: attest_sbom
+        continue-on-error: true
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          cosign attest --yes \
+            --predicate sbom.spdx.json \
+            --type spdxjson \
+            "${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      - name: Surface SBOM attestation failure to job summary (amd64)
+        if: always() && steps.attest_sbom.outcome == 'failure'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "## SBOM cosign attestation FAILED (amd64)"
+            echo ""
+            echo "cosign attest --type spdxjson returned outcome=failure for image ${IMAGE_REF}@${IMAGE_DIGEST}."
+            echo ""
+            echo "Image is still cosign-signed. SBOM file is uploaded as a workflow artifact below. The miss is the OCI-registry binding of SBOM to image digest."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=SBOM attestation missing (amd64)::cosign attest --type spdxjson failed; image signed + SBOM artifact still attached."
+
+      - name: Upload SBOM artifact (amd64)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: always() && hashFiles('sbom.spdx.json') != ''
+        with:
+          name: sbom-spdx-amd64-${{ github.sha }}
+          path: sbom.spdx.json
+          retention-days: 90
+
+  # ------------------------------------------------------------------
+  # publish-arm64 — native arm64 build on ubuntu-24.04-arm.
+  # Mirror of publish-amd64. GitHub-hosted ARM runners GA since March 2025
+  # remove the QEMU emulation cost that previously broke this job at 90 min
+  # (see release.yml build-linux-arm64 for the same runner pattern).
+  # ------------------------------------------------------------------
+  publish-arm64:
+    name: Build + push arm64
+    needs: meta
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read       # actions/checkout on a private repo
+      packages: write      # push image to GHCR
+      id-token: write      # keyless cosign signing + OIDC build provenance
+      attestations: write  # actions/attest-build-provenance
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      arch_tag: ${{ steps.arch_tag.outputs.arch_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute arch-suffixed tag
+        id: arch_tag
+        env:
+          IMAGE_REF: ${{ needs.meta.outputs.image_ref }}
+          SHORT_SHA: ${{ needs.meta.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          arch_tag="${IMAGE_REF}:sha-${SHORT_SHA}-arm64"
+          echo "arch_tag=${arch_tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push (arm64, native)
+        id: push
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        with:
+          context: .
+          push: true
+          platforms: linux/arm64
+          tags: ${{ steps.arch_tag.outputs.arch_tag }}
+          labels: ${{ needs.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-docker-arm64
+          cache-to: type=gha,scope=release-docker-arm64,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Attest image provenance (arm64)
+        continue-on-error: true
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Sign arm64 image (keyless OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          cosign sign --yes "${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
+
+      - name: Generate SPDX SBOM (arm64)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          set -euo pipefail
+          syft "${IMAGE_REF}@${IMAGE_DIGEST}" \
+            -o spdx-json=sbom.spdx.json
+          test -s sbom.spdx.json
+          python3 -c "import json,sys; json.load(open('sbom.spdx.json'))"
+
+      - name: Attach SBOM as cosign attestation (arm64, keyless OIDC)
+        id: attest_sbom
+        continue-on-error: true
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          cosign attest --yes \
+            --predicate sbom.spdx.json \
+            --type spdxjson \
+            "${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      - name: Surface SBOM attestation failure to job summary (arm64)
+        if: always() && steps.attest_sbom.outcome == 'failure'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "## SBOM cosign attestation FAILED (arm64)"
+            echo ""
+            echo "cosign attest --type spdxjson returned outcome=failure for image ${IMAGE_REF}@${IMAGE_DIGEST}."
+            echo ""
+            echo "Image is still cosign-signed. SBOM file is uploaded as a workflow artifact below. The miss is the OCI-registry binding of SBOM to image digest."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=SBOM attestation missing (arm64)::cosign attest --type spdxjson failed; image signed + SBOM artifact still attached."
+
+      - name: Upload SBOM artifact (arm64)
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: always() && hashFiles('sbom.spdx.json') != ''
+        with:
+          name: sbom-spdx-arm64-${{ github.sha }}
+          path: sbom.spdx.json
+          retention-days: 90
+
+  # ------------------------------------------------------------------
+  # manifest — fan the two per-arch images into a multi-arch index under
+  # every canonical tag (latest, vX.Y.Z, X.Y, sha-<short>, etc.), sign the
+  # resulting index digest, and run a single Trivy SARIF scan against the
+  # manifest digest. Trivy resolves the index to amd64 (REVIEW option a)
+  # which keeps the Security tab clean instead of doubling findings per arch.
+  # ------------------------------------------------------------------
+  manifest:
+    name: Combine multi-arch manifest + scan
+    needs: [meta, publish-amd64, publish-arm64]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write          # push manifest list to GHCR
+      id-token: write          # keyless cosign signing of manifest digest
+      security-events: write   # upload Trivy SARIF to Security tab
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create + push multi-arch manifest list
+        id: manifest
+        env:
+          TAGS_CSV: ${{ needs.meta.outputs.tags_csv }}
+          AMD64_TAG: ${{ needs.publish-amd64.outputs.arch_tag }}
+          ARM64_TAG: ${{ needs.publish-arm64.outputs.arch_tag }}
+          IMAGE_REF: ${{ needs.meta.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          # Split CSV into an array (tags never contain commas — they're
+          # validated against the Docker tag regex in the meta job).
+          IFS=',' read -r -a tags <<< "${TAGS_CSV}"
+
+          # Build the -t flag list for imagetools create.
+          tag_args=()
+          for t in "${tags[@]}"; do
+            tag_args+=(-t "${t}")
+          done
+
+          # Combine the two per-arch tags into a multi-arch index, pushed
+          # to every canonical tag at once.
+          docker buildx imagetools create \
+            "${tag_args[@]}" \
+            "${AMD64_TAG}" \
+            "${ARM64_TAG}"
+
+          # Resolve the manifest digest from the first canonical tag
+          # (they all point at the same index, by construction).
+          first_tag="${tags[0]}"
+          digest="$(docker buildx imagetools inspect "${first_tag}" 2>/dev/null | awk '/^Digest:/ { print $2; exit }')"
+
+          if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Failed to resolve manifest digest from ${first_tag}"
+            exit 1
+          fi
+
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "Pushed manifest ${IMAGE_REF}@${digest}"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Sign manifest list (keyless OIDC)
+        env:
+          COSIGN_EXPERIMENTAL: 'true'
+          IMAGE_DIGEST: ${{ steps.manifest.outputs.digest }}
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        run: |
+          cosign sign --yes "${IMAGE_REF}@${IMAGE_DIGEST}"
+
+      - name: Run Trivy vulnerability scan (manifest digest)
+        # Single scan on the manifest digest — Trivy resolves the index to
+        # the runner's native arch (amd64 here), which keeps the Security
+        # tab to one set of findings per release instead of doubling them.
+        # Per-arch package sets are near-identical for Rust headless builds,
+        # so the missed coverage is negligible (REVIEW option a).
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         continue-on-error: true
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.manifest.outputs.digest }}
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
@@ -168,110 +495,19 @@ jobs:
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
         if: always() && hashFiles('trivy-results.sarif') != ''
         # Advisory: GitHub's SARIF upload API can hit installation rate limits;
-        # keep Security tab upload failures from blocking signing or demo deploy.
+        # keep Security tab upload failures from blocking the deploy.
         continue-on-error: true
         with:
           sarif_file: trivy-results.sarif
 
-      - name: Attest image provenance
-        # GHA installation API rate-limit hits this step intermittently
-        # (observed v5.0.6 runs 25108343024 + 25108620933 on the same SHA).
-        # Make it advisory so cosign signing + Syft SBOM + deploy-demo
-        # still complete — those provide the cryptographic + supply-chain
-        # proof we rely on even when SLSA provenance API is rate-limited.
-        continue-on-error: true
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-
-      # T-1789: keyless Sigstore signature on every pushed digest.
-      # Uses the ambient GitHub OIDC token — no long-lived keys to rotate.
-      - name: Install cosign
-        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
-        with:
-          cosign-release: 'v3.0.6'
-
-      - name: Sign container image (keyless OIDC)
-        env:
-          COSIGN_EXPERIMENTAL: 'true'
-          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
-          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        run: |
-          cosign sign --yes "${IMAGE_REF}@${IMAGE_DIGEST}"
-
-      # SOTA-2026 supply-chain: generate a SPDX SBOM with Syft and attach it as
-      # a cosign attestation on the same digest. Syft is Apache-2.0; SPDX is
-      # the SBOM format the K8s + DHS SBOM-policy ecosystem standardised on.
-      - name: Install syft
-        uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
-
-      - name: Generate SPDX SBOM
-        env:
-          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
-          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        run: |
-          set -euo pipefail
-          syft "${IMAGE_REF}@${IMAGE_DIGEST}" \
-            -o spdx-json=sbom.spdx.json
-          # Smoke-test the SBOM is non-empty / parseable before attesting.
-          test -s sbom.spdx.json
-          python3 -c "import json,sys; json.load(open('sbom.spdx.json'))"
-
-      - name: Attach SBOM as cosign attestation (keyless OIDC)
-        # cosign 3.x regressed `cosign attest --type spdx` against this
-        # SBOM-format combination — observed v5.0.7 docker-publish run
-        # 25109842488 step 15 failure:
-        #   "failed to fetch envelope statement: validation error:
-        #    invalid attestation: decoding json"
-        # Make this advisory: image is still signed (Sign step earlier),
-        # SBOM is still uploaded as an artifact (Upload SBOM step below).
-        # The miss is the binding of SBOM to image digest in OCI registry.
-        # TODO: investigate cosign 3.x attestation envelope expectations;
-        # possibly switch to `--predicate-type` flag or upgrade syft SPDX
-        # output to a compatible version.
-        id: attest_sbom
-        continue-on-error: true
-        env:
-          COSIGN_EXPERIMENTAL: 'true'
-          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
-          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        run: |
-          cosign attest --yes \
-            --predicate sbom.spdx.json \
-            --type spdx \
-            "${IMAGE_REF}@${IMAGE_DIGEST}"
-
-      - name: Surface SBOM attestation failure to job summary
-        if: always() && steps.attest_sbom.outcome == 'failure'
-        env:
-          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
-        run: |
-          {
-            echo "## ⚠️ SBOM cosign attestation FAILED"
-            echo ""
-            echo "cosign attest --type spdx returned outcome=failure for image ${IMAGE_REF}@${IMAGE_DIGEST}."
-            echo ""
-            echo "Image is still cosign-signed (Sign container image step earlier). SBOM file is still uploaded as a workflow artifact (Upload SBOM step below). The miss is the OCI-registry binding of SBOM to image digest."
-            echo ""
-            echo "Likely cosign 3.x compatibility regression with --type spdx. Tracked as a follow-up to investigate."
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "::warning title=SBOM attestation missing::cosign attest --type spdx failed; image signed + SBOM artifact still attached."
-
-      - name: Upload SBOM artifact
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
-        if: always() && hashFiles('sbom.spdx.json') != ''
-        with:
-          name: sbom-spdx-${{ github.sha }}
-          path: sbom.spdx.json
-          retention-days: 90
-
+  # ------------------------------------------------------------------
+  # deploy-demo — moved to needs: manifest so we never deploy a half-built
+  # release where only one arch has been pushed.
+  # ------------------------------------------------------------------
   deploy-demo:
     name: Deploy demo
     if: github.event_name == 'workflow_dispatch'
-    needs: publish
+    needs: manifest
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: {}
