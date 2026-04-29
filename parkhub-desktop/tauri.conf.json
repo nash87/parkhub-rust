@@ -4,8 +4,8 @@
   "version": "../package.json",
   "identifier": "app.parkhub.desktop",
   "build": {
-    "beforeDevCommand": "cd ../parkhub-web && npm run dev",
-    "beforeBuildCommand": "cd ../parkhub-web && npm run build",
+    "beforeDevCommand": "cd parkhub-web && npm run dev",
+    "beforeBuildCommand": "cd parkhub-web && npm run build",
     "devUrl": "http://localhost:4321",
     "frontendDist": "../parkhub-web/dist"
   },
