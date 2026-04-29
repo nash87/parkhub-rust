@@ -174,11 +174,40 @@ jobs:
           sarif_file: trivy-results.sarif
 
       - name: Attest image provenance
+        # GHA installation API rate-limit hits this step intermittently
+        # (observed v5.0.6 runs 25108343024 + 25108620933 on the same SHA).
+        # Make it advisory so cosign signing + Syft SBOM + deploy-demo
+        # still complete — those provide the cryptographic + supply-chain
+        # proof we rely on even when SLSA provenance API is rate-limited.
+        id: attest_provenance
+        continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+      - name: Surface attest-build-provenance failure to job summary
+        # When attest_provenance fails (rate-limit, misconfig, permission
+        # regression), warn loudly in the run summary so a maintainer
+        # sees missing SLSA provenance even though cosign + SBOM still
+        # gated. Use env: to bind context expressions safely (no template
+        # injection via run: shell expansion).
+        if: always() && steps.attest_provenance.outcome == 'failure'
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "## ⚠️ SLSA build provenance attestation FAILED"
+            echo ""
+            echo "actions/attest-build-provenance returned outcome=failure for image ${IMAGE_REF}@${IMAGE_DIGEST}."
+            echo ""
+            echo "Most common cause: GHA installation API rate-limit. Cosign signature + Syft SBOM still attached on the published digest, so the image is still cryptographically verifiable. SLSA provenance is missing for THIS run only."
+            echo ""
+            echo "If this fires repeatedly outside the rate-limit window, check id-token + attestations:write permissions and the action pin."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=SLSA provenance missing::actions/attest-build-provenance failed for this run; cosign + SBOM still attached."
 
       # T-1789: keyless Sigstore signature on every pushed digest.
       # Uses the ambient GitHub OIDC token — no long-lived keys to rotate.

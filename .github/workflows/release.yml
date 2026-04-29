@@ -705,11 +705,36 @@ jobs:
           cat checksums.txt
 
       - name: Attest release artifacts
+        # GHA installation API rate-limit hits this step intermittently
+        # (v5.0.6 release.yml run 25108343017 failed here, then v5.0.4
+        # before that). Make it advisory so cosign signing + Syft SBOM
+        # + Create Release still publish the artifacts even when the
+        # SLSA attestations API is rate-limited.
+        id: attest_release_artifacts
+        continue-on-error: true
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-path: |
             parkhub-linux-x64.tar.gz
             checksums.txt
+
+      - name: Surface attest-build-provenance failure to job summary
+        # Mirror the docker-publish.yml pattern: warn loudly in the run
+        # summary if the SLSA provenance step failed so missing
+        # attestations don't go unnoticed across releases. cosign + SBOM
+        # are written downstream regardless; this step is best-effort.
+        # GITHUB_REF_NAME is provided by the runner as a plain env var,
+        # not a template expansion — safe to read directly.
+        if: always() && steps.attest_release_artifacts.outcome == 'failure'
+        run: |
+          {
+            echo "## ⚠️ SLSA build provenance attestation FAILED"
+            echo ""
+            echo "actions/attest-build-provenance returned outcome=failure for parkhub-linux-x64.tar.gz + checksums.txt on tag ${GITHUB_REF_NAME}."
+            echo ""
+            echo "Most common cause: GHA installation API rate-limit. Cosign signatures + Syft SBOMs are still attached to every release archive, so artifacts remain cryptographically verifiable. SLSA provenance is missing for THIS release only."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::warning title=SLSA provenance missing::actions/attest-build-provenance failed for this release; cosign + SBOM still attached."
 
       # SOTA-2026 supply-chain: keyless cosign signatures + SPDX SBOMs for
       # every release archive. The signatures (.sig + .pem) let downstream
