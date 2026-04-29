@@ -33,13 +33,19 @@
     "active": true,
     "targets": "all",
     "icon": [
+      "icons/512x512.png",
+      "icons/256x256.png",
+      "icons/128x128.png",
+      "icons/64x64.png",
+      "icons/32x32.png",
+      "icons/icon.png",
       "icons/icon.ico"
     ],
     "publisher": "ParkHub",
     "category": "Business",
     "shortDescription": "Self-hosted parking management",
-    "longDescription": "ParkHub — self-hosted parking management desktop client. Connects to a ParkHub server (Rust or Laravel edition) over HTTPS. GDPR compliant. MIT licensed.",
-    "copyright": "© 2026 nash87. MIT licensed.",
+    "longDescription": "ParkHub \u2014 self-hosted parking management desktop client. Connects to a ParkHub server (Rust or Laravel edition) over HTTPS. GDPR compliant. MIT licensed.",
+    "copyright": "\u00a9 2026 nash87. MIT licensed.",
     "homepage": "https://nash87.github.io/parkhub-site/",
     "macOS": {
       "minimumSystemVersion": "11.0",
@@ -53,7 +59,10 @@
     },
     "linux": {
       "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libayatana-appindicator3-1"]
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libayatana-appindicator3-1"
+        ]
       }
     }
   },
