@@ -220,18 +220,20 @@ jobs:
           python3 -c "import json,sys; json.load(open('sbom.spdx.json'))"
 
       - name: Attach SBOM as cosign attestation (keyless OIDC)
-        # cosign 3.x regressed `cosign attest --type spdx` against this
-        # SBOM-format combination — observed v5.0.7 docker-publish run
-        # 25109842488 step 15 failure:
-        #   "failed to fetch envelope statement: validation error:
-        #    invalid attestation: decoding json"
-        # Make this advisory: image is still signed (Sign step earlier),
-        # SBOM is still uploaded as an artifact (Upload SBOM step below).
-        # The miss is the binding of SBOM to image digest in OCI registry.
-        # TODO: investigate cosign 3.x attestation envelope expectations;
-        # possibly switch to `--predicate-type` flag or upgrade syft SPDX
-        # output to a compatible version.
+        # cosign 3.0.6 hardened in-toto predicate validation
+        # (sigstore/cosign GHSA-w6c6-c85g-mmv6 + the v3.0.6 release-note
+        # "Fix parsing of in-toto for string predicates"). The shortname
+        # `--type spdx` maps to the SPDX *tag-value* predicate (plain text);
+        # syft emits SPDX-JSON via `-o spdx-json=...`. cosign 3.x now
+        # rejects the mismatch with:
+        #   failed to fetch envelope statement: validation error:
+        #     invalid attestation: decoding json
+        # Use `--type spdxjson` (or the explicit URI
+        # https://spdx.dev/Document) to declare the JSON predicate type.
         id: attest_sbom
+        # Keep continue-on-error for one CI cycle to avoid blocking the
+        # release if the fix turns out to be incomplete; drop in a follow-up
+        # once we observe a green run.
         continue-on-error: true
         env:
           COSIGN_EXPERIMENTAL: 'true'
@@ -240,7 +242,7 @@ jobs:
         run: |
           cosign attest --yes \
             --predicate sbom.spdx.json \
-            --type spdx \
+            --type spdxjson \
             "${IMAGE_REF}@${IMAGE_DIGEST}"
 
       - name: Surface SBOM attestation failure to job summary
@@ -252,13 +254,11 @@ jobs:
           {
             echo "## ⚠️ SBOM cosign attestation FAILED"
             echo ""
-            echo "cosign attest --type spdx returned outcome=failure for image ${IMAGE_REF}@${IMAGE_DIGEST}."
+            echo "cosign attest --type spdxjson returned outcome=failure for image ${IMAGE_REF}@${IMAGE_DIGEST}."
             echo ""
             echo "Image is still cosign-signed (Sign container image step earlier). SBOM file is still uploaded as a workflow artifact (Upload SBOM step below). The miss is the OCI-registry binding of SBOM to image digest."
-            echo ""
-            echo "Likely cosign 3.x compatibility regression with --type spdx. Tracked as a follow-up to investigate."
           } | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "::warning title=SBOM attestation missing::cosign attest --type spdx failed; image signed + SBOM artifact still attached."
+          echo "::warning title=SBOM attestation missing::cosign attest --type spdxjson failed; image signed + SBOM artifact still attached."
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
