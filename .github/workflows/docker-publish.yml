@@ -199,7 +199,6 @@ jobs:
 
       - name: Sign amd64 image (keyless OIDC)
         env:
-          COSIGN_EXPERIMENTAL: 'true'
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
@@ -231,7 +230,6 @@ jobs:
         id: attest_sbom
         continue-on-error: true
         env:
-          COSIGN_EXPERIMENTAL: 'true'
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
@@ -337,7 +335,6 @@ jobs:
 
       - name: Sign arm64 image (keyless OIDC)
         env:
-          COSIGN_EXPERIMENTAL: 'true'
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
@@ -361,7 +358,6 @@ jobs:
         id: attest_sbom
         continue-on-error: true
         env:
-          COSIGN_EXPERIMENTAL: 'true'
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
@@ -482,7 +478,6 @@ jobs:
 
       - name: Sign manifest list (keyless OIDC)
         env:
-          COSIGN_EXPERIMENTAL: 'true'
           IMAGE_DIGEST: ${{ steps.manifest.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         run: |
