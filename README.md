@@ -152,6 +152,8 @@ cargo build --release --package parkhub-server --features gui
 
 Headless/server release archives for v5.0.5 and newer are signed with [cosign](https://github.com/sigstore/cosign) using GitHub's keyless OIDC flow — the signing identity is the `release.yml` workflow on this repo, so you can verify provenance without any pre-shared key. The matching `*.cosign.bundle` is published next to each signed archive on the [Releases page](https://github.com/nash87/parkhub-rust/releases/latest).
 
+Signed assets: the four headless platform tarballs (`parkhub-linux-x64.tar.gz`, `parkhub-linux-arm64.tar.gz`, `parkhub-macos-universal.tar.gz`, `parkhub-windows-x64.zip`) and `checksums.txt`. The desktop bundles (`parkhub-desktop-linux-x64.zip`, `parkhub-desktop-macos.dmg.zip`, `parkhub-desktop-windows-x64.msi.zip`) are not yet signed — track [#nash87/parkhub-rust desktop signing](https://github.com/nash87/parkhub-rust/issues) for status.
+
 ```sh
 curl -LO https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-linux-x64.tar.gz
 curl -LO https://github.com/nash87/parkhub-rust/releases/latest/download/parkhub-linux-x64.tar.gz.cosign.bundle
