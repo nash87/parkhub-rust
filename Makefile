@@ -7,12 +7,13 @@
 # local core gate and `make act` when you need to execute the actual YAML.
 #
 # Usage:
-#   make ci         # core local gate: fmt + clippy + check + client-check + test + frontend + drift
-#   make lint       # fmt --check + clippy (fmt + clippy jobs)
-#   make test       # cargo test headless (test job)
-#   make drift      # regenerate openapi + fail on diff — mirrors openapi-drift.yml
-#   make act        # run the actual .github/workflows locally via nektos/act
-#   make pre-push   # alias for ci; run before `git push origin/github`
+#   make ci          # core local gate: fmt + clippy + check + client-check + test + frontend + drift
+#   make ci-security # strict local OSS mirror of GitHub/Gitea security gates
+#   make lint        # fmt --check + clippy (fmt + clippy jobs)
+#   make test        # cargo test headless (test job)
+#   make drift       # regenerate openapi + fail on diff — mirrors openapi-drift.yml
+#   make act         # run the actual .github/workflows locally via nektos/act
+#   make pre-push    # alias for ci; run before `git push origin/github`
 #
 # Requires: rust 1.94.1 (rust-toolchain.toml), node 22, npm. `act` is optional.
 
@@ -23,12 +24,13 @@ MAKEFLAGS += --no-print-directory
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
 
-.PHONY: help ci ci-post fmt clippy check client-check test lint drift frontend integration embed act pre-push clean
+.PHONY: help ci ci-post ci-security fmt clippy check client-check test lint drift frontend integration embed act pre-push clean
 
 help:
 	@echo "parkhub-rust local CI mirror (see .github/workflows/*.yml)"
 	@echo ""
 	@echo "  make ci          — fmt + clippy + check + client-check + test + frontend + drift"
+	@echo "  make ci-security — strict local OSS mirror of .github/workflows/security.yml"
 	@echo "  make lint        — fmt --check + clippy (mirrors fmt + clippy jobs)"
 	@echo "  make check       — cargo check headless"
 	@echo "  make client-check — cargo check parkhub-client (requires cmake + fontconfig dev libs)"
@@ -107,6 +109,12 @@ ci: fmt clippy check client-check test frontend drift
 ## osv-scanner) inside fop's queue + posts the success status when clean.
 ci-post:
 	.github/scripts/fop-local-ci.sh --profile pr --post-status
+
+## Strict local OSS mirror of .github/workflows/security.yml. All scanners
+## are commercial-license-safe (MIT/Apache-2.0/BSD/ISC). Mirrors parkhub-php's
+## ci-security target so the same mental model spans both repos.
+ci-security:
+	scripts/ci/local-security-audit.sh --profile cd --strict-tools --fail-advisory
 
 pre-push: ci
 
