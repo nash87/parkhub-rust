@@ -276,6 +276,13 @@ jobs:
 
       - name: Upload OSV-Scanner SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+        # Advisory: GitHub's installation API rate limit (5000/hr per
+        # installation) can transiently 429 the SARIF upload during a busy
+        # PR queue. Job-level continue-on-error keeps the workflow green;
+        # this step-level flag keeps the per-job CHECK green too so the
+        # rollup doesn't show a red X for what is actually a transient
+        # rate-limit blip.
+        continue-on-error: true
         if: always() && hashFiles('osv-scanner.sarif') != ''
         with:
           sarif_file: osv-scanner.sarif
