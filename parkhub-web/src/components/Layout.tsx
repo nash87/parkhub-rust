@@ -170,7 +170,7 @@ function SidebarNav({
           : undefined
       }
       className={({ isActive }) =>
-        `relative flex items-center gap-3 ${itemPadding} text-sm font-medium rounded-lg transition-all ${
+        `focus-ring relative flex items-center gap-3 ${itemPadding} text-sm font-medium rounded-lg transition-colors ${
           isActive
             ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
             : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
@@ -268,7 +268,7 @@ function SidebarNav({
             to="/admin"
             onClick={onItemClick}
             className={({ isActive }) =>
-              `relative flex items-center gap-3 ${itemPadding} text-sm font-medium rounded-lg transition-all ${
+              `focus-ring relative flex items-center gap-3 ${itemPadding} text-sm font-medium rounded-lg transition-colors ${
                 isActive
                   ? 'text-primary-700 dark:text-primary-300 bg-primary-50/80 dark:bg-primary-950/30'
                   : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100/60 dark:hover:bg-surface-800/40'
@@ -303,7 +303,7 @@ function LanguageSelector() {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-all w-full"
+        className="focus-ring flex items-center gap-2 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-colors w-full"
         aria-label="Change language"
         aria-expanded={open}
       >
@@ -317,7 +317,7 @@ function LanguageSelector() {
             <button
               key={lang.code}
               onClick={() => { i18n?.changeLanguage(lang.code); setOpen(false); }}
-              className={`flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
+              className={`focus-ring flex items-center gap-2 w-full px-3 py-2 text-sm transition-colors ${
                 lang.code === i18n?.language
                   ? 'bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 font-medium'
                   : 'text-surface-700 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-700/50'
@@ -484,7 +484,7 @@ export function Layout() {
 
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
-          className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-all mb-2"
+          className="focus-ring flex items-center gap-3 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-colors mb-2"
         >
           {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
           {resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
@@ -507,7 +507,7 @@ export function Layout() {
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/20 rounded-lg transition-all w-full"
+            className="focus-ring flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/20 rounded-lg transition-colors w-full"
           >
             <SignOut weight="bold" className="w-5 h-5" />
             {t('nav.logout')}
@@ -592,7 +592,7 @@ export function Layout() {
                   />
                 </div>
                 <div className="absolute bottom-4 left-4 right-4">
-                  <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 w-full rounded-lg hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-all">
+                  <button onClick={handleLogout} className="focus-ring flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 w-full rounded-lg hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-colors">
                     <SignOut weight="bold" className="w-5 h-5" /> {t('nav.logout')}
                   </button>
                 </div>

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 const { mockNavigate, mockLocation } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -31,6 +30,11 @@ vi.mock('react-i18next', () => ({
 vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => mockLocation,
+  Link: ({ to, children, ...rest }: any) => (
+    <a href={typeof to === 'string' ? to : '#'} {...rest}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
@@ -116,19 +120,21 @@ describe('BottomNavBar', () => {
     expect(screen.getByText('Profile')).toBeDefined();
   });
 
-  it('has 5 navigation buttons', () => {
+  it('renders 5 navigation links (not buttons)', () => {
+    // a11y: tabs must be real <a> links so cmd-click / middle-click open
+    // in a new tab, right-click opens the context menu, status bar shows
+    // destination URL, and screen readers announce them as links.
     render(<BottomNavBar />);
-    const buttons = screen.getAllByRole('button');
-    expect(buttons.length).toBe(5);
+    const links = screen.getAllByRole('link');
+    expect(links.length).toBe(5);
+    // No buttons should be used for navigation in the bottom bar.
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 
-  it('navigates when a tab is clicked', async () => {
-    const user = userEvent.setup();
+  it('exposes the route path in the href so middle/cmd-click open in a new tab', async () => {
     render(<BottomNavBar />);
-
-    await user.click(screen.getByLabelText('Vehicles'));
-
-    expect(mockNavigate).toHaveBeenCalledWith('/vehicles');
+    expect(screen.getByLabelText('Vehicles').getAttribute('href')).toBe('/vehicles');
+    expect(screen.getByLabelText('Dashboard').getAttribute('href')).toBe('/');
   });
 
   it('marks nested booking routes as active', () => {
