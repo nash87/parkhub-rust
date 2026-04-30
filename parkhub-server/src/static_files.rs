@@ -2,8 +2,6 @@
 //!
 //! Embeds and serves the web frontend from the binary.
 
-use std::path::Path;
-
 use axum::{
     body::Body,
     http::{StatusCode, Uri, header},
@@ -51,23 +49,33 @@ pub async fn static_handler(uri: Uri) -> impl IntoResponse {
     (StatusCode::NOT_FOUND, "Not found").into_response()
 }
 
+/// Returns true when the URL path points to a directory that contains
+/// content-hashed asset filenames (Astro emits to `_astro/`, Vite + legacy
+/// Astro emit to `/assets/`). Files under those paths are safe to mark
+/// `immutable` because the URL itself changes on every edit.
+///
+/// Files outside those directories — `sw.js`, `manifest.json`, `favicon.*`,
+/// hand-written root scripts — keep their filename across releases, so they
+/// MUST be served `no-cache`. Otherwise a browser that fetched an old `sw.js`
+/// will keep serving it for up to a year (the previous max-age was 31536000),
+/// pinning users to whatever app version that service worker last cached.
+fn is_content_hashed_asset_path(path: &str) -> bool {
+    path.starts_with("_astro/")
+        || path.contains("/_astro/")
+        || path.starts_with("assets/")
+        || path.contains("/assets/")
+}
+
 fn serve_file(path: &str, file: rust_embed::EmbeddedFile) -> Response {
     let mime = mime_guess::from_path(path).first_or_octet_stream();
 
     let mut response = Response::builder().header(header::CONTENT_TYPE, mime.as_ref());
 
-    // Add cache headers for assets (not index.html)
-    if path != "index.html"
-        && (path.contains("/assets/")
-            || Path::new(path)
-                .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("js"))
-            || Path::new(path)
-                .extension()
-                .is_some_and(|e| e.eq_ignore_ascii_case("css")))
-    {
+    if path != "index.html" && is_content_hashed_asset_path(path) {
         response = response.header(header::CACHE_CONTROL, "public, max-age=31536000, immutable");
     } else {
+        // Includes index.html and all non-hashed root files (sw.js,
+        // manifest.json, favicon.ico, offline.html, …). Always re-validate.
         response = response.header(header::CACHE_CONTROL, "no-cache");
     }
 
@@ -256,6 +264,84 @@ mod tests {
             assert!(
                 assets.iter().any(|a| a.contains("index.html")),
                 "assets should include index.html"
+            );
+        }
+    }
+
+    // ── serve_file no-cache for non-hashed root assets (regression: sw.js v4.15.0 trap) ──
+
+    #[test]
+    fn serve_file_sw_js_must_not_be_immutable() {
+        // sw.js is at the dist root and not content-hashed in the filename.
+        // Browsers honored the previous `public, max-age=31536000, immutable`
+        // for up to 1 year, so users who installed a v4.15.0 sw.js never saw
+        // updates to the active service worker — the v4 footer kept rendering
+        // long after the deployed binary moved to v5.0.x. sw.js MUST be served
+        // with no-cache so the browser re-fetches it on every page load.
+        if let Some(file) = WebAssets::get("index.html") {
+            let resp = serve_file("sw.js", file);
+            let cache = resp
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(
+                cache, "no-cache",
+                "sw.js must be served with no-cache so SW updates propagate, got: {cache}"
+            );
+        }
+    }
+
+    #[test]
+    fn serve_file_manifest_json_gets_no_cache() {
+        // PWA manifest is at the dist root and not hashed; updates to icons,
+        // start_url, theme_color etc. should propagate without 1-year staleness.
+        if let Some(file) = WebAssets::get("index.html") {
+            let resp = serve_file("manifest.json", file);
+            let cache = resp
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(
+                cache, "no-cache",
+                "manifest.json must be served with no-cache, got: {cache}"
+            );
+        }
+    }
+
+    #[test]
+    fn serve_file_root_level_js_not_in_hashed_dir_gets_no_cache() {
+        // Any *.js outside /_astro/ or /assets/ is presumed non-hashed and
+        // must use no-cache to avoid the same trap as sw.js.
+        if let Some(file) = WebAssets::get("index.html") {
+            let resp = serve_file("legacy-script.js", file);
+            let cache = resp
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert_eq!(
+                cache, "no-cache",
+                "non-hashed root .js files must use no-cache, got: {cache}"
+            );
+        }
+    }
+
+    #[test]
+    fn serve_file_astro_hashed_js_gets_immutable_cache() {
+        // Files in _astro/ have content hashes (e.g., Welcome.DcWMTKUm.js)
+        // so URL changes on every edit — immutable caching is safe.
+        if let Some(file) = WebAssets::get("index.html") {
+            let resp = serve_file("_astro/Welcome.DcWMTKUm.js", file);
+            let cache = resp
+                .headers()
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+            assert!(
+                cache.contains("immutable"),
+                "_astro/* files must be immutable-cached (content-hashed URLs), got: {cache}"
             );
         }
     }
