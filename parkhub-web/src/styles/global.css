@@ -442,10 +442,22 @@ p { line-height: 1.6; }
 ::-webkit-scrollbar-thumb { background: var(--color-surface-300); border-radius: var(--radius-full); }
 .dark ::-webkit-scrollbar-thumb { background: var(--color-surface-600); }
 
-/* Focus ring */
+/* Focus ring — global default for any focusable element */
 *:focus-visible {
   outline: 2px solid var(--color-primary-500);
   outline-offset: 2px;
+}
+
+/* Focus ring — opt-in utility for interactive elements that need to
+   override component-local outline styles (e.g. when a parent sets
+   `focus:outline-none`). Use `:focus-visible` so the ring only shows on
+   keyboard navigation, not on mouse clicks. */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-md);
+  }
 }
 
 /* Mobile touch target minimum */

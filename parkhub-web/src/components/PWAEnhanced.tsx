@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { WifiSlash, ArrowDown, House, CalendarBlank, Car, User } from '@phosphor-icons/react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Offline Indicator
@@ -108,10 +108,14 @@ export function CachedBookingCard() {
 // Bottom Navigation Bar (Mobile)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Mobile bottom navigation bar — visible only on small screens. */
+/** Mobile bottom navigation bar — visible only on small screens.
+ *
+ * Uses real `<Link>` elements (not `<button onClick={navigate}>`) so the
+ * browser's native link affordances work: cmd-click / middle-click open
+ * the route in a new tab, right-click opens the context menu, and the
+ * status bar shows the destination URL on hover. */
 export function BottomNavBar() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const location = useLocation();
 
   const tabs = [
@@ -128,16 +132,16 @@ export function BottomNavBar() {
         {tabs.map(tab => {
           const isActive = location.pathname === tab.path || (tab.path !== '/' && location.pathname.startsWith(tab.path));
           return (
-            <button
+            <Link
               key={tab.path}
-              onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${isActive ? 'text-primary-500' : 'text-surface-400 hover:text-surface-600'}`}
+              to={tab.path}
+              className={`focus-ring flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${isActive ? 'text-primary-500' : 'text-surface-400 hover:text-surface-600'}`}
               aria-label={tab.label}
               aria-current={isActive ? 'page' : undefined}
             >
               <tab.icon size={22} weight={isActive ? 'fill' : 'regular'} />
               <span className="text-[10px] font-medium leading-tight">{tab.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>
