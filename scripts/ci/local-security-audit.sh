@@ -237,6 +237,37 @@ run_advisory_if_available zizmor "zizmor (gha sast audit-mode)" zizmor "${zizmor
 # ─── typos (MIT, advisory) ───────────────────────────────────────────────────
 run_advisory_if_available typos "typos" typos .
 
+# ─── cargo-geiger (Apache-2.0 OR MIT, unsafe-block SAST) ────────────────────
+# cargo-geiger counts unsafe blocks in the entire dep graph, surfacing
+# supply-chain unsafe-usage growth before it lands in production. Advisory:
+# unsafe is unavoidable in low-level crates (memmap2, axum's deps, etc.) and
+# we don't want to fail on legitimate usage — we want to track the trend and
+# review additions during dep bumps.
+# Source: github.com/geiger-rs/cargo-geiger (license: "Apache-2.0 OR MIT").
+run_advisory_if_available cargo-geiger "cargo-geiger (unsafe-block SAST)" \
+  cargo geiger --output-format Ascii --frozen
+
+# ─── osv-scanner (Apache-2.0, multi-ecosystem SCA) ──────────────────────────
+# Google OSV-Scanner cross-references Cargo.lock + parkhub-web/package-lock.json
+# against the OSV.dev database. Defense-in-depth complement to cargo-audit
+# (which only checks RustSec advisories) and npm audit (which only checks the
+# npm advisory feed) — OSV.dev aggregates GHSA, RustSec, npm, GHSA, Go,
+# debian, alpine, etc. into a single feed.
+#
+# Why osv-scanner instead of Bearer/Semgrep for "SAST coverage": Bearer is
+# Elastic License 2.0 (source-available, banned per platform commercial-safe
+# doctrine alongside BSL/SSPL/FSL). Semgrep is LGPL-2.1 (also banned).
+# Rudra (Apache-2.0 OR MIT) is archived 2026-04-02, requires a frozen
+# nightly-2021-10-21 toolchain, and only analyses crates that compile with
+# that pinned compiler — not viable on a current Rust 1.94 codebase.
+# Kani (Apache-2.0 OR MIT) is a bounded model checker and requires hand-written
+# `#[kani::proof]` harnesses, so it is not a drop-in SAST gate.
+# OSV-Scanner is the FOSS equivalent that actually runs against today's tree.
+run_advisory_if_available osv-scanner "osv-scanner (multi-ecosystem SCA)" \
+  osv-scanner scan source \
+    -L Cargo.lock \
+    -L parkhub-web/package-lock.json
+
 # ─── cd profile: trivy filesystem scan (Apache-2.0) ─────────────────────────
 # Mirrors security.yml trivy-fs job. Skips node_modules/target/vendor for
 # parity with the GitHub job's effective scope.
