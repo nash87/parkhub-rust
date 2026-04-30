@@ -25,6 +25,7 @@ import type { SwapRequestStatus as GeneratedSwapRequestStatus } from '../generat
 import type { AnnouncementSeverity as GeneratedAnnouncementSeverity } from '../generated/types/AnnouncementSeverity';
 import type { VehicleType as GeneratedVehicleType } from '../generated/types/VehicleType';
 import type { FuelType as GeneratedFuelType } from '../generated/types/FuelType';
+import type { BookingStatus as GeneratedBookingStatus } from '../generated/types/BookingStatus';
 import type { PaginatedResponse } from '../generated/types/PaginatedResponse';
 import type { JsonValue } from '../generated/types/serde_json/JsonValue';
 
@@ -56,6 +57,7 @@ export type SwapRequestStatus = GeneratedSwapRequestStatus;
 export type AnnouncementSeverity = GeneratedAnnouncementSeverity;
 export type VehicleType = GeneratedVehicleType;
 export type FuelType = GeneratedFuelType;
+export type BookingStatus = GeneratedBookingStatus;
 
 export interface RequestOptions extends Omit<RequestInit, 'signal'> {
   signal?: AbortSignal;
@@ -436,6 +438,10 @@ export const api = {
 
   // ── Admin ──
   adminStats: () => request<AdminStats>('/api/v1/admin/stats'),
+  adminBookings: (perPage = 500) =>
+    request<PaginatedResponse<AdminBooking>>(`/api/v1/admin/bookings?per_page=${perPage}`),
+  adminReports: (days = 7) =>
+    request<DailyBookingStat[]>(`/api/v1/admin/reports?days=${days}`),
   adminUsers: () => request<PaginatedResponse<User>>('/api/v1/admin/users'),
   adminUpdateUser: (id: string, data: UpdateUserPayload) => request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   adminDeleteUser: (id: string) => request<void>(`/api/v1/admin/users/${id}`, { method: 'DELETE' }),
@@ -1007,7 +1013,7 @@ export interface Booking {
   vehicle_plate?: string;
   start_time: string;
   end_time: string;
-  status: 'confirmed' | 'active' | 'completed' | 'cancelled';
+  status: BookingStatus;
   booking_type?: string;
   dauer_interval?: string;
   notes?: string;
@@ -1015,6 +1021,18 @@ export interface Booking {
   tax_amount?: number;
   total_price?: number;
   currency?: string;
+}
+
+export interface AdminBooking extends Booking {
+  status: BookingStatus;
+  user_name?: string;
+  user_email?: string;
+  created_at: string;
+}
+
+export interface DailyBookingStat {
+  date: string;
+  count: number;
 }
 
 export interface Vehicle {
@@ -1143,8 +1161,10 @@ export interface Co2Summary {
 export interface AdminStats {
   total_users: number;
   total_lots: number;
+  total_slots: number;
   total_bookings: number;
   active_bookings: number;
+  occupancy_percent: number;
 }
 
 /** Raw shape from the Rust API (nested objects) */
