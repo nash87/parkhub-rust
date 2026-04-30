@@ -97,7 +97,7 @@ jobs:
     timeout-minutes: 14
     permissions:
       contents: read  # checkout-only (no writes from this gate job)
-      statuses: read  # poll the `fop/local-ci/pr` commit status posted by the local CI gate
+      statuses: write  # cross-token visibility: workflow GITHUB_TOKEN with read-only cannot see PAT-posted statuses; write scope is the documented workaround per github.com/orgs/community/discussions/40769
     steps:
       - name: Require fop local CI commit status (adaptive backoff)
         env:
