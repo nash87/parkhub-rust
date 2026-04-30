@@ -8,7 +8,7 @@
 #
 # Usage:
 #   make ci          # core local gate: fmt + clippy + check + client-check + test + frontend + drift
-#   make ci-security # strict local OSS mirror of GitHub/Gitea security gates
+#   make ci-security # local OSS security/workflow subset
 #   make lint        # fmt --check + clippy (fmt + clippy jobs)
 #   make test        # cargo test headless (test job)
 #   make drift       # regenerate openapi + fail on diff — mirrors openapi-drift.yml
@@ -30,7 +30,7 @@ help:
 	@echo "parkhub-rust local CI mirror (see .github/workflows/*.yml)"
 	@echo ""
 	@echo "  make ci          — fmt + clippy + check + client-check + test + frontend + drift"
-	@echo "  make ci-security — strict local OSS mirror of .github/workflows/security.yml"
+	@echo "  make ci-security — local OSS security/workflow subset"
 	@echo "  make lint        — fmt --check + clippy (mirrors fmt + clippy jobs)"
 	@echo "  make check       — cargo check headless"
 	@echo "  make client-check — cargo check parkhub-client (requires cmake + fontconfig dev libs)"
@@ -110,9 +110,11 @@ ci: fmt clippy check client-check test frontend drift
 ci-post:
 	.github/scripts/fop-local-ci.sh --profile pr --post-status
 
-## Strict local OSS mirror of .github/workflows/security.yml. All scanners
-## are commercial-license-safe (MIT/Apache-2.0/BSD/ISC). Mirrors parkhub-php's
-## ci-security target so the same mental model spans both repos.
+## Local OSS security subset for .github/workflows/security.yml: code scanning
+## and workflow hygiene checks that are commercial-license-safe
+## (MIT/Apache-2.0/BSD/ISC). This target does not run image-scan jobs such as
+## trivy-image or grype-image. Mirrors parkhub-php's ci-security target so the
+## same mental model spans both repos.
 ci-security:
 	scripts/ci/local-security-audit.sh --profile cd --strict-tools --fail-advisory
 

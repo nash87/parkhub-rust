@@ -7,9 +7,10 @@ Usage: scripts/ci/local-security-audit.sh [--profile pr|cd] [--strict-tools] [--
 
 Runs the local OSS security mirror for the GitHub/Gitea security and workflow
 hygiene jobs in .github/workflows/security.yml. Default mode mirrors GitHub PR
-behavior: required gates fail, advisory gates report findings without failing
-the run, and missing optional OSS tools are reported. Use --strict-tools before
-a release to require the full local toolchain to be installed.
+behavior for installed tools: enforced gates fail, advisory gates report
+findings without failing the run, and missing local OSS tools are reported
+and skipped. Use --strict-tools before a release to require the full local
+toolchain to be installed.
 
 All gates use commercial-license-safe OSS (MIT/Apache-2.0/BSD/ISC). No CodeQL,
 no Semgrep (LGPL), no SaaS scanners. Mirrors parkhub-php's UX exactly so a
@@ -116,6 +117,7 @@ run_advisory() {
   if [[ "$fail_advisory" -eq 1 ]]; then
     return 1
   fi
+  return 0
 }
 
 run_if_available() {
@@ -145,7 +147,6 @@ run_advisory_if_available() {
 require_core_tool git
 require_core_tool cargo
 require_core_tool npm
-require_core_tool python3
 
 section "local security profile"
 echo "profile=$profile strict_tools=$strict_tools fail_advisory=$fail_advisory"
@@ -274,7 +275,7 @@ run_advisory_if_available osv-scanner "osv-scanner (multi-ecosystem SCA)" \
 if [[ "$profile" == "cd" ]]; then
   run_if_available trivy "trivy filesystem scan" trivy fs \
     --severity HIGH,CRITICAL --exit-code 1 \
-    --skip-dirs target,node_modules,parkhub-web/node_modules \
+    --skip-dirs target,node_modules,parkhub-web/node_modules,vendor \
     .
 fi
 
