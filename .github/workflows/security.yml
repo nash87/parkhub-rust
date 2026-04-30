@@ -29,8 +29,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      # Use ubuntu-latest's pre-installed stable Rust toolchain (zizmor flagged
+      # dtolnay/rust-toolchain as superfluous-actions + the SHA pin did not point
+      # to a Git tag). cargo-geiger only needs cargo + stable, both present.
       - name: Cache cargo
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
@@ -52,8 +53,9 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      # Use ubuntu-latest's pre-installed stable Rust toolchain (zizmor flagged
+      # dtolnay/rust-toolchain as superfluous-actions + the SHA pin did not point
+      # to a Git tag). cargo-geiger only needs cargo + stable, both present.
       - name: Cache cargo
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
@@ -191,6 +193,103 @@ jobs:
           # auditor persona surfaces low-severity findings useful for hardening
           # without flooding the PR with regular-user noise.
           persona: auditor
+
+  cargo-geiger:
+    # Unsafe-block SAST for the Rust dep graph. Apache-2.0 OR MIT
+    # (github.com/geiger-rs/cargo-geiger). Surfaces supply-chain unsafe-usage
+    # growth before it lands in production. Advisory because legitimate unsafe
+    # usage in low-level deps (memmap2, mio, etc.) is unavoidable; we want to
+    # observe the trend rather than block PRs. No untrusted github.event inputs
+    # are used — all parameters are controlled constants.
+    name: cargo-geiger (unsafe-block SAST, advisory)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      # Use ubuntu-latest's pre-installed stable Rust toolchain (zizmor flagged
+      # dtolnay/rust-toolchain as superfluous-actions + the SHA pin did not point
+      # to a Git tag). cargo-geiger only needs cargo + stable, both present.
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Install cargo-geiger
+        uses: taiki-e/install-action@481c34c1cf3a84c68b5e46f4eccfc82af798415a # v2.75.23
+        with:
+          tool: cargo-geiger
+
+      - name: Run cargo-geiger
+        continue-on-error: true
+        run: cargo geiger --output-format Ascii --frozen
+
+  osv-scanner:
+    # Multi-ecosystem SCA via Google's osv-scanner against the OSV.dev DB.
+    # Apache-2.0 (github.com/google/osv-scanner). Defense-in-depth complement
+    # to cargo-audit (RustSec advisories only) and npm audit (npm advisories
+    # only) — OSV.dev aggregates GHSA, RustSec, npm, Go, Debian, Alpine, etc.
+    #
+    # Why osv-scanner instead of Bearer/Semgrep for "SAST coverage": Bearer is
+    # Elastic License 2.0 (source-available, banned per platform commercial-safe
+    # doctrine alongside BSL/SSPL/FSL). Semgrep is LGPL-2.1 (also banned).
+    # Rudra (Apache-2.0 OR MIT) is archived 2026-04-02 and pinned to
+    # nightly-2021-10-21, not viable on Rust 1.94. Kani (Apache-2.0 OR MIT)
+    # requires hand-written `#[kani::proof]` harnesses, not a drop-in gate.
+    # All workflow inputs come from controlled `env:` constants — no use of
+    # github.event.* untrusted strings (no injection surface).
+    name: OSV-Scanner (multi-ecosystem SCA, advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read         # checkout source + lockfiles for SCA
+      security-events: write # upload OSV-Scanner SARIF to GitHub Security tab
+    env:
+      OSV_SCANNER_VERSION: 2.3.5
+      OSV_SCANNER_SHA256: bb30c580afe5e757d3e959f4afd08a4795ea505ef84c46962b9a738aa573b41b
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install osv-scanner
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/osv-scanner \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  /tmp/osv-scanner" | sha256sum -c -
+          chmod +x /tmp/osv-scanner
+          sudo mv /tmp/osv-scanner /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: Scan Cargo.lock + npm lockfile (SARIF)
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          osv-scanner scan source \
+            -L Cargo.lock \
+            -L parkhub-web/package-lock.json \
+            --format=sarif \
+            --output=osv-scanner.sarif || true
+
+      - name: Upload OSV-Scanner SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+        # Advisory: GitHub's installation API rate limit (5000/hr per
+        # installation) can transiently 429 the SARIF upload during a busy
+        # PR queue. Job-level continue-on-error keeps the workflow green;
+        # this step-level flag keeps the per-job CHECK green too so the
+        # rollup doesn't show a red X for what is actually a transient
+        # rate-limit blip.
+        continue-on-error: true
+        if: always() && hashFiles('osv-scanner.sarif') != ''
+        with:
+          sarif_file: osv-scanner.sarif
+          category: osv-scanner
 
   trivy-image:
     name: Trivy Image Scan (CRITICAL/HIGH)
