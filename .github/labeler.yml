@@ -1,0 +1,58 @@
+# actions/labeler v6 config.
+# Auto-applies labels based on changed paths so release.yml category mapping
+# (above) Just Works.
+
+# Stack-area labels — useful for code-owner routing + filtered queries.
+rust:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'parkhub-server/**'
+      - 'parkhub-common/**'
+      - 'parkhub-client/**'
+      - 'parkhub-desktop/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+web:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'parkhub-web/**'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'lefthook.yml'
+      - 'Justfile'
+      - 'scripts/**'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Cargo.lock'
+      - 'parkhub-web/package-lock.json'
+      - 'package-lock.json'
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'dev/**'
+      - '**/*.md'
+
+security:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/security.yml'
+      - 'deny.toml'
+      - 'audit.toml'
+      - 'osv-scanner.toml'
+      - 'cargo-deny.toml'
+      - '.trivyignore'
+
+# Conventional-commit-style labels — applied via the labeler workflow (added
+# in this PR) which inspects the PR title prefix.
+# (Implemented in a separate small action; see .github/workflows/labeler.yml.)

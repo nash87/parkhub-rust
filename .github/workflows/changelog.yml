@@ -1,0 +1,55 @@
+name: Changelog
+
+# Regenerates the [Unreleased] section of CHANGELOG.md from git-cliff
+# (using conventional-commit message parsing) on every push to main.
+# On tag push (v*), promotes [Unreleased] to a new release section.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'docs/**'
+      - 'README.md'
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write  # commit the regenerated CHANGELOG.md back
+
+concurrency:
+  group: changelog-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: Regenerate CHANGELOG.md
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Run git-cliff
+        # MIT/Apache-2.0 — orhun/git-cliff. Reads cliff.toml at repo root.
+        uses: orhun/git-cliff-action@4a4a951bc43fafe41cd2348e181853f7f939bf3a # v4.6.0
+        with:
+          config: cliff.toml
+          args: --output CHANGELOG.md
+
+      - name: Commit if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet CHANGELOG.md; then
+            echo "CHANGELOG.md unchanged — skipping commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): regenerate from git-cliff [skip ci]"
+          git push

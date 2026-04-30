@@ -127,8 +127,42 @@ release-preview:
     @echo "package.json: $(jq -r .version package.json)"
     @echo "parkhub-web: $(jq -r .version parkhub-web/package.json)"
     @echo "Last tag: $(git describe --tags --abbrev=0)"
+    @echo ""
     @echo "Commits since last tag:"
     @git log --oneline "$(git describe --tags --abbrev=0)..HEAD" | head -20
+    @echo ""
+    @echo "Generated CHANGELOG section (dry-run, what cliff would write):"
+    @git cliff --unreleased --strip header 2>/dev/null || echo "(install git-cliff to preview)"
+
+[doc("regenerate CHANGELOG.md from git history (cliff.toml + conventional commits)")]
+changelog:
+    git cliff --output CHANGELOG.md
+    @echo "✓ CHANGELOG.md regenerated. Review the diff before committing."
+
+[doc("cut a new tag — bumps Cargo.toml + package.json + tags + pushes")]
+release-tag VERSION:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ ! "{{VERSION}}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      echo "VERSION must be semver, e.g. 5.0.9 (got: {{VERSION}})" >&2
+      exit 1
+    fi
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "working tree not clean — commit or stash first" >&2
+      exit 1
+    fi
+    echo "▶ bumping versions to {{VERSION}}"
+    sed -i 's/^version = ".*"/version = "{{VERSION}}"/' Cargo.toml
+    jq '.version = "{{VERSION}}"' package.json > package.json.tmp && mv package.json.tmp package.json
+    jq '.version = "{{VERSION}}"' parkhub-web/package.json > parkhub-web/package.json.tmp && mv parkhub-web/package.json.tmp parkhub-web/package.json
+    cargo update --workspace
+    echo "▶ regenerating CHANGELOG"
+    git cliff -t v{{VERSION}} --output CHANGELOG.md
+    git add Cargo.toml Cargo.lock package.json parkhub-web/package.json CHANGELOG.md
+    git commit -m "chore(release): v{{VERSION}}"
+    git tag -a v{{VERSION}} -m "Release v{{VERSION}}"
+    @echo "✓ tagged v{{VERSION}}. Review: git show v{{VERSION}}"
+    @echo "  Push when ready: git push github main && git push github v{{VERSION}}"
 
 # ---------------------------------------------------------------------------
 # Cleanup
