@@ -1,0 +1,67 @@
+# GitHub native release-notes generator config.
+# Used when the "Generate release notes" button is clicked, OR when a release
+# is created via the API with `generate_release_notes: true`.
+# Pairs with the release.yml workflow which auto-attaches generated notes.
+#
+# Docs: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - dependencies-internal
+    authors:
+      - dependabot
+
+  categories:
+    - title: 🚀 Added
+      labels:
+        - feature
+        - enhancement
+        - feat
+
+    - title: 🐛 Fixed
+      labels:
+        - fix
+        - bug
+
+    - title: ⚡ Performance
+      labels:
+        - perf
+        - performance
+
+    - title: 🔄 Changed
+      labels:
+        - refactor
+        - changed
+
+    - title: 🔒 Security
+      labels:
+        - security
+
+    - title: 📚 Documentation
+      labels:
+        - docs
+        - documentation
+
+    - title: 🧪 Tests
+      labels:
+        - test
+        - tests
+
+    - title: 🤖 CI
+      labels:
+        - ci
+        - build
+
+    - title: 📦 Dependencies
+      labels:
+        - dependencies
+        - deps
+
+    - title: 🧹 Chore
+      labels:
+        - chore
+
+    - title: Other Changes
+      labels:
+        - "*"
