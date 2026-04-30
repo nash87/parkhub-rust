@@ -1,0 +1,65 @@
+# bacon — live cargo check/clippy/test loop in a TUI (MIT/Apache-2.0).
+#
+#     bacon                 # start in default ('check') mode
+#     bacon clippy          # start in clippy mode
+#     bacon test            # start in test mode
+#
+# Inside bacon: `c`=check, `l`=clippy, `t`=test, `q`=quit, `Esc`=exit.
+
+default_job = "check-headless"
+on_change_strategy = "wait_then_restart"
+env_default_setting = false
+
+# Match the same headless-feature subset CI runs so bacon and CI report the
+# same diagnostics. Tauri/desktop crates are excluded — they pull in
+# webkit2gtk system deps that not every dev box has.
+[jobs.check-headless]
+command = [
+    "cargo", "check",
+    "--locked",
+    "-p", "parkhub-common",
+    "-p", "parkhub-server",
+    "--no-default-features", "--features", "headless",
+    "-p", "parkhub-client",
+    "--all-targets",
+    "--color", "always",
+]
+need_stdout = false
+watch = ["parkhub-common/src", "parkhub-server/src", "parkhub-client/src", "Cargo.toml", "Cargo.lock"]
+
+[jobs.clippy]
+command = [
+    "cargo", "clippy",
+    "--locked",
+    "-p", "parkhub-common",
+    "-p", "parkhub-server",
+    "--no-default-features", "--features", "headless",
+    "-p", "parkhub-client",
+    "--all-targets",
+    "--color", "always",
+    "--", "-D", "warnings",
+    "-A", "clippy::cognitive_complexity",
+    "-A", "clippy::assigning_clones",
+]
+need_stdout = false
+
+[jobs.test]
+command = [
+    "cargo", "test",
+    "--locked",
+    "-p", "parkhub-common", "--lib",
+    "-p", "parkhub-server", "--no-default-features", "--features", "headless", "--lib",
+    "--color", "always",
+]
+need_stdout = true
+
+# `bacon doc` opens generated docs once they compile — handy for the API
+# surface review pass before opening a PR.
+[jobs.doc]
+command = ["cargo", "doc", "--no-deps", "--color", "always"]
+need_stdout = false
+on_success = "back"
+
+# Keymap shortcut — press `f` to filter to first error.
+[keybindings]
+f = "scope-to-failures"
