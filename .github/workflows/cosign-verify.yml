@@ -115,7 +115,7 @@ jobs:
           set -euo pipefail
           repo="${IMAGE%:*}"
           if ! cosign verify-attestation \
-            --type spdx \
+            --type spdxjson \
             --certificate-identity-regexp "${IDENTITY_REGEX}" \
             --certificate-oidc-issuer "${ISSUER}" \
             "${repo}@${DIGEST}" 2>&1; then
