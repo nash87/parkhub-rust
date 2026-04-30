@@ -1,0 +1,67 @@
+# mise toolchain pin — SOTA-2026 polyglot version manager (MIT, jdx/mise).
+#
+# One-command bootstrap:
+#
+#     mise install            # installs every tool below at the pinned version
+#     mise current            # shows what's active
+#
+# `direnv allow` (with .envrc → `use mise`) auto-activates these tools when
+# you `cd` into the repo. Otherwise: `mise activate bash` in your shell rc.
+#
+# This file is the single source of truth for dev-tool versions. Lefthook
+# gates skip cleanly when tools are missing, so contributors who don't run
+# mise still get usable hooks (just slower local CI feedback).
+
+[tools]
+# Rust toolchain — mirrors rust-toolchain.toml channel for redundancy.
+# rust-toolchain.toml is what `cargo`/`rustup` consume; mise is what one-shot
+# `mise install` picks up so a fresh clone is buildable in one command.
+rust = "1.94.1"
+
+# Node — parkhub-web/package.json engines pins ">=22.12.0". Use the latest
+# 22.x LTS line so we stay current within the major.
+node = "22.12.0"
+
+# Bun is faster than npm for `bun install` of the parkhub-web/ workspace
+# during local dev. Optional — `npm` still works and is what CI uses.
+# Uncomment when you want it:
+# bun = "1.1.42"
+
+# Build accelerators (declarative install, hooked from .cargo/config.toml).
+sccache = "latest"
+mold = "latest"
+
+# Local CI gate binaries — match what lefthook.yml expects on PATH.
+lefthook = "latest"
+typos = "latest"
+gitleaks = "latest"
+zizmor = "latest"
+osv-scanner = "latest"
+trivy = "latest"
+"cargo:cargo-deny" = "latest"
+"cargo:cargo-audit" = "latest"
+
+# Live-reload dev loop — `bacon` runs cargo check/clippy/test continuously
+# in a TUI. MIT/Apache-2.0 (Canop/bacon).
+"cargo:bacon" = "latest"
+
+# Unified formatter for non-Rust files (md/json/yml/toml). MIT (dprint/dprint).
+dprint = "latest"
+
+# Optional: cargo-shear for unused-deps detection (replaces cargo-machete in
+# 2026-era stack — MIT, github.com/n8henrie/cargo-shear).
+"cargo:cargo-shear" = "latest"
+
+[env]
+# Speed up cold cargo builds via the sccache + mold combo. Override per-shell
+# if a specific build can't tolerate it.
+RUSTC_WRAPPER = "sccache"
+SCCACHE_DIR = "{{ env.HOME }}/.cache/sccache"
+RUSTFLAGS = "-C link-arg=-fuse-ld=mold"
+
+[settings]
+# Use legacy version files (rust-toolchain.toml, .nvmrc, etc.) so this repo
+# stays compatible with non-mise users.
+legacy_version_file = true
+# Don't auto-trust new mise.toml files in subdirs without explicit `mise trust`.
+trust_check = true

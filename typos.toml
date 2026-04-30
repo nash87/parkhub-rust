@@ -1,0 +1,43 @@
+# typos repo config (MIT/Apache-2.0, crate-ci/typos).
+#
+# Default rules + project-specific allow-list. Keep this file small —
+# add entries only after a real false-positive surfaces, with a one-line
+# rationale comment.
+
+[default]
+# Treat code-like identifiers (camelCase / snake_case) the same as words for
+# typo detection. False positives go in [default.extend-words].
+locale = "en"
+
+[default.extend-words]
+# Domain term: "parkhub" is the product name, not a typo of "parking" etc.
+parkhub = "parkhub"
+
+# Crate / library names that look like typos to typos:
+ser = "ser"           # serde common abbreviation in test fixtures
+de = "de"             # serde Deserialize abbreviation
+unmaped = "unmaped"   # rare; kept here only if it surfaces in a vendor file
+
+[default.extend-identifiers]
+# Vendor identifiers we cannot rename:
+# (none yet — add as discovered)
+
+[files]
+extend-exclude = [
+    "Cargo.lock",
+    "package-lock.json",
+    "*.min.js",
+    "*.min.css",
+    "parkhub-web/dist/**",
+    "parkhub-web/.astro/**",
+    "parkhub-web/node_modules/**",
+    "node_modules/**",
+    "target/**",
+    ".claude/worktrees/**",
+    "*.svg",
+    "*.ico",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.webp",
+]
