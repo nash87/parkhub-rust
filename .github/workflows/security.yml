@@ -109,7 +109,15 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4
+        # GitHub Actions installation API rate-limits SARIF uploads
+        # (~5000/hr shared across all SARIF-emitting steps in the org).
+        # Local-first CI: scripts/local-security-audit.sh already runs
+        # Trivy + osv-scanner + cargo-audit + cargo-deny pre-push, so the
+        # GitHub Security tab is informational, not load-bearing. Match
+        # the OSV-scanner + trivy-image upload steps which already have
+        # continue-on-error: true for the same reason.
         if: always() && hashFiles('trivy-results.sarif') != ''
+        continue-on-error: true
         with:
           sarif_file: trivy-results.sarif
 
