@@ -5,12 +5,19 @@ usage() {
   cat <<'EOF'
 Usage: scripts/ci/local-security-audit.sh [--profile pr|cd] [--strict-tools] [--fail-advisory]
 
-Runs the local OSS security mirror for the GitHub/Gitea security and workflow
-hygiene jobs in .github/workflows/security.yml. Default mode mirrors GitHub PR
-behavior for installed tools: enforced gates fail, advisory gates report
-findings without failing the run, and missing local OSS tools are reported
-and skipped. Use --strict-tools before a release to require the full local
-toolchain to be installed.
+Runs the local OSS filesystem-and-source security mirror for security.yml.
+Default mode mirrors GitHub PR behavior for installed tools: enforced gates
+fail, advisory gates report findings without failing the run, and missing
+local OSS tools are reported and skipped. Use --strict-tools before a release
+to require the full local toolchain to be installed.
+
+Coverage parity with security.yml: this script runs filesystem-and-source
+gates only (cargo deny/audit/geiger, npm audit, gitleaks, zizmor, typos,
+osv-scanner, actionlint, helm lint, docker compose config, trivy fs). It does
+NOT run security.yml's image-scan jobs (trivy-image, grype-image) because
+they require a built container image — those run in CI after the build job
+publishes a tagged image to ghcr. Run \`docker build\` + \`trivy image\` /
+\`grype\` manually before pushing release tags if you want pre-push parity.
 
 All gates use commercial-license-safe OSS (MIT/Apache-2.0/BSD/ISC). No CodeQL,
 no Semgrep (LGPL), no SaaS scanners. Mirrors parkhub-php's UX exactly so a
