@@ -208,8 +208,6 @@ jobs:
       - name: Install syft
         uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
       - name: Sign release archives (cosign keyless)
-        env:
-          COSIGN_EXPERIMENTAL: '1'
         run: |
           set -euo pipefail
           for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz checksums.txt; do

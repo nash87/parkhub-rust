@@ -738,8 +738,6 @@ jobs:
         # open an empty path and exits 1 ("create bundle file: open :
         # no such file or directory"). Pin --bundle explicitly so the
         # new-bundle-format file is named alongside .sig/.pem.
-        env:
-          COSIGN_EXPERIMENTAL: '1'
         run: |
           set -euo pipefail
           for f in parkhub-linux-x64.tar.gz parkhub-linux-arm64.tar.gz parkhub-macos-universal.tar.gz parkhub-windows-x64.zip checksums.txt; do
