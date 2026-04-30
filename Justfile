@@ -123,7 +123,7 @@ types-drift:
 # ---------------------------------------------------------------------------
 [doc("preview the next release — version surfaces + changelog dry-run")]
 release-preview:
-    @echo "Cargo version: $(grep '^version' Cargo.toml | head -1 | cut -d'\"' -f2)"
+    @echo "Cargo version: $(awk -F'\"' '/^version[[:space:]]*=/ { print $2; exit }' Cargo.toml)"
     @echo "package.json: $(jq -r .version package.json)"
     @echo "parkhub-web: $(jq -r .version parkhub-web/package.json)"
     @echo "Last tag: $(git describe --tags --abbrev=0)"
