@@ -52,12 +52,13 @@ jobs:
           GH_TOKEN: ${{ secrets.PARKHUB_CHANGELOG_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "::error::Configure PARKHUB_CHANGELOG_TOKEN with contents:write and pull-requests:write so generated changelog PRs trigger normal PR CI."
-            exit 1
-          fi
           if git diff --quiet CHANGELOG.md; then
             echo "CHANGELOG.md unchanged — skipping commit."
+            exit 0
+          fi
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::CHANGELOG.md changed, but PARKHUB_CHANGELOG_TOKEN is not configured. Skipping changelog PR creation so main stays green; configure a repo secret with contents:write and pull-requests:write to enable automated changelog PRs that trigger normal PR CI."
+            git diff -- CHANGELOG.md
             exit 0
           fi
           if [ "${GITHUB_REF_TYPE}" = "branch" ] && [ "${GITHUB_REF_NAME}" = "main" ]; then
