@@ -226,7 +226,7 @@ fi
 # actionlint (MIT) is the primary workflow linter. We deliberately skip
 # yamllint (GPL-3.0) to keep the local gate strictly within Florian's
 # commercial-license-safe set (MIT/Apache-2.0/BSD/ISC).
-run_if_available actionlint "workflow lint (actionlint)" actionlint .github/workflows
+run_if_available actionlint "workflow lint (actionlint)" bash -euo pipefail -c "find .github/workflows -maxdepth 1 -type f \\( -name '*.yml' -o -name '*.yaml' \\) -print0 | xargs -0 actionlint"
 run_if_available helm "helm chart render" bash -euo pipefail -c "if [[ -d helm ]]; then for chart in helm/*/Chart.yaml; do [[ -f \"\$chart\" ]] || continue; chartdir=\"\$(dirname \"\$chart\")\"; helm lint \"\$chartdir\" && helm template parkhub \"\$chartdir\" >/dev/null; done; else echo 'no helm/ directory; skipping'; fi"
 run_if_available docker "docker compose config" bash -euo pipefail -c "if [[ -f docker-compose.yml ]]; then docker compose -f docker-compose.yml config -q; else echo 'no docker-compose.yml; skipping'; fi"
 

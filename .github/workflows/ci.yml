@@ -138,17 +138,13 @@ jobs:
                 exit 1
                 ;;
             esac
-            if [[ "${combined}" == "success" ]]; then
-              echo "Combined commit status is success after ${SECONDS}s"
-              exit 0
-            fi
             echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
             sleep "$delay"
           done
-          echo "::warning::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s; treating as advisory because explicit failure/error was not observed."
+          echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
           echo "Run locally:"
           echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
-          exit 0
+          exit 1
 
   cargo-deny:
     name: Cargo Deny
