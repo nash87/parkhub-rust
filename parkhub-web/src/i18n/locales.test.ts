@@ -44,6 +44,22 @@ const REQUIRED_SECTIONS = [
   'app',
 ];
 
+const REQUIRED_HEATMAP_SCALAR_KEYS = [
+  'title',
+  'subtitle',
+  'allLots',
+  'peakHour',
+  'avgOccupancy',
+  'busiestDay',
+  'loadError',
+  'avgBookings',
+  'empty',
+  'low',
+  'medium',
+  'high',
+  'full',
+];
+
 function getTopLevelKeys(locale: { translation: Record<string, unknown> }): string[] {
   return Object.keys(locale.translation);
 }
@@ -59,6 +75,15 @@ function collectValues(obj: unknown, path = ''): { path: string; value: string }
     }
   }
   return results;
+}
+
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (typeof current !== 'object' || current === null || Array.isArray(current)) {
+      return undefined;
+    }
+    return (current as Record<string, unknown>)[key];
+  }, obj);
 }
 
 describe('i18n locales', () => {
@@ -100,6 +125,16 @@ describe('i18n locales', () => {
     it('translation key is an object with content', () => {
       expect(typeof locale.translation).toBe('object');
       expect(Object.keys(locale.translation).length).toBeGreaterThan(0);
+    });
+
+    it('has scalar strings for OccupancyHeatmap translation keys', () => {
+      for (const key of REQUIRED_HEATMAP_SCALAR_KEYS) {
+        const path = `heatmap.${key}`;
+        const value = getNestedValue(locale.translation, path);
+        expect(value, `${code}.${path} should exist`).toBeDefined();
+        expect(typeof value, `${code}.${path} should be a scalar string`).toBe('string');
+        expect(value, `${code}.${path} should not be empty`).not.toBe('');
+      }
     });
   });
 

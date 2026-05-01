@@ -13,7 +13,7 @@ vi.mock('@phosphor-icons/react', () => ({
   CaretRight: (props: any) => <span data-testid="caret-right" {...props} />,
 }));
 
-import { Breadcrumb } from './Breadcrumb';
+import { Breadcrumb, SEGMENT_LABELS } from './Breadcrumb';
 
 describe('Breadcrumb', () => {
   it('renders nothing on root path', () => {
@@ -34,6 +34,31 @@ describe('Breadcrumb', () => {
     expect(screen.getByText('nav.dashboard')).toBeInTheDocument();
     expect(screen.getByText('nav.admin')).toBeInTheDocument();
     expect(screen.getByText('admin.users')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['tenants', 'admin.tenants'],
+    ['fleet', 'admin.fleet'],
+    ['accessible', 'admin.accessible'],
+    ['maintenance', 'admin.maintenance'],
+    ['billing', 'admin.billing'],
+    ['visitors', 'admin.visitors'],
+    ['plugins', 'admin.plugins'],
+    ['compliance', 'compliance.title'],
+    ['sso', 'admin.sso'],
+    ['heatmap', 'heatmap.title'],
+  ])('maps /admin/%s to a scalar breadcrumb key', (segment, labelKey) => {
+    expect(SEGMENT_LABELS[segment]).toBe(labelKey);
+    expect(SEGMENT_LABELS[segment]).not.toBe(segment);
+
+    render(
+      <MemoryRouter initialEntries={[`/admin/${segment}`]}>
+        <Breadcrumb />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(labelKey)).toBeInTheDocument();
+    expect(screen.queryByText(segment)).not.toBeInTheDocument();
   });
 
   it('marks the last crumb with aria-current=page', () => {
