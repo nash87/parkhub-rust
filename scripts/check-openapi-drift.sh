@@ -65,6 +65,7 @@ mkdir -p parkhub-web/dist
     > parkhub-web/dist/index.html
 
 echo "openapi-drift: building parkhub-server (debug, headless+full)..." >&2
+TARGET_DIR="$(cargo metadata --locked --format-version 1 --no-deps | jq -er '.target_directory')"
 # Debug build is faster than release for local checks; spec output is
 # identical because utoipa derives are compile-time.
 cargo build \
@@ -74,7 +75,7 @@ cargo build \
     --features 'full,headless' \
     >&2
 
-BIN="$REPO_ROOT/target/debug/parkhub-server"
+BIN="$TARGET_DIR/debug/parkhub-server"
 if [[ ! -x "$BIN" ]]; then
     echo "openapi-drift: built binary not found at $BIN" >&2
     exit 1
@@ -119,8 +120,9 @@ if ! git diff --no-index --exit-code "$COMMITTED_SPEC" "$LIVE_SPEC"; then
 Regenerate locally:
 
     # In one terminal:
-    cargo run --no-default-features --features 'full,headless' \\
-        -p parkhub-server -- --headless --port 18181
+    fop build --backend local . --preset custom -- \\
+        cargo run --no-default-features --features 'full,headless' \\
+            -p parkhub-server -- --headless --port 18181
 
     # In another terminal:
     ./scripts/dump-openapi.sh 18181
