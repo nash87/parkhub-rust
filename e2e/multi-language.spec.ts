@@ -1,19 +1,19 @@
 import { test, expect } from '@playwright/test';
-import { loginViaUi, loginViaApi, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginViaUi, loginViaApi, DEMO_ADMIN } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8081';
 
 test.describe('i18n — Multi-Language Support', () => {
   test.describe('Language Switching (UI)', () => {
     test('app loads in English by default', async ({ page }) => {
-      await page.goto('/login');
+      await gotoAppPage(page, '/login');
       await page.waitForLoadState('domcontentloaded');
       // Login page should contain English text
       await expect(page.locator('body')).toContainText(/sign in|log in|login|email|password/i);
     });
 
     test('switch language to German and verify UI text', async ({ page }) => {
-      await page.goto('/welcome');
+      await gotoAppPage(page, '/welcome');
       await page.waitForLoadState('domcontentloaded');
 
       // Look for language selector (dropdown, buttons, or select)
@@ -42,7 +42,7 @@ test.describe('i18n — Multi-Language Support', () => {
     });
 
     test('switch language to French and verify UI text', async ({ page }) => {
-      await page.goto('/welcome');
+      await gotoAppPage(page, '/welcome');
       await page.waitForLoadState('domcontentloaded');
 
       const langSelector = page.locator(
@@ -68,7 +68,7 @@ test.describe('i18n — Multi-Language Support', () => {
     });
 
     test('language persists across page navigation', async ({ page }) => {
-      await page.goto('/welcome');
+      await gotoAppPage(page, '/welcome');
       await page.waitForLoadState('domcontentloaded');
 
       // Set language via localStorage directly (i18next stores language there)
@@ -77,7 +77,7 @@ test.describe('i18n — Multi-Language Support', () => {
       });
 
       // Navigate to login page
-      await page.goto('/login');
+      await gotoAppPage(page, '/login');
       await page.waitForLoadState('domcontentloaded');
 
       // Check that localStorage still holds German
@@ -85,7 +85,7 @@ test.describe('i18n — Multi-Language Support', () => {
       expect(lang).toBe('de');
 
       // Navigate to another page
-      await page.goto('/register');
+      await gotoAppPage(page, '/register');
       await page.waitForLoadState('domcontentloaded');
 
       const langAfter = await page.evaluate(() => localStorage.getItem('i18nextLng'));
@@ -139,7 +139,7 @@ test.describe('i18n — Multi-Language Support', () => {
           localStorage.setItem('i18nextLng', lang);
         }, locale);
 
-        await page.goto('/login');
+        await gotoAppPage(page, '/login');
         await page.waitForLoadState('domcontentloaded');
 
         // Page should not show i18n key fallbacks (e.g. "auth.login" instead of "Login")

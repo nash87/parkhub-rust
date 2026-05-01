@@ -1,4 +1,4 @@
-import { type Page, type APIRequestContext } from '@playwright/test';
+import { type Page, type APIRequestContext, type Response } from '@playwright/test';
 
 /** Demo credentials used across all E2E tests. */
 export const DEMO_ADMIN = {
@@ -16,9 +16,26 @@ export async function loginViaApi(request: APIRequestContext): Promise<string> {
   return body.data?.tokens?.access_token ?? body.data?.token ?? body.token ?? '';
 }
 
+/**
+ * Navigate inside the app using the readiness signal that matches this SPA.
+ *
+ * Playwright's default page.goto() waits for the window "load" event. WebKit
+ * mobile emulation can intermittently miss that signal on the React/PWA shell
+ * while the DOM is already ready and usable, which turns healthy pages into
+ * 30s navigation timeouts. DOMContentLoaded is the stable boundary the E2E
+ * suite already asserts after navigation.
+ */
+export async function gotoAppPage(
+  page: Page,
+  url: string,
+  options: Parameters<Page['goto']>[1] = {},
+): Promise<Response | null> {
+  return page.goto(url, { waitUntil: 'domcontentloaded', ...options });
+}
+
 /** Log in through the UI login form. */
 export async function loginViaUi(page: Page): Promise<void> {
-  await page.goto('/login');
+  await gotoAppPage(page, '/login');
   // Try username field first (Rust), then email field (PHP)
   const usernameField = page.locator('input[name="username"], input[type="email"], input[name="email"]').first();
   await usernameField.fill(DEMO_ADMIN.username);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaUi } from './helpers';
+import { gotoAppPage, loginViaUi } from './helpers';
 
 /**
  * Visual regression suite — T-1770.
@@ -85,7 +85,7 @@ for (const viewport of VIEWPORTS) {
             });
           }
 
-          await page.goto(surface.path, { waitUntil: 'domcontentloaded' });
+          await gotoAppPage(page, surface.path, { waitUntil: 'domcontentloaded' });
 
           if (theme === 'dark') {
             await page.evaluate(() => {

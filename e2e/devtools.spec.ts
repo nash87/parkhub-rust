@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaUi, PUBLIC_ROUTES, PROTECTED_ROUTES, MOBILE_DEVICES } from './helpers';
+import { gotoAppPage, loginViaUi, PUBLIC_ROUTES, PROTECTED_ROUTES, MOBILE_DEVICES } from './helpers';
 
 /**
  * Chromium emits `console.error("Failed to load resource: ...")` for every
@@ -34,7 +34,7 @@ test.describe('DevTools — Console Errors', () => {
     });
 
     for (const route of PUBLIC_ROUTES) {
-      await page.goto(route);
+      await gotoAppPage(page, route);
       await page.waitForLoadState('domcontentloaded');
     }
 
@@ -51,7 +51,7 @@ test.describe('DevTools — Console Errors', () => {
     await loginViaUi(page);
 
     for (const route of PROTECTED_ROUTES) {
-      await page.goto(route);
+      await gotoAppPage(page, route);
       await page.waitForLoadState('domcontentloaded');
     }
 
@@ -76,7 +76,7 @@ test.describe('DevTools — Network', () => {
     await loginViaUi(page);
 
     for (const route of [...PUBLIC_ROUTES, ...PROTECTED_ROUTES]) {
-      await page.goto(route);
+      await gotoAppPage(page, route);
       await page.waitForLoadState('domcontentloaded');
     }
 
@@ -94,7 +94,7 @@ test.describe('DevTools — Network', () => {
     });
 
     await loginViaUi(page);
-    await page.goto('/');
+    await gotoAppPage(page, '/');
     await page.waitForLoadState('domcontentloaded');
 
     expect(missing).toEqual([]);
@@ -108,7 +108,7 @@ test.describe('DevTools — Network', () => {
 test.describe('DevTools — Performance', () => {
   test('LCP < 4s on dashboard', async ({ page }) => {
     await loginViaUi(page);
-    await page.goto('/');
+    await gotoAppPage(page, '/');
 
     const lcp = await page.evaluate(() => {
       return new Promise<number>((resolve) => {
@@ -129,7 +129,7 @@ test.describe('DevTools — Performance', () => {
   });
 
   test('FCP < 3s on login page', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     await page.waitForLoadState('domcontentloaded');
 
     const fcp = await page.evaluate(() => {
@@ -144,7 +144,7 @@ test.describe('DevTools — Performance', () => {
 
   test('DOM nodes < 3000 on dashboard', async ({ page }) => {
     await loginViaUi(page);
-    await page.goto('/');
+    await gotoAppPage(page, '/');
     await page.waitForLoadState('domcontentloaded');
 
     const nodeCount = await page.evaluate(() => document.querySelectorAll('*').length);
@@ -162,7 +162,7 @@ test.describe('DevTools — Performance', () => {
       }
     });
 
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     await page.waitForLoadState('domcontentloaded');
 
     expect(totalBytes).toBeLessThan(5 * 1024 * 1024);
@@ -175,13 +175,13 @@ test.describe('DevTools — Performance', () => {
 
 test.describe('DevTools — Accessibility', () => {
   test('html has lang attribute', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     const lang = await page.locator('html').getAttribute('lang');
     expect(lang).toBeTruthy();
   });
 
   test('all img tags have alt text on login page', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     const images = page.locator('img');
     const count = await images.count();
     for (let i = 0; i < count; i++) {
@@ -191,7 +191,7 @@ test.describe('DevTools — Accessibility', () => {
   });
 
   test('all buttons have accessible names on login page', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     const buttons = page.locator('button');
     const count = await buttons.count();
     for (let i = 0; i < count; i++) {
@@ -206,7 +206,7 @@ test.describe('DevTools — Accessibility', () => {
 
   test('heading hierarchy — no skipped levels', async ({ page }) => {
     await loginViaUi(page);
-    await page.goto('/');
+    await gotoAppPage(page, '/');
     await page.waitForLoadState('domcontentloaded');
 
     // Ignore visually hidden headings (used for screen-reader landmarks).
@@ -248,7 +248,7 @@ test.describe('DevTools — Accessibility', () => {
 
 test.describe('DevTools — Axe Accessibility Audit', () => {
   test('login page passes axe-core checks', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
 
     // Wait for React hydration + web fonts before running axe.
     // Without this the first run regularly reports a flaky
@@ -294,7 +294,7 @@ test.describe('DevTools — Mobile Responsive', () => {
   for (const device of MOBILE_DEVICES) {
     test(`renders on ${device.name} (${device.width}x${device.height})`, async ({ page }) => {
       await page.setViewportSize({ width: device.width, height: device.height });
-      await page.goto('/login');
+      await gotoAppPage(page, '/login');
       await page.waitForLoadState('domcontentloaded');
 
       // Page should not have horizontal overflow
@@ -341,7 +341,7 @@ test.describe('DevTools — Security Headers', () => {
 
 test.describe('DevTools — Interactions', () => {
   test('login form is submittable', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await gotoAppPage(page, '/login', { waitUntil: 'domcontentloaded' });
     // `getByLabel(/password/i)` also matches the "Forgot password?" link,
     // which isn't a form control — use the actual input selector.
     const emailInput = page.getByLabel(/email/i).first();
@@ -367,7 +367,7 @@ test.describe('DevTools — Interactions', () => {
 
   test('theme switcher opens and toggles', async ({ page }) => {
     await loginViaUi(page);
-    await page.goto('/profile');
+    await gotoAppPage(page, '/profile');
 
     // Look for theme toggle / dark mode switch
     const themeBtn = page.locator(

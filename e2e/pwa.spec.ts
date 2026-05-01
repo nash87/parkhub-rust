@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { gotoAppPage } from './helpers';
 
 test.describe('PWA — Progressive Web App', () => {
   test('manifest.json exists and is valid', async ({ request }) => {
@@ -16,7 +17,7 @@ test.describe('PWA — Progressive Web App', () => {
   });
 
   test('service worker registered', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     await page.waitForLoadState('domcontentloaded');
 
     // Check if SW is registered via the page
@@ -31,7 +32,7 @@ test.describe('PWA — Progressive Web App', () => {
   });
 
   test('apple-touch-icon present', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     const icon = page.locator('link[rel="apple-touch-icon"]');
     const count = await icon.count();
     // PWA should have apple-touch-icon
@@ -42,7 +43,7 @@ test.describe('PWA — Progressive Web App', () => {
   });
 
   test('theme-color meta tag present', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     const themeMeta = page.locator('meta[name="theme-color"]');
     const count = await themeMeta.count();
     if (count > 0) {
@@ -52,7 +53,7 @@ test.describe('PWA — Progressive Web App', () => {
   });
 
   test('viewport meta with proper settings', async ({ page }) => {
-    await page.goto('/login');
+    await gotoAppPage(page, '/login');
     const viewport = page.locator('meta[name="viewport"]');
     const content = await viewport.getAttribute('content');
     expect(content).toBeTruthy();
