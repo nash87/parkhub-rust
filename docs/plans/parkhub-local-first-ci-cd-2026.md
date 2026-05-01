@@ -27,7 +27,7 @@ Refactor ParkHub CI/CD so fop local verification is the primary PR gate, GitHub 
 
 - Local command `.github/scripts/fop-local-ci.sh --profile pr` runs the PR gate through fop.
 - Local command can publish the commit status context `fop/local-ci/pr`.
-- GitHub PR CI requires that attestation and only runs lightweight remote checks by default.
+- GitHub PR CI fails closed for same-repo human PRs until the explicit `fop/local-ci/pr` status is `success`; combined-status success is not accepted as a substitute.
 - Heavy CI and CodeQL jobs still run on `main`, by manual dispatch/schedule, or on PRs labeled `github-ci-full`.
 - CD stays release/GitOps-oriented and is not coupled to every PR push.
 
@@ -68,3 +68,4 @@ Rollback is restoring PR triggers and removing `local-ci-attestation` from `ci.y
 ## Notes
 
 - Based on current GitHub Actions primitives: workflow concurrency, reusable/lightweight workflows, and required checks remain the correct remote-side controls.
+- 2026-05-01 hardening: the `local-ci-attestation` job no longer passes on timeout or combined commit-status success. It only passes after observing the explicit `fop/local-ci/pr` status.
