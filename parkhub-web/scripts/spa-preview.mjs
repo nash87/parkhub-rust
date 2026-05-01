@@ -35,7 +35,7 @@ const DEFAULT_HEADERS = {
 
 const HTML_HEADERS = {
   ...DEFAULT_HEADERS,
-  'content-security-policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; base-uri 'self'; form-action 'self';",
+  'content-security-policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; font-src 'self' data:; connect-src 'self' ws: wss:; base-uri 'self'; form-action 'self';",
 };
 
 function send(res, statusCode, body, contentType = 'text/plain; charset=utf-8', headers = DEFAULT_HEADERS) {
