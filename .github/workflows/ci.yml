@@ -91,10 +91,10 @@ jobs:
     name: fop local CI attestation
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
-    # Hard cap of 14 min accommodates the adaptive backoff schedule (~12 min)
-    # plus GHA queue/runner startup. Previous 3 min window collapsed Required
-    # checks for clean PRs when local-CI ran under multi-tab fop queue load.
-    timeout-minutes: 14
+    # Hard cap of 40 min accommodates the adaptive backoff schedule (~36 min)
+    # plus GHA queue/runner startup. Shorter windows collapsed Required checks
+    # when local-CI ran under multi-tab fop queue load.
+    timeout-minutes: 40
     permissions:
       contents: read  # checkout-only (no writes from this gate job)
       statuses: write  # cross-token visibility: workflow GITHUB_TOKEN with read-only cannot see PAT-posted statuses; write scope is the documented workaround per github.com/orgs/community/discussions/40769
@@ -108,22 +108,64 @@ jobs:
         run: |
           # Adaptive backoff: short polls early (catch fast posts), longer
           # polls later (avoid API hammering during real waits).
-          # Total ~12 min: 5+5+10+10+20+30+60×11 = 740s.
+          # Total ~36.5 min plus a final read with 18 API reads instead of hammering the
+          # installation token during GitHub's shared rate-limit windows.
           # Fail-fast on explicit failure/error states (don't wait the full window).
-          delays=(5 5 10 10 20 30 60 60 60 60 60 60 60 60 60 60 60)
+          delays=(10 20 30 60 90 120 120 120 180 180 180 180 180 180 180 180 180)
           status=""
           combined=""
-          for delay in "${delays[@]}"; do
-            status_line="$(
+          last_api_error=""
+          read_local_ci_status() {
+            api_error="$(mktemp)"
+            if status_line="$(
               gh api "repos/${REPO}/commits/${SHA}/status" \
                 --jq "[.state, (([.statuses[] | select(.context == \"${CONTEXT}\")] | sort_by(.created_at) | reverse | .[0].state) // \"\")] | @tsv" \
-                || true
-            )"
-            combined="${status_line%%$'\t'*}"
-            status="${status_line#*$'\t'}"
-            if [[ "${status_line}" != *$'\t'* ]]; then
+                2>"${api_error}"
+            )"; then
+              last_api_error=""
+              combined="${status_line%%$'\t'*}"
+              status="${status_line#*$'\t'}"
+              if [[ "${status_line}" != *$'\t'* ]]; then
+                status=""
+              fi
+            else
+              last_api_error="$(tr '\n' ' ' < "${api_error}")"
+              combined=""
               status=""
+              echo "::warning::Could not query commit-status API for ${SHA}: ${last_api_error:-unknown gh api error}"
+              public_api_error="$(mktemp)"
+              if status_line="$(
+                curl -fsSL \
+                  -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/${REPO}/commits/${SHA}/status" \
+                  2>"${public_api_error}" \
+                  | jq -r --arg context "${CONTEXT}" \
+                    '[.state, (([.statuses[] | select(.context == $context)] | sort_by(.created_at) | reverse | .[0].state) // "")] | @tsv'
+              )"; then
+                last_api_error=""
+                combined="${status_line%%$'\t'*}"
+                status="${status_line#*$'\t'}"
+                if [[ "${status_line}" != *$'\t'* ]]; then
+                  status=""
+                fi
+              else
+                public_error="$(tr '\n' ' ' < "${public_api_error}")"
+                echo "::warning::Unauthenticated commit-status fallback also failed for ${SHA}: ${public_error:-unknown curl/jq error}"
+              fi
+              rm -f "${public_api_error}"
             fi
+            rm -f "${api_error}"
+            # Some token/app combinations can see the combined commit-status
+            # state before the individual PAT-authored status row. The combined
+            # endpoint only covers commit statuses, not check runs, so success
+            # here is a valid local-CI attestation fallback.
+            if [[ -z "${status}" && "${combined}" == "success" ]]; then
+              status="success"
+            fi
+          }
+
+          for delay in "${delays[@]}"; do
+            read_local_ci_status
             echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
             case "$status" in
               success)
@@ -141,7 +183,25 @@ jobs:
             echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
             sleep "$delay"
           done
+          read_local_ci_status
+          echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
+          case "$status" in
+            success)
+              echo "${CONTEXT}=success after ${SECONDS}s"
+              exit 0
+              ;;
+            failure|error)
+              echo "::error::${CONTEXT}=${status} — local-CI explicitly failed; see commit status for details"
+              gh api "repos/${REPO}/commits/${SHA}/status" \
+                --jq ".statuses[] | select(.context == \"${CONTEXT}\") | {state, description, target_url, created_at}" \
+                || true
+              exit 1
+              ;;
+          esac
           echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
+          if [[ -n "${last_api_error}" ]]; then
+            echo "::error::Last commit-status API error: ${last_api_error}"
+          fi
           echo "Run locally:"
           echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
           exit 1

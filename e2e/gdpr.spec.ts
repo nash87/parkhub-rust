@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaApi } from './helpers';
+import { gotoAppPage, loginViaApi, waitForAppDomReady } from './helpers';
 
 test.describe('GDPR — Data Privacy Compliance', () => {
   let token: string;
@@ -38,8 +38,8 @@ test.describe('GDPR — Data Privacy Compliance', () => {
 
   test('privacy/legal content served', async ({ page }) => {
     // Check if /legal or /privacy routes exist in frontend, or if impressum API works
-    await page.goto('/login');
-    await page.waitForLoadState('domcontentloaded');
+    await gotoAppPage(page, '/login');
+    await waitForAppDomReady(page);
 
     // Look for legal/privacy links on login page
     const legalLinks = page.locator(

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaApi, loginViaUi, DEMO_ADMIN, ADMIN_ROUTES, ADMIN_API_ENDPOINTS } from './helpers';
+import { gotoAppPage, loginViaApi, loginViaUi, DEMO_ADMIN, ADMIN_ROUTES, ADMIN_API_ENDPOINTS } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
@@ -36,7 +36,7 @@ test.describe('Security — Access Control & Hardening', () => {
         // waitForLoadState('domcontentloaded') fires before the <Navigate>
         // redirect lands. Wait for the redirect (or an explicit 403 body)
         // instead of reading the URL too early.
-        await page.goto(route);
+        await gotoAppPage(page, route);
 
         await page
           .waitForFunction(

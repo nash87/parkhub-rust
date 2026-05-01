@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
         'admin.translations': 'Translations',
         'admin.rateLimits': 'Rate Limits',
         'admin.tenants': 'Tenants',
+        'admin.modules.title': 'Modules & Features',
       };
       return map[key] ?? fallback ?? key;
     },
@@ -129,5 +130,11 @@ describe('AdminPage', () => {
   it('renders the outlet for child routes', () => {
     render(<AdminPage />);
     expect(screen.getByTestId('outlet')).toBeInTheDocument();
+  });
+
+  it('does not render nested i18n object errors for the modules nav item', () => {
+    render(<AdminPage />);
+    expect(screen.queryByText(/returned an object instead of string/i)).toBeNull();
+    expect(screen.getAllByRole('link', { name: /^Modules & Features$/ }).length).toBeGreaterThan(0);
   });
 });

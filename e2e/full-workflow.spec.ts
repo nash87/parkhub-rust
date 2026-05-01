@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type APIResponse } from '@playwright/test';
-import { loginViaApi, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginViaApi, waitForAppDomReady, DEMO_ADMIN } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
@@ -448,12 +448,12 @@ test.describe('Full Admin Workflow', () => {
 
 test.describe('Theme UI Switching (Browser)', () => {
   test('theme switcher FAB is visible after login', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await gotoAppPage(page, '/login');
     await page.getByLabel(/email/i).first().fill(DEMO_ADMIN.email);
     await page.locator('input[type="password"]').first().fill(DEMO_ADMIN.password);
     await page.getByRole('button', { name: /sign in|log in|login/i }).click();
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Locating the theme switcher is best-effort — it may be behind a menu
     // or hidden on narrow viewports. Just assert the query doesn't throw.

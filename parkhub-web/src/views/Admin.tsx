@@ -90,7 +90,7 @@ function useAdminSections(): NavSection[] {
       label: t('admin.group.platform', 'Platform'),
       items: [
         { key: 'settings', label: t('admin.settings', 'Settings'), to: '/admin/settings', icon: GearSix },
-        { key: 'modules', label: t('admin.modules', 'Modules & Features'), to: '/admin/modules', icon: PuzzlePiece },
+        { key: 'modules', label: t('admin.modules.title', 'Modules & Features'), to: '/admin/modules', icon: PuzzlePiece },
         { key: 'plugins', label: t('admin.plugins', 'Plugins'), to: '/admin/plugins', icon: PuzzlePiece },
         { key: 'updates', label: t('nav.updates', 'Updates'), to: '/admin/updates', icon: ArrowsClockwise },
         { key: 'graphql', label: 'GraphQL Playground', to: '/api/v1/graphql/playground', icon: GraphicsCard, external: true },

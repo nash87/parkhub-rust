@@ -1,16 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { loginViaUi } from './helpers';
+import { gotoAppPage, loginViaUi, waitForAppDomReady } from './helpers';
 
 test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('offline indicator shown when network is lost', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Go offline by aborting all network requests
     await context.route('**/*', (route) => route.abort('internetdisconnected'));
 
     // Trigger a navigation or action to detect offline state
-    await page.goto('/bookings').catch(() => {
+    await gotoAppPage(page, '/bookings').catch(() => {
       // Expected to fail while offline
     });
 
@@ -44,8 +44,8 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
   test('graceful error when creating booking while offline', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.goto('/book');
-    await page.waitForLoadState('domcontentloaded');
+    await gotoAppPage(page, '/book');
+    await waitForAppDomReady(page);
 
     // Go offline
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -80,7 +80,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
   test('reconnection restores functionality', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Go offline
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -90,7 +90,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
     await context.unrouteAll({ behavior: 'wait' });
 
     // Navigate to a page that fetches data
-    await page.goto('/');
+    await gotoAppPage(page, '/');
 
     // Wait for the authenticated React shell to actually render content
     // after hydration + the first API round-trip. A bare `domcontentloaded`
@@ -117,8 +117,8 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
       return;
     }
 
-    await page.goto('/login');
-    await page.waitForLoadState('domcontentloaded');
+    await gotoAppPage(page, '/login');
+    await waitForAppDomReady(page);
 
     // Check if service worker is registered
     const swRegistered = await page.evaluate(async () => {
@@ -140,8 +140,8 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
   test('pages still load from cache when offline', async ({ page, context }) => {
     // First visit to populate cache
-    await page.goto('/login');
-    await page.waitForLoadState('domcontentloaded');
+    await gotoAppPage(page, '/login');
+    await waitForAppDomReady(page);
 
     // Go offline (block only API, allow cached static assets through SW)
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -150,7 +150,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
     // net::ERR_INTERNET_DISCONNECTED if the SW doesn't intercept — the
     // guarantee we care about is that the page either renders something
     // cached or the error is propagated without crashing the test.
-    await page.goto('/login').catch(() => {});
+    await gotoAppPage(page, '/login').catch(() => {});
 
     const bodyText = (await page.locator('body').textContent()) ?? '';
     expect(bodyText).toBeDefined();

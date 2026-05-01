@@ -13,10 +13,10 @@ profile. The GitHub PR attestation gate expects this exact command:
 
 Profiles:
   pr    Fast PR gate: format, Rust headless checks, frontend tests/build,
-        TypeScript typecheck, generated type drift. Diff-aware: skips
-        Rust steps if no .rs/Cargo.{toml,lock} touched, skips frontend
-        if no parkhub-web/ touched. Set FOP_LOCAL_CI_NO_DIFF_AWARE=1
-        to force every step.
+        TypeScript typecheck, generated type drift, and Playwright spec
+        compile when E2E files change. Diff-aware: skips Rust steps if no
+        .rs/Cargo.{toml,lock} touched, skips frontend if no parkhub-web/
+        touched. Set FOP_LOCAL_CI_NO_DIFF_AWARE=1 to force every step.
   full  PR gate plus OpenAPI drift and Playwright smoke/e2e (always full).
   cd    Release-oriented build and supply-chain preflight (always full).
 
@@ -98,6 +98,7 @@ diff_touch_frontend=0
 diff_touch_ts_export=0
 diff_touch_workflows=0
 diff_touch_php=0
+diff_touch_e2e=0
 
 compute_diff_paths() {
   if [[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] || [[ "$profile" != "pr" ]]; then
@@ -106,6 +107,7 @@ compute_diff_paths() {
     diff_touch_ts_export=1
     diff_touch_workflows=1
     diff_touch_php=1
+    diff_touch_e2e=1
     return 0
   fi
 
@@ -124,6 +126,7 @@ compute_diff_paths() {
     diff_touch_ts_export=1
     diff_touch_workflows=1
     diff_touch_php=1
+    diff_touch_e2e=1
     return 0
   fi
 
@@ -157,10 +160,13 @@ compute_diff_paths() {
   if grep -qE '\.php$|^composer\.(json|lock)$' <<<"$diff_paths"; then
     diff_touch_php=1
   fi
+  if grep -qE '^e2e/|^playwright\.config\.(ts|js|mjs|cjs)$' <<<"$diff_paths"; then
+    diff_touch_e2e=1
+  fi
 
-  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d (%d files)\n' \
+  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d (%d files)\n' \
     "$base_ref" "$diff_touch_rust" "$diff_touch_frontend" "$diff_touch_ts_export" \
-    "$diff_touch_workflows" "$diff_touch_php" "$(wc -l <<<"$diff_paths")"
+    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$(wc -l <<<"$diff_paths")"
 }
 
 # ─── pre-push hook result re-use (opt-in via FOP_LOCAL_CI_REUSE_PREPUSH=1) ───
@@ -231,8 +237,8 @@ post_commit_status() {
 
   # Tolerate "No commit found for SHA" (HTTP 422) — happens when this
   # script runs from the pre-push hook BEFORE the commit has reached
-  # GitHub. The local-ci-attestation gate's 12-min timeout fallback
-  # then exits 0 advisory once the SHA appears on GitHub.
+  # GitHub. The local-ci-attestation gate's extended polling window then
+  # handles the missing status once the SHA appears on GitHub.
   # gh emits both the JSON body and the "(HTTP 422)" line on stdout
   # (not stderr) so we capture combined stdout for the match.
   local out
@@ -271,7 +277,8 @@ write_report() {
     "frontend": $([[ $diff_touch_frontend == 1 ]] && echo true || echo false),
     "ts_export": $([[ $diff_touch_ts_export == 1 ]] && echo true || echo false),
     "workflows": $([[ $diff_touch_workflows == 1 ]] && echo true || echo false),
-    "php": $([[ $diff_touch_php == 1 ]] && echo true || echo false)
+    "php": $([[ $diff_touch_php == 1 ]] && echo true || echo false),
+    "e2e": $([[ $diff_touch_e2e == 1 ]] && echo true || echo false)
   },
   "prepush_reused": $([[ $prepush_validated == 1 ]] && echo true || echo false),
   "memory_available_gb": $mem_avail_gb
@@ -387,6 +394,13 @@ else
   skip_step "frontend test and build" "diff-aware: parkhub-web/ untouched"
 fi
 
+# ─── Stage 4b: Playwright specs (compile-only when E2E harness changed) ─────
+if (( diff_touch_e2e )); then
+  run_step "playwright spec list" "CI=true npx playwright test --list"
+else
+  skip_step "playwright spec list" "diff-aware: e2e/ untouched"
+fi
+
 # ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───
 if (( diff_touch_ts_export )); then
   run_step_heavy "typescript bindings drift" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"\$(git status --porcelain parkhub-web/src/generated/)\""
@@ -396,8 +410,8 @@ fi
 
 # ─── Stage 6: full profile extras (always full when invoked) ─────────────────
 if [[ "$profile" == "full" ]]; then
-  run_step_heavy "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { ./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
-  run_step_heavy "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true ./target/release/parkhub-server --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
+  run_step_heavy "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { \"\$server_bin\" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
+  run_step_heavy "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true \"\$server_bin\" --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
 fi
 
 # ─── Stage 7: cd profile extras ──────────────────────────────────────────────

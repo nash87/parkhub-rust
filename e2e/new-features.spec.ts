@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaApi, loginViaUi, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginBrowserViaApi, loginViaApi } from './helpers';
 
 // ═══════════════════════════════════════════════════════════════════
 // QR Check-In / Check-Out
@@ -7,8 +7,8 @@ import { loginViaApi, loginViaUi, DEMO_ADMIN } from './helpers';
 
 test.describe('QR Check-In/Out', () => {
   test('check-in page loads after login', async ({ page }) => {
-    await loginViaUi(page);
-    await page.goto('/checkin');
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/checkin');
     await expect(page.locator('body')).toContainText(/check.?in|qr|scan/i);
   });
 
@@ -49,8 +49,8 @@ test.describe('QR Check-In/Out', () => {
 
 test.describe('Swap Requests', () => {
   test('swap requests page loads after login', async ({ page }) => {
-    await loginViaUi(page);
-    await page.goto('/swap-requests');
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/swap-requests');
     await expect(page.locator('body')).toContainText(/swap/i);
   });
 
@@ -73,8 +73,8 @@ test.describe('Swap Requests', () => {
 
 test.describe('Guest Parking Pass', () => {
   test('guest pass page loads after login', async ({ page }) => {
-    await loginViaUi(page);
-    await page.goto('/guest-pass');
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/guest-pass');
     await expect(page.locator('body')).toContainText(/guest|visitor/i);
   });
 
@@ -126,8 +126,8 @@ test.describe('Guest Parking Pass', () => {
 
 test.describe('Occupancy Heatmap', () => {
   test('heatmap page loads for admin', async ({ page }) => {
-    await loginViaUi(page);
-    await page.goto('/admin/heatmap');
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/admin/heatmap');
     // Should either show heatmap or redirect to admin
     const url = page.url();
     expect(url).toMatch(/\/(admin|heatmap)/);
@@ -244,8 +244,8 @@ test.describe('1-Month Booking Simulation', () => {
 
 test.describe('Team Leaderboard', () => {
   test('leaderboard page loads after login', async ({ page }) => {
-    await loginViaUi(page);
-    await page.goto('/leaderboard');
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/leaderboard');
     await expect(page.locator('body')).toContainText(/leaderboard|ranking|team/i);
   });
 
@@ -265,8 +265,8 @@ test.describe('Team Leaderboard', () => {
 
 test.describe('Occupancy Prediction', () => {
   test('prediction page loads after login', async ({ page }) => {
-    await loginViaUi(page);
-    await page.goto('/predict');
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/predict');
     await expect(page.locator('body')).toContainText(/predict|smart|forecast/i);
   });
 

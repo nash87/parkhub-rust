@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginViaApi, loginViaUi, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginViaApi, loginViaUi, waitForAppDomReady, DEMO_ADMIN } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
@@ -286,36 +286,36 @@ test.describe('Admin CRUD — Complete Lifecycle', () => {
   test.describe('Admin UI Pages', () => {
     test('admin dashboard loads', async ({ page }) => {
       await loginViaUi(page);
-      await page.goto('/admin');
-      await page.waitForLoadState('domcontentloaded');
+      await gotoAppPage(page, '/admin');
+      await waitForAppDomReady(page);
       await expect(page.locator('body')).not.toBeEmpty();
     });
 
     test('admin users page loads', async ({ page }) => {
       await loginViaUi(page);
-      await page.goto('/admin/users');
-      await page.waitForLoadState('domcontentloaded');
+      await gotoAppPage(page, '/admin/users');
+      await waitForAppDomReady(page);
       await expect(page.locator('body')).toContainText(/user|admin|manage/i);
     });
 
     test('admin lots page loads', async ({ page }) => {
       await loginViaUi(page);
-      await page.goto('/admin/lots');
-      await page.waitForLoadState('domcontentloaded');
+      await gotoAppPage(page, '/admin/lots');
+      await waitForAppDomReady(page);
       await expect(page.locator('body')).toContainText(/lot|parking|manage/i);
     });
 
     test('admin settings page loads', async ({ page }) => {
       await loginViaUi(page);
-      await page.goto('/admin/settings');
-      await page.waitForLoadState('domcontentloaded');
+      await gotoAppPage(page, '/admin/settings');
+      await waitForAppDomReady(page);
       await expect(page.locator('body')).toContainText(/setting|config|general/i);
     });
 
     test('admin reports page loads', async ({ page }) => {
       await loginViaUi(page);
-      await page.goto('/admin/reports');
-      await page.waitForLoadState('domcontentloaded');
+      await gotoAppPage(page, '/admin/reports');
+      await waitForAppDomReady(page);
       await expect(page.locator('body')).not.toBeEmpty();
     });
   });

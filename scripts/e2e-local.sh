@@ -13,7 +13,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_PORT="${SERVER_PORT:-8081}"
 WEB_PORT="${WEB_PORT:-4321}"
-SERVER_LOG="${REPO_ROOT}/target/e2e-server.log"
+SERVER_LOG="${SERVER_LOG:-/tmp/parkhub-e2e-server.log}"
+
+cargo_target_dir() {
+  cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory
+}
 
 build_server() {
   if command -v fop >/dev/null 2>&1; then
@@ -34,7 +38,7 @@ build_web() {
   fi
 
   echo "   fop not found; falling back to npm build for local e2e" >&2
-  (cd parkhub-web && VITE_API_URL= npm run build)
+  (cd parkhub-web && VITE_API_URL='' npm run build)
 }
 
 echo "== parkhub-server (release + e2e-bypass) =="
@@ -45,7 +49,8 @@ echo "== start server on :${SERVER_PORT} =="
 export DEMO_MODE=true
 export PARKHUB_ADMIN_PASSWORD=demo
 export PARKHUB_DISABLE_RATE_LIMITS=true
-"${REPO_ROOT}/target/release/parkhub-server" \
+SERVER_BIN="$(cargo_target_dir)/release/parkhub-server"
+"${SERVER_BIN}" \
   --headless --unattended --port "${SERVER_PORT}" > "${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null || true' EXIT

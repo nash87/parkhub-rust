@@ -398,6 +398,16 @@ describe('AdminUpdatesPage', () => {
     });
   });
 
+  it('handles the live Rust flat system version response shape', async () => {
+    (global as any).fetch = mockFetch({
+      version: { name: 'parkhub-server', version: '5.0.8' },
+    });
+    render(<AdminUpdatesPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId('current-version')).toHaveTextContent('5.0.8');
+    });
+  });
+
   it('renders status badges for history entries', async () => {
     render(<AdminUpdatesPage />);
     await waitFor(() => {
