@@ -3,7 +3,7 @@ import { CaretRight } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 /** Map route segments to i18n keys. */
-const SEGMENT_LABELS: Record<string, string> = {
+export const SEGMENT_LABELS: Record<string, string> = {
   '': 'nav.dashboard',
   admin: 'nav.admin',
   users: 'admin.users',
@@ -11,6 +11,27 @@ const SEGMENT_LABELS: Record<string, string> = {
   announcements: 'admin.announcements',
   settings: 'admin.settings',
   reports: 'admin.reports',
+  analytics: 'admin.analytics',
+  'rate-limits': 'admin.rateLimits',
+  tenants: 'admin.tenants',
+  'audit-log': 'admin.auditLog',
+  data: 'admin.dataManagement',
+  fleet: 'admin.fleet',
+  accessible: 'admin.accessible',
+  maintenance: 'admin.maintenance',
+  billing: 'admin.billing',
+  visitors: 'admin.visitors',
+  chargers: 'admin.chargers',
+  widgets: 'widgets.title',
+  modules: 'admin.modules.title',
+  plugins: 'admin.plugins',
+  compliance: 'compliance.title',
+  sso: 'admin.sso',
+  webhooks: 'webhooks.title',
+  roles: 'rbac.title',
+  zones: 'parkingZones.title',
+  updates: 'nav.updates',
+  heatmap: 'heatmap.title',
   bookings: 'nav.bookings',
   vehicles: 'nav.vehicles',
   absences: 'nav.absences',
