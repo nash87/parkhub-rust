@@ -199,8 +199,14 @@ jobs:
         continue-on-error: true
         with:
           # auditor persona surfaces low-severity findings useful for hardening
-          # without flooding the PR with regular-user noise.
+          # without flooding the PR with regular-user noise. Keep this aligned
+          # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
+          # and scoped to workflow manifests so PR audits cannot hang on live
+          # GitHub API checks.
+          inputs: .github/workflows .gitea/workflows
           persona: auditor
+          online-audits: false
+          min-severity: high
 
   cargo-geiger:
     # Unsafe-block SAST for the Rust dep graph. Apache-2.0 OR MIT
