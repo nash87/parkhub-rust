@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage, loginViaUi, loginViaApi, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginViaUi, loginViaApi, waitForAppDomReady, DEMO_ADMIN } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8081';
 
@@ -7,14 +7,14 @@ test.describe('i18n — Multi-Language Support', () => {
   test.describe('Language Switching (UI)', () => {
     test('app loads in English by default', async ({ page }) => {
       await gotoAppPage(page, '/login');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
       // Login page should contain English text
       await expect(page.locator('body')).toContainText(/sign in|log in|login|email|password/i);
     });
 
     test('switch language to German and verify UI text', async ({ page }) => {
       await gotoAppPage(page, '/welcome');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
 
       // Look for language selector (dropdown, buttons, or select)
       const langSelector = page.locator(
@@ -32,7 +32,7 @@ test.describe('i18n — Multi-Language Support', () => {
         const optCount = await germanOption.count();
         if (optCount > 0) {
           await germanOption.first().click();
-          await page.waitForLoadState('domcontentloaded');
+          await waitForAppDomReady(page);
           // Should now show German text
           await expect(page.locator('body')).toContainText(
             /Anmelden|Willkommen|Sprache|Passwort|Benutzername/i
@@ -43,7 +43,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
     test('switch language to French and verify UI text', async ({ page }) => {
       await gotoAppPage(page, '/welcome');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
 
       const langSelector = page.locator(
         '[data-testid*="language"], [data-testid*="lang"], select[name*="lang"], ' +
@@ -59,7 +59,7 @@ test.describe('i18n — Multi-Language Support', () => {
         const optCount = await frenchOption.count();
         if (optCount > 0) {
           await frenchOption.first().click();
-          await page.waitForLoadState('domcontentloaded');
+          await waitForAppDomReady(page);
           await expect(page.locator('body')).toContainText(
             /Connexion|Bienvenue|Langue|Mot de passe/i
           );
@@ -69,7 +69,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
     test('language persists across page navigation', async ({ page }) => {
       await gotoAppPage(page, '/welcome');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
 
       // Set language via localStorage directly (i18next stores language there)
       await page.evaluate(() => {
@@ -78,7 +78,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
       // Navigate to login page
       await gotoAppPage(page, '/login');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
 
       // Check that localStorage still holds German
       const lang = await page.evaluate(() => localStorage.getItem('i18nextLng'));
@@ -86,7 +86,7 @@ test.describe('i18n — Multi-Language Support', () => {
 
       // Navigate to another page
       await gotoAppPage(page, '/register');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
 
       const langAfter = await page.evaluate(() => localStorage.getItem('i18nextLng'));
       expect(langAfter).toBe('de');
@@ -140,7 +140,7 @@ test.describe('i18n — Multi-Language Support', () => {
         }, locale);
 
         await gotoAppPage(page, '/login');
-        await page.waitForLoadState('domcontentloaded');
+        await waitForAppDomReady(page);
 
         // Page should not show i18n key fallbacks (e.g. "auth.login" instead of "Login")
         const bodyText = await page.locator('body').textContent();

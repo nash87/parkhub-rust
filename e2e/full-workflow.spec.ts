@@ -1,5 +1,5 @@
 import { test, expect, type APIRequestContext, type APIResponse } from '@playwright/test';
-import { gotoAppPage, loginViaApi, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginViaApi, waitForAppDomReady, DEMO_ADMIN } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
@@ -453,7 +453,7 @@ test.describe('Theme UI Switching (Browser)', () => {
     await page.locator('input[type="password"]').first().fill(DEMO_ADMIN.password);
     await page.getByRole('button', { name: /sign in|log in|login/i }).click();
     await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 30_000 });
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Locating the theme switcher is best-effort — it may be behind a menu
     // or hidden on narrow viewports. Just assert the query doesn't throw.

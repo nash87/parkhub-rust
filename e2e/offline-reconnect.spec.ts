@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage, loginViaUi } from './helpers';
+import { gotoAppPage, loginViaUi, waitForAppDomReady } from './helpers';
 
 test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('offline indicator shown when network is lost', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Go offline by aborting all network requests
     await context.route('**/*', (route) => route.abort('internetdisconnected'));
@@ -45,7 +45,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('graceful error when creating booking while offline', async ({ page, context }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/book');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Go offline
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -80,7 +80,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
 
   test('reconnection restores functionality', async ({ page, context }) => {
     await loginViaUi(page);
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Go offline
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));
@@ -118,7 +118,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
     }
 
     await gotoAppPage(page, '/login');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Check if service worker is registered
     const swRegistered = await page.evaluate(async () => {
@@ -141,7 +141,7 @@ test.describe('PWA — Offline Resilience & Reconnection', () => {
   test('pages still load from cache when offline', async ({ page, context }) => {
     // First visit to populate cache
     await gotoAppPage(page, '/login');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Go offline (block only API, allow cached static assets through SW)
     await context.route('**/api/**', (route) => route.abort('internetdisconnected'));

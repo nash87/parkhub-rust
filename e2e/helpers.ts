@@ -22,17 +22,23 @@ export async function loginViaApi(request: APIRequestContext): Promise<string> {
  * Navigate inside the app using the readiness signal that matches this SPA.
  *
  * Playwright's default page.goto() waits for the window "load" event. WebKit
- * mobile emulation can intermittently miss that signal on the React/PWA shell
- * while the DOM is already ready and usable, which turns healthy pages into
- * 30s navigation timeouts. DOMContentLoaded is the stable boundary the E2E
- * suite already asserts after navigation.
+ * mobile emulation can intermittently miss load-state signals on the React/PWA
+ * shell, which turns healthy pages into 30s navigation timeouts. Waiting for
+ * commit keeps the navigation itself bounded; the suite then asserts concrete
+ * page content after navigation.
  */
 export async function gotoAppPage(
   page: Page,
   url: string,
   options: AppNavigationOptions = {},
 ): Promise<Response | null> {
-  return page.goto(url, { ...options, waitUntil: 'domcontentloaded' });
+  const response = await page.goto(url, { ...options, waitUntil: 'commit' });
+  await waitForAppDomReady(page);
+  return response;
+}
+
+export async function waitForAppDomReady(page: Page): Promise<void> {
+  await page.waitForLoadState('domcontentloaded', { timeout: 10_000 }).catch(() => undefined);
 }
 
 /** Log in through the UI login form. */

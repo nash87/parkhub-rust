@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { gotoAppPage, loginViaUi, PUBLIC_ROUTES, PROTECTED_ROUTES, MOBILE_DEVICES } from './helpers';
+import { gotoAppPage, loginViaUi, waitForAppDomReady, PUBLIC_ROUTES, PROTECTED_ROUTES, MOBILE_DEVICES } from './helpers';
 
 /**
  * Chromium emits `console.error("Failed to load resource: ...")` for every
@@ -39,7 +39,7 @@ test.describe('DevTools — Console Errors', () => {
 
     for (const route of PUBLIC_ROUTES) {
       await gotoAppPage(page, route);
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
     }
 
     const critical = errors.filter(isCriticalConsoleError);
@@ -56,7 +56,7 @@ test.describe('DevTools — Console Errors', () => {
 
     for (const route of PROTECTED_ROUTES) {
       await gotoAppPage(page, route);
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
     }
 
     const critical = errors.filter(isCriticalConsoleError);
@@ -81,7 +81,7 @@ test.describe('DevTools — Network', () => {
 
     for (const route of [...PUBLIC_ROUTES, ...PROTECTED_ROUTES]) {
       await gotoAppPage(page, route);
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
     }
 
     expect(serverErrors).toEqual([]);
@@ -99,7 +99,7 @@ test.describe('DevTools — Network', () => {
 
     await loginViaUi(page);
     await gotoAppPage(page, '/');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     expect(missing).toEqual([]);
   });
@@ -150,7 +150,7 @@ test.describe('DevTools — Performance', () => {
   test('DOM nodes < 3000 on dashboard', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     const nodeCount = await page.evaluate(() => document.querySelectorAll('*').length);
     expect(nodeCount).toBeLessThan(3000);
@@ -168,7 +168,7 @@ test.describe('DevTools — Performance', () => {
     });
 
     await gotoAppPage(page, '/login');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     expect(totalBytes).toBeLessThan(5 * 1024 * 1024);
   });
@@ -212,7 +212,7 @@ test.describe('DevTools — Accessibility', () => {
   test('heading hierarchy — no skipped levels', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Ignore visually hidden headings (used for screen-reader landmarks).
     // Those routinely jump levels to label sections inside otherwise
@@ -262,7 +262,7 @@ test.describe('DevTools — Axe Accessibility Audit', () => {
     // waits an extra moment (via Playwright's built-in retry) always
     // passes, which is the signal that this is a timing issue, not
     // a real contrast bug.
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
     await page.waitForFunction(() => document.fonts?.ready, {
       timeout: 5_000,
     }).catch(() => { /* fonts API missing: fall through */ });
@@ -300,7 +300,7 @@ test.describe('DevTools — Mobile Responsive', () => {
     test(`renders on ${device.name} (${device.width}x${device.height})`, async ({ page }) => {
       await page.setViewportSize({ width: device.width, height: device.height });
       await gotoAppPage(page, '/login');
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
 
       // Page should not have horizontal overflow
       const hasOverflow = await page.evaluate(() => {
@@ -365,7 +365,7 @@ test.describe('DevTools — Interactions', () => {
     const navLink = page.locator('nav a[href*="book"], aside a[href*="book"], a[href="/bookings"]').first();
     if (await navLink.isVisible()) {
       await navLink.click();
-      await page.waitForLoadState('domcontentloaded');
+      await waitForAppDomReady(page);
       expect(page.url()).toContain('book');
     }
   });

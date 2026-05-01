@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage } from './helpers';
+import { gotoAppPage, waitForAppDomReady } from './helpers';
 
 test.describe('PWA — Progressive Web App', () => {
   test('manifest.json exists and is valid', async ({ request }) => {
@@ -18,7 +18,7 @@ test.describe('PWA — Progressive Web App', () => {
 
   test('service worker registered', async ({ page }) => {
     await gotoAppPage(page, '/login');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
 
     // Check if SW is registered via the page
     const hasSW = await page.evaluate(async () => {

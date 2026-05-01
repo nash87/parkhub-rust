@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage, loginViaUi, loginViaApi } from './helpers';
+import { gotoAppPage, loginViaUi, loginViaApi, waitForAppDomReady } from './helpers';
 
 test.describe('Parking — Booking Flow', () => {
   test('login with demo credentials', async ({ page }) => {
@@ -11,7 +11,7 @@ test.describe('Parking — Booking Flow', () => {
   test('navigate to booking flow', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/book');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
     // Booking page should show lots or booking form
     await expect(page.locator('body')).toContainText(/book|lot|park|slot|reserve/i);
   });
@@ -19,7 +19,7 @@ test.describe('Parking — Booking Flow', () => {
   test('view bookings list', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/bookings');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
     // Should show booking list (possibly empty)
     await expect(page.locator('body')).toContainText(/booking|reservation|no.*booking/i);
   });
@@ -27,7 +27,7 @@ test.describe('Parking — Booking Flow', () => {
   test('view dashboard KPIs', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
     // Dashboard should show statistics or KPI cards
     await expect(page.locator('main, [data-testid]')).not.toHaveCount(0);
   });
@@ -111,7 +111,7 @@ test.describe('Parking — Admin', () => {
   test('admin reports page loads', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/admin/reports');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForAppDomReady(page);
     await expect(page.locator('body')).not.toBeEmpty();
   });
 });
