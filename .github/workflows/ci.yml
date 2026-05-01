@@ -133,6 +133,26 @@ jobs:
               combined=""
               status=""
               echo "::warning::Could not query commit-status API for ${SHA}: ${last_api_error:-unknown gh api error}"
+              public_api_error="$(mktemp)"
+              if status_line="$(
+                curl -fsSL \
+                  -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/${REPO}/commits/${SHA}/status" \
+                  2>"${public_api_error}" \
+                  | jq -r --arg context "${CONTEXT}" \
+                    '[.state, (([.statuses[] | select(.context == $context)] | sort_by(.created_at) | reverse | .[0].state) // "")] | @tsv'
+              )"; then
+                last_api_error=""
+                combined="${status_line%%$'\t'*}"
+                status="${status_line#*$'\t'}"
+                if [[ "${status_line}" != *$'\t'* ]]; then
+                  status=""
+                fi
+              else
+                public_error="$(tr '\n' ' ' < "${public_api_error}")"
+                echo "::warning::Unauthenticated commit-status fallback also failed for ${SHA}: ${public_error:-unknown curl/jq error}"
+              fi
+              rm -f "${public_api_error}"
             fi
             rm -f "${api_error}"
             # Some token/app combinations can see the combined commit-status
