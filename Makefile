@@ -85,7 +85,8 @@ frontend:
 drift: embed
 	cargo build --locked --release --package parkhub-server --no-default-features --features 'full,headless'
 	@mkdir -p /tmp/parkhub-drift-db
-	@./target/release/parkhub-server --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db > /tmp/parkhub-drift.log 2>&1 & \
+	@SERVER_BIN="$$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)/release/parkhub-server"; \
+		"$$SERVER_BIN" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db > /tmp/parkhub-drift.log 2>&1 & \
 		SERVER_PID=$$!; \
 		for _ in $$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; \
 		./scripts/dump-openapi.sh 18181; RC=$$?; \
