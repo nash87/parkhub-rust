@@ -91,10 +91,10 @@ jobs:
     name: fop local CI attestation
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot'
     runs-on: ubuntu-latest
-    # Hard cap of 14 min accommodates the adaptive backoff schedule (~12 min)
-    # plus GHA queue/runner startup. Previous 3 min window collapsed Required
-    # checks for clean PRs when local-CI ran under multi-tab fop queue load.
-    timeout-minutes: 14
+    # Hard cap of 40 min accommodates the adaptive backoff schedule (~36 min)
+    # plus GHA queue/runner startup. Shorter windows collapsed Required checks
+    # when local-CI ran under multi-tab fop queue load.
+    timeout-minutes: 40
     permissions:
       contents: read  # checkout-only (no writes from this gate job)
       statuses: write  # cross-token visibility: workflow GITHUB_TOKEN with read-only cannot see PAT-posted statuses; write scope is the documented workaround per github.com/orgs/community/discussions/40769
@@ -108,14 +108,14 @@ jobs:
         run: |
           # Adaptive backoff: short polls early (catch fast posts), longer
           # polls later (avoid API hammering during real waits).
-          # Total ~12.5 min with 9 API reads instead of hammering the
+          # Total ~36.5 min plus a final read with 18 API reads instead of hammering the
           # installation token during GitHub's shared rate-limit windows.
           # Fail-fast on explicit failure/error states (don't wait the full window).
-          delays=(10 20 30 60 90 120 120 120 180)
+          delays=(10 20 30 60 90 120 120 120 180 180 180 180 180 180 180 180 180)
           status=""
           combined=""
           last_api_error=""
-          for delay in "${delays[@]}"; do
+          read_local_ci_status() {
             api_error="$(mktemp)"
             if status_line="$(
               gh api "repos/${REPO}/commits/${SHA}/status" \
@@ -162,6 +162,10 @@ jobs:
             if [[ -z "${status}" && "${combined}" == "success" ]]; then
               status="success"
             fi
+          }
+
+          for delay in "${delays[@]}"; do
+            read_local_ci_status
             echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
             case "$status" in
               success)
@@ -179,6 +183,21 @@ jobs:
             echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
             sleep "$delay"
           done
+          read_local_ci_status
+          echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
+          case "$status" in
+            success)
+              echo "${CONTEXT}=success after ${SECONDS}s"
+              exit 0
+              ;;
+            failure|error)
+              echo "::error::${CONTEXT}=${status} — local-CI explicitly failed; see commit status for details"
+              gh api "repos/${REPO}/commits/${SHA}/status" \
+                --jq ".statuses[] | select(.context == \"${CONTEXT}\") | {state, description, target_url, created_at}" \
+                || true
+              exit 1
+              ;;
+          esac
           echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
           if [[ -n "${last_api_error}" ]]; then
             echo "::error::Last commit-status API error: ${last_api_error}"

@@ -237,8 +237,8 @@ post_commit_status() {
 
   # Tolerate "No commit found for SHA" (HTTP 422) — happens when this
   # script runs from the pre-push hook BEFORE the commit has reached
-  # GitHub. The local-ci-attestation gate's 12-min timeout fallback
-  # then exits 0 advisory once the SHA appears on GitHub.
+  # GitHub. The local-ci-attestation gate's extended polling window then
+  # handles the missing status once the SHA appears on GitHub.
   # gh emits both the JSON body and the "(HTTP 422)" line on stdout
   # (not stderr) so we capture combined stdout for the match.
   local out
