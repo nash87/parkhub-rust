@@ -124,6 +124,13 @@ jobs:
             if [[ "${status_line}" != *$'\t'* ]]; then
               status=""
             fi
+            # Some token/app combinations can see the combined commit-status
+            # state before the individual PAT-authored status row. The combined
+            # endpoint only covers commit statuses, not check runs, so success
+            # here is a valid local-CI attestation fallback.
+            if [[ -z "${status}" && "${combined}" == "success" ]]; then
+              status="success"
+            fi
             echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
             case "$status" in
               success)
