@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
+          token: ${{ secrets.PARKHUB_CHANGELOG_TOKEN || github.token }}
           persist-credentials: true
 
       - name: Run git-cliff
@@ -48,28 +49,56 @@ jobs:
       - name: Open changelog PR if changed
         env:
           CHANGELOG_BRANCH: automation/changelog-main
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.PARKHUB_CHANGELOG_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Configure PARKHUB_CHANGELOG_TOKEN with contents:write and pull-requests:write so generated changelog PRs trigger normal PR CI."
+            exit 1
+          fi
           if git diff --quiet CHANGELOG.md; then
             echo "CHANGELOG.md unchanged — skipping commit."
             exit 0
           fi
-          if [ "${GITHUB_REF_TYPE}" != "branch" ] || [ "${GITHUB_REF_NAME}" != "main" ]; then
-            echo "CHANGELOG.md changed for ${GITHUB_REF}; not opening a PR for a non-main ref."
+          if [ "${GITHUB_REF_TYPE}" = "branch" ] && [ "${GITHUB_REF_NAME}" = "main" ]; then
+            git switch --create "$CHANGELOG_BRANCH"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ] && [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            generated_changelog="$(mktemp)"
+            cp CHANGELOG.md "$generated_changelog"
+            git fetch origin main
+            git switch --create "$CHANGELOG_BRANCH" origin/main
+            cp "$generated_changelog" CHANGELOG.md
+            rm -f "$generated_changelog"
+          else
+            echo "CHANGELOG.md changed for ${GITHUB_REF}; not opening a PR for unsupported ref type ${GITHUB_REF_TYPE}."
             git diff -- CHANGELOG.md
+            exit 0
+          fi
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md unchanged on ${CHANGELOG_BRANCH} — skipping commit."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch --create "$CHANGELOG_BRANCH"
           git add CHANGELOG.md
           git commit -m "chore(changelog): regenerate from git-cliff"
-          git fetch origin "refs/heads/${CHANGELOG_BRANCH}:refs/remotes/origin/${CHANGELOG_BRANCH}" || true
-          git push --force-with-lease origin "HEAD:${CHANGELOG_BRANCH}"
-          pr_number="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$CHANGELOG_BRANCH" --json number --jq '.[0].number // ""')"
+          if git ls-remote --exit-code --heads origin "$CHANGELOG_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/${CHANGELOG_BRANCH}:refs/remotes/origin/${CHANGELOG_BRANCH}"
+            git push --force-with-lease origin "HEAD:${CHANGELOG_BRANCH}"
+          else
+            echo "Remote branch ${CHANGELOG_BRANCH} does not exist yet; pushing a new branch."
+            git push origin "HEAD:${CHANGELOG_BRANCH}"
+          fi
+          pr_json="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$CHANGELOG_BRANCH" --state all --json number,state --limit 1)"
+          pr_number="$(jq -r '.[0].number // ""' <<<"$pr_json")"
+          pr_state="$(jq -r '.[0].state // ""' <<<"$pr_json")"
           if [ -n "$pr_number" ]; then
-            echo "Updated changelog PR #${pr_number}."
+            if [ "$pr_state" = "CLOSED" ]; then
+              gh pr reopen "$pr_number" --repo "$GITHUB_REPOSITORY"
+              echo "Reopened changelog PR #${pr_number}."
+            else
+              echo "Updated changelog PR #${pr_number}."
+            fi
           else
             gh pr create \
               --repo "$GITHUB_REPOSITORY" \
