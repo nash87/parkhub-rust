@@ -448,7 +448,7 @@ test.describe('Full Admin Workflow', () => {
 
 test.describe('Theme UI Switching (Browser)', () => {
   test('theme switcher FAB is visible after login', async ({ page }) => {
-    await gotoAppPage(page, '/login', { waitUntil: 'domcontentloaded' });
+    await gotoAppPage(page, '/login');
     await page.getByLabel(/email/i).first().fill(DEMO_ADMIN.email);
     await page.locator('input[type="password"]').first().fill(DEMO_ADMIN.password);
     await page.getByRole('button', { name: /sign in|log in|login/i }).click();

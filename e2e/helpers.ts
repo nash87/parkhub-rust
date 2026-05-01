@@ -1,5 +1,7 @@
 import { type Page, type APIRequestContext, type Response } from '@playwright/test';
 
+type AppNavigationOptions = Omit<NonNullable<Parameters<Page['goto']>[1]>, 'waitUntil'>;
+
 /** Demo credentials used across all E2E tests. */
 export const DEMO_ADMIN = {
   username: 'admin',
@@ -28,9 +30,9 @@ export async function loginViaApi(request: APIRequestContext): Promise<string> {
 export async function gotoAppPage(
   page: Page,
   url: string,
-  options: Parameters<Page['goto']>[1] = {},
+  options: AppNavigationOptions = {},
 ): Promise<Response | null> {
-  return page.goto(url, { waitUntil: 'domcontentloaded', ...options });
+  return page.goto(url, { ...options, waitUntil: 'domcontentloaded' });
 }
 
 /** Log in through the UI login form. */

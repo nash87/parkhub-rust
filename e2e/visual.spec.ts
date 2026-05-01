@@ -85,7 +85,7 @@ for (const viewport of VIEWPORTS) {
             });
           }
 
-          await gotoAppPage(page, surface.path, { waitUntil: 'domcontentloaded' });
+          await gotoAppPage(page, surface.path);
 
           if (theme === 'dark') {
             await page.evaluate(() => {

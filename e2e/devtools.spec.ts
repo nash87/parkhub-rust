@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginViaUi, PUBLIC_ROUTES, PROTECTED_ROUTES, MOBILE_DEVICES } from './helpers';
 
 /**
@@ -20,6 +20,10 @@ function isCriticalConsoleError(text: string): boolean {
   // backend doesn't expose a ws endpoint.
   if (/WebSocket connection/.test(text)) return false;
   return true;
+}
+
+async function waitForMeasurementReady(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -109,6 +113,7 @@ test.describe('DevTools — Performance', () => {
   test('LCP < 4s on dashboard', async ({ page }) => {
     await loginViaUi(page);
     await gotoAppPage(page, '/');
+    await waitForMeasurementReady(page);
 
     const lcp = await page.evaluate(() => {
       return new Promise<number>((resolve) => {
@@ -130,7 +135,7 @@ test.describe('DevTools — Performance', () => {
 
   test('FCP < 3s on login page', async ({ page }) => {
     await gotoAppPage(page, '/login');
-    await page.waitForLoadState('domcontentloaded');
+    await waitForMeasurementReady(page);
 
     const fcp = await page.evaluate(() => {
       const entry = performance.getEntriesByName('first-contentful-paint')[0];
@@ -341,7 +346,7 @@ test.describe('DevTools — Security Headers', () => {
 
 test.describe('DevTools — Interactions', () => {
   test('login form is submittable', async ({ page }) => {
-    await gotoAppPage(page, '/login', { waitUntil: 'domcontentloaded' });
+    await gotoAppPage(page, '/login');
     // `getByLabel(/password/i)` also matches the "Forgot password?" link,
     // which isn't a form control — use the actual input selector.
     const emailInput = page.getByLabel(/email/i).first();
