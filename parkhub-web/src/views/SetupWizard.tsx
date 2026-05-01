@@ -171,10 +171,11 @@ export function SetupWizardPage() {
             <div className="space-y-4" data-testid="wizard-step-1">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('setup.step1', 'Company Info')}</h2>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="setup-company-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('setup.companyName', 'Company Name')}
                 </label>
                 <input
+                  id="setup-company-name"
                   type="text"
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
@@ -184,10 +185,11 @@ export function SetupWizardPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="setup-timezone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('setup.timezone', 'Timezone')}
                 </label>
                 <select
+                  id="setup-timezone"
                   value={timezone}
                   onChange={e => setTimezone(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -197,10 +199,11 @@ export function SetupWizardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="setup-logo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Logo (optional)
                 </label>
                 <input
+                  id="setup-logo"
                   type="file"
                   accept="image/*"
                   onChange={handleLogoUpload}

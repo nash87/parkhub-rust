@@ -22,6 +22,7 @@ vi.mock('react-i18next', () => ({
         'evCharging.totalChargers': 'Total Chargers',
         'evCharging.totalSessions': 'Sessions',
         'evCharging.totalKwh': 'Total kWh',
+        'evCharging.adminLoadFailed': 'Could not load charger statistics.',
         'evCharging.status.available': 'Available',
         'evCharging.status.in_use': 'In Use',
         'evCharging.status.offline': 'Offline',
@@ -59,6 +60,10 @@ const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 vi.mock('react-hot-toast', () => ({
   default: { success: (...a: any[]) => mockToastSuccess(...a), error: (...a: any[]) => mockToastError(...a) },
+}));
+
+vi.mock('../api/client', () => ({
+  getInMemoryToken: () => 'test-token',
 }));
 
 import { EVChargingPage, AdminChargersPage } from './EVCharging';
@@ -131,6 +136,37 @@ describe('AdminChargersPage', () => {
     await waitFor(() => {
       expect(screen.getByText('8')).toBeTruthy();
       expect(screen.getByText('1501 kWh')).toBeTruthy();
+    });
+  });
+
+  it('sends the bearer token for admin charger stats', async () => {
+    const fetchMock = global.fetch as any;
+    render(<AdminChargersPage />);
+    await waitFor(() => expect(screen.getByText('8')).toBeTruthy());
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/admin/chargers',
+      expect.objectContaining({
+        credentials: 'include',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-token',
+          'X-Requested-With': 'XMLHttpRequest',
+        }),
+      }),
+    );
+  });
+
+  it('shows an error instead of spinning forever when admin stats fail', async () => {
+    (global as any).fetch = vi.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve({ success: false, error: { message: 'Missing or invalid authorization header' } }),
+      } as Response),
+    );
+
+    render(<AdminChargersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('admin-chargers-error')).toHaveTextContent('Missing or invalid authorization header');
     });
   });
 

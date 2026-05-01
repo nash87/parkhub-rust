@@ -85,7 +85,8 @@ export function AdminUpdatesPage() {
         headers: authHeaders(),
         credentials: 'include',
       }).then(r => r.json());
-      if (res.success || res.data) setVersionInfo(res.data);
+      const data = res?.data ?? res;
+      if (data?.version) setVersionInfo(data);
     } catch { /* ignore */ }
   }, []);
 

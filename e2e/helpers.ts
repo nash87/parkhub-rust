@@ -2,7 +2,7 @@ import { type Page, type APIRequestContext, type Response } from '@playwright/te
 
 type AppNavigationOptions = Omit<NonNullable<Parameters<Page['goto']>[1]>, 'waitUntil'>;
 
-const APP_NAVIGATION_TIMEOUT_MS = 15_000;
+const APP_NAVIGATION_TIMEOUT_MS = 8_000;
 const APP_SHELL_SETTLE_TIMEOUT_MS = 2_500;
 const TRANSIENT_MODULE_IMPORT_ERROR =
   /Importing a module script failed|Failed to fetch dynamically imported module/i;
@@ -41,16 +41,16 @@ export async function loginBrowserViaApi(page: Page): Promise<string> {
     throw new Error(`API login failed with HTTP ${res.status()}`);
   }
 
-  const hasCookie = (await page.context().cookies()).some((c) => c.name === 'parkhub_token');
-  if (!hasCookie) {
-    await page.context().addCookies([{
-      name: 'parkhub_token',
-      value: token,
-      url: new URL(res.url()).origin,
-      httpOnly: true,
-      sameSite: 'Lax',
-    }]);
-  }
+  // The Rust API correctly marks the real auth cookie Secure. Local E2E runs
+  // against http://*.test, so force an HTTP-compatible cookie for hard reloads.
+  await page.context().addCookies([{
+    name: 'parkhub_token',
+    value: token,
+    url: new URL(res.url()).origin,
+    httpOnly: true,
+    secure: false,
+    sameSite: 'Lax',
+  }]);
 
   return token;
 }
@@ -193,7 +193,18 @@ export const PROTECTED_ROUTES = [
   '/team',
   '/notifications',
   '/calendar',
+  '/visitors',
+  '/ev-charging',
+  '/history',
+  '/absence-approval',
+  '/map',
+  '/swap-requests',
+  '/checkin',
+  '/guest-pass',
+  '/leaderboard',
+  '/predict',
   '/translations',
+  '/settings',
 ];
 
 /** Admin-only frontend routes. */
@@ -205,6 +216,27 @@ export const ADMIN_ROUTES = [
   '/admin/announcements',
   '/admin/reports',
   '/admin/translations',
+  '/admin/analytics',
+  '/admin/rate-limits',
+  '/admin/tenants',
+  '/admin/modules',
+  '/admin/audit-log',
+  '/admin/data',
+  '/admin/fleet',
+  '/admin/accessible',
+  '/admin/maintenance',
+  '/admin/billing',
+  '/admin/visitors',
+  '/admin/chargers',
+  '/admin/plugins',
+  '/admin/compliance',
+  '/admin/sso',
+  '/admin/webhooks',
+  '/admin/roles',
+  '/admin/zones',
+  '/admin/updates',
+  '/admin/heatmap',
+  '/admin/scheduled-reports',
 ];
 
 /** All public API endpoints that should return 200 without auth. */

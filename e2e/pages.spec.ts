@@ -62,8 +62,25 @@ test.describe('Pages — Admin Routes (after admin login)', () => {
       const res = await gotoAppPage(page, route);
       expect(res?.status()).toBeLessThan(400);
       await expect(page.locator('body')).not.toBeEmpty();
+      await expect(page.locator('body')).not.toContainText(/returned an object instead of string/i);
     });
   }
+
+  test('admin modules, chargers, and updates settle without broken UI chrome', async ({ page }) => {
+    for (const route of ['/admin/modules', '/admin/chargers', '/admin/updates']) {
+      await gotoAppPage(page, route);
+      await expect(page.locator('body')).not.toContainText(/returned an object instead of string/i);
+      await expect(page.locator('body')).not.toContainText(/key '[^']+' returned/i);
+      await expect(page.locator('h1, h2').first()).toBeVisible();
+    }
+
+    await gotoAppPage(page, '/admin/chargers');
+    await expect(page.getByText(/Total Chargers/i).first()).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(/Could not load charger statistics/i);
+
+    await gotoAppPage(page, '/admin/updates');
+    await expect(page.getByTestId('current-version')).not.toHaveText('—');
+  });
 });
 
 test.describe('Pages — Redirects', () => {
