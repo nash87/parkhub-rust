@@ -13,10 +13,10 @@ profile. The GitHub PR attestation gate expects this exact command:
 
 Profiles:
   pr    Fast PR gate: format, Rust headless checks, frontend tests/build,
-        TypeScript typecheck, generated type drift. Diff-aware: skips
-        Rust steps if no .rs/Cargo.{toml,lock} touched, skips frontend
-        if no parkhub-web/ touched. Set FOP_LOCAL_CI_NO_DIFF_AWARE=1
-        to force every step.
+        TypeScript typecheck, generated type drift, and Playwright spec
+        compile when E2E files change. Diff-aware: skips Rust steps if no
+        .rs/Cargo.{toml,lock} touched, skips frontend if no parkhub-web/
+        touched. Set FOP_LOCAL_CI_NO_DIFF_AWARE=1 to force every step.
   full  PR gate plus OpenAPI drift and Playwright smoke/e2e (always full).
   cd    Release-oriented build and supply-chain preflight (always full).
 
@@ -98,6 +98,7 @@ diff_touch_frontend=0
 diff_touch_ts_export=0
 diff_touch_workflows=0
 diff_touch_php=0
+diff_touch_e2e=0
 
 compute_diff_paths() {
   if [[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] || [[ "$profile" != "pr" ]]; then
@@ -106,6 +107,7 @@ compute_diff_paths() {
     diff_touch_ts_export=1
     diff_touch_workflows=1
     diff_touch_php=1
+    diff_touch_e2e=1
     return 0
   fi
 
@@ -124,6 +126,7 @@ compute_diff_paths() {
     diff_touch_ts_export=1
     diff_touch_workflows=1
     diff_touch_php=1
+    diff_touch_e2e=1
     return 0
   fi
 
@@ -157,10 +160,13 @@ compute_diff_paths() {
   if grep -qE '\.php$|^composer\.(json|lock)$' <<<"$diff_paths"; then
     diff_touch_php=1
   fi
+  if grep -qE '^e2e/|^playwright\.config\.(ts|js|mjs|cjs)$' <<<"$diff_paths"; then
+    diff_touch_e2e=1
+  fi
 
-  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d (%d files)\n' \
+  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d (%d files)\n' \
     "$base_ref" "$diff_touch_rust" "$diff_touch_frontend" "$diff_touch_ts_export" \
-    "$diff_touch_workflows" "$diff_touch_php" "$(wc -l <<<"$diff_paths")"
+    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$(wc -l <<<"$diff_paths")"
 }
 
 # ─── pre-push hook result re-use (opt-in via FOP_LOCAL_CI_REUSE_PREPUSH=1) ───
@@ -271,7 +277,8 @@ write_report() {
     "frontend": $([[ $diff_touch_frontend == 1 ]] && echo true || echo false),
     "ts_export": $([[ $diff_touch_ts_export == 1 ]] && echo true || echo false),
     "workflows": $([[ $diff_touch_workflows == 1 ]] && echo true || echo false),
-    "php": $([[ $diff_touch_php == 1 ]] && echo true || echo false)
+    "php": $([[ $diff_touch_php == 1 ]] && echo true || echo false),
+    "e2e": $([[ $diff_touch_e2e == 1 ]] && echo true || echo false)
   },
   "prepush_reused": $([[ $prepush_validated == 1 ]] && echo true || echo false),
   "memory_available_gb": $mem_avail_gb
@@ -385,6 +392,13 @@ if (( diff_touch_frontend )); then
 else
   skip_step "frontend typecheck" "diff-aware: parkhub-web/ untouched"
   skip_step "frontend test and build" "diff-aware: parkhub-web/ untouched"
+fi
+
+# ─── Stage 4b: Playwright specs (compile-only when E2E harness changed) ─────
+if (( diff_touch_e2e )); then
+  run_step "playwright spec list" "CI=true npx playwright test --list"
+else
+  skip_step "playwright spec list" "diff-aware: e2e/ untouched"
 fi
 
 # ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───

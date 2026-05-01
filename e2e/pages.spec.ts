@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage, loginViaUi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
+import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
 
 test.describe('Pages — Public Routes', () => {
   for (const route of PUBLIC_ROUTES) {
@@ -29,7 +29,7 @@ test.describe('Pages — Public Routes', () => {
 
 test.describe('Pages — Protected Routes (after login)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
   });
 
   for (const route of PROTECTED_ROUTES) {
@@ -54,7 +54,7 @@ test.describe('Pages — Protected Routes (after login)', () => {
 
 test.describe('Pages — Admin Routes (after admin login)', () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
   });
 
   for (const route of ADMIN_ROUTES) {
@@ -72,7 +72,7 @@ test.describe('Pages — Redirects', () => {
     // AuthProvider shows LoadingSplash on mount until /api/v1/users/me
     // resolves, so URL rewrites to /login or /welcome only AFTER the
     // unauth check returns. Wait for the redirect before reading URL.
-    await page.waitForURL(/\/(login|welcome)/, { timeout: 10_000 });
+    await page.waitForURL(/\/(login|welcome)/, { timeout: 10_000, waitUntil: 'commit' });
   });
 
   test('unknown route shows 404 page', async ({ page }) => {

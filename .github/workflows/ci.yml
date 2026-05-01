@@ -108,22 +108,33 @@ jobs:
         run: |
           # Adaptive backoff: short polls early (catch fast posts), longer
           # polls later (avoid API hammering during real waits).
-          # Total ~12 min: 5+5+10+10+20+30+60×11 = 740s.
+          # Total ~12.5 min with 9 API reads instead of hammering the
+          # installation token during GitHub's shared rate-limit windows.
           # Fail-fast on explicit failure/error states (don't wait the full window).
-          delays=(5 5 10 10 20 30 60 60 60 60 60 60 60 60 60 60 60)
+          delays=(10 20 30 60 90 120 120 120 180)
           status=""
           combined=""
+          last_api_error=""
           for delay in "${delays[@]}"; do
-            status_line="$(
+            api_error="$(mktemp)"
+            if status_line="$(
               gh api "repos/${REPO}/commits/${SHA}/status" \
                 --jq "[.state, (([.statuses[] | select(.context == \"${CONTEXT}\")] | sort_by(.created_at) | reverse | .[0].state) // \"\")] | @tsv" \
-                || true
-            )"
-            combined="${status_line%%$'\t'*}"
-            status="${status_line#*$'\t'}"
-            if [[ "${status_line}" != *$'\t'* ]]; then
+                2>"${api_error}"
+            )"; then
+              last_api_error=""
+              combined="${status_line%%$'\t'*}"
+              status="${status_line#*$'\t'}"
+              if [[ "${status_line}" != *$'\t'* ]]; then
+                status=""
+              fi
+            else
+              last_api_error="$(tr '\n' ' ' < "${api_error}")"
+              combined=""
               status=""
+              echo "::warning::Could not query commit-status API for ${SHA}: ${last_api_error:-unknown gh api error}"
             fi
+            rm -f "${api_error}"
             # Some token/app combinations can see the combined commit-status
             # state before the individual PAT-authored status row. The combined
             # endpoint only covers commit statuses, not check runs, so success
@@ -149,6 +160,9 @@ jobs:
             sleep "$delay"
           done
           echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
+          if [[ -n "${last_api_error}" ]]; then
+            echo "::error::Last commit-status API error: ${last_api_error}"
+          fi
           echo "Run locally:"
           echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
           exit 1
