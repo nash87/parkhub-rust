@@ -74,7 +74,8 @@ cargo build \
     --features 'full,headless' \
     >&2
 
-BIN="$REPO_ROOT/target/debug/parkhub-server"
+TARGET_DIR="$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)"
+BIN="$TARGET_DIR/debug/parkhub-server"
 if [[ ! -x "$BIN" ]]; then
     echo "openapi-drift: built binary not found at $BIN" >&2
     exit 1
