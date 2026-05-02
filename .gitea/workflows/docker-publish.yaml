@@ -41,7 +41,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
@@ -94,7 +94,7 @@ jobs:
       # NOTE: SARIF upload to GitHub Security tab is GitHub-only — skipped here.
       # Gitea exposes the artifact via the workflow run summary instead.
       - name: Upload Trivy results as artifact
-        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: https://192.168.178.233/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           name: trivy-results
@@ -108,7 +108,7 @@ jobs:
         with:
           cosign-release: 'v3.0.6'
 
-      - name: Sign container image (TODO: keyed signing with homelab identity)
+      - name: "Sign container image (TODO: keyed signing with homelab identity)"
         env:
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -133,7 +133,7 @@ jobs:
           test -s sbom.spdx.json
           python3 -c "import json,sys; json.load(open('sbom.spdx.json'))"
 
-      - name: Attach SBOM as cosign attestation (TODO: homelab keyed signing)
+      - name: "Attach SBOM as cosign attestation (TODO: homelab keyed signing)"
         env:
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -141,7 +141,7 @@ jobs:
           echo "TODO: cosign attest --key <vault-fetched-key> --type spdx --predicate sbom.spdx.json ${IMAGE_REF}@${IMAGE_DIGEST}"
 
       - name: Upload SBOM artifact
-        uses: http://192.168.178.212:3000/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: https://192.168.178.233/actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: always() && hashFiles('sbom.spdx.json') != ''
         with:
           name: sbom-spdx-${{ github.sha }}

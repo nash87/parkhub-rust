@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: http://192.168.178.212:3000/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Cold clone
         run: |
           # NOTE: clones from the Gitea mirror — switch to `git clone --depth 1
-          # http://192.168.178.212:3000/florian/parkhub-rust.git /tmp/smoke` once
+          # https://192.168.178.233/florian/parkhub-rust.git /tmp/smoke` once
           # the mirror is canonical for this workflow.
           git clone --depth 1 https://github.com/nash87/parkhub-rust.git /tmp/smoke
       - name: Follow INSTALLATION.md Docker Compose steps
