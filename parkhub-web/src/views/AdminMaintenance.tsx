@@ -147,26 +147,31 @@ export function AdminMaintenancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-            <Wrench weight="bold" className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+      {/* v11 SOTA hero — amber tone (caution = maintenance). */}
+      <section className="admin-hero admin-hero--amber">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Wrench weight="bold" className="w-3.5 h-3.5" />
+            {t('maintenance.eyebrow', 'MAINTENANCE')}
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-surface-900 dark:text-white">{t('maintenance.title', 'Maintenance Scheduling')}</h2>
-            <p className="text-sm text-surface-500 dark:text-surface-400">{t('maintenance.subtitle', 'Schedule and manage maintenance windows')}</p>
-          </div>
+          <h1 className="admin-hero-headline">{t('maintenance.title', 'Maintenance Scheduling')}</h1>
+          <p className="admin-hero-sub">{t('maintenance.subtitle', 'Schedule and manage maintenance windows')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400">
-            <Question weight="bold" className="w-5 h-5" />
+        <div className="admin-hero-actions">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="admin-hero-iconbtn"
+            aria-label={t('common.help', 'Help')}
+          >
+            <Question weight="bold" className="w-4 h-4" />
           </button>
-          <button onClick={openCreate} className="btn btn-primary btn-sm" data-testid="create-btn">
-            <Plus weight="bold" className="w-4 h-4" /> {t('maintenance.create', 'New')}
+          <button onClick={openCreate} className="admin-hero-action" data-testid="create-btn">
+            <Plus weight="bold" className="w-4 h-4" />
+            {t('maintenance.create', 'New')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Help */}
       {showHelp && (
@@ -177,14 +182,20 @@ export function AdminMaintenancePage() {
         </motion.div>
       )}
 
-      {/* Active banner */}
+      {/* v11 SOTA warn banner — pulses gently to keep the active state
+          present in peripheral vision. */}
       {activeCount > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-3 flex items-center gap-2" data-testid="active-banner">
-          <Warning weight="bold" className="w-5 h-5 text-amber-600" />
-          <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="v11-warn-banner"
+          data-testid="active-banner"
+        >
+          <Warning weight="bold" className="v11-warn-banner-icon" />
+          <p className="v11-warn-banner-text">
             {t('maintenance.activeBanner', '{{count}} maintenance window(s) currently active', { count: activeCount })}
           </p>
-        </div>
+        </motion.div>
       )}
 
       {/* Form */}
