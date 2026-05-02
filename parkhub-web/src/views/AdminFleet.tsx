@@ -106,14 +106,18 @@ export function AdminFleetPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Car weight="duotone" className="w-6 h-6 text-primary-500" />
-        <div>
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white">{t('fleet.title', 'Fleet Management')}</h2>
-          <p className="text-sm text-surface-500">{t('fleet.subtitle', 'All vehicles across all users')}</p>
+      {/* v11 SOTA hero — amber tone (fleet monitoring + flag awareness). */}
+      <section className="admin-hero admin-hero--amber">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Car weight="bold" className="w-3.5 h-3.5" />
+            {t('fleet.eyebrow', 'OPERATIONS · FLEET')}
+          </div>
+          <h1 className="admin-hero-headline">{t('fleet.title', 'Fleet Management')}</h1>
+          <p className="admin-hero-sub">{t('fleet.subtitle', 'All vehicles across all users')}</p>
         </div>
-      </div>
+      </section>
 
       {/* Stats cards */}
       {stats && (

@@ -221,14 +221,17 @@ export function AdminLotsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.lots')}</h2>
-          <span className="text-sm text-surface-500 dark:text-surface-400">({lots.length})</span>
+      {/* v11 SOTA hero — emerald tone (parking inventory = healthy operational state). */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            {t('lots.eyebrow', 'OPERATIONS · PARKING NETWORK')}
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.lots')}</h1>
+          <p className="admin-hero-sub">{t('lots.count', '{{count}} lots online', { count: lots.length })}</p>
         </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="admin-hero-actions">
           <div className="relative">
             <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
             <input
@@ -240,12 +243,12 @@ export function AdminLotsPage() {
               aria-label={t('admin.searchLots')}
             />
           </div>
-          <button onClick={openCreate} className="btn btn-primary self-start sm:self-auto">
+          <button onClick={openCreate} className="admin-hero-action">
             <Plus weight="bold" className="w-4 h-4" />
             {t('admin.newLot')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Create / Edit Form */}
       <AnimatePresence>
