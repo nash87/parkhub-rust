@@ -235,29 +235,41 @@ export function CalendarPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('calendar.title', 'Kalender')}</h1>
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500 min-w-[44px] min-h-[44px] flex items-center justify-center" title={t('calendarDrag.helpLabel')}>
-            <Question size={20} />
+      {/* v11 SOTA hero — primary tone, page-hero variant. Help + Subscribe live
+          in hero-actions; the prev/month/next month nav row sits below. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <CalendarBlank weight="bold" className="w-3.5 h-3.5" />
+            {t('calendar.eyebrow', 'SCHEDULE')}
+          </div>
+          <h1 className="admin-hero-headline">{t('calendar.title', 'Kalender')}</h1>
+          <p className="admin-hero-sub">{t('calendar.subtitle', 'See and manage your reservations across the month')}</p>
+        </div>
+        <div className="admin-hero-actions">
+          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" title={t('calendarDrag.helpLabel')}>
+            <Question className="w-4 h-4" />
           </button>
           <button
             onClick={handleSubscribe}
             disabled={generatingToken}
             aria-label={t('calendar.subscribe', 'Subscribe to Calendar')}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50 min-h-[44px]"
+            className="admin-hero-action disabled:opacity-50"
           >
             <LinkSimple weight="bold" className="w-4 h-4" aria-hidden="true" />
             {t('calendar.subscribe', 'Subscribe')}
           </button>
-          <button onClick={prevMonth} aria-label={t('calendar.previousMonth', 'Previous month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
-          </button>
-          <span aria-live="polite" className="text-sm font-medium text-surface-700 dark:text-surface-300 min-w-[140px] text-center">{monthLabel}</span>
-          <button onClick={nextMonth} aria-label={t('calendar.nextMonth', 'Next month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-            <CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
-          </button>
         </div>
+      </section>
+      <div className="flex items-center gap-2 justify-end">
+        <button onClick={prevMonth} aria-label={t('calendar.previousMonth', 'Previous month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
+        </button>
+        <span aria-live="polite" className="text-sm font-medium text-surface-700 dark:text-surface-300 min-w-[140px] text-center">{monthLabel}</span>
+        <button onClick={nextMonth} aria-label={t('calendar.nextMonth', 'Next month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
+          <CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
+        </button>
       </div>
 
       {/* Calendar grid */}
