@@ -121,6 +121,19 @@ ci-security:
 
 pre-push: ci
 
+## Mutation testing (CI/CD audit gap #5 — Rust counterpart of parkhub-php #436).
+## cargo-mutants runs nightly on GHA but never locally — added as a soft-gate
+## advisory target. Skipped cleanly when cargo-mutants binary isn't installed
+## (matches the parkhub-php infection skip-or-run pattern).
+mutants:
+	@if ! command -v cargo-mutants >/dev/null 2>&1; then \
+		echo "cargo-mutants not installed; install with 'cargo install cargo-mutants' (advisory)."; \
+		exit 0; \
+	fi
+	cargo mutants --jobs 4 || echo "cargo-mutants returned non-zero (advisory)."
+
+
+
 ## Run the real workflows locally with nektos/act
 act:
 	@if ! command -v act >/dev/null 2>&1; then \
