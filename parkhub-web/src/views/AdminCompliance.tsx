@@ -115,25 +115,28 @@ export function AdminCompliancePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-            {t('compliance.title')}
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">
-            {t('compliance.subtitle')}
-          </p>
+      {/* v11 SOTA hero — info tone (governance, neutral data). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <FileText weight="bold" className="w-3.5 h-3.5" />
+            {t('compliance.eyebrow', 'GOVERNANCE & DATA')}
+          </div>
+          <h1 className="admin-hero-headline">{t('compliance.title')}</h1>
+          <p className="admin-hero-sub">{t('compliance.subtitle')}</p>
         </div>
-        <button
-          onClick={() => setShowHelp(!showHelp)}
-          className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
-          aria-label={t('compliance.helpLabel')}
-          data-testid="compliance-help-btn"
-        >
-          <Question size={20} />
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="admin-hero-iconbtn"
+            aria-label={t('compliance.helpLabel')}
+            data-testid="compliance-help-btn"
+          >
+            <Question size={16} />
+          </button>
+        </div>
+      </section>
 
       {/* Help tooltip */}
       {showHelp && (

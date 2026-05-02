@@ -177,17 +177,24 @@ export function AdminAnnouncementsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Megaphone weight="fill" className="w-6 h-6 text-primary-600" />
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.announcements')}</h2>
+      {/* v11 SOTA hero — primary tone (default brand for live comms). */}
+      <section className="admin-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Megaphone weight="bold" className="w-3.5 h-3.5" />
+            {t('announcements.eyebrow', 'LIVE COMMS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.announcements')}</h1>
+          <p className="admin-hero-sub">{t('announcements.subtitle', 'Surface comms into the product shell — severity-based and time-bounded.')}</p>
         </div>
-        <button onClick={openCreate} className="btn btn-primary self-start sm:self-auto">
-          <Plus weight="bold" className="w-4 h-4" />
-          {t('admin.newAnnouncement')}
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <button onClick={openCreate} className="admin-hero-action">
+            <Plus weight="bold" className="w-4 h-4" />
+            {t('admin.newAnnouncement')}
+          </button>
+        </div>
+      </section>
 
       {/* Form (Create / Edit) */}
       <AnimatePresence>
