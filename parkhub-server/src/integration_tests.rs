@@ -809,9 +809,14 @@ async fn responses_include_security_headers() {
         .expect("content-security-policy header")
         .to_str()
         .unwrap();
-    assert!(csp.contains("https://a.tile.openstreetmap.org"));
-    assert!(csp.contains("https://b.tile.openstreetmap.org"));
-    assert!(csp.contains("https://c.tile.openstreetmap.org"));
+    let img_src = csp
+        .split(';')
+        .map(str::trim)
+        .find(|directive| directive.starts_with("img-src "))
+        .expect("img-src directive");
+    assert!(img_src.contains("https://a.tile.openstreetmap.org"));
+    assert!(img_src.contains("https://b.tile.openstreetmap.org"));
+    assert!(img_src.contains("https://c.tile.openstreetmap.org"));
     assert!(headers.get("referrer-policy").is_some());
     assert!(headers.get("strict-transport-security").is_some());
     assert!(headers.get("permissions-policy").is_some());
