@@ -41,14 +41,18 @@ export function CreditsPage() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-      {/* Header */}
-      <motion.div variants={item}>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-          <Coins weight="fill" className="w-7 h-7 text-accent-500" />
-          {t('credits.title')}
-        </h1>
-        <p className="text-surface-500 dark:text-surface-400 mt-1">{t('credits.subtitle')}</p>
-      </motion.div>
+      {/* v11 SOTA hero — primary tone, page-hero variant. */}
+      <motion.section variants={item} className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Coins weight="bold" className="w-3.5 h-3.5" />
+            {t('credits.eyebrow', 'BOOKING WALLET')}
+          </div>
+          <h1 className="admin-hero-headline">{t('credits.title')}</h1>
+          <p className="admin-hero-sub">{t('credits.subtitle')}</p>
+        </div>
+      </motion.section>
 
       {/* Balance display */}
       <motion.div variants={item}>
