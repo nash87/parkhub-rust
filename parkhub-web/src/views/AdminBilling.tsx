@@ -77,26 +77,35 @@ export function AdminBillingPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-            <CurrencyDollar weight="bold" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+      {/* v11 SOTA hero — replaces plain h2/subtitle. Pairs with the
+          .admin-hero shipped on the Admin shell. Emerald tone matches
+          the Cost Center Billing identity. */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <CurrencyDollar weight="bold" className="w-3.5 h-3.5" />
+            {t('billing.eyebrow', 'COST CENTER BILLING')}
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-surface-900 dark:text-white">{t('billing.title', 'Cost Center Billing')}</h2>
-            <p className="text-sm text-surface-500 dark:text-surface-400">{t('billing.subtitle', 'Billing breakdown by cost center and department')}</p>
-          </div>
+          <h1 className="admin-hero-headline">{t('billing.title', 'Cost Center Billing')}</h1>
+          <p className="admin-hero-sub">
+            {t('billing.subtitle', 'Billing breakdown by cost center and department')}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400">
-            <Question weight="bold" className="w-5 h-5" />
+        <div className="admin-hero-actions">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="admin-hero-iconbtn"
+            aria-label={t('billing.help_toggle', 'Toggle help')}
+          >
+            <Question weight="bold" className="w-4 h-4" />
           </button>
-          <button onClick={handleExport} className="btn btn-secondary btn-sm" data-testid="export-btn">
-            <DownloadSimple weight="bold" className="w-4 h-4" /> {t('billing.export', 'CSV Export')}
+          <button onClick={handleExport} className="admin-hero-action" data-testid="export-btn">
+            <DownloadSimple weight="bold" className="w-4 h-4" />
+            {t('billing.export', 'CSV Export')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Help */}
       {showHelp && (
@@ -107,11 +116,11 @@ export function AdminBillingPage() {
         </motion.div>
       )}
 
-      {/* Summary cards */}
+      {/* v11 SOTA summary meters — emerald/blue/purple tones for visual rhythm. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="billing-summary">
-        <SummaryCard label={t('billing.totalSpending', 'Total Spending')} value={`EUR ${totalAmount.toFixed(2)}`} icon={<CurrencyDollar weight="bold" className="w-5 h-5 text-emerald-500" />} />
-        <SummaryCard label={t('billing.totalBookings', 'Total Bookings')} value={totalBookings} icon={<ChartBar weight="bold" className="w-5 h-5 text-blue-500" />} />
-        <SummaryCard label={t('billing.totalUsers', 'Total Users')} value={totalUsers} icon={<Buildings weight="bold" className="w-5 h-5 text-purple-500" />} />
+        <SummaryCard tone="success" label={t('billing.totalSpending', 'Total Spending')} value={`EUR ${totalAmount.toFixed(2)}`} icon={<CurrencyDollar weight="bold" className="w-3.5 h-3.5" />} />
+        <SummaryCard tone="info" label={t('billing.totalBookings', 'Total Bookings')} value={totalBookings} icon={<ChartBar weight="bold" className="w-3.5 h-3.5" />} />
+        <SummaryCard tone="accent" label={t('billing.totalUsers', 'Total Users')} value={totalUsers} icon={<Buildings weight="bold" className="w-3.5 h-3.5" />} />
       </div>
 
       {/* Tab switcher */}
@@ -177,11 +186,20 @@ export function AdminBillingPage() {
   );
 }
 
-function SummaryCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+function SummaryCard({ label, value, icon, tone = 'primary' }: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  tone?: 'primary' | 'accent' | 'info' | 'success' | 'warn' | 'danger';
+}) {
+  // v11 SOTA meter from PR #490 — same pattern as AdminReports stat cards.
   return (
-    <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-xs font-medium text-surface-500 dark:text-surface-400">{label}</span></div>
-      <p className="text-2xl font-bold text-surface-900 dark:text-white">{value}</p>
+    <div className={`v11-meter v11-meter--${tone}`}>
+      <div className="v11-meter-eyebrow">
+        {icon}
+        {label}
+      </div>
+      <div className="v11-meter-value">{value}</div>
     </div>
   );
 }

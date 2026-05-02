@@ -1033,3 +1033,82 @@ body {
   background: var(--color-primary-500);
   box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 50%, transparent);
 }
+
+/* ── Admin hero tone variants + action buttons ─────────────────────
+ * Lets per-page hero use a different accent (emerald for billing,
+ * blue for reports, etc.) while reusing the .admin-hero chrome.
+ */
+.admin-hero--emerald {
+  border-color: color-mix(in oklab, oklch(0.72 0.16 145) 32%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, oklch(0.72 0.16 145) 8%, transparent) 0%,
+      color-mix(in oklab, oklch(0.72 0.16 145) 3%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-50, #fafafa);
+}
+.admin-hero--emerald::before {
+  background: oklch(0.72 0.16 145);
+  box-shadow: 0 0 24px color-mix(in oklab, oklch(0.72 0.16 145) 50%, transparent);
+}
+.admin-hero--emerald .admin-hero-eyebrow,
+.admin-hero--emerald .admin-hero-dot { color: oklch(0.55 0.18 145); }
+.admin-hero--emerald .admin-hero-dot { background: oklch(0.72 0.16 145); box-shadow: 0 0 10px oklch(0.72 0.16 145); }
+.dark .admin-hero--emerald {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, oklch(0.72 0.16 145) 12%, transparent) 0%,
+      color-mix(in oklab, oklch(0.72 0.16 145) 4%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-900, #18181b);
+}
+
+.admin-hero-actions {
+  display: flex;
+  gap: 8px;
+  align-self: flex-start;
+}
+.admin-hero-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--color-surface-200, #e4e4e7) 80%, transparent);
+  background: var(--color-surface-50, #fafafa);
+  color: var(--color-surface-500, #71717a);
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+.admin-hero-iconbtn:hover {
+  background: var(--color-surface-100, #f4f4f5);
+  color: var(--color-surface-900, #18181b);
+}
+.dark .admin-hero-iconbtn {
+  background: var(--color-surface-800, #27272a);
+  border-color: color-mix(in oklab, var(--color-surface-700, #3f3f46) 80%, transparent);
+}
+.admin-hero-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklab, var(--color-primary-500) 32%, transparent);
+  background: color-mix(in oklab, var(--color-primary-500) 12%, transparent);
+  color: var(--color-primary-700);
+  font: 600 13px/1 ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+.admin-hero-action:hover {
+  background: color-mix(in oklab, var(--color-primary-500) 22%, transparent);
+}
+.dark .admin-hero-action {
+  color: var(--color-primary-300, var(--color-primary-500));
+}
