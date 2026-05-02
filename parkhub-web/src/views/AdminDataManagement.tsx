@@ -20,14 +20,18 @@ export function AdminDataManagementPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Table weight="duotone" className="w-6 h-6 text-primary-500" />
-        <div>
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white">{t('dataManagement.title', 'Data Management')}</h2>
-          <p className="text-sm text-surface-500">{t('dataManagement.subtitle', 'Import and export your ParkHub data')}</p>
+      {/* v11 SOTA hero — amber tone (bulk ops touch many rows, double-check before running). */}
+      <section className="admin-hero admin-hero--amber">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Table weight="bold" className="w-3.5 h-3.5" />
+            {t('dataManagement.eyebrow', 'BULK OPERATIONS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('dataManagement.title', 'Data Management')}</h1>
+          <p className="admin-hero-sub">{t('dataManagement.subtitle', 'Import and export your ParkHub data')}</p>
         </div>
-      </div>
+      </section>
 
       {/* Tabs */}
       <div className="flex gap-2" data-testid="data-tabs">

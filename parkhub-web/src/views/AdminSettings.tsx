@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { SpinnerGap, Check } from '@phosphor-icons/react';
+import { SpinnerGap, Check, GearSix } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -117,7 +117,18 @@ export function AdminSettingsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.systemSettings')}</h2>
+      {/* v11 SOTA hero — amber tone (config requires deliberate caution). */}
+      <section className="admin-hero admin-hero--amber">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <GearSix weight="bold" className="w-3.5 h-3.5" />
+            SYSTEM CONFIG
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.systemSettings')}</h1>
+          <p className="admin-hero-sub">{t('settings.subtitle', 'Booking rules, credits, and tenant policy')}</p>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column */}
