@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Enable native auto-merge (squash) — TODO: replace with Gitea equivalent
+      - name: "Enable native auto-merge (squash) — TODO: replace with Gitea equivalent"
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
           GITEA_REPO: ${{ github.repository }}
