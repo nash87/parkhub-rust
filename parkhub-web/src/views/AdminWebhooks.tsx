@@ -150,24 +150,32 @@ export function AdminWebhooksPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-100 flex items-center gap-2">
-            <WebhooksLogo size={24} weight="bold" className="text-primary-500" />
-            {t('webhooksV2.title')}
-          </h2>
-          <p className="text-sm text-surface-500 mt-1">{t('webhooksV2.subtitle')}</p>
+      {/* v11 SOTA hero — info tone (event egress = trust boundary, secrets in payloads). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <WebhooksLogo weight="bold" className="w-3.5 h-3.5" />
+            {t('webhooksV2.eyebrow', 'EVENT FAN-OUT')}
+          </div>
+          <h1 className="admin-hero-headline">{t('webhooksV2.title')}</h1>
+          <p className="admin-hero-sub">{t('webhooksV2.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500" aria-label={t('webhooksV2.helpLabel')}>
-            <Question size={20} />
+        <div className="admin-hero-actions">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="admin-hero-iconbtn"
+            aria-label={t('webhooksV2.helpLabel')}
+            title={t('webhooksV2.helpLabel')}
+          >
+            <Question className="w-4 h-4" />
           </button>
-          <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 text-sm font-medium">
-            <Plus size={16} weight="bold" />
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="admin-hero-action">
+            <Plus weight="bold" className="w-4 h-4" />
             {t('webhooksV2.create')}
           </button>
         </div>
-      </div>
+      </section>
 
       <AnimatePresence>
         {showHelp && (

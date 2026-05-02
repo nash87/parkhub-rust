@@ -209,37 +209,38 @@ export function AdminTranslationsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-            <Translate weight="fill" className="w-5 h-5 text-primary-600" />
-            {t('translations.admin.title')}
-          </h2>
+      {/* v11 SOTA hero — emerald tone (community-driven content moderation). */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Translate weight="bold" className="w-3.5 h-3.5" />
+            {t('translations.admin.eyebrow', 'LOCALE CURATION')}
+          </div>
+          <h1 className="admin-hero-headline">{t('translations.admin.title')}</h1>
+          <p className="admin-hero-sub">{t('translations.admin.subtitle', 'Review community translation proposals before they ship')}</p>
+        </div>
+        <div className="admin-hero-actions">
           {pendingCount > 0 && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 tabular-nums">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold tabular-nums px-3 py-1.5 rounded-full bg-amber-100/80 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
               {pendingCount} {t('translations.admin.pendingReview')}
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-2">
           {pendingCount > 0 && (
             <>
-              <button onClick={() => handleBulkAction('approved')} className="btn btn-sm btn-secondary text-emerald-600">
+              <button onClick={() => handleBulkAction('approved')} className="admin-hero-iconbtn text-emerald-600 dark:text-emerald-400" title={t('translations.admin.approveAll')}>
                 <CheckCircle weight="bold" className="w-4 h-4" />
-                {t('translations.admin.approveAll')}
               </button>
-              <button onClick={() => handleBulkAction('rejected')} className="btn btn-sm btn-secondary text-red-600">
+              <button onClick={() => handleBulkAction('rejected')} className="admin-hero-iconbtn text-red-500 dark:text-red-400" title={t('translations.admin.rejectAll')}>
                 <XCircle weight="bold" className="w-4 h-4" />
-                {t('translations.admin.rejectAll')}
               </button>
             </>
           )}
-          <button onClick={loadProposals} className="btn btn-sm btn-ghost" aria-label={t('common.refresh')}>
+          <button onClick={loadProposals} className="admin-hero-iconbtn" aria-label={t('common.refresh')} title={t('common.refresh')}>
             <ArrowsClockwise weight="bold" className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

@@ -124,25 +124,33 @@ export function AdminPluginsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-            {t('plugins.title')}
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">
-            {t('plugins.subtitle')}
-          </p>
+      {/* v11 SOTA hero — info tone (extension surface = expand cluster trust boundary). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <PuzzlePiece weight="bold" className="w-3.5 h-3.5" />
+            {t('plugins.eyebrow', 'EXTENSIONS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('plugins.title')}</h1>
+          <p className="admin-hero-sub">{t('plugins.subtitle')}</p>
         </div>
-        <button
-          onClick={() => setShowHelp(!showHelp)}
-          className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
-          aria-label={t('plugins.helpLabel')}
-          data-testid="plugins-help-btn"
-        >
-          <Question size={20} />
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-surface-600 dark:text-surface-300 px-3 py-1.5 rounded-full bg-surface-100/70 dark:bg-surface-800/60" data-testid="plugins-counter">
+            <Lightning weight="bold" className="w-3.5 h-3.5" />
+            {enabled}/{total} {t('plugins.enabled', 'enabled')}
+          </span>
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="admin-hero-iconbtn"
+            aria-label={t('plugins.helpLabel')}
+            data-testid="plugins-help-btn"
+            title={t('plugins.helpLabel')}
+          >
+            <Question className="w-4 h-4" />
+          </button>
+        </div>
+      </section>
 
       {/* Help tooltip */}
       {showHelp && (
