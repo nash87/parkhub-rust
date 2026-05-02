@@ -117,11 +117,11 @@ function AdminSidebar({ sections, onNavigate }: { sections: NavSection[]; onNavi
             {section.items.map(item => {
               const active = !item.external && isActivePath(location.pathname, item.to);
               const Icon = item.icon;
-              const linkClass = `group flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                  : 'text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 hover:text-surface-900 dark:hover:text-white'
-              }`;
+              // v11 SOTA active state — gradient wash + 3px left-edge bar
+              // with primary glow + soft inner-tone tint. Replaces the
+              // plain bg-primary-50 fill so the sidebar matches the new
+              // .admin-hero + .v11-meter chrome shipped in #489 + #490.
+              const linkClass = `v11-nav-link ${active ? 'is-active' : ''} group flex items-center gap-2.5 px-3 py-2 text-sm font-medium`;
               const content = (
                 <>
                   <Icon weight={active ? 'fill' : 'regular'} className="w-4 h-4 shrink-0" />
