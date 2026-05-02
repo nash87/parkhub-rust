@@ -134,19 +134,21 @@ export function AdminAuditLogPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <ClockCounterClockwise weight="duotone" className="w-6 h-6 text-primary-500" />
-          <div>
-            <h2 className="text-xl font-bold text-surface-900 dark:text-white">{t('auditLog.title', 'Audit Log')}</h2>
-            <p className="text-sm text-surface-500">{t('auditLog.totalEntries', '{{count}} entries', { count: total })}</p>
+      {/* v11 SOTA hero — primary tone (operational journal). */}
+      <section className="admin-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <ClockCounterClockwise weight="bold" className="w-3.5 h-3.5" />
+            {t('auditLog.eyebrow', 'EVENT JOURNAL')}
           </div>
+          <h1 className="admin-hero-headline">{t('auditLog.title', 'Audit Log')}</h1>
+          <p className="admin-hero-sub">{t('auditLog.totalEntries', '{{count}} entries', { count: total })}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="admin-hero-actions">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 rounded-xl text-sm font-medium hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors"
+            className="admin-hero-action"
             data-testid="export-csv-btn"
           >
             <FileCsv weight="bold" className="w-4 h-4" />
@@ -154,14 +156,14 @@ export function AdminAuditLogPage() {
           </button>
           <button
             onClick={() => setShowExportDialog(d => !d)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors"
+            className="admin-hero-action"
             data-testid="export-enhanced-btn"
           >
             <DownloadSimple weight="bold" className="w-4 h-4" />
             {t('auditLog.advancedExport', 'Advanced Export')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Enhanced Export Dialog */}
       {showExportDialog && (
