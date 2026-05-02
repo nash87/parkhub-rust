@@ -93,27 +93,28 @@ export function AdminAccessiblePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-            <Wheelchair weight="bold" className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+      {/* v11 SOTA hero — info tone (accessibility + neutral blue). Pairs
+          with PRs #489/#490/#491/#493 chrome. */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Wheelchair weight="bold" className="w-3.5 h-3.5" />
+            {t('accessible.eyebrow', 'ACCESSIBLE PARKING')}
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-surface-900 dark:text-white">
-              {t('accessible.title', 'Accessible Parking')}
-            </h2>
-            <p className="text-sm text-surface-500 dark:text-surface-400">{t('accessible.subtitle', 'Manage accessible slots and view utilization')}</p>
-          </div>
+          <h1 className="admin-hero-headline">{t('accessible.title', 'Accessible Parking')}</h1>
+          <p className="admin-hero-sub">{t('accessible.subtitle', 'Manage accessible slots and view utilization')}</p>
         </div>
-        <button
-          onClick={() => setShowHelp(!showHelp)}
-          className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400"
-          aria-label="Help"
-        >
-          <Question weight="bold" className="w-5 h-5" />
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="admin-hero-iconbtn"
+            aria-label={t('common.help', 'Help')}
+          >
+            <Question weight="bold" className="w-4 h-4" />
+          </button>
+        </div>
+      </section>
 
       {/* Help / About this module */}
       {showHelp && (
@@ -124,13 +125,13 @@ export function AdminAccessiblePage() {
         </motion.div>
       )}
 
-      {/* Stats cards */}
+      {/* v11 SOTA stat meters — info / success / accent / warn tones */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="accessible-stats">
-          <StatCard label={t('accessible.totalSlots', 'Accessible Slots')} value={stats.total_accessible_slots} icon={<Wheelchair weight="bold" className="w-5 h-5 text-blue-500" />} />
-          <StatCard label={t('accessible.utilization', 'Utilization')} value={`${stats.utilization_percent.toFixed(0)}%`} icon={<ChartBar weight="bold" className="w-5 h-5 text-emerald-500" />} />
-          <StatCard label={t('accessible.totalBookings', 'Active Bookings')} value={stats.total_accessible_bookings} icon={<Wheelchair weight="bold" className="w-5 h-5 text-purple-500" />} />
-          <StatCard label={t('accessible.usersWithNeeds', 'Users with Needs')} value={stats.users_with_accessibility_needs} icon={<Users weight="bold" className="w-5 h-5 text-amber-500" />} />
+          <StatCard tone="info" label={t('accessible.totalSlots', 'Accessible Slots')} value={stats.total_accessible_slots} icon={<Wheelchair weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="success" label={t('accessible.utilization', 'Utilization')} value={`${stats.utilization_percent.toFixed(0)}%`} icon={<ChartBar weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="accent" label={t('accessible.totalBookings', 'Active Bookings')} value={stats.total_accessible_bookings} icon={<Wheelchair weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="warn" label={t('accessible.usersWithNeeds', 'Users with Needs')} value={stats.users_with_accessibility_needs} icon={<Users weight="bold" className="w-3.5 h-3.5" />} />
         </div>
       )}
 
@@ -206,11 +207,20 @@ export function AdminAccessiblePage() {
   );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) {
+function StatCard({ label, value, icon, tone = 'primary' }: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  tone?: 'primary' | 'accent' | 'info' | 'success' | 'warn' | 'danger';
+}) {
+  // v11 SOTA meter (PR #490) — same pattern as AdminReports + AdminBilling.
   return (
-    <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-xs font-medium text-surface-500 dark:text-surface-400">{label}</span></div>
-      <p className="text-2xl font-bold text-surface-900 dark:text-white">{value}</p>
+    <div className={`v11-meter v11-meter--${tone}`}>
+      <div className="v11-meter-eyebrow">
+        {icon}
+        {label}
+      </div>
+      <div className="v11-meter-value">{value}</div>
     </div>
   );
 }

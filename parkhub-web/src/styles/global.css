@@ -1112,3 +1112,99 @@ body {
 .dark .admin-hero-action {
   color: var(--color-primary-300, var(--color-primary-500));
 }
+
+/* ── Admin hero info tone (accessibility, neutral data, blue) ──────── */
+.admin-hero--info {
+  border-color: color-mix(in oklab, oklch(0.62 0.18 240) 32%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, oklch(0.62 0.18 240) 8%, transparent) 0%,
+      color-mix(in oklab, oklch(0.62 0.18 240) 3%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-50, #fafafa);
+}
+.admin-hero--info::before {
+  background: oklch(0.62 0.18 240);
+  box-shadow: 0 0 24px color-mix(in oklab, oklch(0.62 0.18 240) 50%, transparent);
+}
+.admin-hero--info .admin-hero-eyebrow,
+.admin-hero--info .admin-hero-dot { color: oklch(0.50 0.18 240); }
+.admin-hero--info .admin-hero-dot { background: oklch(0.62 0.18 240); box-shadow: 0 0 10px oklch(0.62 0.18 240); }
+.dark .admin-hero--info {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, oklch(0.62 0.18 240) 12%, transparent) 0%,
+      color-mix(in oklab, oklch(0.62 0.18 240) 4%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-900, #18181b);
+}
+
+/* ── Admin hero amber tone (maintenance, caution) ──────────────────── */
+.admin-hero--amber {
+  border-color: color-mix(in oklab, oklch(0.78 0.16 75) 32%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, oklch(0.78 0.16 75) 8%, transparent) 0%,
+      color-mix(in oklab, oklch(0.78 0.16 75) 3%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-50, #fafafa);
+}
+.admin-hero--amber::before {
+  background: oklch(0.78 0.16 75);
+  box-shadow: 0 0 24px color-mix(in oklab, oklch(0.78 0.16 75) 50%, transparent);
+}
+.admin-hero--amber .admin-hero-eyebrow,
+.admin-hero--amber .admin-hero-dot { color: oklch(0.61 0.18 75); }
+.admin-hero--amber .admin-hero-dot { background: oklch(0.78 0.16 75); box-shadow: 0 0 10px oklch(0.78 0.16 75); }
+.dark .admin-hero--amber {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, oklch(0.78 0.16 75) 12%, transparent) 0%,
+      color-mix(in oklab, oklch(0.78 0.16 75) 4%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-900, #18181b);
+}
+
+/* ── v11 SOTA warn banner (pairs with .admin-hero--amber) ──────────── */
+.v11-warn-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, oklch(0.78 0.16 75) 28%, transparent);
+  background: color-mix(in oklab, oklch(0.78 0.16 75) 6%, transparent);
+  animation: v11-warn-pulse 4s ease-in-out infinite;
+}
+.dark .v11-warn-banner {
+  border-color: color-mix(in oklab, oklch(0.78 0.16 75) 32%, transparent);
+  background: color-mix(in oklab, oklch(0.78 0.16 75) 10%, transparent);
+}
+.v11-warn-banner-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: oklch(0.61 0.18 75);
+}
+.dark .v11-warn-banner-icon { color: oklch(0.85 0.14 75); }
+.v11-warn-banner-text {
+  font: 500 14px/1.45 ui-sans-serif, system-ui, sans-serif;
+  color: oklch(0.45 0.16 75);
+  margin: 0;
+}
+.dark .v11-warn-banner-text { color: oklch(0.78 0.12 75); }
+@keyframes v11-warn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v11-warn-banner { animation: none; }
+}
