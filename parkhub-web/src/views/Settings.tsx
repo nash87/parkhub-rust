@@ -82,17 +82,21 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-20">
-      <header className="mb-5">
-        <h1
-          className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white"
-          style={{ letterSpacing: '-0.02em' }}
-        >
-          {t('settings.title', 'Settings')}
-        </h1>
-        <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
-          {t('settings.subtitle', 'Control how ParkHub looks, feels, and behaves — for you and your workspace.')}
-        </p>
-      </header>
+      {/* v11 SOTA hero — primary tone, page-hero variant. User-level settings
+          (workspace + appearance), distinct from amber AdminSettings. */}
+      <section className="admin-hero page-hero mb-5">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <User weight="bold" className="w-3.5 h-3.5" />
+            {t('settings.eyebrow', 'PREFERENCES')}
+          </div>
+          <h1 className="admin-hero-headline">{t('settings.title', 'Settings')}</h1>
+          <p className="admin-hero-sub">
+            {t('settings.subtitle', 'Control how ParkHub looks, feels, and behaves — for you and your workspace.')}
+          </p>
+        </div>
+      </section>
 
       {/* Scope switcher */}
       <div

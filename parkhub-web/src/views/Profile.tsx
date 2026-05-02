@@ -131,10 +131,18 @@ export function ProfilePage() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="max-w-3xl mx-auto space-y-6">
-      <motion.div variants={item}>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('profile.title', 'Profil')}</h1>
-        <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">{t('profile.subtitle', 'Pers\u00f6nliche Daten verwalten')}</p>
-      </motion.div>
+      {/* v11 SOTA hero \u2014 primary tone, page-hero variant (visible on mobile). */}
+      <motion.section variants={item} className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <UserCircle weight="bold" className="w-3.5 h-3.5" />
+            {t('profile.eyebrow', 'ACCOUNT')}
+          </div>
+          <h1 className="admin-hero-headline">{t('profile.title', 'Profil')}</h1>
+          <p className="admin-hero-sub">{t('profile.subtitle', 'Pers\u00f6nliche Daten verwalten')}</p>
+        </div>
+      </motion.section>
 
       {/* Profile card */}
       <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-6">

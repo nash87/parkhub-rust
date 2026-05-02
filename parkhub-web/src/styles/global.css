@@ -882,7 +882,16 @@ body {
 }
 
 @media (max-width: 1024px) {
-  .admin-hero { display: none; } /* Mobile uses the slim sticky header above */
+  .admin-hero { display: none; } /* Admin pages hide hero on mobile — slim sticky header is shown above */
+  /* User-facing pages opt in to a mobile-visible hero by adding .page-hero. */
+  .admin-hero.page-hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+  .admin-hero.page-hero .admin-hero-headline { font-size: 22px; }
+  .admin-hero.page-hero .admin-hero-sub { font-size: 13px; }
 }
 @media (max-width: 1280px) {
   .admin-hero { grid-template-columns: 1fr; }
