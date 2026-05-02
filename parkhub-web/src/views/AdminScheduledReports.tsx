@@ -155,35 +155,37 @@ export function AdminScheduledReportsPage() {
 
   return (
     <div className="space-y-6" data-testid="scheduled-reports-page">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
-            {t('scheduledReports.title')}
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">
-            {t('scheduledReports.subtitle')}
-          </p>
+      {/* v11 SOTA hero — emerald tone (recurring report delivery, insight workflow). */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Clock weight="bold" className="w-3.5 h-3.5" />
+            {t('scheduledReports.eyebrow', 'AUTOMATED DELIVERY')}
+          </div>
+          <h1 className="admin-hero-headline">{t('scheduledReports.title')}</h1>
+          <p className="admin-hero-sub">{t('scheduledReports.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="admin-hero-actions">
           <button
             onClick={() => setShowHelp(!showHelp)}
-            className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
+            className="admin-hero-iconbtn"
             aria-label={t('scheduledReports.helpLabel')}
             data-testid="reports-help-btn"
+            title={t('scheduledReports.helpLabel')}
           >
-            <Question size={20} />
+            <Question className="w-4 h-4" />
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600"
+            className="admin-hero-action"
             data-testid="create-schedule-btn"
           >
-            <Plus size={16} />
+            <Plus weight="bold" className="w-4 h-4" />
             {t('scheduledReports.create')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Help */}
       <AnimatePresence>

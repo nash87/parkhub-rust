@@ -115,11 +115,21 @@ export function AdminReportsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.reports')}</h2>
-        <ExportButton />
-      </div>
+      {/* v11 SOTA hero — emerald tone (data + insight, paired with v11-meter stats below). */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <CalendarCheck weight="bold" className="w-3.5 h-3.5" />
+            {t('admin.reportsEyebrow', 'BUSINESS METRICS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.reports')}</h1>
+          <p className="admin-hero-sub">{t('admin.reportsSubtitle', 'Booking volume, occupancy heatmaps, and revenue trends')}</p>
+        </div>
+        <div className="admin-hero-actions">
+          <ExportButton />
+        </div>
+      </section>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
