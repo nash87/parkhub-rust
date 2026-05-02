@@ -34,14 +34,43 @@ use super::{
 /// Cookie name for the auth token.
 pub const AUTH_COOKIE_NAME: &str = "parkhub_token";
 
+/// Return whether auth cookies should include `Secure` for the configured URL.
+///
+/// Plain HTTP is allowed only for explicit local development hosts.
+pub(super) fn auth_cookie_secure_flag(app_url: Option<&str>) -> bool {
+    let Some(url) = app_url else {
+        return true;
+    };
+
+    let Some(authority) = url.strip_prefix("http://") else {
+        return true;
+    };
+
+    let host = authority
+        .split(['/', '?', '#'])
+        .next()
+        .and_then(|authority| authority.rsplit('@').next())
+        .unwrap_or_default();
+    let host = if let Some(ipv6) = host.strip_prefix('[') {
+        ipv6.split(']').next().unwrap_or_default()
+    } else {
+        host.split(':').next().unwrap_or_default()
+    };
+
+    let is_test_host = host
+        .rsplit_once('.')
+        .is_some_and(|(_, suffix)| suffix.eq_ignore_ascii_case("test"));
+
+    !(host == "localhost" || host == "127.0.0.1" || host == "::1" || is_test_host)
+}
+
 /// Build a `Set-Cookie` header value for the auth token.
 ///
 /// The cookie is `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` unless
-/// running on localhost (detected via `APP_URL` env var).
+/// `APP_URL` points at a plain-HTTP dev origin.
 pub(super) fn build_auth_cookie(token: &str, max_age_secs: i64) -> String {
-    let secure_flag = std::env::var("APP_URL")
-        .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
-        .unwrap_or(true);
+    let app_url = std::env::var("APP_URL").ok();
+    let secure_flag = auth_cookie_secure_flag(app_url.as_deref());
 
     let mut cookie = format!(
         "{AUTH_COOKIE_NAME}={token}; HttpOnly; SameSite=Lax; Path=/; Max-Age={max_age_secs}"
@@ -1128,6 +1157,25 @@ mod tests {
         unsafe { std::env::remove_var("APP_URL") };
         let cookie = build_auth_cookie("tok", 7200);
         assert!(cookie.contains("Secure"));
+    }
+
+    #[test]
+    fn test_auth_cookie_secure_flag_allows_plain_http_dev_origins() {
+        assert!(!auth_cookie_secure_flag(Some("http://localhost:3000")));
+        assert!(!auth_cookie_secure_flag(Some("http://127.0.0.1:39080")));
+        assert!(!auth_cookie_secure_flag(Some("http://[::1]:39080")));
+        assert!(!auth_cookie_secure_flag(Some("http://parkhub-rust.test")));
+        assert!(!auth_cookie_secure_flag(Some(
+            "http://parkhub-rust.test:39080"
+        )));
+        assert!(!auth_cookie_secure_flag(Some("http://parkhub-rust.TEST")));
+    }
+
+    #[test]
+    fn test_auth_cookie_secure_flag_keeps_https_and_missing_url_secure() {
+        assert!(auth_cookie_secure_flag(None));
+        assert!(auth_cookie_secure_flag(Some("https://parkhub.example.com")));
+        assert!(auth_cookie_secure_flag(Some("http://staging.example.com")));
     }
 
     #[test]
