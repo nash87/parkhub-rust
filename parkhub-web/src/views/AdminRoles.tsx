@@ -132,34 +132,31 @@ export function AdminRolesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <ShieldCheck weight="duotone" className="w-6 h-6 text-primary-500" />
-            {t('rbac.title')}
-          </h2>
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
-            {t('rbac.subtitle')}
-          </p>
+      {/* v11 SOTA hero — info tone (access control = security-critical). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <ShieldCheck weight="bold" className="w-3.5 h-3.5" />
+            ACCESS CONTROL
+          </div>
+          <h1 className="admin-hero-headline">{t('rbac.title')}</h1>
+          <p className="admin-hero-sub">{t('rbac.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="admin-hero-actions">
           <button
             onClick={() => setShowHelp(h => !h)}
-            className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800"
+            className="admin-hero-iconbtn"
             title={t('rbac.helpLabel')}
           >
-            <Question className="w-5 h-5" />
+            <Question className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-          >
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="admin-hero-action">
             <Plus className="w-4 h-4" />
             {t('rbac.createRole')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Help tooltip */}
       <AnimatePresence>

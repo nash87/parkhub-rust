@@ -59,24 +59,31 @@ export function AdminRateLimitsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-surface-900 dark:text-white">
-          {t('rateLimits.title', 'Rate Limits')}
-        </h2>
-        <div className="flex items-center gap-2 text-sm">
+      {/* v11 SOTA hero — amber tone (throttle = traffic-shaping caution). */}
+      <section className="admin-hero admin-hero--amber">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Warning weight="bold" className="w-3.5 h-3.5" />
+            {t('rateLimits.eyebrow', 'API THROTTLE')}
+          </div>
+          <h1 className="admin-hero-headline">{t('rateLimits.title', 'Rate Limits')}</h1>
+          <p className="admin-hero-sub">{t('rateLimits.subtitle', 'Per-group request budgets and recent block history')}</p>
+        </div>
+        <div className="admin-hero-actions">
           {totalBlocked > 0 ? (
-            <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-              <Warning weight="bold" className="w-4 h-4" />
+            <span className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-full bg-amber-100/70 dark:bg-amber-900/30">
+              <Warning weight="bold" className="w-3.5 h-3.5" />
               {t('rateLimits.blockedTotal', '{{count}} blocked (last hour)', { count: totalBlocked })}
             </span>
           ) : (
-            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-              <ShieldCheck weight="bold" className="w-4 h-4" />
+            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full bg-emerald-100/70 dark:bg-emerald-900/30">
+              <ShieldCheck weight="bold" className="w-3.5 h-3.5" />
               {t('rateLimits.allClear', 'No blocked requests')}
             </span>
           )}
         </div>
-      </div>
+      </section>
 
       {/* Rate limit group cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

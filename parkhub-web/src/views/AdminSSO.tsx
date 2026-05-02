@@ -120,32 +120,35 @@ export function AdminSSOPage() {
 
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-surface-100 flex items-center gap-2">
-            <ShieldCheck size={24} weight="bold" className="text-primary-500" />
-            {t('sso.title')}
-          </h2>
-          <p className="text-sm text-surface-500 mt-1">{t('sso.subtitle')}</p>
+      {/* v11 SOTA hero — info tone (identity federation = security boundary). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <ShieldCheck weight="bold" className="w-3.5 h-3.5" />
+            {t('sso.eyebrow', 'IDENTITY FEDERATION')}
+          </div>
+          <h1 className="admin-hero-headline">{t('sso.title')}</h1>
+          <p className="admin-hero-sub">{t('sso.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="admin-hero-actions">
           <button
             onClick={() => setShowHelp(!showHelp)}
-            className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500"
+            className="admin-hero-iconbtn"
             aria-label={t('sso.helpLabel')}
+            title={t('sso.helpLabel')}
           >
-            <Question size={20} />
+            <Question className="w-4 h-4" />
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600 transition-colors text-sm font-medium"
+            className="admin-hero-action"
           >
-            <Plus size={16} weight="bold" />
+            <Plus weight="bold" className="w-4 h-4" />
             {t('sso.addProvider')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Help */}
       <AnimatePresence>

@@ -144,15 +144,18 @@ export function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-6" data-testid="admin-analytics">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <ChartBar weight="fill" className="w-6 h-6 text-primary-500" />
-            Analytics
-          </h1>
-          <p className="text-sm text-surface-500 dark:text-surface-400">Comprehensive parking analytics and trends</p>
+      {/* v11 SOTA hero — emerald tone (data + insights). */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <ChartBar weight="bold" className="w-3.5 h-3.5" />
+            USAGE & TRENDS
+          </div>
+          <h1 className="admin-hero-headline">Analytics</h1>
+          <p className="admin-hero-sub">Comprehensive parking analytics and trends</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="admin-hero-actions">
           {(['7', '30', '90', '365'] as DateRange[]).map(r => (
             <button
               key={r}
@@ -166,15 +169,12 @@ export function AdminAnalyticsPage() {
               {r === '365' ? '1y' : `${r}d`}
             </button>
           ))}
-          <button
-            onClick={exportCsv}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-700 rounded-lg transition-colors"
-          >
+          <button onClick={exportCsv} className="admin-hero-action">
             <Export weight="bold" className="w-4 h-4" />
             CSV
           </button>
         </div>
-      </div>
+      </section>
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

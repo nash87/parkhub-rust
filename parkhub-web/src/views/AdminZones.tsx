@@ -98,25 +98,27 @@ export function AdminZonesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <MapTrifold weight="duotone" className="w-6 h-6 text-primary-500" />
-            {t('parkingZones.title')}
-          </h2>
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">
-            {t('parkingZones.subtitle')}
-          </p>
+      {/* v11 SOTA hero — emerald tone (spatial pricing = revenue lever). */}
+      <section className="admin-hero admin-hero--emerald">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <MapTrifold weight="bold" className="w-3.5 h-3.5" />
+            {t('parkingZones.eyebrow', 'SPATIAL PRICING')}
+          </div>
+          <h1 className="admin-hero-headline">{t('parkingZones.title')}</h1>
+          <p className="admin-hero-sub">{t('parkingZones.subtitle')}</p>
         </div>
-        <button
-          onClick={() => setShowHelp(h => !h)}
-          className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800"
-          title={t('parkingZones.helpLabel')}
-        >
-          <Question className="w-5 h-5" />
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <button
+            onClick={() => setShowHelp(h => !h)}
+            className="admin-hero-iconbtn"
+            title={t('parkingZones.helpLabel')}
+          >
+            <Question className="w-4 h-4" />
+          </button>
+        </div>
+      </section>
 
       {/* Help */}
       <AnimatePresence>

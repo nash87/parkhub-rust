@@ -107,21 +107,27 @@ export function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('widgets.title')}</h1>
-          <p className="text-surface-500 dark:text-surface-400 text-sm">{t('widgets.subtitle')}</p>
+      {/* v11 SOTA hero — primary tone (operations view). */}
+      <section className="admin-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <ChartBar weight="bold" className="w-3.5 h-3.5" />
+            OPERATIONS VIEW
+          </div>
+          <h1 className="admin-hero-headline">{t('widgets.title')}</h1>
+          <p className="admin-hero-sub">{t('widgets.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500" title={t('widgets.helpLabel')}>
-            <Question size={20} />
+        <div className="admin-hero-actions">
+          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" title={t('widgets.helpLabel')}>
+            <Question size={16} />
           </button>
-          <button onClick={() => setShowCatalog(!showCatalog)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
-            <GearSix size={16} /> {t('widgets.customize')}
+          <button onClick={() => setShowCatalog(!showCatalog)} className="admin-hero-action">
+            <GearSix size={16} weight="bold" />
+            {t('widgets.customize')}
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Help tooltip */}
       <AnimatePresence>
