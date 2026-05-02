@@ -24,6 +24,7 @@ import { type ModuleInfo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useModuleToggle } from '../hooks/useModuleToggle';
 import { ConfigEditorModal } from '../components/ConfigEditorModal';
+import { PuzzlePiece } from '@phosphor-icons/react';
 
 const CATEGORY_ORDER = [
   'core',
@@ -294,19 +295,23 @@ export function AdminModulesPage() {
 
   return (
     <div className="p-6 space-y-6" data-testid="modules-dashboard">
-      <header className="flex items-center gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">{t('admin.modules.title', 'Modules')}</h1>
-          <p className="text-sm text-surface-600 dark:text-surface-400">
-            {t('admin.modules.subtitle', 'Feature modules compiled into this deployment.')}
-          </p>
+      {/* v11 SOTA hero — info tone (compiled feature surface = build-time decisions). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <PuzzlePiece weight="bold" className="w-3.5 h-3.5" />
+            {t('admin.modules.eyebrow', 'COMPILED FEATURES')}
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.modules.title', 'Modules')}</h1>
+          <p className="admin-hero-sub">{t('admin.modules.subtitle', 'Feature modules compiled into this deployment.')}</p>
         </div>
-        <div className="ml-auto flex items-center gap-2 text-sm">
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-600 dark:text-emerald-400">
+        <div className="admin-hero-actions">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium tabular-nums px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
             {enabledCount}/{total} {t('admin.modules.active', 'active')}
           </span>
         </div>
-      </header>
+      </section>
 
       <div className="flex flex-wrap gap-3 items-center">
         <input
