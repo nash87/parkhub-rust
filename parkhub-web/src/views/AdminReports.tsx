@@ -9,19 +9,26 @@ import { ExportButton } from '../components/ExportButton';
 
 const HEATMAP_STATUSES = new Set(['confirmed', 'active', 'completed']);
 
-function StatCard({ icon: Icon, label, value }: {
+function StatCard({ icon: Icon, label, value, color = 'primary' }: {
   icon: Icon;
   label: string;
   value: number;
-  color?: string;
+  color?: 'primary' | 'accent' | 'info' | 'success' | 'warn' | 'danger';
 }) {
+  // v11 SOTA stat meter: colored left-edge bar, mono UPPERCASE eyebrow,
+  // hero-size value with color-mix(oklab) gradient wash. Pairs with the
+  // admin-hero card landed in PR #489. Color tone drives the semantic
+  // wash via the .v11-meter--{color} modifier.
   return (
-    <div className="stat-card">
-      <div className="flex items-center gap-2 mb-2">
-        <Icon weight="bold" className="w-4 h-4 text-surface-400" />
-        <p className="text-sm font-medium text-surface-500 dark:text-surface-400">{label}</p>
+    <div className={`v11-meter v11-meter--${color}`}>
+      <div className="v11-meter-eyebrow">
+        <Icon weight="bold" className="w-3.5 h-3.5" />
+        {label}
       </div>
-      <p className="stat-value text-surface-900 dark:text-white">{value}</p>
+      <div className="v11-meter-value">{value}</div>
+      <div className="v11-meter-bar" aria-hidden="true">
+        <i style={{ width: `${Math.min(value > 0 ? Math.max(value / 200, 0.05) * 100 : 0, 100)}%` }}></i>
+      </div>
     </div>
   );
 }

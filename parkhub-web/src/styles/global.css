@@ -887,3 +887,95 @@ body {
 @media (max-width: 1280px) {
   .admin-hero { grid-template-columns: 1fr; }
 }
+
+/* ── v11 SOTA stat meter — replaces the plain .stat-card ────────────
+ * Used by AdminReports + (future) other admin overview screens.
+ * Pairs with .admin-hero from PR #489 — same chrome vocabulary
+ * (left-edge bar, mono eyebrow, color-mix wash, gradient bar).
+ */
+.v11-meter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px 18px 22px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 24%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 6%, transparent) 0%,
+      transparent 70%
+    ),
+    var(--color-surface-50, #fafafa);
+  overflow: hidden;
+  transition: transform 120ms ease-out, border-color 120ms ease-out;
+}
+.dark .v11-meter {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 10%, transparent) 0%,
+      transparent 70%
+    ),
+    var(--color-surface-900, #18181b);
+}
+.v11-meter:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 38%, transparent);
+}
+.v11-meter::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--meter-tone, var(--color-primary-500));
+  box-shadow: 0 0 14px color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 40%, transparent);
+}
+.v11-meter-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10px/1 ui-monospace, 'JetBrains Mono', monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-surface-500, #71717a);
+}
+.v11-meter-value {
+  font: 700 32px/1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--color-surface-900, #18181b);
+  font-variant-numeric: tabular-nums;
+}
+.dark .v11-meter-value { color: #fff; }
+.v11-meter-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--color-surface-200, #e4e4e7) 60%, transparent);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.dark .v11-meter-bar {
+  background: color-mix(in oklab, var(--color-surface-800, #27272a) 60%, transparent);
+}
+.v11-meter-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--meter-tone, var(--color-primary-500)) 0%,
+    color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 60%, transparent) 100%
+  );
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 2px;
+}
+
+/* Tone modifiers — drive the --meter-tone CSS var the rule above mixes against */
+.v11-meter--primary { --meter-tone: var(--color-primary-500); }
+.v11-meter--accent  { --meter-tone: oklch(0.68 0.18 200); /* cyan-teal */ }
+.v11-meter--info    { --meter-tone: oklch(0.62 0.18 240); /* blue */ }
+.v11-meter--success { --meter-tone: oklch(0.72 0.16 145); /* emerald */ }
+.v11-meter--warn    { --meter-tone: oklch(0.78 0.16 75);  /* amber */ }
+.v11-meter--danger  { --meter-tone: oklch(0.65 0.22 25);  /* red */ }
