@@ -124,15 +124,18 @@ export function MapViewPage() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      <motion.div variants={item}>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-          <MapPin weight="fill" className="w-7 h-7 text-primary-500" />
-          {t('map.title')}
-        </h1>
-        <p className="text-surface-500 dark:text-surface-400 mt-1">
-          {t('map.subtitle')}
-        </p>
-      </motion.div>
+      {/* v11 SOTA hero — primary tone, page-hero variant. */}
+      <motion.section variants={item} className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <MapPin weight="bold" className="w-3.5 h-3.5" />
+            {t('map.eyebrow', 'LIVE AVAILABILITY')}
+          </div>
+          <h1 className="admin-hero-headline">{t('map.title')}</h1>
+          <p className="admin-hero-sub">{t('map.subtitle')}</p>
+        </div>
+      </motion.section>
 
       {markers.length === 0 ? (
         <motion.div variants={item} className="card p-12 text-center">

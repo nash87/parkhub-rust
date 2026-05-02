@@ -132,19 +132,26 @@ export function BookPage() {
     <div className="space-y-6">
       {confirmed && <ConfettiOverlay />}
 
-      <div className="flex items-center gap-3">
-        {step > 1 && (
-          <button onClick={goBack} className="btn btn-ghost btn-sm p-1.5" aria-label={t('common.back', 'Go back')}>
-            <ArrowLeft weight="bold" className="w-5 h-5" aria-hidden="true" />
-          </button>
-        )}
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
-            {t('book.title')}
-          </h1>
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-0.5">{t(`book.step${step}Label`)}</p>
+      {/* v11 SOTA hero — primary tone, page-hero variant. Step subtitle changes
+          per booking step; back button lives in hero-actions when applicable. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <MapPin weight="bold" className="w-3.5 h-3.5" />
+            {t('book.eyebrow', 'RESERVE A SPOT')}
+          </div>
+          <h1 className="admin-hero-headline">{t('book.title')}</h1>
+          <p className="admin-hero-sub">{t(`book.step${step}Label`)}</p>
         </div>
-      </div>
+        {step > 1 && (
+          <div className="admin-hero-actions">
+            <button onClick={goBack} className="admin-hero-iconbtn" aria-label={t('common.back', 'Go back')} title={t('common.back', 'Go back')}>
+              <ArrowLeft weight="bold" className="w-4 h-4" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </section>
 
       {/* Step indicator — animated progress */}
       <nav aria-label={t('book.progress', 'Booking progress')} className="relative">
