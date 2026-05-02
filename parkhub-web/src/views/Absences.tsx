@@ -123,19 +123,24 @@ export function AbsencesPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-            <Calendar weight="fill" className="w-7 h-7 text-primary-600" />
-            {t('absences.title', 'Abwesenheiten')}
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('absences.subtitle', 'Homeoffice, Urlaub & mehr verwalten')}</p>
+      {/* v11 SOTA hero — primary tone, page-hero variant. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Calendar weight="bold" className="w-3.5 h-3.5" />
+            {t('absences.eyebrow', 'TIME OFF')}
+          </div>
+          <h1 className="admin-hero-headline">{t('absences.title', 'Abwesenheiten')}</h1>
+          <p className="admin-hero-sub">{t('absences.subtitle', 'Homeoffice, Urlaub & mehr verwalten')}</p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="btn btn-primary">
-          <Plus weight="bold" className="w-4 h-4" /> {t('absences.addAbsence', 'Eintragen')}
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <button onClick={() => setShowAdd(true)} className="admin-hero-action">
+            <Plus weight="bold" className="w-4 h-4" />
+            {t('absences.addAbsence', 'Eintragen')}
+          </button>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Calendar */}
