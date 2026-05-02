@@ -804,7 +804,19 @@ async fn responses_include_security_headers() {
     let headers = resp.headers();
     assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
     assert_eq!(headers.get("x-frame-options").unwrap(), "DENY");
-    assert!(headers.get("content-security-policy").is_some());
+    let csp = headers
+        .get("content-security-policy")
+        .expect("content-security-policy header")
+        .to_str()
+        .unwrap();
+    let img_src = csp
+        .split(';')
+        .map(str::trim)
+        .find(|directive| directive.starts_with("img-src "))
+        .expect("img-src directive");
+    assert!(img_src.contains("https://a.tile.openstreetmap.org"));
+    assert!(img_src.contains("https://b.tile.openstreetmap.org"));
+    assert!(img_src.contains("https://c.tile.openstreetmap.org"));
     assert!(headers.get("referrer-policy").is_some());
     assert!(headers.get("strict-transport-security").is_some());
     assert!(headers.get("permissions-policy").is_some());

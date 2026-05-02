@@ -482,7 +482,7 @@ pub async fn security_headers_middleware(request: Request<Body>, next: Next) -> 
             "default-src 'self'; \
              script-src 'self' 'unsafe-inline'; \
              style-src 'self' 'unsafe-inline'; \
-             img-src 'self' data: blob:; \
+             img-src 'self' data: blob: https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; \
              font-src 'self' data:; \
              connect-src 'self' ws: wss:; \
              frame-ancestors 'none'; \
