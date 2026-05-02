@@ -220,20 +220,26 @@ export function AdminUpdatesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg">
-          <ArrowsClockwise weight="bold" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+      {/* v11 SOTA hero — amber tone (in-place upgrades carry rollback risk). */}
+      <section className="admin-hero admin-hero--amber">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <CloudArrowDown weight="bold" className="w-3.5 h-3.5" />
+            {t('updates.eyebrow', 'RELEASE CHANNEL')}
+          </div>
+          <h1 className="admin-hero-headline">{t('updates.title', 'System Updates')}</h1>
+          <p className="admin-hero-sub">{t('updates.subtitle', 'Manage application updates and versioning')}</p>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-surface-900 dark:text-white">
-            {t('updates.title', 'System Updates')}
-          </h2>
-          <p className="text-sm text-surface-500 dark:text-surface-400">
-            {t('updates.subtitle', 'Manage application updates and versioning')}
-          </p>
+        <div className="admin-hero-actions">
+          {versionInfo?.version && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium tabular-nums px-3 py-1.5 rounded-full bg-surface-100/70 dark:bg-surface-800/60 text-surface-600 dark:text-surface-300" data-testid="hero-version">
+              <Info weight="bold" className="w-3.5 h-3.5" />
+              v{versionInfo.version}
+            </span>
+          )}
         </div>
-      </div>
+      </section>
 
       {/* Current Version Card */}
       <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 shadow-sm p-5" data-testid="version-card">
