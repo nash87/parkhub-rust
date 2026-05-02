@@ -752,3 +752,138 @@ body {
 .density-rows > * + * {
   margin-top: var(--density-row-gap);
 }
+
+/* ── Admin v11 SOTA-2026 hero ───────────────────────────────────────
+ * Ports the v11 hero pattern from fop-web-ui (HealthyPulse, IncidentHero,
+ * ParallelGuard) into the parkhub-rust admin shell. Replaces the plain
+ * "Verwaltung" h1+subtitle with a colored-edge hero card carrying a
+ * pulsing studio dot + UPPERCASE mono eyebrow + side meter column.
+ *
+ * Tokens used:
+ *   --color-primary-500/700     teal (existing parkhub palette)
+ *   --color-surface-*           white/50/100/800/900 (Tailwind-derived)
+ * No new tokens needed — matches existing parkhub design language.
+ */
+.admin-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 24px;
+  padding: 24px 28px 24px 32px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in oklab, var(--color-primary-500) 32%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--color-primary-500) 8%, transparent) 0%,
+      color-mix(in oklab, var(--color-primary-500) 3%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-50, #fafafa);
+  overflow: hidden;
+}
+.dark .admin-hero {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--color-primary-500) 12%, transparent) 0%,
+      color-mix(in oklab, var(--color-primary-500) 4%, transparent) 60%,
+      transparent 100%
+    ),
+    var(--color-surface-900, #18181b);
+}
+.admin-hero::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-primary-500);
+  box-shadow: 0 0 24px color-mix(in oklab, var(--color-primary-500) 50%, transparent);
+}
+.admin-hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 11px/1 ui-monospace, 'JetBrains Mono', monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primary-700);
+  margin-bottom: 12px;
+}
+.dark .admin-hero-eyebrow {
+  color: var(--color-primary-400, var(--color-primary-500));
+}
+.admin-hero-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-primary-500);
+  box-shadow: 0 0 10px var(--color-primary-500);
+  animation: admin-hero-pulse 2.4s ease-in-out infinite;
+}
+@keyframes admin-hero-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-hero-dot { animation: none; }
+}
+.admin-hero-headline {
+  font: 700 28px/1.1 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+  color: var(--color-surface-900, #18181b);
+  margin: 0 0 6px 0;
+}
+.dark .admin-hero-headline { color: #fff; }
+.admin-hero-sub {
+  font: 500 14px/1.45 ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-surface-500, #71717a);
+  margin: 0;
+}
+
+.admin-hero-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--color-primary-500) 18%, transparent);
+  background: color-mix(in oklab, var(--color-surface-100, #f4f4f5) 60%, transparent);
+}
+.dark .admin-hero-meter {
+  background: color-mix(in oklab, var(--color-surface-800, #27272a) 60%, transparent);
+}
+.admin-hero-meter-h {
+  font: 600 9px/1 ui-monospace, 'JetBrains Mono', monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-surface-400, #a1a1aa);
+  margin-bottom: 4px;
+}
+.admin-hero-meter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px dashed color-mix(in oklab, var(--color-primary-500) 22%, transparent);
+  background: color-mix(in oklab, var(--color-primary-500) 4%, transparent);
+}
+.admin-hero-meter-row .lbl {
+  font: 600 12px/1.2 ui-sans-serif, system-ui, sans-serif;
+  color: var(--color-surface-900, #18181b);
+}
+.dark .admin-hero-meter-row .lbl { color: #fff; }
+.admin-hero-meter-row .meta {
+  font: 500 11px/1.35 ui-monospace, 'JetBrains Mono', monospace;
+  color: var(--color-surface-500, #71717a);
+}
+
+@media (max-width: 1024px) {
+  .admin-hero { display: none; } /* Mobile uses the slim sticky header above */
+}
+@media (max-width: 1280px) {
+  .admin-hero { grid-template-columns: 1fr; }
+}

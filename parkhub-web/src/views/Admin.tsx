@@ -200,13 +200,45 @@ export function AdminPage() {
         </div>
       </div>
 
+      {/*
+        v11 SOTA-2026 hero — replaces plain "Verwaltung" h1/subtitle with a
+        bracketed governance-studio header card carrying the live operational
+        focus. Mirrors the pattern shipped on fop-web-ui v11 (HealthyPulse,
+        IncidentHero, ParallelGuard) — colored left-edge bar, pulsing dot,
+        mono UPPERCASE eyebrow, color-mix(oklab) gradient wash, side meter
+        column with stacked operational focus cards.
+      */}
+      <section className="admin-hero hidden lg:block mb-6">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            {t('admin.studio_label', 'MARBLE GOVERNANCE STUDIO')}
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.title')}</h1>
+          <p className="admin-hero-sub">{t('admin.subtitle')}</p>
+        </div>
+        <aside className="admin-hero-meter" aria-label={t('admin.operational_focus', 'Operational focus')}>
+          <div className="admin-hero-meter-h">
+            {t('admin.operational_focus', 'OPERATIONAL FOCUS')}
+          </div>
+          <div className="admin-hero-meter-row">
+            <div className="lbl">{t('admin.focus.settings', 'Einstellungen')}</div>
+            <div className="meta">{t('admin.focus.settings_meta', 'Policy, booking rules, waitlist, credits')}</div>
+          </div>
+          <div className="admin-hero-meter-row">
+            <div className="lbl">{t('admin.focus.users', 'Benutzer')}</div>
+            <div className="meta">{t('admin.focus.users_meta', 'Quota, role, lifecycle and bulk actions')}</div>
+          </div>
+          <div className="admin-hero-meter-row">
+            <div className="lbl">{t('admin.focus.announcements', 'Ankuendigungen')}</div>
+            <div className="meta">{t('admin.focus.announcements_meta', 'Live comms surfaced into the product shell')}</div>
+          </div>
+        </aside>
+      </section>
+
       <div className="flex gap-6">
         {/* Desktop sidebar */}
         <aside className="hidden lg:block w-64 shrink-0 pt-2">
-          <div className="mb-5">
-            <h1 className="text-xl font-bold text-surface-900 dark:text-white">{t('admin.title')}</h1>
-            <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{t('admin.subtitle')}</p>
-          </div>
           <div className="sticky top-4">
             <AdminSidebar sections={sections} />
           </div>
