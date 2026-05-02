@@ -131,15 +131,23 @@ export function BookingsPage() {
   return (
     <AnimatePresence mode="wait">
     <motion.div key="bookings-loaded" variants={container} initial="hidden" animate="show" className="space-y-6">
-      <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('bookings.title')}</h1>
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1">{t('bookings.subtitle')}</p>
+      {/* v11 SOTA hero — primary tone, page-hero variant (visible on mobile). */}
+      <motion.section variants={item} className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Clock weight="bold" className="w-3.5 h-3.5" />
+            {t('bookings.eyebrow', 'MY RESERVATIONS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('bookings.title')}</h1>
+          <p className="admin-hero-sub">{t('bookings.subtitle')}</p>
         </div>
-        <button onClick={loadData} className="btn btn-secondary self-start sm:self-auto">
-          <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
-        </button>
-      </motion.div>
+        <div className="admin-hero-actions">
+          <button onClick={loadData} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
+            <ArrowClockwise weight="bold" className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.section>
 
       {/* Filters */}
       <motion.div variants={item} className="bg-white/80 dark:bg-surface-900/80 backdrop-blur-lg border border-surface-200/60 dark:border-surface-800/60 rounded-xl p-4">
