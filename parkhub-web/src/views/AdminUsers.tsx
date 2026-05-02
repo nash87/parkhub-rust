@@ -312,35 +312,42 @@ export function AdminUsersPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-surface-900 dark:text-white">{t('admin.users')}</h2>
-          <span className="text-sm text-surface-500 dark:text-surface-400 tabular-nums">({users.length})</span>
+      {/* v11 SOTA hero — primary tone (people & access). */}
+      <section className="admin-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            {t('users.eyebrow', 'PEOPLE & ACCESS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('admin.users')}</h1>
+          <p className="admin-hero-sub">
+            {t('users.count', '{{count}} active', { count: users.length })}
+          </p>
         </div>
-
-        <div className="relative">
-          <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={t('admin.searchUsers')}
-            className="input pl-9 pr-8 w-full sm:w-64"
-            aria-label={t('admin.searchUsers')}
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => setSearch('')}
-              aria-label={t('admin.clearSearch')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 transition-colors"
-            >
-              <X weight="bold" className="w-3.5 h-3.5" />
-            </button>
-          )}
+        <div className="admin-hero-actions">
+          <div className="relative">
+            <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={t('admin.searchUsers')}
+              className="input pl-9 pr-8 w-full sm:w-64"
+              aria-label={t('admin.searchUsers')}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label={t('admin.clearSearch')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 transition-colors"
+              >
+                <X weight="bold" className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (

@@ -90,18 +90,24 @@ export function AdminTenantsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-surface-900 dark:text-white">
-          {t('tenants.title', 'Tenants')}
-        </h2>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors"
-        >
-          <Plus weight="bold" className="w-4 h-4" />
-          {t('tenants.create', 'Create Tenant')}
-        </button>
-      </div>
+      {/* v11 SOTA hero — info tone (multi-tenant infrastructure). */}
+      <section className="admin-hero admin-hero--info">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Buildings weight="bold" className="w-3.5 h-3.5" />
+            {t('tenants.eyebrow', 'PEOPLE & ACCESS · TENANTS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('tenants.title', 'Tenants')}</h1>
+          <p className="admin-hero-sub">{t('tenants.subtitle', 'Manage isolated tenant environments and per-org domains')}</p>
+        </div>
+        <div className="admin-hero-actions">
+          <button onClick={openCreate} className="admin-hero-action">
+            <Plus weight="bold" className="w-4 h-4" />
+            {t('tenants.create', 'Create Tenant')}
+          </button>
+        </div>
+      </section>
 
       {tenants.length === 0 ? (
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-8 text-center">
