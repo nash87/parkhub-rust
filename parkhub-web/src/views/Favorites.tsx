@@ -88,17 +88,25 @@ export function FavoritesPage() {
   return (
     <AnimatePresence mode="wait">
       <motion.div key="favorites-loaded" variants={container} initial="hidden" animate="show" className="space-y-8">
-        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('favorites.title')}</h1>
-            <p className="text-surface-500 dark:text-surface-400 mt-1">{t('favorites.subtitle')}</p>
+        {/* v11 SOTA hero — primary tone, page-hero variant. Count chip in hero-actions. */}
+        <motion.section variants={item} className="admin-hero page-hero">
+          <div className="admin-hero-left">
+            <div className="admin-hero-eyebrow">
+              <span className="admin-hero-dot" aria-hidden="true"></span>
+              <Star weight="bold" className="w-3.5 h-3.5" />
+              {t('favorites.eyebrow', 'SAVED LOTS')}
+            </div>
+            <h1 className="admin-hero-headline">{t('favorites.title')}</h1>
+            <p className="admin-hero-sub">{t('favorites.subtitle')}</p>
           </div>
           {favorites.length > 0 && (
-            <span className="text-sm text-surface-500 dark:text-surface-400">
-              {t('favorites.count', { count: favorites.length })}
-            </span>
+            <div className="admin-hero-actions">
+              <span className="inline-flex items-center text-xs font-medium px-3 py-1.5 rounded-full bg-surface-100/70 dark:bg-surface-800/60 text-surface-600 dark:text-surface-300 tabular-nums">
+                {t('favorites.count', { count: favorites.length })}
+              </span>
+            </div>
           )}
-        </motion.div>
+        </motion.section>
 
         {enriched.length === 0 ? (
           <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-16 text-center">

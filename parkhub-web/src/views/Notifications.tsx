@@ -95,26 +95,31 @@ export function NotificationsPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('notifications.title')}</h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">
+      {/* v11 SOTA hero — primary tone, page-hero variant. Refresh + Mark-all-read live in hero-actions. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Bell weight="bold" className="w-3.5 h-3.5" />
+            {t('notifications.eyebrow', 'INBOX')}
+          </div>
+          <h1 className="admin-hero-headline">{t('notifications.title')}</h1>
+          <p className="admin-hero-sub">
             {unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : t('notifications.allRead')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={loadNotifications} className="btn btn-secondary">
-            <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
+        <div className="admin-hero-actions">
+          <button onClick={loadNotifications} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
+            <ArrowClockwise weight="bold" className="w-4 h-4" />
           </button>
           {unreadCount > 0 && (
-            <button onClick={markAllAsRead} disabled={isPending} className="btn btn-primary">
+            <button onClick={markAllAsRead} disabled={isPending} className="admin-hero-action disabled:opacity-50">
               {isPending ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
               {t('notifications.markAllRead')}
             </button>
           )}
         </div>
-      </div>
+      </section>
 
       {/* List */}
       {optimisticNotifs.length === 0 ? (

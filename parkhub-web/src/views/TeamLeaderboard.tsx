@@ -165,11 +165,18 @@ export function TeamLeaderboardPage() {
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6" data-testid="leaderboard-page">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-            <Trophy weight="fill" className="w-7 h-7 text-yellow-500" />
-            {t('leaderboard.title', 'Team Leaderboard')}
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('leaderboard.subtitle', 'See how your team is doing')}</p>
+          {/* v11 SOTA hero — primary tone, page-hero variant (renders on both empty + loaded states). */}
+          <section className="admin-hero page-hero">
+            <div className="admin-hero-left">
+              <div className="admin-hero-eyebrow">
+                <span className="admin-hero-dot" aria-hidden="true"></span>
+                <Trophy weight="bold" className="w-3.5 h-3.5" />
+                {t('leaderboard.eyebrow', 'TEAM RANKINGS')}
+              </div>
+              <h1 className="admin-hero-headline">{t('leaderboard.title', 'Team Leaderboard')}</h1>
+              <p className="admin-hero-sub">{t('leaderboard.subtitle', 'See how your team is doing')}</p>
+            </div>
+          </section>
         </div>
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-12 text-center" data-testid="empty-state">
           <Trophy weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
