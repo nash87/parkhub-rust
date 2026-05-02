@@ -186,9 +186,8 @@ const OAUTH_STATE_MAX_AGE: u32 = 600;
 
 /// Build a `Set-Cookie` header value for the OAuth CSRF state nonce.
 fn build_oauth_state_cookie(state_nonce: &str) -> String {
-    let secure_flag = std::env::var("APP_URL")
-        .map(|u| !u.starts_with("http://localhost") && !u.starts_with("http://127.0.0.1"))
-        .unwrap_or(true);
+    let app_url = std::env::var("APP_URL").ok();
+    let secure_flag = super::auth::auth_cookie_secure_flag(app_url.as_deref());
     let mut cookie = format!(
         "{OAUTH_STATE_COOKIE}={state_nonce}; HttpOnly; SameSite=Lax; Path=/api/v1/auth/oauth; Max-Age={OAUTH_STATE_MAX_AGE}"
     );
