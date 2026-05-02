@@ -979,3 +979,57 @@ body {
 .v11-meter--success { --meter-tone: oklch(0.72 0.16 145); /* emerald */ }
 .v11-meter--warn    { --meter-tone: oklch(0.78 0.16 75);  /* amber */ }
 .v11-meter--danger  { --meter-tone: oklch(0.65 0.22 25);  /* red */ }
+
+/* ── v11 SOTA sidebar nav pill (slice 3) ────────────────────────────
+ * Replaces the plain `bg-primary-50 text-primary-700` active fill with
+ * the v11 chrome vocabulary: 3px colored left-edge bar + tone glow,
+ * color-mix(oklab) gradient wash, intensified hover transitions.
+ * Pairs with .admin-hero (PR #489) + .v11-meter (PR #490).
+ */
+.v11-nav-link {
+  position: relative;
+  border-radius: 8px;
+  color: var(--color-surface-700, #404040);
+  transition:
+    color 120ms ease-out,
+    background-color 120ms ease-out;
+}
+.dark .v11-nav-link { color: var(--color-surface-300, #d4d4d4); }
+.v11-nav-link:hover {
+  background: color-mix(in oklab, var(--color-surface-100, #f4f4f5) 80%, transparent);
+  color: var(--color-surface-900, #18181b);
+}
+.dark .v11-nav-link:hover {
+  background: color-mix(in oklab, var(--color-surface-800, #27272a) 70%, transparent);
+  color: #fff;
+}
+.v11-nav-link.is-active {
+  color: var(--color-primary-700);
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--color-primary-500) 14%, transparent) 0%,
+    color-mix(in oklab, var(--color-primary-500) 4%, transparent) 70%,
+    transparent 100%
+  );
+  font-weight: 600;
+}
+.dark .v11-nav-link.is-active {
+  color: var(--color-primary-300, var(--color-primary-500));
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--color-primary-500) 22%, transparent) 0%,
+    color-mix(in oklab, var(--color-primary-500) 6%, transparent) 70%,
+    transparent 100%
+  );
+}
+.v11-nav-link.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-primary-500);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 50%, transparent);
+}
