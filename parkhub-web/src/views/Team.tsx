@@ -50,13 +50,18 @@ export function TeamPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-          <Users weight="fill" className="w-7 h-7 text-primary-600" />
-          {t('team.title', 'Team')}
-        </h1>
-        <p className="text-surface-500 dark:text-surface-400 mt-1">{t('team.subtitle', 'Abwesenheiten im Team')}</p>
-      </div>
+      {/* v11 SOTA hero — primary tone, page-hero variant. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Users weight="bold" className="w-3.5 h-3.5" />
+            {t('team.eyebrow', 'CO-WORKERS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('team.title', 'Team')}</h1>
+          <p className="admin-hero-sub">{t('team.subtitle', 'Abwesenheiten im Team')}</p>
+        </div>
+      </section>
 
       {/* Today */}
       <section>
