@@ -113,7 +113,7 @@ export function AdminDashboardPage() {
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
             <ChartBar weight="bold" className="w-3.5 h-3.5" />
-            OPERATIONS VIEW
+            {t('widgets.eyebrow', 'OPERATIONS VIEW')}
           </div>
           <h1 className="admin-hero-headline">{t('widgets.title')}</h1>
           <p className="admin-hero-sub">{t('widgets.subtitle')}</p>

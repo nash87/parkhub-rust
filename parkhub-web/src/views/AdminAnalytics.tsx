@@ -93,7 +93,7 @@ function HeatmapChart({ peak_hours }: { peak_hours: HourBin[] }) {
 }
 
 export function AdminAnalyticsPage() {
-  useTranslation(); // initialized for future i18n
+  const { t } = useTranslation();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState<DateRange>('30');
@@ -150,7 +150,7 @@ export function AdminAnalyticsPage() {
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
             <ChartBar weight="bold" className="w-3.5 h-3.5" />
-            USAGE & TRENDS
+            {t('analytics.eyebrow', 'USAGE & TRENDS')}
           </div>
           <h1 className="admin-hero-headline">Analytics</h1>
           <p className="admin-hero-sub">Comprehensive parking analytics and trends</p>
