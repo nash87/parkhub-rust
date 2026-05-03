@@ -100,10 +100,13 @@ describe('i18n locales', () => {
     it('has the same top-level keys as en.ts', () => {
       const localeKeys = getTopLevelKeys(locale);
       const missing = enKeys.filter(k => !localeKeys.includes(k));
-      const extra = localeKeys.filter(k => !enKeys.includes(k));
-
+      // Asymmetric: a non-EN locale may add top-level sections (e.g. eyebrow
+      // labels added to DE during the v11 chrome rollout — the English
+      // fallbacks live inline in the source as `t('section.eyebrow', 'X')`
+      // rather than in en.ts). Strict superset check: every EN key must
+      // exist, but extras are allowed. Mirrors the relaxation in
+      // i18n.test.ts (PR #546).
       expect(missing, `${code} is missing keys: ${missing.join(', ')}`).toEqual([]);
-      expect(extra, `${code} has extra keys: ${extra.join(', ')}`).toEqual([]);
     });
 
     it('has no empty string values', () => {
