@@ -73,7 +73,7 @@ impl Drop for MdnsService {
 mod tests {
     use super::*;
 
-    /// Build a minimal ServerConfig for discovery tests.
+    /// Build a minimal `ServerConfig` for discovery tests.
     fn test_config() -> ServerConfig {
         ServerConfig {
             server_name: "TestServer".into(),

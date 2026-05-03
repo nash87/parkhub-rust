@@ -370,7 +370,7 @@ pub async fn demo_config(
 mod tests {
     use super::*;
 
-    /// Build a DemoState with `enabled = true` without touching the environment.
+    /// Build a `DemoState` with `enabled = true` without touching the environment.
     fn enabled_demo_state() -> DemoState {
         let now = Utc::now();
         DemoState {
