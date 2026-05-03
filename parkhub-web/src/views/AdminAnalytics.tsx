@@ -149,8 +149,8 @@ export function AdminAnalyticsPage() {
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
           <HeroEyebrow icon={ChartBarIcon} label={t('analytics.eyebrow', 'USAGE & TRENDS')} />
-          <h1 className="admin-hero-headline">Analytics</h1>
-          <p className="admin-hero-sub">Comprehensive parking analytics and trends</p>
+          <h1 className="admin-hero-headline">{t('analytics.headline', 'Analytics')}</h1>
+          <p className="admin-hero-sub">{t('analytics.subtitle', 'Comprehensive parking analytics and trends')}</p>
         </div>
         <div className="admin-hero-actions">
           {(['7', '30', '90', '365'] as DateRange[]).map(r => (
@@ -183,10 +183,10 @@ export function AdminAnalyticsPage() {
         <>
           {/* Stats cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={CalendarBlankIcon} label="Total Bookings" value={String(data.total_bookings)} sub={`Last ${range} days`} />
-            <StatCard icon={CurrencyDollarIcon} label="Total Revenue" value={`${data.total_revenue.toFixed(2)}`} sub={`Last ${range} days`} />
-            <StatCard icon={ClockIcon} label="Avg Duration" value={`${Math.round(data.avg_booking_duration_minutes)} min`} />
-            <StatCard icon={UsersIcon} label="Active Users" value={String(data.active_users)} sub="With bookings in period" />
+            <StatCard icon={CalendarBlankIcon} label={t('analytics.totalBookings', 'Total Bookings')} value={String(data.total_bookings)} sub={t('analytics.lastNDays', 'Last {{n}} days', { n: range })} />
+            <StatCard icon={CurrencyDollarIcon} label={t('analytics.totalRevenue', 'Total Revenue')} value={`${data.total_revenue.toFixed(2)}`} sub={t('analytics.lastNDays', 'Last {{n}} days', { n: range })} />
+            <StatCard icon={ClockIcon} label={t('analytics.avgDuration', 'Avg Duration')} value={t('analytics.nMinutes', '{{n}} min', { n: Math.round(data.avg_booking_duration_minutes) })} />
+            <StatCard icon={UsersIcon} label={t('analytics.activeUsers', 'Active Users')} value={String(data.active_users)} sub={t('analytics.activeUsersSub', 'With bookings in period')} />
           </div>
 
           {/* Charts row */}
@@ -194,14 +194,14 @@ export function AdminAnalyticsPage() {
             <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
               <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4 flex items-center gap-2">
                 <TrendUpIcon weight="bold" className="w-4 h-4" />
-                Daily Bookings
+                {t('analytics.dailyBookings', 'Daily Bookings')}
               </h3>
               <MiniBarChart data={bookingsChartData} height={160} color="var(--color-primary-500, #6366f1)" />
             </div>
             <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
               <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4 flex items-center gap-2">
                 <CurrencyDollarIcon weight="bold" className="w-4 h-4" />
-                Daily Revenue
+                {t('analytics.dailyRevenue', 'Daily Revenue')}
               </h3>
               <MiniBarChart data={revenueChartData} height={160} color="var(--color-emerald-500, #10b981)" />
             </div>
@@ -210,13 +210,13 @@ export function AdminAnalyticsPage() {
           {/* Heatmap + Top Lots */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
-              <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4">Bookings by Hour (Heatmap)</h3>
+              <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4">{t('analytics.bookingsByHour', 'Bookings by Hour (Heatmap)')}</h3>
               <HeatmapChart peak_hours={data.peak_hours} />
             </div>
             <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
-              <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4">Top Lots by Utilization</h3>
+              <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4">{t('analytics.topLots', 'Top Lots by Utilization')}</h3>
               <div className="space-y-3">
-                {data.top_lots.length === 0 && <p className="text-sm text-surface-400">No lot data</p>}
+                {data.top_lots.length === 0 && <p className="text-sm text-surface-400">{t('analytics.noLotData', 'No lot data')}</p>}
                 {data.top_lots.map(lot => (
                   <div key={lot.lot_id} className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
