@@ -1,10 +1,10 @@
 //! Background job scheduler.
 //!
 //! Uses tokio interval tasks (no external cron dependency beyond what's already in the tree):
-//! - **AutoRelease** (every 5 min): cancel no-show bookings after the configured threshold
-//! - **ExpandRecurring** (every 1 h): create future booking instances for recurring series
-//! - **PurgeExpired** (every 24 h): remove old cancelled/expired bookings beyond retention period
-//! - **AggregateOccupancy** (every 15 min): persist aggregated occupancy stats to settings
+//! - **`AutoRelease`** (every 5 min): cancel no-show bookings after the configured threshold
+//! - **`ExpandRecurring`** (every 1 h): create future booking instances for recurring series
+//! - **`PurgeExpired`** (every 24 h): remove old cancelled/expired bookings beyond retention period
+//! - **`AggregateOccupancy`** (every 15 min): persist aggregated occupancy stats to settings
 
 // Background jobs hold read/write guards within tight scoped blocks by design.
 // Clippy flags the contained scope as "not tight enough" but the block is the
