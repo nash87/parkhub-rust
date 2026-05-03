@@ -32,10 +32,10 @@ interface ComplianceReport {
   generated_at: string;
   overall_status: 'compliant' | 'warning' | 'non_compliant';
   checks: ComplianceCheck[];
-  data_categories: any[];
-  legal_basis: any[];
-  retention_periods: any[];
-  sub_processors: any[];
+  data_categories: unknown[];
+  legal_basis: unknown[];
+  retention_periods: unknown[];
+  sub_processors: unknown[];
   tom_summary: TomSummary;
 }
 
