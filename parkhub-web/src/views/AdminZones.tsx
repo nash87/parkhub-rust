@@ -72,7 +72,9 @@ export function AdminZonesPage() {
   async function handleSavePricing() {
     if (!editZoneId) return;
     try {
-      const body: any = { tier: editTier };
+      const body: { tier: PricingTier; pricing_multiplier?: number; max_capacity?: number } = {
+        tier: editTier,
+      };
       const mult = parseFloat(editMultiplier);
       if (!isNaN(mult) && mult > 0) body.pricing_multiplier = mult;
       const cap = parseInt(editCapacity, 10);
