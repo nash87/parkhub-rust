@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowsClockwise, X } from '@phosphor-icons/react';
+import { ArrowsClockwiseIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 export function SWUpdatePrompt() {
@@ -74,7 +74,7 @@ export function SWUpdatePrompt() {
           className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[9999] max-w-sm w-[calc(100%-2rem)]"
         >
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface-900 dark:bg-surface-100 text-white dark:text-surface-900 shadow-2xl border border-surface-700 dark:border-surface-300">
-            <ArrowsClockwise weight="bold" className="w-5 h-5 text-primary-400 dark:text-primary-600 flex-shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
+            <ArrowsClockwiseIcon weight="bold" className="w-5 h-5 text-primary-400 dark:text-primary-600 flex-shrink-0 animate-spin" style={{ animationDuration: '3s' }} />
             <p className="text-sm font-medium flex-1">
               {t('pwa.updateAvailable', 'A new version is available')}
             </p>
@@ -89,7 +89,7 @@ export function SWUpdatePrompt() {
               className="p-1 rounded-lg hover:bg-surface-700 dark:hover:bg-surface-200 transition-colors"
               aria-label={t('common.dismiss', 'Dismiss')}
             >
-              <X weight="bold" className="w-4 h-4" />
+              <XIcon weight="bold" className="w-4 h-4" />
             </button>
           </div>
         </motion.div>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ClockCounterClockwise, Star, Clock, TrendUp, CalendarBlank,
-  FunnelSimple, CaretLeft, CaretRight, SpinnerGap, Coins,
+  ClockCounterClockwiseIcon, StarIcon, Clock, TrendUp, CalendarBlank,
+  FunnelSimple, CaretLeft, CaretRight, SpinnerGap, CoinsIcon,
 } from '@phosphor-icons/react';
 import { api, type Booking, type ParkingLot, type PersonalParkingStats } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -73,7 +73,7 @@ export function ParkingHistoryPage() {
           <div className="admin-hero-left">
             <div className="admin-hero-eyebrow">
               <span className="admin-hero-dot" aria-hidden="true"></span>
-              <ClockCounterClockwise weight="bold" className="w-3.5 h-3.5" />
+              <ClockCounterClockwiseIcon weight="bold" className="w-3.5 h-3.5" />
               {t('history.eyebrow', 'PARKING ARCHIVE')}
             </div>
             <h1 className="admin-hero-headline">{t('history.title')}</h1>
@@ -96,7 +96,7 @@ export function ParkingHistoryPage() {
             </div>
             <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
               <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400 mb-1">
-                <Star weight="regular" className="w-4 h-4" />
+                <StarIcon weight="regular" className="w-4 h-4" />
                 <span className="text-xs font-medium">{t('history.favoriteLot')}</span>
               </div>
               <p className="text-lg font-bold text-surface-900 dark:text-white truncate">{stats.favorite_lot || '—'}</p>
@@ -110,7 +110,7 @@ export function ParkingHistoryPage() {
             </div>
             <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
               <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400 mb-1">
-                <Coins weight="regular" className="w-4 h-4" />
+                <CoinsIcon weight="regular" className="w-4 h-4" />
                 <span className="text-xs font-medium">{t('history.creditsSpent')}</span>
               </div>
               <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.credits_spent}</p>
@@ -200,7 +200,7 @@ export function ParkingHistoryPage() {
             </div>
           ) : bookings.length === 0 ? (
             <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-16 text-center">
-              <ClockCounterClockwise weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
+              <ClockCounterClockwiseIcon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
               <p className="text-surface-500 dark:text-surface-400 mt-4">{t('history.noHistory')}</p>
             </div>
           ) : (

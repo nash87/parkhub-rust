@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapTrifold, Pencil, Question, Tag } from '@phosphor-icons/react';
+import { MapTrifold, PencilIcon, Question, Tag } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -161,7 +161,7 @@ export function AdminZonesPage() {
                     className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700"
                     title={t('parkingZones.editPricing')}
                   >
-                    <Pencil className="w-4 h-4" />
+                    <PencilIcon className="w-4 h-4" />
                   </button>
                 </div>
 

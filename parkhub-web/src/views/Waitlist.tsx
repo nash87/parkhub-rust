@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Queue, Check, X, Question, Clock, ArrowUp } from '@phosphor-icons/react';
+import { BellIcon, Queue, Check, XIcon, Question, Clock, ArrowUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -206,7 +206,7 @@ export function WaitlistPage() {
                             </span>
                             {wp.entry.status === 'waiting' && (
                               <span className="text-xs text-surface-500 flex items-center gap-1">
-                                <ArrowUp size={12} />
+                                <ArrowUpIcon size={12} />
                                 {t('waitlistExt.position', { pos: wp.position })}
                               </span>
                             )}
@@ -232,7 +232,7 @@ export function WaitlistPage() {
                               onClick={() => handleDecline(wp.entry.lot_id, wp.entry.id)}
                               className="flex items-center gap-1 px-3 py-1.5 bg-surface-200 dark:bg-surface-700 rounded-lg text-sm hover:bg-surface-300 dark:hover:bg-surface-600"
                             >
-                              <X size={16} /> {t('waitlistExt.decline')}
+                              <XIcon size={16} /> {t('waitlistExt.decline')}
                             </button>
                           </>
                         )}
@@ -278,7 +278,7 @@ export function WaitlistPage() {
                       disabled={joining === lot.id}
                       className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
                     >
-                      <Bell size={16} />
+                      <BellIcon size={16} />
                       {joining === lot.id ? t('waitlistExt.joiningWaitlist') : t('waitlistExt.joinWaitlist')}
                     </button>
                   </motion.div>

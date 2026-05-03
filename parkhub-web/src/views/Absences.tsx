@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  House, Calendar, CalendarCheck, Trash, Plus, CaretLeft, CaretRight,
-  X,
+  House, CalendarIcon, CalendarCheckIcon, Trash, Plus, CaretLeft, CaretRight,
+  XIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -45,7 +45,7 @@ export function AbsencesPage() {
 
   const hoPattern = useMemo(() => patterns.find(p => p.absence_type === 'homeoffice'), [patterns]);
 
-  // Calendar days
+  // CalendarIcon days
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1);
     const lastDay = new Date(calYear, calMonth + 1, 0);
@@ -128,7 +128,7 @@ export function AbsencesPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Calendar weight="bold" className="w-3.5 h-3.5" />
+            <CalendarIcon weight="bold" className="w-3.5 h-3.5" />
             {t('absences.eyebrow', 'TIME OFF')}
           </div>
           <h1 className="admin-hero-headline">{t('absences.title', 'Abwesenheiten')}</h1>
@@ -143,7 +143,7 @@ export function AbsencesPage() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Calendar */}
+        {/* CalendarIcon */}
         <div className="lg:col-span-3 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{calMonthLabel}</h2>
@@ -230,7 +230,7 @@ export function AbsencesPage() {
           {/* Upcoming entries */}
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
             <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2">
-              <CalendarCheck weight="fill" className="w-5 h-5 text-emerald-600" />
+              <CalendarCheckIcon weight="fill" className="w-5 h-5 text-emerald-600" />
               {t('absences.upcoming', 'Anstehend')}
             </h3>
             <div className="space-y-2 max-h-72 overflow-y-auto">
@@ -258,7 +258,7 @@ export function AbsencesPage() {
               {entries.filter(e => e.end_date >= todayStr).length === 0 && (
                 <div className="text-center py-6">
                   <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-                    <CalendarCheck weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
+                    <CalendarCheckIcon weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
                   </motion.div>
                   <p className="text-sm text-surface-500 dark:text-surface-400 mt-3">{t('absences.noEntries', 'Keine Eintr\u00e4ge')}</p>
                 </div>
@@ -302,7 +302,7 @@ function AddAbsenceModal({ onClose, onAdd, t }: {
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{t('absences.addAbsence', 'Abwesenheit eintragen')}</h2>
-          <button onClick={onClose} aria-label={t('common.cancel', 'Close')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"><X weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" /></button>
+          <button onClick={onClose} aria-label={t('common.cancel', 'Close')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"><XIcon weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" /></button>
         </div>
 
         {/* Type pills */}

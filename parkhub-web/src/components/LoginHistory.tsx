@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClockCounterClockwise, SpinnerGap, Desktop, Globe, ShieldWarning, Check } from '@phosphor-icons/react';
+import { ClockCounterClockwiseIcon, SpinnerGap, Desktop, GlobeIcon, ShieldWarning, Check } from '@phosphor-icons/react';
 import { api, type LoginHistoryEntry, type SessionInfo } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -57,7 +57,7 @@ export function LoginHistoryComponent() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-3">
-        <ClockCounterClockwise size={24} weight="duotone" className="text-primary-500" />
+        <ClockCounterClockwiseIcon size={24} weight="duotone" className="text-primary-500" />
         <h3 className="font-semibold">Security</h3>
       </div>
 
@@ -101,7 +101,7 @@ export function LoginHistoryComponent() {
                 </div>
                 <div className="text-right text-xs text-gray-500">
                   <div className="flex items-center gap-1">
-                    <Globe size={12} />
+                    <GlobeIcon size={12} />
                     {entry.ip_address}
                   </div>
                   <div className="flex items-center gap-1">

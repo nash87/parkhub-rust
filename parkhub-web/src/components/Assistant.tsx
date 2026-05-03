@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Sparkle, ArrowRight, X } from '@phosphor-icons/react';
+import { SparkleIcon, ArrowRightIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { buildLiveReply, defaultReply } from '../lib/assistantReply';
 
@@ -108,7 +108,7 @@ export function Assistant({
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-surface-200 dark:border-surface-800">
         <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary-600 text-white">
-          <Sparkle weight="fill" className="w-[18px] h-[18px]" />
+          <SparkleIcon weight="fill" className="w-[18px] h-[18px]" />
         </div>
         <div className="flex-1 min-w-0">
           <h2
@@ -129,7 +129,7 @@ export function Assistant({
           className="btn btn-ghost btn-icon"
           aria-label={t('common.close', 'Close')}
         >
-          <X weight="bold" className="w-4 h-4" />
+          <XIcon weight="bold" className="w-4 h-4" />
         </button>
       </div>
 
@@ -195,7 +195,7 @@ export function Assistant({
             className="btn btn-primary btn-icon w-7 h-7 disabled:opacity-50"
             aria-label={t('assistant.send', 'Send')}
           >
-            <ArrowRight weight="bold" className="w-3 h-3" />
+            <ArrowRightIcon weight="bold" className="w-3 h-3" />
           </button>
         </div>
         <div className="text-[10px] text-surface-400 dark:text-surface-500 mt-1.5 text-center">

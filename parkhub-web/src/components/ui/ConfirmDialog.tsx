@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Warning } from '@phosphor-icons/react';
+import { WarningIcon } from '@phosphor-icons/react';
 import { useEffect, useRef } from 'react';
 
 interface ConfirmDialogProps {
@@ -64,7 +64,7 @@ export function ConfirmDialog({
               <div className="flex items-start gap-3">
                 {variant === 'danger' && (
                   <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center flex-shrink-0">
-                    <Warning weight="fill" className="w-5 h-5 text-danger" />
+                    <WarningIcon weight="fill" className="w-5 h-5 text-danger" />
                   </div>
                 )}
                 <div>

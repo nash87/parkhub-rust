@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, X, Palette } from '@phosphor-icons/react';
+import { Check, XIcon, Palette } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useTheme, type DesignThemeId, type DesignThemeInfo } from '../context/ThemeContext';
 
@@ -134,7 +134,7 @@ export function ThemeSwitcher({ open, onClose }: { open: boolean; onClose: () =>
                 className="btn btn-ghost btn-icon"
                 aria-label={t('common.close', 'Close')}
               >
-                <X weight="bold" className="w-4 h-4" />
+                <XIcon weight="bold" className="w-4 h-4" />
               </button>
             </div>
 

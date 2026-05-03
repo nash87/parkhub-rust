@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Plus, Trash, PaperPlaneTilt, Question, Pencil, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
+import { Clock, Plus, Trash, PaperPlaneTilt, Question, PencilIcon, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -345,7 +345,7 @@ export function AdminScheduledReportsPage() {
                     title={t('scheduledReports.edit')}
                     data-testid="edit-btn"
                   >
-                    <Pencil size={16} />
+                    <PencilIcon size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(schedule.id)}

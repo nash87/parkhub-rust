@@ -3,9 +3,9 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  House, CalendarCheck, Car, Calendar, CalendarX, Coins, UserCircle, Users, Bell,
-  GearSix, SignOut, List, X, CarSimple, SunDim, Moon, Translate, Star, Globe, CaretDown, MapPin,
-  ClockCounterClockwise, Swap, QrCode, UserPlus, Trophy, Sparkle, CalendarPlus,
+  House, CalendarCheckIcon, CarIcon, CalendarIcon, CalendarX, CoinsIcon, UserCircleIcon, UsersIcon, BellIcon,
+  GearSixIcon, SignOut, List, XIcon, CarSimpleIcon, SunDim, Moon, Translate, StarIcon, GlobeIcon, CaretDownIcon, MapPinIcon,
+  ClockCounterClockwiseIcon, Swap, QrCodeIcon, UserPlusIcon, TrophyIcon, SparkleIcon, CalendarPlus,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -63,11 +63,11 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     collapsible: false,
     items: [
       { to: '/', icon: House, key: 'dashboard', end: true },
-      { to: '/bookings', icon: CalendarCheck, key: 'bookings' },
+      { to: '/bookings', icon: CalendarCheckIcon, key: 'bookings' },
       { to: '/book', icon: CalendarPlus, key: 'bookSpot' },
-      { to: '/vehicles', icon: Car, key: 'vehicles' },
-      { to: '/calendar', icon: Calendar, key: 'calendar' },
-      { to: '/credits', icon: Coins, key: 'credits' },
+      { to: '/vehicles', icon: CarIcon, key: 'vehicles' },
+      { to: '/calendar', icon: CalendarIcon, key: 'calendar' },
+      { to: '/credits', icon: CoinsIcon, key: 'credits' },
     ],
   },
   {
@@ -76,16 +76,16 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     defaultOpen: true,
     collapsible: true,
     items: [
-      { to: '/favorites', icon: Star, key: 'favorites' },
+      { to: '/favorites', icon: StarIcon, key: 'favorites' },
       { to: '/absences', icon: CalendarX, key: 'absences' },
-      { to: '/team', icon: Users, key: 'team' },
-      { to: '/leaderboard', icon: Trophy, key: 'leaderboard' },
-      { to: '/map', icon: MapPin, key: 'map' },
-      { to: '/history', icon: ClockCounterClockwise, key: 'history' },
+      { to: '/team', icon: UsersIcon, key: 'team' },
+      { to: '/leaderboard', icon: TrophyIcon, key: 'leaderboard' },
+      { to: '/map', icon: MapPinIcon, key: 'map' },
+      { to: '/history', icon: ClockCounterClockwiseIcon, key: 'history' },
       { to: '/swap-requests', icon: Swap, key: 'swapRequests' },
-      { to: '/guest-pass', icon: UserPlus, key: 'guestPass' },
-      { to: '/checkin', icon: QrCode, key: 'checkin' },
-      { to: '/predict', icon: Sparkle, key: 'predictions' },
+      { to: '/guest-pass', icon: UserPlusIcon, key: 'guestPass' },
+      { to: '/checkin', icon: QrCodeIcon, key: 'checkin' },
+      { to: '/predict', icon: SparkleIcon, key: 'predictions' },
     ],
   },
   {
@@ -94,10 +94,10 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     defaultOpen: false,
     collapsible: true,
     items: [
-      { to: '/notifications', icon: Bell, key: 'notifications' },
+      { to: '/notifications', icon: BellIcon, key: 'notifications' },
       { to: '/translations', icon: Translate, key: 'translations' },
-      { to: '/profile', icon: UserCircle, key: 'profile' },
-      { to: '/settings', icon: GearSix, key: 'settings' },
+      { to: '/profile', icon: UserCircleIcon, key: 'profile' },
+      { to: '/settings', icon: GearSixIcon, key: 'settings' },
     ],
   },
 ] as const;
@@ -223,7 +223,7 @@ function SidebarNav({
               transition={SECTION_SPRING}
               className="inline-flex"
             >
-              <CaretDown weight="bold" className="w-3 h-3 -rotate-90" />
+              <CaretDownIcon weight="bold" className="w-3 h-3 -rotate-90" />
             </motion.div>
             <span className="flex-1 text-left">{sectionLabel}</span>
           </button>
@@ -275,7 +275,7 @@ function SidebarNav({
               }`
             }
           >
-            <GearSix weight="fill" className="w-5 h-5" />
+            <GearSixIcon weight="fill" className="w-5 h-5" />
             {t('nav.admin')}
           </NavLink>
         </div>
@@ -307,9 +307,9 @@ function LanguageSelector() {
         aria-label="Change language"
         aria-expanded={open}
       >
-        <Globe weight="fill" className="w-5 h-5" />
+        <GlobeIcon weight="fill" className="w-5 h-5" />
         <span className="flex-1 text-left">{current.flag} {current.native}</span>
-        <CaretDown weight="bold" className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <CaretDownIcon weight="bold" className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="absolute bottom-full left-0 mb-1 w-full bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg shadow-lg py-1 z-50 max-h-64 overflow-y-auto">
@@ -397,7 +397,7 @@ export function Layout() {
     fetch('/api/v1/notifications/unread-count', {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'X-Requested-With': 'XMLHttpRequest',
+        'XIcon-Requested-With': 'XMLHttpRequest',
       },
       credentials: 'include',
     })
@@ -463,7 +463,7 @@ export function Layout() {
       >
         <div className="flex items-center gap-3 px-3 mb-8">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
-            <CarSimple weight="fill" className="w-5 h-5 text-white" />
+            <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>ParkHub</span>
         </div>
@@ -524,7 +524,7 @@ export function Layout() {
               </button>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-sm">
-                  <CarSimple weight="fill" className="w-4 h-4 text-white" />
+                  <CarSimpleIcon weight="fill" className="w-4 h-4 text-white" />
                 </div>
                 <span className="font-bold text-surface-900 dark:text-white">ParkHub</span>
               </div>
@@ -571,12 +571,12 @@ export function Layout() {
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-2">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
-                      <CarSimple weight="fill" className="w-5 h-5 text-white" />
+                      <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
                     </div>
                     <span className="text-xl font-bold text-surface-900 dark:text-white">ParkHub</span>
                   </div>
                   <button onClick={() => setSidebarOpen(false)} className="btn btn-ghost btn-icon" aria-label={t('nav.closeMenu')}>
-                    <X weight="bold" className="w-5 h-5" />
+                    <XIcon weight="bold" className="w-5 h-5" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto -mx-1 px-1 pb-16">

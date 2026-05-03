@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CurrencyDollar, ChartBar, DownloadSimple, Question, Buildings } from '@phosphor-icons/react';
+import { CurrencyDollar, ChartBar, DownloadSimpleIcon, Question, Buildings } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -101,7 +101,7 @@ export function AdminBillingPage() {
             <Question weight="bold" className="w-4 h-4" />
           </button>
           <button onClick={handleExport} className="admin-hero-action" data-testid="export-btn">
-            <DownloadSimple weight="bold" className="w-4 h-4" />
+            <DownloadSimpleIcon weight="bold" className="w-4 h-4" />
             {t('billing.export', 'CSV Export')}
           </button>
         </div>

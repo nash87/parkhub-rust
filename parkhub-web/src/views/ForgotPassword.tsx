@@ -2,7 +2,7 @@ import { useActionState, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { CarSimple, ArrowLeft, SpinnerGap, CheckCircle } from '@phosphor-icons/react';
+import { CarSimpleIcon, ArrowLeft, SpinnerGap, CheckCircle } from '@phosphor-icons/react';
 import { api } from '../api/client';
 
 /**
@@ -61,7 +61,7 @@ export function ForgotPasswordPage() {
 
         <div className="flex items-center gap-3 mb-8">
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
-            <CarSimple weight="fill" className="w-5 h-5 text-white" />
+            <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
         </div>

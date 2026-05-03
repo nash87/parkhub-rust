@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChartBar, CurrencyCircleDollar, CalendarCheck, UsersThree, Fire, Warning,
-  Wrench, Lightning, Plus, Minus, GearSix, Question, ArrowsOutCardinal,
+  ChartBar, CurrencyCircleDollar, CalendarCheckIcon, UsersThree, Fire, WarningIcon,
+  Wrench, Lightning, Plus, Minus, GearSixIcon, Question, ArrowsOutCardinal,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -20,10 +20,10 @@ const WIDGET_TYPES = [
 const widgetIcons: Record<string, React.ComponentType<any>> = {
   occupancy_chart: ChartBar,
   revenue_summary: CurrencyCircleDollar,
-  recent_bookings: CalendarCheck,
+  recent_bookings: CalendarCheckIcon,
   user_growth: UsersThree,
   booking_heatmap: Fire,
-  active_alerts: Warning,
+  active_alerts: WarningIcon,
   maintenance_status: Wrench,
   ev_charging_status: Lightning,
 };
@@ -123,7 +123,7 @@ export function AdminDashboardPage() {
             <Question size={16} />
           </button>
           <button onClick={() => setShowCatalog(!showCatalog)} className="admin-hero-action">
-            <GearSix size={16} weight="bold" />
+            <GearSixIcon size={16} weight="bold" />
             {t('widgets.customize')}
           </button>
         </div>
@@ -171,7 +171,7 @@ export function AdminDashboardPage() {
       {/* Widget grid */}
       {visibleWidgets.length === 0 ? (
         <div className="text-center py-12 text-surface-500 dark:text-surface-400">
-          <GearSix size={40} className="mx-auto mb-3 opacity-40" />
+          <GearSixIcon size={40} className="mx-auto mb-3 opacity-40" />
           <p className="text-lg font-medium mb-1">{t('widgets.empty')}</p>
           <p className="text-sm">{t('widgets.emptyHint')}</p>
         </div>

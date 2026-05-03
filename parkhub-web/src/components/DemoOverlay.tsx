@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Sparkle, Eye, Timer, ArrowsClockwise, CaretDown, CaretUp } from '@phosphor-icons/react';
+import { SparkleIcon, EyeIcon, TimerIcon, ArrowsClockwiseIcon, CaretDownIcon, CaretUpIcon } from '@phosphor-icons/react';
 import { api, type DemoStatus } from '../api/client';
 
 // Module-level stable identity for the default reloadPage. Previously this
@@ -130,23 +130,23 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
         >
           {/* Demo badge */}
           <span className="flex items-center gap-1 rounded-md bg-primary-100 px-2.5 py-1 text-[0.75rem] font-semibold text-primary-900 dark:bg-primary-900/30 dark:text-primary-100">
-            <Sparkle weight="fill" className="w-3 h-3 animate-pulse" />
+            <SparkleIcon weight="fill" className="w-3 h-3 animate-pulse" />
             {t('demo.badge')}
           </span>
 
-          {/* Timer */}
+          {/* TimerIcon */}
           <span className={`font-mono text-sm font-bold transition-colors duration-300 ${isLow ? 'text-red-700 dark:text-red-300' : 'text-surface-800 dark:text-surface-200'}`}>
-            <Timer weight="bold" className="w-3.5 h-3.5 inline mr-1" />
+            <TimerIcon weight="bold" className="w-3.5 h-3.5 inline mr-1" />
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </span>
 
           {/* Viewers */}
           <span className="flex items-center gap-1 text-xs text-surface-700 dark:text-surface-300">
-            <Eye weight="regular" className="w-3.5 h-3.5" />
+            <EyeIcon weight="regular" className="w-3.5 h-3.5" />
             {demo.viewers}
           </span>
 
-          {collapsed ? <CaretDown weight="bold" className="w-3 h-3 text-surface-400" /> : <CaretUp weight="bold" className="w-3 h-3 text-surface-400" />}
+          {collapsed ? <CaretDownIcon weight="bold" className="w-3 h-3 text-surface-400" /> : <CaretUpIcon weight="bold" className="w-3 h-3 text-surface-400" />}
         </button>
 
         <AnimatePresence>
@@ -184,7 +184,7 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
                   disabled={demo.has_voted || demo.reset_in_progress}
                   className="btn btn-sm w-full border border-primary-800 bg-primary-800 text-white shadow-sm hover:bg-primary-900 disabled:opacity-50 dark:border-primary-300 dark:bg-primary-300 dark:text-surface-950 dark:hover:bg-primary-200"
                 >
-                  <ArrowsClockwise weight="bold" className={`w-3.5 h-3.5 ${demo.reset_in_progress ? 'animate-spin' : ''}`} />
+                  <ArrowsClockwiseIcon weight="bold" className={`w-3.5 h-3.5 ${demo.reset_in_progress ? 'animate-spin' : ''}`} />
                   {demo.reset_in_progress
                     ? t('demo.resetting', 'Resetting...')
                     : demo.has_voted

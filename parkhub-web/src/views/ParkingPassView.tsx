@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Ticket, QrCode, Clock, MapPin, Question, CalendarBlank } from '@phosphor-icons/react';
+import { Ticket, QrCodeIcon, Clock, MapPinIcon, Question, CalendarBlank } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 interface ParkingPass {
@@ -119,7 +119,7 @@ export function ParkingPassPage() {
             {/* Pass details */}
             <div className="space-y-2 text-primary-100">
               <div className="flex items-center justify-center gap-2">
-                <MapPin size={16} />
+                <MapPinIcon size={16} />
                 <span>{selectedPass.lot_name} — {t('parkingPass.slot')} {selectedPass.slot_number}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
@@ -164,7 +164,7 @@ export function ParkingPassPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-                        <QrCode size={20} className="text-primary-600 dark:text-primary-400" />
+                        <QrCodeIcon size={20} className="text-primary-600 dark:text-primary-400" />
                       </div>
                       <div>
                         <p className="font-medium text-surface-900 dark:text-surface-100">

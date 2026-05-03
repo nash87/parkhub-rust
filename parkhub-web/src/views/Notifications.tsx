@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo, useOptimistic, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bell, Warning, Info, CheckCircle, Check, SpinnerGap, ArrowClockwise,
+  BellIcon, WarningIcon, Info, CheckCircle, Check, SpinnerGap, ArrowClockwiseIcon,
 } from '@phosphor-icons/react';
 import { api, type Notification } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
-const notifIcon: Record<string, typeof Warning> = { warning: Warning, info: Info, success: CheckCircle };
+const notifIcon: Record<string, typeof WarningIcon> = { warning: WarningIcon, info: Info, success: CheckCircle };
 const notifColor: Record<string, string> = { warning: 'text-amber-500', info: 'text-primary-500', success: 'text-emerald-500' };
 const notifBg: Record<string, string> = { warning: 'bg-amber-100 dark:bg-amber-900/30', info: 'bg-primary-100 dark:bg-primary-900/30', success: 'bg-emerald-100 dark:bg-emerald-900/30' };
 
@@ -100,7 +100,7 @@ export function NotificationsPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Bell weight="bold" className="w-3.5 h-3.5" />
+            <BellIcon weight="bold" className="w-3.5 h-3.5" />
             {t('notifications.eyebrow', 'INBOX')}
           </div>
           <h1 className="admin-hero-headline">{t('notifications.title')}</h1>
@@ -110,7 +110,7 @@ export function NotificationsPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={loadNotifications} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
-            <ArrowClockwise weight="bold" className="w-4 h-4" />
+            <ArrowClockwiseIcon weight="bold" className="w-4 h-4" />
           </button>
           {unreadCount > 0 && (
             <button onClick={markAllAsRead} disabled={isPending} className="admin-hero-action disabled:opacity-50">
@@ -124,7 +124,7 @@ export function NotificationsPage() {
       {/* List */}
       {optimisticNotifs.length === 0 ? (
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-12 text-center">
-          <Bell weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
+          <BellIcon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
           <p className="text-surface-500 dark:text-surface-400">{t('notifications.empty')}</p>
         </div>
       ) : (

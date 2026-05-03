@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Coins, ArrowDown, ArrowUp, ArrowClockwise,
-  TrendUp, Sparkle,
+  CoinsIcon, ArrowDownIcon, ArrowUpIcon, ArrowClockwiseIcon,
+  TrendUp, SparkleIcon,
 } from '@phosphor-icons/react';
 import { api, type UserCredits } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -46,7 +46,7 @@ export function CreditsPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Coins weight="bold" className="w-3.5 h-3.5" />
+            <CoinsIcon weight="bold" className="w-3.5 h-3.5" />
             {t('credits.eyebrow', 'BOOKING WALLET')}
           </div>
           <h1 className="admin-hero-headline">{t('credits.title')}</h1>
@@ -80,7 +80,7 @@ export function CreditsPage() {
               <p className="mt-2 stat-value text-primary-600 dark:text-primary-400">{quota}</p>
             </div>
             <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
-              <Sparkle weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <SparkleIcon weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@ export function CreditsPage() {
               </p>
             </div>
             <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-              <ArrowClockwise weight="fill" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <ArrowClockwiseIcon weight="fill" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
         </div>
@@ -120,7 +120,7 @@ export function CreditsPage() {
 
         {!credits?.transactions?.length ? (
           <div className="text-center py-8">
-            <Coins weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
+            <CoinsIcon weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto" />
             <p className="text-surface-500 dark:text-surface-400 mt-3">{t('credits.noTransactions')}</p>
           </div>
         ) : (
@@ -128,8 +128,8 @@ export function CreditsPage() {
             {credits.transactions.map(tx => (
               <div key={tx.id} className="flex items-center gap-3 py-3">
                 {tx.amount > 0
-                  ? <ArrowDown weight="bold" className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                  : <ArrowUp weight="bold" className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  ? <ArrowDownIcon weight="bold" className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  : <ArrowUpIcon weight="bold" className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
                 }
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-surface-900 dark:text-white">

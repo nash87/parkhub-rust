@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, DownloadSimple, Printer } from '@phosphor-icons/react';
+import { XIcon, DownloadSimpleIcon, Printer } from '@phosphor-icons/react';
 import type { Booking } from '../api/client';
 import { getInMemoryToken } from '../api/client';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
     fetch(`${BASE_URL}/api/v1/bookings/${booking.id}/qr`, {
       credentials: 'include',
       headers: {
-        'X-Requested-With': 'XMLHttpRequest',
+        'XIcon-Requested-With': 'XMLHttpRequest',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     })
@@ -65,7 +65,7 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
             className="p-1 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 print:hidden"
             aria-label={t('common.close')}
           >
-            <X weight="bold" className="w-5 h-5 text-surface-500" />
+            <XIcon weight="bold" className="w-5 h-5 text-surface-500" />
           </button>
         </div>
 
@@ -113,7 +113,7 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
             disabled={!imgSrc}
             className="btn btn-primary flex-1 flex items-center justify-center gap-2"
           >
-            <DownloadSimple weight="bold" className="w-4 h-4" />{' '}
+            <DownloadSimpleIcon weight="bold" className="w-4 h-4" />{' '}
             {t('pass.download')}
           </button>
           <button

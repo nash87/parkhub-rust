@@ -17,7 +17,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CarSimple, CaretDown, GearSix, SignOut, SunDim, Moon,
+  CarSimpleIcon, CaretDownIcon, GearSixIcon, SignOut, SunDim, Moon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -58,7 +58,7 @@ export function TopTabs({ unreadCount, onLogout, isAdmin }: TopTabsProps) {
       {/* Brand */}
       <NavLink to="/" className="flex items-center gap-2 mr-4">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-sm">
-          <CarSimple weight="fill" className="w-4 h-4 text-white" />
+          <CarSimpleIcon weight="fill" className="w-4 h-4 text-white" />
         </div>
         <span className="text-base font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
           ParkHub
@@ -142,7 +142,7 @@ function OverflowDropdown({ items, unreadCount, isAdmin }: { items: NavItem[]; u
         }`}
       >
         {t('nav.more', 'More')}
-        <CaretDown weight="bold" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <CaretDownIcon weight="bold" className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -191,7 +191,7 @@ function OverflowDropdown({ items, unreadCount, isAdmin }: { items: NavItem[]; u
                     }`
                   }
                 >
-                  <GearSix weight="fill" className="w-4 h-4" />
+                  <GearSixIcon weight="fill" className="w-4 h-4" />
                   {t('nav.admin')}
                 </NavLink>
               </>

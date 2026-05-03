@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, PencilSimple, Trash, SpinnerGap, Check, X,
+  Plus, PencilSimple, Trash, SpinnerGap, Check, XIcon,
   MagnifyingGlass, CurrencyEur, TrendUp, Clock,
 } from '@phosphor-icons/react';
 import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus, type DynamicPricingRules, type OperatingHoursData, type DayHoursData } from '../api/client';
@@ -265,7 +265,7 @@ export function AdminLotsPage() {
                   {editingId ? t('admin.editLot') : t('admin.newLot')}
                 </h3>
                 <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
-                  <X weight="bold" className="w-5 h-5 text-surface-400" aria-hidden="true" />
+                  <XIcon weight="bold" className="w-5 h-5 text-surface-400" aria-hidden="true" />
                 </button>
               </div>
 

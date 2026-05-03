@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { SpinnerGap, Users, Buildings, CalendarCheck, Lightning, type Icon } from '@phosphor-icons/react';
+import { SpinnerGap, UsersIcon, Buildings, CalendarCheckIcon, Lightning, type Icon } from '@phosphor-icons/react';
 import { api, type AdminBooking, type AdminStats, type ParkingLot } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
@@ -120,7 +120,7 @@ export function AdminReportsPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CalendarCheck weight="bold" className="w-3.5 h-3.5" />
+            <CalendarCheckIcon weight="bold" className="w-3.5 h-3.5" />
             {t('admin.reportsEyebrow', 'BUSINESS METRICS')}
           </div>
           <h1 className="admin-hero-headline">{t('admin.reports')}</h1>
@@ -134,7 +134,7 @@ export function AdminReportsPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={Users}
+          icon={UsersIcon}
           label={t('admin.totalUsers')}
           value={stats?.total_users ?? 0}
           color="primary"
@@ -146,7 +146,7 @@ export function AdminReportsPage() {
           color="accent"
         />
         <StatCard
-          icon={CalendarCheck}
+          icon={CalendarCheckIcon}
           label={t('admin.totalBookings')}
           value={stats?.total_bookings ?? 0}
           color="info"

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkle, Brain, CalendarBlank, Clock, TrendUp, CaretDown } from '@phosphor-icons/react';
+import { SparkleIcon, Brain, CalendarBlank, Clock, TrendUp, CaretDownIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
@@ -199,7 +199,7 @@ export function OccupancyPredictionPage() {
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
             <Brain weight="fill" className="w-7 h-7 text-purple-500" />
             {t('prediction.title', 'Smart Predictions')}
-            <Sparkle weight="fill" className="w-5 h-5 text-yellow-400" />
+            <SparkleIcon weight="fill" className="w-5 h-5 text-yellow-400" />
           </h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">{t('prediction.subtitle', 'AI-powered occupancy forecasts')}</p>
         </div>
@@ -215,7 +215,7 @@ export function OccupancyPredictionPage() {
                 <option key={lot.id} value={lot.id}>{lot.name}</option>
               ))}
             </select>
-            <CaretDown weight="bold" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-400 pointer-events-none" />
+            <CaretDownIcon weight="bold" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-400 pointer-events-none" />
           </div>
         )}
       </motion.div>
@@ -224,7 +224,7 @@ export function OccupancyPredictionPage() {
       <motion.div variants={fadeUp} className="glass-card p-6" data-testid="recommendation-card">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center flex-shrink-0">
-            <Sparkle weight="fill" className="w-6 h-6 text-white" />
+            <SparkleIcon weight="fill" className="w-6 h-6 text-white" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">

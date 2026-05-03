@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, SpinnerGap, Lock, X, Check, Warning } from '@phosphor-icons/react';
+import { ShieldCheck, SpinnerGap, Lock, XIcon, Check, WarningIcon } from '@phosphor-icons/react';
 import { api, type TwoFactorSetup } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -146,7 +146,7 @@ export function TwoFactorSetupComponent() {
       {showDisable && enabled && (
         <div className="border border-red-200 rounded-xl p-4 space-y-3 bg-red-50 dark:bg-red-900/20">
           <div className="flex items-center gap-2 text-red-600">
-            <Warning size={20} />
+            <WarningIcon size={20} />
             <span className="font-medium">Disable 2FA</span>
           </div>
           <p className="text-sm text-red-600">Enter your password to confirm:</p>
@@ -170,7 +170,7 @@ export function TwoFactorSetupComponent() {
               onClick={() => { setShowDisable(false); setDisablePassword(''); }}
               className="px-3 py-2 text-gray-500 hover:text-gray-700"
             >
-              <X size={16} />
+              <XIcon size={16} />
             </button>
           </div>
         </div>

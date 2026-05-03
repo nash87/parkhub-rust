@@ -15,7 +15,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Building, Bell, Car, Keyboard, Shield, Coins, ChartLine, FileText, ArrowRight } from '@phosphor-icons/react';
+import { User, Building, BellIcon, CarIcon, Keyboard, Shield, CoinsIcon, ChartLine, FileText, ArrowRightIcon } from '@phosphor-icons/react';
 import {
   SCard,
   SRow,
@@ -67,8 +67,8 @@ export function SettingsPage() {
 
   const userSections = [
     { id: 'profile', label: t('settings.profile', 'Profile'), icon: User, to: '/profile' as const },
-    { id: 'notifications', label: t('settings.notifications', 'Notifications'), icon: Bell, to: '/notifications' as const },
-    { id: 'vehicles', label: t('settings.vehicles', 'Vehicles'), icon: Car, to: '/vehicles' as const },
+    { id: 'notifications', label: t('settings.notifications', 'Notifications'), icon: BellIcon, to: '/notifications' as const },
+    { id: 'vehicles', label: t('settings.vehicles', 'Vehicles'), icon: CarIcon, to: '/vehicles' as const },
     { id: 'shortcuts', label: t('settings.shortcuts', 'Keyboard shortcuts'), icon: Keyboard, to: null, hint: t('settings.pressShortcut', 'Press ⌘/') },
   ];
 
@@ -76,7 +76,7 @@ export function SettingsPage() {
     { id: 'org', label: t('settings.org', 'Organization'), icon: Building, to: '/admin/settings' as const },
     { id: 'policies', label: t('settings.bookingRules', 'Booking rules'), icon: FileText, to: '/admin/settings' as const },
     { id: 'sso', label: t('settings.sso', 'SSO & roles'), icon: Shield, to: '/admin/sso' as const },
-    { id: 'billing', label: t('settings.billing', 'Billing'), icon: Coins, to: '/admin/billing' as const },
+    { id: 'billing', label: t('settings.billing', 'Billing'), icon: CoinsIcon, to: '/admin/billing' as const },
     { id: 'audit', label: t('settings.auditLog', 'Audit log'), icon: ChartLine, to: '/admin/audit-log' as const },
   ];
 
@@ -212,7 +212,7 @@ export function SettingsPage() {
                     </p>
                   )}
                 </div>
-                {s.to && <ArrowRight weight="bold" className="w-3.5 h-3.5 text-surface-400 shrink-0" />}
+                {s.to && <ArrowRightIcon weight="bold" className="w-3.5 h-3.5 text-surface-400 shrink-0" />}
               </>
             );
             return s.to ? (

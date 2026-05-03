@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   ToggleLeft, ToggleRight, Info, ShieldCheck, ArrowLeft,
-  ArrowClockwise, FloppyDisk, Check,
+  ArrowClockwiseIcon, FloppyDisk, Check,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import {
@@ -94,7 +94,7 @@ export function AdminFeaturesPage() {
           {t('features.disableAll')}
         </button>
         <button onClick={handleReset} className="btn btn-secondary text-xs cursor-pointer">
-          <ArrowClockwise weight="bold" className="w-3.5 h-3.5" />
+          <ArrowClockwiseIcon weight="bold" className="w-3.5 h-3.5" />
           {t('features.resetToPreset')}
         </button>
         <div className="flex-1" />

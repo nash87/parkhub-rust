@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Plus, Trash, Pencil, Question, UserCircle } from '@phosphor-icons/react';
+import { ShieldCheck, Plus, Trash, PencilIcon, Question, UserCircleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -294,7 +294,7 @@ export function AdminRolesPage() {
                     className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700"
                     title={t('rbac.edit')}
                   >
-                    <Pencil className="w-4 h-4" />
+                    <PencilIcon className="w-4 h-4" />
                   </button>
                   {!role.built_in && (
                     <button

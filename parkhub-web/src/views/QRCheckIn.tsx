@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  QrCode, SignIn, SignOut, SpinnerGap, Clock,
-  MapPin, CalendarBlank, ArrowClockwise,
+  QrCodeIcon, SignIn, SignOut, SpinnerGap, Clock,
+  MapPinIcon, CalendarBlank, ArrowClockwiseIcon,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -167,7 +167,7 @@ export function QRCheckInPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <QrCode weight="bold" className="w-3.5 h-3.5" />
+            <QrCodeIcon weight="bold" className="w-3.5 h-3.5" />
             {t('checkin.eyebrow', 'CHECK-IN')}
           </div>
           <h1 className="admin-hero-headline">{t('checkin.title')}</h1>
@@ -175,7 +175,7 @@ export function QRCheckInPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={loadData} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
-            <ArrowClockwise weight="bold" className="w-4 h-4" />
+            <ArrowClockwiseIcon weight="bold" className="w-4 h-4" />
           </button>
         </div>
       </motion.section>
@@ -183,7 +183,7 @@ export function QRCheckInPage() {
       {/* No active booking */}
       {!booking && (
         <motion.div variants={fadeUp} className="card p-12 text-center">
-          <QrCode weight="thin" className="w-16 h-16 mx-auto mb-4 text-surface-300 dark:text-surface-600" />
+          <QrCodeIcon weight="thin" className="w-16 h-16 mx-auto mb-4 text-surface-300 dark:text-surface-600" />
           <p className="text-surface-500 dark:text-surface-400 text-lg font-medium">{t('checkin.noBooking')}</p>
           <p className="text-surface-400 dark:text-surface-500 text-sm mt-1 mb-4">{t('checkin.noBookingHint')}</p>
           <Link to="/book" className="btn btn-primary">{t('checkin.bookNow')}</Link>
@@ -196,7 +196,7 @@ export function QRCheckInPage() {
           {/* Booking details */}
           <motion.div variants={fadeUp} className="card p-5 space-y-3">
             <div className="flex items-center gap-2">
-              <MapPin weight="fill" className="w-5 h-5 text-primary-500" />
+              <MapPinIcon weight="fill" className="w-5 h-5 text-primary-500" />
               <span className="font-semibold text-surface-900 dark:text-white text-lg">{booking.lot_name}</span>
             </div>
             <div className="grid grid-cols-2 gap-3">

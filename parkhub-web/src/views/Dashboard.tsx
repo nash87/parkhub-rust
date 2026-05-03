@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import {
-  CalendarCheck, Car, Coins, CalendarPlus, ArrowRight,
-  MapPin, ChartLine, Gauge, Leaf,
+  CalendarCheckIcon, CarIcon, CoinsIcon, CalendarPlus, ArrowRightIcon,
+  MapPinIcon, ChartLine, Gauge, Leaf,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type Booking, type Co2Summary, type UserStats } from '../api/client';
@@ -201,13 +201,13 @@ export function DashboardPage() {
         <KpiCard
           label={t('dashboard.creditsLeft')}
           value={creditsLeft}
-          icon={<Coins weight="bold" />}
+          icon={<CoinsIcon weight="bold" />}
           data-testid="kpi-credits"
         />
         <KpiCard
           label={t('dashboard.thisMonth')}
           value={bookingsThisMonth}
-          icon={<CalendarCheck weight="bold" />}
+          icon={<CalendarCheckIcon weight="bold" />}
           delta={monthDelta > 0 ? { value: monthDelta, suffix: '%' } : undefined}
           data-testid="kpi-this-month"
         />
@@ -265,7 +265,7 @@ export function DashboardPage() {
               )}
             </div>
             <Link to="/bookings" className="text-sm text-primary-600 hover:text-primary-500 dark:text-primary-400 font-medium flex items-center gap-1 transition-colors">
-              {t('nav.bookings')} <ArrowRight weight="bold" className="w-3.5 h-3.5" />
+              {t('nav.bookings')} <ArrowRightIcon weight="bold" className="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -314,9 +314,9 @@ export function DashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-surface-900 dark:text-white truncate">{b.lot_name}</p>
                     <div className="flex items-center gap-2 text-sm text-surface-500 dark:text-surface-400">
-                      <MapPin weight="regular" className="w-3.5 h-3.5" />
+                      <MapPinIcon weight="regular" className="w-3.5 h-3.5" />
                       {t('dashboard.slot')} {b.slot_number}
-                      {b.vehicle_plate && <><span className="mx-1">·</span><Car weight="regular" className="w-3.5 h-3.5" />{b.vehicle_plate}</>}
+                      {b.vehicle_plate && <><span className="mx-1">·</span><CarIcon weight="regular" className="w-3.5 h-3.5" />{b.vehicle_plate}</>}
                     </div>
                   </div>
                   <div className="text-right">
@@ -335,9 +335,9 @@ export function DashboardPage() {
           <div className="space-y-2">
             {[
               { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), accent: true },
-              { to: '/vehicles', icon: Car, label: t('dashboard.myVehicles') },
-              { to: '/bookings', icon: CalendarCheck, label: t('dashboard.viewBookings') },
-              { to: '/credits', icon: Coins, label: t('nav.credits') },
+              { to: '/vehicles', icon: CarIcon, label: t('dashboard.myVehicles') },
+              { to: '/bookings', icon: CalendarCheckIcon, label: t('dashboard.viewBookings') },
+              { to: '/credits', icon: CoinsIcon, label: t('nav.credits') },
             ].map((action) => (
               <Link
                 key={action.to}
@@ -350,7 +350,7 @@ export function DashboardPage() {
               >
                 <action.icon weight="regular" className={`w-4 h-4 transition-transform group-hover:scale-110 ${action.accent ? 'text-primary-500' : 'text-surface-400 dark:text-surface-500'}`} />
                 <span className="flex-1">{action.label}</span>
-                <ArrowRight weight="bold" className="w-3.5 h-3.5 text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <ArrowRightIcon weight="bold" className="w-3.5 h-3.5 text-surface-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
           </div>

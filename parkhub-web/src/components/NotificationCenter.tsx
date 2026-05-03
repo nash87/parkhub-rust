@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Bell, X, CheckCircle, XCircle, Clock, Queue, Wrench, Megaphone,
-  CurrencyDollar, UserPlus, Check, Trash, Question, FunnelSimple,
+  BellIcon, XIcon, CheckCircle, XCircle, Clock, Queue, Wrench, Megaphone,
+  CurrencyDollar, UserPlusIcon, Check, Trash, Question, FunnelSimple,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { api, getInMemoryToken, type CenterNotification } from '../api/client';
 
-const TYPE_ICONS: Record<string, typeof Bell> = {
+const TYPE_ICONS: Record<string, typeof BellIcon> = {
   'check-circle': CheckCircle,
   'x-circle': XCircle,
   'clock': Clock,
@@ -17,7 +17,7 @@ const TYPE_ICONS: Record<string, typeof Bell> = {
   'wrench': Wrench,
   'megaphone': Megaphone,
   'currency-dollar': CurrencyDollar,
-  'user-plus': UserPlus,
+  'user-plus': UserPlusIcon,
 };
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -132,14 +132,14 @@ export function NotificationCenter() {
 
   return (
     <div ref={panelRef} className="relative">
-      {/* Bell icon button */}
+      {/* BellIcon icon button */}
       <button
         onClick={() => setOpen(o => !o)}
         className="relative p-2 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
         aria-label={t('notificationCenter.title')}
         title={t('notificationCenter.bellTooltip')}
       >
-        <Bell weight={unreadCount > 0 ? 'fill' : 'regular'} className="w-5 h-5" />
+        <BellIcon weight={unreadCount > 0 ? 'fill' : 'regular'} className="w-5 h-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white bg-red-500 rounded-full px-1">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -172,7 +172,7 @@ export function NotificationCenter() {
                   </button>
                 )}
                 <button onClick={() => setOpen(false)} className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300">
-                  <X weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -212,7 +212,7 @@ export function NotificationCenter() {
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-surface-400">
-                  <Bell className="w-10 h-10 mb-2" />
+                  <BellIcon className="w-10 h-10 mb-2" />
                   <p className="text-sm">{t('notificationCenter.empty')}</p>
                 </div>
               ) : (
@@ -223,7 +223,7 @@ export function NotificationCenter() {
                     </div>
                     <AnimatePresence>
                       {items.map(n => {
-                        const IconComp = TYPE_ICONS[n.icon] || Bell;
+                        const IconComp = TYPE_ICONS[n.icon] || BellIcon;
                         const colors = SEVERITY_COLORS[n.severity] || SEVERITY_COLORS.neutral;
                         return (
                           <motion.div

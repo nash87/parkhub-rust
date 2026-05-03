@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ClockCounterClockwise, DownloadSimple, FunnelSimple, MagnifyingGlass, FileCsv, FileDoc, FileJs, CircleNotch } from '@phosphor-icons/react';
+import { ClockCounterClockwiseIcon, DownloadSimpleIcon, FunnelSimple, MagnifyingGlass, FileCsv, FileDoc, FileJs, CircleNotch } from '@phosphor-icons/react';
 import { api, type AuditLogEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -139,7 +139,7 @@ export function AdminAuditLogPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <ClockCounterClockwise weight="bold" className="w-3.5 h-3.5" />
+            <ClockCounterClockwiseIcon weight="bold" className="w-3.5 h-3.5" />
             {t('auditLog.eyebrow', 'EVENT JOURNAL')}
           </div>
           <h1 className="admin-hero-headline">{t('auditLog.title', 'Audit Log')}</h1>
@@ -159,7 +159,7 @@ export function AdminAuditLogPage() {
             className="admin-hero-action"
             data-testid="export-enhanced-btn"
           >
-            <DownloadSimple weight="bold" className="w-4 h-4" />
+            <DownloadSimpleIcon weight="bold" className="w-4 h-4" />
             {t('auditLog.advancedExport', 'Advanced Export')}
           </button>
         </div>
@@ -169,7 +169,7 @@ export function AdminAuditLogPage() {
       {showExportDialog && (
         <div className="bg-white dark:bg-surface-800 rounded-2xl border border-surface-200 dark:border-surface-700 p-5 space-y-4" data-testid="export-dialog">
           <h3 className="font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-            <DownloadSimple className="w-5 h-5 text-primary-500" />
+            <DownloadSimpleIcon className="w-5 h-5 text-primary-500" />
             {t('auditLog.advancedExport', 'Advanced Export')}
           </h3>
           <p className="text-sm text-surface-500 dark:text-surface-400">
@@ -201,7 +201,7 @@ export function AdminAuditLogPage() {
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
               data-testid="export-download-btn"
             >
-              {exporting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <DownloadSimple className="w-4 h-4" />}
+              {exporting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <DownloadSimpleIcon className="w-4 h-4" />}
               {exporting ? t('auditLog.exporting', 'Exporting...') : t('auditLog.download', 'Download')}
             </button>
             <button

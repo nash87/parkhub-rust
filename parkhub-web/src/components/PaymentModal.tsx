@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, X, Lock, SpinnerGap, CheckCircle, WarningCircle } from '@phosphor-icons/react';
+import { CreditCard, XIcon, Lock, SpinnerGap, CheckCircle, WarningCircle } from '@phosphor-icons/react';
 
 type PaymentStep = 'form' | 'processing' | 'success' | 'error';
 
@@ -110,7 +110,7 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
                 className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
                 aria-label={t('common.close')}
               >
-                <X size={20} className="text-gray-500" />
+                <XIcon size={20} className="text-gray-500" />
               </button>
             </div>
             <div className="p-5">

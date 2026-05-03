@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Wrench, Plus, Trash, PencilSimple, Question, CalendarBlank, Warning } from '@phosphor-icons/react';
+import { Wrench, Plus, Trash, PencilSimple, Question, CalendarBlank, WarningIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -191,7 +191,7 @@ export function AdminMaintenancePage() {
           className="v11-warn-banner"
           data-testid="active-banner"
         >
-          <Warning weight="bold" className="v11-warn-banner-icon" />
+          <WarningIcon weight="bold" className="v11-warn-banner-icon" />
           <p className="v11-warn-banner-text">
             {t('maintenance.activeBanner', '{{count}} maintenance window(s) currently active', { count: activeCount })}
           </p>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Question, FileText, Table, Warning, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { Download, Question, FileText, Table, WarningIcon, CheckCircle, XCircle } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -40,14 +40,14 @@ interface ComplianceReport {
 
 const statusConfig: Record<string, { color: string; icon: typeof CheckCircle; label: string }> = {
   compliant: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle, label: 'Compliant' },
-  warning: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: Warning, label: 'Warning' },
+  warning: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: WarningIcon, label: 'WarningIcon' },
   non_compliant: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: XCircle, label: 'Non-Compliant' },
 };
 
 const fallbackStatusConfig = statusConfig.warning ?? {
   color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  icon: Warning,
-  label: 'Warning',
+  icon: WarningIcon,
+  label: 'WarningIcon',
 };
 
 export function AdminCompliancePage() {
@@ -174,7 +174,7 @@ export function AdminCompliancePage() {
         </div>
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
-            <Warning size={20} className="text-amber-500" />
+            <WarningIcon size={20} className="text-amber-500" />
             <div>
               <p className="text-sm text-surface-500">{t('compliance.warnings')}</p>
               <p className="text-xl font-bold text-surface-900 dark:text-white">{warningCount}</p>

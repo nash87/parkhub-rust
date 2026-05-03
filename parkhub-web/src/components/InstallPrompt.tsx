@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DownloadSimple, X } from '@phosphor-icons/react';
+import { DownloadSimpleIcon, XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -113,7 +113,7 @@ export function InstallPrompt() {
             <div className="bg-white dark:bg-surface-800 rounded-2xl shadow-xl border border-surface-200 dark:border-surface-700 p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
-                  <DownloadSimple weight="bold" className="w-5 h-5 text-white" />
+                  <DownloadSimpleIcon weight="bold" className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-surface-900 dark:text-white">
@@ -144,7 +144,7 @@ export function InstallPrompt() {
                   className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                   aria-label={t('pwa.dismiss', { defaultValue: 'Dismiss' })}
                 >
-                  <X weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
             </div>

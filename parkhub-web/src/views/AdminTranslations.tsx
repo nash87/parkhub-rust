@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import {
-  Translate, SpinnerGap, Check, X, Clock, Eye,
-  ThumbsUp, ThumbsDown, ChatCircleDots, ArrowsClockwise,
+  Translate, SpinnerGap, Check, XIcon, Clock, EyeIcon,
+  ThumbsUp, ThumbsDown, ChatCircleDots, ArrowsClockwiseIcon,
   CheckCircle, XCircle, MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { api, type TranslationProposal, type ProposalStatus } from '../api/client';
@@ -23,7 +23,7 @@ const STATUS_COLORS: Record<ProposalStatus, string> = {
 const STATUS_ICONS: Record<ProposalStatus, React.ReactNode> = {
   pending: <Clock weight="bold" className="w-3 h-3" />,
   approved: <Check weight="bold" className="w-3 h-3" />,
-  rejected: <X weight="bold" className="w-3 h-3" />,
+  rejected: <XIcon weight="bold" className="w-3 h-3" />,
 };
 
 export function AdminTranslationsPage() {
@@ -197,7 +197,7 @@ export function AdminTranslationsPage() {
               title={t('translations.admin.reviewDetail')}
               aria-label={`${t('translations.admin.reviewDetail')} ${p.key}`}
             >
-              <Eye weight="bold" className="w-4.5 h-4.5" />
+              <EyeIcon weight="bold" className="w-4.5 h-4.5" />
             </button>
           </div>
         );
@@ -237,7 +237,7 @@ export function AdminTranslationsPage() {
             </>
           )}
           <button onClick={loadProposals} className="admin-hero-iconbtn" aria-label={t('common.refresh')} title={t('common.refresh')}>
-            <ArrowsClockwise weight="bold" className="w-4 h-4" />
+            <ArrowsClockwiseIcon weight="bold" className="w-4 h-4" />
           </button>
         </div>
       </section>
@@ -289,7 +289,7 @@ export function AdminTranslationsPage() {
                   </p>
                 </div>
                 <button onClick={() => { setReviewingId(null); setReviewAction(null); }} className="btn btn-ghost btn-icon btn-sm" aria-label={t('common.close')}>
-                  <X weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
 

@@ -25,23 +25,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowsClockwise,
-  Bell,
+  ArrowsClockwiseIcon,
+  BellIcon,
   CalendarPlus,
-  Car,
+  CarIcon,
   ChartLine,
-  GearSix,
+  GearSixIcon,
   House,
   MagnifyingGlass,
-  MapPin,
-  QrCode,
+  MapPinIcon,
+  QrCodeIcon,
   ShieldCheck,
   SignOut,
-  Sparkle,
+  SparkleIcon,
   SquaresFour,
-  Trophy,
+  TrophyIcon,
   User,
-  Users,
+  UsersIcon,
 } from '@phosphor-icons/react';
 import { api, type Booking, type ParkingLot, type ParkingSlot } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -67,15 +67,15 @@ interface FlatItem {
 const PRIMARY_NAV: NumberedItem[] = [
   { num: '01', Icon: House, label: 'Today', to: '/', shortcut: 'D' },
   { num: '02', Icon: CalendarPlus, label: 'Book', to: '/book', shortcut: 'B' },
-  { num: '03', Icon: QrCode, label: 'My pass', to: '/guest-pass', shortcut: 'P' },
-  { num: '04', Icon: MapPin, label: 'Live map', to: '/map' },
+  { num: '03', Icon: QrCodeIcon, label: 'My pass', to: '/guest-pass', shortcut: 'P' },
+  { num: '04', Icon: MapPinIcon, label: 'Live map', to: '/map' },
 ];
 
 const WORKSPACE_NAV: FlatItem[] = [
-  { Icon: Car, label: 'Vehicles', to: '/vehicles' },
-  { Icon: ArrowsClockwise, label: 'Swap requests', to: '/swap-requests' },
-  { Icon: Users, label: 'Team', to: '/team' },
-  { Icon: Trophy, label: 'Leaderboard', to: '/leaderboard' },
+  { Icon: CarIcon, label: 'Vehicles', to: '/vehicles' },
+  { Icon: ArrowsClockwiseIcon, label: 'Swap requests', to: '/swap-requests' },
+  { Icon: UsersIcon, label: 'Team', to: '/team' },
+  { Icon: TrophyIcon, label: 'Leaderboard', to: '/leaderboard' },
 ];
 
 const ADMIN_NAV: FlatItem[] = [
@@ -357,7 +357,7 @@ export function SidebarV3() {
             className="sv3-hover relative flex items-center justify-center"
             style={{ width: 28, height: 28, borderRadius: 7, color: 'oklch(0.75 0.01 260)' }}
           >
-            <Bell size={14} />
+            <BellIcon size={14} />
             <span
               aria-hidden="true"
               style={{
@@ -534,7 +534,7 @@ export function SidebarV3() {
                   color: 'oklch(0.18 0.02 260)',
                 }}
               >
-                <QrCode size={12} /> Show QR
+                <QrCodeIcon size={12} /> Show QR
               </Link>
               <button
                 type="button"
@@ -1086,7 +1086,7 @@ function LotFloorMap({
           color: 'oklch(0.92 0.005 260)',
         }}
       >
-        <MapPin size={11} /> Open floor map
+        <MapPinIcon size={11} /> Open floor map
       </button>
     </div>
   );
@@ -1307,7 +1307,7 @@ function UserMenu({
         className="sv3-hover w-full flex items-center text-left"
         style={{ gap: 10, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'oklch(0.90 0.005 260)' }}
       >
-        <GearSix size={14} /> Preferences
+        <GearSixIcon size={14} /> Preferences
       </button>
       <button
         type="button"
@@ -1316,7 +1316,7 @@ function UserMenu({
         className="sv3-hover w-full flex items-center text-left"
         style={{ gap: 10, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'oklch(0.90 0.005 260)' }}
       >
-        <Sparkle size={14} /> Assistant
+        <SparkleIcon size={14} /> Assistant
       </button>
       <div style={{ height: 1, background: 'oklch(0.28 0.02 260)', margin: '6px 0' }} />
       <button
