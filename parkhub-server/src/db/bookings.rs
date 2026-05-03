@@ -69,7 +69,7 @@ impl Database {
         Ok(bookings)
     }
 
-    /// List bookings with pagination. Returns (page_items, total_count).
+    /// List bookings with pagination. Returns (`page_items`, `total_count`).
     pub async fn list_bookings_paginated(
         &self,
         page: i32,
@@ -91,7 +91,7 @@ impl Database {
         Ok((bookings, total))
     }
 
-    /// Get bookings for a user using the BOOKINGS_BY_USER secondary index.
+    /// Get bookings for a user using the `BOOKINGS_BY_USER` secondary index.
     ///
     /// O(k) where k = number of bookings for this user, instead of O(n) over
     /// all bookings.

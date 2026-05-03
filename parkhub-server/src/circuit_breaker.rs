@@ -17,7 +17,7 @@
 //! host (lower-cased); unknown/invalid URLs fall back to the literal URL.
 //!
 //! Metrics (reusing the existing `metrics` crate helpers):
-//!   * `parkhub_circuit_breaker_state{name}` gauge — 0 = Closed, 1 = HalfOpen,
+//!   * `parkhub_circuit_breaker_state{name}` gauge — 0 = Closed, 1 = `HalfOpen`,
 //!     2 = Open.
 //!   * `parkhub_circuit_breaker_events_total{name, event}` counter — event is
 //!     one of `success`, `failure`, `opened`, `half_opened`, `closed`,
@@ -46,13 +46,13 @@ pub struct Config {
     pub failure_threshold: u32,
     /// How long the breaker stays Open before allowing a probe.
     pub reset_after: Duration,
-    /// Max probe calls allowed concurrently in HalfOpen.
+    /// Max probe calls allowed concurrently in `HalfOpen`.
     pub half_open_max_calls: u32,
 }
 
 impl Config {
     /// Defaults tuned for webhook delivery: 5 consecutive failures, 30-second
-    /// cooldown, one probe at a time in HalfOpen.
+    /// cooldown, one probe at a time in `HalfOpen`.
     #[must_use]
     pub const fn webhook_defaults() -> Self {
         Self {
