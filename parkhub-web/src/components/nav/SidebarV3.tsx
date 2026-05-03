@@ -353,6 +353,7 @@ export function SidebarV3() {
               // Dispatches the same event pages use to open the notification centre.
               window.dispatchEvent(new CustomEvent('parkhub:open-notifications'));
             }}
+            aria-label="Notifications"
             title="Notifications"
             className="sv3-hover relative flex items-center justify-center"
             style={{ width: 28, height: 28, borderRadius: 7, color: 'oklch(0.75 0.01 260)' }}
@@ -374,6 +375,7 @@ export function SidebarV3() {
           <button
             type="button"
             onClick={() => setUserMenuOpen(o => !o)}
+            aria-label={`Account menu — ${user?.name || user?.username || 'You'}`}
             title={user?.name || 'Account'}
             aria-haspopup="menu"
             aria-expanded={userMenuOpen}
@@ -549,6 +551,7 @@ export function SidebarV3() {
                   opacity: 0.6,
                   cursor: 'not-allowed',
                 }}
+                aria-label="Extend parking by 1 hour (coming soon)"
                 title="Extend parking — coming soon"
               >
                 +1h
