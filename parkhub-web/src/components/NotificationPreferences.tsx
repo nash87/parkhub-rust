@@ -119,7 +119,7 @@ export function NotificationPreferencesComponent() {
         </div>
       </div>
 
-      {/* PhoneIcon number for SMS/WhatsApp */}
+      {/* Phone number for SMS/WhatsApp */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
           <PhoneIcon size={16} />

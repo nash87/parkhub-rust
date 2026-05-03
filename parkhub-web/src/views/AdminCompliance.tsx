@@ -189,7 +189,7 @@ export function AdminCompliancePage() {
         </div>
       </div>
 
-      {/* DownloadIcon Actions */}
+      {/* Download Actions */}
       <div className="flex flex-wrap gap-3" data-testid="compliance-downloads">
         <button
           onClick={downloadPdf}

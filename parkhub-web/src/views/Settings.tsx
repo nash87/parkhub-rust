@@ -83,7 +83,7 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-20">
-      {/* v11 SOTA hero — primary tone, page-hero variant. UserIcon-level settings
+      {/* v11 SOTA hero — primary tone, page-hero variant. User-level settings
           (workspace + appearance), distinct from amber AdminSettings. */}
       <section className="admin-hero page-hero mb-5">
         <div className="admin-hero-left">

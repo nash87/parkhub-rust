@@ -134,7 +134,7 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
             {t('demo.badge')}
           </span>
 
-          {/* TimerIcon */}
+          {/* Timer */}
           <span className={`font-mono text-sm font-bold transition-colors duration-300 ${isLow ? 'text-red-700 dark:text-red-300' : 'text-surface-800 dark:text-surface-200'}`}>
             <TimerIcon weight="bold" className="w-3.5 h-3.5 inline mr-1" />
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}

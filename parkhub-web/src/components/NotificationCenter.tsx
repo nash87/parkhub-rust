@@ -132,7 +132,7 @@ export function NotificationCenter() {
 
   return (
     <div ref={panelRef} className="relative">
-      {/* BellIcon icon button */}
+      {/* Bell icon button */}
       <button
         onClick={() => setOpen(o => !o)}
         className="relative p-2 rounded-lg text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
