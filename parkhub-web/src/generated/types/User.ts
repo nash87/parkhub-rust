@@ -17,7 +17,7 @@ export type User = { id: string, username: string, email: string, password_hash:
  */
 tenant_id: string | null, 
 /**
- * Accessibility needs: wheelchair, reduced_mobility, visual, hearing, none
+ * Accessibility needs: `wheelchair`, `reduced_mobility`, `visual`, `hearing`, `none`
  */
 accessibility_needs: string | null, 
 /**
