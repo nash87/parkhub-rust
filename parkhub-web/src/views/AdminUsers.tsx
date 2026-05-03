@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { DataTable } from '../components/ui/DataTable';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const columnHelper = createColumnHelper<User>();
 
@@ -315,10 +316,7 @@ export function AdminUsersPage() {
       {/* v11 SOTA hero — primary tone (people & access). */}
       <section className="admin-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            {t('users.eyebrow', 'PEOPLE & ACCESS')}
-          </div>
+          <HeroEyebrow label={t('users.eyebrow', 'PEOPLE & ACCESS')} />
           <h1 className="admin-hero-headline">{t('admin.users')}</h1>
           <p className="admin-hero-sub">
             {t('users.count', '{{count}} active', { count: users.length })}

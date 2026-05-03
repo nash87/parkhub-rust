@@ -7,6 +7,7 @@ import {
   Buildings, ClockCounterClockwiseIcon, Database, CarIcon, Wheelchair, Wrench, CurrencyDollar, UserPlusIcon, Lightning,
   PuzzlePiece, GraphicsCard, ShieldCheck, LockKey, MapTrifold, ArrowsClockwiseIcon, List, XIcon, ArrowSquareOut,
 } from '@phosphor-icons/react';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 /**
  * Admin shell — categorised sidebar on desktop, mobile drawer on small
@@ -210,10 +211,7 @@ export function AdminPage() {
       */}
       <section className="admin-hero hidden lg:block mb-6">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            {t('admin.studio_label', 'MARBLE GOVERNANCE STUDIO')}
-          </div>
+          <HeroEyebrow label={t('admin.studio_label', 'MARBLE GOVERNANCE STUDIO')} />
           <h1 className="admin-hero-headline">{t('admin.title')}</h1>
           <p className="admin-hero-sub">{t('admin.subtitle')}</p>
         </div>
