@@ -6,890 +6,2285 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
-
-## [Unreleased]
-
----
-
-## [4.15.0] - 2026-04-25
-
-Minor bump landing the 2026-04-25 release wave: v5 customization framework,
-branding alignment, broad CI/security/test-infrastructure cleanup, and
-~236 fewer typecheck-ts errors via Phase 1–4b. Aligns with parkhub-php
-4.14.0 release per `docs/parity-governance.md` (parkhub-php catches the
-4.14 baseline; both runtimes ship 4.15 in lockstep next cycle).
-
-### Changed
-
-- **Design v5 rollout complete**: all 26 navigation screens now ship as real v5 components; the `<PlaceholderV5>` fallback has been retired and `SCREENS` is typed as a total `Record<ScreenId, …>` so missing screens become compile-time errors instead of runtime fallbacks.
-- **Visual regression workflow**: `workflow_dispatch` now accepts an `update_snapshots` boolean input — when `true`, Playwright runs with `--update-snapshots` and refreshed baselines are committed back to `main` by a gated bot step.
+## [5.0.9] - 2026-05-03
 
 ### Added
 
-- **v5 coverage**: SSE-backed Fleet event stream (`/api/v1/events/stream`), uPlot live chart primitive, ts-rs-generated `FleetEvent` types, and axe-core a11y coverage across every v5 route.
-- **Customization Framework v5** — settings, sidebar variants, density, fonts, feature toggles, `deepLinking` gate (#392).
-- **Branding alignment** — user-facing v5 strings switched from "KI"/"AI" to "Assistent" (#394).
-- **CI security swap** — trufflehog (AGPL) replaced by gitleaks binary direct (MIT) (#403).
-- **CodeQL** — actions language analysis split into its own job (#402); `required_status_checks` migrated from legacy `CodeQL` aggregate to language-specific `Analyze (rust|javascript-typescript|actions)` to eliminate the NEUTRAL-blocks-merge edge case.
-- **Deps** — tailwind pinned past 4.2.4 vite regression (#404); trivy-action SHA-pinned to v0.36 (#408); Dependabot cooldown defaults 5/10/15-day (#409).
-- **Policies fix** — `Policies.tsx` draft effect re-keyed on `activeId` only; previous dependency on the `active` object reference clobbered in-flight edits on every render (#407).
-- **Analytics test fix** — wait for lazy `UPlotChart` canvases before counting (#416).
-- **typescript devDep + @astrojs/check** installed so `npx tsc` / `astro check` actually run instead of silently passing on missing tools (#414, lefthook hardening #412).
-- **Phase 1–4b tsc cleanup** — typed `firstCall`/`nthCall` helpers in `client.test.ts` (#415), `wsAt` helper in `useWebSocket.test.ts` (#417), Phase 4a/4b view-test pattern triple `(global as any).fetch + arr[N]! + ([url,opts]:any)` across Visitors/AdminUpdates/AdminSSO/AdminWebhooks/EVCharging/AdminZones/AdminAnnouncements/NotificationPreferences (#418, #419). Drives parkhub-web tsc baseline from 558 → ~322 errors.
-- **parity-governance.md** aligned across both runtimes (#413).
-- **parkhub-web README** — replaced Astro starter boilerplate with real workspace overview (#411).
+- Cargo build timeline visualization (--timings=html wrapper) (#533) ([#533](https://github.com/nash87/parkhub-rust/pull/533))
+- Cargo dep hygiene — machete + sort in full/cd profiles (#531) ([#531](https://github.com/nash87/parkhub-rust/pull/531))
+- Unified Rust + frontend coverage report (cargo-llvm-cov + vitest) (#528) ([#528](https://github.com/nash87/parkhub-rust/pull/528))
+- SLSA-3 reproducibility check (build twice + hash compare) (#527) ([#527](https://github.com/nash87/parkhub-rust/pull/527))
+- Release-rehearsal + visual-regression local mirrors (#523) ([#523](https://github.com/nash87/parkhub-rust/pull/523))
+- Mutation testing + fuzz smoke local mirrors (#522) ([#522](https://github.com/nash87/parkhub-rust/pull/522))
+- Wire fop ci-audit + workflow-drift detector into Stage 2 (#521) ([#521](https://github.com/nash87/parkhub-rust/pull/521))
+- Workflow drift detector — gitea ↔ github sync watcher (#519) ([#519](https://github.com/nash87/parkhub-rust/pull/519))
+- Prebuilt image publish workflow → ghcr.io (10× faster first-time devcontainer up) (#518) ([#518](https://github.com/nash87/parkhub-rust/pull/518))
+- Local install-smoke + multi-browser E2E runners (#517) ([#517](https://github.com/nash87/parkhub-rust/pull/517))
+- Supply-chain visibility — local SBOM + Scorecard + gitea ci.yml --add-host fix (#516) ([#516](https://github.com/nash87/parkhub-rust/pull/516))
+- Full local CI/CD toolchain in a single dev container (#515) ([#515](https://github.com/nash87/parkhub-rust/pull/515))
+- Lighthouse + --background flag (PR-C / Slices 5+6, ladder complete) (#514) ([#514](https://github.com/nash87/parkhub-rust/pull/514))
+- Change-gated local container image scan — PR-B / Slice 4 of 6 (#513) ([#513](https://github.com/nash87/parkhub-rust/pull/513))
+- Close GHA→local gap — yamllint + typos + helm-validate + cargo-audit + cargo-geiger (PR-A of 3) (#512) ([#512](https://github.com/nash87/parkhub-rust/pull/512))
 
----
 
-## [4.14.2] - 2026-04-18
+### CI
 
-### Fixed
+- Bot-friendly + non-spammy + professional workflow polish (#520) ([#520](https://github.com/nash87/parkhub-rust/pull/520))
+- Make mutants target — Rust counterpart of parkhub-php#436 (#492) ([#492](https://github.com/nash87/parkhub-rust/pull/492))
+- Keep changelog workflow green without bot token (#485) ([#485](https://github.com/nash87/parkhub-rust/pull/485))
+- Open changelog regeneration PRs (#484) ([#484](https://github.com/nash87/parkhub-rust/pull/484))
+- Repin git-cliff changelog action (#483) ([#483](https://github.com/nash87/parkhub-rust/pull/483))
+- Require explicit fop local attestation (#481) ([#481](https://github.com/nash87/parkhub-rust/pull/481))
+- Make Trivy FS SARIF upload advisory (rate-limit fix) (#477) ([#477](https://github.com/nash87/parkhub-rust/pull/477))
+- Local OSS mirror of security.yml (T-2268, parity with parkhub-php) (#470) ([#470](https://github.com/nash87/parkhub-rust/pull/470))
+- Use --format templating for manifest digest (#464) ([#464](https://github.com/nash87/parkhub-rust/pull/464))
 
-- **macOS universal build**: vendor `openssl-sys` per target for the cross-compile leg — Homebrew's arm64 OpenSSL no longer fails to link into the x86_64 binary slice (#344).
-- **Container build**: drop `parkhub-desktop` (Tauri GUI) from the workspace during the runtime image build so Docker users stop hitting GTK dependency errors (#346).
-
-## [4.14.1] - 2026-04-18
-
-### Fixed
-
-- **CI cross-compile**: explicit `rustup target add aarch64-apple-darwin x86_64-apple-darwin` in the macOS universal job so the toolchain is guaranteed present before `lipo` runs (#342).
-
-## [4.14.0] - 2026-04-17
-
-### Changed
-
-- Workspace version bump after merging the v4.13.0 release branch; no user-facing changes beyond the Modular UX platform already shipped in v4.13.0 (#340, #343).
-
----
-
-## [4.13.0] - 2026-04-17
-
-Major release: the Modular UX platform — admins can now see, toggle, and
-configure every compiled-in module through the web UI, plus a fleet of
-security, quality, and testing-infrastructure improvements.
-
-### Added
-
-#### Modular UX platform (v1 + v2 + v3)
-
-- **`GET /api/v1/modules` returns enriched `ModuleInfo`**: 72 modules across 11 categories (Core, Booking, Vehicle, Admin, Payment, Integration, Analytics, Compliance, Notification, Enterprise, Experimental) with `{name, category, description, enabled, runtime_toggleable, runtime_enabled, config_keys, ui_route, depends_on, version, config_schema}`. Response envelope keeps the legacy flat `{modules: {name: bool}}` map so existing callers don't break.
-- **`GET /api/v1/modules/{name}`**: single-module detail endpoint.
-- **`PATCH /api/v1/admin/modules/{name}`** (admin-only): flip `runtime_enabled` on runtime-toggleable modules without redeploying. 15 safe modules are flagged toggleable in v1: `announcements`, `widgets`, `themes`, `favorites`, `social`, `lobby-display`, `accessible`, `calendar-drag`, `ev-charging`, `maintenance`, `geofence`, `map`, `graphql`, `api-docs`, `setup-wizard`. Security-sensitive modules (auth, payments, rbac, webhooks, audit-export, multi-tenant, notifications) keep `runtime_toggleable = false`.
-- **`GET /api/v1/admin/modules/{name}/config`** + **`PATCH /api/v1/admin/modules/{name}/config`** (admin-only, v3): per-module JSON Schema config editor. Five modules now ship a declared `config_schema`: `themes`, `announcements`, `notifications`, `email-templates`, `widgets`. PATCH validates body against the schema via the `jsonschema` 0.35 crate and persists each key as a setting. Every write emits an `AuditEventType::ConfigChanged` entry.
-- **`module_gate` middleware**: runtime-disabled modules return `404 MODULE_DISABLED` uniformly, indistinguishable from a feature that was never compiled in. Wired on 5 representative routes (`/api/v1/lots/map`, `/graphql`, `/docs`, `/announcements`, `/user/favorites`) as a proof of concept; broader coverage lands per route-table growth.
-- **Frontend `ModulesDashboard`** (`/admin/modules`): grid grouped by category, search + tag filter, per-card Status pill (green=runtime on, amber=runtime off, gray=compile-time off), config-keys count, dependency chain, Export-Config JSON download. Admin-only. v2 adds per-card toggle switch (a11y-compliant, optimistic update + toast rollback). v3 adds per-card "Configure" button that opens a modal with a hand-rolled JSON Schema form renderer (6 field shapes: string, enum, email, time, integer min/max, boolean). Zero external runtime dependencies.
-- **Frontend `CommandPalette` + `CommandPaletteProvider`** (Cmd+K / Ctrl+K / `/`): framework-agnostic `commandRegistry` with fuzzy search + predicate-gated visibility. Plugin-native — any view can `register()` commands and get automatic cleanup via `unregister()`. Provider auto-seeds default commands from `/api/v1/modules`: every active module with `ui_route` appears as a "Go to …" entry. All 10 locales (en/de/es/fr/it/ja/pl/pt/tr/zh) carry the `command.*` + `admin.modules.*` + `admin.modules.toggle.*` + `admin.modules.config.*` key sets.
-
-#### Testing infrastructure (all 6 items shipped)
-
-- **`cargo-fuzz` skeleton** at `parkhub-server/fuzz/` with two targets: `jwt_parse` (feeds arbitrary bytes into JWT decode) and `webhook_hmac` (feeds arbitrary bytes into Stripe-style HMAC verify). Smoke runs for each: 441 k / 511 k executions in 10 s, 0 crashes. Nightly workflow at `.github/workflows/fuzz-smoke.yml` (04:00 UTC, soft-fail, 60 s per target).
-- **`proptest` coverage** in `parkhub-common` via a new `validation` module: `is_valid_email`, `is_valid_e164_phone`, `is_valid_booking_duration`, `TimeRange::{new, is_valid, duration, overlaps, contains}`. Seven property blocks × 256 default cases; unit-test count bumps by 18.
-- **`cargo-mutants` 25.3.1 nightly sweep** via `.github/workflows/mutants.yml` (03:00 UTC, soft-fail, 3 h timeout, parkhub-common scoped for v1). Config at `.cargo/mutants.toml` excludes time-dependent jobs + main.rs boilerplate.
-- **`insta` 1.47 snapshot tests** (feature `json` + `redactions`): `health`, `version`, OpenAPI metadata envelope. Redacts `.version` / `.info.version` so snapshots stay stable across version bumps.
-
-#### Security posture
-
-- **JWT revocation store** (`RevocationStore` trait) with two implementations: `InMemoryRevocationList` (single-replica default) and `RedisRevocationList` (feature-gated `redis-revocation`, fail-closed on Redis error). Refresh-token **family rotation**: every refresh issues a new `family_id`; revoking the family at reuse-detection time invalidates every descendant token. Wired into the axum bootstrap; 27 JWT tests green including 5 new family-rotation tests.
-- **Per-identity rate limiter** layered on top of the existing per-IP `tower_governor`. Six buckets keyed on `AuthUser`: `Login=10/min`, `Register=5/min`, `PasswordReset=3/min`, `Mutation=60/min`, `Read=300/min`, `Admin=120/min`. `X-RateLimit-Bucket` response header emitted. DashMap-backed with 5-minute idle eviction. Applied to pre-auth routes + dynamic classification middleware on protected routes (auth on the outside, rate-limit on the inside).
-- **Session absolute lifetime middleware** (PHP parity): honours `config('session.absolute_lifetime')` (default 1440 min / 24 h). Invalidates + 401s when `now - auth_at > lifetime`.
 
 ### Changed
 
-- **`clippy::significant_drop_tightening` posture formalised**: 218 → 0 advisory warnings. The workspace already allows the lint (`Cargo.toml:81`) because the `Arc<RwLock<AppState>>` guard held across handler duration is intentional — `AppState.db` owns its own inner `Arc<RwLock<RedbDatabase>>`, so outer-guard hold time is bounded by the db lock, not by the handler's `.await` points. This commit documents the architectural choice via 62 module-level `#![allow(…)]` annotations (52 API handler modules, 6 test modules, 3 infra modules, 1 fn-level on `db::delete_notification`'s critical-section write). No behaviour change, no lock reordering.
-- **Multi-tenancy enforcement (part 2)**: 7 handler sites in `api/bookings.rs`, `api/lots.rs`, `api/import.rs`, `api/data_management.rs`, `jobs.rs` now call the new `resolve_tenant_id(&state, user_id)` helper to inherit the caller's tenant on domain-object creation, replacing stub `tenant_id: None`. 10 intentionally system-owned sites (bootstrap admin, self-registration, SSO/OAuth first-login, demo seed) carry explicit `// SAFETY(multi-tenancy):` annotations. Two new read-path filters in `admin_list_users` + `admin_list_bookings` apply tenant filter when the caller is tenant-bound, with in-memory re-pagination fallback; platform admins (role=SuperAdmin + tenant_id=None) see cross-tenant rollups as intended.
-- **Admin user writes are now cross-tenant guarded**: `admin_update_user_role`, `admin_update_user_status`, `admin_delete_user`, `admin_update_user`, `admin_reset_user_password` all load the target and check `matches_tenant` before mutating. Cross-tenant targets return 404 (no existence leak), platform-admin override preserved.
-- **OpenAPI drift gate is authoritative**: `scripts/dump-openapi.sh` always regenerates against a fresh-built server on port 18181; three drift-fixup commits this cycle (`fd2b173`, `f4692ab`) document the failure mode where `fop build` incremental cache left a stale binary after a docstring-only edit, and the `touch + cargo build` workaround now documented in the v2/v3 process notes.
+- HeroEyebrow icon prop now optional — sweep 3 iconless usages (#532) ([#532](https://github.com/nash87/parkhub-rust/pull/532))
+- Full sweep — migrate 40 pages to <HeroEyebrow> component (#526) ([#526](https://github.com/nash87/parkhub-rust/pull/526))
+- Extract <HeroEyebrow> component + 3-page PoC migration (#525) ([#525](https://github.com/nash87/parkhub-rust/pull/525))
+- Extract <V11Meter> component — single source of truth for stat-card chrome (#524) ([#524](https://github.com/nash87/parkhub-rust/pull/524))
 
-### Fixed
 
-- **Mobile-Safari / WebKit cookie race in e2e tests**: `loginViaUi()` now polls `page.context().cookies()` for the `parkhub_token` / `laravel_session` / `XSRF-TOKEN` cookie after `waitForURL` returns. WebKit commits `Set-Cookie` noticeably later than Chromium, so the caller's subsequent `page.goto('/protected-route')` was racing with the cookie landing and being redirected back to `/login` at 30 s timeout.
+### Chore
 
-### Tests
+- Expand short SHAs in `--sha` to full 40-char form (#583) ([#583](https://github.com/nash87/parkhub-rust/pull/583))
+- Replace 3 `any` request bodies with explicit interface types (#581) ([#581](https://github.com/nash87/parkhub-rust/pull/581))
+- Backtick config/discovery/demo doc identifiers (#579) ([#579](https://github.com/nash87/parkhub-rust/pull/579))
+- Add `--sha` flag + state validation to post-attestation-deferred.sh (#582) ([#582](https://github.com/nash87/parkhub-rust/pull/582))
+- Backtick X-API-Key/bucket_label/X-RateLimit-Bucket (#578) ([#578](https://github.com/nash87/parkhub-rust/pull/578))
+- Backtick OpenAPI/WhatsApp in doc comments (#577) ([#577](https://github.com/nash87/parkhub-rust/pull/577))
+- Fix 3 clippy::doc_markdown warnings in api/mod.rs (#576) ([#576](https://github.com/nash87/parkhub-rust/pull/576))
+- Fix 10 clippy::doc_markdown warnings (jobs + db/bookings + circuit_breaker) (#575) ([#575](https://github.com/nash87/parkhub-rust/pull/575))
+- Tighten 7 any types — SOTA-2026 type safety (#574) ([#574](https://github.com/nash87/parkhub-rust/pull/574))
+- Wrap 2 SidebarV3 hardcoded strings in t() (#573) ([#573](https://github.com/nash87/parkhub-rust/pull/573))
+- Fix the 1 doc_markdown warning #570 missed (#571) ([#571](https://github.com/nash87/parkhub-rust/pull/571))
+- Fix 5 clippy::doc_markdown warnings (ParkHub backticks) (#570) ([#570](https://github.com/nash87/parkhub-rust/pull/570))
+- Fix 17 clippy::doc_markdown warnings (co2 + api_docs + admin_ext) (#569) ([#569](https://github.com/nash87/parkhub-rust/pull/569))
+- Fix 5 clippy::doc_markdown warnings (#568) ([#568](https://github.com/nash87/parkhub-rust/pull/568))
+- Wrap final 3 hardcoded strings in t() (LoginHistory + AdminAnalytics) (#565) ([#565](https://github.com/nash87/parkhub-rust/pull/565))
+- Wrap AdminAnalytics hardcoded strings in t() (i18n + test mock) (#564) ([#564](https://github.com/nash87/parkhub-rust/pull/564))
+- Remove obsolete @ts-ignore on JSON import (#563) ([#563](https://github.com/nash87/parkhub-rust/pull/563))
+- Add aria-label to 3 SidebarV3 buttons (a11y) (#562) ([#562](https://github.com/nash87/parkhub-rust/pull/562))
+- Add aria-label to 13 row-action icon buttons (a11y) (#561) ([#561](https://github.com/nash87/parkhub-rust/pull/561))
+- Add aria-label to 7 icon-only buttons (a11y) (#560) ([#560](https://github.com/nash87/parkhub-rust/pull/560))
+- Astro check sweep — 33 → 8 hints (-25, 76% reduction) (#549) ([#549](https://github.com/nash87/parkhub-rust/pull/549))
+- Clean Icon-suffix leakage from 9 source comments (#555) ([#555](https://github.com/nash87/parkhub-rust/pull/555))
+- Zod v4 — z.string().email() → z.email() (-2 deprecation hints) (#552) ([#552](https://github.com/nash87/parkhub-rust/pull/552))
+- Remove 3 unused TS type-only named imports (#543) ([#543](https://github.com/nash87/parkhub-rust/pull/543))
+- Prefix 8 more unused mock-callback params (round 2 — handles `opts?:`) (#542) ([#542](https://github.com/nash87/parkhub-rust/pull/542))
+- Prefix 11 unused mock-callback params with `_` (TS convention) (#541) ([#541](https://github.com/nash87/parkhub-rust/pull/541))
+- Remove 10 unused named imports flagged by ts(6133) (#540) ([#540](https://github.com/nash87/parkhub-rust/pull/540))
+- Remove 23 stale `import React` lines from test files (React 17+ JSX) (#539) ([#539](https://github.com/nash87/parkhub-rust/pull/539))
+- Exclude coverage/ from astro check + gitignore (#538) ([#538](https://github.com/nash87/parkhub-rust/pull/538))
+- Replace deprecated FormEvent with SyntheticEvent (React 19 path) (#537) ([#537](https://github.com/nash87/parkhub-rust/pull/537))
+- Data-driven deprecated phosphor sweep — 994 → 95 hints (-899) (#535) ([#535](https://github.com/nash87/parkhub-rust/pull/535))
+- Wire workflow-drift + image-scan into pre-push (file-glob gated) (#529) ([#529](https://github.com/nash87/parkhub-rust/pull/529))
+- Close 2 SOTA-2026 a11y/perf gaps — WCAG 2.2 tags + Lighthouse INP threshold (#510) ([#510](https://github.com/nash87/parkhub-rust/pull/510))
+- Rename 31 deprecated phosphor icons → IconName variants + fix de.ts dupes (#508) ([#508](https://github.com/nash87/parkhub-rust/pull/508))
+- SOTA-2026 local dev kit (mise + just + bacon + dprint + typos) (#478) ([#478](https://github.com/nash87/parkhub-rust/pull/478))
+- Drop COSIGN_EXPERIMENTAL=true (no-op since cosign 3.x) (#471) ([#471](https://github.com/nash87/parkhub-rust/pull/471))
 
-- Unit test count: `parkhub-server` 1596 → 1729 (+133). Integration tests unchanged at 93. `parkhub-common` 148 → 162.
-- New test files: `api/snapshots.rs`, `tests/property_roundtrip.rs` (via parkhub-common), 10+ module registry / PATCH / gate / policy tests, 3 regression tests asserting CONFIG_VALIDATION_FAILED envelope shape, 6 cross-tenant admin-write negative tests.
 
 ### Dependencies
 
-- `jsonwebtoken` bumped to 10 (feature `rust_crypto`).
-- `redis` 1.x added (optional, feature-gated `redis-revocation`).
-- `dashmap` 6 added (per-identity rate-limit bucket map).
-- `jsonschema` 0.35 added (crate-local to `parkhub-server`, `default-features = false` — no HTTP / file retrievers).
-- `insta` 1.x added (dev-dep, `features = ["json", "redactions"]`).
-- `proptest` 1.8 extended into `parkhub-common` validators.
-- Rust base image `1.94-slim → 1.95-slim` (Dependabot).
-- Distroless `cc-debian13` digest bump (Dependabot).
+- Cargo-machete metadata.ignored for documented false positives (#534) ([#534](https://github.com/nash87/parkhub-rust/pull/534))
+- Override yaml to ^2.8.3 — CVE-2026-33532 (#475) ([#475](https://github.com/nash87/parkhub-rust/pull/475))
 
----
 
-### Earlier this cycle
+### Documentation
 
-- **Legal templates for BFSG + EU AI Act** in `legal/`:
-  - `bfsg-barrierefreiheit-template.md` — Accessibility Statement template per § 14 BFSG (in force since 2025-06-28), covering EN 301 549 / WCAG 2.1 AA scope, current a11y features, feedback path, Schlichtungsstelle BGG + Bundesfachstelle contact details.
-  - `ai-act-transparency-template.md` — AI Act Art. 50 transparency template for the planned Occupancy Forecast + optional Dashboard narrative module. Classifies them as limited-risk (not high-risk Annex III), documents data basis, confidence intervals, opt-out, 90-day inference logging.
-- Both templates are mirrored from `parkhub-php/legal/` so a single source stays in sync across the two implementations.
-- **`PARKHUB_DISABLE_RATE_LIMITS` is now compile-time gated** behind the `e2e-bypass` cargo feature. Before, any production deployment that happened to leak the env var silently disarmed brute-force protection on login, registration, password reset, and token refresh. The production Dockerfile builds with `--no-default-features --features headless`, which never enables `e2e-bypass`; in that configuration, seeing the env var at startup now panics. E2E + nightly builds opt in explicitly.
-- **Property-based round-trip tests in `parkhub-common`** via a new `proptest` dev-dependency. `tests/property_roundtrip.rs` exhaustively exercises every variant of `VehicleType`, `FuelType`, `UserRole`, `SlotType`, `SlotStatus`, `SlotFeature` through `serialise → bytes → deserialise` and asserts idempotence, plus one extra test that pins the JSON shape across a second round-trip — first deliverable of the testing depth push.
-- **Per-job Prometheus counters + duration histogram** on AutoRelease / ExpandRecurring / PurgeExpired / AggregateOccupancy: `parkhub_job_runs_total{job,success}` + `parkhub_job_duration_seconds{job}`. New `spawn_recurring_job` helper consolidates the four near-identical spawn blocks.
-- **Helm chart**: `livenessProbe` → shallow `/health/live`, `readinessProbe` still deep `/health/ready`. Added `terminationGracePeriodSeconds: 45` + `preStop: sleep 15` so kube-proxy de-registers before SIGTERM.
-- **reqwest clients in `updates.rs` + `oauth.rs`** now build with a 15 s timeout — five previously unbounded clients (GitHub API release fetches, Google/GitHub OAuth token exchange) can no longer hang a request handler forever.
-- **All GitHub Actions in `.github/workflows/` pinned to full commit SHAs** (v-tag as trailing comment) — SLSA L3 + GitHub security guide require SHA pins. Covers 23 distinct actions across 11 workflow files.
-- **Lot QR codes rendered locally**: `GET /api/v1/lots/{id}/qr` no longer points at `api.qrserver.com`; uses `qrcode` + `image` crates to render a 300×300 PNG in-memory as a `data:image/png;base64,…` URL. Zero network calls at runtime.
+- Document SOTA-2026 local CI mirrors + dev container (#544) ([#544](https://github.com/nash87/parkhub-rust/pull/544))
+- Comprehensive local CI/CD script index (13 mirrors + invariants) (#530) ([#530](https://github.com/nash87/parkhub-rust/pull/530))
+- Cosign-verify quickstart (#461) ([#461](https://github.com/nash87/parkhub-rust/pull/461))
 
----
+
+### Fixed
+
+- Disable lot selector + drop lot_id from PUT body on edit (T-2652) (#584) ([#584](https://github.com/nash87/parkhub-rust/pull/584))
+- 3 v11-rollout aftershocks (label leak + act type + refresh aria) (#558) ([#558](https://github.com/nash87/parkhub-rust/pull/558))
+- Add aria-label to bulk buttons (a11y + 4 tests) (#556) ([#556](https://github.com/nash87/parkhub-rust/pull/556))
+- Icon rename leaked into 4 string-literal fallbacks (#554) ([#554](https://github.com/nash87/parkhub-rust/pull/554))
+- Phosphor mock cascade v3 — 102 admin tests resurrected (#553) ([#553](https://github.com/nash87/parkhub-rust/pull/553))
+- Render user count badge in table column header (#550) ([#550](https://github.com/nash87/parkhub-rust/pull/550))
+- Inject missing motion.section mock — 96 tests resurrected across 8 files (#551) ([#551](https://github.com/nash87/parkhub-rust/pull/551))
+- Render filtered lot count badge in table header (#547) ([#547](https://github.com/nash87/parkhub-rust/pull/547))
+- Rename phosphor icon mocks in 69 test files to match post-deprecation IconName (#545) ([#545](https://github.com/nash87/parkhub-rust/pull/545))
+- Update Gitea workflow IPs 192.168.178.212 → 192.168.178.233 (T-2501) (#488) ([#488](https://github.com/nash87/parkhub-rust/pull/488))
+- Allow dev http cookies (#487) ([#487](https://github.com/nash87/parkhub-rust/pull/487))
+- Allow OpenStreetMap tiles in CSP (#486) ([#486](https://github.com/nash87/parkhub-rust/pull/486))
+- Correct Cargo.toml version parse in release-preview (#480) ([#480](https://github.com/nash87/parkhub-rust/pull/480))
+- Correct download-artifact version comment v7 → v8 (#476) ([#476](https://github.com/nash87/parkhub-rust/pull/476))
+- Bump fop local CI attestation statuses:read -> write (#474) ([#474](https://github.com/nash87/parkhub-rust/pull/474))
+- Tighten dashboard and reports parity (#473) ([#473](https://github.com/nash87/parkhub-rust/pull/473))
+- /sw.js + non-hashed root assets must be no-cache (v4.15.0 trap) (#469) ([#469](https://github.com/nash87/parkhub-rust/pull/469))
+- Cosign-verify uses --type spdxjson (matches docker-publish) (#468) ([#468](https://github.com/nash87/parkhub-rust/pull/468))
+- Focus-visible utility, scoped transitions, link-based bottom nav (#467) ([#467](https://github.com/nash87/parkhub-rust/pull/467))
+- Heatmap ARIA grid wrapping + breadcrumb contrast (#465) ([#465](https://github.com/nash87/parkhub-rust/pull/465))
+
+
+### Security
+
+- SOTA-2026 batch4 — Analytics+Dashboard+Settings+Roles+SSO+Zones+DataMgmt+RateLimits (19/24) (#497) ([#497](https://github.com/nash87/parkhub-rust/pull/497))
+
+
+### Tests
+
+- Add 8 property tests for is_valid_email rejection paths
+- Expand property_roundtrip 35 → 39 (+4) — close last 2 enum gaps (#567) ([#567](https://github.com/nash87/parkhub-rust/pull/567))
+- Expand property_roundtrip 19 → 35 (+16) for 8 domain enums (#566) ([#566](https://github.com/nash87/parkhub-rust/pull/566))
+- Add 16 property tests for src/validation.rs (#559) ([#559](https://github.com/nash87/parkhub-rust/pull/559))
+- Expand validation property tests 7 → 20 (boundary + adversarial) (#548) ([#548](https://github.com/nash87/parkhub-rust/pull/548))
+- Relax locales.test.ts to allow DE-superset (mirrors #546) (#557) ([#557](https://github.com/nash87/parkhub-rust/pull/557))
+- Allow DE to be a superset of EN (eyebrow labels added in #505-#511) (#546) ([#546](https://github.com/nash87/parkhub-rust/pull/546))
+- Expand property roundtrip suite — +12 tests for lifecycle enums (#536) ([#536](https://github.com/nash87/parkhub-rust/pull/536))
+- Stabilize WebKit E2E navigation (#482) ([#482](https://github.com/nash87/parkhub-rust/pull/482))
+
+
+### Design
+
+- SOTA-2026 v11 hero on 6 feature pages (UF batch5 — 19/24) (#504) ([#504](https://github.com/nash87/parkhub-rust/pull/504))
+- SOTA-2026 v11 hero on Team + Leaderboard + Notifications + Favorites (UF batch4 — 13/24) (#503) ([#503](https://github.com/nash87/parkhub-rust/pull/503))
+- SOTA-2026 v11 hero on Vehicles + Credits + Absences (UF batch3 — 9/24) (#502) ([#502](https://github.com/nash87/parkhub-rust/pull/502))
+- SOTA-2026 v11 hero on Book + Calendar + MapView (UF batch2 — 6/24) (#501) ([#501](https://github.com/nash87/parkhub-rust/pull/501))
+- SOTA-2026 v11 hero on Profile + Settings + Bookings (UF batch1) (#500) ([#500](https://github.com/nash87/parkhub-rust/pull/500))
+- SOTA-2026 batch6 — Reports/Modules/ScheduledReports stragglers (true 26/26) (#499) ([#499](https://github.com/nash87/parkhub-rust/pull/499))
+- SOTA-2026 batch5 — Plugins+Webhooks+Translations+Updates (24/24 complete) (#498) ([#498](https://github.com/nash87/parkhub-rust/pull/498))
+- SOTA-2026 batch3 — Users + Lots + Fleet + Tenants (#496) ([#496](https://github.com/nash87/parkhub-rust/pull/496))
+- SOTA-2026 batch2 — Announcements + Compliance + AuditLog (#495) ([#495](https://github.com/nash87/parkhub-rust/pull/495))
+- SOTA-2026 batch1 — Accessible + Maintenance + 2 tone variants + warn-banner (#494) ([#494](https://github.com/nash87/parkhub-rust/pull/494))
+- SOTA-2026 hero + meters with emerald tone (#493) ([#493](https://github.com/nash87/parkhub-rust/pull/493))
+- SOTA-2026 sidebar nav pill (slice 3/3 — final) (#491) ([#491](https://github.com/nash87/parkhub-rust/pull/491))
+- SOTA-2026 stat cards → v11 metric meters (slice 2/3) (#490) ([#490](https://github.com/nash87/parkhub-rust/pull/490))
+- SOTA-2026 hero card with v11 chrome — first slice (#489) ([#489](https://github.com/nash87/parkhub-rust/pull/489))
+
+
+### I18n
+
+- Broad sweep of 67 ASCII-only umlaut typos in DE locale (#511) ([#511](https://github.com/nash87/parkhub-rust/pull/511))
+- Fix 17 missing-umlaut typos in DE locale (Parkplätze, Ankündigungen, Für Reset) (#509) ([#509](https://github.com/nash87/parkhub-rust/pull/509))
+- Admin sidebar nav + group headers + OPERATIONAL FOCUS card (#507) ([#507](https://github.com/nash87/parkhub-rust/pull/507))
+- Admin v11 hero eyebrow keys + 4 hardcoded eyebrows refactored to t() (#506) ([#506](https://github.com/nash87/parkhub-rust/pull/506))
+- V11 hero eyebrow keys for 19 user-facing pages (#505) ([#505](https://github.com/nash87/parkhub-rust/pull/505))
+
+
+## [5.0.8] - 2026-04-29
+
+### CI
+
+- Native amd64 + arm64 split + manifest list (#462) ([#462](https://github.com/nash87/parkhub-rust/pull/462))
+- Make SBOM cosign attestation advisory (cosign 3.x compat) (#459) ([#459](https://github.com/nash87/parkhub-rust/pull/459))
+
+
+## [5.0.7] - 2026-04-29
+
+### CI
+
+- Make Attest provenance advisory in release.yml + docker-publish.yml (#457) ([#457](https://github.com/nash87/parkhub-rust/pull/457))
+
+
+## [5.0.6] - 2026-04-29
+
+### CI
+
+- Release-container profile (thin LTO) to fit 90-min timeout (#455) ([#455](https://github.com/nash87/parkhub-rust/pull/455))
+- Drop ARM64 — QEMU exceeds 90-min timeout (#454) ([#454](https://github.com/nash87/parkhub-rust/pull/454))
+- Dormant deploy.yml (render + fly + koyeb, T-2272 Phase B) (#453) ([#453](https://github.com/nash87/parkhub-rust/pull/453))
+- Add release-rehearsal.yml (#452) ([#452](https://github.com/nash87/parkhub-rust/pull/452))
+
+
+## [5.0.5] - 2026-04-29
+
+### CI
+
+- Cosign sign-blob + SPDX SBOMs for release archives (#443) ([#443](https://github.com/nash87/parkhub-rust/pull/443))
+- Tauri desktop installers + multi-arch container + PWA prep (#441) ([#441](https://github.com/nash87/parkhub-rust/pull/441))
+
+
+### Chore
+
+- Add app-version drift guard (#442) ([#442](https://github.com/nash87/parkhub-rust/pull/442))
+
+
+### Fixed
+
+- Regenerate icons as 8-bit PNG + multi-res ICO (#451) ([#451](https://github.com/nash87/parkhub-rust/pull/451))
+- Add icon.png for tauri::generate_context!() (#450) ([#450](https://github.com/nash87/parkhub-rust/pull/450))
+- Cosign 3.x needs explicit --bundle flag (#449) ([#449](https://github.com/nash87/parkhub-rust/pull/449))
+- BeforeBuildCommand relative to repo root, not projectPath (#447) ([#447](https://github.com/nash87/parkhub-rust/pull/447))
+- Point tauri.conf.json version at package.json (#446) ([#446](https://github.com/nash87/parkhub-rust/pull/446))
+- Register service worker + use PNG apple-touch-icon (#444) ([#444](https://github.com/nash87/parkhub-rust/pull/444))
+- Fop-local-ci.sh auto-fallback to direct mode when fop missing (#440) ([#440](https://github.com/nash87/parkhub-rust/pull/440))
+
+
+## [5.0.3] - 2026-04-29
+
+### CI
+
+- SOTA-2026 pipeline + fop attestation + zizmor ERROR fixes (#437) ([#437](https://github.com/nash87/parkhub-rust/pull/437))
+- Make SARIF upload advisory (#431) ([#431](https://github.com/nash87/parkhub-rust/pull/431))
+- Avoid metadata API rate limit (#430) ([#430](https://github.com/nash87/parkhub-rust/pull/430))
+
+
+### Dependencies
+
+- Bump reqwest from 0.13.2 to 0.13.3 in the rust-deps group (#436) ([#436](https://github.com/nash87/parkhub-rust/pull/436))
+- Bump the github-actions group with 2 updates (#434) ([#434](https://github.com/nash87/parkhub-rust/pull/434))
+- Bump the npm-deps group in /parkhub-web with 6 updates (#432) ([#432](https://github.com/nash87/parkhub-rust/pull/432))
+
+
+### Fixed
+
+- Delete orphan design-v5/Sidebar.tsx + bump v5.0.3 (#439) ([#439](https://github.com/nash87/parkhub-rust/pull/439))
+
+
+## [5.0.1] - 2026-04-26
+
+### Added
+
+- Full customization framework — settings + sidebar variants + density + fonts + feature toggles (Rust mirror) (#392) ([#392](https://github.com/nash87/parkhub-rust/pull/392))
+- Lokal badge + Vorschläge eyebrow + privacy footer (#393) ([#393](https://github.com/nash87/parkhub-rust/pull/393))
+- Local-first CI workflow (Lefthook + drift gates + Biome + native auto-merge) (#395) ([#395](https://github.com/nash87/parkhub-rust/pull/395))
+- Tier-2 polish — conflict check, iCal button, PDF export, undo, filter persist (#387) ([#387](https://github.com/nash87/parkhub-rust/pull/387))
+- Tier-1 2026 UX quick-wins (T-1977) (#386) ([#386](https://github.com/nash87/parkhub-rust/pull/386))
+- Export FleetEvent via ts-rs + harden stray-bindings cleanup (#380) ([#380](https://github.com/nash87/parkhub-rust/pull/380))
+- Upgrade Analytics bar chart to uPlot canvas (#379) ([#379](https://github.com/nash87/parkhub-rust/pull/379))
+- SSE fleet events for Einchecken/EV/Tausch (#378) ([#378](https://github.com/nash87/parkhub-rust/pull/378))
+- Auto-generate TypeScript types from Rust via ts-rs (#377) ([#377](https://github.com/nash87/parkhub-rust/pull/377))
+- Wave 4+5 — port 11 admin screens (26/26 parity with PHP #337) (#376) ([#376](https://github.com/nash87/parkhub-rust/pull/376))
+- Wave 3 — port 7 Fleet screens (parity with PHP #333) (#374) ([#374](https://github.com/nash87/parkhub-rust/pull/374))
+- Wave 2 — port Buchen/Kalender/Karte/Profil (parity with PHP) (#373) ([#373](https://github.com/nash87/parkhub-rust/pull/373))
+- V5 user-core screens (#371) ([#371](https://github.com/nash87/parkhub-rust/pull/371))
+- V5 follow-up (#370) ([#370](https://github.com/nash87/parkhub-rust/pull/370))
+- V5 follow-up (#369) ([#369](https://github.com/nash87/parkhub-rust/pull/369))
+
+
+### CI
+
+- Add typos + zizmor as advisory CI checks (Wave 5b) (#428) ([#428](https://github.com/nash87/parkhub-rust/pull/428))
+- Backport --resource-profile pattern from parkhub-php (#385) (#427) ([#427](https://github.com/nash87/parkhub-rust/pull/427))
+- Cutting-edge 2026 local-first CI/CD pipeline (#425) ([#425](https://github.com/nash87/parkhub-rust/pull/425))
+- Pilot fop local-first PR attestation (#423) ([#423](https://github.com/nash87/parkhub-rust/pull/423))
+- Bump trivy-action 0.35.0 → v0.36.0 (verified clean) (#408) ([#408](https://github.com/nash87/parkhub-rust/pull/408))
+- Close silent-pass holes in typecheck-ts + vitest (#412) ([#412](https://github.com/nash87/parkhub-rust/pull/412))
+- Dependabot cooldown + tailwind 4.2.3 ignore (#409) ([#409](https://github.com/nash87/parkhub-rust/pull/409))
+- Swap trufflehog (AGPL) for gitleaks (MIT) (#403) ([#403](https://github.com/nash87/parkhub-rust/pull/403))
+- Add actions language analysis (#402) ([#402](https://github.com/nash87/parkhub-rust/pull/402))
+- Pin past tailwind 4.2.4 vite regression (#404) ([#404](https://github.com/nash87/parkhub-rust/pull/404))
+- Unblock Render demo deploy (#368) ([#368](https://github.com/nash87/parkhub-rust/pull/368))
+
+
+### Changed
+
+- Harden useDraftFromActive edge cases (#426) ([#426](https://github.com/nash87/parkhub-rust/pull/426))
+- Replace Policies eslint-disable with useDraftFromActive hook (#424) ([#424](https://github.com/nash87/parkhub-rust/pull/424))
+
+
+### Chore
+
+- Bump root + parkhub-web/package.json to 4.15.0 (#422) ([#422](https://github.com/nash87/parkhub-rust/pull/422))
+- Bump to 4.15.0 — 2026-04-25 release wave + parkhub-php parity (#420) ([#420](https://github.com/nash87/parkhub-rust/pull/420))
+- Install typescript + @astrojs/check, exclude stories from tsc (Phase 1) (#414) ([#414](https://github.com/nash87/parkhub-rust/pull/414))
+- Retire PlaceholderV5 + add visual-regression update_snapshots input (#383) ([#383](https://github.com/nash87/parkhub-rust/pull/383))
+
+
+### Dependencies
+
+- Bump actions/download-artifact from 6.0.0 to 8.0.1 (#399) ([#399](https://github.com/nash87/parkhub-rust/pull/399))
+- Bump the rust-deps group with 2 updates (#400) ([#400](https://github.com/nash87/parkhub-rust/pull/400))
+- Bump rust from `c03ea15` to `8109983` (#396) ([#396](https://github.com/nash87/parkhub-rust/pull/396))
+- Bump grid from 1.0.0 to 1.0.1 (#388) ([#388](https://github.com/nash87/parkhub-rust/pull/388))
+- Bump rust from `275c320` to `c03ea15` (#389) ([#389](https://github.com/nash87/parkhub-rust/pull/389))
+
+
+### Documentation
+
+- Align parity-governance.md with PHP canonical version (#413) ([#413](https://github.com/nash87/parkhub-rust/pull/413))
+- Replace parkhub-web/README boilerplate with real overview (#411) ([#411](https://github.com/nash87/parkhub-rust/pull/411))
+- Post-merge-train drift cleanup (#410) ([#410](https://github.com/nash87/parkhub-rust/pull/410))
+- V5 design showcase in README (#390) ([#390](https://github.com/nash87/parkhub-rust/pull/390))
+
+
+### Fixed
+
+- Unblock merge train — wait for lazy UPlotChart canvases (#416) ([#416](https://github.com/nash87/parkhub-rust/pull/416))
+- Only re-init draft on activeId change (#407) ([#407](https://github.com/nash87/parkhub-rust/pull/407))
+- Remove KI/AI from v5 user-facing strings (#394) ([#394](https://github.com/nash87/parkhub-rust/pull/394))
+- Unwrap PaginatedResponse so NutzerV5 renders (T-1954) (#384) ([#384](https://github.com/nash87/parkhub-rust/pull/384))
+
+
+### Tests
+
+- Phase 4c — kill 8 file-level tsc errors with mixed patterns (#421) ([#421](https://github.com/nash87/parkhub-rust/pull/421))
+- -41 tsc errors in admin/EV test suites (Phase 4b) (#419) ([#419](https://github.com/nash87/parkhub-rust/pull/419))
+- Kill 37 tsc errors in Visitors+AdminUpdates (Phase 4a) (#418) ([#418](https://github.com/nash87/parkhub-rust/pull/418))
+- Kill 42 tsc errors via wsAt() helper (Phase 3) (#417) ([#417](https://github.com/nash87/parkhub-rust/pull/417))
+- Kill ~80 tsc errors via firstCall/nthCall helpers (Phase 2) (#415) ([#415](https://github.com/nash87/parkhub-rust/pull/415))
+- Dashboard/Profil regression guards + PWA OfflineIndicator wire-up (#391) ([#391](https://github.com/nash87/parkhub-rust/pull/391))
+- Axe-core audit + WCAG 2.1 AA fixes for v5 (T-1974) (#385) ([#385](https://github.com/nash87/parkhub-rust/pull/385))
+- Rust mirror — 26 screens × visual + happy-paths (T-1952) (#382) ([#382](https://github.com/nash87/parkhub-rust/pull/382))
+
+
+### Release
+
+- Cut v5.0.1 (#429) ([#429](https://github.com/nash87/parkhub-rust/pull/429))
+
+
+### Sync
+
+- Cherry-pick Gitea test-stability fixes to unblock #371 (#372) ([#372](https://github.com/nash87/parkhub-rust/pull/372))
+
+
+## [5.0.0] - 2026-04-23
+
+### Added
+
+- ParkHub v5 design system foundation for Rust runtime (#367) ([#367](https://github.com/nash87/parkhub-rust/pull/367))
+- Density actually applies + Assistant queries real data (#350) ([#350](https://github.com/nash87/parkhub-rust/pull/350))
+- Implement Rail, Top-tabs, Dock layouts + version-sync footer (#349) ([#349](https://github.com/nash87/parkhub-rust/pull/349))
+
+
+### Chore
+
+- Translate nav/shortcuts/assistant/settings keys across 9 locales (#352) ([#352](https://github.com/nash87/parkhub-rust/pull/352))
+
+
+### Dependencies
+
+- Bump openssl from 0.10.77 to 0.10.78 (#363) ([#363](https://github.com/nash87/parkhub-rust/pull/363))
+- Bump openssl from 0.10.77 to 0.10.78 in /parkhub-server/fuzz in the cargo group across 1 directory (#362) ([#362](https://github.com/nash87/parkhub-rust/pull/362))
+- Bump redb from 3.1.3 to 4.1.0 (#360) ([#360](https://github.com/nash87/parkhub-rust/pull/360))
+- Bump the actions group with 5 updates (#358) ([#358](https://github.com/nash87/parkhub-rust/pull/358))
+- Bump the cargo-minor-patch group with 3 updates (#359) ([#359](https://github.com/nash87/parkhub-rust/pull/359))
+- Printpdf 0.8 → 0.9 + Op API migration (#347) ([#347](https://github.com/nash87/parkhub-rust/pull/347))
+
+
+### Fixed
+
+- Reduce Rust scanner findings (#365) ([#365](https://github.com/nash87/parkhub-rust/pull/365))
+- Key mapped React fragments in heatmap views (#357) ([#357](https://github.com/nash87/parkhub-rust/pull/357))
+- Wire /settings route + redesign Admin shell (no horizontal scroll) (#356) ([#356](https://github.com/nash87/parkhub-rust/pull/356))
+- Login footer reads workspace version + sync docs to v4.14.2 (#355) ([#355](https://github.com/nash87/parkhub-rust/pull/355))
+- Regen visual baselines in Playwright Jammy container (CI-matched) (#354) ([#354](https://github.com/nash87/parkhub-rust/pull/354))
+- Tag DemoOverlay + regen 6 failing mobile visual baselines (#353) ([#353](https://github.com/nash87/parkhub-rust/pull/353))
+- Drop parkhub-desktop from container workspace (#346) ([#346](https://github.com/nash87/parkhub-rust/pull/346))
+
+
+### Tests
+
+- Stabilize local browser and harness paths (#361) ([#361](https://github.com/nash87/parkhub-rust/pull/361))
+- 2026 AI-driven stack + design-component coverage (#348) ([#348](https://github.com/nash87/parkhub-rust/pull/348))
+
+
+## [4.14.2] - 2026-04-19
+
+### Chore
+
+- Bump workspace version to 4.14.2 (#345) ([#345](https://github.com/nash87/parkhub-rust/pull/345))
+
+
+### Fixed
+
+- Vendor OpenSSL per-target for macOS universal build (#344) ([#344](https://github.com/nash87/parkhub-rust/pull/344))
+
+
+## [4.14.1] - 2026-04-19
+
+### Chore
+
+- Bump workspace version to 4.14.1 (#343) ([#343](https://github.com/nash87/parkhub-rust/pull/343))
+
+
+### Fixed
+
+- Explicit rustup target add for macOS universal build (#342) ([#342](https://github.com/nash87/parkhub-rust/pull/342))
+
+
+## [4.14.0] - 2026-04-18
+
+### Added
+
+- Tauri 2 scaffold (coexists with Slint parkhub-client) (#336) ([#336](https://github.com/nash87/parkhub-rust/pull/336))
+- Claude.ai/design v3+v4 integration + React 19 refactor (#335) ([#335](https://github.com/nash87/parkhub-rust/pull/335))
+- Multi-country VAT profiles + EU B2B reverse-charge
+- Per-module JSON Schema config editor modal
+- Per-module JSON Schema config editor
+- Runtime enable/disable toggle in ModulesDashboard
+- Runtime enable/disable for safe modules + PATCH admin/modules/{name}
+- Command Palette (Cmd+K) + Modules Dashboard
+- Enrich api/v1/modules endpoint with ModuleInfo metadata
+- Wire Redis revocation + per-identity rate-limit middleware
+- Pluggable Redis revocation + refresh-token family rotation
+- Per-identity limiter layered on per-IP
+- Add ServiceMonitor + PrometheusRule templates
+- Add RuntimeDefault seccomp profile + document PSS
+- Add per-host circuit breaker on outbound webhook HTTP
+- Dashboard CO₂ KPI tile + Co2Summary API typing
+- Per-job run counter + duration histogram in scheduler
+- Admin Modules Dashboard + plugin-native command registry
+- Enriched ModuleInfo registry + GET api/v1/modules/info
+- FuelType enum + CO2 summary endpoint (user scope v1)
+
+
+### CI
+
+- MacOS universal + Linux ARM64 build jobs (#337) ([#337](https://github.com/nash87/parkhub-rust/pull/337))
+- Tier-1 workflow cleanup (#333) ([#333](https://github.com/nash87/parkhub-rust/pull/333))
+- Add helm lint + template validation gate on chart changes
+- Promote advisory checks to required now that CI is reliably green
+- Cache Rust build with Swatinem/rust-cache
+- Loosen gates to achievable-today + keep CWV as aspirational floor
+- Install cargo-deny + cargo-audit via prebuilt binaries, cut 5-10 min/day
+- Build frontend before cargo so rust_embed resolves
+- Add openapi-drift workflow counterpart on Rust side
+
+
+### Changed
+
+- Split db.rs (4528 LOC) into domain-oriented sub-modules
+- Extract bootstrap helpers from main.rs
+- Preserve ModuleInfo doc-comment to keep openapi drift = 0
+- Split api/modules.rs (3066 LOC) into focused sub-modules
+- Decompose create_router into per-group helpers
+- Tighten lock scopes to reduce contention under load
+
+
+### Chore
+
+- Cosign sign + PDB + topology-spread + Lighthouse CWV gates
+- State-of-the-art 2025 local CI mirror + workflow cleanup
+- Add trufflehog secret scan + document accepted RUSTSEC advisories
+- Pin every GitHub Action to a SHA (v-tag as comment)
+
+
+### Dependencies
+
+- Bump reqwest 0.13, jsonschema 0.46, npm patches (#341) ([#341](https://github.com/nash87/parkhub-rust/pull/341))
+- Bump rust from 1.94-slim to 1.95-slim (#329)
+- Bump distroless/cc-debian13 from `9d41206` to `56aaf20` (#330)
+
+
+### Documentation
+
+- Fix stale steps + missing secrets + broken links across install paths
+- Add SLO definitions + error-budget burn-rate alert guidance
+- Refresh commit-SHA references after history rewrite
+- Scrub internal task IDs from external-facing docs
+- Fresh v4.13.0 screenshots + install-flow fix + capture script
+- Refresh README + ARCHITECTURE for v4.13.0 Modular UX + refactors
+- Wire remaining handlers — close coverage to ~100%
+- Annotate 50 handlers — raise coverage from 9% to ~27%
+- Document Modular UX platform
+- Add drop-tightening note to v4.13.0
+- Cut v4.13.0 for the Modular UX + security/testing cycle
+- Sync README + AGENTS with parkhub-php sprint shipments
+- Commit actual Rust OpenAPI dump + fix prefix normalisation
+- Add Rust OpenAPI dump script (counterpart to PHP)
+- OpenAPI parity methodology + diff script
+- Mirror BFSG + EU AI Act templates from parkhub-php
+
+
+### Fixed
+
+- Bump UID/GID > 10000 (Trivy KSV-0020 + KSV-0021) ([#339](https://github.com/nash87/parkhub-rust/pull/339))
+- Clear CodeQL warnings in Settings + AdminModules (#338) ([#338](https://github.com/nash87/parkhub-rust/pull/338))
+- Fortlaufende invoice numbers + webhook idempotency
+- Guard admin user writes against cross-tenant targets
+- Regenerate rust.json for v2 ModuleInfo docstring update
+- Regenerate rust.json openapi snapshot for ModuleInfo endpoint
+- Resolve caller tenant_id on all domain-object creation paths
+- Harden three remaining flaky specs on hydration timing
+- Diff-openapi.sh handles both Scramble prefix variants
+- Wait for client-side ProtectedRoute redirect in admin-route tests
+- HTTP timeouts on all outbound reqwest clients + Helm probe/drain
+- Render lot QR codes locally; clippy cleanup on main
+- Gate PARKHUB_DISABLE_RATE_LIMITS behind e2e-bypass feature
+
+
+### Performance
+
+- Reduce LCP via route-preload gating + overlay defer + CSS/chunk hints
+- Enable tower-http compression (gzip/br/zstd)
+
+
+### Tests
+
+- Add Playwright visual regression suite
+- Add cargo-mutants nightly + insta snapshots
+- Add proptest coverage for validators
+- Wait for auth cookie after login to unblock mobile-safari
+- Add cargo-fuzz skeleton + JWT/HMAC targets
+- Align Dashboard.test with KpiCard migration
+- Wire getCo2Summary mock into Dashboard test setup
+- Cargo-mutants config + weekly CI sweep for coverage gaps
+- Proptest envelope coverage (ApiError, meta, requests)
+- Proptest round-trip coverage for cross-boundary enums
+
+
+### Marathon
+
+- Sim audit shape + visual expand + a11y login contrast (#332) ([#332](https://github.com/nash87/parkhub-rust/pull/332))
+
+
+### Ops
+
+- Add Fly.io + Railway templates + nightly install smoke test
+- Ship default Grafana dashboard (opt-in via values)
+
 
 ## [4.12.0] - 2026-04-16
 
 ### Added
-- **`object-src 'none'`** in the Content-Security-Policy header — blocks legacy `<object>` / `<embed>` plugin content from loading, killing a Flash-era XSS/clickjacking class. Parity with parkhub-php.
-- **`Cross-Origin-Opener-Policy: same-origin`** and **`Cross-Origin-Resource-Policy: same-origin`** site-isolation headers. COOP blocks `window.opener` cross-origin access tricks; CORP stops responses from being embedded cross-origin. Both safe for a standalone app.
-- **`scripts/locale-coverage.mjs`** + `npm run i18n:coverage`: enumerates every leaf key under en.translation and reports missing keys per locale. All ten files currently ship at 100% (1,543 keys each); the script guards future feature work against en-only key regressions.
 
-### Changed
-- **Pre-auth critical path trimmed by ~150 KB** via `React.lazy` on the Layout shell. Layout hosts 25+ Phosphor icons + sidebar/header chrome and only renders inside the ProtectedRoute tree — unauthenticated visitors on /login, /welcome, /register no longer pay for it in the main chunk.
-- **Non-English locales now lazy-load**. Nine of the ten locale TS files (~7,000 lines total) moved behind `import.meta.glob` with `partialBundledLanguages=true`; en stays bundled as the synchronous fallback. After init, the detected primary + secondary Accept-Language chunks hydrate in the background and trigger a localized re-render. ~450 KB raw JS saved per user.
-- **Net live critical-path bundle dropped from ~740 KB to 127 KB raw / 41 KB brotli** on the Render demo — an 83% reduction vs v4.11.0.
-- **Admin user on first setup now carries a real 40/40 credits allowance** with `credits_last_refilled = now`; previously it was 0/0 and the KPI row on the demo admin dashboard read a row of zeros on first login. Also fills `department = "IT"` so the admin row is not the only one without a department in the admin panel user list.
+- Add locale-coverage script as a drift guard
+- Wire Sentry SDK for error tracking (opts in via SENTRY_DSN)
+
+
+### Documentation
+
+- Bump Release badge to v4.11.0
+
 
 ### Fixed
-- **`e2e/*.spec.ts`**: replaced 28 `waitForLoadState('networkidle')` + `goto({waitUntil: 'networkidle'})` call sites with `'domcontentloaded'`. `networkidle` has been discouraged by Playwright since 1.x because modern apps run continuous background traffic that keeps the 500 ms idle timer from ever firing. v4.10.0 started the migration; this commit finishes it.
 
----
+- Give admin a real credits allowance on first setup
+
+
+### Performance
+
+- Lazy-load non-English locales to shave ~450KB
+- Lazy-load Layout to shrink pre-auth critical path
+
+
+### Tests
+
+- Replace deprecated networkidle waits with domcontentloaded
+
+
+### Release
+
+- V4.12.0
+
+
+### Sec
+
+- Add Cross-Origin-{Opener,Resource}-Policy: same-origin
+- Add object-src 'none' to the rust CSP
+
 
 ## [4.11.0] - 2026-04-16
 
-### Added
-- **Keepalive cron** (`.github/workflows/keepalive-demo.yml`): pings the Render demo's `/health/ready` every 10 minutes between 05-22 UTC so the free-tier 15-minute idle spin-down never drops a cold 30-60 s wake-up on the first visitor of the day.
+### CI
 
-### Changed
-- **Astro** `6.1.6 → 6.1.7` in `parkhub-web/`. Parity with parkhub-php, npm audit clean.
-- **Docker FROM digest-pinning** for supply-chain hardening: `node:22-alpine`, `rust:1.94-slim`, and `busybox:1.37.0` now all carry immutable `@sha256:…` references alongside the already-pinned distroless runtime. Dependabot's `docker` ecosystem block refreshes these on its weekly cycle.
-- **`busybox:latest` → `busybox:1.37.0`** in the `data-setup` stage. Tag-only `:latest` is an anti-pattern that rotates silently across rebuilds.
-- **`actions/download-artifact`** bumped `v6 → v8` on the two straggler steps in `nightly.yml`; the rest of the matrix was already on v8.
-- **Repo metadata**: README gains Astro 6 + Tailwind CSS 4 badges; GitHub description and topics list Astro explicitly.
+- Ping Render demo every 10 min to prevent spin-down
+- Set APP_URL so build_auth_cookie drops the Secure flag
+
+
+### Chore
+
+- Sync Cargo.lock with 4.11.0 workspace version bump
+
+
+### Dependencies
+
+- Bump astro 6.1.6 -> 6.1.7
+
+
+### Documentation
+
+- Add Astro 6 + Tailwind CSS 4 badges
+
 
 ### Fixed
-- **Service worker shadowing**: `parkhub-server/src/api/pwa.rs` registered an inline 10-line handler at `/sw.js` that shadowed the 361-line Astro-built SW in `parkhub-web/dist/sw.js`. Every navigation hit origin — no API stale-while-revalidate, no background-sync mutation queue, no push notifications, no offline page. Retired the inline handler so the static file handler serves the enhanced SW; the live demo now responds with `CACHE_VERSION = '<build-sha>'` instead of the `parkhub-v1` stub.
-- **Manifest shadowing**: `pwa::pwa_manifest` returned a 7-field minimal manifest that shadowed the Astro-built 17-field manifest (`description`, `screenshots` wide + narrow, `shortcuts`, `categories`, `id`, `scope`, `lang`, `dir`, `prefer_related_applications`, …). Retired the entire `api::pwa` module; `enhanced_pwa::pwa_dynamic_manifest` on `/api/v1/pwa/manifest` remains for branding-aware callers that want the narrower shape.
-- **`/sw-v2.js` dead route**: the frontend only registers `/sw.js`, so the 60-line `enhanced_service_worker()` handler on `/sw-v2.js` was never fetched. Removed, along with the unused tests it shipped with.
 
----
+- Retire dead sw-v2.js route and enhanced_service_worker
+- Digest-pin all FROM directives for supply-chain hardening
+- Pin busybox:latest to busybox:1.37.0
+- Also stop shadowing Astro-built manifest.json
+- Stop shadowing Astro-built service worker with inline stub
+
+
+### Performance
+
+- Instant navigation via prefetch + View Transitions API
+
+
+### Tests
+
+- Wait for cancel button before clicking it
+- Anchor max-per-day test to tomorrow 09:00 UTC
+- Widen cross-env tolerance to 10%
+
+
+### Release
+
+- V4.11.0
+
 
 ## [4.10.0] - 2026-04-15
 
 ### Added
-- **Kinetic Observatory dashboard**: new `KpiCard`, `TrendCard`, `SensorFeedCard`, `RecentActivityCard` component kit in `parkhub-web/src/components/KineticObservatory.tsx`, with a 4-KPI row, a line-chart trend card, a pulsing sensor feed, and a responsive activity table. `DashboardPage` rewired to compose the kit; new i18n keys (`dashboard.totalBookings`, `weeklyActivityTitle`, `liveSensorFeed`, `recentActivity`, etc.) added for all 10 languages.
 
-### Changed
-- **Docker runtime**: pinned to `gcr.io/distroless/cc-debian13@sha256:9d41206...` so builder (`rust:1.94-slim` → Debian 13) and runtime agree on `libssl.so.3` symbol versions. The previous `distroless/cc-debian12` base shipped OpenSSL 3.0 and crashed at startup with `OPENSSL_3.2.0 not found`.
-- **Container build**: dropped `linux/arm64` from `Release Container` workflow — Render only runs amd64, and QEMU arm64 emulation pushed the Rust + cargo-chef build past the 90-minute job timeout. Builds now complete in ~5 minutes.
-- **E2E tests**: replaced `waitForLoadState('networkidle')` with `domcontentloaded` across all specs and cut CI retries from 2 to 1. `networkidle` is explicitly discouraged by Playwright and was the root cause of the 45-minute E2E job timeout (tests accumulated 30-second page-load timeouts that compounded through retries).
+- GET api/v1/bookings/guest returns current user's passes
+- P0 sidebar regrouping + empty-state onboarding + test mocks
+- React 19 useOptimistic on cancel for instant UI
+- Locale-aware KPI counter + transparent token refresh interceptor
+- Kinetic Observatory dashboard — KPI cards, trend, sensor feed, activity table
+- Enforce 2FA at login with temp token flow
+
+
+### Build
+
+- Upgrade rand 0.9→0.10 + redb 2→3
+- Bump tray-icon from 0.21.3 to 0.22.0 (#328)
+- Bump rustls from 0.23.37 to 0.23.38 in the cargo-minor-patch group (#324)
+- Bump mdns-sd from 0.18.2 to 0.19.0 (#327)
+- Bump astro from 6.1.5 to 6.1.6 in parkhub-web in the npm-minor-patch group (#323)
+
+
+### CI
+
+- Shard E2E across chromium + mobile-chrome + mobile-safari
+- Remove continue-on-error masks on CI + E2E jobs
+- Drop --retries=2 CLI flag, defer to playwright.config.ts
+- Build amd64 only (drop arm64 multi-arch)
+
+
+### Chore
+
+- Collapse nested ifs to satisfy clippy pedantic
+- Regenerate Cargo.lock after rebase
+- Add coverage to.gitignore
+
+
+### Dependencies
+
+- Bump rustls-webpki 0.103.11 → 0.103.12 (RUSTSEC-2026-0098)
+
+
+### Documentation
+
+- Append v4.10.0 session fixes
+- Bump to v4.10.0 + changelog for Kinetic Observatory + deploy fixes
+- Add CODE_OF_CONDUCT and NOTICE for public release
+
 
 ### Fixed
-- **`/data` ownership in final image**: `COPY --from=data-setup /data /data` silently discarded the busybox `chown 65532:65532` because Docker COPY defaults to root:root unless `--chown` is passed. Added `--chown=65532:65532` so the distroless `nonroot` user can actually write `config.toml` and `parkhub.redb`.
-- **Render service config drift**: the `parkhub-rust-demo` service had a stale `dockerCommand = /app/docker-entrypoint.sh` left over from a pre-distroless iteration of the image. Cleared via the Render API so the Dockerfile `CMD` takes effect.
-- **CodeQL dismissals**: `DS-0001` (`:latest` tag) resolved by digest-pinning the runtime; `rust/hard-coded-cryptographic-value` alerts on `parkhub-server/src/api/stripe.rs:690,702` dismissed as test fixtures (`whsec_test_secret`, `whsec_correct`, `whsec_wrong` — only referenced in `#[test]` functions).
-- **NotificationCenter localStorage drift**: `NotificationCenter.tsx` was still reading the bearer token from `localStorage.getItem('parkhub_token')` after the httpOnly-cookie auth migration. Every page mount fired `/api/v1/notifications/unread-count` with `Authorization: Bearer null` and surfaced a 401 flood in the console. Refactored to use the shared `api` client and bail out when `getInMemoryToken()` returns null.
-- **`GET /api/v1/bookings/guest` missing**: the GuestPass page calls this on mount; the Rust server only registered `POST /api/v1/bookings/guest` so the list 405'd and the user's own passes never rendered. Added `list_user_guest_bookings` handler (filters `list_guest_bookings` by `created_by`) and registered both GET + POST on one router entry via `.get(...).post(...)` chaining.
-- **`rustls-webpki` RUSTSEC-2026-0098**: bumped the lockfile entry from `0.103.11` → `0.103.12` to clear the advisory. rustls-webpki is a transitive dep through `rustls` → `tokio-rustls` → `reqwest`/`hyper-rustls`/`axum-server`, so the fix is a pure `cargo update -p` — no direct dep-graph churn.
-- **CI + nightly green for the first time**: fixed a dozen e2e spec files to be tolerant of PHP vs Rust backend shapes (`tryEndpoints` helper, `PaginatedResponse` envelope unwrapping, `/health/ready` + `/api/v1/system/version` JSON fallback, ISO-8601 booking timestamps, slot rotation to dodge seeded-data collisions, strict-mode locator fixes, animation-disabled visual baselines, hydration-safe `loginViaUi`). Removed `continue-on-error: true` from the `actionlint`, `clippy`, `integration`, and `e2e` jobs now that all four are green. Sharded the nightly into a build-once + `(project × shard)` = 3 × 4 = 12 parallel matrix so chromium + mobile-chrome + mobile-safari all fit in the 45-minute job ceiling.
 
----
+- NotificationCenter auth — use api client, not localStorage
+- Kill the per-render DDoS on api/v1/demo/status
+- Disable mDNS in unattended/headless mode
+- Dashboard skeleton matches Kinetic Observatory layout
+- 3 P0 bugs found by UX audit subagent
+- Return 404 JSON for unknown api/* routes + E2E cleanups
+- Add PARKHUB_DISABLE_RATE_LIMITS escape hatch for E2E
+- Pin distroless/cc-debian13 digest to silence DS-0001
+- COPY data with --chown to preserve nonroot ownership
+- Use distroless/cc-debian13 runtime to match builder
+- Bridge --dt-* tokens into --theme-* so body actually repaints
+- I18n keys, NaN guards, Material You theme, demo banner, page titles
+- PWA icons, notification guard, CSP header, footer landmark
+- Add Stripe webhook signature verification with HMAC-SHA256
+- Cookie secure default, env example, OAuth CSRF, JWT revocation, TOTP SHA-256
+- Revert broken OccupancyPrediction split + cargo fmt updates.rs
+- Bust stale Docker cache v3 — v2 inherited broken builder layer
+- Re-copy Cargo.toml in builder stage, remove error-swallowing || true
+- Bust Docker build cache — stale cache served headless= binary
+- Add healthCheckPath and demo password to render.yaml
+- Enable all API modules in headless Docker build + guard optional-chain array ops
+- Remove unused imports in TeamLeaderboard
+- Wire selectedLot to stats API in OccupancyPrediction
+- Prevent SSRF in self-update API via version input validation
+
+
+### Performance
+
+- O(1) API key lookup via reverse prefix index
+
+
+### Tests
+
+- Health-JSON test probes health/ready + system/version
+- Health-endpoint JSON probe for Rust layout
+- Remaining Rust-specific nightly fixes
+- Sync nightly-suite fixes from parkhub-php 10773bf
+- Sync NotificationCenter test with api-client refactor
+- Admin-crud tolerant of rust vs php endpoint differences
+- Webhook URLs → admin/webhooks-v2 (real route)
+- Update nonexistent-route assertion to match new 404 behavior
+- Unblock concurrent-users, devtools, theme switcher tests
+- Fix racy admin-route guard + skip visual on non-chromium
+- Use CARGO_PKG_VERSION in test_current_version assertion
+- Replace networkidle with domcontentloaded, cut retries to 1
+- Mark network-failure catch blocks as istanbul ignore
+- Uptime branches + defensive guards istanbul-ignore
+- GuestPass error paths, QRCheckIn status fallback + defensive guards
+- Profile.tsx — mark defensive guards as istanbul ignore
+- Dashboard WS events, LoginHistory UA branches
+- Notifications.tsx error paths, timeAgo branches, success type
+- Bookings.tsx WS events, cancel errors, filters
+- Translations.tsx 87% → 97% (+7 tests)
+- Final coverage push — 96.46% statements, 1994 tests
+- Comprehensive theme switching audit + use api client
+- Fix flaky smtp_config test — remove unsafe env var manipulation
+- Achieve >90% coverage across all frontend files
+- Final coverage push — batch 2
+- Final coverage push — batch 1
+- 100% coverage for notification, visitors, approval, admin views
+- 100% coverage for calendar, translations, admin CRUD, user views
+- Boost coverage for admin views and critical paths to 100%
+- 100% coverage for zero-coverage components and locales
+- Update cookie secure test to match new fail-safe default
+- Add coverage for critical untested components
+
 
 ## [4.9.0] - 2026-04-13
 
 ### Added
-- **API Client Resilience**: Exponential backoff retry for transient errors (502/503/504/429), GET request deduplication, AbortController support
-- **Service Worker Update Prompt**: User-controlled update flow with toast notification instead of auto-`skipWaiting()` — prevents mid-session interruptions
-- **CSP Meta Tag**: Content-Security-Policy for static deployments (Render, CDN) with script, style, connect, frame restrictions
-- **React 19 `useOptimistic`**: Notifications view uses `useOptimistic` + `useTransition` for instant read toggle with auto-revert on failure
-- **CommandPalette ARIA**: Full WAI-ARIA 1.2 combobox pattern — `role="combobox"`, `aria-activedescendant`, `role="listbox"`, `role="option"`, `aria-selected`
-- **WebSocket Heartbeat**: 30s ping for dead connection detection, max retry cap (10) with `retriesExhausted` state and manual `reconnect()` callback
-- **ErrorBoundary Event**: Dispatches `app:error` custom event with structured error details for external monitoring integration
-- **SWUpdatePrompt component**: Animated toast UI for service worker update detection and reload
-- **Vitest Coverage Thresholds**: Enforced minimums (statements: 40%, branches: 30%, functions: 35%, lines: 40%) with `json-summary` reporter
-- 10 new Vitest tests (822 total): API retry/dedup/abort (5), CommandPalette ARIA (5)
 
-### Changed
-- TypeScript strict mode: added `noUncheckedIndexedAccess`, `noFallthroughCasesInSwitch`
-- Server CSP header: added `'unsafe-inline'` for Astro compatibility + `base-uri`/`form-action` directives
-- Permissions-Policy: expanded to restrict camera, microphone, payment, USB, bluetooth, serial; geolocation allowed for self
-- DataTable: `role="grid"` → `role="table"`, added `role="columnheader"` + `scope="col"` + `role="row"` for screen readers
-- Updated npm deps: React 19.2.5, Astro 6.1.5, Vitest 4.1.4, i18next 26.0.4
+- Wire up update API routes — all 5 endpoints live
+- Self-update system with version history + rollback
+- 4 new premium themes + enhanced animations
+- Add Team Leaderboard + Smart Predictions views
+
 
 ### Fixed
-- Framer Motion `layoutId` prop leaking to DOM in AdminGraphQL test mock
-- Service Worker auto-`skipWaiting()` causing mid-session reloads
 
----
+- Rebuild docker-publish — amd64-only, push-to-main trigger, Render auto-deploy
+- Make team/leaderboard E2E test tolerant of feature flags
+- Clean updates.rs — remove utoipa annotations, fix check_admin API
+- Add utoipa::ToSchema derive to update API types
+
+
+### Release
+
+- V4.9.0 — API resilience, React 19 useOptimistic, security hardening
+
 
 ## [4.8.0] - 2026-04-13
 
 ### Added
-- **QR Check-In/Out**: Scan QR code to check in at parking lot, live elapsed timer, manual checkout
-- **Swap Requests**: Offer and accept parking spot trades between colleagues
-- **Guest Parking Pass**: Generate shareable QR passes for visitors with unique guest codes
-- **Occupancy Heatmap**: 7x24 grid visualization of lot usage patterns (admin)
-- **DESIGN.md**: Comprehensive AI-readable design system specification
-- **SEO**: Open Graph, Twitter Card meta tags, JSON-LD structured data
-- **CODEOWNERS**: Automated code review routing
-- **DOCKER.md + PAAS.md**: Deployment guides for Docker, Render, Railway, Fly.io
-- **X-RateLimit headers**: Limit/Remaining/Retry-After on all API responses
-- Container queries and scroll-driven animations (CSS 2026)
-- Visual regression baselines (login, register, welcome)
-- 34 new Vitest tests (782 total), 4 new E2E specs (117 total)
 
-### Changed
-- i18n: 160+ untranslated strings filled across all 9 non-EN locales
-- All 50 clippy warnings resolved (Rust 2024 let chains)
-- Typography: text-wrap balance/pretty, Inter var font optimization
+- Add QR Check-In, Swap Requests, Guest Pass, Occupancy Heatmap
+- Translate remaining untranslated strings across all 9 locales
+- CODEOWNERS, SEO meta tags, X-RateLimit headers
+
+
+### Chore
+
+- Bump version badges to v4.8.0
+
+
+### Documentation
+
+- Add What's New in v4.8.0 section to README
+
 
 ### Fixed
-- CI: cargo fmt after let-chain refactoring
-- nav.favorites missing i18n key in sidebar
 
----
+- Add getInMemoryToken mock + QR ok:true in tests (CI fix)
+- Address all pre-release review findings (7 agents)
+- Add missing nav.favorites key to all 10 locales
+- Resolve all clippy warnings + add cutting-edge CSS patterns + DESIGN.md
+- Clippy --fix collapsible_if + auth_flow CI retry
+
+
+### Release
+
+- V4.8.0 — QR Check-In, Swap Requests, Guest Pass, Heatmap
+
 
 ## [4.7.0] - 2026-04-12
 
-### Added
-- **Full Test Pyramid**: 8-layer test infrastructure matching production standards
-  - 10 integration test suites per repo (API contract, auth flow, booking lifecycle, webhook delivery, GDPR compliance, multi-tenant isolation, rate limiting, email templates, recurring bookings, DB migration)
-  - 1-month booking simulation engine with 3 profiles (small/campus/enterprise)
-  - k6 load test profiles with graduated thresholds (p95 <200ms/<500ms/<1s)
-  - 6 new E2E Playwright suites (multi-language, offline/reconnect, concurrent users, admin CRUD, booking edge cases, security flows)
-  - Frontend Vitest expansion: hooks, validation, router, error boundary tests
-  - axe-core WCAG2aa accessibility testing
-  - Visual regression testing with Playwright screenshots
-- **CI/CD Modernization**
-  - Integration tests in GitHub Actions CI (advisory)
-  - Nightly assurance workflow (Rust) / Security workflow (PHP) for parity
-  - `docker-compose.test.yml` for containerized test pipeline
-  - Dependabot auto-merge with version filtering (skip major bumps)
-  - Branch protection aligned to gate job ("Required checks")
-  - PHPStan static analysis in PHP CI (advisory)
-- **Quick-Start installer** (`install.sh`) for one-command setup
+### Build
 
-### Changed
-- Rust toolchain pinned to 1.94.1 via `rust-toolchain.toml` (was 1.88.0, release had 1.85!)
-- MSRV bumped from 1.88 to 1.94
-- actionlint v1.7.11 → v1.7.12, setup-qemu-action v3 → v4
-- GDPR/COMPLIANCE docs synced to v3.3.0 across both repos
-- Lighthouse CI: added LCP ≤4000ms threshold, 3 runs per URL
-- All README badges updated to v4.7.0
+- Bump the cargo-minor-patch group across 1 directory with 3 updates (#321)
+- Bump the actions group across 1 directory with 3 updates (#320)
+- Bump react-i18next from 16.6.1 to 17.0.2 in parkhub-web (#317)
+- Bump i18next from 25.10.4 to 26.0.3 in parkhub-web (#316)
+- Pin Rust 1.94.1 via rust-toolchain.toml, update all CI workflows
+- Bump vite from 7.3.1 to 7.3.2 in parkhub-web (#319)
+- Bump the npm-minor-patch group in parkhub-web with 5 updates (#315)
+- Bump defu from 6.1.4 to 6.1.6 in parkhub-web (#314)
+
+
+### CI
+
+- Rename gate job CI → Required checks (fix auto-merge blocking)
+- Add nightly assurance workflow (parity with PHP)
+- Add docker-compose.test.yml + integration tests in CI
+- Update actionlint v1.7.11→v1.7.12, setup-qemu-action v3→v4
+
+
+### Chore
+
+- Remove.claude from tracking, fix deny.toml stale advisory
+- Align parkhub-web version to 4.5.0
+
+
+### Documentation
+
+- Update all MD files to v4.5.0
+
 
 ### Fixed
-- **ParkingPassController**: QR code v6 API migration (`OUTPUT_MARKUP_SVG` → `QRMarkupSVG::class`) — PHP only
-- E2E login payload: `email` → `username` field for Laravel Sanctum
-- 28 clippy warnings resolved (Rust test files)
-- 50 cargo fmt formatting diffs resolved
-- nightly.yml shellcheck issues (SC2015, SC2034)
-- `router.test.tsx`: `require()` → direct mock (Vitest jsdom compat)
-- Pint formatting on 17 PHP test files
-- `build:php` path: `../parkhub-php/public/` → `../public/`
-- serialize-javascript 7.0.4 → 7.0.5 (CVE DoS fix)
-- RUSTSEC-2026-0097 (rand unsoundness) acknowledged in deny.toml
+
+- Fix release workflow — OpenSSL for Windows, tolerant release job
+- Fix docker-publish skipping on tag push (same validate-tag issue)
+- Fix release workflow skipping on tag push
+- Remaining cargo fmt diffs + nightly.yml shellcheck (SC2015, SC2034)
+- Fix api.spec.ts token extraction + bad-creds field name
+- Resolve all 28 clippy warnings in test files
+- Router.test.tsx require → direct mock, add RUSTSEC-2026-0097 ignore
+- Remove stale RUSTSEC-2025-0141 advisory ignore (bincode no longer in tree)
+- Fix integration test API contract mismatches
+- Landing page infinite loop -- event-driven 401 handling (synced from PHP #265)
+
+
+### Tests
+
+- Add frontend Vitest expansion (hooks, validation, router, error boundary)
+- Add 6 E2E Playwright suites (multi-lang, offline, concurrent, admin CRUD, edge cases, security)
+- Add 1-month booking simulation engine (3 profiles)
+- Add 10 integration test suites (78 tests)
+- Add a11y, visual regression, and Lighthouse LCP threshold
+
+
+### Release
+
+- V4.7.0 — Rust edition 2024, full test pyramid, installer
+
 
 ### Security
-- Removed `program.md` (exposed local filesystem paths)
-- Removed `.aoe/`, `.forge-operator/`, `.claude/` from git tracking
-- Removed internal IPs from AGENTS.md, package.json, seeders
-- Added `.aoe/`, `.forge-operator/`, `.fop/`, `.claude/`, `skills-lock.json` to .gitignore
-- 14 Dependabot security alerts resolved (vite, defu, lodash, serialize-javascript)
-- cargo-deny stale advisory (RUSTSEC-2025-0141) cleaned
 
-### Removed
-- `program.md` (internal autoimprove config, not for public)
-- `.aoe/config.toml`, `.forge-operator/config.toml` (internal tooling)
-- `.claude/skills/` (62 files, internal automation)
+- Remove program.md (exposed local paths), update compliance docs
+- Remove internal references from public repo
 
----
+
+## [4.6.0] - 2026-03-27
+
+### Added
+
+- Finish desktop admin user flows
+- Harden rust push, compliance pdf, and admin reset flows
+
+
+### Build
+
+- Switch Docker runtime to distroless, move entrypoint logic into binary (#305)
+- Bump picomatch in parkhub-web (#301)
+- Refresh Cargo.lock for 4.5.0 crates
+
+
+### CI
+
+- Align rust workflows on 1.88
+- Make clippy advisory on main
+
+
+### Documentation
+
+- Align readme with current toolchain and test counts
+- Add FEATURES.md feature showcase with API examples and use cases (#295)
+- Add CONTRIBUTING.md with development setup and PR guidelines (#294)
+- Overhaul README for public audience with badges, screenshots, quick-start (#293)
+- Add GitHub issue templates for bug reports and feature requests
+
+
+### Fixed
+
+- Gate SMS/WhatsApp notification toggles (opacity + pointer-events-none)
+- Guard theme fetch against non-200 response to prevent retry loop
+- Auto-fix clippy warnings
+- Resolve all clippy warnings (cargo clippy --fix + manual allows)
+- Clear main seed security and clippy drift
+- Replace map_or with is_some_and for clippy
+- Update admin_list_all_bookings test for pagination envelope
+- Use clamp instead of min/max in admin analytics occupancy rate
+
+
+### Performance
+
+- Add pagination to admin_list_bookings and admin_list_users (#304)
+
+
+### Security
+
+- Fix OAuth signup bypass of allow_self_registration and missing CSRF state (#299)
+
+
+### Tests
+
+- Expand E2E Playwright coverage to 20 spec files (#289)
+- Satisfy clippy on headless CI
+
+
+### Merge
+
+- Product-truth-cleanup (clippy fixes, forge-operator init)
+
+
+### Security
+
+- Document instant advisory exception
+- Reorder password validation before DB calls in register; cap username dedup loop (#300)
+
 
 ## [4.5.0] - 2026-03-25
 
 ### Added
-- **Mobile Booking**: 3 endpoints + tests
-- **Notification Center**: 5 endpoints with 8 notification types and enriched metadata
-- Integration test suite (10 suites)
-- 1-month booking simulation engine (3 profiles)
-- k6 load test profiles (small/campus/enterprise)
-- axe-core WCAG2aa accessibility testing
-- Visual regression testing with Playwright
-- Lighthouse CI with LCP threshold
-- 6 new E2E test suites: multi-language, offline-reconnect, concurrent-users, admin-crud-complete, booking-edge-cases, security-flows
 
-### Changed
-- Rust toolchain pinned to 1.94.1 via rust-toolchain.toml
-- CI modernized: actionlint v1.7.12, setup-qemu-action v4
+- Add Google Calendar and iCal sync for bookings
+- Add admin analytics API with occupancy, revenue, popular-lots
 
-### Fixed
-- Landing page infinite loop (event-driven 401 handling)
-- SMS/WhatsApp notification toggle gating
 
-### Security
-- Removed internal references from public repos
-- 6 critical security fixes (OAuth, SAML, importBackup, GraphQL, N+1)
+### CI
 
----
+- Add auto-merge workflow for low-risk Copilot PRs
+- Trigger fresh CI run
+- Fix rust workflow toolchain and security checks
+- Make actionlint advisory, not blocking gate
+- Audit and harden GitHub Actions for Rust, security, and releases
+
+
+### Tests
+
+- Add integration tests for mobile booking endpoints
+
+
+### Release
+
+- V4.5.0
+
 
 ## [4.4.0] - 2026-03-25
 
 ### Added
-- **Notification Center module** (5 endpoints)
-- **Mobile Booking module**
-- Copilot Agent CI/CD integration
-- GitHub Audit Kit
 
-### Changed
-- Branch cleanup: 42 -> 11 branches
-- CI hardened with auto-merge for Copilot PRs
+- Merge Copilot test PR #278 + fix GDPR test assumptions + notification data field
+- Smart notification center with real-time badge count
 
----
+
+### Chore
+
+- Initial plan for comprehensive test coverage
+- Add aoe repo defaults
+
+
+### Fixed
+
+- Resolve all clippy warnings, remove unused imports
+- Resolve all clippy warnings across workspace
+- Restore rust workflow health
+
+
+### Tests
+
+- Add webhooks_v2 test module + mobile test integration
+- Add ~60 tests across 6 zero-coverage modules
+- Add comprehensive tests for common types, protocol, branding, lots_ext, team, translations
+
+
+### Release
+
+- V4.4.0 — mobile booking, notification center, test coverage boost
+
 
 ## [4.3.0] - 2026-03-23
 
 ### Added
-- **Role-Based Access Control (RBAC)**: Fine-grained permission management with 5 built-in roles (super_admin, admin, manager, user, viewer) and 6 permissions (manage_users, manage_lots, manage_bookings, view_reports, manage_settings, manage_plugins). Custom roles with any permission combination. 6 admin API endpoints: `GET/POST /api/v1/admin/roles`, `PUT/DELETE /api/v1/admin/roles/{id}`, `GET/PUT /api/v1/admin/users/{id}/roles`. RBAC permission middleware for endpoint authorization. Frontend: AdminRoles page with permission checkboxes, built-in badges, help tooltip. Feature flag: `mod-rbac`. 15 backend + 8 frontend tests. (#269)
-- **Advanced Audit Log Export**: Multi-format audit log export supporting PDF, CSV, and JSON with signed download URLs (5-minute expiry). Full filtering: date range, action type, user ID. Token-based download endpoint (no auth header needed). `GET /api/v1/admin/audit-log/export/enhanced`, `GET /api/v1/admin/audit-log/export/download/{token}`. Frontend: enhanced export dialog with format selector cards, download progress indicator. Feature flag: `mod-audit-export`. 11 backend tests. (#270)
-- **Parking Zones with Pricing Tiers**: Zone-based pricing with 4 tiers: economy (0.8x green), standard (1.0x blue), premium (1.5x gold), VIP (2.5x purple). Configurable multipliers and max capacity per zone. `GET /api/v1/lots/{id}/zones/pricing`, `PUT /api/v1/admin/zones/{id}/pricing`, `GET /api/v1/zones/{id}/price`. Frontend: zone cards with color-coded tier badges, inline pricing editor, capacity progress bars. Feature flag: `mod-parking-zones`. 11 backend + 6 frontend tests. (#271)
-- **i18n**: rbac, parkingZones, auditLog.advancedExport keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
-- **63 feature flags**: Added `mod-rbac`, `mod-audit-export`, `mod-parking-zones` (was 60)
 
----
+- Zone pricing tiers with economy/standard/premium/vip
+- Multi-format audit log export with signed URLs
+- Role-based access control with fine-grained permissions
+
+
+### Fixed
+
+- Remove unused fireEvent import from PWAEnhanced test
+- Restore waitFor import in PWAEnhanced test
+- Resolve CodeQL alerts — unused import + property injection
+- Remove temp script, fix WebhooksLogo mock in test
+- I18n brace nesting, cargo-deny ignores, async test waitFor, phosphor icon rename
+
+
+### Release
+
+- V4.3.0 — RBAC, Audit Export, Parking Zones
+
 
 ## [4.2.0] - 2026-03-23
 
 ### Added
-- **SAML/SSO Enterprise Authentication**: Full SAML 2.0 SSO integration with 5 API endpoints. `GET /api/v1/auth/sso/providers`, `GET /api/v1/auth/sso/{provider}/login`, `POST /api/v1/auth/sso/{provider}/callback`, `PUT /api/v1/admin/sso/{provider}`, `DELETE /api/v1/admin/sso/{provider}`. Lightweight XML parsing for SAML responses. SSO login buttons on login page + admin configuration panel. Feature flag: `mod-sso`. 12 backend + 13 frontend tests. (#266)
-- **Webhooks v2 (Outgoing Event Subscriptions)**: Enhanced webhook system with delivery tracking, retry logic, and HMAC-SHA256 signing. 6 admin API endpoints: list, create, update, delete, test, deliveries. Events: booking.created, booking.cancelled, user.registered, lot.full, payment.completed. `X-ParkHub-Signature` header. 3 retry attempts with exponential backoff. Feature flag: `mod-webhooks-v2`. 13 backend + 6 frontend tests. (#267)
-- **Enhanced PWA / Mobile Experience**: Dynamic PWA manifest based on branding, offline data caching, enhanced service worker (network-first API, cache-first static). Offline indicator, cached booking display, bottom navigation bar for mobile, pull-to-refresh gesture. Feature flag: `mod-enhanced-pwa`. 5 backend + 6 frontend tests. (#268)
-- **i18n**: sso, webhooksV2, pwa keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
-- **60 feature flags**: Added `mod-sso`, `mod-webhooks-v2`, `mod-enhanced-pwa` (was 57)
 
----
+- Mobile experience with offline support
+- Outgoing event subscriptions with delivery tracking
+- SAML/SSO enterprise authentication
+
+
+### Documentation
+
+- Update README for v4.1.0 — 57 modules, expanded features, NIS2 compliance, CI scanning
+- Update README for v4.1.0 — 57 modules, expanded features, NIS2 compliance, CI scanning
+
+
+### Fixed
+
+- Resolve remaining CodeQL alerts (property injection, unused vars)
+- Resolve CodeQL alerts — prototype pollution, unused imports
+- Resolve all CodeQL JS/TS security scanning alerts in parkhub-web
+- Eliminate Docker image CVEs by removing python3 and upgrading base
+
+
+### Release
+
+- V4.2.0 — SSO, Webhooks v2, Enhanced PWA
+
 
 ## [4.1.0] - 2026-03-23
 
 ### Added
-- **Booking Sharing & Guest Invites**: Share booking details via secure links with optional expiry. Invite guests by email. `POST /api/v1/bookings/{id}/share`, `GET /api/v1/shared/{code}` (public, no auth), `POST /api/v1/bookings/{id}/invite`, `DELETE /api/v1/bookings/{id}/share`. Frontend: BookingSharingModal with share link + invite tabs, copy-to-clipboard, expiry selector. Feature flag: `mod-sharing`. 15 backend + 8 frontend tests. (#262)
-- **Scheduled Reports (Email Digest)**: Configure automated report delivery via email on daily, weekly, or monthly schedules. Report types: occupancy_summary, revenue_report, user_activity, booking_trends. `GET/POST /api/v1/admin/reports/schedules`, `PUT/DELETE /api/v1/admin/reports/schedules/{id}`, `POST .../send-now`. Frontend: AdminScheduledReportsPage with CRUD form and cron visualization. Feature flag: `mod-scheduled-reports`. 16 backend + 7 frontend tests. (#263)
-- **API Versioning & Deprecation**: `GET /api/v1/version` with deprecation notices, `GET /api/v1/changelog` with breaking changes per version. `X-API-Version` response header on all API responses. `Sunset` header on deprecated endpoints. Frontend: ApiVersionBadge + ApiVersionAdmin components. Feature flag: `mod-api-versioning`. 10 backend + 3 frontend tests. (#264)
-- **i18n**: sharing, scheduledReports, apiVersion keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
-- **57 feature flags**: Added `mod-sharing`, `mod-scheduled-reports`, `mod-api-versioning` (was 54)
 
----
+- Version headers, deprecation notices, changelog
+- Automated email digest system
+- Booking sharing & guest invites
+
+
+### Build
+
+- Bump the actions group with 7 updates (#255)
+- Bump the npm-minor-patch group in parkhub-web with 5 updates (#254)
+- Bump rust from 1.93-slim to 1.94-slim (#253)
+
+
+### Fixed
+
+- Bump frontend version to 4.0.0
+- Div_ceil + writeln instead of write with newline
+- Const fn default_waitlist_status
+- Add missing plugins section to EN locale
+- Add missing icon mocks (ShieldCheck, PuzzlePiece, GraphicsCard)
+- Cargo fmt all v3.7-v4.0 modules
+- Add workflow_dispatch to CodeQL, disable default setup
+
+
+### Release
+
+- V4.1.0 — Booking Sharing, Scheduled Reports, API Versioning
+
 
 ## [4.0.0] - 2026-03-23
 
 ### Added
-- **Plugin/Extension System**: Modular plugin architecture with trait-based contract (`name()`, `version()`, `on_event()`, `routes()`). Plugin registry with load/unload/enable/disable. Event hooks: booking_created, booking_cancelled, user_registered, lot_full. 2 built-in plugins: "Slack Notifier" (webhook notifications), "Auto-Assign Preferred Spot" (favorite spot assignment). Admin API: `GET /api/v1/admin/plugins`, `PUT /api/v1/admin/plugins/{id}/toggle`, `GET/PUT /api/v1/admin/plugins/{id}/config`. Frontend: marketplace-style grid with toggle switches and config dialogs. Feature flag: `mod-plugins`. 24 backend + 8 frontend tests. (#257)
-- **GraphQL API**: Full GraphQL interface alongside REST. Schema: Query (me, lots, lot, bookings, booking, myVehicles) + Mutation (createBooking, cancelBooking, addVehicle). Interactive GraphiQL playground at `GET /api/v1/graphql/playground`. Schema SDL at `GET /api/v1/graphql/schema`. Execute at `POST /api/v1/graphql`. Same Bearer token auth. Feature flag: `mod-graphql`. 30 backend + 3 frontend tests. (#258)
-- **Compliance Reports & Audit Trail**: GDPR/DSGVO compliance monitoring system. Compliance status report with 10 checks (encryption, access control, data portability, DPO, etc.). Art. 30 data processing inventory (data map). Full audit trail export (CSV/JSON). PDF compliance report. TOM summary with scoring. `GET /api/v1/admin/compliance/report`, `/report/pdf`, `/data-map`, `/audit-export`. Frontend: compliance dashboard with status cards (green/yellow/red), download buttons. Feature flag: `mod-compliance`. 21 backend + 7 frontend tests. (#259)
-- **i18n**: plugins, compliance, graphql keys added to all 10 locales (en, de, fr, es, it, pt, pl, ja, zh, tr)
-- **54 feature flags**: Added `mod-plugins`, `mod-graphql`, `mod-compliance` (was 51)
 
----
+- GDPR/DSGVO audit trail export and compliance reports
+- GraphQL API with query/mutation support and playground
+- Modular plugin/extension system with registry and event hooks
+
+
+### CI
+
+- Best-in-class security tooling for 2026
+
+
+### Fixed
+
+- Puzzle → PuzzlePiece (valid phosphor icon)
+- Prevent theme FOUC with inline pre-hydration script
+
+
+### Release
+
+- V4.0.0 — Plugin System, GraphQL API, Compliance Reports
+
 
 ## [3.9.0] - 2026-03-23
 
 ### Added
-- **Kubernetes Helm Chart**: Full Helm chart in `helm/parkhub/` for K8s deployment. Deployment with health/readiness/startup probes, resource limits, PVC persistence. ConfigMap with all 51 module feature flags, Secret for credentials (SMTP, Stripe, OAuth, DB encryption). Optional ingress with TLS, HPA for autoscaling. `helm/README.md` with install/upgrade/config docs. (#249)
-- **k6 Load Testing Suite**: Performance testing scripts in `tests/load/`. Smoke test (1 VU, 30s), load test (50 VUs, 5min ramp), stress test (100 VUs, 10min, all endpoints), spike test (1-200-1 VUs). Shared config with environment variable overrides. `tests/load/README.md` with install, run, and interpretation guides. (#250)
-- **Postman Collection & Auto-Generation**: `GET /api/v1/docs/postman.json` endpoint that auto-generates a Postman v2.1 collection from the OpenAPI spec. Static collection in `docs/postman/` with 100+ requests in 17 folders (Auth, Bookings, Lots, Admin, etc.), environment template, login auto-sets token. Feature flag: `mod-api-docs`. 4 backend tests. (#251)
 
----
+- Auto-generated Postman collection endpoint + static collection
+- Load testing scripts for smoke, load, stress, and spike scenarios
+- Kubernetes Helm chart with full module flag support
 
-## [3.8.0] - 2026-03-23
+
+### Release
+
+- V3.9.0 — Helm chart, k6 load tests, Postman collection
+
+
+## [3.8.0] - 2026-03-22
 
 ### Added
-- **Absence Approval Workflows**: Submit absence requests that require admin approval. `POST /api/v1/absences/requests`, `GET /api/v1/admin/absences/pending`, `PUT /api/v1/admin/absences/{id}/approve`, `PUT /api/v1/admin/absences/{id}/reject`, `GET /api/v1/absences/my`. Auto-notification on status change. Frontend: submit form with date range + type + reason, admin pending queue with approve/reject + comment, status badges. Feature flag: `mod-absence-approval`. 14 backend + 8 frontend tests. (#245)
-- **Calendar Drag-to-Reschedule**: Drag booking events to new dates on the calendar. `PUT /api/v1/bookings/{id}/reschedule` with slot availability validation and conflict detection. Visual drop target feedback, confirmation dialog. Feature flag: `mod-calendar-drag`. 10 backend + 5 frontend tests. (#246)
-- **Customizable Admin Dashboard Widgets**: Per-user dashboard widget system. `GET/PUT /api/v1/admin/widgets` for layout persistence, `GET /api/v1/admin/widgets/data/{widget_id}` for data. 8 widget types: occupancy_chart, revenue_summary, recent_bookings, user_growth, booking_heatmap, active_alerts, maintenance_status, ev_charging_status. Grid layout with widget catalog sidebar. Feature flag: `mod-widgets`. 13 backend + 8 frontend tests. (#247)
-- **i18n**: absenceApproval, calendarDrag, widgets keys added to all 10 locales
-- **51 feature flags**: Added `mod-absence-approval`, `mod-calendar-drag`, `mod-widgets` (was 48)
 
----
+- Customizable admin dashboard widget system
+- Drag-to-reschedule bookings on calendar
+- Absence request workflow with admin approval
+
+
+### Release
+
+- V3.8.0 — absence approval, calendar drag, admin widgets
+
 
 ## [3.7.0] - 2026-03-22
 
 ### Added
-- **Enhanced Waitlist with Notifications**: Priority-based waitlist with auto-notification when slots become available. Accept/decline offers with 15-minute expiry. `POST /api/v1/lots/:id/waitlist/subscribe`, `GET /api/v1/lots/:id/waitlist`, `DELETE /api/v1/lots/:id/waitlist`, `POST .../accept`, `POST .../decline`. Frontend: WaitlistPage with join button, position indicator, accept/decline UI. Feature flag: `mod-waitlist-ext`. 9 backend + 7 frontend tests. (#241)
-- **Digital Parking Pass / QR Badge**: Generate digital passes with QR codes from active bookings. Public verification endpoint for QR scanning. `GET /api/v1/bookings/:id/pass`, `GET /api/v1/pass/verify/:code` (public), `GET /api/v1/me/passes`. Mobile-optimized full-screen pass display. Feature flag: `mod-parking-pass`. 10 backend + 7 frontend tests. (#242)
-- **Interactive API Documentation**: Embedded Swagger UI at `/api/v1/docs` for exploring and testing the REST API. Raw OpenAPI 3.0 JSON spec at `/api/v1/docs/openapi.json`. Admin sidebar link. Feature flag: `mod-api-docs`. 5 backend + 3 frontend tests. (#243)
-- **i18n**: waitlistExt, parkingPass, apiDocs keys added to all 10 locales
-- **48 feature flags**: Added `mod-waitlist-ext`, `mod-parking-pass`, `mod-api-docs` (was 45)
 
----
+- Interactive API documentation with Swagger UI
+- Digital parking pass with QR verification
+- Enhanced waitlist with notifications and accept/decline
+
+
+### Release
+
+- V3.7.0 — waitlist notifications, parking passes, API docs
+
 
 ## [3.6.0] - 2026-03-22
 
 ### Added
-- **Personal Parking History**: Paginated booking history with lot/date filters. Personal stats dashboard: total bookings, favorite lot, avg duration, busiest day, monthly trend chart, credits spent. `GET /api/v1/bookings/history`, `GET /api/v1/bookings/stats`. Timeline view with status badges. Feature flag: `mod-history`. 8 backend + 6 frontend tests. (#238)
-- **Geofencing & Auto Check-in**: Auto check-in when user enters lot geofence area using GPS proximity (haversine distance). `POST /api/v1/geofence/check-in`, `GET /api/v1/lots/:id/geofence`, `PUT /api/v1/admin/lots/:id/geofence`. Auto check-in toggle in Profile settings. Feature flag: `mod-geofence`. 8 backend + 4 frontend tests. (#239)
-- **i18n**: History and geofence keys added to all 10 locales
-- **43 feature flags**: Added `mod-history`, `mod-geofence` (was 41)
+
+- Geofencing with auto check-in (#239)
+- Personal parking history with stats (#238)
+
 
 ### Fixed
-- **Icon Audit**: Synced test mocks with component icon imports across AdminLots, AdminUsers, and Book tests (#237)
 
----
+- Sync test mocks with component imports (#237)
+- BatteryCharging test mock (#236)
+- Deduplicate imports + fix Battery icon (#235)
+- Remove duplicate model imports in db.rs (#234)
+
+
+### Release
+
+- V3.6.0 (#240)
+
 
 ## [3.5.0] - 2026-03-22
 
 ### Added
-- **Visitor Pre-Registration**: Pre-register visitors with name, email, vehicle plate, and visit date. Auto-generated QR code passes with visitor pass URL. `POST /api/v1/visitors/register`, `GET /api/v1/visitors`, `GET /api/v1/admin/visitors`, `PUT /api/v1/visitors/:id/check-in`, `DELETE /api/v1/visitors/:id`. Admin view with search/filter and stats. Feature flag: `mod-visitors`. 8 backend + 6 frontend tests. (#230)
-- **EV Charging Station Management**: Manage EV chargers per lot with Type2, CCS, CHAdeMO, Tesla connector types. Start/stop charging sessions with kWh tracking. `GET /api/v1/lots/:id/chargers`, `POST /api/v1/chargers/:id/start`, `POST /api/v1/chargers/:id/stop`, `GET /api/v1/chargers/sessions`, `GET /api/v1/admin/chargers`, `POST /api/v1/admin/chargers`. Admin utilization stats. Feature flag: `mod-ev-charging`. 10 backend + 5 frontend tests. (#231)
-- **Smart Slot Recommendations**: Enhanced recommendation engine with weighted scoring algorithm: frequency (40%), availability (30%), price (20%), distance (10%). Recommendation badges (Your usual spot, Best price, Closest, Available now, Preferred lot, Accessible). Star rating visualization. "Recommended for you" section in booking flow. `GET /api/v1/recommendations/stats` for admin analytics. 8 backend + 4 frontend tests. (#232)
-- **i18n**: Visitors, EV charging, recommendations keys added to all 10 locales
-- **41 feature flags**: Added `mod-visitors`, `mod-ev-charging` (was 39)
 
----
+- Enhanced smart slot recommendations with scoring algorithm
+- EV charging station management with session tracking
+- Visitor pre-registration with QR codes
+
+
+### Release
+
+- V3.5.0 — visitor pre-registration, EV charging, smart recommendations
+
 
 ## [3.4.0] - 2026-03-22
 
 ### Added
-- **Accessible Parking System**: `is_accessible` field on ParkingSlot, `accessibility_needs` on User (wheelchair, reduced_mobility, visual, hearing, none). `GET /api/v1/lots/:id/slots/accessible`, `PUT /api/v1/admin/lots/:id/slots/:slot_id/accessible`, `GET /api/v1/bookings/accessible-stats`, `PUT /api/v1/users/me/accessibility-needs`. 30-min priority booking for accessible users. Admin page with stats and slot toggles. Wheelchair icon in booking flow. Feature flag: `mod-accessible`. 9 backend + 8 frontend tests. (#226)
-- **Maintenance Scheduling**: Full CRUD for maintenance windows (`POST/GET/PUT/DELETE /api/v1/admin/maintenance`), `GET /api/v1/maintenance/active` (public). Auto-block affected slots (all or specific). Booking overlap validation. Admin page with calendar list, create/edit form, active banner. Feature flag: `mod-maintenance`. 9 backend + 6 frontend tests. (#227)
-- **Cost Center Billing**: `cost_center` and `department` fields on User. `GET /api/v1/admin/billing/by-cost-center`, `GET /api/v1/admin/billing/by-department`, `GET /api/v1/admin/billing/export` (CSV), `POST /api/v1/admin/billing/allocate`. Admin page with summary cards, tab switcher, data table, CSV export. Feature flag: `mod-cost-center`. 6 backend + 6 frontend tests. (#228)
-- **i18n**: Accessible, maintenance, billing keys in all 10 locales
-- **39 feature flags**: Added `mod-accessible`, `mod-maintenance`, `mod-cost-center` (was 36)
 
----
+- Cost center billing with CSV export and credit allocation
+- Maintenance scheduling with slot blocking
+- Accessible parking system with priority booking
+
+
+### Documentation
+
+- Add comprehensive legal compliance documentation
+
+
+### Release
+
+- V3.4.0 — accessible parking, maintenance scheduling, cost center billing
+
 
 ## [3.3.0] - 2026-03-22
 
 ### Added
-- **Audit Log UI + Export**: Paginated admin audit log at `/admin/audit-log` with action/user/date filters, color-coded badges, and CSV export. Extended `AuditLogEntry` with `target_type`, `target_id`, `ip_address`. New event types: `PaymentCompleted`, `TwoFactorEnabled/Disabled`, `ApiKeyCreated/Revoked`. 7 backend + 6 frontend tests. (#217)
-- **Data Import/Export Suite**: `POST /api/v1/admin/import/{users,lots}` for CSV/JSON bulk import with validation and error reporting. `GET /api/v1/admin/data/export/{users,lots,bookings}` for enhanced CSV exports with booking stats. Drag-and-drop upload UI with preview and import results. Feature flag: `mod-data-import`. 8 backend + 6 frontend tests. (#218)
-- **Fleet / Vehicle Management**: `GET /api/v1/admin/fleet` (all vehicles with stats), `GET /api/v1/admin/fleet/stats` (types distribution, electric ratio), `PUT /api/v1/admin/fleet/:id/flag` (flag/unflag vehicles). Added `Bicycle` to `VehicleType` enum. Feature flag: `mod-fleet`. 6 backend + 6 frontend tests. (#222)
-- **i18n**: Audit log, data management, fleet keys added to all 10 locales
-- **36 feature flags**: Added `mod-data-import`, `mod-fleet` (was 34)
 
----
+- Vehicle fleet management with stats and flagging
+- Import/export suite with CSV/JSON bulk operations
+- Paginated audit log UI with CSV export and filters
+
+
+### Release
+
+- V3.3.0 — audit log, data import/export, fleet management
+
 
 ## [3.2.0] - 2026-03-22
 
 ### Added
-- **iCal Calendar Sync**: `GET /api/v1/calendar/ical` (authenticated feed), `GET /api/v1/calendar/ical/:token` (public subscription via personal token), `POST /api/v1/calendar/token` (generate/rotate subscription token). VEVENTs with DTSTART, DTEND, SUMMARY, LOCATION, DESCRIPTION, DTSTAMP. Subscribe button in Calendar view with copy-link modal and instructions for Google Calendar, Outlook, Apple Calendar. Feature flag: `mod-ical`. 8 backend + 3 frontend tests. (#214)
-- **API Rate Limiting Dashboard**: `GET /api/v1/admin/rate-limits` (stats per endpoint group: auth 5/min, api 100/min, public 30/min, webhook 50/min), `GET /api/v1/admin/rate-limits/history` (blocked requests over last 24h in hourly bins). Admin Rate Limits page at `/admin/rate-limits` with progress bars and 24h blocked-request bar chart. 4 backend + 5 frontend tests. (#215)
-- **Multi-Tenant Isolation**: `tenant_id: Option<String>` added to User, ParkingLot, Booking models. `GET /POST /api/v1/admin/tenants` (list/create), `PUT /api/v1/admin/tenants/:id` (update). Super-admin sees all tenants; regular admins scoped to their own. AdminTenants page at `/admin/tenants` with create/edit modal and branding support. Feature flag: `mod-multi-tenant`. 10 backend + 5 frontend tests. (#216)
-- **i18n**: Calendar subscribe, rate limits, tenants keys added to all 10 locales
-- **34 feature flags**: Added `mod-ical`, `mod-multi-tenant` (was 31)
 
----
+- Multi-tenant isolation with admin CRUD and data-scoping fields
+- Admin rate limiting dashboard with blocked-request history
+- Calendar subscription with personal tokens and subscribe UI
+
+
+### Release
+
+- V3.2.0 — iCal sync, rate dashboard, multi-tenant
+
 
 ## [3.1.0] - 2026-03-22
 
 ### Added
-- **Interactive Map View**: `GET /api/v1/lots/map` returns lots with coordinates, live availability, and color-coded markers (green/yellow/red/gray). `PUT /api/v1/admin/lots/{id}/location` for setting lot coordinates. Leaflet.js + OpenStreetMap frontend at `/map` with click-to-book popups. Feature flag: `mod-map`. 12 backend + 6 frontend tests. (#211)
-- **Web Push Notifications**: Structured `PushPayload` with event types (booking confirmed/reminder/cancelled, new announcement). Service worker push handler with action buttons and notification click routing. `useNotifications` hook for subscribe/unsubscribe flow. 7 new backend + 4 frontend tests. (#212)
-- **Stripe Payment Integration**: `POST /api/v1/payments/create-checkout` for credit purchase, `POST /api/v1/payments/webhook` for Stripe webhook events, `GET /api/v1/payments/history` for payment history, `GET /api/v1/payments/config` for Stripe status. Feature flag: `mod-stripe`. 14 backend tests. (#213)
-- **i18n**: Map, payments keys added to all 10 locales
-- **31 feature flags**: Added `mod-map`, `mod-stripe` (was 29)
 
----
+- Checkout sessions, webhook handler, payment history
+- Structured push payloads, service worker notifications, useNotifications hook
+- Interactive Leaflet map view with lot markers
+
+
+### Fixed
+
+- Auto-format analytics.rs
+
+
+### Release
+
+- V3.1.0 — map view, web push, Stripe payments
+
 
 ## [3.0.0] - 2026-03-22
 
 ### Added
-- **10-Language Support**: Complete translations for FR, ES, IT, PT, TR, PL, JA, ZH — all 904 keys matching EN. Language selector dropdown in sidebar with flag + native name. 29 new i18n tests. (#207)
-- **Admin Analytics Dashboard**: `GET /api/v1/admin/analytics/overview` — daily bookings, revenue, peak hours histogram (24 bins), top 10 lots by utilization, user growth (12 months), avg booking duration. Frontend with stat cards, SVG charts, heatmap, date range picker, CSV export. Feature flag: `mod-analytics`. 6 backend + 7 frontend tests. (#208)
-- **Email Notification Templates**: 6 professional HTML email templates with inline CSS — booking confirmation, reminder, cancellation, password reset, welcome, weekly admin summary. Template engine with `{{key}}` variable substitution. Feature flag: `mod-email-templates`. 9 unit tests. (#209)
 
----
+- HTML email templates with inline CSS
+- Admin analytics dashboard with backend API
+- Complete 10-language support with full translations
+
+
+### Fixed
+
+- Cap API key expires_in_days to 365 (CodeQL alert #56)
+- Add permissions block to lighthouse.yml
+
+
+### Release
+
+- V3.0.0 — 10 languages, analytics, email templates
+
 
 ## [2.9.0] - 2026-03-22
 
 ### Added
-- **Lobby Display / Kiosk Mode**: Public `GET /api/v1/lots/:id/display` endpoint for digital signage monitors — no auth required, rate-limited 10 req/min per IP. Returns lot name, available/total slots, occupancy percentage, color status (green/yellow/red), and per-floor breakdown. Feature flag: `mod-lobby-display`. (#198)
-- **LobbyDisplay frontend**: Full-screen view at `/lobby/:lotId` with auto-refresh every 10 seconds, 8rem+ numbers, color-coded occupancy bar, floor breakdown cards, dark background for screen burn-in prevention. i18n for en/de.
-- **Interactive Onboarding Wizard**: 4-step setup wizard at `/setup` — company info (name/logo/timezone), create lot (floors/slots), user invites, theme picker (all 12 themes). Feature flag: `mod-setup-wizard`. (#200)
-- **Wizard API**: `GET /api/v1/setup/wizard/status` + `POST /api/v1/setup/wizard` with per-step persistence and validation
-- **12 backend tests**: 6 lobby display (color boundaries, serialization) + 8 wizard (DTO serialization, theme list, step validation)
-- **12 frontend tests**: 6 lobby display (loading, display, floors, error, occupancy bar) + 6 wizard (render, validation, navigation, themes, redirect)
 
-### Closed
-- **#199 Digital Parking Pass**: Deferred — requires Apple Developer and Google Pay API accounts
+- Interactive Onboarding Wizard (#200) (#205)
+- Lobby Display Kiosk Mode (#198) (#204)
 
----
+
+### Release
+
+- V2.9.0 (#206)
+
 
 ## [2.8.0] - 2026-03-22
 
 ### Added
-- **WebSocket real-time updates**: Token-based auth via `?token=` query param, heartbeat with missed-pong tracking, initial occupancy snapshot on connect (`mod-websocket`)
-- **WsEvent factory methods**: `BookingCreated`, `BookingCancelled`, `OccupancyChanged`, `AnnouncementPublished`, `SlotStatusChange`
-- **Live booking broadcasts**: Booking create/cancel handlers broadcast WebSocket events to all connected clients
-- **Frontend useWebSocket hook**: Returns `{ connected, lastMessage, occupancy }` with token auth and exponential backoff reconnect
-- **Dashboard live indicator**: Green dot shows active WebSocket connection status
-- **Bookings real-time toasts**: Toast notifications on WebSocket booking events in Bookings page
+
+- Enhance WebSocket with auth, heartbeat, occupancy snapshot
+
 
 ### Changed
-- **API module extraction (Phase 3)**: `mod.rs` reduced from 4517 to 1503 lines
-  - `system.rs`: health, version, maintenance, handshake, middleware (345 lines)
-  - `users.rs`: profile CRUD, GDPR, password, preferences, stats (757 lines)
-  - `admin_handlers.rs`: user/booking mgmt, stats, reports, audit, settings (1412 lines)
-  - `lots_ext.rs`: lot QR codes, admin dashboard charts (267 lines)
-  - `misc.rs`: legal/Impressum, public occupancy/display (384 lines)
 
----
+- Extract handlers from mod.rs into dedicated modules
+
+
+### Documentation
+
+- Update README + CHANGELOG for v2.7.0 (12 themes, pricing, hours, SMS)
+
+
+### Fixed
+
+- Workspace lint override, ThemeSwitcher 6→12 themes test
+- Add Palette/Check icon mocks to Layout, getDynamicPrice mock to Book
+- Allow unsafe in parkhub-client for Slint FFI on Windows
+- Auto-format mod.rs imports
+
+
+### Release
+
+- V2.8.0 — WebSocket real-time + API extraction
+
 
 ## [2.7.0] - 2026-03-22
 
 ### Added
-- **Dynamic pricing**: Occupancy-based surge/discount with admin-configurable multipliers and thresholds (`mod-dynamic-pricing`)
-- **Operating hours**: Per-lot 7-day schedule with open/close times, booking validation, "Open Now" badges (`mod-operating-hours`)
-- **SMS/WhatsApp stubs**: Notification channel expansion with phone number input and per-event toggles
-- **PDF invoices**: Professional booking invoices with VAT breakdown via `printpdf` (`mod-invoices`)
-- **OAuth/Social login**: Self-service Google + GitHub OAuth configuration (`mod-oauth`)
-- **12 design themes**: Added Wabi-Sabi, Scandinavian, Cyberpunk, Terracotta, Oceanic, Art Deco (was 6)
-- **Playwright E2E**: 65 tests covering API, pages, devtools, parking flow, GDPR, PWA
-- **Lighthouse CI**: Automated quality gates (a11y >= 95, perf >= 90, SEO >= 95)
-- **httpOnly cookie auth**: XSS-proof authentication with CSRF protection and Bearer fallback
+
+- Add SMS/WhatsApp channel stubs
+- Add per-lot operating hours with booking validation
+- Add occupancy-based dynamic pricing
+- Synthwave + Zen themes (12 total) (#193)
+- 4 new design themes — Liquid, Mono, Ocean, Forest (#192)
+
 
 ### Fixed
-- Workspace lint override for Slint FFI on Windows builds
-- ThemeSwitcher test updated for 12 themes
-- Frontend test mocks for all new API endpoints
 
----
+- Clippy unused imports, frontend test mocks for theme/2FA/notifications
+- Use username field for Rust API, fix token extraction
+
+
+### Tests
+
+- Add full user+admin workflow E2E with 12-theme cycle and booking simulation
+- Update theme tests for all 12 themes (was 6)
+
+
+### Stitch
+
+- Add Wabi-Sabi design screenshot
+
+
+## [2.6.0] - 2026-03-22
+
+### Added
+
+- Add PDF invoice generation for bookings
+- Add Google + GitHub social login
+
+
+### Changed
+
+- Extract booking handlers from mod.rs into bookings.rs
+
+
+### Documentation
+
+- Update README to v2.5.0 — themes, httpOnly cookies, OAuth, test counts
+
+
+### Fixed
+
+- Gate quick_book and booking_checkin routes behind mod-bookings feature
+
+
+### Tests
+
+- Add comprehensive Playwright E2E test suite
+
+
+### Security
+
+- Remove hardcoded password from docker-compose.yml
+
+
+## [2.5.0] - 2026-03-22
+
+### Fixed
+
+- Replace localStorage JWT with httpOnly cookie auth (#154)
+
+
+## [2.4.0] - 2026-03-22
+
+### Added
+
+- Design theme switcher with 6 visual themes (#179)
+
+
+### Fixed
+
+- Len_zero in coverage tests
+
+
+### Stitch
+
+- Improved generator v2 (separate projects, DESIGN.md context, verified discussion IDs)
+- Enhanced v3 designs with DESIGN.md + pro UX prompts
+- 5 unique AI-generated designs (separate projects per screen)
+
+
+## [2.3.0] - 2026-03-22
+
+### CI
+
+- Downgrade Lighthouse performance to warn (static SPA shell)
+- Add Lighthouse CI workflow with quality gates
+
+
+### Chore
+
+- GitOps polish — README, CHANGELOG, SECURITY.md, templates
+
+
+### Fixed
+
+- Fmt coverage_tests.rs + update lockfile
+- Close accessibility gap from 93 to 100
+
+
+### Tests
+
+- Add 104 coverage tests for security, admin, and edge cases (#175)
+
+
+### Stitch
+
+- Add 4 AI-generated design proposals (mobile-pass, admin-analytics, onboarding, lobby)
+
 
 ## [2.2.0] - 2026-03-22
 
 ### Added
-- **Glass morphism UI**: Bento grid dashboard with frosted-glass cards, animated counters, and modern gradients
-- **2FA/TOTP authentication**: QR code enrollment via `totp-rs`, backup codes, per-account enable/disable
-- **Accessibility score 100**: Full ARIA compliance, contrast fixes, confirm dialogs replacing `window.confirm`
-- **CI badges and GitOps polish**: README overhaul, SECURITY.md, issue/PR templates, CHANGELOG in Keep a Changelog format
 
-### Changed
-- Bumped version to 2.2.0
-- README badges switched from for-the-badge to flat-square style with CI status badge
-- Added Security link to README navigation
+- Modern UI 2026 redesign — glass morphism, animated counters, bento grid
 
----
+
+### Fixed
+
+- Align test assertions with actual i18n translations
+- Resolve 13 QA issues (#151-#165)
+
 
 ## [2.1.0] - 2026-03-22
 
 ### Added
-- **28 Cargo feature flags**: Full modularity system — build only the modules you need (`mod-bookings`, `mod-vehicles`, `mod-absences`, etc.)
-- **Headless mode**: `--no-default-features --features headless` for pure MIT server builds without GUI dependencies
-- **Module documentation**: Feature flag table in README with build examples
 
-### Changed
-- Workspace Rust version updated to 1.85
-- Axum upgraded from 0.7 to 0.8
-- `rand` upgraded from 0.8 to 0.9
+- Add frontend components - 2FA, notifications, login history, bulk actions, print
+- Add admin QoS features - bulk ops, advanced reports, notifications, booking policies, health
+- Add security improvements - 2FA/TOTP, password policy, login history, sessions, API keys
 
----
+
+### Fixed
+
+- Clippy let-else, fmt, frontend test mocks
+
 
 ## [2.0.0] - 2026-03-22
 
 ### Added
-- **Full modularity system**: 28 feature-gated modules for compile-time customization
-- **Smart slot recommendations**: Heuristic scoring engine (slot frequency, lot frequency, features, proximity) — top 5 returned
-- **Community translation management**: Proposal submission, up/down voting, admin review with comments
-- **Runtime translation overrides**: Approved translations hot-loaded into i18n at app startup
-- **Favorites UI**: Full view for managing pinned parking slots with live availability status
-- **Dashboard analytics**: 7-day booking activity bar chart with real booking data
-- **DataTable CSV export**: Download any data table as CSV with proper cell escaping
-- **Demo reset tracking**: `last_reset_at`, `next_scheduled_reset`, `reset_in_progress` in status API
+
+- Add test coverage for background jobs (#112)
+- Add compile-time module feature flags for all API modules
+- System endpoints, iCal absence import, webhook retry
+- Add background jobs system (closes #42)
+- Implement PATCH bookings/{id}, PUT recurring-bookings/{id}, PUT absences/{id}
+- Per-slot QR code, PWA manifest, branding endpoints
+- Add GET admin/credits/transactions endpoint with filters
+- Add PUT lots/{lot_id}/zones/{zone_id} update endpoint (closes #48)
+- Dedicated pricing endpoint + daily_max cap in price calculation (closes #37)
+- Add BookingReminder and WaitlistSlotAvailable notifications (closes #35)
+- Add slot_type, status, and feature filters to GET lots/{id}/slots (closes #38)
+- Add bulk user import via CSV (closes #40)
+- Add welcome + cancellation emails, mark SMTP as Done
+
+
+### CI
+
+- Stop spam — security scanning weekly only, remove MSRV/Docker from PRs
+- Stop spam — security scanning weekly only, remove MSRV/Docker from PRs
+- Add MSRV check (1.82) and Docker build test to CI
+- Add --all-targets and doc tests to test job (closes #68)
+- Fix action versions, add fmt check and security scanning
+
 
 ### Changed
-- Major version bump to reflect the modularity system and feature flag architecture
-- Clippy pedantic and nursery lints enforced with zero warnings
+
+- Add admin_middleware layer for admin routes (#109)
+- Extract 10 handler modules from api/mod.rs (8168→5353 lines)
+- Replace unnecessary write locks with read locks in submodules (#62)
+- Replace unnecessary write locks with read locks in submodules (#62)
+- Extract vehicles module, replace write locks with read locks
+
+
+### Chore
+
+- Update deps — patch CVEs
+
+
+### Dependencies
+
+- Bump h3 from 1.15.6 to 1.15.9 in parkhub-web
+
+
+### Documentation
+
+- Redesign README for professional presentation
+- Update test counts to 1,390 (v1.9.0 actuals)
+- Update README + CHANGELOG for v1.9.0 features
+
+
+### Fixed
+
+- Remove unsafe-inline from CSP style-src (#106)
+- Use constant-time comparison for metrics token (#114)
+- Replace mem::forget with TestHarness for test isolation (#108)
+- Remove unused rustls-pemfile dependency (#102)
+- Add input length limits on key endpoints (#115)
+- Invalidate all sessions on password change (#116)
+- Un-ignore max_bookings_per_day enforcement test (#103)
+- Make MSRV informational, fix checkout action version
+- Bump MSRV from 1.82 to 1.85
+- Move confidence-threshold before exceptions in deny.toml
+- Add all GTK3/Slint advisory ignores and renderer license exceptions to deny.toml
+- Update deny.toml with correct license exceptions for Slint and ring
+- CI doc tests and add deny.toml for cargo-deny policy
+- Resolve CI failures — compilation errors, clippy warnings, and broken tests
+- Correct clippy lint names for Rust 1.94
+- Allow remaining Rust 1.94 pedantic/nursery lints
+- Allow new Rust 1.94 pedantic lints (CI clippy failure)
+- Mask credentials in seed_demo.py output (CodeQL alert)
+- Resolve 42 clippy warnings in parkhub-client
+- Deadlock in create_booking, XSS in public_display, quick_book rollback
+
+
+### Performance
+
+- Wrap Argon2 password hashing in spawn_blocking (#117)
+- Use LazyLock for vehicle city codes map (closes #111)
+- Reduce write-lock scope in create_booking, add booking-by-user index, re-validate user on auth
+
 
 ### Tests
-- **505 Rust + 401 Frontend + 484 PHP** = 1,390 total tests
 
----
+- Add booking workflow, admin, and rate-limit integration tests
+
+
+### Quality
+
+- Zero clippy warnings, security hardening, simplify pass
+
+
+### Security
+
+- Reduce JWT TTL to 1h, add token revocation, rate-limit auth endpoints, explicit Argon2 params, extend audit logging
+
 
 ## [1.9.0] - 2026-03-21
 
 ### Added
-- **Community translation management**: Proposal submission, up/down voting, admin review (approve/reject with comments)
-- **Runtime translation overrides**: Approved translations hot-loaded into i18n at app startup
-- **Smart slot recommendations**: Heuristic scoring engine (slot frequency, lot frequency, features, proximity, base) — top 5 returned
-- **Favorites UI**: Full view for managing pinned parking slots with live availability status
-- **OpenAPI docs**: 30+ annotated endpoints — translations and recommendations schemas registered
-- **Dashboard analytics**: 7-day booking activity bar chart with real booking data
-- **DataTable CSV export**: Download any data table as CSV with proper cell escaping
-- **A11y audit fixes**: ARIA labels on icon buttons, contrast fixes, confirm dialogs replacing window.confirm
-- **Demo reset tracking**: `last_reset_at`, `next_scheduled_reset`, `reset_in_progress` in status API + overlay
-- **PUSH_SUBSCRIPTIONS drain**: Demo reset now properly clears push subscription table
 
-### Changed
-- Clippy pedantic: `map_or`, `let...else`, format string inlining across translation + recommendation handlers
-- API client: 4 `any` types replaced with proper TypeScript interfaces
-- Version bumped to 1.9.0
+- Favorites UI — view, nav, i18n for 10 locales
+- OpenAPI docs for translations/recommendations, fix demo drain
+- A11y audit, analytics charts, clippy pedantic fixes
+- Smart recommendations, typed API, CSV export, runtime i18n overrides
+- Translation management system + UI/UX 2026 overhaul
+
+
+### Chore
+
+- Bump version to v1.9.0, update README badges
+
+
+### Fixed
+
+- Consolidate demo mode env var tests to prevent race condition
+- Include devDependencies in Docker web build stage
+- Skip Astro font fetch in CI/Docker builds
+
+
+## [1.8.0] - 2026-03-21
+
+### Added
+
+- Add Stripe payment stub for demo showcase
+- Add admin CSV export for bookings, users, and revenue
+- Add QR code parking pass generation
+- Add Stripe payment integration stub
+- Add WebSocket real-time event support
+- Add occupancy heatmap visualization to admin reports
+- Add structured observability to ParkHub backend
+
+
+### Chore
+
+- Bump version to v1.8.0, update README with new features
+
+
+### Fixed
+
+- Correct export paths in OpenAPI test assertion
+- Resolve all CI clippy/test failures for registration and code quality
+- Add password_confirmation to client RegisterRequest constructor
+- Heatmap test used future booking time at midnight, use yesterday
+- Correct test assertions for ws broadcast lag and reconnect
+- Add password confirmation to registration form (#21)
+
+
+## [1.7.1] - 2026-03-20
+
+### Added
+
+- Polish dark mode with OKLCH palette, glass morphism, and reactive system theme
+- Enhance PWA with offline support, background sync, and install prompt
+
+
+### Documentation
+
+- Annotate remaining 23 handlers and register in OpenAPI spec
+- Annotate 66 handlers in mod.rs with utoipa::path and register in OpenAPI spec
+- Add OpenAPI annotations to webhooks, zones, favorites, push, setup, and export endpoints
+- Annotate 66 handlers in mod.rs with utoipa::path and register in OpenAPI spec
+
+
+### Fixed
+
+- Add Debug derive to AuthUser for clippy compliance
+
+
+## [1.7.0] - 2026-03-20
+
+### Added
+
+- Complete i18n audit — replace all hardcoded strings with t calls
+- Production-grade middleware stack
+
+
+### Documentation
+
+- Add OpenAPI annotations to webhooks, zones, favorites, push, setup, and export endpoints
+
+
+### Fixed
+
+- Replace is_ok/unwrap_err with match for clippy compliance
+
+
+## [1.6.1] - 2026-03-20
+
+### Added
+
+- Comprehensive accessibility improvements across all views
+
+
+### CI
+
+- Add gate job matching required "CI" status check
+
+
+### Documentation
+
+- Update README and CHANGELOG for v1.6.0
+
+
+### Performance
+
+- Reduce main bundle 627K → 129K with code splitting
+
 
 ### Tests
-- **505 Rust + 484 PHP + 401 Frontend** = 1,390 total tests
 
----
+- Add 31 HTTP API integration tests for parkhub-server
+- Add 9 Playwright E2E specs (admin, booking, responsive, dark-mode, etc.)
+- Add 101 Vitest unit tests for 13 untested views/components
+
 
 ## [1.6.0] - 2026-03-20
 
 ### Added
-- **Typed AppError handling**: Structured error responses with consistent error codes across all endpoints
-- **Demo reset with DB wipe**: Full database clear and re-seed on demo reset (not just soft reset)
-- **Auto-reset scheduler**: Demo mode auto-resets every 6 hours with countdown in DemoOverlay
-- **React 19 useActionState**: Form handling migrated to React 19 `useActionState` pattern
-- **Tailwind CSS 4 @utility**: Custom utilities via Tailwind CSS 4 `@utility` directives
-- **Admin user search**: Search/filter users by name, email, or role in admin panel
-- **Rate-limited demo endpoints**: Demo reset and status endpoints are rate-limited to prevent abuse
+
+- Demo reset actually wipes DB and re-seeds
+- Typed error handling, React 19 patterns, TW4 @utility, admin search
+
+
+### Fixed
+
+- Demo reset race conditions and error handling
+
+
+### Security
+
+- Rate-limit demo vote/reset endpoints (3/min per IP)
+
+
+## [1.5.5] - 2026-03-20
+
+### Added
+
+- Occupancy donut chart in AdminReports, build hash via Vite define
+
+
+### Performance
+
+- React.lazy admin routes, memoize Team/Calendar, DemoOverlay guard — 350 Rust + 197 Vitest passing
+
 
 ### Tests
-- **965 tests total**: 426 Rust + 213 Vitest + 326 PHP (up from 727 in v1.5.4)
 
----
+- 421 Rust tests — credits, lots, bookings, requests serde + edge cases
+
 
 ## [1.5.4] - 2026-03-20
 
-### Added
-- **Book a Spot page**: 3-step guided booking flow — lot → slot → confirm (fixes #20)
-- **Command Palette** (Ctrl+K): quick navigation and actions from anywhere
-- **Admin bar chart**: visual booking statistics on admin dashboard
-- **Forgot Password page**: self-service password reset flow with email link
-- **404 page**: custom not-found page with navigation back to dashboard
-- **Playwright E2E tests**: browser-based end-to-end test suite
-- **Lighthouse CI**: automated performance, accessibility, and best practices auditing
+### Changed
+
+- Code review fixes — shared constants, N+1 elimination, i18n
+
 
 ### Fixed
-- **Dark mode (Tailwind CSS 4)**: resolved compatibility issues with Tailwind CSS v4 dark mode
-- **Shared constants**: extracted magic numbers and strings into shared constants (code review)
-- **N+1 query elimination**: optimized database queries to batch-load related records (code review)
+
+- Make Lighthouse CI non-blocking (continue-on-error)
+- Clippy redundant import + Lighthouse CI server startup
+
+
+## [1.5.3] - 2026-03-20
+
+### Added
+
+- Command palette (Ctrl+K), admin charts, Lighthouse CI, 727 tests
+
+
+## [1.5.2] - 2026-03-20
+
+### Fixed
+
+- Cargo fmt on webhook + db tests
+
 
 ### Tests
-- **727 tests total**: 327 Rust + 197 Vitest + 203 PHP (up from 434 in v1.4.8)
 
----
+- 631 total tests — email, health, jwt, waitlist, zones, system, register, calendar, 404
+- 196 Rust + 163 vitest + 180 PHP = 539 total tests
+
+
+### Design
+
+- Clean up Register + ErrorBoundary (remove mesh-gradient, glass-card)
+
+
+## [1.5.1] - 2026-03-20
+
+### Added
+
+- Add Book a Spot page — 3-step booking flow
+
+
+## [1.5.0] - 2026-03-20
+
+### Added
+
+- Add 404 Not Found page instead of silent redirect
+- Add Forgot Password page + forgotPassword/resetPassword API methods
+
+
+### Fixed
+
+- Maestro login-failure flow use pressKey:Enter
+- Cargo fmt + Maestro pressKey:Enter flows
+
+
+## [1.4.9] - 2026-03-19
+
+### Chore
+
+- Gitignore Playwright test-results
+- Update README badge + CHANGELOG to v1.4.8
+
+
+### Tests
+
+- Add Playwright E2E tests (welcome, login, dashboard, dark mode, mobile)
+
 
 ## [1.4.8] - 2026-03-19
 
-### Design
-- **Full UI overhaul**: Eliminated AI slop patterns across all 12+ views
-- Welcome: left-aligned layout, inline features, no floating shapes or 3-column grid
-- Login: dark panel with specific copy, clean form, no decorative elements
-- Dashboard: clean stat cards, tabular-nums, real action buttons
-- Bookings: 2px left-border status accents, text badges
-- Profile: neutral avatar, clean stats, GDPR section
-- Layout: flat sidebar, left-border active indicator, no glass/blur
-- Admin: plain text headers, clean data tables
-- CSS: 12px card radius, 8px button radius, solid backgrounds, system font
-- Specific copy replacing generic AI marketing language
+### Fixed
 
-### Added
-- **434 tests**: 147 Rust + 150 PHP (376 assertions) + 137 frontend vitest
-- **Maestro E2E**: 5 browser flows (welcome, login, dashboard, admin, login failure)
-- **1-month simulation**: 294 bookings, EUR 5,007 revenue simulated successfully
-- **Prometheus metrics middleware**: HTTP request duration/count, auth/booking events
-- **Global rate limiting**: 100 req/s burst 200 on all routes
-- **OpenAPI annotations**: 18 handler endpoints in Swagger UI
-- **Skeleton loading**: contextual skeleton screens for Dashboard, Bookings, Vehicles
-- **i18n**: 50+ translation keys for notifications, calendar, team, profile (EN + DE)
-- **Dynamic version**: reads from package.json at build time
-- **Render env var automation**: deploy workflow sets env vars via API
+- Add missing nav.team/calendar/notifications i18n keys
+
+
+## [1.4.7] - 2026-03-19
 
 ### Fixed
-- Demo login credentials (admin@parkhub.test / demo) — seeder, entrypoint, env vars
-- DemoOverlay [object Object] / NaN — normalize nested API response
-- FeaturesContext crash (api.getFeatures not a function)
-- Welcome screen not showing for first-time visitors
-- PHP DemoController wrong config key (test_mode → demo_mode)
-- PHP User $fillable missing 'role' — setup wizard admin got role=user
-- PHP audit_log table name typo in GDPR anonymize
-- Rate limiter panic on zero config values
-- Admin password exposed via CLI arg (now env var)
+
+- Dynamic version from package.json, bump to v1.4.7
+
+
+## [1.4.6] - 2026-03-19
+
+### Tests
+
+- 434 total tests — full coverage across all layers
+
+
+### Design
+
+- Apply UI/UX Pro Max design system — system font, tight tracking
+
+
+## [1.4.5] - 2026-03-19
+
+### Copy
+
+- Replace generic AI marketing copy with specific product description
+
+
+## [1.4.4] - 2026-03-19
+
+### Design
+
+- Clean up Admin views + refine global CSS
+
+
+## [1.4.3] - 2026-03-19
+
+### Design
+
+- Full AI slop removal across all views
+
+
+## [1.4.2] - 2026-03-19
+
+### Added
+
+- 90 Rust tests, 106 vitest, 5 Maestro E2E flows
+
+
+### Fixed
+
+- Version badge test uses regex instead of hardcoded version
+
 
 ### Security
-- Rate limiter: clamp config values to >=1 (prevents panic)
-- Admin password: passed via env var, not CLI arg
-- cargo audit: 1 known advisory (RSA timing in jsonwebtoken, no fix available)
 
----
+- Fix rate limiter panic on zero config + password via env var
+
+
+### Design
+
+- Eliminate AI slop from Welcome + Login pages
+
+
+## [1.4.1] - 2026-03-19
+
+### Chore
+
+- Bump version to v1.4.0, add Maestro E2E tests
+
+
+### Fixed
+
+- Add id to login submit button for E2E testing
+
+
+## [1.4.0] - 2026-03-19
+
+### Added
+
+- Micro-interactions, animated stats, empty state polish
+- Skeleton loading, i18n coverage, Layout test, UI polish
+
+
+## [1.3.17] - 2026-03-19
+
+### Fixed
+
+- Remove api.getFeatures/updateFeatures calls (no backend endpoint)
+
+
+## [1.3.16] - 2026-03-19
+
+### Documentation
+
+- Add AGENTS.md for agent-assisted development
+
+
+### Fixed
+
+- Redirect first-time visitors to welcome language screen
+
+
+## [1.3.13] - 2026-03-19
+
+### Fixed
+
+- Use per-key PUT for Render env vars API
+
+
+## [1.3.12] - 2026-03-19
+
+### Fixed
+
+- Use Render API GET+merge+PUT for env vars
+
+
+## [1.3.11] - 2026-03-19
+
+### Fixed
+
+- Normalize DemoStatus API response + set Render env vars in deploy
+
+
+## [1.3.9] - 2026-03-19
+
+### Fixed
+
+- Use 'demo' as default admin password everywhere
+
+
+## [1.3.8] - 2026-03-19
+
+### CI
+
+- Add vitest job, fix clippy allows, fix Docker npm ci
+
+
+### Dependencies
+
+- Bump the npm-minor-patch group across 1 directory with 6 updates
+
+
+### Documentation
+
+- Redirect docs/CHANGELOG.md to root CHANGELOG
+
+
+### Fixed
+
+- Allow unused_mut on data_dir for headless builds
+
 
 ## [1.3.7] - 2026-03-19
 
-### Added
-- **Prometheus metrics middleware**: HTTP request duration/count, auth events (login success/fail), booking events (created/cancelled) recorded for every request
-- **Global rate limiting**: 100 req/s with burst 200 on all routes (in addition to per-IP auth rate limits)
-- **Periodic gauge updates**: Lot occupancy and active booking counts updated every 5 minutes via cron
-- **OpenAPI annotations**: 18 handler endpoints annotated with `#[utoipa::path]` — Swagger UI now fully populated for auth, lots, and credits APIs
-- **Frontend Vitest tests**: 33 tests across 3 files (API client, DemoOverlay, Login) — vitest + @testing-library/react
-- **Use-case context providers**: `UseCaseProvider` and `FeaturesProvider` wired into App.tsx provider tree
-- **i18n keys**: Added `useCase.*` and `features.*` translation keys in English and German for UseCaseSelector page
-- **PWA support**: manifest.json, service worker registration, apple-mobile-web-app meta tags
+### V1.3.7
 
-### Fixed
-- **AdminSettings use-case dropdown**: Options now match backend presets (company, residential, shared, rental, personal) instead of stale corporate/university/other
-- **Metric path normalization**: UUIDs and numeric IDs collapsed to `:id` to prevent Prometheus label cardinality explosion
-- **Clippy clean**: Resolved `if_same_then_else` in metric path normalization
+- Prometheus metrics, global rate limiting, OpenAPI, Vitest
 
-### Improved
-- **Test coverage**: 77 Rust tests (60 server + 17 common), 33 frontend vitest tests, all passing
-- **OpenAPI schemas**: Request/response types registered in ApiDoc for complete Swagger documentation
 
----
-
-## [1.3.0] - 2026-03-18
+## [1.3.6] - 2026-03-19
 
 ### Added
-- **Demo auto-reset**: Scheduled auto-reset every 6 hours when `DEMO_MODE=true` — clears all data and re-seeds
-- **Demo reset button**: Manual reset via `POST /api/v1/demo/reset` with actual database wipe + re-seed
-- **Demo status tracking**: `GET /api/v1/demo/status` now returns `last_reset_at`, `next_scheduled_reset`, `reset_in_progress`
-- **DemoOverlay countdown**: Frontend shows time since last reset, countdown to next auto-reset, and reset-in-progress indicator
-- **Database clear method**: `Database::clear_all_data()` for full table drain while preserving settings
 
-### Fixed
-- **Silent error ignores**: Replaced all `let _ =` patterns with `tracing::warn` logging for credit transactions, GDPR operations, and settings saves
-- **Absence date parsing**: Replaced `unwrap()` with safe `Option` chaining in absence date filtering (prevented potential panics)
-- **CI pipeline**: Removed `|| true` from clippy and test steps in Gitea CI (errors were silently ignored)
-- **Duplicate scheduling**: Removed duplicate auto-release job in PHP scheduler (ran twice every 5 min)
-- **GDPR export route**: Fixed broken `/users/me/export` route pointing to wrong method name (PHP)
-- **Swap race condition**: Wrapped slot swap in `DB::transaction` with `lockForUpdate` (PHP)
-- **Admin pagination**: Added pagination to admin bookings endpoint to prevent memory exhaustion (PHP)
+- Wire UseCaseSelector route + full PWA support
 
-### Improved
-- **Dead code warnings**: Reduced from 46 to 0 by adding `#[allow(dead_code)]` on scaffolding modules
-- **Auth response**: Removed unnecessary `User::clone()` in login/register responses
-- **iCal import**: Added date validation and title truncation to prevent crashes on malformed input (PHP)
-- **Demo reset error handling**: Returns HTTP 500 on failure instead of silently swallowing exceptions (PHP)
 
----
-
-## [1.2.0] - 2026-02-28
+## [1.3.5] - 2026-03-19
 
 ### Added
-- **Audit logging wired**: All sensitive operations (login, register, booking create/cancel, vehicle add/remove, user delete, role change, password reset, GDPR deletion) now emit structured audit log entries via the existing `audit.rs` infrastructure
-- **Booking confirmation email**: `POST /api/v1/bookings` now sends an HTML booking confirmation email (non-fatal if SMTP not configured)
-- **Profile editing**: New `PUT /api/v1/users/me` endpoint allows users to update their name, phone, and avatar URL; frontend Profile page now has an edit form
-- **Admin UI**: User management page now fully implemented — list users, change role, toggle active/inactive, delete user; Bookings overview tab added
-- **Booking filter**: Bookings page now has status/date/search filter bar (client-side filtering)
-- **Koyeb deployment**: Added `koyeb.yaml` for one-command Koyeb deployment
 
-### Fixed
-- Email verification config flag `require_email_verification` is now documented as unimplemented (not silently ignored)
-- parkhub-client: `on_admin_search_users` now implements real client-side user search filtering
-- parkhub-client: `ServerConnection::connect_with_cert()` added for proper TLS cert pinning; `connect()` documents the self-signed cert limitation
+- Wire use-case CSS theme via ThemeLoader component
+- Add SEED_DEMO_DATA mode + deployment modes docs
 
----
-
-## [1.1.1] — 2026-02-28
 
 ### Fixed
 
-- **Self-registration enforcement**: `POST /api/v1/auth/register` now returns HTTP 403 `REGISTRATION_DISABLED`
-  when `allow_self_registration = false` in config. Previously the flag had no effect.
-- **Floor name UUID**: Booking confirmation response showed the internal UUID of the floor (e.g.
-  `"Floor 82936167-..."`) instead of the human-readable name. Now resolved from the lot's floors array.
-- **CI Kaniko build**: `Cargo.lock` was gitignored, causing all CI builds to fail with
-  `lstat /workspace/src/Cargo.lock: no such file or directory`. Binary crates must commit
-  their lockfile for reproducible Docker builds.
+- Update smoke test to use admin@parkhub.test demo
 
----
 
-## [1.1.0] — 2026-02-28
+## [1.3.4] - 2026-03-19
 
 ### Added
-- Per-endpoint rate limiting middleware (login: 5/min, register: 3/min, forgot-password: 3/15min — all per-IP)
-- SMTP email notifications: welcome email on registration, booking confirmation
-- Password reset flow via email (`POST /api/v1/auth/forgot-password`, `POST /api/v1/auth/reset-password`)
-- Token refresh endpoint (`POST /api/v1/auth/refresh`)
-- Booking invoice endpoint (`GET /api/v1/bookings/:id/invoice`)
-- Cookie consent UI (TTDSG §25 compliant — localStorage only, no HTTP cookies)
-- GDPR transparency page (`/transparency`)
-- Legal templates: Widerrufsbelehrung (§356 BGB) and updated cookie policy
-- Admin user management UI with role management
-- Admin booking overview UI
+
+- Use-case CSS theme overrides + fix.test TLD
+
+
+## [1.3.3] - 2026-03-19
+
+### Fixed
+
+- Change demo credentials to admin@parkhub.demo demo
+
+
+## [1.3.2] - 2026-03-19
+
+### Added
+
+- Use-case theming system with 5 presets
+
+
+### Fixed
+
+- Remove unused Slint components and spurious Icon export
+
+
+## [1.3.1] - 2026-03-19
+
+### Added
+
+- Redesign login page — split-screen layout with hero panel
+
+
+## [1.3.0] - 2026-03-19
+
+### Added
+
+- Wire webhook dispatch + audit log persistence into handlers
+- Add 12 remaining admin + user endpoints for full API coverage
+- Vehicle photos, city codes, QR, dashboard charts — 100% parity
+- Add audit log, team list, autoresearch program.md
+- Add zones + user favorites
+- Add web push notification endpoints (#23)
+- CSV export, iCal, public display, change password
+- Add webhook system with SSRF protection (#22)
+- Add setup wizard API endpoints (#21)
+- Add slot CRUD + vehicle update endpoints (#19, #20)
+- DemoOverlay shows reset status, countdown, and resetting indicator
+- Demo reset — actual DB wipe + 6h auto-reset scheduler
+- Full feature parity — 32 new API endpoints, 8 models, 7 DB tables, complete frontend
+
+
+### CI
+
+- Auto-deploy to Render after Docker image push
+
+
+### Changed
+
+- Suppress dead code warning on server_connection module (WIP client)
+- Suppress dead code warnings on scaffolding modules
+- Remove unnecessary clone on User in auth responses
+- Split api.rs into modules (5901→4628 lines)
+
+
+### Dependencies
+
+- Merge dependabot — directories 6, toml 1.0, actions bumps
+- Bump directories from 5.0.1 to 6.0.0
+- Bump toml from 0.9.12+spec-1.1.0 to 1.0.6+spec-1.1.0 (#16)
+- Bump docker/build-push-action from 6 to 7 (#14)
+- Bump actions/setup-node from 4 to 6 (#13)
+
+
+### Documentation
+
+- Add v1.3.0 changelog and live demo section to README
+
+
+### Fixed
+
+- GDPR Art. 15 export now includes absences, credit transactions, notifications
+- Resolve clippy field_reassign_with_default in tests
+- Allow dead_code on send_push_notification placeholder
+- Design audit P0 fixes — disabled states, tabular nums, reduced motion
+- Default total_slots to 10 when creating a lot via API
+- Remove unused std::io::Write import in config tests
+- DemoOverlay accessibility and UX improvements
+- Resolve all 14 clippy warnings (clean -D warnings)
+- Code review fixes — safety, logging, GDPR
+- Metrics auth, font fix, ErrorBoundary, icon fixes, admin mobile nav
+- Hardcoded pricing, cargo fmt, WCAG accessibility
+- Admin lot creation + credit quota system (closes #15)
+- Add port to render.yaml, respect PORT env var in entrypoint
+
+
+### Tests
+
+- Add 20 integration tests — 60 total, full DB coverage
+- Add 5 integration tests for new DB operations
+
+
+### A11y
+
+- Add reduced motion support + improve input focus indicators
+
+
+### Legal
+
+- Add Art. 28(3)(h) audit rights clause to AVV template
+
+
+### Release
+
+- V1.3.0 — version bump, smoke test, API docs update
+
+
+## [1.2.5] - 2026-03-14
+
+### Fixed
+
+- API deserialization + version bump to v1.2.5
+
+
+## [1.2.4] - 2026-03-14
+
+### Fixed
+
+- Correct docs — password, ports, build cmd, versions
+
+
+## [1.2.3] - 2026-03-14
+
+### Fixed
+
+- Add Node.js frontend build step to release workflow
+
+
+## [1.2.2] - 2026-03-14
+
+### Fixed
+
+- Use parkhub.test domain for admin email instead of localhost
+
+
+## [1.2.1] - 2026-03-14
+
+### Added
+
+- Toggleable UX experience modules + PWA + i18n for all 10 locales
+- Integrate demo seeding into Docker startup
+- Solo reset mode with countdown + cancel
+- Use-case selector with adaptive theming
+
+
+### CI
+
+- Add Dependabot grouped updates for minor/patch versions
+- Add workflow_dispatch trigger to all workflows
+- Add Dependabot version update config
+
+
+### Dependencies
+
+- Bump tray-icon from 0.18.0 to 0.21.3 (#10)
+- Bump toml from 0.8.2 to 0.9.12+spec-1.1.0 (#9)
+- Bump windows-sys from 0.59.0 to 0.61.2 (#8)
+- Bump actions/checkout from 4 to 6 (#7)
+- Bump docker/metadata-action from 5 to 6 (#6)
+- Bump actions/download-artifact from 4 to 8 (#5)
+- Bump actions/upload-artifact from 4 to 7 (#4)
+- Bump docker/login-action from 3 to 4 (#3)
+
+
+### Documentation
+
+- Add compliance badges and regulatory coverage table to README
+- Legal compliance audit — GDPR, TTDSG, BFSG, international
+
+
+### Fixed
+
+- Rebrand all securanido references to parkhub
+- Resolve TypeScript errors in Framer Motion ease types and FeaturesContext
+- Update workspace version to 1.2.0 and Axum docs to 0.8
+- Resolve all CI failures (clippy, fmt, docker-publish triggers)
+- Resolve CI failures (fmt, clippy, rust-embed placeholder)
+- Accessibility, reduced-motion, i18n completeness, and service worker versioning
+- Cargo update — aws-lc-sys 0.37.1→0.38.0 (3 high CVEs)
+- Update dependencies — resolve 3 high-severity aws-lc-sys CVEs
+- Move global declaration before usage in seed_demo.py
+- Use 127.0.0.1 instead of localhost in container
+- Add missing CSS classes, refine Welcome page decorations
+- Whitelist Docker scripts in.dockerignore, fix login placeholder
+- Replace parkhub-demo.de with parkhub.test domain
+- Add missing auth.passwordConfirmation to all locales
+- Align DemoOverlay with actual API response shape
+- Update quinn-proto to 0.11.14 to resolve DoS vulnerability
+- Correct dtolnay/rust-toolchain action name
+
+
+### Design
+
+- Industrial-luxury aesthetic rework
+
+
+## [1.2.0] - 2026-03-13
+
+### Added
+
+- Astro 6 frontend, credits system, API parity with PHP edition
+- Add demo overlay with 30-min countdown, collaborative vote reset, viewer count
+- V1.2.0 — audit logging, booking email, profile editing, admin UI, search filters, Koyeb
+- Add Render.com demo deployment config
+
+
+### Chore
+
+- Comprehensive audit — fix docs, env vars, CI, docker-compose, and config accuracy
+- Link footer legal pages to centralized legal hub
+
+
+### Documentation
+
+- Sync v1.2.0 — update badge, backfill docs/CHANGELOG.md
+- Add v1.1.1 changelog entry
+
+
+### Fixed
+
+- Security audit + industrial precision UI redesign
+- Axum 0.8 path params and Dockerfile for Render deployment
+- Enable rust_crypto feature for jsonwebtoken 10
+- GHCR image build pipeline + Dockerfile/render.yaml corrections
+- Commit Cargo.lock for reproducible Docker builds
+
+
+### Devops
+
+- Dockerfile hardening, compose cleanup, CI permissions fixes
+
 
 ### Security
-- JWT secret now uses 256-bit cryptographically random bytes (CSPRNG) instead of UUID
-- HSTS header added (`max-age=31536000; includeSubDomains; preload`)
-- CSP hardened: removed `script-src 'unsafe-inline'`
-- X-Forwarded-For only trusted from private/loopback IP ranges (proxy trust validation)
-- Past booking creation rejected (start_time must be future)
-- Slot status update failure no longer silently ignored — returns HTTP 500
+
+- Comprehensive audit — fix critical vulns, update deps to 2026
+- Restrict GitHub Actions to minimal permissions
+
+
+## [1.1.1] - 2026-02-28
 
 ### Fixed
-- Docker: Dockerfile now uses `rust:alpine` (latest) for edition2024 + MSRV compatibility
-- Docker: `parkhub-client` (GUI workspace member) excluded from server build
-- Docker: `curl` added to Alpine deps for utoipa-swagger-ui asset download
-- Docker: server compiled with `--no-default-features --features headless` (no GTK/systray)
-- Docker: health checks, named volumes, restart policy
-- UX: empty states, loading states, error handling, mobile layout, accessibility polish
-- Password reset page and admin endpoint authorization checks
 
----
+- Enforce allow_self_registration flag + fix floor_name UUID display
 
-## [1.0.0] — 2026-02-27 — Initial Public Release
 
-### Backend (parkhub-server)
+## [1.1.0] - 2026-02-28
 
-- Axum 0.7 HTTP server with async Tokio runtime
-- Embedded redb database — no external database server required
-- Optional AES-256-GCM at-rest encryption (PBKDF2-SHA256 key derivation)
-- JWT-style session authentication (UUID tokens, 24-hour expiry)
-- Argon2id password hashing with OsRng salts
-- RBAC with three roles: user, admin, superadmin
-- Parking lot management: create lots, define floors and slots
-- Booking creation with write-lock race condition protection
-- Booking cancellation with automatic slot status restoration
-- Vehicle registry: create and delete vehicles, ownership enforcement
-- GDPR Art. 15 — full data export as JSON (profile, bookings, vehicles)
-- GDPR Art. 17 — account erasure (PII anonymization, §147 AO compliant booking retention)
-- DDG §5 Impressum — configurable via admin API, public endpoint
-- Prometheus metrics endpoint (`/metrics`)
-- OpenAPI specification with Swagger UI (`/swagger-ui`)
-- Kubernetes health probes (`/health`, `/health/live`, `/health/ready`)
-- mDNS LAN autodiscovery via `mdns-sd`
-- TLS 1.3 with auto-generated self-signed certificate via `rcgen` + `rustls`
-- Security headers middleware (CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy)
-- CORS: same-origin only, localhost allowed in development
-- Rate limiting: per-IP for auth endpoints (5 login/3 register per minute), global 100 req/s
-- Request body size limit: 1 MiB
-- Automatic daily backups with configurable retention
-- Audit logging
-- Windows GUI mode: Slint setup wizard, system tray via `tray-icon`
-- Headless and unattended modes for servers and Docker
-- CLI flags: `--headless`, `--unattended`, `--debug`, `--port`, `--data-dir`, `--version`
-- Portable mode: data stored next to binary (no system directory installation required)
+### Added
 
-### Frontend (parkhub-web)
+- Wire per-endpoint rate limiting middleware
+- Add cookie policy, Widerrufsbelehrung, transparency page; security audit updated
+- SMTP email, password reset, invoice endpoint, token refresh
+- Legal pages, cookie consent, GDPR portal, admin UIs
 
-- React 19 + TypeScript + Tailwind CSS
-- Login page (username or email)
-- Registration page
-- Dashboard: occupancy stats, active bookings list, parking lot grid overview, quick action
-- Book page: 3-step flow (lot selection → slot grid → duration + vehicle)
-  - Slot favorites (persisted in localStorage)
-  - Duration options: 30 min, 1h, 2h, 4h, 8h, 12h
-  - Booking summary card with confirmation
-- My Bookings: active bookings with expiry countdown and cancel button; booking history
-- Vehicles: add vehicle (plate, make, model, color), delete with confirmation dialog
-- Admin panel: overview stats, lot management with inline layout editor, user management placeholder, bookings placeholder
-- Impressum page: renders DDG §5 data from server or shows setup notice
-- Dark mode and light mode
-- Mobile-responsive layout
-- Accessibility: ARIA labels, roles, live regions, keyboard navigation
-- Animated UI with Framer Motion
-- Toast notifications via react-hot-toast
 
-### Common (parkhub-common)
+### CI
 
-- Shared data models: User, ParkingLot, ParkingFloor, ParkingSlot, Booking, Vehicle
-- Protocol types: ApiResponse, HandshakeRequest/Response, LoginRequest/Response
-- UserRole, SlotStatus, BookingStatus, VehicleType, LotStatus enums
-- PROTOCOL_VERSION constant for client-server compatibility negotiation
+- Add release build and Docker image build steps
+- Add GitHub Actions workflows (CI + release)
 
-### Deployment
 
-- Multi-stage Dockerfile (Node 22 for frontend, Rust 1.83 + musl-dev for backend, Alpine runtime)
-- Docker Compose with named volume, health check, and Traefik labels
-- German legal templates: impressum-template.md, datenschutz-template.md, agb-template.md, avv-template.md
+### Documentation
 
-### Known Limitations in 1.0.0
+- Prepare v1.1.0 release — CHANGELOG, legal templates, installation docs, VVT template
+- Comprehensive documentation suite — installation, API, GDPR, security, changelog
+- World-class README, issue templates, PR template
 
-- Token refresh endpoint returns 501 Not Implemented
-- Admin user management UI is a placeholder (use API)
-- Admin booking overview UI is a placeholder (use API)
-- No email/SMTP notification support
+
+### Fixed
+
+- P0+P1 security hardening — JWT entropy, HSTS, CSP, past-booking validation, slot race fix, X-ForwardedFor trust, email hooks
+- Add curl to Alpine build deps for utoipa-swagger-ui download
+- Build parkhub-server with headless feature flag
+- Exclude parkhub-client from server Docker build workspace
+- Use rust:alpine (latest) to satisfy workspace MSRV requirements
+- Upgrade Rust builder to 1.85 for edition2024 support
+- Add parkhub-client workspace member to Dockerfile
+- Suppress unused parameter warning in getLotDetailed mock
+- Comprehensive UX polish — empty states, loading states, error handling, mobile, a11y
+- Health checks, named volumes, restart policy,.env.example, override example
+- Deep audit fixes — password reset pages, admin endpoints, UX polish
+
+
+## [1.0.0] - 2026-02-27
+
+### Added
+
+- V1.0.0 release preparation — security, accessibility, docs
+- Frontend redesign WIP
+- Embed web frontend + Docker support
+- Add web frontend (React + TailwindCSS)
+- Integrate production infrastructure into API
+- Add production-ready infrastructure modules (Phase 1-2)
+
+
+### Chore
+
+- Sync changes
+- Trigger CI test
+
+
+### Documentation
+
+- Add root CHANGELOG.md, fix version 0.1.0 → 1.0.0
+
+
+### Fixed
+
+- Restore db.rs module with full implementation
+- Add rand_core feature for argon2 password hashing
+
+
+### Tests
+
+- Webhook trigger
+
+
+
