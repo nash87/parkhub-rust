@@ -11,8 +11,6 @@ export function SWUpdatePrompt() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
-    let registration: ServiceWorkerRegistration | null = null;
-
     function onStateChange(this: ServiceWorker) {
       if (this.state === 'installed' && navigator.serviceWorker.controller) {
         setWaitingWorker(this);
@@ -21,8 +19,6 @@ export function SWUpdatePrompt() {
     }
 
     navigator.serviceWorker.ready.then((reg) => {
-      registration = reg;
-
       // Check if there's already a waiting worker
       if (reg.waiting) {
         setWaitingWorker(reg.waiting);

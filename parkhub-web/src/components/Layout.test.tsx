@@ -474,10 +474,7 @@ describe('Layout', () => {
 
     await user.click(screen.getByLabelText('Open navigation menu'));
 
-    // The mobile sidebar has its own logout button
-    const sidebar = screen.getByLabelText('Navigation menu');
-    const logoutBtn = sidebar.parentElement?.querySelector('button');
-    // There's a logout button in the mobile sidebar's bottom area
+    // The mobile sidebar has its own logout button in its bottom area.
     const allLogouts = screen.getAllByText('Log Out');
     expect(allLogouts.length).toBeGreaterThanOrEqual(2); // desktop + mobile
   });

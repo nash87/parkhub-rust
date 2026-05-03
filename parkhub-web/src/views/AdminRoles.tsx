@@ -24,11 +24,6 @@ interface RbacRole {
   updated_at: string;
 }
 
-interface UserRoleAssignment {
-  user_id: string;
-  roles: { id: string; name: string; permissions: string[] }[];
-}
-
 export function AdminRolesPage() {
   const { t } = useTranslation();
   const [roles, setRoles] = useState<RbacRole[]>([]);

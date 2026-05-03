@@ -504,7 +504,6 @@ describe('AdminUsersPage', () => {
   });
 
   it('bulk delete selected users', async () => {
-    const user = userEvent.setup();
     mockAdminBulkDelete.mockResolvedValue({ success: true, data: { succeeded: 1, total: 1 } });
 
     render(<AdminUsersPage />);
@@ -766,7 +765,6 @@ describe('AdminUsersPage', () => {
 
     it('bulk action returns early when no action selected', async () => {
       patchSelectedIds();
-      const user = userEvent.setup();
       render(<AdminUsersPage />);
       await waitFor(() => expect(screen.getByText('Alice')).toBeInTheDocument());
       // Apply button is disabled when bulkAction is empty

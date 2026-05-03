@@ -30,7 +30,6 @@ import { SWUpdatePrompt } from './SWUpdatePrompt';
 describe('SWUpdatePrompt', () => {
   let swReady: (reg: any) => void;
   let controllerChangeListeners: (() => void)[] = [];
-  const originalLocation = window.location;
 
   beforeEach(() => {
     controllerChangeListeners = [];
@@ -56,7 +55,7 @@ describe('SWUpdatePrompt', () => {
   });
 
   it('renders nothing when no service worker is waiting', () => {
-    const { container } = render(<SWUpdatePrompt />);
+    render(<SWUpdatePrompt />);
     // No update banner
     expect(screen.queryByText('A new version is available')).not.toBeInTheDocument();
   });

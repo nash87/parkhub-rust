@@ -86,6 +86,9 @@ vi.mock('framer-motion', () => ({
     div: React.forwardRef(({ children, initial, animate, exit, transition, whileHover, whileTap, variants, ...props }: any, ref: any) => (
       <div ref={ref} {...props}>{children}</div>
     )),
+    section: React.forwardRef(({ children, initial, animate, exit, transition, variants, ...props }: any, ref: any) => (
+      <section ref={ref} {...props}>{children}</section>
+    )),
     p: React.forwardRef(({ children, initial, animate, exit, transition, ...props }: any, ref: any) => (
       <p ref={ref} {...props}>{children}</p>
     )),
@@ -359,7 +362,6 @@ describe('BookingsPage', () => {
   it('handles booking_cancelled websocket event with toast', async () => {
     mockGetBookings.mockResolvedValue({ success: true, data: [] });
     mockGetVehicles.mockResolvedValue({ success: true, data: [] });
-    const toastModule = await import('react-hot-toast');
     render(<BookingsPage />);
     await waitFor(() => expect(mockGetBookings).toHaveBeenCalled());
     // The cancelled-event path uses toast(...) not success/error, so just assert no throw

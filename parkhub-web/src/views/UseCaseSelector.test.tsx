@@ -61,7 +61,7 @@ vi.mock('framer-motion', () => ({
       <button ref={ref} {...props}>{children}</button>
     )),
   },
-  AnimatePresence: ({ children, mode }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
@@ -182,7 +182,7 @@ describe('UseCaseSelectorPage', () => {
 
   it('finish button sets use case and features, navigates to welcome', async () => {
     vi.useFakeTimers();
-    const { container } = render(<UseCaseSelectorPage />);
+    render(<UseCaseSelectorPage />);
 
     // Use fireEvent for fake timers compatibility
     const businessBtn = screen.getByText('Business').closest('button')!;

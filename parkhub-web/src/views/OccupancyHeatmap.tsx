@@ -33,13 +33,6 @@ function cellColor(pct: number): string {
   return 'bg-surface-100 dark:bg-surface-800';
 }
 
-function cellTextColor(pct: number): string {
-  if (pct >= 90) return 'text-white';
-  if (pct >= 75) return 'text-amber-900';
-  if (pct >= 50) return 'text-primary-900 dark:text-primary-100';
-  return 'text-surface-500';
-}
-
 function authHeaders(): Record<string, string> {
   const token = getInMemoryToken();
   return {

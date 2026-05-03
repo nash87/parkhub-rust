@@ -23,12 +23,6 @@ function GoodComponent() {
   return <div data-testid="good-component">All good</div>;
 }
 
-function ThrowingWithStackComponent(): React.ReactElement {
-  const err = new Error('Stack trace error');
-  err.stack = 'Error: Stack trace error\n    at ThrowingWithStackComponent (file.tsx:1:1)';
-  throw err;
-}
-
 describe('ErrorBoundary (extended)', () => {
   const originalConsoleError = console.error;
   const mockReload = vi.fn();

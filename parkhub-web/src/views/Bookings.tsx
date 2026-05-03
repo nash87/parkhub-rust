@@ -8,7 +8,7 @@ import {
   MagnifyingGlassIcon, FunnelIcon, QrCodeIcon, FilePdfIcon, CalendarPlusIcon,
 } from '@phosphor-icons/react';
 import type { TFunction } from 'i18next';
-import { api, type Booking, type Vehicle } from '../api/client';
+import { api, type Booking } from '../api/client';
 import { BookingsSkeleton } from '../components/Skeleton';
 import { ParkingPass } from '../components/ParkingPass';
 import { stagger, fadeUp } from '../constants/animations';
@@ -25,7 +25,6 @@ export function BookingsPage() {
   const { t, i18n } = useTranslation();
   const dateFnsLocale = i18n.language?.startsWith('de') ? de : enUS;
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -63,9 +62,8 @@ export function BookingsPage() {
   }, []);
 
   async function loadData() {
-    const [bRes, vRes] = await Promise.all([api.getBookings(), api.getVehicles()]);
+    const bRes = await api.getBookings();
     if (bRes.success && bRes.data) setBookings(bRes.data);
-    if (vRes.success && vRes.data) setVehicles(vRes.data);
     setLoading(false);
   }
 
@@ -176,7 +174,7 @@ export function BookingsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence>
               {active.map(b => (
-                <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
+                <BookingCard key={b.id} booking={b} now={now}
                   onCancel={handleCancel} cancelling={cancelling} onShowPass={setPassBooking} t={t} dateFnsLocale={dateFnsLocale} />
               ))}
             </AnimatePresence>
@@ -192,7 +190,7 @@ export function BookingsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence>
               {upcoming.map(b => (
-                <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
+                <BookingCard key={b.id} booking={b} now={now}
                   onCancel={handleCancel} cancelling={cancelling} onShowPass={setPassBooking} t={t} dateFnsLocale={dateFnsLocale} />
               ))}
             </AnimatePresence>
@@ -207,7 +205,7 @@ export function BookingsPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {past.map(b => (
-              <BookingCard key={b.id} booking={b} now={now} vehicles={vehicles}
+              <BookingCard key={b.id} booking={b} now={now}
                 onCancel={handleCancel} cancelling={cancelling} t={t} dateFnsLocale={dateFnsLocale} />
             ))}
           </div>
@@ -298,7 +296,6 @@ function Empty({ text, showAction, t }: EmptyProps) {
 interface BookingCardProps {
   booking: Booking;
   now: number;
-  vehicles: Vehicle[];
   onCancel: (id: string) => void;
   cancelling: string | null;
   onShowPass?: (booking: Booking) => void;
@@ -306,7 +303,7 @@ interface BookingCardProps {
   dateFnsLocale: Locale;
 }
 
-function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass, t, dateFnsLocale }: BookingCardProps) {
+function BookingCard({ booking, now, onCancel, cancelling, onShowPass, t, dateFnsLocale }: BookingCardProps) {
   const isActiveOrConfirmed = booking.status === 'active' || booking.status === 'confirmed';
   const isPast = booking.status === 'completed' || booking.status === 'cancelled';
   const isExpiring = isActiveOrConfirmed && new Date(booking.end_time).getTime() - now < 30 * 60 * 1000;

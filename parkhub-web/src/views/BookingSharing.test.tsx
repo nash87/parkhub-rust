@@ -292,7 +292,6 @@ describe('BookingSharingModal', () => {
   });
 
   it('validates empty email', async () => {
-    const toast = (await import('react-hot-toast')).default;
     render(<BookingSharingModal bookingId="booking-1" />);
     fireEvent.click(screen.getByTestId('tab-invite'));
     await waitFor(() => screen.getByTestId('send-invite-btn'));
