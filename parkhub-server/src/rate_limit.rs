@@ -10,7 +10,7 @@
 //!    server from unauthenticated flooding and from attackers who don't yet
 //!    have credentials.
 //! 2. **Per-identity** — a second limiter keyed off the caller's `user_id`
-//!    (session / bearer / cookie auth) or `api_key_id` (X-API-Key auth).
+//!    (session / bearer / cookie auth) or `api_key_id` (`X-API-Key` auth).
 //!    Protects against credential-reuse attacks where a compromised key or
 //!    session rotates across IPs behind CGNAT/mobile carrier NAT.
 //!
@@ -864,7 +864,7 @@ mod tests {
         assert!(bucket.check(key_b).is_err());
     }
 
-    /// The bucket_label emitted in the X-RateLimit-Bucket header must
+    /// The `bucket_label` emitted in the `X-RateLimit-Bucket` header must
     /// never leak internal limiter names — only a small enum-of-strings.
     #[test]
     fn test_bucket_label_enum_of_strings() {
