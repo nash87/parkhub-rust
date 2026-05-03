@@ -311,3 +311,185 @@ mod tests {
         assert_eq!(err.code.as_ref(), "not_in_future");
     }
 }
+
+// ── Property-based tests ───────────────────────────────────────────────────
+//
+// These mirror the parkhub-common proptest pattern (see
+// parkhub-common/tests/validation_properties.rs). They cover the four
+// pure server-side validators with boundary, adversarial, and invariant
+// properties at the default 256 cases per block.
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    // ── validate_license_plate ────────────────────────────────────────────
+
+    proptest! {
+        /// Any string of 2–10 uppercase ASCII alphanumerics validates.
+        /// Anchors the happy path so the validator can't accidentally
+        /// over-reject.
+        #[test]
+        fn license_plate_alphanumeric_2_to_10_accepted(
+            plate in "[A-Z0-9]{2,10}",
+        ) {
+            prop_assert!(validate_license_plate(&plate).is_ok());
+        }
+
+        /// Length below 2 (after stripping `-` and ` `) is always rejected.
+        #[test]
+        fn license_plate_too_short_rejected(plate in "[A-Z0-9]{0,1}") {
+            prop_assert!(validate_license_plate(&plate).is_err());
+        }
+
+        /// Length above 10 (after stripping `-` and ` `) is always rejected.
+        #[test]
+        fn license_plate_too_long_rejected(plate in "[A-Z0-9]{11,40}") {
+            prop_assert!(validate_license_plate(&plate).is_err());
+        }
+
+        /// Case-invariance: `validate_license_plate` normalises to upper
+        /// before checking, so the lowercase version of any valid plate
+        /// must also validate.
+        #[test]
+        fn license_plate_case_invariant(plate in "[A-Z0-9]{2,10}") {
+            prop_assert_eq!(
+                validate_license_plate(&plate).is_ok(),
+                validate_license_plate(&plate.to_lowercase()).is_ok(),
+            );
+        }
+
+        /// Inserting `-` or ` ` separators into any valid 2–10 plate
+        /// must not change the validation result. The validator strips
+        /// these before length-checking.
+        #[test]
+        fn license_plate_separator_invariant(
+            plate in "[A-Z0-9]{2,10}",
+            sep in prop_oneof![Just('-'), Just(' ')],
+        ) {
+            // Insert one separator at the midpoint.
+            let mid = plate.len() / 2;
+            let mut with_sep = String::with_capacity(plate.len() + 1);
+            with_sep.push_str(&plate[..mid]);
+            with_sep.push(sep);
+            with_sep.push_str(&plate[mid..]);
+            prop_assert_eq!(
+                validate_license_plate(&plate).is_ok(),
+                validate_license_plate(&with_sep).is_ok(),
+            );
+        }
+    }
+
+    // ── validate_booking_duration ─────────────────────────────────────────
+
+    proptest! {
+        /// `[15, 1440]` is the documented closed interval — every value
+        /// inside accepts.
+        #[test]
+        fn booking_duration_inside_bounds_accepted(minutes in 15i32..=24*60) {
+            prop_assert!(validate_booking_duration(minutes).is_ok());
+        }
+
+        /// Anything strictly below 15 (including the full negative range
+        /// and `i32::MIN`) is rejected with `too_short`.
+        #[test]
+        fn booking_duration_below_15_rejected(minutes in i32::MIN..15) {
+            let err = validate_booking_duration(minutes).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "too_short");
+        }
+
+        /// Anything strictly above 1440 (including `i32::MAX`) is
+        /// rejected with `too_long`.
+        #[test]
+        fn booking_duration_above_1440_rejected(minutes in (24*60 + 1)..=i32::MAX) {
+            let err = validate_booking_duration(minutes).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "too_long");
+        }
+    }
+
+    // ── validate_future_time ──────────────────────────────────────────────
+
+    proptest! {
+        /// Any time `now + delta` for positive `delta_secs` is accepted.
+        /// Skips a small floor (~5s) to absorb clock drift between
+        /// `Utc::now()` calls.
+        #[test]
+        fn future_time_accepted(delta_secs in 5i64..=(365 * 24 * 60 * 60)) {
+            let t = chrono::Utc::now() + chrono::Duration::seconds(delta_secs);
+            prop_assert!(validate_future_time(&t).is_ok());
+        }
+
+        /// Any time `now - delta` for positive `delta_secs` is rejected
+        /// with `not_in_future`.
+        #[test]
+        fn past_time_rejected(delta_secs in 1i64..=(365 * 24 * 60 * 60)) {
+            let t = chrono::Utc::now() - chrono::Duration::seconds(delta_secs);
+            let err = validate_future_time(&t).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "not_in_future");
+        }
+    }
+
+    // ── validate_password_strength ────────────────────────────────────────
+
+    proptest! {
+        /// Any password ≥ 8 chars containing at least one lowercase, one
+        /// uppercase, and one digit is accepted. The strategy hand-builds
+        /// candidates with all three classes guaranteed.
+        #[test]
+        fn password_with_all_classes_accepted(
+            lower in "[a-z]{2,16}",
+            upper in "[A-Z]{2,16}",
+            digit in "[0-9]{2,16}",
+        ) {
+            let pw = format!("{lower}{upper}{digit}");
+            prop_assume!(pw.len() >= 8); // belt + suspenders
+            prop_assert!(validate_password_strength(&pw).is_ok());
+        }
+
+        /// Anything strictly shorter than 8 chars is rejected with
+        /// `too_short`, regardless of character mix.
+        #[test]
+        fn password_under_8_rejected(pw in "[A-Za-z0-9]{0,7}") {
+            let err = validate_password_strength(&pw).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "too_short");
+        }
+
+        /// All-lowercase ≥ 8 chars is rejected with `weak_password`
+        /// (missing uppercase + digit).
+        #[test]
+        fn password_all_lowercase_rejected(pw in "[a-z]{8,32}") {
+            let err = validate_password_strength(&pw).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "weak_password");
+        }
+
+        /// All-uppercase ≥ 8 chars is rejected with `weak_password`
+        /// (missing lowercase + digit).
+        #[test]
+        fn password_all_uppercase_rejected(pw in "[A-Z]{8,32}") {
+            let err = validate_password_strength(&pw).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "weak_password");
+        }
+
+        /// All-digit ≥ 8 chars is rejected with `weak_password`
+        /// (missing lowercase + uppercase).
+        #[test]
+        fn password_all_digit_rejected(pw in "[0-9]{8,32}") {
+            let err = validate_password_strength(&pw).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "weak_password");
+        }
+
+        /// Missing exactly one class (e.g. only lower+digit, no upper)
+        /// is rejected with `weak_password`. Catches a regression where
+        /// the validator accepts only-2-of-3 instead of all-3.
+        #[test]
+        fn password_missing_one_class_rejected(
+            lower in "[a-z]{4,16}",
+            digit in "[0-9]{4,16}",
+        ) {
+            let pw = format!("{lower}{digit}");
+            prop_assume!(pw.len() >= 8);
+            let err = validate_password_strength(&pw).unwrap_err();
+            prop_assert_eq!(err.code.as_ref(), "weak_password");
+        }
+    }
+}
