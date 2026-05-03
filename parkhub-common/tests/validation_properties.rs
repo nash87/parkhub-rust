@@ -232,6 +232,121 @@ proptest! {
         let candidate = format!("{local}@{domain}.{tld}");
         prop_assert!(!is_valid_email(&candidate));
     }
+
+    /// Two or more `@` signs must always be rejected. Catches a
+    /// regression where `split_once('@')` is replaced with something
+    /// that accepts the first match silently.
+    #[test]
+    fn email_multiple_at_signs_rejected(
+        local in "[a-z]{1,8}",
+        middle in "[a-z]{1,8}",
+        domain in "[a-z]{1,8}",
+    ) {
+        let candidate = format!("{local}@{middle}@{domain}.com");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// Empty local part (`@example.com`) must be rejected even when
+    /// the domain is otherwise valid.
+    #[test]
+    fn email_empty_local_rejected(
+        domain in "[a-z][a-z0-9-]{0,16}",
+        tld in "[a-z]{2,8}",
+    ) {
+        let candidate = format!("@{domain}.{tld}");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// Empty domain (`local@`) must be rejected even when the local
+    /// part is otherwise valid.
+    #[test]
+    fn email_empty_domain_rejected(local in "[a-z][a-z0-9]{0,16}") {
+        let candidate = format!("{local}@");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// Whitespace anywhere in the candidate must trigger rejection.
+    /// Covers SP, TAB, NL, and the unicode whitespace surface.
+    #[test]
+    fn email_whitespace_anywhere_rejected(
+        local in "[a-z]{1,8}",
+        ws in prop_oneof![Just(' '), Just('\t'), Just('\n'), Just('\r')],
+        domain in "[a-z]{1,8}",
+        tld in "[a-z]{2,4}",
+    ) {
+        let candidate = format!("{local}{ws}@{domain}.{tld}");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// Local parts starting OR ending with a dot must be rejected.
+    /// Two strategies cover both boundaries in one test body.
+    #[test]
+    fn email_local_dot_at_edge_rejected(
+        body in "[a-z]{1,12}",
+        domain in "[a-z]{1,8}",
+        tld in "[a-z]{2,4}",
+        position in 0u8..=1,
+    ) {
+        let local = if position == 0 {
+            format!(".{body}")
+        } else {
+            format!("{body}.")
+        };
+        let candidate = format!("{local}@{domain}.{tld}");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// A domain label that starts or ends with `-` must be rejected.
+    /// Hostname syntax (RFC 1035) requires alphanumeric edges.
+    #[test]
+    fn email_domain_label_hyphen_at_edge_rejected(
+        local in "[a-z]{1,8}",
+        body in "[a-z]{1,8}",
+        tld in "[a-z]{2,4}",
+        position in 0u8..=1,
+    ) {
+        let label = if position == 0 {
+            format!("-{body}")
+        } else {
+            format!("{body}-")
+        };
+        let candidate = format!("{local}@{label}.{tld}");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// A domain label longer than 63 characters violates the DNS
+    /// label-length limit. The validator must reject it regardless
+    /// of how short the rest of the address is.
+    #[test]
+    fn email_domain_label_over_63_rejected(
+        local in "[a-z]{1,8}",
+        oversize_len in 64usize..=80,
+        tld in "[a-z]{2,4}",
+    ) {
+        let label: String = "a".repeat(oversize_len);
+        let candidate = format!("{local}@{label}.{tld}");
+        // Pre-flight: total length must stay ≤ 254 to ensure the
+        // 254-byte global cap doesn't overshadow the label-length
+        // rejection we're actually testing.
+        prop_assume!(candidate.len() <= 254);
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// A TLD containing any digit must be rejected — the validator
+    /// requires `is_ascii_alphabetic()` for every TLD char.
+    #[test]
+    fn email_tld_with_digit_rejected(
+        local in "[a-z]{1,8}",
+        domain in "[a-z]{1,8}",
+        prefix in "[a-z]{0,3}",
+        digit in 0u8..=9,
+        suffix in "[a-z]{0,3}",
+    ) {
+        let tld = format!("{prefix}{digit}{suffix}");
+        prop_assume!(tld.len() >= 2);
+        let candidate = format!("{local}@{domain}.{tld}");
+        prop_assert!(!is_valid_email(&candidate));
+    }
 }
 
 // ── is_valid_e164_phone — boundaries ──────────────────────────────────────
