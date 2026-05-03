@@ -6,6 +6,7 @@
   ],
   "exclude": [
     "dist",
+    "coverage",
     "**/*.stories.tsx",
     "**/*.stories.ts"
   ],

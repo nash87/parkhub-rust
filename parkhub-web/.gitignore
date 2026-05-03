@@ -24,3 +24,6 @@ pnpm-debug.log*
 .idea/
 test-results/
 playwright-report/
+
+# vitest --coverage output
+coverage/
