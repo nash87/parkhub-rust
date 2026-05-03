@@ -2,7 +2,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+  useTranslation: () => ({
+    // Mirror i18next's real behavior: the second arg is the English fallback,
+    // and an opts object's interpolation values replace `{{name}}` placeholders.
+    t: (key: string, defaultOrOpts?: string | Record<string, unknown>, opts?: Record<string, unknown>) => {
+      const isFallback = typeof defaultOrOpts === 'string';
+      let text = isFallback ? defaultOrOpts : key;
+      const interp = isFallback ? opts : (defaultOrOpts as Record<string, unknown> | undefined);
+      if (interp) {
+        for (const [k, v] of Object.entries(interp)) {
+          text = text.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
+        }
+      }
+      return text;
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
 }));
 
 vi.mock('../api/client', () => ({
