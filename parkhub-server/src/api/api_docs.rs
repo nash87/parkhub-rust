@@ -3,8 +3,8 @@
 //! Provides convenient endpoints for accessing the API documentation.
 //!
 //! - `GET /api/v1/docs` — serve embedded Swagger UI HTML page
-//! - `GET /api/v1/docs/openapi.json` — raw OpenAPI 3.0 specification
-//! - `GET /api/v1/docs/postman.json` — auto-generated Postman collection
+//! - `GET /api/v1/docs/openapi.json` — raw `OpenAPI` 3.0 specification
+//! - `GET /api/v1/docs/postman.json` — auto-generated `Postman` collection
 
 use axum::{
     http::{StatusCode, header},
@@ -23,7 +23,7 @@ pub async fn api_docs_ui() -> impl IntoResponse {
     Html(SWAGGER_HTML)
 }
 
-/// `GET /api/v1/docs/openapi.json` — raw OpenAPI spec
+/// `GET /api/v1/docs/openapi.json` — raw `OpenAPI` spec
 #[utoipa::path(get, path = "/api/v1/docs/openapi.json", tag = "Documentation",
     summary = "OpenAPI specification",
     description = "Returns the raw OpenAPI 3.0 JSON specification for the ParkHub API.",
@@ -41,7 +41,7 @@ pub async fn api_docs_openapi_json() -> impl IntoResponse {
     )
 }
 
-/// Generate the OpenAPI spec JSON string
+/// Generate the `OpenAPI` spec JSON string
 fn generate_openapi_spec() -> String {
     serde_json::json!({
         "openapi": "3.0.3",
@@ -94,7 +94,7 @@ fn generate_openapi_spec() -> String {
     .to_string()
 }
 
-/// `GET /api/v1/docs/postman.json` — auto-generated Postman collection from OpenAPI spec
+/// `GET /api/v1/docs/postman.json` — auto-generated `Postman` collection from `OpenAPI` spec
 #[utoipa::path(get, path = "/api/v1/docs/postman.json", tag = "Documentation",
     summary = "Postman collection",
     description = "Returns an auto-generated Postman v2.1 collection derived from the OpenAPI specification. Import directly into Postman.",
@@ -111,7 +111,7 @@ pub async fn api_docs_postman_json() -> impl IntoResponse {
     )
 }
 
-/// Convert OpenAPI spec into a Postman v2.1 collection.
+/// Convert `OpenAPI` spec into a `Postman` v2.1 collection.
 fn generate_postman_collection() -> String {
     let spec_str = generate_openapi_spec();
     let spec: serde_json::Value = serde_json::from_str(&spec_str).unwrap_or_default();

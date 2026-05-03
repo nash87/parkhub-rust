@@ -425,11 +425,11 @@
         "description": "Request body for bulk user update.",
         "properties": {
           "action": {
-            "description": "Action: \"activate\", \"deactivate\", \"set_role\"",
+            "description": "Action: \"activate\", \"deactivate\", `\"set_role\"`",
             "type": "string"
           },
           "role": {
-            "description": "Role to set (only used with \"set_role\" action)",
+            "description": "Role to set (only used with `\"set_role\"` action)",
             "type": [
               "string",
               "null"
@@ -1710,15 +1710,15 @@
             "type": "boolean"
           },
           "whatsapp_booking_cancelled": {
-            "description": "WhatsApp channel: booking cancelled",
+            "description": "`WhatsApp` channel: booking cancelled",
             "type": "boolean"
           },
           "whatsapp_booking_confirm": {
-            "description": "WhatsApp channel: booking confirmations",
+            "description": "`WhatsApp` channel: booking confirmations",
             "type": "boolean"
           },
           "whatsapp_booking_reminder": {
-            "description": "WhatsApp channel: booking reminders",
+            "description": "`WhatsApp` channel: booking reminders",
             "type": "boolean"
           }
         },

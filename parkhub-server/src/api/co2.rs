@@ -1,7 +1,7 @@
 //! CO2 accounting — converts bookings into emissions saved.
 //!
 //! Methodology: each booking represents a car trip to the lot.
-//! Without ParkHub, the user would still drive there (booking doesn't
+//! Without `ParkHub`, the user would still drive there (booking doesn't
 //! eliminate the trip), so the "saved" metric comes from two sources:
 //!   1. **Powertrain**: EVs, hybrids, and hydrogen vehicles emit less
 //!      per km than a gasoline baseline. The delta vs the fleet baseline
@@ -10,7 +10,7 @@
 //!      time-window, the extra riders would otherwise have made their own
 //!      trips — each additional rider saves their entire trip emissions.
 //!
-//! Emission factors (g CO2e per vehicle-km) are DEFRA 2024 + UBA 2024.
+//! Emission factors (g `CO2e` per vehicle-km) are `DEFRA` 2024 + `UBA` 2024.
 //! Baseline = gasoline car. Values are conservative; tune via
 //! `co2_*_g_per_km` admin settings when deploying.
 //!
@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{AuthUser, SharedState};
 
-/// Default per-km emission factors (g CO2e / km). Aligned with DEFRA 2024
+/// Default per-km emission factors (g `CO2e` / km). Aligned with `DEFRA` 2024
 /// "Company reporting" dataset and UBA 2024 road transport breakdown.
 /// `Unknown` falls back to `Gasoline` so under-reported vehicles at least
 /// surface a real cost rather than masquerading as zero.
@@ -80,7 +80,7 @@ pub struct Co2Summary {
     pub counterfactual_g: f64,
     pub saved_g: f64,
     pub carpool_saved_g: f64,
-    /// Convenience: saved_g + carpool_saved_g / 1000, rounded to 2 decimals.
+    /// Convenience: `saved_g` + `carpool_saved_g` / 1000, rounded to 2 decimals.
     pub saved_kg: f64,
 }
 
@@ -88,7 +88,7 @@ pub struct Co2Summary {
 ///
 /// Returns the CO2 accounting across the requested window. Scoped to the
 /// authenticated user's own bookings. For carpool detection we count any
-/// N≥2 bookings that share the same lot_id and overlap on start_time
+/// N≥2 bookings that share the same `lot_id` and overlap on `start_time`
 /// within a 30-minute grace window as a shared trip; each additional
 /// rider is credited with saving one full trip's baseline emissions.
 pub async fn co2_summary(
