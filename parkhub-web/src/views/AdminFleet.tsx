@@ -84,7 +84,7 @@ export function AdminFleetPage() {
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(flagged ? t('fleet.flagged', 'Vehicle flagged') : t('fleet.unflagged', 'FlagIcon removed'));
+        toast.success(flagged ? t('fleet.flagged', 'Vehicle flagged') : t('fleet.unflagged', 'Flag removed'));
         loadData();
       }
     /* istanbul ignore next -- network failure path */

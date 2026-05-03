@@ -442,7 +442,7 @@ export function CalendarPage() {
                 />
                 <button
                   onClick={handleCopyLink}
-                  aria-label={t('calendar.copyLink', 'CopyIcon link')}
+                  aria-label={t('calendar.copyLink', 'Copy link')}
                   className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors min-h-[40px]"
                 >
                   {copied ? <CheckIcon weight="bold" className="w-4 h-4" /> : <CopyIcon weight="bold" className="w-4 h-4" />}

@@ -122,8 +122,9 @@ describe('NotificationsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('No notifications')).toBeInTheDocument();
     });
-    // Bell icon shown in empty state
-    expect(screen.getByTestId('icon-bell')).toBeInTheDocument();
+    // Bell icon shown in empty state (also rendered in the v11 hero eyebrow,
+    // so the testid appears twice — assert at least one is present).
+    expect(screen.getAllByTestId('icon-bell').length).toBeGreaterThan(0);
   });
 
   it('renders notification list with titles and messages', async () => {
