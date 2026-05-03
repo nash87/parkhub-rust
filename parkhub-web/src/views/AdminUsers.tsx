@@ -181,7 +181,12 @@ export function AdminUsersPage() {
 
   const columns = useMemo(() => [
     columnHelper.accessor('name', {
-      header: () => t('admin.users'),
+      header: () => (
+        <>
+          {t('admin.users')}{' '}
+          <span className="font-normal normal-case text-surface-400">({users.length})</span>
+        </>
+      ),
       cell: info => (
         <div className="min-w-0">
           <p className="text-sm font-medium text-surface-900 dark:text-white truncate">{info.getValue()}</p>
@@ -301,7 +306,7 @@ export function AdminUsersPage() {
         );
       },
     }),
-  ], [editingId, editRole, savingRole, editingQuotaId, editQuota, savingQuota, t]);
+  ], [editingId, editRole, savingRole, editingQuotaId, editQuota, savingQuota, t, users.length]);
 
   if (loading) {
     return (
