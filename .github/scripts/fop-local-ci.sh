@@ -620,6 +620,17 @@ else
   skip_step "osv-scanner" "osv-scanner not on PATH (install: https://google.github.io/osv-scanner/installation/)"
 fi
 
+# ─── Stage 7c: SBOM generation (cd profile only) ────────────────────────────
+# Mirrors the syft step in .github/workflows/docker-publish.yml. Generates
+# SPDX-JSON SBOM into .fop/reports/. Optional cosign sign via FOP_LOCAL_SBOM_SIGN_KEY.
+if [[ "$profile" == "cd" ]]; then
+  if [[ -x scripts/local-sbom.sh ]]; then
+    run_step "SBOM generation (syft → SPDX-JSON)" "./scripts/local-sbom.sh"
+  else
+    skip_step "SBOM generation" "scripts/local-sbom.sh missing"
+  fi
+fi
+
 # ─── Stage 10b: Lighthouse CI (perf + a11y; full+cd profiles, frontend touched) ───
 # Mirrors .github/workflows/lighthouse.yml. Skipped if MemAvailable < 6 GiB
 # (Lighthouse + headless Chromium need ~3 GB; the script enforces the floor).
