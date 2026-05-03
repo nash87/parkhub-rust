@@ -42,7 +42,7 @@ pub struct ServerConfig {
     #[serde(skip)]
     pub generate_dummy_users: bool,
 
-    /// Username style for dummy users (0=FirstLastLetter, 1=FirstDotLast, 2=InitialLast, 3=FirstInitial)
+    /// Username style for dummy users (0=`FirstLastLetter`, 1=`FirstDotLast`, 2=`InitialLast`, 3=`FirstInitial`)
     #[serde(skip)]
     pub username_style: u8,
 
