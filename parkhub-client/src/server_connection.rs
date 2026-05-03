@@ -12,7 +12,7 @@ use parkhub_common::{
     RegisterRequest, ServerInfo, User, UserRole, models::UserPreferences,
 };
 
-/// Connection to a ParkHub server
+/// Connection to a `ParkHub` server
 pub struct ServerConnection {
     client: Client,
     base_url: String,
