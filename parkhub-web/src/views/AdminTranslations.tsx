@@ -225,10 +225,10 @@ export function AdminTranslationsPage() {
           )}
           {pendingCount > 0 && (
             <>
-              <button onClick={() => handleBulkAction('approved')} className="admin-hero-iconbtn text-emerald-600 dark:text-emerald-400" title={t('translations.admin.approveAll')}>
+              <button onClick={() => handleBulkAction('approved')} className="admin-hero-iconbtn text-emerald-600 dark:text-emerald-400" aria-label={t('translations.admin.approveAll')} title={t('translations.admin.approveAll')}>
                 <CheckCircleIcon weight="bold" className="w-4 h-4" />
               </button>
-              <button onClick={() => handleBulkAction('rejected')} className="admin-hero-iconbtn text-red-500 dark:text-red-400" title={t('translations.admin.rejectAll')}>
+              <button onClick={() => handleBulkAction('rejected')} className="admin-hero-iconbtn text-red-500 dark:text-red-400" aria-label={t('translations.admin.rejectAll')} title={t('translations.admin.rejectAll')}>
                 <XCircleIcon weight="bold" className="w-4 h-4" />
               </button>
             </>
