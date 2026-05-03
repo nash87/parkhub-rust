@@ -1,4 +1,4 @@
-//! Build script for ParkHub Client
+//! Build script for `ParkHub` Client
 //!
 //! Compiles Slint UI files and embeds Windows resources.
 

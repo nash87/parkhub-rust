@@ -1,6 +1,6 @@
 //! Server Discovery
 //!
-//! Discovers ParkHub servers on the local network using mDNS/DNS-SD
+//! Discovers `ParkHub` servers on the local network using mDNS/DNS-SD
 //! with fallback to localhost probing.
 
 use anyhow::Result;
