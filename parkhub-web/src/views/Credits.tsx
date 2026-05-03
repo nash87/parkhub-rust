@@ -8,6 +8,7 @@ import {
 import { api, type UserCredits } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { staggerSlow, fadeUp } from '../constants/animations';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 export function CreditsPage() {
   const { t } = useTranslation();
@@ -44,11 +45,7 @@ export function CreditsPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. */}
       <motion.section variants={item} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CoinsIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('credits.eyebrow', 'BOOKING WALLET')}
-          </div>
+          <HeroEyebrow icon={CoinsIcon} label={t('credits.eyebrow', 'BOOKING WALLET')} />
           <h1 className="admin-hero-headline">{t('credits.title')}</h1>
           <p className="admin-hero-sub">{t('credits.subtitle')}</p>
         </div>

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { UploadSimple, DownloadSimpleIcon, FileArrowUp, FileArrowDown, Table, WarningIcon, CheckCircle } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 type Tab = 'import' | 'export';
 type ImportType = 'users' | 'lots';
@@ -23,11 +24,7 @@ export function AdminDataManagementPage() {
       {/* v11 SOTA hero — amber tone (bulk ops touch many rows, double-check before running). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Table weight="bold" className="w-3.5 h-3.5" />
-            {t('dataManagement.eyebrow', 'BULK OPERATIONS')}
-          </div>
+          <HeroEyebrow icon={Table} label={t('dataManagement.eyebrow', 'BULK OPERATIONS')} />
           <h1 className="admin-hero-headline">{t('dataManagement.title', 'Data Management')}</h1>
           <p className="admin-hero-sub">{t('dataManagement.subtitle', 'Import and export your ParkHub data')}</p>
         </div>

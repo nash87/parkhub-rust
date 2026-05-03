@@ -4,6 +4,7 @@ import { UsersIcon } from '@phosphor-icons/react';
 import { api, type TeamAbsenceEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { ABSENCE_CONFIG, type AbsenceType } from '../constants/absenceConfig';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 export function TeamPage() {
   const { t } = useTranslation();
@@ -53,11 +54,7 @@ export function TeamPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UsersIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('team.eyebrow', 'CO-WORKERS')}
-          </div>
+          <HeroEyebrow icon={UsersIcon} label={t('team.eyebrow', 'CO-WORKERS')} />
           <h1 className="admin-hero-headline">{t('team.title', 'Team')}</h1>
           <p className="admin-hero-sub">{t('team.subtitle', 'Abwesenheiten im Team')}</p>
         </div>

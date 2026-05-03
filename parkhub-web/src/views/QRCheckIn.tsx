@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { de, enUS } from 'date-fns/locale';
 import { api, getInMemoryToken, type Booking } from '../api/client';
 import { stagger, fadeUp } from '../constants/animations';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 function authHeaders(): Record<string, string> {
   const token = getInMemoryToken();
@@ -165,11 +166,7 @@ export function QRCheckInPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. Refresh in hero-actions. */}
       <motion.section variants={fadeUp} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <QrCodeIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('checkin.eyebrow', 'CHECK-IN')}
-          </div>
+          <HeroEyebrow icon={QrCodeIcon} label={t('checkin.eyebrow', 'CHECK-IN')} />
           <h1 className="admin-hero-headline">{t('checkin.title')}</h1>
           <p className="admin-hero-sub">{t('checkin.subtitle')}</p>
         </div>

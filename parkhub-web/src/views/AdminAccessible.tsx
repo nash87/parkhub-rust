@@ -4,6 +4,7 @@ import { Wheelchair, Question, ToggleLeft, ToggleRight, ChartBar, UsersIcon } fr
 import { V11Meter } from '../components/v11/V11Meter';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface AccessibleStats {
   total_accessible_slots: number;
@@ -98,11 +99,7 @@ export function AdminAccessiblePage() {
           with PRs #489/#490/#491/#493 chrome. */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Wheelchair weight="bold" className="w-3.5 h-3.5" />
-            {t('accessible.eyebrow', 'ACCESSIBLE PARKING')}
-          </div>
+          <HeroEyebrow icon={Wheelchair} label={t('accessible.eyebrow', 'ACCESSIBLE PARKING')} />
           <h1 className="admin-hero-headline">{t('accessible.title', 'Accessible Parking')}</h1>
           <p className="admin-hero-sub">{t('accessible.subtitle', 'Manage accessible slots and view utilization')}</p>
         </div>

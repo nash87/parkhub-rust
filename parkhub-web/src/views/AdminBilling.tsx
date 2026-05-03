@@ -4,6 +4,7 @@ import { CurrencyDollar, ChartBar, DownloadSimpleIcon, Question, Buildings } fro
 import { V11Meter } from '../components/v11/V11Meter';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface CostCenterRow {
   cost_center: string;
@@ -83,11 +84,7 @@ export function AdminBillingPage() {
           the Cost Center Billing identity. */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CurrencyDollar weight="bold" className="w-3.5 h-3.5" />
-            {t('billing.eyebrow', 'COST CENTER BILLING')}
-          </div>
+          <HeroEyebrow icon={CurrencyDollar} label={t('billing.eyebrow', 'COST CENTER BILLING')} />
           <h1 className="admin-hero-headline">{t('billing.title', 'Cost Center Billing')}</h1>
           <p className="admin-hero-sub">
             {t('billing.subtitle', 'Billing breakdown by cost center and department')}

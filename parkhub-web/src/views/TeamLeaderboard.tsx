@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface TeamMember {
   id: string;
@@ -168,11 +169,7 @@ export function TeamLeaderboardPage() {
           {/* v11 SOTA hero — primary tone, page-hero variant (renders on both empty + loaded states). */}
           <section className="admin-hero page-hero">
             <div className="admin-hero-left">
-              <div className="admin-hero-eyebrow">
-                <span className="admin-hero-dot" aria-hidden="true"></span>
-                <TrophyIcon weight="bold" className="w-3.5 h-3.5" />
-                {t('leaderboard.eyebrow', 'TEAM RANKINGS')}
-              </div>
+              <HeroEyebrow icon={TrophyIcon} label={t('leaderboard.eyebrow', 'TEAM RANKINGS')} />
               <h1 className="admin-hero-headline">{t('leaderboard.title', 'Team Leaderboard')}</h1>
               <p className="admin-hero-sub">{t('leaderboard.subtitle', 'See how your team is doing')}</p>
             </div>

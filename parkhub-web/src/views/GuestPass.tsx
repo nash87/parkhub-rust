@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { getInMemoryToken } from '../api/client';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface Lot {
   id: string;
@@ -206,11 +207,7 @@ export function GuestPassPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. Create button in hero-actions. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UserPlusIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('guestBooking.eyebrow', 'GUEST CODES')}
-          </div>
+          <HeroEyebrow icon={UserPlusIcon} label={t('guestBooking.eyebrow', 'GUEST CODES')} />
           <h1 className="admin-hero-headline">{t('guestBooking.title')}</h1>
           <p className="admin-hero-sub">{t('guestBooking.subtitle')}</p>
         </div>

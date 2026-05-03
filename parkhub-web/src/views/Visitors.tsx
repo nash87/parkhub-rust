@@ -4,6 +4,7 @@ import { UserPlusIcon, QrCodeIcon, Trash, CheckCircle, Question, MagnifyingGlass
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface Visitor {
   id: string;
@@ -142,11 +143,7 @@ export function VisitorsPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. Help + viewMode toggle + Register live in admin-hero-actions. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UserPlusIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('visitors.eyebrow', 'GUEST INVITES')}
-          </div>
+          <HeroEyebrow icon={UserPlusIcon} label={t('visitors.eyebrow', 'GUEST INVITES')} />
           <h1 className="admin-hero-headline">{t('visitors.title')}</h1>
           <p className="admin-hero-sub">{t('visitors.subtitle')}</p>
         </div>

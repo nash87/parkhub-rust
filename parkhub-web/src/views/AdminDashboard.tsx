@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { api } from '../api/client';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface WidgetPosition { x: number; y: number; w: number; h: number; }
 interface WidgetEntry { id: string; widget_type: string; position: WidgetPosition; visible: boolean; }
@@ -110,11 +111,7 @@ export function AdminDashboardPage() {
       {/* v11 SOTA hero — primary tone (operations view). */}
       <section className="admin-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <ChartBar weight="bold" className="w-3.5 h-3.5" />
-            {t('widgets.eyebrow', 'OPERATIONS VIEW')}
-          </div>
+          <HeroEyebrow icon={ChartBar} label={t('widgets.eyebrow', 'OPERATIONS VIEW')} />
           <h1 className="admin-hero-headline">{t('widgets.title')}</h1>
           <p className="admin-hero-sub">{t('widgets.subtitle')}</p>
         </div>

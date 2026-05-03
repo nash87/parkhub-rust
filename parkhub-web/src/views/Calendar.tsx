@@ -4,6 +4,7 @@ import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, XIcon, Copy, Check, Q
 import { api, type CalendarEvent } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const statusColors: Record<string, string> = {
   confirmed: 'bg-emerald-500',
@@ -239,11 +240,7 @@ export function CalendarPage() {
           in hero-actions; the prev/month/next month nav row sits below. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CalendarBlank weight="bold" className="w-3.5 h-3.5" />
-            {t('calendar.eyebrow', 'SCHEDULE')}
-          </div>
+          <HeroEyebrow icon={CalendarBlank} label={t('calendar.eyebrow', 'SCHEDULE')} />
           <h1 className="admin-hero-headline">{t('calendar.title', 'Kalender')}</h1>
           <p className="admin-hero-sub">{t('calendar.subtitle', 'See and manage your reservations across the month')}</p>
         </div>

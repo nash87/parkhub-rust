@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { api, type AbsenceEntry, type AbsencePattern } from '../api/client';
 import { ABSENCE_CONFIG, type AbsenceType } from '../constants/absenceConfig';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 function isDateInRange(date: Date, start: string, end: string) {
   const d = date.toISOString().slice(0, 10);
@@ -126,11 +127,7 @@ export function AbsencesPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CalendarIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('absences.eyebrow', 'TIME OFF')}
-          </div>
+          <HeroEyebrow icon={CalendarIcon} label={t('absences.eyebrow', 'TIME OFF')} />
           <h1 className="admin-hero-headline">{t('absences.title', 'Abwesenheiten')}</h1>
           <p className="admin-hero-sub">{t('absences.subtitle', 'Homeoffice, Urlaub & mehr verwalten')}</p>
         </div>

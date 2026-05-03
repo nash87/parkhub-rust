@@ -19,6 +19,7 @@ import type { Locale } from 'date-fns';
 import { useWebSocket, type WsEvent } from '../hooks/useWebSocket';
 import { useUndoToast } from '../hooks/useUndoToast';
 import { buildIcsEvent, downloadIcs } from '../utils/exportTable';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 export function BookingsPage() {
   const { t, i18n } = useTranslation();
@@ -134,11 +135,7 @@ export function BookingsPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant (visible on mobile). */}
       <motion.section variants={item} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Clock weight="bold" className="w-3.5 h-3.5" />
-            {t('bookings.eyebrow', 'MY RESERVATIONS')}
-          </div>
+          <HeroEyebrow icon={Clock} label={t('bookings.eyebrow', 'MY RESERVATIONS')} />
           <h1 className="admin-hero-headline">{t('bookings.title')}</h1>
           <p className="admin-hero-sub">{t('bookings.subtitle')}</p>
         </div>
