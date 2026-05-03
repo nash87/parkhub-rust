@@ -6,7 +6,7 @@
 // Previously this lived hardcoded in Layout.tsx ("v4.9.0") and drifted —
 // v4.13.0 and later shipped with a stale footer. One-line source so it
 // stays accurate forever.
-// @ts-ignore — Vite resolves JSON imports at build time
+// resolveJsonModule is enabled in astro/tsconfigs/base.json so this is type-safe.
 import { version as pkgVersion } from '../../package.json';
 
 export const APP_VERSION: string =
