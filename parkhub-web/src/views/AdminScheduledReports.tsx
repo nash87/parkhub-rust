@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, Plus, Trash, PaperPlaneTilt, Question, PencilIcon, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
+import { ClockIcon, PlusIcon, TrashIcon, PaperPlaneTiltIcon, QuestionIcon, PencilIcon, ToggleLeftIcon, ToggleRightIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -159,7 +159,7 @@ export function AdminScheduledReportsPage() {
       {/* v11 SOTA hero — emerald tone (recurring report delivery, insight workflow). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Clock} label={t('scheduledReports.eyebrow', 'AUTOMATED DELIVERY')} />
+          <HeroEyebrow icon={ClockIcon} label={t('scheduledReports.eyebrow', 'AUTOMATED DELIVERY')} />
           <h1 className="admin-hero-headline">{t('scheduledReports.title')}</h1>
           <p className="admin-hero-sub">{t('scheduledReports.subtitle')}</p>
         </div>
@@ -171,14 +171,14 @@ export function AdminScheduledReportsPage() {
             data-testid="reports-help-btn"
             title={t('scheduledReports.helpLabel')}
           >
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
             className="admin-hero-action"
             data-testid="create-schedule-btn"
           >
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('scheduledReports.create')}
           </button>
         </div>
@@ -301,9 +301,9 @@ export function AdminScheduledReportsPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium text-surface-900 dark:text-white">{schedule.name}</h3>
                     {schedule.enabled ? (
-                      <ToggleRight size={20} weight="fill" className="text-green-500" data-testid="enabled-icon" />
+                      <ToggleRightIcon size={20} weight="fill" className="text-green-500" data-testid="enabled-icon" />
                     ) : (
-                      <ToggleLeft size={20} className="text-surface-400" data-testid="disabled-icon" />
+                      <ToggleLeftIcon size={20} className="text-surface-400" data-testid="disabled-icon" />
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-1">
@@ -314,7 +314,7 @@ export function AdminScheduledReportsPage() {
                       {frequencyLabels[schedule.frequency]}
                     </span>
                     <span className="text-xs text-surface-500" title={frequencyCron[schedule.frequency]}>
-                      <Clock size={12} className="inline mr-0.5" />
+                      <ClockIcon size={12} className="inline mr-0.5" />
                       {frequencyCron[schedule.frequency]}
                     </span>
                   </div>
@@ -334,7 +334,7 @@ export function AdminScheduledReportsPage() {
                     title={t('scheduledReports.sendNow')}
                     data-testid="send-now-btn"
                   >
-                    <PaperPlaneTilt size={16} />
+                    <PaperPlaneTiltIcon size={16} />
                   </button>
                   <button
                     onClick={() => startEdit(schedule)}
@@ -350,7 +350,7 @@ export function AdminScheduledReportsPage() {
                     title={t('scheduledReports.delete')}
                     data-testid="delete-btn"
                   >
-                    <Trash size={16} />
+                    <TrashIcon size={16} />
                   </button>
                 </div>
               </div>

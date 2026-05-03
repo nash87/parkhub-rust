@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Buildings, Plus, XIcon, PencilSimple } from '@phosphor-icons/react';
+import { BuildingsIcon, PlusIcon, XIcon, PencilSimpleIcon } from '@phosphor-icons/react';
 import { api, type TenantInfo, type CreateTenantRequest } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -94,13 +94,13 @@ export function AdminTenantsPage() {
       {/* v11 SOTA hero — info tone (multi-tenant infrastructure). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Buildings} label={t('tenants.eyebrow', 'PEOPLE & ACCESS · TENANTS')} />
+          <HeroEyebrow icon={BuildingsIcon} label={t('tenants.eyebrow', 'PEOPLE & ACCESS · TENANTS')} />
           <h1 className="admin-hero-headline">{t('tenants.title', 'Tenants')}</h1>
           <p className="admin-hero-sub">{t('tenants.subtitle', 'Manage isolated tenant environments and per-org domains')}</p>
         </div>
         <div className="admin-hero-actions">
           <button onClick={openCreate} className="admin-hero-action">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('tenants.create', 'Create Tenant')}
           </button>
         </div>
@@ -108,7 +108,7 @@ export function AdminTenantsPage() {
 
       {tenants.length === 0 ? (
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-8 text-center">
-          <Buildings weight="light" className="w-10 h-10 text-surface-300 dark:text-surface-600 mx-auto mb-2" />
+          <BuildingsIcon weight="light" className="w-10 h-10 text-surface-300 dark:text-surface-600 mx-auto mb-2" />
           <p className="text-sm text-surface-500 dark:text-surface-400">
             {t('tenants.empty', 'No tenants configured. Create one to enable multi-tenant isolation.')}
           </p>
@@ -119,7 +119,7 @@ export function AdminTenantsPage() {
             <div key={tenant.id} className="flex items-center justify-between p-4 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800" data-testid={`tenant-${tenant.id}`}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: tenant.branding?.primary_color || '#6366f1' }}>
-                  <Buildings weight="bold" className="w-5 h-5 text-white" />
+                  <BuildingsIcon weight="bold" className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{tenant.name}</h3>
@@ -133,7 +133,7 @@ export function AdminTenantsPage() {
                   <span>{tenant.lot_count} {t('tenants.lots', 'lots')}</span>
                 </div>
                 <button onClick={() => openEdit(tenant)} aria-label={t('common.edit', 'Edit')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
-                  <PencilSimple weight="bold" className="w-4 h-4 text-surface-500" />
+                  <PencilSimpleIcon weight="bold" className="w-4 h-4 text-surface-500" />
                 </button>
               </div>
             </div>

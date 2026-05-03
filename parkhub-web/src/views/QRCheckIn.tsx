@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  QrCodeIcon, SignIn, SignOut, SpinnerGap, Clock,
-  MapPinIcon, CalendarBlank, ArrowClockwiseIcon,
+  QrCodeIcon, SignInIcon, SignOutIcon, SpinnerGapIcon, ClockIcon,
+  MapPinIcon, CalendarBlankIcon, ArrowClockwiseIcon,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -210,14 +210,14 @@ export function QRCheckInPage() {
               <div className="glass-card p-3">
                 <p className="text-xs text-surface-400 dark:text-surface-500 mb-1">{t('checkin.startTime')}</p>
                 <p className="font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-1">
-                  <CalendarBlank weight="regular" className="w-3.5 h-3.5" />
+                  <CalendarBlankIcon weight="regular" className="w-3.5 h-3.5" />
                   {format(new Date(booking.start_time), 'HH:mm')}
                 </p>
               </div>
               <div className="glass-card p-3">
                 <p className="text-xs text-surface-400 dark:text-surface-500 mb-1">{t('checkin.endTime')}</p>
                 <p className="font-semibold text-surface-800 dark:text-surface-200 flex items-center gap-1">
-                  <Clock weight="regular" className="w-3.5 h-3.5" />
+                  <ClockIcon weight="regular" className="w-3.5 h-3.5" />
                   {format(new Date(booking.end_time), 'HH:mm')}
                 </p>
               </div>
@@ -246,8 +246,8 @@ export function QRCheckInPage() {
                   data-testid="checkin-btn"
                 >
                   {acting
-                    ? <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" />
-                    : <><SignIn weight="bold" className="w-5 h-5" /> {t('checkin.checkInBtn')}</>
+                    ? <SpinnerGapIcon weight="bold" className="w-5 h-5 animate-spin" />
+                    : <><SignInIcon weight="bold" className="w-5 h-5" /> {t('checkin.checkInBtn')}</>
                   }
                 </button>
               </motion.div>
@@ -276,8 +276,8 @@ export function QRCheckInPage() {
                   data-testid="checkout-btn"
                 >
                   {acting
-                    ? <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" />
-                    : <><SignOut weight="bold" className="w-5 h-5" /> {t('checkin.checkOutBtn')}</>
+                    ? <SpinnerGapIcon weight="bold" className="w-5 h-5 animate-spin" />
+                    : <><SignOutIcon weight="bold" className="w-5 h-5" /> {t('checkin.checkOutBtn')}</>
                   }
                 </button>
               </motion.div>

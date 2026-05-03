@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
-  ArrowLeft, MapPinIcon, Clock, CarIcon, SpinnerGap, Check,
-  Lightning, Wheelchair, Motorcycle, StarIcon,
-  TrendUp, TrendDown,
+  ArrowLeftIcon, MapPinIcon, ClockIcon, CarIcon, SpinnerGapIcon, CheckIcon,
+  LightningIcon, WheelchairIcon, MotorcycleIcon, StarIcon,
+  TrendUpIcon, TrendDownIcon,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult, type OperatingHoursData, type Booking } from '../api/client';
@@ -144,7 +144,7 @@ export function BookPage() {
         {step > 1 && (
           <div className="admin-hero-actions">
             <button onClick={goBack} className="admin-hero-iconbtn" aria-label={t('common.back', 'Go back')} title={t('common.back', 'Go back')}>
-              <ArrowLeft weight="bold" className="w-4 h-4" aria-hidden="true" />
+              <ArrowLeftIcon weight="bold" className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         )}
@@ -165,7 +165,7 @@ export function BookPage() {
                   animate={s === step ? { scale: [1, 1.1, 1] } : {}}
                   transition={{ duration: 0.3 }}
                 >
-                  {s < step ? <Check weight="bold" className="w-3.5 h-3.5" aria-hidden="true" /> : s}
+                  {s < step ? <CheckIcon weight="bold" className="w-3.5 h-3.5" aria-hidden="true" /> : s}
                 </motion.div>
                 <span
                   aria-current={s === step ? 'step' : undefined}
@@ -251,7 +251,7 @@ export function BookPage() {
   );
 }
 
-/** Check if a lot is currently open based on operating_hours. */
+/** CheckIcon if a lot is currently open based on operating_hours. */
 function isLotOpenNow(hours?: OperatingHoursData): boolean {
   if (!hours || hours.is_24h) return true;
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -402,7 +402,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
 }
 
 const SLOT_TYPE_ICON: Record<string, Icon> = {
-  electric: Lightning, handicap: Wheelchair, motorcycle: Motorcycle, vip: StarIcon,
+  electric: LightningIcon, handicap: WheelchairIcon, motorcycle: MotorcycleIcon, vip: StarIcon,
 };
 
 function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
@@ -433,8 +433,8 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
                 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                 : 'bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-400'
             }`}>
-              {dynamicPrice.tier === 'surge' && <TrendUp weight="bold" className="w-3.5 h-3.5" />}
-              {dynamicPrice.tier === 'discount' && <TrendDown weight="bold" className="w-3.5 h-3.5" />}
+              {dynamicPrice.tier === 'surge' && <TrendUpIcon weight="bold" className="w-3.5 h-3.5" />}
+              {dynamicPrice.tier === 'discount' && <TrendDownIcon weight="bold" className="w-3.5 h-3.5" />}
               {dynamicPrice.tier === 'surge' ? t('book.surgePricing') : dynamicPrice.tier === 'discount' ? t('book.discountPricing') : ''}
               <span className="ml-1">{dynamicPrice.currency}{dynamicPrice.current_price.toFixed(2)}/h</span>
             </div>
@@ -467,7 +467,7 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
                 >
                   {slot.slot_number}
                   {Icon && <Icon weight="bold" className="absolute top-0.5 right-0.5 w-3 h-3 opacity-60" />}
-                  {slot.is_accessible && !Icon && <Wheelchair weight="bold" className="absolute top-0.5 right-0.5 w-3 h-3 opacity-60 text-blue-500" />}
+                  {slot.is_accessible && !Icon && <WheelchairIcon weight="bold" className="absolute top-0.5 right-0.5 w-3 h-3 opacity-60 text-blue-500" />}
                 </motion.button>
               );
             })}
@@ -478,7 +478,7 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label htmlFor="book-start-time" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-            <Clock weight="regular" className="inline w-4 h-4 mr-1" aria-hidden="true" />{t('book.startTime')}
+            <ClockIcon weight="regular" className="inline w-4 h-4 mr-1" aria-hidden="true" />{t('book.startTime')}
           </label>
           <input id="book-start-time" type="datetime-local" value={startDate} onChange={e => onStartDateChange(e.target.value)} className="input text-sm" />
         </div>
@@ -536,8 +536,8 @@ function StepConfirm({ lot, slot, start, end, duration, estimatedCost, vehicle, 
         whileHover={!submitting ? { scale: 1.02 } : {}} whileTap={!submitting ? { scale: 0.98 } : {}}
         className={`btn btn-primary w-full sm:w-auto shadow-lg shadow-primary-500/15 ${submitting ? 'btn-shimmer' : ''}`}
       >
-        {submitting ? <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('book.confirming')}</>
-          : <><Check weight="bold" className="w-4 h-4" /> {t('book.confirm')}</>}
+        {submitting ? <><SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> {t('book.confirming')}</>
+          : <><CheckIcon weight="bold" className="w-4 h-4" /> {t('book.confirm')}</>}
       </motion.button>
     </div>
   );

@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChartBar, TrendUp, UsersIcon, Clock, CurrencyDollar, Export, CalendarBlank } from '@phosphor-icons/react';
+import { ChartBarIcon, TrendUpIcon, UsersIcon, ClockIcon, CurrencyDollarIcon, ExportIcon, CalendarBlankIcon } from '@phosphor-icons/react';
 import { getInMemoryToken } from '../api/client';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
@@ -148,7 +148,7 @@ export function AdminAnalyticsPage() {
       {/* v11 SOTA hero — emerald tone (data + insights). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={ChartBar} label={t('analytics.eyebrow', 'USAGE & TRENDS')} />
+          <HeroEyebrow icon={ChartBarIcon} label={t('analytics.eyebrow', 'USAGE & TRENDS')} />
           <h1 className="admin-hero-headline">Analytics</h1>
           <p className="admin-hero-sub">Comprehensive parking analytics and trends</p>
         </div>
@@ -167,7 +167,7 @@ export function AdminAnalyticsPage() {
             </button>
           ))}
           <button onClick={exportCsv} className="admin-hero-action">
-            <Export weight="bold" className="w-4 h-4" />
+            <ExportIcon weight="bold" className="w-4 h-4" />
             CSV
           </button>
         </div>
@@ -183,9 +183,9 @@ export function AdminAnalyticsPage() {
         <>
           {/* Stats cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={CalendarBlank} label="Total Bookings" value={String(data.total_bookings)} sub={`Last ${range} days`} />
-            <StatCard icon={CurrencyDollar} label="Total Revenue" value={`${data.total_revenue.toFixed(2)}`} sub={`Last ${range} days`} />
-            <StatCard icon={Clock} label="Avg Duration" value={`${Math.round(data.avg_booking_duration_minutes)} min`} />
+            <StatCard icon={CalendarBlankIcon} label="Total Bookings" value={String(data.total_bookings)} sub={`Last ${range} days`} />
+            <StatCard icon={CurrencyDollarIcon} label="Total Revenue" value={`${data.total_revenue.toFixed(2)}`} sub={`Last ${range} days`} />
+            <StatCard icon={ClockIcon} label="Avg Duration" value={`${Math.round(data.avg_booking_duration_minutes)} min`} />
             <StatCard icon={UsersIcon} label="Active UsersIcon" value={String(data.active_users)} sub="With bookings in period" />
           </div>
 
@@ -193,14 +193,14 @@ export function AdminAnalyticsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
               <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4 flex items-center gap-2">
-                <TrendUp weight="bold" className="w-4 h-4" />
+                <TrendUpIcon weight="bold" className="w-4 h-4" />
                 Daily Bookings
               </h3>
               <MiniBarChart data={bookingsChartData} height={160} color="var(--color-primary-500, #6366f1)" />
             </div>
             <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
               <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4 flex items-center gap-2">
-                <CurrencyDollar weight="bold" className="w-4 h-4" />
+                <CurrencyDollarIcon weight="bold" className="w-4 h-4" />
                 Daily Revenue
               </h3>
               <MiniBarChart data={revenueChartData} height={160} color="var(--color-emerald-500, #10b981)" />

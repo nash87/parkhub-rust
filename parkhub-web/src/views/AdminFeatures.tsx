@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ToggleLeft, ToggleRight, Info, ShieldCheck, ArrowLeft,
-  ArrowClockwiseIcon, FloppyDisk, Check,
+  ToggleLeftIcon, ToggleRightIcon, InfoIcon, ShieldCheckIcon, ArrowLeftIcon,
+  ArrowClockwiseIcon, FloppyDiskIcon, CheckIcon,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import {
@@ -72,7 +72,7 @@ export function AdminFeaturesPage() {
       {/* Header */}
       <motion.div variants={item}>
         <Link to="/" className="inline-flex items-center gap-2 text-xs text-surface-500 hover:text-accent-600 mb-4 transition-colors cursor-pointer uppercase tracking-wider font-semibold">
-          <ArrowLeft weight="bold" className="w-3.5 h-3.5" /> {t('nav.dashboard')}
+          <ArrowLeftIcon weight="bold" className="w-3.5 h-3.5" /> {t('nav.dashboard')}
         </Link>
         <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-widest mb-1">
           {t('nav.admin')}
@@ -128,9 +128,9 @@ export function AdminFeaturesPage() {
                       aria-label={t(`features.modules.${mod.id}.name`)}
                     >
                       {enabled ? (
-                        <ToggleRight weight="fill" className="w-8 h-8 text-accent-500 transition-colors" />
+                        <ToggleRightIcon weight="fill" className="w-8 h-8 text-accent-500 transition-colors" />
                       ) : (
-                        <ToggleLeft weight="regular" className="w-8 h-8 text-surface-300 dark:text-surface-600 transition-colors" />
+                        <ToggleLeftIcon weight="regular" className="w-8 h-8 text-surface-300 dark:text-surface-600 transition-colors" />
                       )}
                     </button>
                     <div className="flex-1 min-w-0">
@@ -157,7 +157,7 @@ export function AdminFeaturesPage() {
                       }`}
                       aria-label={t('common.info', 'More info')}
                     >
-                      <Info weight={helpOpen ? 'fill' : 'regular'} className="w-4.5 h-4.5" />
+                      <InfoIcon weight={helpOpen ? 'fill' : 'regular'} className="w-4.5 h-4.5" />
                     </button>
                   </div>
                   <AnimatePresence>
@@ -186,7 +186,7 @@ export function AdminFeaturesPage() {
       {/* Compliance */}
       <motion.div variants={item} className="card p-4 border-l-3 border-l-emerald-500">
         <div className="flex items-start gap-3">
-          <ShieldCheck weight="fill" className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+          <ShieldCheckIcon weight="fill" className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-semibold text-surface-900 dark:text-white uppercase tracking-wider mb-1.5">
               {t('features.compliance.title')}
@@ -220,9 +220,9 @@ export function AdminFeaturesPage() {
               className="btn btn-primary shadow-lg px-6 py-3 text-sm cursor-pointer"
             >
               {saved ? (
-                <><Check weight="bold" className="w-4 h-4" /> {t('features.saved')}</>
+                <><CheckIcon weight="bold" className="w-4 h-4" /> {t('features.saved')}</>
               ) : (
-                <><FloppyDisk weight="bold" className="w-4 h-4" /> {t('features.saveChanges')}</>
+                <><FloppyDiskIcon weight="bold" className="w-4 h-4" /> {t('features.saveChanges')}</>
               )}
             </button>
           </motion.div>

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   CoinsIcon, ArrowDownIcon, ArrowUpIcon, ArrowClockwiseIcon,
-  TrendUp, SparkleIcon,
+  TrendUpIcon, SparkleIcon,
 } from '@phosphor-icons/react';
 import { api, type UserCredits } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -89,7 +89,7 @@ export function CreditsPage() {
               <p className="mt-2 stat-value text-orange-600 dark:text-orange-400">{used}</p>
             </div>
             <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-              <TrendUp weight="fill" className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <TrendUpIcon weight="fill" className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
           </div>
         </div>

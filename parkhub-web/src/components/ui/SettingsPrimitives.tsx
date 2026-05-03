@@ -17,7 +17,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { Lock } from '@phosphor-icons/react';
+import { LockIcon } from '@phosphor-icons/react';
 
 // ─── Section Card ────────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ export function SRow({
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10"
               title={`Enforced by ${lockedBy}`}
             >
-              <Lock weight="fill" className="w-2.5 h-2.5" />
+              <LockIcon weight="fill" className="w-2.5 h-2.5" />
               {lockedBy}
             </span>
           )}

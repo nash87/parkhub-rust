@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Wheelchair, Question, ToggleLeft, ToggleRight, ChartBar, UsersIcon } from '@phosphor-icons/react';
+import { WheelchairIcon, QuestionIcon, ToggleLeftIcon, ToggleRightIcon, ChartBarIcon, UsersIcon } from '@phosphor-icons/react';
 import { V11Meter } from '../components/v11/V11Meter';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -99,7 +99,7 @@ export function AdminAccessiblePage() {
           with PRs #489/#490/#491/#493 chrome. */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Wheelchair} label={t('accessible.eyebrow', 'ACCESSIBLE PARKING')} />
+          <HeroEyebrow icon={WheelchairIcon} label={t('accessible.eyebrow', 'ACCESSIBLE PARKING')} />
           <h1 className="admin-hero-headline">{t('accessible.title', 'Accessible Parking')}</h1>
           <p className="admin-hero-sub">{t('accessible.subtitle', 'Manage accessible slots and view utilization')}</p>
         </div>
@@ -109,7 +109,7 @@ export function AdminAccessiblePage() {
             className="admin-hero-iconbtn"
             aria-label={t('common.help', 'Help')}
           >
-            <Question weight="bold" className="w-4 h-4" />
+            <QuestionIcon weight="bold" className="w-4 h-4" />
           </button>
         </div>
       </section>
@@ -126,9 +126,9 @@ export function AdminAccessiblePage() {
       {/* v11 SOTA stat meters — info / success / accent / warn tones */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="accessible-stats">
-          <StatCard tone="info" label={t('accessible.totalSlots', 'Accessible Slots')} value={stats.total_accessible_slots} icon={<Wheelchair weight="bold" className="w-3.5 h-3.5" />} />
-          <StatCard tone="success" label={t('accessible.utilization', 'Utilization')} value={`${stats.utilization_percent.toFixed(0)}%`} icon={<ChartBar weight="bold" className="w-3.5 h-3.5" />} />
-          <StatCard tone="accent" label={t('accessible.totalBookings', 'Active Bookings')} value={stats.total_accessible_bookings} icon={<Wheelchair weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="info" label={t('accessible.totalSlots', 'Accessible Slots')} value={stats.total_accessible_slots} icon={<WheelchairIcon weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="success" label={t('accessible.utilization', 'Utilization')} value={`${stats.utilization_percent.toFixed(0)}%`} icon={<ChartBarIcon weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="accent" label={t('accessible.totalBookings', 'Active Bookings')} value={stats.total_accessible_bookings} icon={<WheelchairIcon weight="bold" className="w-3.5 h-3.5" />} />
           <StatCard tone="warn" label={t('accessible.usersWithNeeds', 'UsersIcon with Needs')} value={stats.users_with_accessibility_needs} icon={<UsersIcon weight="bold" className="w-3.5 h-3.5" />} />
         </div>
       )}
@@ -188,8 +188,8 @@ export function AdminAccessiblePage() {
                     )}
                   </div>
                   {slot.is_accessible
-                    ? <ToggleRight weight="fill" className="w-6 h-6 text-blue-500" />
-                    : <ToggleLeft weight="regular" className="w-6 h-6 text-surface-400" />
+                    ? <ToggleRightIcon weight="fill" className="w-6 h-6 text-blue-500" />
+                    : <ToggleLeftIcon weight="regular" className="w-6 h-6 text-surface-400" />
                   }
                 </button>
               ))}

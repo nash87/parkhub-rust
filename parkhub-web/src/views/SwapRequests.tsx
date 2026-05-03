@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Swap, Check, XIcon, SpinnerGap, Plus, ArrowClockwiseIcon,
-  CalendarBlank, Clock, ChatText,
+  SwapIcon, CheckIcon, XIcon, SpinnerGapIcon, PlusIcon, ArrowClockwiseIcon,
+  CalendarBlankIcon, ClockIcon, ChatTextIcon,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -148,7 +148,7 @@ export function SwapRequestsPage() {
         {/* v11 SOTA hero — primary tone, page-hero variant. Refresh + Create in hero-actions. */}
         <motion.section variants={fadeUp} className="admin-hero page-hero">
           <div className="admin-hero-left">
-            <HeroEyebrow icon={Swap} label={t('swap.eyebrow', 'SHIFT TRADE')} />
+            <HeroEyebrow icon={SwapIcon} label={t('swap.eyebrow', 'SHIFT TRADE')} />
             <h1 className="admin-hero-headline">{t('swap.title')}</h1>
             <p className="admin-hero-sub">{t('swap.subtitle')}</p>
           </div>
@@ -157,7 +157,7 @@ export function SwapRequestsPage() {
               <ArrowClockwiseIcon weight="bold" className="w-4 h-4" />
             </button>
             <button onClick={() => setShowModal(true)} className="admin-hero-action">
-              <Plus weight="bold" className="w-4 h-4" />
+              <PlusIcon weight="bold" className="w-4 h-4" />
               {t('swap.create')}
             </button>
           </div>
@@ -166,7 +166,7 @@ export function SwapRequestsPage() {
         {/* Request list */}
         {requests.length === 0 ? (
           <motion.div variants={fadeUp} className="card p-12 text-center">
-            <Swap weight="thin" className="w-16 h-16 mx-auto mb-4 text-surface-300 dark:text-surface-600" />
+            <SwapIcon weight="thin" className="w-16 h-16 mx-auto mb-4 text-surface-300 dark:text-surface-600" />
             <p className="text-surface-500 dark:text-surface-400 text-lg font-medium">{t('swap.empty')}</p>
             <p className="text-surface-400 dark:text-surface-500 text-sm mt-1">{t('swap.emptyHint')}</p>
           </motion.div>
@@ -185,7 +185,7 @@ export function SwapRequestsPage() {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <Swap weight="bold" className="w-4 h-4 text-primary-500" />
+                        <SwapIcon weight="bold" className="w-4 h-4 text-primary-500" />
                         <span className="font-semibold text-surface-900 dark:text-white">
                           {req.source_booking.lot_name}
                         </span>
@@ -202,11 +202,11 @@ export function SwapRequestsPage() {
                       <div className="glass-card p-3">
                         <p className="text-xs font-medium text-surface-400 dark:text-surface-500 mb-1">{t('swap.yourSlot')}</p>
                         <div className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
-                          <CalendarBlank weight="regular" className="w-3.5 h-3.5" />
+                          <CalendarBlankIcon weight="regular" className="w-3.5 h-3.5" />
                           {format(new Date(req.source_booking.start_time), 'd. MMM yyyy', { locale: dateFnsLocale })}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-400 mt-1">
-                          <Clock weight="regular" className="w-3.5 h-3.5" />
+                          <ClockIcon weight="regular" className="w-3.5 h-3.5" />
                           {t('dashboard.slot')} {req.source_booking.slot_number} &middot;{' '}
                           {format(new Date(req.source_booking.start_time), 'HH:mm')} — {format(new Date(req.source_booking.end_time), 'HH:mm')}
                         </div>
@@ -215,11 +215,11 @@ export function SwapRequestsPage() {
                       <div className="glass-card p-3">
                         <p className="text-xs font-medium text-surface-400 dark:text-surface-500 mb-1">{t('swap.theirSlot')}</p>
                         <div className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
-                          <CalendarBlank weight="regular" className="w-3.5 h-3.5" />
+                          <CalendarBlankIcon weight="regular" className="w-3.5 h-3.5" />
                           {format(new Date(req.target_booking.start_time), 'd. MMM yyyy', { locale: dateFnsLocale })}
                         </div>
                         <div className="flex items-center gap-2 text-sm text-surface-600 dark:text-surface-400 mt-1">
-                          <Clock weight="regular" className="w-3.5 h-3.5" />
+                          <ClockIcon weight="regular" className="w-3.5 h-3.5" />
                           {t('dashboard.slot')} {req.target_booking.slot_number} &middot;{' '}
                           {format(new Date(req.target_booking.start_time), 'HH:mm')} — {format(new Date(req.target_booking.end_time), 'HH:mm')}
                         </div>
@@ -228,7 +228,7 @@ export function SwapRequestsPage() {
 
                     {req.message && (
                       <div className="flex items-start gap-2 text-sm text-surface-600 dark:text-surface-400 mb-3">
-                        <ChatText weight="regular" className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <ChatTextIcon weight="regular" className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <p>{req.message}</p>
                       </div>
                     )}
@@ -241,8 +241,8 @@ export function SwapRequestsPage() {
                           className="btn btn-sm btn-primary"
                         >
                           {acting === req.id
-                            ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                            : <><Check weight="bold" className="w-4 h-4" /> {t('swap.accept')}</>
+                            ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                            : <><CheckIcon weight="bold" className="w-4 h-4" /> {t('swap.accept')}</>
                           }
                         </button>
                         <button
@@ -262,7 +262,7 @@ export function SwapRequestsPage() {
         )}
       </motion.div>
 
-      {/* Create Swap Modal */}
+      {/* Create SwapIcon Modal */}
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -333,8 +333,8 @@ export function SwapRequestsPage() {
                   data-testid="submit-swap"
                 >
                   {creating
-                    ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                    : <><Swap weight="bold" className="w-4 h-4" /> {t('swap.send')}</>
+                    ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                    : <><SwapIcon weight="bold" className="w-4 h-4" /> {t('swap.send')}</>
                   }
                 </button>
               </div>

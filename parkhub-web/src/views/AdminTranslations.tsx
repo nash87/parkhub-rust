@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import {
-  Translate, SpinnerGap, Check, XIcon, Clock, EyeIcon,
-  ThumbsUp, ThumbsDown, ChatCircleDots, ArrowsClockwiseIcon,
-  CheckCircle, XCircle, MagnifyingGlass,
+  TranslateIcon, SpinnerGapIcon, CheckIcon, XIcon, ClockIcon, EyeIcon,
+  ThumbsUpIcon, ThumbsDownIcon, ChatCircleDotsIcon, ArrowsClockwiseIcon,
+  CheckCircleIcon, XCircleIcon, MagnifyingGlassIcon,
 } from '@phosphor-icons/react';
 import { api, type TranslationProposal, type ProposalStatus } from '../api/client';
 import toast from 'react-hot-toast';
@@ -22,8 +22,8 @@ const STATUS_COLORS: Record<ProposalStatus, string> = {
 };
 
 const STATUS_ICONS: Record<ProposalStatus, React.ReactNode> = {
-  pending: <Clock weight="bold" className="w-3 h-3" />,
-  approved: <Check weight="bold" className="w-3 h-3" />,
+  pending: <ClockIcon weight="bold" className="w-3 h-3" />,
+  approved: <CheckIcon weight="bold" className="w-3 h-3" />,
   rejected: <XIcon weight="bold" className="w-3 h-3" />,
 };
 
@@ -145,8 +145,8 @@ export function AdminTranslationsPage() {
         const net = p.votes_for - p.votes_against;
         return (
           <div className="flex items-center gap-2 tabular-nums text-sm">
-            <span className="text-emerald-500"><ThumbsUp weight="bold" className="w-3.5 h-3.5 inline" /> {p.votes_for}</span>
-            <span className="text-red-500"><ThumbsDown weight="bold" className="w-3.5 h-3.5 inline" /> {p.votes_against}</span>
+            <span className="text-emerald-500"><ThumbsUpIcon weight="bold" className="w-3.5 h-3.5 inline" /> {p.votes_for}</span>
+            <span className="text-red-500"><ThumbsDownIcon weight="bold" className="w-3.5 h-3.5 inline" /> {p.votes_against}</span>
             <span className={`font-semibold ${net > 0 ? 'text-emerald-600' : net < 0 ? 'text-red-600' : 'text-surface-400'}`}>
               {net > 0 ? '+' : ''}{net}
             </span>
@@ -182,7 +182,7 @@ export function AdminTranslationsPage() {
               title={t('translations.admin.approve')}
               aria-label={`${t('translations.admin.approve')} ${p.key}`}
             >
-              <CheckCircle weight="bold" className="w-4.5 h-4.5" />
+              <CheckCircleIcon weight="bold" className="w-4.5 h-4.5" />
             </button>
             <button
               onClick={() => { setReviewingId(p.id); setReviewAction('rejected'); setReviewComment(''); }}
@@ -190,7 +190,7 @@ export function AdminTranslationsPage() {
               title={t('translations.admin.reject')}
               aria-label={`${t('translations.admin.reject')} ${p.key}`}
             >
-              <XCircle weight="bold" className="w-4.5 h-4.5" />
+              <XCircleIcon weight="bold" className="w-4.5 h-4.5" />
             </button>
             <button
               onClick={() => { setReviewingId(p.id); setReviewAction(null); setReviewComment(''); }}
@@ -213,7 +213,7 @@ export function AdminTranslationsPage() {
       {/* v11 SOTA hero — emerald tone (community-driven content moderation). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Translate} label={t('translations.admin.eyebrow', 'LOCALE CURATION')} />
+          <HeroEyebrow icon={TranslateIcon} label={t('translations.admin.eyebrow', 'LOCALE CURATION')} />
           <h1 className="admin-hero-headline">{t('translations.admin.title')}</h1>
           <p className="admin-hero-sub">{t('translations.admin.subtitle', 'Review community translation proposals before they ship')}</p>
         </div>
@@ -226,10 +226,10 @@ export function AdminTranslationsPage() {
           {pendingCount > 0 && (
             <>
               <button onClick={() => handleBulkAction('approved')} className="admin-hero-iconbtn text-emerald-600 dark:text-emerald-400" title={t('translations.admin.approveAll')}>
-                <CheckCircle weight="bold" className="w-4 h-4" />
+                <CheckCircleIcon weight="bold" className="w-4 h-4" />
               </button>
               <button onClick={() => handleBulkAction('rejected')} className="admin-hero-iconbtn text-red-500 dark:text-red-400" title={t('translations.admin.rejectAll')}>
-                <XCircle weight="bold" className="w-4 h-4" />
+                <XCircleIcon weight="bold" className="w-4 h-4" />
               </button>
             </>
           )}
@@ -242,7 +242,7 @@ export function AdminTranslationsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <MagnifyingGlassIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
             type="text"
             value={search}
@@ -297,8 +297,8 @@ export function AdminTranslationsPage() {
                 </code>
                 <span className="text-xs text-surface-400 font-medium">{reviewProposal.language.toUpperCase()}</span>
                 <div className="flex items-center gap-2 ml-auto tabular-nums text-sm">
-                  <span className="text-emerald-500"><ThumbsUp weight="bold" className="w-3.5 h-3.5 inline" /> {reviewProposal.votes_for}</span>
-                  <span className="text-red-500"><ThumbsDown weight="bold" className="w-3.5 h-3.5 inline" /> {reviewProposal.votes_against}</span>
+                  <span className="text-emerald-500"><ThumbsUpIcon weight="bold" className="w-3.5 h-3.5 inline" /> {reviewProposal.votes_for}</span>
+                  <span className="text-red-500"><ThumbsDownIcon weight="bold" className="w-3.5 h-3.5 inline" /> {reviewProposal.votes_against}</span>
                 </div>
               </div>
 
@@ -317,7 +317,7 @@ export function AdminTranslationsPage() {
               {/* Context */}
               {reviewProposal.context && (
                 <p className="text-xs text-surface-500 dark:text-surface-400 italic">
-                  <ChatCircleDots weight="bold" className="w-3 h-3 inline mr-1" />
+                  <ChatCircleDotsIcon weight="bold" className="w-3 h-3 inline mr-1" />
                   {reviewProposal.context}
                 </p>
               )}
@@ -345,8 +345,8 @@ export function AdminTranslationsPage() {
                       className="btn btn-primary bg-emerald-600 hover:bg-emerald-700"
                     >
                       {submittingReview && reviewAction === 'approved'
-                        ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                        : <CheckCircle weight="bold" className="w-4 h-4" />}
+                        ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                        : <CheckCircleIcon weight="bold" className="w-4 h-4" />}
                       {t('translations.admin.approve')}
                     </button>
                     <button
@@ -355,8 +355,8 @@ export function AdminTranslationsPage() {
                       className="btn bg-red-600 hover:bg-red-700 text-white"
                     >
                       {submittingReview && reviewAction === 'rejected'
-                        ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                        : <XCircle weight="bold" className="w-4 h-4" />}
+                        ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                        : <XCircleIcon weight="bold" className="w-4 h-4" />}
                       {t('translations.admin.reject')}
                     </button>
                     <button onClick={() => { setReviewingId(null); setReviewAction(null); }} className="btn btn-secondary">

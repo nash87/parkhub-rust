@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Question, FileText, Table, WarningIcon, CheckCircle, XCircle } from '@phosphor-icons/react';
+import { DownloadIcon, QuestionIcon, FileTextIcon, TableIcon, WarningIcon, CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -39,10 +39,10 @@ interface ComplianceReport {
   tom_summary: TomSummary;
 }
 
-const statusConfig: Record<string, { color: string; icon: typeof CheckCircle; label: string }> = {
-  compliant: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircle, label: 'Compliant' },
+const statusConfig: Record<string, { color: string; icon: typeof CheckCircleIcon; label: string }> = {
+  compliant: { color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: CheckCircleIcon, label: 'Compliant' },
   warning: { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: WarningIcon, label: 'WarningIcon' },
-  non_compliant: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: XCircle, label: 'Non-Compliant' },
+  non_compliant: { color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: XCircleIcon, label: 'Non-Compliant' },
 };
 
 const fallbackStatusConfig = statusConfig.warning ?? {
@@ -119,7 +119,7 @@ export function AdminCompliancePage() {
       {/* v11 SOTA hero — info tone (governance, neutral data). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={FileText} label={t('compliance.eyebrow', 'GOVERNANCE & DATA')} />
+          <HeroEyebrow icon={FileTextIcon} label={t('compliance.eyebrow', 'GOVERNANCE & DATA')} />
           <h1 className="admin-hero-headline">{t('compliance.title')}</h1>
           <p className="admin-hero-sub">{t('compliance.subtitle')}</p>
         </div>
@@ -130,7 +130,7 @@ export function AdminCompliancePage() {
             aria-label={t('compliance.helpLabel')}
             data-testid="compliance-help-btn"
           >
-            <Question size={16} />
+            <QuestionIcon size={16} />
           </button>
         </div>
       </section>
@@ -162,7 +162,7 @@ export function AdminCompliancePage() {
         </div>
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
-            <CheckCircle size={20} className="text-green-500" />
+            <CheckCircleIcon size={20} className="text-green-500" />
             <div>
               <p className="text-sm text-surface-500">{t('compliance.passed')}</p>
               <p className="text-xl font-bold text-surface-900 dark:text-white">{compliantCount}</p>
@@ -180,7 +180,7 @@ export function AdminCompliancePage() {
         </div>
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
-            <XCircle size={20} className="text-red-500" />
+            <XCircleIcon size={20} className="text-red-500" />
             <div>
               <p className="text-sm text-surface-500">{t('compliance.failures')}</p>
               <p className="text-xl font-bold text-surface-900 dark:text-white">{nonCompliantCount}</p>
@@ -189,14 +189,14 @@ export function AdminCompliancePage() {
         </div>
       </div>
 
-      {/* Download Actions */}
+      {/* DownloadIcon Actions */}
       <div className="flex flex-wrap gap-3" data-testid="compliance-downloads">
         <button
           onClick={downloadPdf}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 text-white hover:bg-primary-600"
           data-testid="download-pdf"
         >
-          <FileText size={16} />
+          <FileTextIcon size={16} />
           {t('compliance.downloadPdf')}
         </button>
         <button
@@ -204,7 +204,7 @@ export function AdminCompliancePage() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 hover:bg-surface-200"
           data-testid="download-datamap"
         >
-          <Table size={16} />
+          <TableIcon size={16} />
           {t('compliance.downloadDataMap')}
         </button>
         <button
@@ -212,7 +212,7 @@ export function AdminCompliancePage() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 hover:bg-surface-200"
           data-testid="download-audit-json"
         >
-          <Download size={16} />
+          <DownloadIcon size={16} />
           {t('compliance.auditJson')}
         </button>
         <button
@@ -220,7 +220,7 @@ export function AdminCompliancePage() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-100 dark:bg-surface-700 text-surface-700 dark:text-surface-300 hover:bg-surface-200"
           data-testid="download-audit-csv"
         >
-          <Download size={16} />
+          <DownloadIcon size={16} />
           {t('compliance.auditCsv')}
         </button>
       </div>

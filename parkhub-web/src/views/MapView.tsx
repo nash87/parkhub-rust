@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { MapPinIcon, NavigationArrow } from '@phosphor-icons/react';
+import { MapPinIcon, NavigationArrowIcon } from '@phosphor-icons/react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 // Leaflet CSS is loaded at runtime (see loadLeafletCss below) to keep it out
@@ -136,7 +136,7 @@ export function MapViewPage() {
 
       {markers.length === 0 ? (
         <motion.div variants={item} className="card p-12 text-center">
-          <NavigationArrow weight="light" className="w-16 h-16 mx-auto text-surface-300 dark:text-surface-600 mb-4" />
+          <NavigationArrowIcon weight="light" className="w-16 h-16 mx-auto text-surface-300 dark:text-surface-600 mb-4" />
           <p className="text-surface-500 dark:text-surface-400 text-lg">{t('map.noLots')}</p>
         </motion.div>
       ) : (

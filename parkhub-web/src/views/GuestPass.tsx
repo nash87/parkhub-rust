@@ -1,6 +1,6 @@
 import { useActionState, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlusIcon, Copy, ShareNetwork, Trash, QrCodeIcon, SpinnerGap, CheckCircle, CalendarBlank, MapPinIcon } from '@phosphor-icons/react';
+import { UserPlusIcon, CopyIcon, ShareNetworkIcon, TrashIcon, QrCodeIcon, SpinnerGapIcon, CheckCircleIcon, CalendarBlankIcon, MapPinIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { getInMemoryToken } from '../api/client';
@@ -279,12 +279,12 @@ export function GuestPassPage() {
                       {createdPass.guest_code}
                     </code>
                     <button onClick={() => copyCode(createdPass.guest_code)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700" data-testid="copy-code-btn">
-                      {copied ? <CheckCircle size={18} className="text-green-500" /> : <Copy size={18} className="text-surface-500" />}
+                      {copied ? <CheckCircleIcon size={18} className="text-green-500" /> : <CopyIcon size={18} className="text-surface-500" />}
                     </button>
                   </div>
                 </div>
                 <button onClick={() => sharePass(createdPass)} className="btn btn-secondary flex items-center gap-2 mt-2" data-testid="share-pass-btn">
-                  <ShareNetwork size={16} />
+                  <ShareNetworkIcon size={16} />
                   {t('guestBooking.share')}
                 </button>
               </div>
@@ -376,7 +376,7 @@ export function GuestPassPage() {
               <div className="sm:col-span-2 flex justify-end gap-2">
                 <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); }} className="btn btn-secondary">{t('common.cancel')}</button>
                 <button type="submit" disabled={isSubmitting} className="btn btn-primary" data-testid="submit-guest-btn">
-                  {isSubmitting ? <SpinnerGap size={16} className="animate-spin inline mr-1" /> : null}
+                  {isSubmitting ? <SpinnerGapIcon size={16} className="animate-spin inline mr-1" /> : null}
                   {isSubmitting ? t('guestBooking.creating') : t('common.save')}
                 </button>
               </div>
@@ -411,16 +411,16 @@ export function GuestPassPage() {
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-surface-500">
                     <span className="flex items-center gap-1"><MapPinIcon className="w-3.5 h-3.5" />{b.lot_name} / {b.slot_number}</span>
-                    <span className="flex items-center gap-1"><CalendarBlank className="w-3.5 h-3.5" />{new Date(b.start_time).toLocaleString()} — {new Date(b.end_time).toLocaleString()}</span>
+                    <span className="flex items-center gap-1"><CalendarBlankIcon className="w-3.5 h-3.5" />{new Date(b.start_time).toLocaleString()} — {new Date(b.end_time).toLocaleString()}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <button onClick={() => sharePass(b)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" title={t('guestBooking.share')}>
-                    <ShareNetwork className="w-5 h-5" />
+                    <ShareNetworkIcon className="w-5 h-5" />
                   </button>
                   {isAdmin && b.status === 'active' && (
                     <button onClick={() => handleCancel(b.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('guestBooking.cancel')} data-testid={`cancel-${b.id}`}>
-                      <Trash className="w-5 h-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
                   )}
                 </div>

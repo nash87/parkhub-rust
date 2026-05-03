@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Buildings, House, UsersThree, CarIcon, ArrowRightIcon, ArrowLeft, Check,
-  SunDim, Moon, ToggleLeft, ToggleRight, Info, ShieldCheck,
+  BuildingsIcon, HouseIcon, UsersThreeIcon, CarIcon, ArrowRightIcon, ArrowLeftIcon, CheckIcon,
+  SunDimIcon, MoonIcon, ToggleLeftIcon, ToggleRightIcon, InfoIcon, ShieldCheckIcon,
 } from '@phosphor-icons/react';
 import { useUseCase, type UseCase } from '../context/UseCaseContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,7 +26,7 @@ const USE_CASES: {
 }[] = [
   {
     id: 'business',
-    icon: Buildings,
+    icon: BuildingsIcon,
     iconBg: 'bg-accent-100 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400',
     ring: 'ring-accent-500',
     check: 'bg-accent-500',
@@ -34,7 +34,7 @@ const USE_CASES: {
   },
   {
     id: 'residential',
-    icon: House,
+    icon: HouseIcon,
     iconBg: 'bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400',
     ring: 'ring-emerald-500',
     check: 'bg-emerald-500',
@@ -42,7 +42,7 @@ const USE_CASES: {
   },
   {
     id: 'personal',
-    icon: UsersThree,
+    icon: UsersThreeIcon,
     iconBg: 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400',
     ring: 'ring-indigo-500',
     check: 'bg-indigo-500',
@@ -113,8 +113,8 @@ export function UseCaseSelectorPage() {
           aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
         >
           {resolved === 'dark'
-            ? <SunDim weight="bold" className="w-4 h-4 text-accent-400" />
-            : <Moon weight="bold" className="w-4 h-4 text-surface-500" />}
+            ? <SunDimIcon weight="bold" className="w-4 h-4 text-accent-400" />
+            : <MoonIcon weight="bold" className="w-4 h-4 text-surface-500" />}
         </button>
       </div>
 
@@ -188,7 +188,7 @@ export function UseCaseSelectorPage() {
                             exit={{ scale: 0 }}
                             className={`absolute top-3 right-3 w-5 h-5 ${uc.check} flex items-center justify-center`}
                           >
-                            <Check weight="bold" className="w-3 h-3 text-white" />
+                            <CheckIcon weight="bold" className="w-3 h-3 text-white" />
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -287,9 +287,9 @@ export function UseCaseSelectorPage() {
                                 aria-label={t(`features.modules.${mod.id}.name`)}
                               >
                                 {enabled ? (
-                                  <ToggleRight weight="fill" className="w-7 h-7 text-accent-500" />
+                                  <ToggleRightIcon weight="fill" className="w-7 h-7 text-accent-500" />
                                 ) : (
-                                  <ToggleLeft weight="regular" className="w-7 h-7 text-surface-300 dark:text-surface-600" />
+                                  <ToggleLeftIcon weight="regular" className="w-7 h-7 text-surface-300 dark:text-surface-600" />
                                 )}
                               </button>
                               <div className="flex-1 min-w-0">
@@ -316,7 +316,7 @@ export function UseCaseSelectorPage() {
                                 }`}
                                 aria-label={t('common.info', 'More info')}
                               >
-                                <Info weight={helpOpen ? 'fill' : 'regular'} className="w-4 h-4" />
+                                <InfoIcon weight={helpOpen ? 'fill' : 'regular'} className="w-4 h-4" />
                               </button>
                             </div>
                             <AnimatePresence>
@@ -351,7 +351,7 @@ export function UseCaseSelectorPage() {
                 className="w-full card p-4 mb-6 border-l-3 border-l-emerald-500"
               >
                 <div className="flex items-start gap-3">
-                  <ShieldCheck weight="fill" className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                  <ShieldCheckIcon weight="fill" className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-xs font-semibold text-surface-900 dark:text-white uppercase tracking-wider mb-1.5">
                       {t('features.compliance.title')}
@@ -377,7 +377,7 @@ export function UseCaseSelectorPage() {
                   onClick={handleBack}
                   className="btn btn-secondary text-sm px-5 py-3 cursor-pointer"
                 >
-                  <ArrowLeft weight="bold" className="w-4 h-4" />
+                  <ArrowLeftIcon weight="bold" className="w-4 h-4" />
                   {t('onboarding.back')}
                 </button>
 
@@ -389,7 +389,7 @@ export function UseCaseSelectorPage() {
                       animate={{ scale: 1, opacity: 1 }}
                       className="flex items-center gap-2 text-accent-600 dark:text-accent-400 font-semibold text-sm px-5 py-3"
                     >
-                      <Check weight="bold" className="w-4 h-4" />
+                      <CheckIcon weight="bold" className="w-4 h-4" />
                       {t('useCase.applying')}
                     </motion.div>
                   ) : (

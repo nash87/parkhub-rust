@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  UserCircleIcon, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
-  DownloadSimpleIcon, Trash, CaretDownIcon, CaretUpIcon,
-  MapPinIcon, Question,
+  UserCircleIcon, EnvelopeIcon, PencilSimpleIcon, FloppyDiskIcon, SpinnerGapIcon, LockIcon,
+  DownloadSimpleIcon, TrashIcon, CaretDownIcon, CaretUpIcon,
+  MapPinIcon, QuestionIcon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type UserStats } from '../api/client';
@@ -160,7 +160,7 @@ export function ProfilePage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm">
-                    {saving ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <FloppyDisk weight="bold" className="w-4 h-4" />}
+                    {saving ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <FloppyDiskIcon weight="bold" className="w-4 h-4" />}
                     {t('common.save', 'Speichern')}
                   </button>
                   <button onClick={() => setEditing(false)} className="btn btn-secondary btn-sm">{t('common.cancel', 'Abbrechen')}</button>
@@ -176,11 +176,11 @@ export function ProfilePage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-surface-500 dark:text-surface-400">
                   <span className="flex items-center gap-1.5"><UserCircleIcon weight="regular" className="w-4 h-4" />@{user?.username}</span>
-                  <span className="flex items-center gap-1.5"><Envelope weight="regular" className="w-4 h-4" />{user?.email}</span>
+                  <span className="flex items-center gap-1.5"><EnvelopeIcon weight="regular" className="w-4 h-4" />{user?.email}</span>
                 </div>
                 <div className="mt-3">
                   <button onClick={() => setEditing(true)} className="btn btn-secondary btn-sm">
-                    <PencilSimple weight="bold" className="w-3.5 h-3.5" /> {t('common.edit', 'Bearbeiten')}
+                    <PencilSimpleIcon weight="bold" className="w-3.5 h-3.5" /> {t('common.edit', 'Bearbeiten')}
                   </button>
                 </div>
               </>
@@ -259,7 +259,7 @@ export function ProfilePage() {
               {pwForm.confirm.length > 0 && pwForm.newPw !== pwForm.confirm && <p className="text-xs text-red-600 mt-1">{t('profile.passwordsNoMatch')}</p>}
             </div>
             <button onClick={handleChangePassword} disabled={pwSaving || pwForm.newPw.length < 8 || pwForm.newPw !== pwForm.confirm || !pwForm.current} className="btn btn-primary btn-sm disabled:opacity-60">
-              {pwSaving ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Lock weight="bold" className="w-4 h-4" />}
+              {pwSaving ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <LockIcon weight="bold" className="w-4 h-4" />}
               {t('profile.changePasswordBtn', 'Passwort \u00e4ndern')}
             </button>
           </div>
@@ -281,7 +281,7 @@ export function ProfilePage() {
             </div>
           </button>
           <button onClick={handleDeleteAccount} className="btn btn-secondary flex-1 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-            <Trash weight="bold" className="w-4 h-4 text-red-600" />
+            <TrashIcon weight="bold" className="w-4 h-4 text-red-600" />
             <div className="text-left">
               <div className="font-medium">{t('gdpr.deleteAccount', 'Konto l\u00f6schen')}</div>
               <div className="text-xs opacity-60">{t('gdpr.deleteAccountDesc', 'Alle Daten unwiderruflich l\u00f6schen')}</div>
@@ -312,7 +312,7 @@ export function ProfilePage() {
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t('geofence.autoCheckIn')}</h3>
               <div className="group relative">
-                <Question weight="fill" className="w-4 h-4 text-surface-400 cursor-help" />
+                <QuestionIcon weight="fill" className="w-4 h-4 text-surface-400 cursor-help" />
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-surface-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                   {t('geofence.help')}
                 </div>

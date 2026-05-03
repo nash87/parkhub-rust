@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Translate, MagnifyingGlass, ThumbsUp, ThumbsDown,
-  SpinnerGap, PaperPlaneTilt, XIcon, Check, Clock,
-  ChatCircleDots,
+  TranslateIcon, MagnifyingGlassIcon, ThumbsUpIcon, ThumbsDownIcon,
+  SpinnerGapIcon, PaperPlaneTiltIcon, XIcon, CheckIcon, ClockIcon,
+  ChatCircleDotsIcon,
 } from '@phosphor-icons/react';
 import { api, type TranslationProposal, type ProposalStatus } from '../api/client';
 import toast from 'react-hot-toast';
@@ -44,8 +44,8 @@ function StatusBadge({ status, t }: { status: ProposalStatus; t: (key: string) =
     rejected: 'badge-error',
   };
   const icons = {
-    pending: <Clock weight="bold" className="w-3 h-3" />,
-    approved: <Check weight="bold" className="w-3 h-3" />,
+    pending: <ClockIcon weight="bold" className="w-3 h-3" />,
+    approved: <CheckIcon weight="bold" className="w-3 h-3" />,
     rejected: <XIcon weight="bold" className="w-3 h-3" />,
   };
   const labels = {
@@ -113,7 +113,7 @@ function ProposalCard({
       {/* Context */}
       {proposal.context && (
         <p className="text-xs text-surface-500 dark:text-surface-400 italic">
-          <ChatCircleDots weight="bold" className="w-3 h-3 inline mr-1" />
+          <ChatCircleDotsIcon weight="bold" className="w-3 h-3 inline mr-1" />
           {proposal.context}
         </p>
       )}
@@ -138,7 +138,7 @@ function ProposalCard({
             } ${isOwn ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             aria-label={t('translations.voteFor')}
           >
-            <ThumbsUp weight={proposal.user_vote === 'up' ? 'fill' : 'bold'} className="w-3.5 h-3.5" />
+            <ThumbsUpIcon weight={proposal.user_vote === 'up' ? 'fill' : 'bold'} className="w-3.5 h-3.5" />
             <span className="tabular-nums">{proposal.votes_for}</span>
           </button>
           <button
@@ -151,7 +151,7 @@ function ProposalCard({
             } ${isOwn ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             aria-label={t('translations.voteAgainst')}
           >
-            <ThumbsDown weight={proposal.user_vote === 'down' ? 'fill' : 'bold'} className="w-3.5 h-3.5" />
+            <ThumbsDownIcon weight={proposal.user_vote === 'down' ? 'fill' : 'bold'} className="w-3.5 h-3.5" />
             <span className="tabular-nums">{proposal.votes_against}</span>
           </button>
           <span className="text-xs text-surface-400 ml-auto">
@@ -258,13 +258,13 @@ export function TranslationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-            <Translate weight="fill" className="w-7 h-7 text-primary-600" />
+            <TranslateIcon weight="fill" className="w-7 h-7 text-primary-600" />
             {t('translations.title')}
           </h1>
           <p className="text-surface-500 dark:text-surface-400 text-sm mt-1">{t('translations.subtitle')}</p>
         </div>
         <button onClick={() => setShowPropose(true)} className="btn btn-primary">
-          <PaperPlaneTilt weight="bold" className="w-4 h-4" />
+          <PaperPlaneTiltIcon weight="bold" className="w-4 h-4" />
           {t('translations.propose')}
         </button>
       </div>
@@ -289,7 +289,7 @@ export function TranslationsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <MagnifyingGlassIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
             type="text"
             value={search}
@@ -396,7 +396,7 @@ export function TranslationsPage() {
 
               <div className="flex gap-3">
                 <button onClick={handlePropose} disabled={submitting || !proposeKey || !proposeValue} className="btn btn-primary">
-                  {submitting ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <PaperPlaneTilt weight="bold" className="w-4 h-4" />}
+                  {submitting ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <PaperPlaneTiltIcon weight="bold" className="w-4 h-4" />}
                   {t('translations.submitProposal')}
                 </button>
                 <button onClick={() => setShowPropose(false)} className="btn btn-secondary">{t('common.cancel')}</button>
@@ -410,11 +410,11 @@ export function TranslationsPage() {
       {activeTab === 'proposals' ? (
         loading ? (
           <div className="flex items-center justify-center h-40" role="status">
-            <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+            <SpinnerGapIcon weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
           </div>
         ) : filteredProposals.length === 0 ? (
           <div className="card p-8 text-center">
-            <Translate weight="duotone" className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto mb-3" />
+            <TranslateIcon weight="duotone" className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto mb-3" />
             <p className="text-sm text-surface-500 dark:text-surface-400">{t('translations.noProposals')}</p>
           </div>
         ) : (

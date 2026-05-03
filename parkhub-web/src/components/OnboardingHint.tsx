@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { XIcon, Lightbulb } from '@phosphor-icons/react';
+import { XIcon, LightbulbIcon } from '@phosphor-icons/react';
 import { useFeatures } from '../context/FeaturesContext';
 
 const STORAGE_PREFIX = 'parkhub_hint_';
@@ -24,7 +24,7 @@ interface Props {
  * Shows once per hint ID, remembers dismissal in localStorage.
  * Only active when `onboarding_hints` feature is enabled.
  */
-export function OnboardingHint({ id, message, icon: Icon = Lightbulb, position = 'bottom', className = '' }: Props) {
+export function OnboardingHint({ id, message, icon: Icon = LightbulbIcon, position = 'bottom', className = '' }: Props) {
   const { t } = useTranslation();
   const { isEnabled } = useFeatures();
   const [visible, setVisible] = useState(false);

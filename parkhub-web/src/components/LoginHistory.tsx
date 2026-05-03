@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClockCounterClockwiseIcon, SpinnerGap, Desktop, GlobeIcon, ShieldWarning, Check } from '@phosphor-icons/react';
+import { ClockCounterClockwiseIcon, SpinnerGapIcon, DesktopIcon, GlobeIcon, ShieldWarningIcon, CheckIcon } from '@phosphor-icons/react';
 import { api, type LoginHistoryEntry, type SessionInfo } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -48,7 +48,7 @@ export function LoginHistoryComponent() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-4">
-        <SpinnerGap className="animate-spin" size={20} />
+        <SpinnerGapIcon className="animate-spin" size={20} />
         <span>Loading...</span>
       </div>
     );
@@ -86,9 +86,9 @@ export function LoginHistoryComponent() {
               <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
                   {entry.success ? (
-                    <Check size={16} className="text-green-500" />
+                    <CheckIcon size={16} className="text-green-500" />
                   ) : (
-                    <ShieldWarning size={16} className="text-red-500" />
+                    <ShieldWarningIcon size={16} className="text-red-500" />
                   )}
                   <div>
                     <p className="text-sm font-medium">
@@ -105,7 +105,7 @@ export function LoginHistoryComponent() {
                     {entry.ip_address}
                   </div>
                   <div className="flex items-center gap-1">
-                    <Desktop size={12} />
+                    <DesktopIcon size={12} />
                     {parseUserAgent(entry.user_agent)}
                   </div>
                 </div>
@@ -123,7 +123,7 @@ export function LoginHistoryComponent() {
             sessions.map(session => (
               <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
-                  <Desktop size={18} className={session.is_current ? 'text-primary-500' : 'text-gray-400'} />
+                  <DesktopIcon size={18} className={session.is_current ? 'text-primary-500' : 'text-gray-400'} />
                   <div>
                     <p className="text-sm font-medium flex items-center gap-2">
                       Session {session.id}
@@ -142,7 +142,7 @@ export function LoginHistoryComponent() {
                     disabled={revoking === session.id}
                     className="text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 disabled:opacity-50"
                   >
-                    {revoking === session.id ? <SpinnerGap className="animate-spin" size={14} /> : 'Revoke'}
+                    {revoking === session.id ? <SpinnerGapIcon className="animate-spin" size={14} /> : 'Revoke'}
                   </button>
                 )}
               </div>

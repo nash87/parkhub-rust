@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartBar, GearSixIcon, UsersIcon, Megaphone, ChartLine, MapPinIcon, Translate, PresentationChart, Gauge,
-  Buildings, ClockCounterClockwiseIcon, Database, CarIcon, Wheelchair, Wrench, CurrencyDollar, UserPlusIcon, Lightning,
-  PuzzlePiece, GraphicsCard, ShieldCheck, LockKey, MapTrifold, ArrowsClockwiseIcon, List, XIcon, ArrowSquareOut,
+  ChartBarIcon, GearSixIcon, UsersIcon, MegaphoneIcon, ChartLineIcon, MapPinIcon, TranslateIcon, PresentationChartIcon, GaugeIcon,
+  BuildingsIcon, ClockCounterClockwiseIcon, DatabaseIcon, CarIcon, WheelchairIcon, WrenchIcon, CurrencyDollarIcon, UserPlusIcon, LightningIcon,
+  PuzzlePieceIcon, GraphicsCardIcon, ShieldCheckIcon, LockKeyIcon, MapTrifoldIcon, ArrowsClockwiseIcon, ListIcon, XIcon, ArrowSquareOutIcon,
 } from '@phosphor-icons/react';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
@@ -39,8 +39,8 @@ function useAdminSections(): NavSection[] {
       key: 'overview',
       label: t('admin.group.overview', 'Overview'),
       items: [
-        { key: 'reports', label: t('admin.overview', 'Overview'), to: '/admin', icon: ChartBar },
-        { key: 'analytics', label: t('admin.analytics', 'Analytics'), to: '/admin/analytics', icon: PresentationChart },
+        { key: 'reports', label: t('admin.overview', 'Overview'), to: '/admin', icon: ChartBarIcon },
+        { key: 'analytics', label: t('admin.analytics', 'Analytics'), to: '/admin/analytics', icon: PresentationChartIcon },
         { key: 'audit', label: t('admin.auditLog', 'Audit Log'), to: '/admin/audit-log', icon: ClockCounterClockwiseIcon },
       ],
     },
@@ -49,11 +49,11 @@ function useAdminSections(): NavSection[] {
       label: t('admin.group.operations', 'Operations'),
       items: [
         { key: 'lots', label: t('admin.lots', 'Lots'), to: '/admin/lots', icon: MapPinIcon },
-        { key: 'zones', label: t('parkingZones.title', 'Zones'), to: '/admin/zones', icon: MapTrifold },
+        { key: 'zones', label: t('parkingZones.title', 'Zones'), to: '/admin/zones', icon: MapTrifoldIcon },
         { key: 'fleet', label: t('admin.fleet', 'Fleet'), to: '/admin/fleet', icon: CarIcon },
-        { key: 'chargers', label: t('admin.chargers', 'EV Chargers'), to: '/admin/chargers', icon: Lightning },
-        { key: 'maintenance', label: t('admin.maintenance', 'Maintenance'), to: '/admin/maintenance', icon: Wrench },
-        { key: 'accessible', label: t('admin.accessible', 'Accessible'), to: '/admin/accessible', icon: Wheelchair },
+        { key: 'chargers', label: t('admin.chargers', 'EV Chargers'), to: '/admin/chargers', icon: LightningIcon },
+        { key: 'maintenance', label: t('admin.maintenance', 'Maintenance'), to: '/admin/maintenance', icon: WrenchIcon },
+        { key: 'accessible', label: t('admin.accessible', 'Accessible'), to: '/admin/accessible', icon: WheelchairIcon },
         { key: 'visitors', label: t('admin.visitors', 'Visitors'), to: '/admin/visitors', icon: UserPlusIcon },
       ],
     },
@@ -62,28 +62,28 @@ function useAdminSections(): NavSection[] {
       label: t('admin.group.peopleAccess', 'People & Access'),
       items: [
         { key: 'users', label: t('admin.users', 'UsersIcon'), to: '/admin/users', icon: UsersIcon },
-        { key: 'roles', label: t('rbac.title', 'Roles'), to: '/admin/roles', icon: LockKey },
-        { key: 'tenants', label: t('admin.tenants', 'Tenants'), to: '/admin/tenants', icon: Buildings },
-        { key: 'sso', label: t('admin.sso', 'SSO & SAML'), to: '/admin/sso', icon: ShieldCheck },
+        { key: 'roles', label: t('rbac.title', 'Roles'), to: '/admin/roles', icon: LockKeyIcon },
+        { key: 'tenants', label: t('admin.tenants', 'Tenants'), to: '/admin/tenants', icon: BuildingsIcon },
+        { key: 'sso', label: t('admin.sso', 'SSO & SAML'), to: '/admin/sso', icon: ShieldCheckIcon },
       ],
     },
     {
       key: 'compliance',
       label: t('admin.group.complianceData', 'Compliance & Data'),
       items: [
-        { key: 'compliance', label: t('compliance.title', 'Compliance'), to: '/admin/compliance', icon: ShieldCheck },
-        { key: 'data', label: t('admin.dataManagement', 'Data'), to: '/admin/data', icon: Database },
-        { key: 'rateLimits', label: t('admin.rateLimits', 'Rate Limits'), to: '/admin/rate-limits', icon: Gauge },
-        { key: 'announcements', label: t('admin.announcements', 'Announcements'), to: '/admin/announcements', icon: Megaphone },
+        { key: 'compliance', label: t('compliance.title', 'Compliance'), to: '/admin/compliance', icon: ShieldCheckIcon },
+        { key: 'data', label: t('admin.dataManagement', 'Data'), to: '/admin/data', icon: DatabaseIcon },
+        { key: 'rateLimits', label: t('admin.rateLimits', 'Rate Limits'), to: '/admin/rate-limits', icon: GaugeIcon },
+        { key: 'announcements', label: t('admin.announcements', 'Announcements'), to: '/admin/announcements', icon: MegaphoneIcon },
       ],
     },
     {
       key: 'billing',
       label: t('admin.group.billingReports', 'Billing & Reports'),
       items: [
-        { key: 'billing', label: t('admin.billing', 'Billing'), to: '/admin/billing', icon: CurrencyDollar },
-        { key: 'reports', label: t('admin.reports', 'Reports'), to: '/admin/reports', icon: ChartLine },
-        { key: 'translations', label: t('admin.translations', 'Translations'), to: '/admin/translations', icon: Translate },
+        { key: 'billing', label: t('admin.billing', 'Billing'), to: '/admin/billing', icon: CurrencyDollarIcon },
+        { key: 'reports', label: t('admin.reports', 'Reports'), to: '/admin/reports', icon: ChartLineIcon },
+        { key: 'translations', label: t('admin.translations', 'Translations'), to: '/admin/translations', icon: TranslateIcon },
       ],
     },
     {
@@ -91,10 +91,10 @@ function useAdminSections(): NavSection[] {
       label: t('admin.group.platform', 'Platform'),
       items: [
         { key: 'settings', label: t('admin.settings', 'Settings'), to: '/admin/settings', icon: GearSixIcon },
-        { key: 'modules', label: t('admin.modules.title', 'Modules & Features'), to: '/admin/modules', icon: PuzzlePiece },
-        { key: 'plugins', label: t('admin.plugins', 'Plugins'), to: '/admin/plugins', icon: PuzzlePiece },
+        { key: 'modules', label: t('admin.modules.title', 'Modules & Features'), to: '/admin/modules', icon: PuzzlePieceIcon },
+        { key: 'plugins', label: t('admin.plugins', 'Plugins'), to: '/admin/plugins', icon: PuzzlePieceIcon },
         { key: 'updates', label: t('nav.updates', 'Updates'), to: '/admin/updates', icon: ArrowsClockwiseIcon },
-        { key: 'graphql', label: 'GraphQL Playground', to: '/api/v1/graphql/playground', icon: GraphicsCard, external: true },
+        { key: 'graphql', label: 'GraphQL Playground', to: '/api/v1/graphql/playground', icon: GraphicsCardIcon, external: true },
       ],
     },
   ];
@@ -127,7 +127,7 @@ function AdminSidebar({ sections, onNavigate }: { sections: NavSection[]; onNavi
                 <>
                   <Icon weight={active ? 'fill' : 'regular'} className="w-4 h-4 shrink-0" />
                   <span className="truncate flex-1">{item.label}</span>
-                  {item.external && <ArrowSquareOut weight="regular" className="w-3 h-3 text-surface-400" />}
+                  {item.external && <ArrowSquareOutIcon weight="regular" className="w-3 h-3 text-surface-400" />}
                   {active && (
                     <motion.span
                       layoutId="admin-active-dot"
@@ -193,7 +193,7 @@ export function AdminPage() {
           aria-label={t('admin.openNav', 'Open admin navigation')}
           className="p-2 -ml-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"
         >
-          <List weight="bold" className="w-5 h-5" />
+          <ListIcon weight="bold" className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
           <div className="text-[11px] uppercase tracking-wider text-surface-500 dark:text-surface-400">{t('admin.title')}</div>

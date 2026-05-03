@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Clock, CarIcon, XIcon, SpinnerGap,
+  ClockIcon, CarIcon, XIcon, SpinnerGapIcon,
   ArrowClockwiseIcon, WarningIcon,
-  MagnifyingGlass, Funnel, QrCodeIcon, FilePdf, CalendarPlus,
+  MagnifyingGlassIcon, FunnelIcon, QrCodeIcon, FilePdfIcon, CalendarPlusIcon,
 } from '@phosphor-icons/react';
 import type { TFunction } from 'i18next';
 import { api, type Booking, type Vehicle } from '../api/client';
@@ -135,7 +135,7 @@ export function BookingsPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant (visible on mobile). */}
       <motion.section variants={item} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Clock} label={t('bookings.eyebrow', 'MY RESERVATIONS')} />
+          <HeroEyebrow icon={ClockIcon} label={t('bookings.eyebrow', 'MY RESERVATIONS')} />
           <h1 className="admin-hero-headline">{t('bookings.title')}</h1>
           <p className="admin-hero-sub">{t('bookings.subtitle')}</p>
         </div>
@@ -149,13 +149,13 @@ export function BookingsPage() {
       {/* Filters */}
       <motion.div variants={item} className="bg-white/80 dark:bg-surface-900/80 backdrop-blur-lg border border-surface-200/60 dark:border-surface-800/60 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3" aria-live="polite">
-          <Funnel weight="bold" className="w-4 h-4 text-surface-400" />
+          <FunnelIcon weight="bold" className="w-4 h-4 text-surface-400" />
           <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t('common.filter')}</span>
           <span className="ml-auto text-xs text-surface-400">{t('bookingFilters.totalCount', { count: filtered.length })}</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="relative">
-            <MagnifyingGlass weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <MagnifyingGlassIcon weight="regular" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
             <input type="text" value={searchLot} onChange={e => setSearchLot(e.target.value)} placeholder={t('bookingFilters.searchLot')} className="input pl-9 text-sm" aria-label={t('bookingFilters.searchLot')} />
           </div>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input" aria-label={t('common.filter')}>
@@ -265,7 +265,7 @@ function Empty({ text, showAction, t }: EmptyProps) {
           className="w-16 h-16 rounded-full bg-primary-500/10 ring-1 ring-primary-500/20 flex items-center justify-center mb-4"
           aria-hidden="true"
         >
-          <CalendarPlus weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+          <CalendarPlusIcon weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
         </div>
         <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-1">
           {t('bookings.emptyActiveTitle')}
@@ -351,7 +351,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
           <span className="flex items-center gap-1"><CarIcon weight="regular" className="w-3.5 h-3.5" /> {booking.vehicle_plate}</span>
         )}
         <span className="flex items-center gap-1">
-          <Clock weight="regular" className="w-3.5 h-3.5" />
+          <ClockIcon weight="regular" className="w-3.5 h-3.5" />
           {format(new Date(booking.start_time), 'HH:mm')} — {format(new Date(booking.end_time), 'HH:mm')}
         </span>
       </div>
@@ -384,7 +384,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
             aria-label={`${t('bookings.downloadInvoice')} ${booking.lot_name}`}
             data-testid={`invoice-${booking.id}`}
           >
-            <FilePdf weight="bold" className="w-4 h-4" /> {t('bookings.downloadInvoice')}
+            <FilePdfIcon weight="bold" className="w-4 h-4" /> {t('bookings.downloadInvoice')}
           </a>
           {/* Tier-2 item 9 — Zum Kalender hinzufügen. The bulk feed lives at
               /api/v1/bookings/ical; for single-event downloads we build the
@@ -406,7 +406,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
             aria-label={`${t('bookings.addToCalendar', 'Zum Kalender hinzufügen')} ${booking.lot_name}`}
             data-testid={`ical-${booking.id}`}
           >
-            <CalendarPlus weight="bold" className="w-4 h-4" /> {t('bookings.addToCalendar', 'Zum Kalender hinzufügen')}
+            <CalendarPlusIcon weight="bold" className="w-4 h-4" /> {t('bookings.addToCalendar', 'Zum Kalender hinzufügen')}
           </button>
           {isActiveOrConfirmed && (
             <button
@@ -416,7 +416,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
               className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               {cancelling === booking.id
-                ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
+                ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
                 : <><XIcon weight="bold" className="w-4 h-4" /> {t('bookings.cancelBtn')}</>
               }
             </button>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarCheckIcon, CarIcon, UserCircleIcon, UsersIcon, GearSixIcon, CoinsIcon, CalendarIcon, CalendarPlus,
+  CalendarCheckIcon, CarIcon, UserCircleIcon, UsersIcon, GearSixIcon, CoinsIcon, CalendarIcon, CalendarPlusIcon,
 } from '@phosphor-icons/react';
 
 interface Action {
@@ -14,7 +14,7 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { labelKey: 'dashboard.bookSpot', path: '/book', icon: CalendarPlus, shortcut: 'Ctrl+B' },
+  { labelKey: 'dashboard.bookSpot', path: '/book', icon: CalendarPlusIcon, shortcut: 'Ctrl+B' },
   { labelKey: 'nav.bookings', path: '/bookings', icon: CalendarCheckIcon },
   { labelKey: 'nav.vehicles', path: '/vehicles', icon: CarIcon },
   { labelKey: 'nav.profile', path: '/profile', icon: UserCircleIcon },

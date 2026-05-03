@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { SpinnerGap, Check, GearSixIcon } from '@phosphor-icons/react';
+import { SpinnerGapIcon, CheckIcon, GearSixIcon } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -111,7 +111,7 @@ export function AdminSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <SpinnerGapIcon weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -206,7 +206,7 @@ export function AdminSettingsPage() {
 
           {/* Save Button */}
           <button onClick={handleSave} disabled={saving} className="btn btn-primary w-full">
-            {saving ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+            {saving ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <CheckIcon weight="bold" className="w-4 h-4" />}
             {t('admin.saveSettings')}
           </button>
         </div>

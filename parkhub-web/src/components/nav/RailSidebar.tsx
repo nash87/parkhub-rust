@@ -16,7 +16,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CarSimpleIcon, GearSixIcon, SignOut, SunDim, Moon,
+  CarSimpleIcon, GearSixIcon, SignOutIcon, SunDimIcon, MoonIcon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -104,7 +104,7 @@ export function RailSidebar({ unreadCount, onLogout, isAdmin }: RailSidebarProps
           aria-label={resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
           title={resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
         >
-          {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
+          {resolved === 'dark' ? <SunDimIcon weight="fill" className="w-5 h-5" /> : <MoonIcon weight="fill" className="w-5 h-5" />}
         </button>
 
         <div className="my-1 scale-90">
@@ -129,7 +129,7 @@ export function RailSidebar({ unreadCount, onLogout, isAdmin }: RailSidebarProps
           aria-label={t('nav.logout')}
           title={t('nav.logout')}
         >
-          <SignOut weight="bold" className="w-5 h-5" />
+          <SignOutIcon weight="bold" className="w-5 h-5" />
         </button>
       </div>
     </aside>

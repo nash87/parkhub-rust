@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { CaretRight } from '@phosphor-icons/react';
+import { CaretRightIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 /** Map route segments to i18n keys. */
@@ -69,7 +69,7 @@ export function Breadcrumb() {
       </Link>
       {crumbs.map(crumb => (
         <span key={crumb.path} className="flex items-center gap-1.5">
-          <CaretRight weight="bold" className="w-3 h-3 text-surface-300 dark:text-surface-600" aria-hidden="true" />
+          <CaretRightIcon weight="bold" className="w-3 h-3 text-surface-300 dark:text-surface-600" aria-hidden="true" />
           {crumb.isLast ? (
             <span className="text-surface-900 dark:text-white font-medium" aria-current="page">
               {crumb.label}

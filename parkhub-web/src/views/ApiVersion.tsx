@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Code, Info } from '@phosphor-icons/react';
+import { CodeIcon, InfoIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 interface DeprecationNotice {
@@ -45,7 +45,7 @@ export function ApiVersionBadge() {
       data-testid="api-version-badge"
       title={t('apiVersion.tooltip')}
     >
-      <Code size={12} />
+      <CodeIcon size={12} />
       API v{version}
     </span>
   );
@@ -78,7 +78,7 @@ export function ApiVersionAdmin() {
   return (
     <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700" data-testid="api-version-admin">
       <div className="flex items-center gap-2 mb-3">
-        <Info size={18} className="text-primary-500" />
+        <InfoIcon size={18} className="text-primary-500" />
         <h3 className="font-medium text-surface-900 dark:text-white">
           {t('apiVersion.title')}
         </h3>

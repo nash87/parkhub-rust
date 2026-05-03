@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { ClockCounterClockwiseIcon, DownloadSimpleIcon, FunnelSimple, MagnifyingGlass, FileCsv, FileDoc, FileJs, CircleNotch } from '@phosphor-icons/react';
+import { ClockCounterClockwiseIcon, DownloadSimpleIcon, FunnelSimpleIcon, MagnifyingGlassIcon, FileCsvIcon, FileDocIcon, FileJsIcon, CircleNotchIcon } from '@phosphor-icons/react';
 import { api, type AuditLogEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -148,7 +148,7 @@ export function AdminAuditLogPage() {
             className="admin-hero-action"
             data-testid="export-csv-btn"
           >
-            <FileCsv weight="bold" className="w-4 h-4" />
+            <FileCsvIcon weight="bold" className="w-4 h-4" />
             {t('auditLog.exportCsv', 'CSV')}
           </button>
           <button
@@ -184,9 +184,9 @@ export function AdminAuditLogPage() {
                 }`}
                 data-testid={`format-${fmt}`}
               >
-                {fmt === 'csv' && <FileCsv className="w-5 h-5" />}
-                {fmt === 'json' && <FileJs className="w-5 h-5" />}
-                {fmt === 'pdf' && <FileDoc className="w-5 h-5" />}
+                {fmt === 'csv' && <FileCsvIcon className="w-5 h-5" />}
+                {fmt === 'json' && <FileJsIcon className="w-5 h-5" />}
+                {fmt === 'pdf' && <FileDocIcon className="w-5 h-5" />}
                 <span className="font-medium uppercase">{fmt}</span>
               </button>
             ))}
@@ -198,7 +198,7 @@ export function AdminAuditLogPage() {
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-xl text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
               data-testid="export-download-btn"
             >
-              {exporting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <DownloadSimpleIcon className="w-4 h-4" />}
+              {exporting ? <CircleNotchIcon className="w-4 h-4 animate-spin" /> : <DownloadSimpleIcon className="w-4 h-4" />}
               {exporting ? t('auditLog.exporting', 'Exporting...') : t('auditLog.download', 'Download')}
             </button>
             <button
@@ -214,7 +214,7 @@ export function AdminAuditLogPage() {
       {/* Filters */}
       <div className="glass-card p-4 rounded-2xl space-y-3" data-testid="audit-filters">
         <div className="flex items-center gap-2 text-sm font-medium text-surface-600 dark:text-surface-300">
-          <FunnelSimple weight="bold" className="w-4 h-4" />
+          <FunnelSimpleIcon weight="bold" className="w-4 h-4" />
           {t('auditLog.filters', 'Filters')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -232,7 +232,7 @@ export function AdminAuditLogPage() {
           </select>
 
           <div className="relative">
-            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
             <input
               type="text"
               value={userFilter}

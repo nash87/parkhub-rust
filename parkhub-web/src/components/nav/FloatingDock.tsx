@@ -14,7 +14,7 @@ import { useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { DotsThree, XIcon } from '@phosphor-icons/react';
+import { DotsThreeIcon, XIcon } from '@phosphor-icons/react';
 import { preloadRoute } from '../../lib/routePreload';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { NAV_SECTIONS, type NavItem } from '../Layout';
@@ -84,7 +84,7 @@ export function FloatingDock({ unreadCount, isAdmin }: FloatingDockProps) {
               : 'text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800'
           }`}
         >
-          <DotsThree weight="bold" className="w-6 h-6" />
+          <DotsThreeIcon weight="bold" className="w-6 h-6" />
         </button>
       </motion.nav>
 

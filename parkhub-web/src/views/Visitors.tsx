@@ -1,6 +1,6 @@
 import { useActionState, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { UserPlusIcon, QrCodeIcon, Trash, CheckCircle, Question, MagnifyingGlass, CalendarBlank, Envelope } from '@phosphor-icons/react';
+import { UserPlusIcon, QrCodeIcon, TrashIcon, CheckCircleIcon, QuestionIcon, MagnifyingGlassIcon, CalendarBlankIcon, EnvelopeIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -149,7 +149,7 @@ export function VisitorsPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" aria-label="Help" title="Help">
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           {isAdmin && (
             <div className="flex rounded-lg overflow-hidden border border-surface-200 dark:border-surface-700">
@@ -180,7 +180,7 @@ export function VisitorsPage() {
 
       {/* Search */}
       <div className="relative">
-        <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
         <input
           type="text"
           value={search}
@@ -256,8 +256,8 @@ export function VisitorsPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-sm text-surface-500">
-                  <span className="flex items-center gap-1"><Envelope className="w-3.5 h-3.5" />{v.email}</span>
-                  <span className="flex items-center gap-1"><CalendarBlank className="w-3.5 h-3.5" />{new Date(v.visit_date).toLocaleString()}</span>
+                  <span className="flex items-center gap-1"><EnvelopeIcon className="w-3.5 h-3.5" />{v.email}</span>
+                  <span className="flex items-center gap-1"><CalendarBlankIcon className="w-3.5 h-3.5" />{new Date(v.visit_date).toLocaleString()}</span>
                   {v.vehicle_plate && <span>{v.vehicle_plate}</span>}
                   {v.purpose && <span className="italic">{v.purpose}</span>}
                 </div>
@@ -271,10 +271,10 @@ export function VisitorsPage() {
                 {v.status === 'pending' && (
                   <>
                     <button onClick={() => handleCheckIn(v.id)} className="p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600" title={t('visitors.checkIn')}>
-                      <CheckCircle className="w-5 h-5" />
+                      <CheckCircleIcon className="w-5 h-5" />
                     </button>
                     <button onClick={() => handleCancel(v.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('visitors.cancelVisitor')}>
-                      <Trash className="w-5 h-5" />
+                      <TrashIcon className="w-5 h-5" />
                     </button>
                   </>
                 )}
@@ -323,7 +323,7 @@ export function AdminVisitorsPage() {
             <UserPlusIcon weight="duotone" className="w-7 h-7 text-primary-500" />
             {t('visitors.adminTitle')}
             <button onClick={() => setShowHelp(!showHelp)} className="text-surface-400 hover:text-primary-500 transition-colors" aria-label="Help">
-              <Question weight="fill" className="w-5 h-5" />
+              <QuestionIcon weight="fill" className="w-5 h-5" />
             </button>
           </h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">{t('visitors.adminSubtitle')}</p>
@@ -356,7 +356,7 @@ export function AdminVisitorsPage() {
       {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('visitors.searchPlaceholder')} className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 px-3 py-2 text-sm">

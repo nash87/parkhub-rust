@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Wrench, Plus, Trash, PencilSimple, Question, CalendarBlank, WarningIcon } from '@phosphor-icons/react';
+import { WrenchIcon, PlusIcon, TrashIcon, PencilSimpleIcon, QuestionIcon, CalendarBlankIcon, WarningIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -151,7 +151,7 @@ export function AdminMaintenancePage() {
       {/* v11 SOTA hero — amber tone (caution = maintenance). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Wrench} label={t('maintenance.eyebrow', 'MAINTENANCE')} />
+          <HeroEyebrow icon={WrenchIcon} label={t('maintenance.eyebrow', 'MAINTENANCE')} />
           <h1 className="admin-hero-headline">{t('maintenance.title', 'Maintenance Scheduling')}</h1>
           <p className="admin-hero-sub">{t('maintenance.subtitle', 'Schedule and manage maintenance windows')}</p>
         </div>
@@ -161,10 +161,10 @@ export function AdminMaintenancePage() {
             className="admin-hero-iconbtn"
             aria-label={t('common.help', 'Help')}
           >
-            <Question weight="bold" className="w-4 h-4" />
+            <QuestionIcon weight="bold" className="w-4 h-4" />
           </button>
           <button onClick={openCreate} className="admin-hero-action" data-testid="create-btn">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('maintenance.create', 'New')}
           </button>
         </div>
@@ -247,7 +247,7 @@ export function AdminMaintenancePage() {
       <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 divide-y divide-surface-100 dark:divide-surface-800" data-testid="maintenance-list">
         {windows.length === 0 ? (
           <div className="p-8 text-center">
-            <CalendarBlank weight="thin" className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
+            <CalendarBlankIcon weight="thin" className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
             <p className="text-sm text-surface-500 dark:text-surface-400">{t('maintenance.empty', 'No maintenance windows scheduled')}</p>
           </div>
         ) : (
@@ -270,10 +270,10 @@ export function AdminMaintenancePage() {
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button onClick={() => openEdit(w)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400 hover:text-primary-600">
-                    <PencilSimple weight="bold" className="w-4 h-4" />
+                    <PencilSimpleIcon weight="bold" className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-surface-400 hover:text-red-600">
-                    <Trash weight="bold" className="w-4 h-4" />
+                    <TrashIcon weight="bold" className="w-4 h-4" />
                   </button>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChartBar, Clock, CalendarBlank, TrendUp } from '@phosphor-icons/react';
+import { ChartBarIcon, ClockIcon, CalendarBlankIcon, TrendUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 
@@ -145,7 +145,7 @@ export function OccupancyHeatmapPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <ChartBar weight="duotone" className="w-7 h-7 text-primary-500" />
+            <ChartBarIcon weight="duotone" className="w-7 h-7 text-primary-500" />
             {t('heatmap.title')}
           </h1>
           <p className="text-surface-500 dark:text-surface-400 mt-1">{t('heatmap.subtitle')}</p>
@@ -170,7 +170,7 @@ export function OccupancyHeatmapPage() {
         <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center">
-              <Clock weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <ClockIcon weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
             <span className="text-sm text-surface-500 dark:text-surface-400">{t('heatmap.peakHour')}</span>
           </div>
@@ -179,7 +179,7 @@ export function OccupancyHeatmapPage() {
         <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center">
-              <TrendUp weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <TrendUpIcon weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
             <span className="text-sm text-surface-500 dark:text-surface-400">{t('heatmap.avgOccupancy')}</span>
           </div>
@@ -188,7 +188,7 @@ export function OccupancyHeatmapPage() {
         <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center">
-              <CalendarBlank weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <CalendarBlankIcon weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
             </div>
             <span className="text-sm text-surface-500 dark:text-surface-400">{t('heatmap.busiestDay')}</span>
           </div>

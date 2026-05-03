@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Plus, Trash, PencilIcon, Question, UserCircleIcon } from '@phosphor-icons/react';
+import { ShieldCheckIcon, PlusIcon, TrashIcon, PencilIcon, QuestionIcon, UserCircleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -136,7 +136,7 @@ export function AdminRolesPage() {
       {/* v11 SOTA hero — info tone (access control = security-critical). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={ShieldCheck} label={t('rbac.eyebrow', 'ACCESS CONTROL')} />
+          <HeroEyebrow icon={ShieldCheckIcon} label={t('rbac.eyebrow', 'ACCESS CONTROL')} />
           <h1 className="admin-hero-headline">{t('rbac.title')}</h1>
           <p className="admin-hero-sub">{t('rbac.subtitle')}</p>
         </div>
@@ -146,10 +146,10 @@ export function AdminRolesPage() {
             className="admin-hero-iconbtn"
             title={t('rbac.helpLabel')}
           >
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           <button onClick={() => { resetForm(); setShowForm(true); }} className="admin-hero-action">
-            <Plus className="w-4 h-4" />
+            <PlusIcon className="w-4 h-4" />
             {t('rbac.createRole')}
           </button>
         </div>
@@ -299,7 +299,7 @@ export function AdminRolesPage() {
                       className="p-2 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                       title={t('rbac.delete')}
                     >
-                      <Trash className="w-4 h-4" />
+                      <TrashIcon className="w-4 h-4" />
                     </button>
                   )}
                 </div>

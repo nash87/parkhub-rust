@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, PencilSimple, Trash, SpinnerGap, Check, XIcon,
-  MagnifyingGlass, CurrencyEur, TrendUp, Clock,
+  PlusIcon, PencilSimpleIcon, TrashIcon, SpinnerGapIcon, CheckIcon, XIcon,
+  MagnifyingGlassIcon, CurrencyEurIcon, TrendUpIcon, ClockIcon,
 } from '@phosphor-icons/react';
 import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, type LotStatus, type DynamicPricingRules, type OperatingHoursData, type DayHoursData } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -215,7 +215,7 @@ export function AdminLotsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <SpinnerGapIcon weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -231,7 +231,7 @@ export function AdminLotsPage() {
         </div>
         <div className="admin-hero-actions">
           <div className="relative">
-            <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <MagnifyingGlassIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
             <input
               type="text"
               value={search}
@@ -242,7 +242,7 @@ export function AdminLotsPage() {
             />
           </div>
           <button onClick={openCreate} className="admin-hero-action">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('admin.newLot')}
           </button>
         </div>
@@ -349,7 +349,7 @@ export function AdminLotsPage() {
                 <div>
                   <label htmlFor="lot-hourly-rate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.hourlyRate')}</label>
                   <div className="relative">
-                    <CurrencyEur weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                    <CurrencyEurIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
                       id="lot-hourly-rate"
                       type="number"
@@ -365,7 +365,7 @@ export function AdminLotsPage() {
                 <div>
                   <label htmlFor="lot-daily-max" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.dailyMax')}</label>
                   <div className="relative">
-                    <CurrencyEur weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                    <CurrencyEurIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
                       id="lot-daily-max"
                       type="number"
@@ -381,7 +381,7 @@ export function AdminLotsPage() {
                 <div>
                   <label htmlFor="lot-monthly-pass" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">{t('admin.monthlyPass')}</label>
                   <div className="relative">
-                    <CurrencyEur weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+                    <CurrencyEurIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
                     <input
                       id="lot-monthly-pass"
                       type="number"
@@ -402,7 +402,7 @@ export function AdminLotsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-                        <TrendUp weight="bold" className="w-4 h-4 text-primary-600" />
+                        <TrendUpIcon weight="bold" className="w-4 h-4 text-primary-600" />
                         {t('admin.dynamicPricing')}
                       </h4>
                       <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{t('admin.dynamicPricingDesc')}</p>
@@ -467,7 +467,7 @@ export function AdminLotsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-                        <Clock weight="bold" className="w-4 h-4 text-primary-600" />
+                        <ClockIcon weight="bold" className="w-4 h-4 text-primary-600" />
                         {t('admin.operatingHours')}
                       </h4>
                       <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{t('admin.operatingHoursDesc')}</p>
@@ -516,8 +516,8 @@ export function AdminLotsPage() {
               <div className="flex gap-3 pt-2">
                 <button onClick={handleSave} disabled={saving} className="btn btn-primary">
                   {saving
-                    ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                    : <Check weight="bold" className="w-4 h-4" />}
+                    ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                    : <CheckIcon weight="bold" className="w-4 h-4" />}
                   {editingId ? t('common.save') : t('admin.create')}
                 </button>
                 <button onClick={closeForm} className="btn btn-secondary">{t('common.cancel')}</button>
@@ -593,7 +593,7 @@ export function AdminLotsPage() {
                         className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
                         aria-label={`${t('admin.editLotBtn')} ${lot.name}`}
                       >
-                        <PencilSimple weight="bold" className="w-4 h-4" aria-hidden="true" />
+                        <PencilSimpleIcon weight="bold" className="w-4 h-4" aria-hidden="true" />
                       </button>
                       <button
                         onClick={() => handleDelete(lot.id)}
@@ -602,8 +602,8 @@ export function AdminLotsPage() {
                         aria-label={`${t('admin.deleteLotBtn')} ${lot.name}`}
                       >
                         {deletingId === lot.id
-                          ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                          : <Trash weight="bold" className="w-4 h-4" aria-hidden="true" />}
+                          ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                          : <TrashIcon weight="bold" className="w-4 h-4" aria-hidden="true" />}
                       </button>
                     </div>
                   </td>

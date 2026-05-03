@@ -1,14 +1,14 @@
 import { useEffect, useState, useMemo, useOptimistic, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BellIcon, WarningIcon, Info, CheckCircle, Check, SpinnerGap, ArrowClockwiseIcon,
+  BellIcon, WarningIcon, InfoIcon, CheckCircleIcon, CheckIcon, SpinnerGapIcon, ArrowClockwiseIcon,
 } from '@phosphor-icons/react';
 import { api, type Notification } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
-const notifIcon: Record<string, typeof WarningIcon> = { warning: WarningIcon, info: Info, success: CheckCircle };
+const notifIcon: Record<string, typeof WarningIcon> = { warning: WarningIcon, info: InfoIcon, success: CheckCircleIcon };
 const notifColor: Record<string, string> = { warning: 'text-amber-500', info: 'text-primary-500', success: 'text-emerald-500' };
 const notifBg: Record<string, string> = { warning: 'bg-amber-100 dark:bg-amber-900/30', info: 'bg-primary-100 dark:bg-primary-900/30', success: 'bg-emerald-100 dark:bg-emerald-900/30' };
 
@@ -111,7 +111,7 @@ export function NotificationsPage() {
           </button>
           {unreadCount > 0 && (
             <button onClick={markAllAsRead} disabled={isPending} className="admin-hero-action disabled:opacity-50">
-              {isPending ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+              {isPending ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <CheckIcon weight="bold" className="w-4 h-4" />}
               {t('notifications.markAllRead')}
             </button>
           )}
@@ -129,7 +129,7 @@ export function NotificationsPage() {
           <AnimatePresence>
             {optimisticNotifs.map(n => {
               const nType = resolveType(n.notification_type);
-              const NIcon = notifIcon[nType] || Info;
+              const NIcon = notifIcon[nType] || InfoIcon;
               return (
                 <motion.button
                   key={n.id}

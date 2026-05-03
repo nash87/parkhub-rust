@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { StarIcon, Trash, MapPinIcon, SpinnerGap } from '@phosphor-icons/react';
+import { StarIcon, TrashIcon, MapPinIcon, SpinnerGapIcon } from '@phosphor-icons/react';
 import { api, type Favorite, type ParkingLot, type ParkingSlot } from '../api/client';
 import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
@@ -158,8 +158,8 @@ export function FavoritesPage() {
                         aria-label={t('favorites.remove', { slot: fav.slot_number || fav.slot_id })}
                       >
                         {removing === fav.slot_id
-                          ? <SpinnerGap weight="bold" className="w-5 h-5 animate-spin" />
-                          : <Trash weight="regular" className="w-5 h-5" aria-hidden="true" />
+                          ? <SpinnerGapIcon weight="bold" className="w-5 h-5 animate-spin" />
+                          : <TrashIcon weight="regular" className="w-5 h-5" aria-hidden="true" />
                         }
                       </button>
                     </div>

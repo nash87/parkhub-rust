@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  House, CalendarIcon, CalendarCheckIcon, Trash, Plus, CaretLeft, CaretRight,
+  HouseIcon, CalendarIcon, CalendarCheckIcon, TrashIcon, PlusIcon, CaretLeftIcon, CaretRightIcon,
   XIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
@@ -133,7 +133,7 @@ export function AbsencesPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => setShowAdd(true)} className="admin-hero-action">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('absences.addAbsence', 'Eintragen')}
           </button>
         </div>
@@ -145,9 +145,9 @@ export function AbsencesPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{calMonthLabel}</h2>
             <div className="flex items-center gap-1">
-              <button onClick={prevMonth} aria-label={t('absences.previousMonth', 'Previous month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
+              <button onClick={prevMonth} aria-label={t('absences.previousMonth', 'Previous month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretLeftIcon weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
               <button onClick={() => { setCalMonth(today.getMonth()); setCalYear(today.getFullYear()); }} aria-label={t('absences.goToToday')} className="px-3 py-2 text-xs font-medium text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 min-h-[44px] flex items-center">{t('absences.today')}</button>
-              <button onClick={nextMonth} aria-label={t('absences.nextMonth', 'Next month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
+              <button onClick={nextMonth} aria-label={t('absences.nextMonth', 'Next month')} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 min-w-[44px] min-h-[44px] flex items-center justify-center"><CaretRightIcon weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" /></button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -188,10 +188,10 @@ export function AbsencesPage() {
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
             <button onClick={() => setShowPattern(!showPattern)} aria-expanded={showPattern} className="flex items-center justify-between w-full text-left">
               <h3 className="text-base font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-                <House weight="fill" className="w-5 h-5 text-primary-600" />
+                <HouseIcon weight="fill" className="w-5 h-5 text-primary-600" />
                 {t('absences.weeklyPattern', 'Homeoffice-Muster')}
               </h3>
-              <CaretRight weight="bold" className={`w-4 h-4 text-surface-400 transition-transform ${showPattern ? 'rotate-90' : ''}`} />
+              <CaretRightIcon weight="bold" className={`w-4 h-4 text-surface-400 transition-transform ${showPattern ? 'rotate-90' : ''}`} />
             </button>
             <AnimatePresence>
               {showPattern && (
@@ -214,7 +214,7 @@ export function AbsencesPage() {
                           }`}
                         >
                           <span className="text-sm">{name}</span>
-                          {active && <House weight="fill" className="w-4 h-4" />}
+                          {active && <HouseIcon weight="fill" className="w-4 h-4" />}
                         </button>
                       );
                     })}
@@ -247,7 +247,7 @@ export function AbsencesPage() {
                       </div>
                     </div>
                     <button onClick={() => deleteEntry(entry.id)} aria-label={t('absences.deleteEntry', 'Delete absence entry')} className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-                      <Trash weight="bold" className="w-4 h-4" aria-hidden="true" />
+                      <TrashIcon weight="bold" className="w-4 h-4" aria-hidden="true" />
                     </button>
                   </div>
                 );
@@ -344,7 +344,7 @@ function AddAbsenceModal({ onClose, onAdd, t }: {
           if (!startDate || !endDate || endDate < startDate) return;
           onAdd(type, startDate, endDate, note);
         }} disabled={!startDate || !endDate || endDate < startDate} className="btn btn-primary w-full">
-          <Plus weight="bold" className="w-4 h-4" /> {t('absences.addBtn', 'Eintragen')}
+          <PlusIcon weight="bold" className="w-4 h-4" /> {t('absences.addBtn', 'Eintragen')}
         </button>
       </motion.div>
     </>

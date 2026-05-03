@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WebhooksLogo, Plus, Trash, PencilIcon, Question, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react';
+import { WebhooksLogoIcon, PlusIcon, TrashIcon, PencilIcon, QuestionIcon, PaperPlaneTiltIcon, ListChecksIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -154,7 +154,7 @@ export function AdminWebhooksPage() {
       {/* v11 SOTA hero — info tone (event egress = trust boundary, secrets in payloads). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={WebhooksLogo} label={t('webhooksV2.eyebrow', 'EVENT FAN-OUT')} />
+          <HeroEyebrow icon={WebhooksLogoIcon} label={t('webhooksV2.eyebrow', 'EVENT FAN-OUT')} />
           <h1 className="admin-hero-headline">{t('webhooksV2.title')}</h1>
           <p className="admin-hero-sub">{t('webhooksV2.subtitle')}</p>
         </div>
@@ -165,10 +165,10 @@ export function AdminWebhooksPage() {
             aria-label={t('webhooksV2.helpLabel')}
             title={t('webhooksV2.helpLabel')}
           >
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           <button onClick={() => { resetForm(); setShowForm(true); }} className="admin-hero-action">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('webhooksV2.create')}
           </button>
         </div>
@@ -224,7 +224,7 @@ export function AdminWebhooksPage() {
         <div className="text-center py-8 text-surface-400">{t('common.loading')}</div>
       ) : webhooks.length === 0 ? (
         <div className="text-center py-12 text-surface-400">
-          <WebhooksLogo size={48} className="mx-auto mb-3 opacity-30" />
+          <WebhooksLogoIcon size={48} className="mx-auto mb-3 opacity-30" />
           <p>{t('webhooksV2.empty')}</p>
         </div>
       ) : (
@@ -239,16 +239,16 @@ export function AdminWebhooksPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => handleTest(wh.id)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" aria-label={t('webhooksV2.test')}>
-                    <PaperPlaneTilt size={16} />
+                    <PaperPlaneTiltIcon size={16} />
                   </button>
                   <button onClick={() => loadDeliveries(wh.id)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" aria-label={t('webhooksV2.deliveries')}>
-                    <ListChecks size={16} />
+                    <ListChecksIcon size={16} />
                   </button>
                   <button onClick={() => { setEditId(wh.id); setFormUrl(wh.url); setFormEvents(wh.events); setFormDesc(wh.description || ''); setShowForm(true); }} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" aria-label={t('webhooksV2.edit')}>
                     <PencilIcon size={16} />
                   </button>
                   <button onClick={() => handleDelete(wh.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500" aria-label={t('webhooksV2.delete')}>
-                    <Trash size={16} />
+                    <TrashIcon size={16} />
                   </button>
                 </div>
               </div>

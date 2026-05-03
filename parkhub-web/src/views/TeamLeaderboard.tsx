@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { TrophyIcon, Medal, Lightning, StarIcon } from '@phosphor-icons/react';
+import { TrophyIcon, MedalIcon, LightningIcon, StarIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getInMemoryToken } from '../api/client';
@@ -218,7 +218,7 @@ export function TeamLeaderboardPage() {
           <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-950/30 flex items-center justify-center">
-                <Lightning weight="fill" className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <LightningIcon weight="fill" className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <span className="text-sm text-surface-500 dark:text-surface-400">{t('leaderboard.greenest', 'Greenest (EV)')}</span>
             </div>
@@ -230,7 +230,7 @@ export function TeamLeaderboardPage() {
           <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center">
-                <Medal weight="fill" className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <MedalIcon weight="fill" className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <span className="text-sm text-surface-500 dark:text-surface-400">{t('leaderboard.mostReliable', 'Most Reliable')}</span>
             </div>
@@ -266,7 +266,7 @@ export function TeamLeaderboardPage() {
             {/* Rank */}
             <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
               {idx < 3 ? (
-                <Medal weight="fill" className={`w-6 h-6 ${MEDAL_COLORS[idx]}`} data-testid={`medal-${idx + 1}`} />
+                <MedalIcon weight="fill" className={`w-6 h-6 ${MEDAL_COLORS[idx]}`} data-testid={`medal-${idx + 1}`} />
               ) : (
                 <span className="text-sm font-bold text-surface-400">{idx + 1}</span>
               )}

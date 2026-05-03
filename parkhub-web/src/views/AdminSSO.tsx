@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Plus, Trash, PencilIcon, Question, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
+import { ShieldCheckIcon, PlusIcon, TrashIcon, PencilIcon, QuestionIcon, ToggleLeftIcon, ToggleRightIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -124,7 +124,7 @@ export function AdminSSOPage() {
       {/* v11 SOTA hero — info tone (identity federation = security boundary). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={ShieldCheck} label={t('sso.eyebrow', 'IDENTITY FEDERATION')} />
+          <HeroEyebrow icon={ShieldCheckIcon} label={t('sso.eyebrow', 'IDENTITY FEDERATION')} />
           <h1 className="admin-hero-headline">{t('sso.title')}</h1>
           <p className="admin-hero-sub">{t('sso.subtitle')}</p>
         </div>
@@ -135,13 +135,13 @@ export function AdminSSOPage() {
             aria-label={t('sso.helpLabel')}
             title={t('sso.helpLabel')}
           >
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
             className="admin-hero-action"
           >
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('sso.addProvider')}
           </button>
         </div>
@@ -255,7 +255,7 @@ export function AdminSSOPage() {
         <div className="text-center py-8 text-surface-400">{t('common.loading')}</div>
       ) : providers.length === 0 ? (
         <div className="text-center py-12 text-surface-400">
-          <ShieldCheck size={48} className="mx-auto mb-3 opacity-30" />
+          <ShieldCheckIcon size={48} className="mx-auto mb-3 opacity-30" />
           <p>{t('sso.empty')}</p>
         </div>
       ) : (
@@ -268,7 +268,7 @@ export function AdminSSOPage() {
               className="bg-white dark:bg-surface-800 rounded-xl border border-surface-200 dark:border-surface-700 p-4 flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <ShieldCheck size={24} weight="bold" className="text-primary-500" />
+                <ShieldCheckIcon size={24} weight="bold" className="text-primary-500" />
                 <div>
                   <p className="font-medium text-surface-900 dark:text-surface-100">{p.display_name}</p>
                   <p className="text-xs text-surface-500">{p.slug} &middot; {p.entity_id}</p>
@@ -276,9 +276,9 @@ export function AdminSSOPage() {
               </div>
               <div className="flex items-center gap-2">
                 {p.enabled ? (
-                  <ToggleRight size={24} className="text-green-500" />
+                  <ToggleRightIcon size={24} className="text-green-500" />
                 ) : (
-                  <ToggleLeft size={24} className="text-surface-400" />
+                  <ToggleLeftIcon size={24} className="text-surface-400" />
                 )}
                 <button
                   onClick={() => openEdit(p)}
@@ -292,7 +292,7 @@ export function AdminSSOPage() {
                   className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500"
                   aria-label={t('sso.delete')}
                 >
-                  <Trash size={16} />
+                  <TrashIcon size={16} />
                 </button>
               </div>
             </motion.div>

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CarSimpleIcon, SpinnerGap, ArrowLeft, Check, XIcon } from '@phosphor-icons/react';
+import { CarSimpleIcon, SpinnerGapIcon, ArrowLeftIcon, CheckIcon, XIcon } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { FormField, FormInput } from '../components/ui/FormField';
 import { OAuthButtons } from '../components/OAuthButtons';
@@ -30,7 +30,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 function PasswordRule({ met, label }: { met: boolean; label: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-xs ${met ? 'text-green-600 dark:text-green-400' : 'text-surface-400'}`}>
-      {met ? <Check weight="bold" className="w-3 h-3" /> : <XIcon weight="bold" className="w-3 h-3" />}
+      {met ? <CheckIcon weight="bold" className="w-3 h-3" /> : <XIcon weight="bold" className="w-3 h-3" />}
       {label}
     </span>
   );
@@ -78,7 +78,7 @@ export function RegisterPage() {
         className="w-full max-w-sm"
       >
         <Link to="/login" className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors">
-          <ArrowLeft weight="bold" className="w-4 h-4" /> {t('auth.signIn')}
+          <ArrowLeftIcon weight="bold" className="w-4 h-4" /> {t('auth.signIn')}
         </Link>
 
         <div className="flex items-center gap-3 mb-8">
@@ -138,7 +138,7 @@ export function RegisterPage() {
           )}
 
           <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full py-2.5 disabled:opacity-50">
-            {isSubmitting ? <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.creatingAccount')}</> : t('auth.signUp')}
+            {isSubmitting ? <><SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.creatingAccount')}</> : t('auth.signUp')}
           </button>
         </form>
 

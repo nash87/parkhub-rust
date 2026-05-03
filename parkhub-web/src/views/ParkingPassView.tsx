@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Ticket, QrCodeIcon, Clock, MapPinIcon, Question, CalendarBlank } from '@phosphor-icons/react';
+import { TicketIcon, QrCodeIcon, ClockIcon, MapPinIcon, QuestionIcon, CalendarBlankIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 interface ParkingPass {
@@ -67,7 +67,7 @@ export function ParkingPassPage() {
           className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"
           aria-label={t('parkingPass.helpLabel')}
         >
-          <Question size={24} />
+          <QuestionIcon size={24} />
         </button>
       </div>
 
@@ -97,7 +97,7 @@ export function ParkingPassPage() {
         >
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-2 text-primary-100">
-              <Ticket size={20} />
+              <TicketIcon size={20} />
               <span className="text-sm font-medium uppercase tracking-wide">
                 {t('parkingPass.digitalPass')}
               </span>
@@ -123,11 +123,11 @@ export function ParkingPassPage() {
                 <span>{selectedPass.lot_name} — {t('parkingPass.slot')} {selectedPass.slot_number}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
-                <CalendarBlank size={16} />
+                <CalendarBlankIcon size={16} />
                 <span>{formatDate(selectedPass.valid_from)}</span>
               </div>
               <div className="flex items-center justify-center gap-2">
-                <Clock size={16} />
+                <ClockIcon size={16} />
                 <span>{t('parkingPass.validUntil')} {formatDate(selectedPass.valid_until)}</span>
               </div>
             </div>
@@ -184,7 +184,7 @@ export function ParkingPassPage() {
             </div>
           ) : (
             <div className="text-center py-12 text-surface-400">
-              <Ticket size={48} className="mx-auto mb-3 opacity-40" />
+              <TicketIcon size={48} className="mx-auto mb-3 opacity-40" />
               <p>{t('parkingPass.empty')}</p>
             </div>
           )}

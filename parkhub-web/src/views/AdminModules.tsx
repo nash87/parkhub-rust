@@ -24,7 +24,7 @@ import { type ModuleInfo } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useModuleToggle } from '../hooks/useModuleToggle';
 import { ConfigEditorModal } from '../components/ConfigEditorModal';
-import { PuzzlePiece } from '@phosphor-icons/react';
+import { PuzzlePieceIcon } from '@phosphor-icons/react';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const CATEGORY_ORDER = [
@@ -299,7 +299,7 @@ export function AdminModulesPage() {
       {/* v11 SOTA hero — info tone (compiled feature surface = build-time decisions). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={PuzzlePiece} label={t('admin.modules.eyebrow', 'COMPILED FEATURES')} />
+          <HeroEyebrow icon={PuzzlePieceIcon} label={t('admin.modules.eyebrow', 'COMPILED FEATURES')} />
           <h1 className="admin-hero-headline">{t('admin.modules.title', 'Modules')}</h1>
           <p className="admin-hero-sub">{t('admin.modules.subtitle', 'Feature modules compiled into this deployment.')}</p>
         </div>

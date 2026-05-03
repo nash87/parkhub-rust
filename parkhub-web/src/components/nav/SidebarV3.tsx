@@ -27,20 +27,20 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowsClockwiseIcon,
   BellIcon,
-  CalendarPlus,
+  CalendarPlusIcon,
   CarIcon,
-  ChartLine,
+  ChartLineIcon,
   GearSixIcon,
-  House,
-  MagnifyingGlass,
+  HouseIcon,
+  MagnifyingGlassIcon,
   MapPinIcon,
   QrCodeIcon,
-  ShieldCheck,
-  SignOut,
+  ShieldCheckIcon,
+  SignOutIcon,
   SparkleIcon,
-  SquaresFour,
+  SquaresFourIcon,
   TrophyIcon,
-  User,
+  UserIcon,
   UsersIcon,
 } from '@phosphor-icons/react';
 import { api, type Booking, type ParkingLot, type ParkingSlot } from '../../api/client';
@@ -65,8 +65,8 @@ interface FlatItem {
 }
 
 const PRIMARY_NAV: NumberedItem[] = [
-  { num: '01', Icon: House, label: 'Today', to: '/', shortcut: 'D' },
-  { num: '02', Icon: CalendarPlus, label: 'Book', to: '/book', shortcut: 'B' },
+  { num: '01', Icon: HouseIcon, label: 'Today', to: '/', shortcut: 'D' },
+  { num: '02', Icon: CalendarPlusIcon, label: 'Book', to: '/book', shortcut: 'B' },
   { num: '03', Icon: QrCodeIcon, label: 'My pass', to: '/guest-pass', shortcut: 'P' },
   { num: '04', Icon: MapPinIcon, label: 'Live map', to: '/map' },
 ];
@@ -79,9 +79,9 @@ const WORKSPACE_NAV: FlatItem[] = [
 ];
 
 const ADMIN_NAV: FlatItem[] = [
-  { Icon: SquaresFour, label: 'Lots & floors', to: '/admin/lots' },
-  { Icon: ShieldCheck, label: 'Roles', to: '/admin/roles' },
-  { Icon: ChartLine, label: 'Analytics', to: '/admin/analytics' },
+  { Icon: SquaresFourIcon, label: 'Lots & floors', to: '/admin/lots' },
+  { Icon: ShieldCheckIcon, label: 'Roles', to: '/admin/roles' },
+  { Icon: ChartLineIcon, label: 'Analytics', to: '/admin/analytics' },
 ];
 
 // ----------------------------------------------------------------------
@@ -575,7 +575,7 @@ export function SidebarV3() {
             fontSize: 12.5,
           }}
         >
-          <MagnifyingGlass size={13} />
+          <MagnifyingGlassIcon size={13} />
           <span className="flex-1">Search</span>
           <kbd
             className="sv3-num font-semibold"
@@ -1167,7 +1167,7 @@ function WhatsNextCard({ upNext }: { upNext: Booking | undefined }) {
             color: 'var(--color-primary-300, #a5b4fc)',
           }}
         >
-          <CalendarPlus size={14} />
+          <CalendarPlusIcon size={14} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -1249,7 +1249,7 @@ function UserMenu({
     };
   }, [onClose]);
 
-  const roleLabel = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'User';
+  const roleLabel = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'UserIcon';
 
   return (
     <div
@@ -1295,7 +1295,7 @@ function UserMenu({
         className="sv3-hover w-full flex items-center text-left"
         style={{ gap: 10, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'oklch(0.90 0.005 260)' }}
       >
-        <User size={14} /> Profile
+        <UserIcon size={14} /> Profile
       </button>
       <button
         type="button"
@@ -1326,7 +1326,7 @@ function UserMenu({
         className="sv3-hover w-full flex items-center text-left"
         style={{ gap: 10, padding: '7px 10px', borderRadius: 6, fontSize: 12.5, color: 'oklch(0.80 0.12 25)' }}
       >
-        <SignOut size={14} /> Sign out
+        <SignOutIcon size={14} /> Sign out
       </button>
     </div>
   );

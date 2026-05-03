@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, XIcon, Palette } from '@phosphor-icons/react';
+import { CheckIcon, XIcon, PaletteIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useTheme, type DesignThemeId, type DesignThemeInfo } from '../context/ThemeContext';
 
@@ -36,7 +36,7 @@ function ThemePreviewCard({ theme, isActive, onApply }: {
           animate={{ scale: 1 }}
           className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary-500 flex items-center justify-center"
         >
-          <Check weight="bold" className="w-3.5 h-3.5 text-white" />
+          <CheckIcon weight="bold" className="w-3.5 h-3.5 text-white" />
         </motion.div>
       )}
 
@@ -124,7 +124,7 @@ export function ThemeSwitcher({ open, onClose }: { open: boolean; onClose: () =>
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-800">
               <div className="flex items-center gap-2">
-                <Palette weight="fill" className="w-5 h-5 text-primary-500" />
+                <PaletteIcon weight="fill" className="w-5 h-5 text-primary-500" />
                 <h2 className="text-lg font-bold text-surface-900 dark:text-white">
                   {t('themes.title', 'Design Themes')}
                 </h2>
@@ -176,7 +176,7 @@ export function ThemeSwitcherFab({ onClick }: { onClick: () => void }) {
         flex items-center justify-center hover:bg-surface-200 dark:hover:bg-surface-700 transition-colors"
       aria-label={t('themes.openSwitcher', 'Change theme')}
     >
-      <Palette weight="fill" className="w-5 h-5 text-surface-600 dark:text-surface-300" />
+      <PaletteIcon weight="fill" className="w-5 h-5 text-surface-600 dark:text-surface-300" />
     </motion.button>
   );
 }

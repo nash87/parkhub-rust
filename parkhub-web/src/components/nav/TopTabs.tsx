@@ -17,7 +17,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CarSimpleIcon, CaretDownIcon, GearSixIcon, SignOut, SunDim, Moon,
+  CarSimpleIcon, CaretDownIcon, GearSixIcon, SignOutIcon, SunDimIcon, MoonIcon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -107,7 +107,7 @@ export function TopTabs({ unreadCount, onLogout, isAdmin }: TopTabsProps) {
           aria-label={resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
           title={resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
         >
-          {resolved === 'dark' ? <SunDim weight="fill" className="w-4 h-4" /> : <Moon weight="fill" className="w-4 h-4" />}
+          {resolved === 'dark' ? <SunDimIcon weight="fill" className="w-4 h-4" /> : <MoonIcon weight="fill" className="w-4 h-4" />}
         </button>
         <UserMenu user={user} onLogout={onLogout} />
       </div>
@@ -247,7 +247,7 @@ function UserMenu({ user, onLogout }: { user: { name?: string; username?: string
               onClick={() => { setOpen(false); onLogout(); }}
               className="flex items-center gap-2.5 w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-colors"
             >
-              <SignOut weight="bold" className="w-4 h-4" />
+              <SignOutIcon weight="bold" className="w-4 h-4" />
               {t('nav.logout')}
             </button>
           </motion.div>
