@@ -1,6 +1,6 @@
 //! Server Connection
 //!
-//! Handles HTTP API communication with the ParkHub server.
+//! Handles HTTP API communication with the `ParkHub` server.
 
 use anyhow::{Context, Result};
 use reqwest::Client;

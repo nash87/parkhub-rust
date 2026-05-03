@@ -1,7 +1,7 @@
-//! ParkHub Client
+//! `ParkHub` Client
 //!
 //! Desktop application for parking lot management.
-//! Connects to ParkHub Server via HTTP API with autodiscovery.
+//! Connects to `ParkHub` Server via HTTP API with autodiscovery.
 
 #![windows_subsystem = "windows"]
 #![allow(unsafe_code)] // Slint uses unsafe FFI for native window management
