@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheckIcon, PlusIcon, TrashIcon, PencilIcon, QuestionIcon, UserCircleIcon } from '@phosphor-icons/react';
+import { ShieldCheckIcon, PlusIcon, TrashIcon, PencilIcon, QuestionIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
