@@ -1,6 +1,16 @@
 {
   "name": "parkhub-rust full local CI/CD",
-  "build": {
+
+  "// image vs build": [
+    "We default to the prebuilt image at ghcr.io/nash87/parkhub-rust-devcontainer:latest",
+    "(published by .github/workflows/devcontainer-publish.yml on every push to .devcontainer/",
+    "and weekly to pick up base-image security patches). This makes first-time `devcontainer up`",
+    "~10× faster — no local 5–10 min build. To force a local build instead (e.g. testing a new",
+    "Containerfile), comment out `image:` and uncomment `build:` below."
+  ],
+  "image": "ghcr.io/nash87/parkhub-rust-devcontainer:latest",
+
+  "// build": {
     "context": ".",
     "dockerfile": "Containerfile"
   },

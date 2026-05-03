@@ -1,0 +1,113 @@
+name: Publish dev container image
+
+# Builds .devcontainer/Containerfile and pushes to ghcr.io so contributors
+# (and Codespaces) can pull the pre-built image instead of waiting 5-10 min
+# on first `devcontainer up`. Triggers on changes to .devcontainer/, on
+# manual dispatch, and weekly to pick up base-image security updates.
+#
+# Security note: this workflow uses ZERO user-controlled inputs (no
+# github.event.issue/pull_request/comment/* fields). All template
+# expressions reference workflow-controlled steps.* outputs or static
+# secrets/env. Safe per github.blog workflow-injection guidance.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.devcontainer/**'
+      - '.github/workflows/devcontainer-publish.yml'
+  schedule:
+    # Weekly on Sunday 04:30 UTC to pick up base-image security patches.
+    - cron: '30 4 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: devcontainer-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write   # for cosign keyless OIDC sign of the image
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-devcontainer
+
+jobs:
+  build-and-push:
+    name: Build & push devcontainer image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=schedule,pattern=weekly
+            type=sha,prefix=git-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .devcontainer
+          file: .devcontainer/Containerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
+
+      - name: Sign image (keyless OIDC)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          for tag in $TAGS; do
+            echo "▶ cosign sign $tag@$DIGEST"
+            cosign sign --yes "$tag@$DIGEST"
+          done
+
+      - name: Summary
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "## devcontainer image published"
+            echo ""
+            echo "**Tags**:"
+            for tag in $TAGS; do echo "- \`$tag\`"; done
+            echo ""
+            echo "**Digest**: \`$DIGEST\`"
+            echo ""
+            echo "**Pull**: \`podman pull ${REGISTRY}/${IMAGE_NAME}:latest\`"
+            echo ""
+            echo "Devcontainer.json now defaults to this prebuilt image; first-time"
+            echo "\`devcontainer up\` should be ~10× faster (no local build)."
+          } >> "$GITHUB_STEP_SUMMARY"
