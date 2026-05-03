@@ -94,18 +94,24 @@ export function AdminMaintenancePage() {
     }
     setSubmitting(true);
     try {
+      // PUT /api/v1/admin/maintenance/:id silently ignores lot_id
+      // (backend's UpdateMaintenanceRequest doesn't include it). To avoid
+      // misleading users into thinking they edited the lot, we disable
+      // the selector below when editing AND drop lot_id from the PUT body.
       const body: {
-        lot_id: string;
+        lot_id?: string;
         start_time: string;
         end_time: string;
         reason: string;
         affected_slots?: string[];
       } = {
-        lot_id: form.lot_id,
         start_time: new Date(form.start_time).toISOString(),
         end_time: new Date(form.end_time).toISOString(),
         reason: form.reason,
       };
+      if (!editId) {
+        body.lot_id = form.lot_id;
+      }
       if (!form.all_slots && form.slot_ids.trim()) {
         body.affected_slots = form.slot_ids.split(',').map(s => s.trim()).filter(Boolean);
       }
@@ -210,7 +216,14 @@ export function AdminMaintenancePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1">{t('maintenance.lot', 'Lot')}</label>
-              <select className="input" value={form.lot_id} onChange={e => setForm({ ...form, lot_id: e.target.value })} data-testid="form-lot">
+              <select
+                className="input disabled:opacity-60 disabled:cursor-not-allowed"
+                value={form.lot_id}
+                onChange={e => setForm({ ...form, lot_id: e.target.value })}
+                data-testid="form-lot"
+                disabled={!!editId}
+                title={editId ? t('maintenance.lotImmutable', 'Lot cannot be changed; delete and re-create to move the window') : undefined}
+              >
                 <option value="">{t('maintenance.selectLot', 'Select lot...')}</option>
                 {lots.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
