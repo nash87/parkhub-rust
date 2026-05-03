@@ -252,11 +252,11 @@ export function NotificationCenter() {
                             </div>
                             <div className="flex flex-col gap-1 flex-shrink-0">
                               {!n.read && (
-                                <button onClick={e => { e.stopPropagation(); markRead(n.id); }} className="p-1 rounded text-surface-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" title={t('notificationCenter.markRead')}>
+                                <button onClick={e => { e.stopPropagation(); markRead(n.id); }} className="p-1 rounded text-surface-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" aria-label={t('notificationCenter.markRead')} title={t('notificationCenter.markRead')}>
                                   <CheckIcon weight="bold" className="w-3.5 h-3.5" />
                                 </button>
                               )}
-                              <button onClick={e => { e.stopPropagation(); deleteNotification(n.id); }} className="p-1 rounded text-surface-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title={t('notificationCenter.deleteOne')}>
+                              <button onClick={e => { e.stopPropagation(); deleteNotification(n.id); }} className="p-1 rounded text-surface-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label={t('notificationCenter.deleteOne')} title={t('notificationCenter.deleteOne')}>
                                 <TrashIcon weight="bold" className="w-3.5 h-3.5" />
                               </button>
                             </div>

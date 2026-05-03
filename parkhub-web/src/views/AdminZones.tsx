@@ -157,6 +157,7 @@ export function AdminZonesPage() {
                   <button
                     onClick={() => startEdit(zone)}
                     className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700"
+                    aria-label={`${t('parkingZones.editPricing')} ${zone.name}`}
                     title={t('parkingZones.editPricing')}
                   >
                     <PencilIcon className="w-4 h-4" />

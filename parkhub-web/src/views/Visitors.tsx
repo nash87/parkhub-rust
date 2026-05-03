@@ -264,16 +264,16 @@ export function VisitorsPage() {
               </div>
               <div className="flex items-center gap-2 ml-4">
                 {v.qr_code && (
-                  <button onClick={() => setShowQr(v.qr_code)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" title={t('visitors.showQr')}>
+                  <button onClick={() => setShowQr(v.qr_code)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" aria-label={`${t('visitors.showQr')} ${v.name}`} title={t('visitors.showQr')}>
                     <QrCodeIcon className="w-5 h-5" />
                   </button>
                 )}
                 {v.status === 'pending' && (
                   <>
-                    <button onClick={() => handleCheckIn(v.id)} className="p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600" title={t('visitors.checkIn')}>
+                    <button onClick={() => handleCheckIn(v.id)} className="p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600" aria-label={`${t('visitors.checkIn')} ${v.name}`} title={t('visitors.checkIn')}>
                       <CheckCircleIcon className="w-5 h-5" />
                     </button>
-                    <button onClick={() => handleCancel(v.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('visitors.cancelVisitor')}>
+                    <button onClick={() => handleCancel(v.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" aria-label={`${t('visitors.cancelVisitor')} ${v.name}`} title={t('visitors.cancelVisitor')}>
                       <TrashIcon className="w-5 h-5" />
                     </button>
                   </>

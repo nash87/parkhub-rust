@@ -331,6 +331,7 @@ export function AdminScheduledReportsPage() {
                   <button
                     onClick={() => handleSendNow(schedule.id)}
                     className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-primary-500"
+                    aria-label={`${t('scheduledReports.sendNow')} ${schedule.name}`}
                     title={t('scheduledReports.sendNow')}
                     data-testid="send-now-btn"
                   >
@@ -339,6 +340,7 @@ export function AdminScheduledReportsPage() {
                   <button
                     onClick={() => startEdit(schedule)}
                     className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
+                    aria-label={`${t('scheduledReports.edit')} ${schedule.name}`}
                     title={t('scheduledReports.edit')}
                     data-testid="edit-btn"
                   >
@@ -347,6 +349,7 @@ export function AdminScheduledReportsPage() {
                   <button
                     onClick={() => handleDelete(schedule.id)}
                     className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500"
+                    aria-label={`${t('scheduledReports.delete')} ${schedule.name}`}
                     title={t('scheduledReports.delete')}
                     data-testid="delete-btn"
                   >

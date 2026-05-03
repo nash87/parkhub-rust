@@ -269,10 +269,10 @@ export function AdminMaintenancePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <button onClick={() => openEdit(w)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400 hover:text-primary-600">
+                  <button onClick={() => openEdit(w)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400 hover:text-primary-600" aria-label={`${t('common.edit', 'Edit')} ${w.reason}`} title={t('common.edit', 'Edit')}>
                     <PencilSimpleIcon weight="bold" className="w-4 h-4" />
                   </button>
-                  <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-surface-400 hover:text-red-600">
+                  <button onClick={() => handleDelete(w.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-surface-400 hover:text-red-600" aria-label={`${t('common.delete', 'Delete')} ${w.reason}`} title={t('common.delete', 'Delete')}>
                     <TrashIcon weight="bold" className="w-4 h-4" />
                   </button>
                 </div>

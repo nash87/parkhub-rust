@@ -119,6 +119,7 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
           <button
             onClick={() => window.print()}
             className="btn btn-secondary flex items-center justify-center gap-2 px-4"
+            aria-label="Print booking confirmation"
             title="Print booking confirmation"
           >
             <PrinterIcon weight="bold" className="w-4 h-4" />
