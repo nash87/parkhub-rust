@@ -24,9 +24,9 @@ use super::{AuthUser, SharedState, check_admin};
 pub struct BulkUserUpdateRequest {
     /// User IDs to update
     pub user_ids: Vec<String>,
-    /// Action: "activate", "deactivate", "set_role"
+    /// Action: "activate", "deactivate", `"set_role"`
     pub action: String,
-    /// Role to set (only used with "set_role" action)
+    /// Role to set (only used with `"set_role"` action)
     pub role: Option<String>,
 }
 
@@ -552,13 +552,13 @@ pub struct NotificationPreferences {
     /// SMS channel: booking cancelled
     #[serde(default)]
     pub sms_booking_cancelled: bool,
-    /// WhatsApp channel: booking confirmations
+    /// `WhatsApp` channel: booking confirmations
     #[serde(default)]
     pub whatsapp_booking_confirm: bool,
-    /// WhatsApp channel: booking reminders
+    /// `WhatsApp` channel: booking reminders
     #[serde(default)]
     pub whatsapp_booking_reminder: bool,
-    /// WhatsApp channel: booking cancelled
+    /// `WhatsApp` channel: booking cancelled
     #[serde(default)]
     pub whatsapp_booking_cancelled: bool,
     /// Phone number for SMS/WhatsApp (E.164 format, e.g. "+491234567890")
