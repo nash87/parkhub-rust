@@ -144,24 +144,27 @@ export function SwapRequestsPage() {
   return (
     <div className="space-y-6">
       <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-        {/* Header */}
-        <motion.div variants={fadeUp} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Swap weight="duotone" className="w-7 h-7 text-primary-500" />
-            <div>
-              <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('swap.title')}</h1>
-              <p className="text-sm text-surface-500 dark:text-surface-400 mt-0.5">{t('swap.subtitle')}</p>
+        {/* v11 SOTA hero — primary tone, page-hero variant. Refresh + Create in hero-actions. */}
+        <motion.section variants={fadeUp} className="admin-hero page-hero">
+          <div className="admin-hero-left">
+            <div className="admin-hero-eyebrow">
+              <span className="admin-hero-dot" aria-hidden="true"></span>
+              <Swap weight="bold" className="w-3.5 h-3.5" />
+              {t('swap.eyebrow', 'SHIFT TRADE')}
             </div>
+            <h1 className="admin-hero-headline">{t('swap.title')}</h1>
+            <p className="admin-hero-sub">{t('swap.subtitle')}</p>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button onClick={loadData} className="btn btn-secondary">
-              <ArrowClockwise weight="bold" className="w-4 h-4" /> {t('common.refresh')}
+          <div className="admin-hero-actions">
+            <button onClick={loadData} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
+              <ArrowClockwise weight="bold" className="w-4 h-4" />
             </button>
-            <button onClick={() => setShowModal(true)} className="btn btn-primary">
-              <Plus weight="bold" className="w-4 h-4" /> {t('swap.create')}
+            <button onClick={() => setShowModal(true)} className="admin-hero-action">
+              <Plus weight="bold" className="w-4 h-4" />
+              {t('swap.create')}
             </button>
           </div>
-        </motion.div>
+        </motion.section>
 
         {/* Request list */}
         {requests.length === 0 ? (

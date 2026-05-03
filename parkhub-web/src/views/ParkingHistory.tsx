@@ -68,19 +68,21 @@ export function ParkingHistoryPage() {
   return (
     <AnimatePresence mode="wait">
       <motion.div key="history" variants={container} initial="hidden" animate="show" className="space-y-8">
-        {/* Header */}
-        <motion.div variants={item} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <ClockCounterClockwise weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+        {/* v11 SOTA hero — primary tone, page-hero variant. */}
+        <motion.section variants={item} className="admin-hero page-hero">
+          <div className="admin-hero-left">
+            <div className="admin-hero-eyebrow">
+              <span className="admin-hero-dot" aria-hidden="true"></span>
+              <ClockCounterClockwise weight="bold" className="w-3.5 h-3.5" />
+              {t('history.eyebrow', 'PARKING ARCHIVE')}
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('history.title')}</h1>
-              <p className="text-surface-500 dark:text-surface-400 mt-0.5">{t('history.subtitle')}</p>
-            </div>
+            <h1 className="admin-hero-headline">{t('history.title')}</h1>
+            <p className="admin-hero-sub">{t('history.subtitle')}</p>
           </div>
-          <OnboardingHint id="parking-history" message={t('history.help')} />
-        </motion.div>
+          <div className="admin-hero-actions">
+            <OnboardingHint id="parking-history" message={t('history.help')} />
+          </div>
+        </motion.section>
 
         {/* Stats Cards */}
         {stats && (

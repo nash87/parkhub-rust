@@ -162,19 +162,23 @@ export function QRCheckInPage() {
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6 max-w-lg mx-auto">
-      {/* Header */}
-      <motion.div variants={fadeUp} className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <QrCode weight="duotone" className="w-7 h-7 text-primary-500" />
-          <div>
-            <h1 className="text-2xl font-bold text-surface-900 dark:text-white">{t('checkin.title')}</h1>
-            <p className="text-sm text-surface-500 dark:text-surface-400 mt-0.5">{t('checkin.subtitle')}</p>
+      {/* v11 SOTA hero — primary tone, page-hero variant. Refresh in hero-actions. */}
+      <motion.section variants={fadeUp} className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <QrCode weight="bold" className="w-3.5 h-3.5" />
+            {t('checkin.eyebrow', 'CHECK-IN')}
           </div>
+          <h1 className="admin-hero-headline">{t('checkin.title')}</h1>
+          <p className="admin-hero-sub">{t('checkin.subtitle')}</p>
         </div>
-        <button onClick={loadData} className="btn btn-secondary btn-sm">
-          <ArrowClockwise weight="bold" className="w-4 h-4" />
-        </button>
-      </motion.div>
+        <div className="admin-hero-actions">
+          <button onClick={loadData} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
+            <ArrowClockwise weight="bold" className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.section>
 
       {/* No active booking */}
       {!booking && (
