@@ -9,8 +9,10 @@
 //! targets later on nightly without rewriting the shape.
 
 use parkhub_common::{
-    BookingStatus, CreditTransactionType, FuelType, LotStatus, PaymentStatus, SlotFeature,
-    SlotStatus, SlotType, SwapRequestStatus, UserRole, VehicleType, WaitlistStatus,
+    AbsenceType, AnnouncementSeverity, BookingStatus, ConnectorType, CreditTransactionType,
+    EvChargerStatus, FuelType, LayoutElementType, LotStatus, NotificationType, PaymentStatus,
+    ProposalStatus, SlotFeature, SlotStatus, SlotType, SwapRequestStatus, UserRole, VehicleType,
+    VisitorStatus, WaitlistStatus,
 };
 use proptest::prelude::*;
 
@@ -291,4 +293,205 @@ proptest! {
         let json2 = serde_json::to_string(&decoded).unwrap();
         prop_assert_eq!(json1, json2);
     }
+
+    // ── domain enums (added 2026-05-03 — second wave) ──────────────────────
+
+    #[test]
+    fn notification_type_roundtrips(n in arb_notification_type()) {
+        let json = serde_json::to_string(&n).unwrap();
+        let decoded: NotificationType = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(n, decoded);
+    }
+
+    #[test]
+    fn layout_element_type_roundtrips(l in arb_layout_element_type()) {
+        let json = serde_json::to_string(&l).unwrap();
+        let decoded: LayoutElementType = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(l, decoded);
+    }
+
+    #[test]
+    fn absence_type_roundtrips(a in arb_absence_type()) {
+        let json = serde_json::to_string(&a).unwrap();
+        let decoded: AbsenceType = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(a, decoded);
+    }
+
+    #[test]
+    fn announcement_severity_roundtrips(s in arb_announcement_severity()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: AnnouncementSeverity = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn proposal_status_roundtrips(s in arb_proposal_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: ProposalStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn visitor_status_roundtrips(s in arb_visitor_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: VisitorStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn connector_type_roundtrips(c in arb_connector_type()) {
+        let json = serde_json::to_string(&c).unwrap();
+        let decoded: ConnectorType = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(c, decoded);
+    }
+
+    #[test]
+    fn ev_charger_status_roundtrips(s in arb_ev_charger_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: EvChargerStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    // ── json-stability variant for the same 8 enums ────────────────────────
+
+    #[test]
+    fn notification_type_json_is_stable(n in arb_notification_type()) {
+        let j1 = serde_json::to_string(&n).unwrap();
+        let d: NotificationType = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn layout_element_type_json_is_stable(l in arb_layout_element_type()) {
+        let j1 = serde_json::to_string(&l).unwrap();
+        let d: LayoutElementType = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn absence_type_json_is_stable(a in arb_absence_type()) {
+        let j1 = serde_json::to_string(&a).unwrap();
+        let d: AbsenceType = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn announcement_severity_json_is_stable(s in arb_announcement_severity()) {
+        let j1 = serde_json::to_string(&s).unwrap();
+        let d: AnnouncementSeverity = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn proposal_status_json_is_stable(s in arb_proposal_status()) {
+        let j1 = serde_json::to_string(&s).unwrap();
+        let d: ProposalStatus = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn visitor_status_json_is_stable(s in arb_visitor_status()) {
+        let j1 = serde_json::to_string(&s).unwrap();
+        let d: VisitorStatus = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn connector_type_json_is_stable(c in arb_connector_type()) {
+        let j1 = serde_json::to_string(&c).unwrap();
+        let d: ConnectorType = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    #[test]
+    fn ev_charger_status_json_is_stable(s in arb_ev_charger_status()) {
+        let j1 = serde_json::to_string(&s).unwrap();
+        let d: EvChargerStatus = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+}
+
+// ── arbitraries for the 8 new enums ────────────────────────────────────────
+
+fn arb_notification_type() -> impl Strategy<Value = NotificationType> {
+    prop_oneof![
+        Just(NotificationType::BookingConfirmed),
+        Just(NotificationType::BookingReminder),
+        Just(NotificationType::BookingExpiring),
+        Just(NotificationType::BookingCancelled),
+        Just(NotificationType::PaymentReceived),
+        Just(NotificationType::PaymentFailed),
+        Just(NotificationType::PromotionAvailable),
+        Just(NotificationType::SystemMessage),
+        Just(NotificationType::WaitlistOffer),
+    ]
+}
+
+fn arb_layout_element_type() -> impl Strategy<Value = LayoutElementType> {
+    prop_oneof![
+        Just(LayoutElementType::ParkingSlot),
+        Just(LayoutElementType::Road),
+        Just(LayoutElementType::Entrance),
+        Just(LayoutElementType::Exit),
+        Just(LayoutElementType::Elevator),
+        Just(LayoutElementType::Stairs),
+        Just(LayoutElementType::Wall),
+        Just(LayoutElementType::Pillar),
+        Just(LayoutElementType::Obstacle),
+        Just(LayoutElementType::ChargingStation),
+    ]
+}
+
+fn arb_absence_type() -> impl Strategy<Value = AbsenceType> {
+    prop_oneof![
+        Just(AbsenceType::Homeoffice),
+        Just(AbsenceType::Vacation),
+        Just(AbsenceType::Sick),
+        Just(AbsenceType::Training),
+        Just(AbsenceType::Other),
+    ]
+}
+
+fn arb_announcement_severity() -> impl Strategy<Value = AnnouncementSeverity> {
+    prop_oneof![
+        Just(AnnouncementSeverity::Info),
+        Just(AnnouncementSeverity::Warning),
+        Just(AnnouncementSeverity::Error),
+        Just(AnnouncementSeverity::Success),
+    ]
+}
+
+fn arb_proposal_status() -> impl Strategy<Value = ProposalStatus> {
+    prop_oneof![
+        Just(ProposalStatus::Pending),
+        Just(ProposalStatus::Approved),
+        Just(ProposalStatus::Rejected),
+    ]
+}
+
+fn arb_visitor_status() -> impl Strategy<Value = VisitorStatus> {
+    prop_oneof![
+        Just(VisitorStatus::Pending),
+        Just(VisitorStatus::CheckedIn),
+        Just(VisitorStatus::Expired),
+        Just(VisitorStatus::Cancelled),
+    ]
+}
+
+fn arb_connector_type() -> impl Strategy<Value = ConnectorType> {
+    prop_oneof![
+        Just(ConnectorType::Type2),
+        Just(ConnectorType::Ccs),
+        Just(ConnectorType::Chademo),
+        Just(ConnectorType::Tesla),
+    ]
+}
+
+fn arb_ev_charger_status() -> impl Strategy<Value = EvChargerStatus> {
+    prop_oneof![
+        Just(EvChargerStatus::Available),
+        Just(EvChargerStatus::InUse),
+        Just(EvChargerStatus::Offline),
+        Just(EvChargerStatus::Maintenance),
+    ]
 }
