@@ -254,7 +254,7 @@ export function AdminAnalyticsPage() {
           </div>
         </>
       ) : (
-        <div className="text-center py-12 text-surface-500">Failed to load analytics data</div>
+        <div className="text-center py-12 text-surface-500">{t('analytics.loadFailed', 'Failed to load analytics data')}</div>
       )}
     </div>
   );
