@@ -15,7 +15,7 @@ function parseUserAgent(ua: string): string {
 }
 
 export function LoginHistoryComponent() {
-  useTranslation(); // initialized for future i18n
+  const { t } = useTranslation();
   const [history, setHistory] = useState<LoginHistoryEntry[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +80,7 @@ export function LoginHistoryComponent() {
       {tab === 'history' && (
         <div className="space-y-2">
           {history.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No login history</p>
+            <p className="text-sm text-gray-500 text-center py-4">{t('loginHistory.empty', 'No login history')}</p>
           ) : (
             history.map((entry, i) => (
               <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
@@ -118,7 +118,7 @@ export function LoginHistoryComponent() {
       {tab === 'sessions' && (
         <div className="space-y-2">
           {sessions.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No active sessions</p>
+            <p className="text-sm text-gray-500 text-center py-4">{t('loginHistory.noSessions', 'No active sessions')}</p>
           ) : (
             sessions.map(session => (
               <div key={session.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">

@@ -18,7 +18,10 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    // Mirror i18next: return the inline fallback (2nd arg) if provided.
+    t: (key: string, fallback?: string) => fallback ?? key,
+  }),
 }));
 
 vi.mock('react-hot-toast', () => ({
