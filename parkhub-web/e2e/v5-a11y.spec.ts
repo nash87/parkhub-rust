@@ -31,7 +31,7 @@ test.describe('v5 a11y — WCAG 2.1 AA', () => {
       await openV5(page, screen);
 
       const results = await new AxeBuilder({ page })
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22a', 'wcag22aa'])
         .disableRules(['color-contrast'])
         .analyze();
 
