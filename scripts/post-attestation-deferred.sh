@@ -9,20 +9,49 @@
 # every 5s (up to 2.5min) until the SHA shows up, then posts the status.
 # The parent process returns immediately so lefthook isn't blocked.
 #
-# Usage: bash scripts/post-attestation-deferred.sh [success|failure] [description]
+# Usage:
+#   bash scripts/post-attestation-deferred.sh [state] [description]
+#   bash scripts/post-attestation-deferred.sh --sha <sha> [state] [description]
+#
+# By default the SHA comes from `git rev-parse HEAD` (the lefthook
+# pre-push case). Use `--sha <sha>` to manually re-post against a
+# different commit (e.g. when an earlier post failed and the PR is
+# stuck on `fop/local-ci/pr` PENDING — see
+# `feedback_parkhub_attestation_script_args_2026_05_03.md`).
 #
 # Skips cleanly if `gh` isn't on PATH or no GitHub remote is configured.
 
 set -euo pipefail
 
+sha=""
+if [ "${1:-}" = "--sha" ]; then
+  sha="${2:-}"
+  if [ -z "$sha" ]; then
+    echo "ERROR: --sha requires a SHA argument" >&2
+    exit 2
+  fi
+  shift 2
+fi
+
 state="${1:-success}"
 description="${2:-Local-first attestation: lefthook pre-push gates clean}"
+
+# Validate state — GitHub statuses API rejects anything outside this set.
+case "$state" in
+  success|failure|pending|error) ;;
+  *)
+    echo "ERROR: state must be one of: success failure pending error (got: $state)" >&2
+    exit 2
+    ;;
+esac
 
 if ! command -v gh >/dev/null 2>&1; then
   exit 0
 fi
 
-sha="$(git rev-parse HEAD)"
+if [ -z "$sha" ]; then
+  sha="$(git rev-parse HEAD)"
+fi
 repo=""
 for remote in github upstream origin; do
   url="$(git remote get-url "$remote" 2>/dev/null || true)"
