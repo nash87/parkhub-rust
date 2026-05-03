@@ -1,0 +1,55 @@
+name: Stale PR closer
+
+# Close stale PRs that have had no activity for 60 days (mark) + 14 days
+# (close). Issues are NOT touched (we triage those manually). Bot PRs are
+# exempt — Dependabot's own scheduling handles its PR lifecycle.
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: stale-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  stale:
+    name: Mark + close stale PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # PR-only: issues exempted via -1
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+
+          days-before-pr-stale: 60
+          days-before-pr-close: 14
+
+          stale-pr-label: stale
+          stale-pr-message: |
+            This PR has been inactive for 60 days. It will close in 14 days
+            if there is no further activity. To keep it open, push a commit
+            or remove the `stale` label.
+
+            If this PR is still relevant but blocked, leave a comment with
+            the blocker — the maintainers will look.
+
+          close-pr-message: |
+            Closing this PR after 60 + 14 days of inactivity. Reopen and
+            push a commit if you'd like to revive it.
+
+          exempt-pr-labels: 'pinned,security,wip,blocked,help-wanted'
+          exempt-all-pr-milestones: true
+
+          ascending: true
+          operations-per-run: 30
+          exempt-bot-author-pr: true

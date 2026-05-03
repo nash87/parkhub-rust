@@ -5,6 +5,16 @@ name: OpenAPI Drift
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - docs/**
+      - CHANGELOG*
+      - LICENSE*
+      - .gitignore
+      - .editorconfig
+      - .github/ISSUE_TEMPLATE/**
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/agents/**
   workflow_dispatch:
 
 concurrency:
