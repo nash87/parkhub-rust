@@ -3,8 +3,28 @@ name: Security
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - docs/**
+      - CHANGELOG*
+      - LICENSE*
+      - .gitignore
+      - .editorconfig
+      - .github/ISSUE_TEMPLATE/**
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/agents/**
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - docs/**
+      - CHANGELOG*
+      - LICENSE*
+      - .gitignore
+      - .editorconfig
+      - .github/ISSUE_TEMPLATE/**
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/agents/**
   schedule:
     - cron: '0 8 * * 1'
   workflow_dispatch:

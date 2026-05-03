@@ -1,0 +1,60 @@
+name: PR title lint
+
+# Enforce Conventional Commits in PR titles so the auto-generated changelog
+# (.github/release-drafter.yml + git-cliff) categorizes correctly. Runs on
+# every PR open / edit / sync.
+#
+# Examples that pass:
+#   feat(admin): add tenant scoping to lots
+#   fix(auth): refresh-token race in /me
+#   chore(deps): bump tokio 1.42 → 1.43
+#
+# Bot PRs (Dependabot, Copilot) are exempt — they use proper prefixes.
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: pr-title-lint-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Conventional Commits PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      pull-requests: read
+    if: github.event.pull_request.user.type != 'Bot'
+    steps:
+      - name: Lint title
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            test
+            docs
+            build
+            ci
+            chore
+            revert
+            security
+            i18n
+            design
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" must start with a lowercase letter.
+
+            Examples that pass:
+              feat(admin): add tenant scoping to lots
+              fix(auth): refresh-token race in /me
+              chore(deps): bump tokio 1.42 → 1.43
