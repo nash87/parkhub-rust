@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowsClockwiseIcon, CheckCircle, WarningIcon, CloudArrowDown, Info,
-  Clock, Spinner, ArrowRightIcon,
+  ArrowsClockwiseIcon, CheckCircleIcon, WarningIcon, CloudArrowDownIcon, InfoIcon,
+  ClockIcon, SpinnerIcon, ArrowRightIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -224,14 +224,14 @@ export function AdminUpdatesPage() {
       {/* v11 SOTA hero — amber tone (in-place upgrades carry rollback risk). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={CloudArrowDown} label={t('updates.eyebrow', 'RELEASE CHANNEL')} />
+          <HeroEyebrow icon={CloudArrowDownIcon} label={t('updates.eyebrow', 'RELEASE CHANNEL')} />
           <h1 className="admin-hero-headline">{t('updates.title', 'System Updates')}</h1>
           <p className="admin-hero-sub">{t('updates.subtitle', 'Manage application updates and versioning')}</p>
         </div>
         <div className="admin-hero-actions">
           {versionInfo?.version && (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium tabular-nums px-3 py-1.5 rounded-full bg-surface-100/70 dark:bg-surface-800/60 text-surface-600 dark:text-surface-300" data-testid="hero-version">
-              <Info weight="bold" className="w-3.5 h-3.5" />
+              <InfoIcon weight="bold" className="w-3.5 h-3.5" />
               v{versionInfo.version}
             </span>
           )}
@@ -244,7 +244,7 @@ export function AdminUpdatesPage() {
           <h3 className="text-sm font-semibold text-surface-700 dark:text-surface-300">
             {t('updates.currentVersion', 'Current Version')}
           </h3>
-          <Info weight="fill" className="w-4 h-4 text-surface-400" />
+          <InfoIcon weight="fill" className="w-4 h-4 text-surface-400" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -282,7 +282,7 @@ export function AdminUpdatesPage() {
             data-testid="check-btn"
           >
             {checking ? (
-              <Spinner weight="bold" className="w-4 h-4 animate-spin" />
+              <SpinnerIcon weight="bold" className="w-4 h-4 animate-spin" />
             ) : (
               <ArrowsClockwiseIcon weight="bold" className="w-4 h-4" />
             )}
@@ -300,7 +300,7 @@ export function AdminUpdatesPage() {
               className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl"
               data-testid="up-to-date"
             >
-              <CheckCircle weight="fill" className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircleIcon weight="fill" className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
               <div>
                 <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
                   {t('updates.upToDate', "You're up to date!")}
@@ -323,7 +323,7 @@ export function AdminUpdatesPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CloudArrowDown weight="fill" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <CloudArrowDownIcon weight="fill" className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                     {t('updates.newVersion', 'New version available')}
                   </span>
@@ -351,7 +351,7 @@ export function AdminUpdatesPage() {
                   className="btn btn-primary btn-sm"
                   data-testid="apply-btn"
                 >
-                  <CloudArrowDown weight="bold" className="w-4 h-4" />
+                  <CloudArrowDownIcon weight="bold" className="w-4 h-4" />
                   {t('updates.applyButton', 'Update Now')}
                 </button>
                 {checkResult.release_url && (
@@ -383,7 +383,7 @@ export function AdminUpdatesPage() {
             data-testid="update-progress"
           >
             <div className="flex items-center gap-3">
-              <Spinner weight="bold" className="w-5 h-5 text-primary-600 animate-spin" />
+              <SpinnerIcon weight="bold" className="w-5 h-5 text-primary-600 animate-spin" />
               <div>
                 <p className="text-sm font-medium text-primary-800 dark:text-primary-300">
                   {updateStep === 'downloading' && t('updates.stepDownloading', 'Downloading update...')}
@@ -416,7 +416,7 @@ export function AdminUpdatesPage() {
             className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl"
             data-testid="update-success"
           >
-            <CheckCircle weight="fill" className="w-6 h-6 text-emerald-600" />
+            <CheckCircleIcon weight="fill" className="w-6 h-6 text-emerald-600" />
             <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
               {t('updates.applySuccess', 'Update applied successfully!')}
             </p>
@@ -505,7 +505,7 @@ export function AdminUpdatesPage() {
         </div>
         {history.length === 0 ? (
           <div className="p-8 text-center">
-            <Clock weight="thin" className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
+            <ClockIcon weight="thin" className="w-12 h-12 mx-auto text-surface-300 dark:text-surface-600 mb-3" />
             <p className="text-sm text-surface-500 dark:text-surface-400">
               {t('updates.noHistory', 'No update history yet')}
             </p>

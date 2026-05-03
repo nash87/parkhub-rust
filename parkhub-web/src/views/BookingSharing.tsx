@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShareNetwork, Link as LinkIcon, Copy, Envelope, Question, Trash, CheckCircle, XIcon, SpinnerGap } from '@phosphor-icons/react';
+import { ShareNetworkIcon, LinkIcon as LinkIcon, CopyIcon, EnvelopeIcon, QuestionIcon, TrashIcon, CheckCircleIcon, XIcon, SpinnerGapIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -131,7 +131,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-surface-200 dark:border-surface-700">
         <div className="flex items-center gap-2">
-          <ShareNetwork size={20} className="text-primary-500" />
+          <ShareNetworkIcon size={20} className="text-primary-500" />
           <h2 className="font-semibold text-surface-900 dark:text-white">
             {t('sharing.title')}
           </h2>
@@ -143,7 +143,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
             aria-label={t('sharing.helpLabel')}
             data-testid="sharing-help-btn"
           >
-            <Question size={16} />
+            <QuestionIcon size={16} />
           </button>
           {onClose && (
             <button
@@ -197,7 +197,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
           }`}
           data-testid="tab-invite"
         >
-          <Envelope size={14} className="inline mr-1" />
+          <EnvelopeIcon size={14} className="inline mr-1" />
           {t('sharing.tabInvite')}
         </button>
       </div>
@@ -231,7 +231,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
                   data-testid="create-link-btn"
                 >
-                  {creating ? <SpinnerGap size={16} className="animate-spin" /> : <LinkIcon size={16} />}
+                  {creating ? <SpinnerGapIcon size={16} className="animate-spin" /> : <LinkIcon size={16} />}
                   {creating ? t('sharing.creating') : t('sharing.createLink')}
                 </button>
               </div>
@@ -249,7 +249,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
                     className="p-2 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-600"
                     data-testid="copy-link-btn"
                   >
-                    {copied ? <CheckCircle size={16} className="text-green-500" /> : <Copy size={16} />}
+                    {copied ? <CheckCircleIcon size={16} className="text-green-500" /> : <CopyIcon size={16} />}
                   </button>
                 </div>
                 {shareLink.expires_at && (
@@ -263,7 +263,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
                   className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-red-600 border border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20"
                   data-testid="revoke-link-btn"
                 >
-                  {revoking ? <SpinnerGap size={16} className="animate-spin" /> : <Trash size={16} />}
+                  {revoking ? <SpinnerGapIcon size={16} className="animate-spin" /> : <TrashIcon size={16} />}
                   {t('sharing.revokeLink')}
                 </button>
               </div>
@@ -304,7 +304,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50"
               data-testid="send-invite-btn"
             >
-              {inviting ? <SpinnerGap size={16} className="animate-spin" /> : <Envelope size={16} />}
+              {inviting ? <SpinnerGapIcon size={16} className="animate-spin" /> : <EnvelopeIcon size={16} />}
               {inviting ? t('sharing.sending') : t('sharing.sendInvite')}
             </button>
           </div>

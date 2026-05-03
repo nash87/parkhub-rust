@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { CreditCard, XIcon, Lock, SpinnerGap, CheckCircle, WarningCircle } from '@phosphor-icons/react';
+import { CreditCardIcon, XIcon, LockIcon, SpinnerGapIcon, CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react';
 
 type PaymentStep = 'form' | 'processing' | 'success' | 'error';
 
@@ -99,7 +99,7 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
           >
             <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
-                <CreditCard size={24} weight="duotone" className="text-indigo-500" />
+                <CreditCardIcon size={24} weight="duotone" className="text-indigo-500" />
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   {t('payment.title')}
                 </h2>
@@ -179,11 +179,11 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
                     disabled={!isFormValid}
                     className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Lock size={16} weight="bold" />
+                    <LockIcon size={16} weight="bold" />
                     {t('payment.pay', { amount: formatAmount() })}
                   </button>
                   <p className="text-xs text-center text-gray-400 dark:text-gray-500 flex items-center justify-center gap-1">
-                    <Lock size={12} />
+                    <LockIcon size={12} />
                     {t('payment.secureNote')}
                   </p>
                 </form>
@@ -191,7 +191,7 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
               {step === 'processing' && (
                 <div className="flex flex-col items-center py-12 gap-4">
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
-                    <SpinnerGap size={48} className="text-indigo-500" />
+                    <SpinnerGapIcon size={48} className="text-indigo-500" />
                   </motion.div>
                   <p className="text-gray-600 dark:text-gray-400">{t('payment.processing')}</p>
                 </div>
@@ -199,7 +199,7 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
               {step === 'success' && (
                 <div className="flex flex-col items-center py-12 gap-4">
                   <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
-                    <CheckCircle size={64} weight="duotone" className="text-green-500" />
+                    <CheckCircleIcon size={64} weight="duotone" className="text-green-500" />
                   </motion.div>
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">{t('payment.success')}</p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">{t('payment.successDesc')}</p>
@@ -213,7 +213,7 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
               )}
               {step === 'error' && (
                 <div className="flex flex-col items-center py-12 gap-4">
-                  <WarningCircle size={64} weight="duotone" className="text-red-500" />
+                  <WarningCircleIcon size={64} weight="duotone" className="text-red-500" />
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">{t('payment.errorTitle')}</p>
                   <p className="text-gray-500 dark:text-gray-400 text-sm">{error || t('payment.genericError')}</p>
                   <button

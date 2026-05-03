@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XIcon, DownloadSimpleIcon, Printer } from '@phosphor-icons/react';
+import { XIcon, DownloadSimpleIcon, PrinterIcon } from '@phosphor-icons/react';
 import type { Booking } from '../api/client';
 import { getInMemoryToken } from '../api/client';
 import { format } from 'date-fns';
@@ -121,7 +121,7 @@ export function ParkingPass({ booking, onClose }: ParkingPassProps) {
             className="btn btn-secondary flex items-center justify-center gap-2 px-4"
             title="Print booking confirmation"
           >
-            <Printer weight="bold" className="w-4 h-4" />
+            <PrinterIcon weight="bold" className="w-4 h-4" />
           </button>
         </div>
       </div>

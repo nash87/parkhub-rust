@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CurrencyDollar, ChartBar, DownloadSimpleIcon, Question, Buildings } from '@phosphor-icons/react';
+import { CurrencyDollarIcon, ChartBarIcon, DownloadSimpleIcon, QuestionIcon, BuildingsIcon } from '@phosphor-icons/react';
 import { V11Meter } from '../components/v11/V11Meter';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -84,7 +84,7 @@ export function AdminBillingPage() {
           the Cost Center Billing identity. */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={CurrencyDollar} label={t('billing.eyebrow', 'COST CENTER BILLING')} />
+          <HeroEyebrow icon={CurrencyDollarIcon} label={t('billing.eyebrow', 'COST CENTER BILLING')} />
           <h1 className="admin-hero-headline">{t('billing.title', 'Cost Center Billing')}</h1>
           <p className="admin-hero-sub">
             {t('billing.subtitle', 'Billing breakdown by cost center and department')}
@@ -96,7 +96,7 @@ export function AdminBillingPage() {
             className="admin-hero-iconbtn"
             aria-label={t('billing.help_toggle', 'Toggle help')}
           >
-            <Question weight="bold" className="w-4 h-4" />
+            <QuestionIcon weight="bold" className="w-4 h-4" />
           </button>
           <button onClick={handleExport} className="admin-hero-action" data-testid="export-btn">
             <DownloadSimpleIcon weight="bold" className="w-4 h-4" />
@@ -116,9 +116,9 @@ export function AdminBillingPage() {
 
       {/* v11 SOTA summary meters — emerald/blue/purple tones for visual rhythm. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="billing-summary">
-        <SummaryCard tone="success" label={t('billing.totalSpending', 'Total Spending')} value={`EUR ${totalAmount.toFixed(2)}`} icon={<CurrencyDollar weight="bold" className="w-3.5 h-3.5" />} />
-        <SummaryCard tone="info" label={t('billing.totalBookings', 'Total Bookings')} value={totalBookings} icon={<ChartBar weight="bold" className="w-3.5 h-3.5" />} />
-        <SummaryCard tone="accent" label={t('billing.totalUsers', 'Total Users')} value={totalUsers} icon={<Buildings weight="bold" className="w-3.5 h-3.5" />} />
+        <SummaryCard tone="success" label={t('billing.totalSpending', 'Total Spending')} value={`EUR ${totalAmount.toFixed(2)}`} icon={<CurrencyDollarIcon weight="bold" className="w-3.5 h-3.5" />} />
+        <SummaryCard tone="info" label={t('billing.totalBookings', 'Total Bookings')} value={totalBookings} icon={<ChartBarIcon weight="bold" className="w-3.5 h-3.5" />} />
+        <SummaryCard tone="accent" label={t('billing.totalUsers', 'Total Users')} value={totalUsers} icon={<BuildingsIcon weight="bold" className="w-3.5 h-3.5" />} />
       </div>
 
       {/* Tab switcher */}

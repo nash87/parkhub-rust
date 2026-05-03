@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChartBar, CurrencyCircleDollar, CalendarCheckIcon, UsersThree, Fire, WarningIcon,
-  Wrench, Lightning, Plus, Minus, GearSixIcon, Question, ArrowsOutCardinal,
+  ChartBarIcon, CurrencyCircleDollarIcon, CalendarCheckIcon, UsersThreeIcon, FireIcon, WarningIcon,
+  WrenchIcon, LightningIcon, PlusIcon, MinusIcon, GearSixIcon, QuestionIcon, ArrowsOutCardinalIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -19,14 +19,14 @@ const WIDGET_TYPES = [
 ] as const;
 
 const widgetIcons: Record<string, React.ComponentType<any>> = {
-  occupancy_chart: ChartBar,
-  revenue_summary: CurrencyCircleDollar,
+  occupancy_chart: ChartBarIcon,
+  revenue_summary: CurrencyCircleDollarIcon,
   recent_bookings: CalendarCheckIcon,
-  user_growth: UsersThree,
-  booking_heatmap: Fire,
+  user_growth: UsersThreeIcon,
+  booking_heatmap: FireIcon,
   active_alerts: WarningIcon,
-  maintenance_status: Wrench,
-  ev_charging_status: Lightning,
+  maintenance_status: WrenchIcon,
+  ev_charging_status: LightningIcon,
 };
 
 export function AdminDashboardPage() {
@@ -111,13 +111,13 @@ export function AdminDashboardPage() {
       {/* v11 SOTA hero — primary tone (operations view). */}
       <section className="admin-hero">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={ChartBar} label={t('widgets.eyebrow', 'OPERATIONS VIEW')} />
+          <HeroEyebrow icon={ChartBarIcon} label={t('widgets.eyebrow', 'OPERATIONS VIEW')} />
           <h1 className="admin-hero-headline">{t('widgets.title')}</h1>
           <p className="admin-hero-sub">{t('widgets.subtitle')}</p>
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" title={t('widgets.helpLabel')}>
-            <Question size={16} />
+            <QuestionIcon size={16} />
           </button>
           <button onClick={() => setShowCatalog(!showCatalog)} className="admin-hero-action">
             <GearSixIcon size={16} weight="bold" />
@@ -131,7 +131,7 @@ export function AdminDashboardPage() {
         {showHelp && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             className="p-3 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-sm text-primary-800 dark:text-primary-300 flex items-start gap-2">
-            <ArrowsOutCardinal size={18} className="mt-0.5 shrink-0" />
+            <ArrowsOutCardinalIcon size={18} className="mt-0.5 shrink-0" />
             <span>{t('widgets.help')}</span>
           </motion.div>
         )}
@@ -145,7 +145,7 @@ export function AdminDashboardPage() {
             <h3 className="font-semibold text-surface-900 dark:text-surface-100 mb-3">{t('widgets.catalog')}</h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {WIDGET_TYPES.map(wt => {
-                const Icon = widgetIcons[wt] || ChartBar;
+                const Icon = widgetIcons[wt] || ChartBarIcon;
                 const isActive = (layout?.widgets ?? []).some(w => w.widget_type === wt && w.visible);
                 return (
                   <button key={wt} onClick={() => toggleWidget(wt)}
@@ -156,7 +156,7 @@ export function AdminDashboardPage() {
                     }`}>
                     <Icon size={18} />
                     <span className="truncate">{t(`widgets.types.${wt}`)}</span>
-                    {isActive ? <Minus size={14} className="ml-auto shrink-0" /> : <Plus size={14} className="ml-auto shrink-0" />}
+                    {isActive ? <MinusIcon size={14} className="ml-auto shrink-0" /> : <PlusIcon size={14} className="ml-auto shrink-0" />}
                   </button>
                 );
               })}
@@ -175,7 +175,7 @@ export function AdminDashboardPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visibleWidgets.map(w => {
-            const Icon = widgetIcons[w.widget_type] || ChartBar;
+            const Icon = widgetIcons[w.widget_type] || ChartBarIcon;
             const data = widgetData[w.widget_type];
             return (
               <motion.div key={w.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
@@ -188,7 +188,7 @@ export function AdminDashboardPage() {
                     <h3 className="font-semibold text-surface-900 dark:text-white text-sm">{t(`widgets.types.${w.widget_type}`)}</h3>
                   </div>
                   <button onClick={() => toggleWidget(w.widget_type)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" title={t('widgets.remove')}>
-                    <Minus size={14} />
+                    <MinusIcon size={14} />
                   </button>
                 </div>
                 <div className="text-sm text-surface-600 dark:text-surface-400">

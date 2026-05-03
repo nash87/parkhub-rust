@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Lightning, Play, Stop, Question, Clock, BatteryCharging } from '@phosphor-icons/react';
+import { LightningIcon, PlayIcon, StopIcon, QuestionIcon, ClockIcon, BatteryChargingIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { getInMemoryToken } from '../api/client';
@@ -127,13 +127,13 @@ export function EVChargingPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. Help + lot-select live in admin-hero-actions. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Lightning} label={t('evCharging.eyebrow', 'CHARGING SESSIONS')} />
+          <HeroEyebrow icon={LightningIcon} label={t('evCharging.eyebrow', 'CHARGING SESSIONS')} />
           <h1 className="admin-hero-headline">{t('evCharging.title')}</h1>
           <p className="admin-hero-sub">{t('evCharging.subtitle')}</p>
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" aria-label="Help" title="Help">
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           <select value={selectedLot} onChange={e => setSelectedLot(e.target.value)} className="rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 px-3 py-1.5 text-sm">
             {lots.map(lot => <option key={lot.id} value={lot.id}>{lot.name}</option>)}
@@ -152,7 +152,7 @@ export function EVChargingPage() {
         <div className="flex justify-center py-12"><div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" /></div>
       ) : chargers.length === 0 ? (
         <div className="text-center py-12 text-surface-400">
-          <Lightning className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <LightningIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p>{t('evCharging.empty')}</p>
         </div>
       ) : (
@@ -168,21 +168,21 @@ export function EVChargingPage() {
                   </span>
                 </div>
                 <div className="space-y-1 text-sm text-surface-500 mb-3">
-                  <div className="flex items-center gap-1"><BatteryCharging className="w-4 h-4" />{connectorLabels[ch.connector_type]} - {ch.power_kw} kW</div>
+                  <div className="flex items-center gap-1"><BatteryChargingIcon className="w-4 h-4" />{connectorLabels[ch.connector_type]} - {ch.power_kw} kW</div>
                   {ch.location_hint && <div>{ch.location_hint}</div>}
                 </div>
                 {ch.status === 'available' && (
                   <button onClick={() => handleStart(ch.id)} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
-                    <Play weight="bold" className="w-4 h-4" />{t('evCharging.startCharging')}
+                    <PlayIcon weight="bold" className="w-4 h-4" />{t('evCharging.startCharging')}
                   </button>
                 )}
                 {active && (
                   <div>
                     <div className="flex items-center gap-1 text-sm text-amber-600 mb-2">
-                      <Clock className="w-4 h-4" />{t('evCharging.chargingSince')} {new Date(active.start_time).toLocaleTimeString()}
+                      <ClockIcon className="w-4 h-4" />{t('evCharging.chargingSince')} {new Date(active.start_time).toLocaleTimeString()}
                     </div>
                     <button onClick={() => handleStop(ch.id)} className="btn-secondary w-full flex items-center justify-center gap-2 text-sm border-red-300 text-red-600 hover:bg-red-50">
-                      <Stop weight="bold" className="w-4 h-4" />{t('evCharging.stopCharging')}
+                      <StopIcon weight="bold" className="w-4 h-4" />{t('evCharging.stopCharging')}
                     </button>
                   </div>
                 )}
@@ -243,10 +243,10 @@ export function AdminChargersPage() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-          <Lightning weight="duotone" className="w-7 h-7 text-yellow-500" />
+          <LightningIcon weight="duotone" className="w-7 h-7 text-yellow-500" />
           {t('evCharging.adminTitle')}
           <button onClick={() => setShowHelp(!showHelp)} className="text-surface-400 hover:text-primary-500" aria-label="Help">
-            <Question weight="fill" className="w-5 h-5" />
+            <QuestionIcon weight="fill" className="w-5 h-5" />
           </button>
         </h1>
         <p className="text-surface-500 dark:text-surface-400 mt-1">{t('evCharging.adminSubtitle')}</p>

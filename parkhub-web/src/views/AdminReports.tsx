@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { SpinnerGap, UsersIcon, Buildings, CalendarCheckIcon, Lightning, type Icon } from '@phosphor-icons/react';
+import { SpinnerGapIcon, UsersIcon, BuildingsIcon, CalendarCheckIcon, LightningIcon, type Icon } from '@phosphor-icons/react';
 import { api, type AdminBooking, type AdminStats, type ParkingLot } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { BarChart, DonutChart, type DonutSlice } from '../components/SimpleChart';
@@ -109,7 +109,7 @@ export function AdminReportsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <SpinnerGapIcon weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -137,7 +137,7 @@ export function AdminReportsPage() {
           color="primary"
         />
         <StatCard
-          icon={Buildings}
+          icon={BuildingsIcon}
           label={t('admin.totalLots')}
           value={stats?.total_lots ?? 0}
           color="accent"
@@ -149,7 +149,7 @@ export function AdminReportsPage() {
           color="info"
         />
         <StatCard
-          icon={Lightning}
+          icon={LightningIcon}
           label={t('admin.activeBookings')}
           value={stats?.active_bookings ?? 0}
           color="success"

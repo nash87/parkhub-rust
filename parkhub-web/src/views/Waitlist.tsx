@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { BellIcon, Queue, Check, XIcon, Question, Clock, ArrowUpIcon } from '@phosphor-icons/react';
+import { BellIcon, QueueIcon, CheckIcon, XIcon, QuestionIcon, ClockIcon, ArrowUpIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -155,7 +155,7 @@ export function WaitlistPage() {
           className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"
           aria-label={t('waitlistExt.helpLabel')}
         >
-          <Question size={24} />
+          <QuestionIcon size={24} />
         </button>
       </div>
 
@@ -195,7 +195,7 @@ export function WaitlistPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Queue size={20} className="text-primary-500" />
+                        <QueueIcon size={20} className="text-primary-500" />
                         <div>
                           <p className="font-medium text-surface-900 dark:text-surface-100">
                             {lot?.name || wp.entry.lot_id}
@@ -212,7 +212,7 @@ export function WaitlistPage() {
                             )}
                             {wp.estimated_wait_minutes != null && wp.entry.status === 'waiting' && (
                               <span className="text-xs text-surface-500 flex items-center gap-1">
-                                <Clock size={12} />
+                                <ClockIcon size={12} />
                                 {t('waitlistExt.estimatedWait', { minutes: wp.estimated_wait_minutes })}
                               </span>
                             )}
@@ -226,7 +226,7 @@ export function WaitlistPage() {
                               onClick={() => handleAccept(wp.entry.lot_id, wp.entry.id)}
                               className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
                             >
-                              <Check size={16} /> {t('waitlistExt.accept')}
+                              <CheckIcon size={16} /> {t('waitlistExt.accept')}
                             </button>
                             <button
                               onClick={() => handleDecline(wp.entry.lot_id, wp.entry.id)}
@@ -289,7 +289,7 @@ export function WaitlistPage() {
           {/* Empty state */}
           {fullLots.length === 0 && entries.length === 0 && (
             <div className="text-center py-12 text-surface-400">
-              <Queue size={48} className="mx-auto mb-3 opacity-40" />
+              <QueueIcon size={48} className="mx-auto mb-3 opacity-40" />
               <p>{t('waitlistExt.noFullLots')}</p>
             </div>
           )}

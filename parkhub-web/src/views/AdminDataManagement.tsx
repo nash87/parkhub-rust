@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { UploadSimple, DownloadSimpleIcon, FileArrowUp, FileArrowDown, Table, WarningIcon, CheckCircle } from '@phosphor-icons/react';
+import { UploadSimpleIcon, DownloadSimpleIcon, FileArrowUpIcon, FileArrowDownIcon, TableIcon, WarningIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -24,7 +24,7 @@ export function AdminDataManagementPage() {
       {/* v11 SOTA hero — amber tone (bulk ops touch many rows, double-check before running). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Table} label={t('dataManagement.eyebrow', 'BULK OPERATIONS')} />
+          <HeroEyebrow icon={TableIcon} label={t('dataManagement.eyebrow', 'BULK OPERATIONS')} />
           <h1 className="admin-hero-headline">{t('dataManagement.title', 'Data Management')}</h1>
           <p className="admin-hero-sub">{t('dataManagement.subtitle', 'Import and export your ParkHub data')}</p>
         </div>
@@ -41,7 +41,7 @@ export function AdminDataManagementPage() {
           }`}
           data-testid="tab-import"
         >
-          <UploadSimple weight="bold" className="w-4 h-4" />
+          <UploadSimpleIcon weight="bold" className="w-4 h-4" />
           {t('dataManagement.import', 'Import')}
         </button>
         <button
@@ -144,7 +144,7 @@ function ImportSection() {
         className="border-2 border-dashed border-surface-300 dark:border-surface-600 rounded-2xl p-8 text-center cursor-pointer hover:border-primary-400 transition-colors"
         data-testid="drop-zone"
       >
-        <FileArrowUp weight="duotone" className="w-12 h-12 mx-auto text-surface-400 mb-3" />
+        <FileArrowUpIcon weight="duotone" className="w-12 h-12 mx-auto text-surface-400 mb-3" />
         <p className="text-sm text-surface-600 dark:text-surface-300 font-medium">
           {file ? file.name : t('dataManagement.dropHint', 'Drop a CSV or JSON file here, or click to browse')}
         </p>
@@ -200,7 +200,7 @@ function ImportSection() {
       {result && (
         <div className="glass-card rounded-2xl p-4 space-y-2" data-testid="import-result">
           <div className="flex items-center gap-2">
-            <CheckCircle weight="fill" className="w-5 h-5 text-emerald-500" />
+            <CheckCircleIcon weight="fill" className="w-5 h-5 text-emerald-500" />
             <span className="font-medium text-surface-900 dark:text-white">
               {t('dataManagement.importComplete', 'Import Complete')}
             </span>
@@ -273,7 +273,7 @@ function ExportSection() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {exportCards.map(card => (
           <div key={card.type} className="glass-card rounded-2xl p-5 space-y-3" data-testid={`export-card-${card.type}`}>
-            <FileArrowDown weight="duotone" className="w-8 h-8 text-primary-500" />
+            <FileArrowDownIcon weight="duotone" className="w-8 h-8 text-primary-500" />
             <div>
               <h3 className="font-medium text-surface-900 dark:text-white">{card.title}</h3>
               <p className="text-xs text-surface-500 mt-0.5">{card.desc}</p>

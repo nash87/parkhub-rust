@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BellIcon, SpinnerGap, FloppyDisk, EnvelopeSimple, DeviceMobile, ChatCircleDots, Phone } from '@phosphor-icons/react';
+import { BellIcon, SpinnerGapIcon, FloppyDiskIcon, EnvelopeSimpleIcon, DeviceMobileIcon, ChatCircleDotsIcon, PhoneIcon } from '@phosphor-icons/react';
 import { api, type NotificationPreferences } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -68,7 +68,7 @@ export function NotificationPreferencesComponent() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-4">
-        <SpinnerGap className="animate-spin" size={20} />
+        <SpinnerGapIcon className="animate-spin" size={20} />
         <span>Loading preferences...</span>
       </div>
     );
@@ -83,7 +83,7 @@ export function NotificationPreferencesComponent() {
 
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-          <EnvelopeSimple size={16} />
+          <EnvelopeSimpleIcon size={16} />
           <span>Email Notifications</span>
         </div>
         <div className="space-y-3 pl-6">
@@ -107,7 +107,7 @@ export function NotificationPreferencesComponent() {
 
       <div className="space-y-1">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-          <DeviceMobile size={16} />
+          <DeviceMobileIcon size={16} />
           <span>{t('notifications.pushTitle', 'Push Notifications')}</span>
         </div>
         <div className="pl-6">
@@ -119,11 +119,11 @@ export function NotificationPreferencesComponent() {
         </div>
       </div>
 
-      {/* Phone number for SMS/WhatsApp */}
+      {/* PhoneIcon number for SMS/WhatsApp */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
-          <Phone size={16} />
-          <span>{t('notifications.phoneNumber', 'Phone Number')}</span>
+          <PhoneIcon size={16} />
+          <span>{t('notifications.phoneNumber', 'PhoneIcon Number')}</span>
         </div>
         <div className="pl-6">
           <input
@@ -132,7 +132,7 @@ export function NotificationPreferencesComponent() {
             onChange={e => update('phone_number', e.target.value || '')}
             placeholder="+49 123 4567890"
             className="input text-sm w-full max-w-xs"
-            aria-label={t('notifications.phoneNumber', 'Phone Number')}
+            aria-label={t('notifications.phoneNumber', 'PhoneIcon Number')}
           />
           <p className="text-xs text-gray-400 mt-1">{t('notifications.phoneHint', 'Required for SMS and WhatsApp notifications')}</p>
         </div>
@@ -141,7 +141,7 @@ export function NotificationPreferencesComponent() {
       {/* SMS Channel (gated - no provider configured) */}
       <div className="space-y-1 opacity-50 pointer-events-none">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-          <DeviceMobile size={16} />
+          <DeviceMobileIcon size={16} />
           <span>{t('notifications.smsTitle', 'SMS Notifications')}</span>
           <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Coming soon')}</span>
         </div>
@@ -167,7 +167,7 @@ export function NotificationPreferencesComponent() {
       {/* WhatsApp Channel (gated - no provider configured) */}
       <div className="space-y-1 opacity-50 pointer-events-none">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-          <ChatCircleDots size={16} />
+          <ChatCircleDotsIcon size={16} />
           <span>{t('notifications.whatsappTitle', 'WhatsApp Notifications')}</span>
           <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Coming soon')}</span>
         </div>
@@ -196,7 +196,7 @@ export function NotificationPreferencesComponent() {
           disabled={saving}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition"
         >
-          {saving ? <SpinnerGap className="animate-spin" size={16} /> : <FloppyDisk size={16} />}
+          {saving ? <SpinnerGapIcon className="animate-spin" size={16} /> : <FloppyDiskIcon size={16} />}
           Save Preferences
         </button>
       )}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, XIcon, Copy, Check, Question, ArrowsClockwiseIcon } from '@phosphor-icons/react';
+import { CaretLeftIcon, CaretRightIcon, CalendarBlankIcon, LinkSimpleIcon, XIcon, CopyIcon, CheckIcon, QuestionIcon, ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { api, type CalendarEvent } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -240,13 +240,13 @@ export function CalendarPage() {
           in hero-actions; the prev/month/next month nav row sits below. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={CalendarBlank} label={t('calendar.eyebrow', 'SCHEDULE')} />
+          <HeroEyebrow icon={CalendarBlankIcon} label={t('calendar.eyebrow', 'SCHEDULE')} />
           <h1 className="admin-hero-headline">{t('calendar.title', 'Kalender')}</h1>
           <p className="admin-hero-sub">{t('calendar.subtitle', 'See and manage your reservations across the month')}</p>
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" title={t('calendarDrag.helpLabel')}>
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
           <button
             onClick={handleSubscribe}
@@ -254,18 +254,18 @@ export function CalendarPage() {
             aria-label={t('calendar.subscribe', 'Subscribe to Calendar')}
             className="admin-hero-action disabled:opacity-50"
           >
-            <LinkSimple weight="bold" className="w-4 h-4" aria-hidden="true" />
+            <LinkSimpleIcon weight="bold" className="w-4 h-4" aria-hidden="true" />
             {t('calendar.subscribe', 'Subscribe')}
           </button>
         </div>
       </section>
       <div className="flex items-center gap-2 justify-end">
         <button onClick={prevMonth} aria-label={t('calendar.previousMonth', 'Previous month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-          <CaretLeft weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
+          <CaretLeftIcon weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
         </button>
         <span aria-live="polite" className="text-sm font-medium text-surface-700 dark:text-surface-300 min-w-[140px] text-center">{monthLabel}</span>
         <button onClick={nextMonth} aria-label={t('calendar.nextMonth', 'Next month')} className="p-2 rounded-xl hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center">
-          <CaretRight weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
+          <CaretRightIcon weight="bold" className="w-5 h-5 text-surface-600 dark:text-surface-400" aria-hidden="true" />
         </button>
       </div>
 
@@ -329,7 +329,7 @@ export function CalendarPage() {
           </h2>
           {selectedEvents.length === 0 ? (
             <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-8 text-center">
-              <CalendarBlank weight="light" className="w-10 h-10 text-surface-300 dark:text-surface-600 mx-auto mb-2" />
+              <CalendarBlankIcon weight="light" className="w-10 h-10 text-surface-300 dark:text-surface-600 mx-auto mb-2" />
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('calendar.noBookings', 'Keine Eintr\u00e4ge an diesem Tag')}</p>
             </div>
           ) : (
@@ -442,11 +442,11 @@ export function CalendarPage() {
                 />
                 <button
                   onClick={handleCopyLink}
-                  aria-label={t('calendar.copyLink', 'Copy link')}
+                  aria-label={t('calendar.copyLink', 'CopyIcon link')}
                   className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors min-h-[40px]"
                 >
-                  {copied ? <Check weight="bold" className="w-4 h-4" /> : <Copy weight="bold" className="w-4 h-4" />}
-                  {t('calendar.copyLink', 'Copy')}
+                  {copied ? <CheckIcon weight="bold" className="w-4 h-4" /> : <CopyIcon weight="bold" className="w-4 h-4" />}
+                  {t('calendar.copyLink', 'CopyIcon')}
                 </button>
               </div>
 

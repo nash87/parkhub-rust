@@ -8,7 +8,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretUpIcon, CaretDownIcon, DownloadSimpleIcon, FilePdf } from '@phosphor-icons/react';
+import { CaretUpIcon, CaretDownIcon, DownloadSimpleIcon, FilePdfIcon } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { downloadPdfTable, type CsvCell } from '../../utils/exportTable';
 
@@ -136,7 +136,7 @@ export function DataTable<T>({
             aria-label={`Export ${exportFilename} as PDF`}
             data-testid={`export-pdf-${exportFilename}`}
           >
-            <FilePdf weight="bold" className="w-4 h-4" />
+            <FilePdfIcon weight="bold" className="w-4 h-4" />
             Als PDF
           </button>
         </div>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { languages } from '../i18n';
 import {
-  ArrowRightIcon, GlobeIcon, SunDim, Moon, CarSimpleIcon,
+  ArrowRightIcon, GlobeIcon, SunDimIcon, MoonIcon, CarSimpleIcon,
 } from '@phosphor-icons/react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -71,7 +71,7 @@ export function WelcomePage() {
           className="p-2 rounded-lg hover:bg-surface-100/80 dark:hover:bg-surface-800/80 transition-colors backdrop-blur-sm"
           aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
         >
-          {resolved === 'dark' ? <SunDim weight="bold" className="w-5 h-5 text-surface-400" /> : <Moon weight="bold" className="w-5 h-5 text-surface-500" />}
+          {resolved === 'dark' ? <SunDimIcon weight="bold" className="w-5 h-5 text-surface-400" /> : <MoonIcon weight="bold" className="w-5 h-5 text-surface-500" />}
         </button>
       </header>
 

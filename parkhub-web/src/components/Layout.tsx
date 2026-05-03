@@ -3,9 +3,9 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  House, CalendarCheckIcon, CarIcon, CalendarIcon, CalendarX, CoinsIcon, UserCircleIcon, UsersIcon, BellIcon,
-  GearSixIcon, SignOut, List, XIcon, CarSimpleIcon, SunDim, Moon, Translate, StarIcon, GlobeIcon, CaretDownIcon, MapPinIcon,
-  ClockCounterClockwiseIcon, Swap, QrCodeIcon, UserPlusIcon, TrophyIcon, SparkleIcon, CalendarPlus,
+  HouseIcon, CalendarCheckIcon, CarIcon, CalendarIcon, CalendarXIcon, CoinsIcon, UserCircleIcon, UsersIcon, BellIcon,
+  GearSixIcon, SignOutIcon, ListIcon, XIcon, CarSimpleIcon, SunDimIcon, MoonIcon, TranslateIcon, StarIcon, GlobeIcon, CaretDownIcon, MapPinIcon,
+  ClockCounterClockwiseIcon, SwapIcon, QrCodeIcon, UserPlusIcon, TrophyIcon, SparkleIcon, CalendarPlusIcon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -62,9 +62,9 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     defaultOpen: true,
     collapsible: false,
     items: [
-      { to: '/', icon: House, key: 'dashboard', end: true },
+      { to: '/', icon: HouseIcon, key: 'dashboard', end: true },
       { to: '/bookings', icon: CalendarCheckIcon, key: 'bookings' },
-      { to: '/book', icon: CalendarPlus, key: 'bookSpot' },
+      { to: '/book', icon: CalendarPlusIcon, key: 'bookSpot' },
       { to: '/vehicles', icon: CarIcon, key: 'vehicles' },
       { to: '/calendar', icon: CalendarIcon, key: 'calendar' },
       { to: '/credits', icon: CoinsIcon, key: 'credits' },
@@ -77,12 +77,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     collapsible: true,
     items: [
       { to: '/favorites', icon: StarIcon, key: 'favorites' },
-      { to: '/absences', icon: CalendarX, key: 'absences' },
+      { to: '/absences', icon: CalendarXIcon, key: 'absences' },
       { to: '/team', icon: UsersIcon, key: 'team' },
       { to: '/leaderboard', icon: TrophyIcon, key: 'leaderboard' },
       { to: '/map', icon: MapPinIcon, key: 'map' },
       { to: '/history', icon: ClockCounterClockwiseIcon, key: 'history' },
-      { to: '/swap-requests', icon: Swap, key: 'swapRequests' },
+      { to: '/swap-requests', icon: SwapIcon, key: 'swapRequests' },
       { to: '/guest-pass', icon: UserPlusIcon, key: 'guestPass' },
       { to: '/checkin', icon: QrCodeIcon, key: 'checkin' },
       { to: '/predict', icon: SparkleIcon, key: 'predictions' },
@@ -95,7 +95,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     collapsible: true,
     items: [
       { to: '/notifications', icon: BellIcon, key: 'notifications' },
-      { to: '/translations', icon: Translate, key: 'translations' },
+      { to: '/translations', icon: TranslateIcon, key: 'translations' },
       { to: '/profile', icon: UserCircleIcon, key: 'profile' },
       { to: '/settings', icon: GearSixIcon, key: 'settings' },
     ],
@@ -486,7 +486,7 @@ export function Layout() {
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
           className="focus-ring flex items-center gap-3 px-3 py-2 text-sm font-medium text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white rounded-lg hover:bg-surface-100/60 dark:hover:bg-surface-800/40 transition-colors mb-2"
         >
-          {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
+          {resolved === 'dark' ? <SunDimIcon weight="fill" className="w-5 h-5" /> : <MoonIcon weight="fill" className="w-5 h-5" />}
           {resolved === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
         </button>
 
@@ -509,7 +509,7 @@ export function Layout() {
             onClick={handleLogout}
             className="focus-ring flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/20 rounded-lg transition-colors w-full"
           >
-            <SignOut weight="bold" className="w-5 h-5" />
+            <SignOutIcon weight="bold" className="w-5 h-5" />
             {t('nav.logout')}
           </button>
         </div>
@@ -520,7 +520,7 @@ export function Layout() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button onClick={() => setSidebarOpen(true)} className="btn btn-ghost btn-icon min-w-[44px] min-h-[44px]" aria-label={t('nav.openMenu')}>
-                <List weight="bold" className="w-5 h-5" />
+                <ListIcon weight="bold" className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-sm">
@@ -536,7 +536,7 @@ export function Layout() {
                 className="btn btn-ghost btn-icon"
                 aria-label={resolved === 'dark' ? t('nav.switchToLight') : t('nav.switchToDark')}
               >
-                {resolved === 'dark' ? <SunDim weight="fill" className="w-5 h-5" /> : <Moon weight="fill" className="w-5 h-5" />}
+                {resolved === 'dark' ? <SunDimIcon weight="fill" className="w-5 h-5" /> : <MoonIcon weight="fill" className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -593,7 +593,7 @@ export function Layout() {
                 </div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <button onClick={handleLogout} className="focus-ring flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 w-full rounded-lg hover:bg-red-50/60 dark:hover:bg-red-950/20 transition-colors">
-                    <SignOut weight="bold" className="w-5 h-5" /> {t('nav.logout')}
+                    <SignOutIcon weight="bold" className="w-5 h-5" /> {t('nav.logout')}
                   </button>
                 </div>
               </motion.aside>

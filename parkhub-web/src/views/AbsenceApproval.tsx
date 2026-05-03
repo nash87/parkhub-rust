@@ -1,7 +1,7 @@
 import { useActionState, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CalendarIcon, Check, XIcon, Clock, Question, PaperPlaneTilt, ChatText,
+  CalendarIcon, CheckIcon, XIcon, ClockIcon, QuestionIcon, PaperPlaneTiltIcon, ChatTextIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -103,7 +103,7 @@ function SubmitForm({ onSubmitted }: { onSubmitted: () => void }) {
         <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder={t('absenceApproval.reasonPlaceholder')} rows={2} className="w-full mt-1 px-3 py-2 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-900 text-surface-900 dark:text-surface-100 resize-none" />
       </div>
       <button type="submit" disabled={isSubmitting} className="w-full py-2 rounded-lg bg-primary-600 text-white font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-        <PaperPlaneTilt size={18} />
+        <PaperPlaneTiltIcon size={18} />
         {isSubmitting ? t('absenceApproval.submitting') : t('absenceApproval.submitBtn')}
       </button>
     </form>
@@ -151,7 +151,7 @@ function AdminPendingQueue({ requests, onAction }: { requests: AbsenceRequest[];
   if (requests.length === 0) {
     return (
       <div className="text-center py-8 text-surface-500 dark:text-surface-400">
-        <Check size={32} className="mx-auto mb-2 opacity-50" />
+        <CheckIcon size={32} className="mx-auto mb-2 opacity-50" />
         <p>{t('absenceApproval.noPending')}</p>
       </div>
     );
@@ -186,7 +186,7 @@ function AdminPendingQueue({ requests, onAction }: { requests: AbsenceRequest[];
             />
             <button onClick={() => handleApprove(req.id)} disabled={processing === req.id}
               className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 flex items-center gap-1">
-              <Check size={14} /> {t('absenceApproval.approveBtn')}
+              <CheckIcon size={14} /> {t('absenceApproval.approveBtn')}
             </button>
             <button onClick={() => handleReject(req.id)} disabled={processing === req.id}
               className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-1">
@@ -238,7 +238,7 @@ export function AbsenceApprovalPage() {
           <p className="text-surface-500 dark:text-surface-400 text-sm">{t('absenceApproval.subtitle')}</p>
         </div>
         <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500" title={t('absenceApproval.helpLabel')}>
-          <Question size={20} />
+          <QuestionIcon size={20} />
         </button>
       </div>
 
@@ -247,7 +247,7 @@ export function AbsenceApprovalPage() {
         {showHelp && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             className="mb-4 p-3 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-sm text-primary-800 dark:text-primary-300 flex items-start gap-2">
-            <ChatText size={18} className="mt-0.5 shrink-0" />
+            <ChatTextIcon size={18} className="mt-0.5 shrink-0" />
             <span>{t('absenceApproval.help')}</span>
           </motion.div>
         )}
@@ -282,7 +282,7 @@ export function AbsenceApprovalPage() {
         <div className="space-y-3">
           {myRequests.length === 0 ? (
             <div className="text-center py-8 text-surface-500 dark:text-surface-400">
-              <Clock size={32} className="mx-auto mb-2 opacity-50" />
+              <ClockIcon size={32} className="mx-auto mb-2 opacity-50" />
               <p>{t('absenceApproval.noRequests')}</p>
             </div>
           ) : (
@@ -302,7 +302,7 @@ export function AbsenceApprovalPage() {
                 <p className="text-sm text-surface-600 dark:text-surface-400">{req.reason}</p>
                 {req.reviewer_comment && (
                   <div className="mt-2 p-2 rounded-lg bg-surface-100 dark:bg-surface-700 text-sm text-surface-600 dark:text-surface-400 flex items-start gap-1.5">
-                    <ChatText size={14} className="mt-0.5 shrink-0" />
+                    <ChatTextIcon size={14} className="mt-0.5 shrink-0" />
                     <span>{req.reviewer_comment}</span>
                   </div>
                 )}

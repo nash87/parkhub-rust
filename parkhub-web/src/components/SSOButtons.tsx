@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck } from '@phosphor-icons/react';
+import { ShieldCheckIcon } from '@phosphor-icons/react';
 
 interface SsoProviderPublic {
   slug: string;
@@ -64,7 +64,7 @@ export function SSOButtons() {
           className="flex items-center justify-center gap-3 w-full py-2.5 px-4 rounded-lg border border-surface-200 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-700 dark:text-surface-200 hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors font-medium text-sm"
           aria-label={t('sso.continueWith', { provider: provider.display_name })}
         >
-          <ShieldCheck size={20} weight="bold" className="text-primary-500" />
+          <ShieldCheckIcon size={20} weight="bold" className="text-primary-500" />
           {t('sso.continueWith', { provider: provider.display_name })}
         </button>
       ))}

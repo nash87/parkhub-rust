@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, WarningIcon } from '@phosphor-icons/react';
+import { ShieldCheckIcon, WarningIcon } from '@phosphor-icons/react';
 import { api, type RateLimitGroup, type RateLimitHistoryBin } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -75,7 +75,7 @@ export function AdminRateLimitsPage() {
             </span>
           ) : (
             <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 px-3 py-1.5 rounded-full bg-emerald-100/70 dark:bg-emerald-900/30">
-              <ShieldCheck weight="bold" className="w-3.5 h-3.5" />
+              <ShieldCheckIcon weight="bold" className="w-3.5 h-3.5" />
               {t('rateLimits.allClear', 'No blocked requests')}
             </span>
           )}

@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import {
-  CalendarCheckIcon, CarIcon, CoinsIcon, CalendarPlus, ArrowRightIcon,
-  MapPinIcon, ChartLine, Gauge, Leaf,
+  CalendarCheckIcon, CarIcon, CoinsIcon, CalendarPlusIcon, ArrowRightIcon,
+  MapPinIcon, ChartLineIcon, GaugeIcon, LeafIcon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type Booking, type Co2Summary, type UserStats } from '../api/client';
@@ -194,7 +194,7 @@ export function DashboardPage() {
         <KpiCard
           label={t('dashboard.activeBookings')}
           value={activeBookings.length}
-          icon={<ChartLine weight="bold" />}
+          icon={<ChartLineIcon weight="bold" />}
           live={activeBookings.length > 0}
           data-testid="kpi-active-bookings"
         />
@@ -214,14 +214,14 @@ export function DashboardPage() {
         <KpiCard
           label={t('dashboard.totalBookings', 'Total Bookings')}
           value={totalBookings}
-          icon={<Gauge weight="bold" />}
+          icon={<GaugeIcon weight="bold" />}
           data-testid="kpi-total"
         />
         <KpiCard
           label={t('dashboard.co2Saved', 'CO₂ Saved (30d)')}
           value={co2SavedKg ?? 0}
           suffix=" kg"
-          icon={<Leaf weight="bold" />}
+          icon={<LeafIcon weight="bold" />}
           data-testid="kpi-co2-saved"
         />
       </motion.div>
@@ -275,7 +275,7 @@ export function DashboardPage() {
                 className="w-16 h-16 rounded-full bg-primary-500/10 dark:bg-primary-500/10 ring-1 ring-primary-500/20 flex items-center justify-center mb-4"
                 aria-hidden="true"
               >
-                <CalendarPlus weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+                <CalendarPlusIcon weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
               </div>
               <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '-0.01em' }}>
                 {t('dashboard.emptyBookingsTitle')}
@@ -334,7 +334,7 @@ export function DashboardPage() {
           </h2>
           <div className="space-y-2">
             {[
-              { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), accent: true },
+              { to: '/book', icon: CalendarPlusIcon, label: t('dashboard.bookSpot'), accent: true },
               { to: '/vehicles', icon: CarIcon, label: t('dashboard.myVehicles') },
               { to: '/bookings', icon: CalendarCheckIcon, label: t('dashboard.viewBookings') },
               { to: '/credits', icon: CoinsIcon, label: t('nav.credits') },

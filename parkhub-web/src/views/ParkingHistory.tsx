@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ClockCounterClockwiseIcon, StarIcon, Clock, TrendUp, CalendarBlank,
-  FunnelSimple, CaretLeft, CaretRight, SpinnerGap, CoinsIcon,
+  ClockCounterClockwiseIcon, StarIcon, ClockIcon, TrendUpIcon, CalendarBlankIcon,
+  FunnelSimpleIcon, CaretLeftIcon, CaretRightIcon, SpinnerGapIcon, CoinsIcon,
 } from '@phosphor-icons/react';
 import { api, type Booking, type ParkingLot, type PersonalParkingStats } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -86,7 +86,7 @@ export function ParkingHistoryPage() {
           <motion.div variants={item} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
               <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400 mb-1">
-                <CalendarBlank weight="regular" className="w-4 h-4" />
+                <CalendarBlankIcon weight="regular" className="w-4 h-4" />
                 <span className="text-xs font-medium">{t('history.totalBookings')}</span>
               </div>
               <p className="text-2xl font-bold text-surface-900 dark:text-white">{stats.total_bookings}</p>
@@ -100,7 +100,7 @@ export function ParkingHistoryPage() {
             </div>
             <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
               <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400 mb-1">
-                <Clock weight="regular" className="w-4 h-4" />
+                <ClockIcon weight="regular" className="w-4 h-4" />
                 <span className="text-xs font-medium">{t('history.avgDuration')}</span>
               </div>
               <p className="text-2xl font-bold text-surface-900 dark:text-white">{Math.round(stats.avg_duration_minutes)}<span className="text-sm font-normal text-surface-500"> min</span></p>
@@ -121,7 +121,7 @@ export function ParkingHistoryPage() {
             {/* Monthly Trend */}
             <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
               <div className="flex items-center gap-2 mb-4">
-                <TrendUp weight="regular" className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                <TrendUpIcon weight="regular" className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                 <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t('history.monthlyTrend')}</h3>
               </div>
               <div className="flex items-end gap-2 h-32">
@@ -141,7 +141,7 @@ export function ParkingHistoryPage() {
             {/* Busiest Day */}
             <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">
               <div className="flex items-center gap-2 mb-4">
-                <CalendarBlank weight="regular" className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                <CalendarBlankIcon weight="regular" className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                 <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t('history.busiestDay')}</h3>
               </div>
               <div className="flex items-center justify-center h-32">
@@ -159,7 +159,7 @@ export function ParkingHistoryPage() {
         {/* Filters */}
         <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-4">
           <div className="flex items-center gap-2 mb-3">
-            <FunnelSimple weight="regular" className="w-4 h-4 text-surface-500" />
+            <FunnelSimpleIcon weight="regular" className="w-4 h-4 text-surface-500" />
             <span className="text-sm font-medium text-surface-700 dark:text-surface-300">{t('history.filters')}</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -193,7 +193,7 @@ export function ParkingHistoryPage() {
         <motion.div variants={item}>
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <SpinnerGap weight="bold" className="w-8 h-8 animate-spin text-primary-500" />
+              <SpinnerGapIcon weight="bold" className="w-8 h-8 animate-spin text-primary-500" />
             </div>
           ) : bookings.length === 0 ? (
             <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-16 text-center">
@@ -251,7 +251,7 @@ export function ParkingHistoryPage() {
                 className="p-2 rounded-lg border border-surface-200 dark:border-surface-700 disabled:opacity-40 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                 aria-label={t('history.prevPage')}
               >
-                <CaretLeft weight="bold" className="w-4 h-4" />
+                <CaretLeftIcon weight="bold" className="w-4 h-4" />
               </button>
               <span className="text-sm font-medium text-surface-900 dark:text-white px-2">
                 {page} / {totalPages}
@@ -262,7 +262,7 @@ export function ParkingHistoryPage() {
                 className="p-2 rounded-lg border border-surface-200 dark:border-surface-700 disabled:opacity-40 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors"
                 aria-label={t('history.nextPage')}
               >
-                <CaretRight weight="bold" className="w-4 h-4" />
+                <CaretRightIcon weight="bold" className="w-4 h-4" />
               </button>
             </div>
           </motion.div>

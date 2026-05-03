@@ -3,20 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  BellIcon, XIcon, CheckCircle, XCircle, Clock, Queue, Wrench, Megaphone,
-  CurrencyDollar, UserPlusIcon, Check, Trash, Question, FunnelSimple,
+  BellIcon, XIcon, CheckCircleIcon, XCircleIcon, ClockIcon, QueueIcon, WrenchIcon, MegaphoneIcon,
+  CurrencyDollarIcon, UserPlusIcon, CheckIcon, TrashIcon, QuestionIcon, FunnelSimpleIcon,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { api, getInMemoryToken, type CenterNotification } from '../api/client';
 
 const TYPE_ICONS: Record<string, typeof BellIcon> = {
-  'check-circle': CheckCircle,
-  'x-circle': XCircle,
-  'clock': Clock,
-  'queue': Queue,
-  'wrench': Wrench,
-  'megaphone': Megaphone,
-  'currency-dollar': CurrencyDollar,
+  'check-circle': CheckCircleIcon,
+  'x-circle': XCircleIcon,
+  'clock': ClockIcon,
+  'queue': QueueIcon,
+  'wrench': WrenchIcon,
+  'megaphone': MegaphoneIcon,
+  'currency-dollar': CurrencyDollarIcon,
   'user-plus': UserPlusIcon,
 };
 
@@ -162,7 +162,7 @@ export function NotificationCenter() {
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-surface-900 dark:text-white">{t('notificationCenter.title')}</h3>
                 <button onClick={() => setShowHelp(h => !h)} className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300" title={t('notificationCenter.helpLabel')}>
-                  <Question weight="bold" className="w-4 h-4" />
+                  <QuestionIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export function NotificationCenter() {
 
             {/* Filter bar */}
             <div className="flex items-center gap-1 px-4 py-2 border-b border-surface-100 dark:border-surface-800">
-              <FunnelSimple weight="bold" className="w-4 h-4 text-surface-400 mr-1" />
+              <FunnelSimpleIcon weight="bold" className="w-4 h-4 text-surface-400 mr-1" />
               {(['all', 'unread', 'read'] as const).map(f => (
                 <button
                   key={f}
@@ -253,11 +253,11 @@ export function NotificationCenter() {
                             <div className="flex flex-col gap-1 flex-shrink-0">
                               {!n.read && (
                                 <button onClick={e => { e.stopPropagation(); markRead(n.id); }} className="p-1 rounded text-surface-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20" title={t('notificationCenter.markRead')}>
-                                  <Check weight="bold" className="w-3.5 h-3.5" />
+                                  <CheckIcon weight="bold" className="w-3.5 h-3.5" />
                                 </button>
                               )}
                               <button onClick={e => { e.stopPropagation(); deleteNotification(n.id); }} className="p-1 rounded text-surface-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title={t('notificationCenter.deleteOne')}>
-                                <Trash weight="bold" className="w-3.5 h-3.5" />
+                                <TrashIcon weight="bold" className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </motion.div>

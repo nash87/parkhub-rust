@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CarSimpleIcon, ArrowLeft } from '@phosphor-icons/react';
+import { CarSimpleIcon, ArrowLeftIcon } from '@phosphor-icons/react';
 
 export function NotFoundPage() {
   const { t } = useTranslation();
@@ -17,7 +17,7 @@ export function NotFoundPage() {
           {t('notFound.description')}
         </p>
         <Link to="/" className="btn btn-primary inline-flex">
-          <ArrowLeft weight="bold" className="w-4 h-4" />
+          <ArrowLeftIcon weight="bold" className="w-4 h-4" />
           {t('notFound.backToDashboard')}
         </Link>
       </div>

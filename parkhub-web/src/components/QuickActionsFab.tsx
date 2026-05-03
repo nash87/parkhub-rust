@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, XIcon, CalendarPlus, CarIcon, CoinVertical, CalendarCheckIcon,
+  PlusIcon, XIcon, CalendarPlusIcon, CarIcon, CoinVerticalIcon, CalendarCheckIcon,
 } from '@phosphor-icons/react';
 import { useFeatures } from '../context/FeaturesContext';
 
@@ -30,9 +30,9 @@ export function QuickActionsFab() {
 
   const actions = [
     { to: '/bookings', icon: CalendarCheckIcon, label: t('dashboard.viewBookings'), color: 'bg-blue-500' },
-    ...(isEnabled('credits') ? [{ to: '/credits', icon: CoinVertical, label: t('nav.credits'), color: 'bg-emerald-500' }] : []),
+    ...(isEnabled('credits') ? [{ to: '/credits', icon: CoinVerticalIcon, label: t('nav.credits'), color: 'bg-emerald-500' }] : []),
     ...(isEnabled('vehicles') ? [{ to: '/vehicles', icon: CarIcon, label: t('dashboard.myVehicles'), color: 'bg-primary-500' }] : []),
-    { to: '/book', icon: CalendarPlus, label: t('dashboard.bookSpot'), color: 'bg-accent-500' },
+    { to: '/book', icon: CalendarPlusIcon, label: t('dashboard.bookSpot'), color: 'bg-accent-500' },
   ];
 
   return (
@@ -87,7 +87,7 @@ export function QuickActionsFab() {
         className="w-14 h-14 rounded-full bg-accent-600 text-white flex items-center justify-center shadow-xl shadow-accent-500/30 active:scale-95 transition-transform cursor-pointer"
         aria-label={open ? t('commandPalette.closeQuickActions') : t('commandPalette.openQuickActions')}
       >
-        {open ? <XIcon weight="bold" className="w-6 h-6" /> : <Plus weight="bold" className="w-6 h-6" />}
+        {open ? <XIcon weight="bold" className="w-6 h-6" /> : <PlusIcon weight="bold" className="w-6 h-6" />}
       </motion.button>
     </div>
   );

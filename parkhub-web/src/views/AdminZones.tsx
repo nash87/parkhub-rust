@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapTrifold, PencilIcon, Question, Tag } from '@phosphor-icons/react';
+import { MapTrifoldIcon, PencilIcon, QuestionIcon, TagIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -102,7 +102,7 @@ export function AdminZonesPage() {
       {/* v11 SOTA hero — emerald tone (spatial pricing = revenue lever). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={MapTrifold} label={t('parkingZones.eyebrow', 'SPATIAL PRICING')} />
+          <HeroEyebrow icon={MapTrifoldIcon} label={t('parkingZones.eyebrow', 'SPATIAL PRICING')} />
           <h1 className="admin-hero-headline">{t('parkingZones.title')}</h1>
           <p className="admin-hero-sub">{t('parkingZones.subtitle')}</p>
         </div>
@@ -112,7 +112,7 @@ export function AdminZonesPage() {
             className="admin-hero-iconbtn"
             title={t('parkingZones.helpLabel')}
           >
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
         </div>
       </section>
@@ -165,7 +165,7 @@ export function AdminZonesPage() {
                 {/* Tier badge */}
                 <div className="flex items-center gap-2">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${style.bg} ${style.text}`}>
-                    <Tag weight="bold" className="w-3 h-3 inline mr-1" />
+                    <TagIcon weight="bold" className="w-3 h-3 inline mr-1" />
                     {zone.tier_display}
                   </span>
                   <span className="text-xs text-surface-500">

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { SparkleIcon, Brain, CalendarBlank, Clock, TrendUp, CaretDownIcon } from '@phosphor-icons/react';
+import { SparkleIcon, BrainIcon, CalendarBlankIcon, ClockIcon, TrendUpIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
@@ -197,7 +197,7 @@ export function OccupancyPredictionPage() {
       <motion.div variants={fadeUp} className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-            <Brain weight="fill" className="w-7 h-7 text-purple-500" />
+            <BrainIcon weight="fill" className="w-7 h-7 text-purple-500" />
             {t('prediction.title', 'Smart Predictions')}
             <SparkleIcon weight="fill" className="w-5 h-5 text-yellow-400" />
           </h1>
@@ -232,11 +232,11 @@ export function OccupancyPredictionPage() {
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
-                <CalendarBlank weight="fill" className="w-4 h-4" />
+                <CalendarBlankIcon weight="fill" className="w-4 h-4" />
                 {recommendation.day}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
-                <Clock weight="fill" className="w-4 h-4" />
+                <ClockIcon weight="fill" className="w-4 h-4" />
                 {recommendation.timeSlot}
               </span>
             </div>
@@ -248,7 +248,7 @@ export function OccupancyPredictionPage() {
       {/* 7-day forecast */}
       <motion.div variants={fadeUp}>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-3 flex items-center gap-2">
-          <TrendUp weight="bold" className="w-4 h-4" />
+          <TrendUpIcon weight="bold" className="w-4 h-4" />
           {t('prediction.weeklyForecast', '7-Day Forecast')}
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3" data-testid="forecast-grid">

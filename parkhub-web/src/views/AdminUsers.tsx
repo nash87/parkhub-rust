@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import {
-  SpinnerGap, MagnifyingGlass, CoinsIcon,
-  PencilSimple, XIcon, Check, UserMinus, UserPlusIcon,
-  Lightning,
+  SpinnerGapIcon, MagnifyingGlassIcon, CoinsIcon,
+  PencilSimpleIcon, XIcon, CheckIcon, UserMinusIcon, UserPlusIcon,
+  LightningIcon,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -203,7 +203,7 @@ export function AdminUsersPage() {
                 <option value="superadmin">superadmin</option>
               </select>
               <button onClick={() => saveRole(user.id)} disabled={savingRole} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label={t('common.save')}>
-                {savingRole ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+                {savingRole ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <CheckIcon weight="bold" className="w-4 h-4" />}
               </button>
               <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('common.cancel')}>
                 <XIcon weight="bold" className="w-4 h-4" />
@@ -229,7 +229,7 @@ export function AdminUsersPage() {
             <div className="flex items-center gap-2">
               <input type="number" min={0} max={999} value={editQuota} onChange={e => setEditQuota(e.target.value)} className="input text-xs py-1 px-2 w-20" aria-label={t('admin.monthlyQuota')} />
               <button onClick={() => saveQuota(user.id)} disabled={savingQuota} className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600" aria-label={t('admin.saveQuota')}>
-                {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+                {savingQuota ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <CheckIcon weight="bold" className="w-4 h-4" />}
               </button>
               <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('admin.cancelEditQuota')}>
                 <XIcon weight="bold" className="w-4 h-4" />
@@ -275,7 +275,7 @@ export function AdminUsersPage() {
               title={t('admin.editRole')}
               aria-label={`${t('admin.editRole')} ${user.name}`}
             >
-              <PencilSimple weight="bold" className="w-4 h-4" />
+              <PencilSimpleIcon weight="bold" className="w-4 h-4" />
             </button>
             <button
               onClick={() => { setCreditUserId(user.id); setCreditAmount(''); setCreditDesc(''); }}
@@ -295,7 +295,7 @@ export function AdminUsersPage() {
               title={user.is_active ? t('admin.deactivate') : t('admin.activate')}
               aria-label={`${user.is_active ? t('admin.deactivate') : t('admin.activate')} ${user.name}`}
             >
-              {user.is_active ? <UserMinus weight="bold" className="w-4 h-4" /> : <UserPlusIcon weight="bold" className="w-4 h-4" />}
+              {user.is_active ? <UserMinusIcon weight="bold" className="w-4 h-4" /> : <UserPlusIcon weight="bold" className="w-4 h-4" />}
             </button>
           </div>
         );
@@ -306,7 +306,7 @@ export function AdminUsersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
+        <SpinnerGapIcon weight="bold" className="w-8 h-8 text-primary-600 animate-spin" />
       </div>
     );
   }
@@ -324,7 +324,7 @@ export function AdminUsersPage() {
         </div>
         <div className="admin-hero-actions">
           <div className="relative">
-            <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <MagnifyingGlassIcon weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
             <input
               type="text"
               value={search}
@@ -377,7 +377,7 @@ export function AdminUsersPage() {
             disabled={!bulkAction || bulkRunning}
             className="px-3 py-1.5 text-xs bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
           >
-            {bulkRunning ? <SpinnerGap className="animate-spin" weight="bold" size={14} /> : <Lightning weight="bold" size={14} />}
+            {bulkRunning ? <SpinnerGapIcon className="animate-spin" weight="bold" size={14} /> : <LightningIcon weight="bold" size={14} />}
             {t('admin.bulkApply')}
           </button>
           <button onClick={() => setSelectedIds(new Set())} className="text-xs text-gray-500 hover:text-gray-700">
@@ -426,7 +426,7 @@ export function AdminUsersPage() {
               </div>
               <div className="flex gap-3">
                 <button onClick={handleGrantCredits} disabled={grantingCredits || !creditAmount} className="btn btn-primary">
-                  {grantingCredits ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
+                  {grantingCredits ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : <CheckIcon weight="bold" className="w-4 h-4" />}
                   {t('admin.grant')}
                 </button>
                 <button onClick={() => setCreditUserId(null)} className="btn btn-secondary">{t('common.cancel')}</button>

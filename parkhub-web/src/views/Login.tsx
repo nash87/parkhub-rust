@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CarSimpleIcon, EyeIcon, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
+import { CarSimpleIcon, EyeIcon, EyeSlashIcon, SpinnerGapIcon, ArrowLeftIcon } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { FormField, FormInput } from '../components/ui/FormField';
 import { OAuthButtons } from '../components/OAuthButtons';
@@ -115,7 +115,7 @@ export function LoginPage() {
             to="/welcome"
             className="inline-flex items-center gap-2 text-sm text-surface-600 hover:text-primary-600 mb-8 transition-colors lg:hidden"
           >
-            <ArrowLeft weight="bold" className="w-4 h-4" />
+            <ArrowLeftIcon weight="bold" className="w-4 h-4" />
             {t('auth.back')}
           </Link>
 
@@ -188,7 +188,7 @@ export function LoginPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
-                  {showPassword ? <EyeSlash weight="bold" className="w-4 h-4" /> : <EyeIcon weight="bold" className="w-4 h-4" />}
+                  {showPassword ? <EyeSlashIcon weight="bold" className="w-4 h-4" /> : <EyeIcon weight="bold" className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -211,7 +211,7 @@ export function LoginPage() {
               className={`btn btn-primary w-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/15 ${isSubmitting ? 'btn-shimmer' : ''}`}
             >
               {isSubmitting ? (
-                <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.loggingIn')}</>
+                <><SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> {t('auth.loggingIn')}</>
               ) : (
                 t('auth.signIn')
               )}

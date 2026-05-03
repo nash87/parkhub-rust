@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Megaphone, Plus, PencilSimple, Trash, SpinnerGap, Check, XIcon,
-  Info, WarningIcon, WarningCircle, CheckCircle, Clock,
+  MegaphoneIcon, PlusIcon, PencilSimpleIcon, TrashIcon, SpinnerGapIcon, CheckIcon, XIcon,
+  InfoIcon, WarningIcon, WarningCircleIcon, CheckCircleIcon, ClockIcon,
 } from '@phosphor-icons/react';
 import { api, type Announcement } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -28,11 +28,11 @@ const emptyForm: AnnouncementForm = {
   expires_at: '',
 };
 
-const severityIcons: Record<Severity, { color: string; bg: string; icon: typeof Info }> = {
-  info:    { color: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-100 dark:bg-blue-900/30',   icon: Info },
+const severityIcons: Record<Severity, { color: string; bg: string; icon: typeof InfoIcon }> = {
+  info:    { color: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-100 dark:bg-blue-900/30',   icon: InfoIcon },
   warning: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: WarningIcon },
-  error:   { color: 'text-red-600 dark:text-red-400',     bg: 'bg-red-100 dark:bg-red-900/30',     icon: WarningCircle },
-  success: { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle },
+  error:   { color: 'text-red-600 dark:text-red-400',     bg: 'bg-red-100 dark:bg-red-900/30',     icon: WarningCircleIcon },
+  success: { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircleIcon },
 };
 
 const severityLabelKeys: Record<Severity, string> = {
@@ -58,14 +58,14 @@ function StatusBadge({ active, expiresAt, t }: { active: boolean; expiresAt?: st
   if (!active || isExpired) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400">
-        <Clock weight="fill" className="w-3.5 h-3.5" />
+        <ClockIcon weight="fill" className="w-3.5 h-3.5" />
         {isExpired ? t('admin.expired') : t('admin.inactive')}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-      <CheckCircle weight="fill" className="w-3.5 h-3.5" />
+      <CheckCircleIcon weight="fill" className="w-3.5 h-3.5" />
       {t('admin.active')}
     </span>
   );
@@ -171,7 +171,7 @@ export function AdminAnnouncementsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" role="status" aria-label={t('common.loading')}>
-        <SpinnerGap weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
+        <SpinnerGapIcon weight="bold" className="w-8 h-8 text-primary-600 animate-spin" aria-hidden="true" />
       </div>
     );
   }
@@ -181,13 +181,13 @@ export function AdminAnnouncementsPage() {
       {/* v11 SOTA hero — primary tone (default brand for live comms). */}
       <section className="admin-hero">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={Megaphone} label={t('announcements.eyebrow', 'LIVE COMMS')} />
+          <HeroEyebrow icon={MegaphoneIcon} label={t('announcements.eyebrow', 'LIVE COMMS')} />
           <h1 className="admin-hero-headline">{t('admin.announcements')}</h1>
           <p className="admin-hero-sub">{t('announcements.subtitle', 'Surface comms into the product shell — severity-based and time-bounded.')}</p>
         </div>
         <div className="admin-hero-actions">
           <button onClick={openCreate} className="admin-hero-action">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('admin.newAnnouncement')}
           </button>
         </div>
@@ -278,9 +278,9 @@ export function AdminAnnouncementsPage() {
                     }`}
                   >
                     {form.active ? (
-                      <><CheckCircle weight="fill" className="w-4 h-4" />{t('admin.active')}</>
+                      <><CheckCircleIcon weight="fill" className="w-4 h-4" />{t('admin.active')}</>
                     ) : (
-                      <><Clock weight="fill" className="w-4 h-4" />{t('admin.inactive')}</>
+                      <><ClockIcon weight="fill" className="w-4 h-4" />{t('admin.inactive')}</>
                     )}
                   </button>
                 </div>
@@ -302,8 +302,8 @@ export function AdminAnnouncementsPage() {
               <div className="flex gap-3 pt-2">
                 <button onClick={handleSave} disabled={saving} className="btn btn-primary">
                   {saving
-                    ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                    : <Check weight="bold" className="w-4 h-4" />}
+                    ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" />
+                    : <CheckIcon weight="bold" className="w-4 h-4" />}
                   {editingId ? t('common.save') : t('admin.create')}
                 </button>
                 <button onClick={closeForm} className="btn btn-secondary">{t('common.cancel')}</button>
@@ -316,7 +316,7 @@ export function AdminAnnouncementsPage() {
       {/* Announcements List */}
       {announcements.length === 0 && !showForm ? (
         <div className="p-12 text-center">
-          <Megaphone weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
+          <MegaphoneIcon weight="light" className="w-16 h-16 text-surface-200 dark:text-surface-700 mx-auto mb-4" />
           <p className="text-surface-500 dark:text-surface-400">{t('admin.noAnnouncements')}</p>
         </div>
       ) : (
@@ -353,7 +353,7 @@ export function AdminAnnouncementsPage() {
                     className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors text-surface-400 hover:text-primary-600"
                     aria-label={`${t('common.edit')} ${a.title}`}
                   >
-                    <PencilSimple weight="bold" className="w-4.5 h-4.5" aria-hidden="true" />
+                    <PencilSimpleIcon weight="bold" className="w-4.5 h-4.5" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => handleDelete(a.id)}
@@ -362,8 +362,8 @@ export function AdminAnnouncementsPage() {
                     aria-label={`${t('common.delete')} ${a.title}`}
                   >
                     {deletingId === a.id
-                      ? <SpinnerGap weight="bold" className="w-4.5 h-4.5 animate-spin" />
-                      : <Trash weight="bold" className="w-4.5 h-4.5" aria-hidden="true" />}
+                      ? <SpinnerGapIcon weight="bold" className="w-4.5 h-4.5 animate-spin" />
+                      : <TrashIcon weight="bold" className="w-4.5 h-4.5" aria-hidden="true" />}
                   </button>
                 </div>
               </div>

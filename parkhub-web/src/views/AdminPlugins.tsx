@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { PuzzlePiece, ToggleLeft, ToggleRight, Gear, Question, Lightning } from '@phosphor-icons/react';
+import { PuzzlePieceIcon, ToggleLeftIcon, ToggleRightIcon, GearIcon, QuestionIcon, LightningIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -128,13 +128,13 @@ export function AdminPluginsPage() {
       {/* v11 SOTA hero — info tone (extension surface = expand cluster trust boundary). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={PuzzlePiece} label={t('plugins.eyebrow', 'EXTENSIONS')} />
+          <HeroEyebrow icon={PuzzlePieceIcon} label={t('plugins.eyebrow', 'EXTENSIONS')} />
           <h1 className="admin-hero-headline">{t('plugins.title')}</h1>
           <p className="admin-hero-sub">{t('plugins.subtitle')}</p>
         </div>
         <div className="admin-hero-actions">
           <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-surface-600 dark:text-surface-300 px-3 py-1.5 rounded-full bg-surface-100/70 dark:bg-surface-800/60" data-testid="plugins-counter">
-            <Lightning weight="bold" className="w-3.5 h-3.5" />
+            <LightningIcon weight="bold" className="w-3.5 h-3.5" />
             {enabled}/{total} {t('plugins.enabled', 'enabled')}
           </span>
           <button
@@ -144,7 +144,7 @@ export function AdminPluginsPage() {
             data-testid="plugins-help-btn"
             title={t('plugins.helpLabel')}
           >
-            <Question className="w-4 h-4" />
+            <QuestionIcon className="w-4 h-4" />
           </button>
         </div>
       </section>
@@ -168,7 +168,7 @@ export function AdminPluginsPage() {
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
-              <PuzzlePiece size={20} className="text-primary-600 dark:text-primary-400" />
+              <PuzzlePieceIcon size={20} className="text-primary-600 dark:text-primary-400" />
             </div>
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('plugins.totalPlugins')}</p>
@@ -179,7 +179,7 @@ export function AdminPluginsPage() {
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <Lightning size={20} className="text-green-600 dark:text-green-400" />
+              <LightningIcon size={20} className="text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('plugins.enabledPlugins')}</p>
@@ -190,7 +190,7 @@ export function AdminPluginsPage() {
         <div className="bg-white dark:bg-surface-800 rounded-xl p-4 shadow-sm border border-surface-200 dark:border-surface-700">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-surface-100 dark:bg-surface-700">
-              <Gear size={20} className="text-surface-600 dark:text-surface-400" />
+              <GearIcon size={20} className="text-surface-600 dark:text-surface-400" />
             </div>
             <div>
               <p className="text-sm text-surface-500 dark:text-surface-400">{t('plugins.disabledPlugins')}</p>
@@ -232,9 +232,9 @@ export function AdminPluginsPage() {
                 data-testid={`toggle-${plugin.id}`}
               >
                 {plugin.status === 'enabled' ? (
-                  <ToggleRight size={32} weight="fill" className="text-green-500" />
+                  <ToggleRightIcon size={32} weight="fill" className="text-green-500" />
                 ) : (
-                  <ToggleLeft size={32} className="text-surface-300 dark:text-surface-600" />
+                  <ToggleLeftIcon size={32} className="text-surface-300 dark:text-surface-600" />
                 )}
               </button>
             </div>
@@ -258,7 +258,7 @@ export function AdminPluginsPage() {
                 className="text-sm px-3 py-1.5 rounded-lg bg-surface-100 dark:bg-surface-700 hover:bg-surface-200 dark:hover:bg-surface-600 text-surface-700 dark:text-surface-300"
                 data-testid={`config-${plugin.id}`}
               >
-                <Gear size={14} className="inline mr-1" />
+                <GearIcon size={14} className="inline mr-1" />
                 {t('plugins.configure')}
               </button>
               {plugin.routes.length > 0 && (
@@ -301,9 +301,9 @@ export function AdminPluginsPage() {
                       data-testid={`config-field-${key}`}
                     >
                       {value ? (
-                        <ToggleRight size={28} weight="fill" className="text-green-500" />
+                        <ToggleRightIcon size={28} weight="fill" className="text-green-500" />
                       ) : (
-                        <ToggleLeft size={28} className="text-surface-300" />
+                        <ToggleLeftIcon size={28} className="text-surface-300" />
                       )}
                     </button>
                   ) : (

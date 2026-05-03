@@ -1,6 +1,6 @@
 import { useActionState, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CarIcon, Plus, Trash, StarIcon, XIcon, SpinnerGap } from '@phosphor-icons/react';
+import { CarIcon, PlusIcon, TrashIcon, StarIcon, XIcon, SpinnerGapIcon } from '@phosphor-icons/react';
 import { api, type Vehicle } from '../api/client';
 import { VehiclesSkeleton } from '../components/Skeleton';
 import { stagger, fadeUp } from '../constants/animations';
@@ -122,7 +122,7 @@ export function VehiclesPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => setShowForm(true)} className="admin-hero-action">
-            <Plus weight="bold" className="w-4 h-4" />
+            <PlusIcon weight="bold" className="w-4 h-4" />
             {t('vehicles.add', 'Hinzuf\u00fcgen')}
           </button>
         </div>
@@ -172,7 +172,7 @@ export function VehiclesPage() {
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setShowForm(false)} className="btn btn-secondary">{t('common.cancel', 'Abbrechen')}</button>
                   <button type="submit" disabled={isAdding || !form.plate.trim()} className="btn btn-primary">
-                    {isAdding ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : t('common.save', 'Speichern')}
+                    {isAdding ? <SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> : t('common.save', 'Speichern')}
                   </button>
                 </div>
               </form>
@@ -189,7 +189,7 @@ export function VehiclesPage() {
           </motion.div>
           <p className="text-surface-500 dark:text-surface-400 mb-4 mt-4">{t('vehicles.noVehicles', 'Noch keine Fahrzeuge angelegt')}</p>
           <motion.button onClick={() => setShowForm(true)} className="btn btn-primary" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Plus weight="bold" className="w-4 h-4" /> {t('vehicles.add', 'Hinzuf\u00fcgen')}
+            <PlusIcon weight="bold" className="w-4 h-4" /> {t('vehicles.add', 'Hinzuf\u00fcgen')}
           </motion.button>
         </motion.div>
       ) : (
@@ -208,7 +208,7 @@ export function VehiclesPage() {
                     </div>
                   </div>
                   <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" aria-label={t('vehicles.deleteVehicle', { plate: v.plate })}>
-                    <Trash weight="regular" className="w-5 h-5" aria-hidden="true" />
+                    <TrashIcon weight="regular" className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
                 {v.is_default && (

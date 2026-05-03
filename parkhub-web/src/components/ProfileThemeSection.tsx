@@ -1,4 +1,4 @@
-import { Check, Palette } from '@phosphor-icons/react';
+import { CheckIcon, PaletteIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useTheme, type DesignThemeId, type DesignThemeInfo } from '../context/ThemeContext';
 
@@ -25,7 +25,7 @@ function MiniThemeCard({ theme, isActive, onApply, resolved }: {
     >
       {isActive && (
         <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
-          <Check weight="bold" className="w-3 h-3 text-white" />
+          <CheckIcon weight="bold" className="w-3 h-3 text-white" />
         </div>
       )}
 
@@ -64,7 +64,7 @@ export function ProfileThemeSection() {
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
-        <Palette weight="fill" className="w-5 h-5 text-primary-500" />
+        <PaletteIcon weight="fill" className="w-5 h-5 text-primary-500" />
         <h3 className="text-base font-semibold text-surface-900 dark:text-white">
           {t('themes.title', 'Design Themes')}
         </h3>

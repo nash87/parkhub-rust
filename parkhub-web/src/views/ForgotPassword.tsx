@@ -2,7 +2,7 @@ import { useActionState, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { CarSimpleIcon, ArrowLeft, SpinnerGap, CheckCircle } from '@phosphor-icons/react';
+import { CarSimpleIcon, ArrowLeftIcon, SpinnerGapIcon, CheckCircleIcon } from '@phosphor-icons/react';
 import { api } from '../api/client';
 
 /**
@@ -55,7 +55,7 @@ export function ForgotPasswordPage() {
           to="/login"
           className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-primary-600 mb-8 transition-colors"
         >
-          <ArrowLeft weight="bold" className="w-4 h-4" />
+          <ArrowLeftIcon weight="bold" className="w-4 h-4" />
           {t('auth.signIn')}
         </Link>
 
@@ -69,7 +69,7 @@ export function ForgotPasswordPage() {
         {state.sent ? (
           <div className="space-y-4" role="status">
             <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle weight="fill" className="w-6 h-6" />
+              <CheckCircleIcon weight="fill" className="w-6 h-6" />
               <h1 className="text-xl font-bold text-surface-900 dark:text-white">{t('forgotPassword.successTitle')}</h1>
             </div>
             <p className="text-surface-500 dark:text-surface-400 text-sm leading-relaxed">
@@ -112,7 +112,7 @@ export function ForgotPasswordPage() {
                 className="btn btn-primary w-full py-2.5 disabled:opacity-50"
               >
                 {isPending ? (
-                  <><SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> {t('forgotPassword.sending')}</>
+                  <><SpinnerGapIcon weight="bold" className="w-4 h-4 animate-spin" /> {t('forgotPassword.sending')}</>
                 ) : (
                   t('forgotPassword.sendResetLink')
                 )}

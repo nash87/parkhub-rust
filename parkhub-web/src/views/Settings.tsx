@@ -15,7 +15,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Building, BellIcon, CarIcon, Keyboard, Shield, CoinsIcon, ChartLine, FileText, ArrowRightIcon } from '@phosphor-icons/react';
+import { UserIcon, BuildingIcon, BellIcon, CarIcon, KeyboardIcon, ShieldIcon, CoinsIcon, ChartLineIcon, FileTextIcon, ArrowRightIcon } from '@phosphor-icons/react';
 import {
   SCard,
   SRow,
@@ -67,27 +67,27 @@ export function SettingsPage() {
   );
 
   const userSections = [
-    { id: 'profile', label: t('settings.profile', 'Profile'), icon: User, to: '/profile' as const },
+    { id: 'profile', label: t('settings.profile', 'Profile'), icon: UserIcon, to: '/profile' as const },
     { id: 'notifications', label: t('settings.notifications', 'Notifications'), icon: BellIcon, to: '/notifications' as const },
     { id: 'vehicles', label: t('settings.vehicles', 'Vehicles'), icon: CarIcon, to: '/vehicles' as const },
-    { id: 'shortcuts', label: t('settings.shortcuts', 'Keyboard shortcuts'), icon: Keyboard, to: null, hint: t('settings.pressShortcut', 'Press ⌘/') },
+    { id: 'shortcuts', label: t('settings.shortcuts', 'KeyboardIcon shortcuts'), icon: KeyboardIcon, to: null, hint: t('settings.pressShortcut', 'Press ⌘/') },
   ];
 
   const workspaceSections = [
-    { id: 'org', label: t('settings.org', 'Organization'), icon: Building, to: '/admin/settings' as const },
-    { id: 'policies', label: t('settings.bookingRules', 'Booking rules'), icon: FileText, to: '/admin/settings' as const },
-    { id: 'sso', label: t('settings.sso', 'SSO & roles'), icon: Shield, to: '/admin/sso' as const },
+    { id: 'org', label: t('settings.org', 'Organization'), icon: BuildingIcon, to: '/admin/settings' as const },
+    { id: 'policies', label: t('settings.bookingRules', 'Booking rules'), icon: FileTextIcon, to: '/admin/settings' as const },
+    { id: 'sso', label: t('settings.sso', 'SSO & roles'), icon: ShieldIcon, to: '/admin/sso' as const },
     { id: 'billing', label: t('settings.billing', 'Billing'), icon: CoinsIcon, to: '/admin/billing' as const },
-    { id: 'audit', label: t('settings.auditLog', 'Audit log'), icon: ChartLine, to: '/admin/audit-log' as const },
+    { id: 'audit', label: t('settings.auditLog', 'Audit log'), icon: ChartLineIcon, to: '/admin/audit-log' as const },
   ];
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-20">
-      {/* v11 SOTA hero — primary tone, page-hero variant. User-level settings
+      {/* v11 SOTA hero — primary tone, page-hero variant. UserIcon-level settings
           (workspace + appearance), distinct from amber AdminSettings. */}
       <section className="admin-hero page-hero mb-5">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={User} label={t('settings.eyebrow', 'PREFERENCES')} />
+          <HeroEyebrow icon={UserIcon} label={t('settings.eyebrow', 'PREFERENCES')} />
           <h1 className="admin-hero-headline">{t('settings.title', 'Settings')}</h1>
           <p className="admin-hero-sub">
             {t('settings.subtitle', 'Control how ParkHub looks, feels, and behaves — for you and your workspace.')}
@@ -103,8 +103,8 @@ export function SettingsPage() {
       >
         {(
           [
-            { k: 'user' as const, label: t('settings.personal', 'Personal'), icon: User },
-            { k: 'workspace' as const, label: t('settings.workspace', 'Workspace'), icon: Building },
+            { k: 'user' as const, label: t('settings.personal', 'Personal'), icon: UserIcon },
+            { k: 'workspace' as const, label: t('settings.workspace', 'Workspace'), icon: BuildingIcon },
           ]
         ).map((s) => {
           const active = scope === s.k;

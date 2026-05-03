@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, SpinnerGap, Lock, XIcon, Check, WarningIcon } from '@phosphor-icons/react';
+import { ShieldCheckIcon, SpinnerGapIcon, LockIcon, XIcon, CheckIcon, WarningIcon } from '@phosphor-icons/react';
 import { api, type TwoFactorSetup } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -72,7 +72,7 @@ export function TwoFactorSetupComponent() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-4">
-        <SpinnerGap className="animate-spin" size={20} />
+        <SpinnerGapIcon className="animate-spin" size={20} />
         <span>Loading 2FA status...</span>
       </div>
     );
@@ -82,7 +82,7 @@ export function TwoFactorSetupComponent() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ShieldCheck size={24} weight="duotone" className={enabled ? 'text-green-500' : 'text-gray-400'} />
+          <ShieldCheckIcon size={24} weight="duotone" className={enabled ? 'text-green-500' : 'text-gray-400'} />
           <div>
             <h3 className="font-semibold">Two-Factor Authentication</h3>
             <p className="text-sm text-gray-500">
@@ -135,7 +135,7 @@ export function TwoFactorSetupComponent() {
               disabled={verifying || code.length !== 6}
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
             >
-              {verifying ? <SpinnerGap className="animate-spin" size={16} /> : <Check size={16} />}
+              {verifying ? <SpinnerGapIcon className="animate-spin" size={16} /> : <CheckIcon size={16} />}
               Verify
             </button>
           </div>
@@ -163,7 +163,7 @@ export function TwoFactorSetupComponent() {
               disabled={disabling || !disablePassword}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1"
             >
-              {disabling ? <SpinnerGap className="animate-spin" size={16} /> : <Lock size={16} />}
+              {disabling ? <SpinnerGapIcon className="animate-spin" size={16} /> : <LockIcon size={16} />}
               Confirm
             </button>
             <button

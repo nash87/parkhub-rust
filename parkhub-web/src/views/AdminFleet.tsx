@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { CarIcon, MagnifyingGlass, Flag, Lightning } from '@phosphor-icons/react';
+import { CarIcon, MagnifyingGlassIcon, FlagIcon, LightningIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -84,7 +84,7 @@ export function AdminFleetPage() {
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(flagged ? t('fleet.flagged', 'Vehicle flagged') : t('fleet.unflagged', 'Flag removed'));
+        toast.success(flagged ? t('fleet.flagged', 'Vehicle flagged') : t('fleet.unflagged', 'FlagIcon removed'));
         loadData();
       }
     /* istanbul ignore next -- network failure path */
@@ -126,7 +126,7 @@ export function AdminFleetPage() {
           <div className="glass-card rounded-2xl p-4">
             <p className="text-xs text-surface-500">{t('fleet.electricCount', 'Electric')}</p>
             <p className="text-2xl font-bold text-emerald-600 flex items-center gap-1">
-              <Lightning weight="fill" className="w-5 h-5" />
+              <LightningIcon weight="fill" className="w-5 h-5" />
               {stats.electric_count}
             </p>
           </div>
@@ -158,7 +158,7 @@ export function AdminFleetPage() {
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
           <input
             type="text"
             value={search}
@@ -208,7 +208,7 @@ export function AdminFleetPage() {
                 <tr key={v.id} className={`border-b border-surface-100 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800/50 transition-colors ${v.flagged ? 'bg-red-50/50 dark:bg-red-900/10' : ''}`} data-testid="fleet-row">
                   <td className="px-4 py-3 font-mono font-medium text-surface-900 dark:text-white">
                     {v.license_plate}
-                    {v.flagged && <Flag weight="fill" className="inline w-4 h-4 text-red-500 ml-1" />}
+                    {v.flagged && <FlagIcon weight="fill" className="inline w-4 h-4 text-red-500 ml-1" />}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${typeColors[v.vehicle_type] || 'bg-surface-100 text-surface-600'}`}>
@@ -233,7 +233,7 @@ export function AdminFleetPage() {
                       }`}
                       data-testid="flag-btn"
                     >
-                      {v.flagged ? t('fleet.unflag', 'Unflag') : t('fleet.flag', 'Flag')}
+                      {v.flagged ? t('fleet.unflag', 'Unflag') : t('fleet.flag', 'FlagIcon')}
                     </button>
                   </td>
                 </tr>
