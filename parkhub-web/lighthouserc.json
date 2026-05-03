@@ -9,7 +9,8 @@
     "assert": {
       "assertions": {
         "categories:accessibility": ["error", {"minScore": 0.8}],
-        "categories:best-practices": ["warn", {"minScore": 0.8}]
+        "categories:best-practices": ["warn", {"minScore": 0.8}],
+        "interaction-to-next-paint": ["warn", {"maxNumericValue": 200}]
       }
     }
   }
