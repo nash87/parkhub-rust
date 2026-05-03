@@ -208,7 +208,7 @@ describe('AdminSSOPage', () => {
   });
 
   it('deletes provider', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'DELETE') return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as any);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: sampleProviders }) } as any);
     }) as any;
@@ -267,7 +267,7 @@ describe('AdminSSOPage', () => {
   });
 
   it('save error response', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'PUT') return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Duplicate slug' } }) } as any);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { providers: [] } }) } as any);
     }) as any;
@@ -285,7 +285,7 @@ describe('AdminSSOPage', () => {
   });
 
   it('save network error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'PUT') return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { providers: [] } }) } as any);
     }) as any;
