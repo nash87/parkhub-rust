@@ -408,17 +408,17 @@ pub async fn check_admin(
     }
 }
 
-/// T-1731: resolve the caller's tenant_id by looking up the authenticated user.
+/// T-1731: resolve the caller's `tenant_id` by looking up the authenticated user.
 ///
 /// Returns the user's `tenant_id` field (which is `None` for platform admins
 /// or unbound accounts — the same semantic the PHP side uses via
 /// `TenantScope::currentId()`).  Returns `None` when the user cannot be
 /// loaded at all (caller should treat that as "no tenant bound" rather than
-/// failing the request — the auth layer already guaranteed a valid user_id).
+/// failing the request — the auth layer already guaranteed a valid `user_id`).
 ///
 /// This is the first half of the Rust-side multi-tenancy hardening: every
 /// domain object created on behalf of `auth_user` carries the caller's
-/// tenant_id instead of a hard-coded `None`, so when `MODULE_MULTI_TENANT`
+/// `tenant_id` instead of a hard-coded `None`, so when `MODULE_MULTI_TENANT`
 /// flips on (today it is OFF) the records are already partitioned correctly.
 pub async fn resolve_tenant_id(state: &crate::AppState, user_id: Uuid) -> Option<String> {
     state
