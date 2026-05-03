@@ -102,6 +102,7 @@ diff_touch_ts_export=0
 diff_touch_workflows=0
 diff_touch_php=0
 diff_touch_e2e=0
+diff_touch_image=0
 
 compute_diff_paths() {
   if [[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] || [[ "$profile" != "pr" ]]; then
@@ -166,10 +167,13 @@ compute_diff_paths() {
   if grep -qE '^e2e/|^playwright\.config\.(ts|js|mjs|cjs)$' <<<"$diff_paths"; then
     diff_touch_e2e=1
   fi
+  if grep -qE '^(Dockerfile|Containerfile.*|Cargo\.lock|parkhub-web/package-lock\.json)$' <<<"$diff_paths"; then
+    diff_touch_image=1
+  fi
 
-  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d (%d files)\n' \
+  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d image=%d (%d files)\n' \
     "$base_ref" "$diff_touch_rust" "$diff_touch_frontend" "$diff_touch_ts_export" \
-    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$(wc -l <<<"$diff_paths")"
+    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$diff_touch_image" "$(wc -l <<<"$diff_paths")"
 }
 
 # ─── pre-push hook result re-use (opt-in via FOP_LOCAL_CI_REUSE_PREPUSH=1) ───
@@ -510,6 +514,24 @@ fi
 # ─── Stage 7: cd profile extras ──────────────────────────────────────────────
 if [[ "$profile" == "cd" ]]; then
   run_step_heavy "release image preflight" "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
+fi
+
+# ─── Stage 7b: container image vulnerability scan (cd, or Dockerfile touched on full) ───
+# Mirrors .github/workflows/security.yml trivy-image + grype-image jobs (which
+# only run post-publish on main). Locally we build a fresh image and scan it.
+# Stamp-cached on Dockerfile + Cargo.lock + parkhub-web/package-lock.json SHA
+# so we don't rebuild across pushes that don't touch image inputs.
+image_scan_should_run=0
+[[ "$profile" == "cd" ]] && image_scan_should_run=1
+[[ "$profile" == "full" ]] && (( diff_touch_image )) && image_scan_should_run=1
+if (( image_scan_should_run )); then
+  if [[ -x scripts/local-image-scan.sh ]]; then
+    # The script gracefully skips if podman/trivy/grype is missing, so we
+    # don't need to gate on tool presence here.
+    run_step_heavy "container image scan (build + trivy image + grype)" "./scripts/local-image-scan.sh"
+  else
+    skip_step "container image scan" "scripts/local-image-scan.sh missing"
+  fi
 fi
 
 # ─── Stage 8: trivy filesystem scan ─────────────────────────────────────────
