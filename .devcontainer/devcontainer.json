@@ -1,0 +1,79 @@
+{
+  "name": "parkhub-rust full local CI/CD",
+  "build": {
+    "context": ".",
+    "dockerfile": "Containerfile"
+  },
+
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspaces/parkhub-rust",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/parkhub-rust,type=bind,consistency=cached",
+
+  "// Note": [
+    "This dev container ships every binary fop-local-ci.sh expects (rust toolchain, node 22,",
+    "helm, trivy, grype, syft, gitleaks, actionlint, cargo-audit, cargo-deny, cargo-geiger,",
+    "typos, zizmor, lighthouse, lefthook, yamllint). After 'devcontainer up' or VS Code's",
+    "Reopen-in-Container, run '.github/scripts/fop-local-ci.sh --profile full --post-status'",
+    "and every gate that passes on GHA will pass here too — same binaries, same versions."
+  ],
+
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "vadimcn.vscode-lldb",
+        "astro-build.astro-vscode",
+        "biomejs.biome",
+        "ms-azuretools.vscode-docker",
+        "GitHub.vscode-github-actions",
+        "GitHub.copilot",
+        "ms-playwright.playwright"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "[rust]": { "editor.defaultFormatter": "rust-lang.rust-analyzer" },
+        "[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+        "[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+        "[astro]": { "editor.defaultFormatter": "astro-build.astro-vscode" },
+        "rust-analyzer.cargo.features": ["full", "headless"],
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.checkOnSave": true,
+        "files.watcherExclude": {
+          "**/target/**": true,
+          "**/node_modules/**": true,
+          "**/.fop/**": true
+        }
+      }
+    }
+  },
+
+  "forwardPorts": [4321, 8081, 18181, 18182],
+  "portsAttributes": {
+    "4321": { "label": "astro preview", "onAutoForward": "notify" },
+    "8081": { "label": "parkhub-server (full)", "onAutoForward": "notify" },
+    "18181": { "label": "parkhub-server (drift / openapi)", "onAutoForward": "silent" },
+    "18182": { "label": "lighthouse target preview", "onAutoForward": "silent" }
+  },
+
+  "mounts": [
+    "source=parkhub-cargo-cache,target=/usr/local/cargo/registry,type=volume",
+    "source=parkhub-target-cache,target=/workspaces/parkhub-rust/target,type=volume",
+    "source=parkhub-npm-cache,target=/home/vscode/.npm,type=volume"
+  ],
+
+  "postCreateCommand": "bash -lc 'cd parkhub-web && npm ci --no-audit --no-fund && cd .. && lefthook install --reset-hooks-path'",
+
+  "postStartCommand": "bash -lc 'echo \"parkhub-rust devcontainer ready. Run: .github/scripts/fop-local-ci.sh --profile full --post-status --background\"'",
+
+  "remoteEnv": {
+    "CARGO_TERM_COLOR": "always",
+    "RUST_BACKTRACE": "1",
+    "FOP_LOCAL_CI_DIRECT": "1"
+  }
+}
