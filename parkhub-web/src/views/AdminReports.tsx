@@ -9,27 +9,27 @@ import { ExportButton } from '../components/ExportButton';
 
 const HEATMAP_STATUSES = new Set(['confirmed', 'active', 'completed']);
 
+// StatCard now delegates to the shared V11Meter primitive (extracted into
+// parkhub-web/src/components/v11/). Local wrapper preserves the previous
+// API (color prop + value-derived bar) so call sites don't change.
+import { V11Meter, type V11MeterTone } from '../components/v11/V11Meter';
+
 function StatCard({ icon: Icon, label, value, color = 'primary' }: {
   icon: Icon;
   label: string;
   value: number;
-  color?: 'primary' | 'accent' | 'info' | 'success' | 'warn' | 'danger';
+  color?: V11MeterTone;
 }) {
-  // v11 SOTA stat meter: colored left-edge bar, mono UPPERCASE eyebrow,
-  // hero-size value with color-mix(oklab) gradient wash. Pairs with the
-  // admin-hero card landed in PR #489. Color tone drives the semantic
-  // wash via the .v11-meter--{color} modifier.
+  // Bar fill: 0..1 derived from the value (legacy heuristic — same as before).
+  const bar = value > 0 ? Math.max(value / 200, 0.05) : 0;
   return (
-    <div className={`v11-meter v11-meter--${color}`}>
-      <div className="v11-meter-eyebrow">
-        <Icon weight="bold" className="w-3.5 h-3.5" />
-        {label}
-      </div>
-      <div className="v11-meter-value">{value}</div>
-      <div className="v11-meter-bar" aria-hidden="true">
-        <i style={{ width: `${Math.min(value > 0 ? Math.max(value / 200, 0.05) * 100 : 0, 100)}%` }}></i>
-      </div>
-    </div>
+    <V11Meter
+      icon={<Icon weight="bold" className="w-3.5 h-3.5" />}
+      label={label}
+      value={value}
+      tone={color}
+      bar={bar}
+    />
   );
 }
 
