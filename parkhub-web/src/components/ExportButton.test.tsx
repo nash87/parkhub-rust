@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ExportButton, type ExportType } from './ExportButton';
+import { ExportButton } from './ExportButton';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_: string, f: string) => f }) }));
 
