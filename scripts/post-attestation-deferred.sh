@@ -51,6 +51,18 @@ fi
 
 if [ -z "$sha" ]; then
   sha="$(git rev-parse HEAD)"
+else
+  # Expand short / abbreviated SHAs to the full 40-char form.
+  # GitHub's POST /repos/.../statuses/{sha} endpoint rejects anything
+  # shorter with HTTP 422 "Sha must be a valid hex object ID", even
+  # though GET /commits/{sha} accepts the prefix. Fail loudly if the
+  # SHA isn't resolvable locally.
+  expanded="$(git rev-parse --verify "${sha}^{commit}" 2>/dev/null || true)"
+  if [ -z "$expanded" ]; then
+    echo "ERROR: --sha '$sha' is not a valid commit in this repo" >&2
+    exit 2
+  fi
+  sha="$expanded"
 fi
 repo=""
 for remote in github upstream origin; do
