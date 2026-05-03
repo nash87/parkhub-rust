@@ -28,7 +28,10 @@ Environment:
   FOP_LOCAL_CI_NO_AUTO_HEAL=1 disable astro sync auto-run on missing types
   FOP_CAPACITY_WAIT_MAX_SECS  fop build queue capacity-wait timeout (default
                               1800s when MemAvailable < 6GB, else fop default)
-  FOP_LOCAL_CI_RUN_LINTERS=1  run actionlint + zizmor (if installed) on workflows
+  FOP_LOCAL_CI_RUN_LINTERS=1  run actionlint + yamllint + zizmor + helm-validate
+                              even if no workflow / helm chart files touched
+  FOP_LOCAL_CI_AUDIT_STRICT=1 fail the gate on any cargo-audit finding (default:
+                              advisory; CI enforces strict)
   FOP_LOCAL_CI_DIRECT=1       bypass fop build queue entirely (kernel + earlyoom
                               handle memory). Use only when fop queue is
                               unreachable (bootstrap chicken-and-egg) or when
@@ -367,6 +370,26 @@ if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; t
     # Audit-mode: surface findings, don't fail the gate yet
     run_direct "zizmor (audit)" "zizmor --no-progress --persona auditor .github/workflows/ || true"
   fi
+  if command -v yamllint >/dev/null 2>&1; then
+    # Match GHA ci.yml yamllint scope: docker-compose.yml, render.yaml, koyeb.yaml
+    # only check files that exist (silent skip otherwise).
+    run_direct "yamllint (compose+deploy manifests)" \
+      "for f in docker-compose.yml docker-compose.test.yml render.yaml koyeb.yaml; do \
+        [[ -f \$f ]] && yamllint -d 'rules: {line-length: disable, document-start: disable, truthy: disable}' \"\$f\"; \
+      done"
+  fi
+fi
+
+# ─── Stage 2b: spell-check via typos (advisory, all profiles) ───────────────
+# Mirrors security.yml typos job (crate-ci/typos action). MIT licensed.
+# Advisory: surfaces likely typos but doesn't fail the gate. Common in commit
+# messages, comments, README; less common in code identifiers (those are caught
+# by clippy/tsc).
+if command -v typos >/dev/null 2>&1; then
+  run_direct "typos (spell-check, advisory)" \
+    "typos --color=always 2>&1 | head -50 || echo 'typos found likely typos (advisory — see above)'"
+else
+  skip_step "typos (spell-check)" "typos not on PATH (install: cargo install typos-cli)"
 fi
 
 # ─── Stage 3: Rust headless checks (skip if no .rs touched OR pre-push reused) ───
@@ -412,6 +435,76 @@ fi
 if [[ "$profile" == "full" ]]; then
   run_step_heavy "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { \"\$server_bin\" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
   run_step_heavy "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true \"\$server_bin\" --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
+fi
+
+# ─── Stage 6b: Helm chart validation (full+cd profiles or helm/ touched) ────
+# Mirrors .github/workflows/ci.yml `helm-validate` job lines 45-70: lint +
+# template renders for the 4 chart-value variants, each piped to a YAML parser
+# to catch silent rendering bugs. Skips silently if helm not on PATH (per the
+# `pr` profile contributor-friendly pattern).
+helm_required=0
+[[ "$profile" == "cd" || "$profile" == "full" ]] && helm_required=1
+helm_should_run=0
+[[ $helm_required -eq 1 ]] && helm_should_run=1
+if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; then
+  helm_should_run=1
+fi
+if [[ -d helm/parkhub ]] && (( helm_should_run )); then
+  if command -v helm >/dev/null 2>&1; then
+    run_step "helm lint (parkhub chart)" "helm lint ./helm/parkhub"
+    # 4 template variants matching ci.yml: default + grafana + ha + servicemonitor
+    run_step "helm template (default)" \
+      "helm template parkhub ./helm/parkhub | python3 -c 'import sys,yaml; list(yaml.safe_load_all(sys.stdin))'"
+    if [[ -f helm/parkhub/values-grafana.yaml ]]; then
+      run_step "helm template (grafana)" \
+        "helm template parkhub ./helm/parkhub -f helm/parkhub/values-grafana.yaml | python3 -c 'import sys,yaml; list(yaml.safe_load_all(sys.stdin))'"
+    fi
+    if [[ -f helm/parkhub/values-ha.yaml ]]; then
+      run_step "helm template (ha)" \
+        "helm template parkhub ./helm/parkhub -f helm/parkhub/values-ha.yaml | python3 -c 'import sys,yaml; list(yaml.safe_load_all(sys.stdin))'"
+    fi
+    if [[ -f helm/parkhub/values-servicemonitor.yaml ]]; then
+      run_step "helm template (servicemonitor)" \
+        "helm template parkhub ./helm/parkhub -f helm/parkhub/values-servicemonitor.yaml | python3 -c 'import sys,yaml; list(yaml.safe_load_all(sys.stdin))'"
+    fi
+  elif (( helm_required )); then
+    echo "✗ helm chart validation FAILED: helm not on PATH (required for ${profile} profile)" >&2
+    write_report "failure" "helm chart validation"
+    post_commit_status "failure" "fop local ${profile} failed: helm not installed"
+    exit 1
+  else
+    skip_step "helm chart validation" "helm not on PATH (install: https://helm.sh/docs/intro/install/)"
+  fi
+fi
+
+# ─── Stage 6c: cargo audit (RustSec) + cargo-geiger (unsafe SAST) ───────────
+# Mirrors .github/workflows/security.yml cargo-audit + cargo-geiger jobs.
+# cargo audit: gating on full+cd profiles; same RUSTSEC ignore list as the
+# workflow (kept in sync via deny.toml — cargo-audit reads its own DB but
+# respects --ignore CLI flags).
+# cargo-geiger: advisory only (unsafe-block trend tracking, not a hard gate).
+if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
+  if command -v cargo-audit >/dev/null 2>&1; then
+    # --deny warnings matches GHA. The transitive Slint/Tauri RUSTSEC ignores
+    # live in deny.toml; cargo-audit respects those via --ignore CLI on each
+    # crate ID. For local runs we accept warnings as advisory unless
+    # FOP_LOCAL_CI_AUDIT_STRICT=1 is set (CI enforces strictly).
+    if [[ "${FOP_LOCAL_CI_AUDIT_STRICT:-}" == "1" ]]; then
+      run_step "cargo audit (RustSec, strict)" "cargo audit --deny warnings"
+    else
+      run_step "cargo audit (RustSec, advisory)" "cargo audit || echo 'cargo-audit found advisories (advisory — see above)'"
+    fi
+  else
+    skip_step "cargo audit" "cargo-audit not installed (cargo install cargo-audit)"
+  fi
+  if command -v cargo-geiger >/dev/null 2>&1; then
+    # Advisory: scans for `unsafe` blocks across the dep tree. Use parkhub-server
+    # as the entry point (workspace root has multiple targets).
+    run_step "cargo-geiger (unsafe SAST, advisory)" \
+      "cargo geiger --quiet --manifest-path parkhub-server/Cargo.toml --no-default-features --features headless 2>&1 | tail -30 || echo 'cargo-geiger advisory output above'"
+  else
+    skip_step "cargo-geiger" "cargo-geiger not installed (cargo install cargo-geiger)"
+  fi
 fi
 
 # ─── Stage 7: cd profile extras ──────────────────────────────────────────────
