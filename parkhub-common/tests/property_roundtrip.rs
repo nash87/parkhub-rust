@@ -9,10 +9,10 @@
 //! targets later on nightly without rewriting the shape.
 
 use parkhub_common::{
-    AbsenceType, AnnouncementSeverity, BookingStatus, ConnectorType, CreditTransactionType,
-    EvChargerStatus, FuelType, LayoutElementType, LotStatus, NotificationType, PaymentStatus,
-    ProposalStatus, SlotFeature, SlotStatus, SlotType, SwapRequestStatus, UserRole, VehicleType,
-    VisitorStatus, WaitlistStatus,
+    AbsenceType, AnnouncementSeverity, BookingStatus, ChargingSessionStatus, ConnectorType,
+    CreditTransactionType, EvChargerStatus, FleetEventType, FuelType, LayoutElementType, LotStatus,
+    NotificationType, PaymentStatus, ProposalStatus, SlotFeature, SlotStatus, SlotType,
+    SwapRequestStatus, UserRole, VehicleType, VisitorStatus, WaitlistStatus,
 };
 use proptest::prelude::*;
 
@@ -409,6 +409,60 @@ proptest! {
         let d: EvChargerStatus = serde_json::from_str(&j1).unwrap();
         prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
     }
+
+    // ── EV + fleet enums (third wave 2026-05-03) ───────────────────────────
+
+    #[test]
+    fn charging_session_status_roundtrips(s in arb_charging_session_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: ChargingSessionStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn charging_session_status_json_is_stable(s in arb_charging_session_status()) {
+        let j1 = serde_json::to_string(&s).unwrap();
+        let d: ChargingSessionStatus = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+
+    /// FleetEventType uses dotted-string serde renames ("checkin.started" etc.).
+    /// Roundtrip catches a typo in any of the 9 #[serde(rename = ...)] tags.
+    #[test]
+    fn fleet_event_type_roundtrips(e in arb_fleet_event_type()) {
+        let json = serde_json::to_string(&e).unwrap();
+        let decoded: FleetEventType = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(e, decoded);
+    }
+
+    #[test]
+    fn fleet_event_type_json_is_stable(e in arb_fleet_event_type()) {
+        let j1 = serde_json::to_string(&e).unwrap();
+        let d: FleetEventType = serde_json::from_str(&j1).unwrap();
+        prop_assert_eq!(j1, serde_json::to_string(&d).unwrap());
+    }
+}
+
+fn arb_charging_session_status() -> impl Strategy<Value = ChargingSessionStatus> {
+    prop_oneof![
+        Just(ChargingSessionStatus::Active),
+        Just(ChargingSessionStatus::Completed),
+        Just(ChargingSessionStatus::Cancelled),
+    ]
+}
+
+fn arb_fleet_event_type() -> impl Strategy<Value = FleetEventType> {
+    prop_oneof![
+        Just(FleetEventType::CheckinStarted),
+        Just(FleetEventType::CheckinCompleted),
+        Just(FleetEventType::SwapRequested),
+        Just(FleetEventType::SwapAccepted),
+        Just(FleetEventType::SwapDeclined),
+        Just(FleetEventType::EvSessionStarted),
+        Just(FleetEventType::EvSessionStopped),
+        Just(FleetEventType::GuestCreated),
+        Just(FleetEventType::GuestCancelled),
+    ]
 }
 
 // ── arbitraries for the 8 new enums ────────────────────────────────────────
