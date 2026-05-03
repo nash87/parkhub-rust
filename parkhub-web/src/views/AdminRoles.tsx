@@ -139,6 +139,7 @@ export function AdminRolesPage() {
           <button
             onClick={() => setShowHelp(h => !h)}
             className="admin-hero-iconbtn"
+            aria-label={t('rbac.helpLabel')}
             title={t('rbac.helpLabel')}
           >
             <QuestionIcon className="w-4 h-4" />

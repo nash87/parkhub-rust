@@ -245,7 +245,7 @@ export function CalendarPage() {
           <p className="admin-hero-sub">{t('calendar.subtitle', 'See and manage your reservations across the month')}</p>
         </div>
         <div className="admin-hero-actions">
-          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" title={t('calendarDrag.helpLabel')}>
+          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" aria-label={t('calendarDrag.helpLabel')} title={t('calendarDrag.helpLabel')}>
             <QuestionIcon className="w-4 h-4" />
           </button>
           <button

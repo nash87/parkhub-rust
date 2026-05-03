@@ -110,6 +110,7 @@ export function AdminZonesPage() {
           <button
             onClick={() => setShowHelp(h => !h)}
             className="admin-hero-iconbtn"
+            aria-label={t('parkingZones.helpLabel')}
             title={t('parkingZones.helpLabel')}
           >
             <QuestionIcon className="w-4 h-4" />

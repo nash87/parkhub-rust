@@ -116,7 +116,7 @@ export function AdminDashboardPage() {
           <p className="admin-hero-sub">{t('widgets.subtitle')}</p>
         </div>
         <div className="admin-hero-actions">
-          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" title={t('widgets.helpLabel')}>
+          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" aria-label={t('widgets.helpLabel')} title={t('widgets.helpLabel')}>
             <QuestionIcon size={16} />
           </button>
           <button onClick={() => setShowCatalog(!showCatalog)} className="admin-hero-action">
