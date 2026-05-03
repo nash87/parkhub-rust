@@ -323,7 +323,7 @@ describe('VisitorsPage - extended', () => {
   it('shows error when registration server returns failure', async () => {
     const toast = await import('react-hot-toast');
     const errSpy = vi.spyOn(toast.default, 'error');
-    (global as any).fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, _opts?: any) => {
       if (typeof url === 'string' && url.includes('/visitors/register')) {
         return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Server fail' } }) } as Response);
       }
@@ -352,7 +352,7 @@ describe('VisitorsPage - extended', () => {
   it('catches network errors during registration', async () => {
     const toast = await import('react-hot-toast');
     const errSpy = vi.spyOn(toast.default, 'error');
-    (global as any).fetch = vi.fn((url: string, opts?: any) => {
+    (global as any).fetch = vi.fn((url: string, _opts?: any) => {
       if (typeof url === 'string' && url.includes('/visitors/register')) {
         return Promise.reject(new Error('boom'));
       }

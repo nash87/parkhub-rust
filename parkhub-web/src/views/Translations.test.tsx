@@ -54,7 +54,7 @@ vi.mock('@phosphor-icons/react', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, opts?: any) => {
+    t: (key: string, _opts?: any) => {
       const map: Record<string, string> = {
         'translations.title': 'Translations',
         'translations.subtitle': 'Help improve translations',
