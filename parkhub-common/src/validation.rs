@@ -1,8 +1,8 @@
-//! Pure input-validation helpers shared across the ParkHub workspace.
+//! Pure input-validation helpers shared across the `ParkHub` workspace.
 //!
 //! These functions are intentionally dependency-free (no `regex`, no
 //! `validator`, no runtime state). They encode the "structural" half of
-//! the ParkHub input contract — shape and range checks that every layer
+//! the `ParkHub` input contract — shape and range checks that every layer
 //! (server handlers, client SDKs, future CLI tools) should agree on.
 //!
 //! The heavier, policy-laden validators (password strength rules,

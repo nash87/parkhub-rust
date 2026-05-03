@@ -36,7 +36,7 @@ pub struct User {
     /// Multi-tenant isolation: tenant ID (None = super-admin / global scope)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tenant_id: Option<String>,
-    /// Accessibility needs: wheelchair, reduced_mobility, visual, hearing, none
+    /// Accessibility needs: `wheelchair`, `reduced_mobility`, `visual`, `hearing`, `none`
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accessibility_needs: Option<String>,
     /// Cost center for billing allocation
@@ -689,7 +689,7 @@ pub struct WaitlistEntry {
     pub notified_at: Option<DateTime<Utc>>,
     #[serde(default = "default_waitlist_status")]
     pub status: WaitlistStatus,
-    /// When the offer expires (notified_at + 15 min)
+    /// When the offer expires (`notified_at` + 15 min)
     #[serde(default)]
     pub offer_expires_at: Option<DateTime<Utc>>,
     /// Booking ID created when the offer is accepted
@@ -944,7 +944,7 @@ pub struct ChargingSession {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Discriminant for `FleetEvent` — matches the wire contract for the
-/// `/api/v1/events/fleet` SSE stream (snake_case variant → dotted wire type).
+/// `/api/v1/events/fleet` SSE stream (`snake_case` variant → dotted wire type).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "gen-types", derive(ts_rs::TS), ts(export))]
 pub enum FleetEventType {

@@ -8,6 +8,6 @@
 
 /**
  * Discriminant for `FleetEvent` — matches the wire contract for the
- * `/api/v1/events/fleet` SSE stream (snake_case variant → dotted wire type).
+ * `/api/v1/events/fleet` SSE stream (`snake_case` variant → dotted wire type).
  */
 export type FleetEventType = "checkin.started" | "checkin.completed" | "swap.requested" | "swap.accepted" | "swap.declined" | "ev.session.started" | "ev.session.stopped" | "guest.created" | "guest.cancelled";
