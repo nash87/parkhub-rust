@@ -15,6 +15,7 @@ you need to get from zero to a merged pull request.
 - [Running Tests](#running-tests)
 - [Code Style](#code-style)
 - [Local CI](#local-ci)
+- [SOTA-2026 mirrors](#sota-2026-mirrors-prs-512543)
 - [Pull Request Guidelines](#pull-request-guidelines)
 - [Adding a New API Endpoint](#adding-a-new-api-endpoint)
 - [Reporting Bugs](#reporting-bugs)
@@ -476,6 +477,34 @@ git add docs/openapi/rust.json
 cargo test --features gen-types -p parkhub-server --test ts_export -- --nocapture
 git add parkhub-web/src/generated/
 ```
+
+### SOTA-2026 mirrors (PRs #512–#543)
+
+Beyond the lefthook gate, the repo ships **13 standalone `scripts/local-*.sh` mirrors** that cover every GHA gate with a workstation analog. Full index in [`docs/local-ci.md`](docs/local-ci.md). Quick orientation:
+
+| Want to… | Run |
+|----------|-----|
+| Verify everything before push | `lefthook run pre-push` |
+| Run the local-CI orchestrator manually | `.github/scripts/fop-local-ci.sh --profile full --post-status` |
+| Same, in background (terminal returns instantly) | `… --background` (posts `fop/local-ci/full` status when complete) |
+| First-time devcontainer | `devcontainer up` (pulls prebuilt `ghcr.io/nash87/parkhub-rust-devcontainer:latest`) |
+| Audit gitea/github workflow drift | `./scripts/local-workflow-drift.sh` |
+| Container image vuln scan | `./scripts/local-image-scan.sh` (stamp-cached) |
+| Lighthouse perf + a11y | `./scripts/local-lighthouse.sh` |
+| Coverage report (Rust + frontend) | `./scripts/local-coverage.sh [--html]` |
+| SLSA-3 reproducibility check | `./scripts/local-reproducibility-check.sh` |
+| Release-tag preflight | `./scripts/local-release-rehearsal.sh --tag v5.0.x` |
+| Multi-browser E2E suite | `./scripts/local-e2e.sh [--project chromium]` |
+| Build-time waterfall HTML | `./scripts/local-build-trace.sh` |
+| SBOM (SPDX-JSON) generation | `./scripts/local-sbom.sh` |
+| OSSF Scorecard | `GH_TOKEN=$(gh auth token) ./scripts/local-scorecard.sh` |
+| Mutation testing | `./scripts/local-mutants.sh` |
+| Fuzz smoke (jwt + webhook) | `./scripts/local-fuzz-smoke.sh` |
+| Install smoke (docker-compose path) | `./scripts/local-install-smoke.sh` |
+
+**Trust-inversion architecture**: `scripts/post-attestation-deferred.sh` (called from `lefthook.yml`) posts a `fop/local-ci/pr=success` status check via PAT after pre-push gates pass. GitHub's `local-ci-attestation` job (`ci.yml:90-207`) waits up to 36.5 min for it; if found, **all 7 Rust gates skip on the PR** ("LOCAL-FIRST: skipped on PR; covered by fop/local-ci/pr"). Bot/fork PRs (Dependabot, Copilot SWE Agent) skip the local-CI shortcut and run the full GHA suite in parallel.
+
+**Dev container**: `.devcontainer/Containerfile` ships every binary at GHA-pinned versions (rust 1.94.1, node 22, helm v3.18.4, trivy 0.59.0, grype 0.91.0, syft, gitleaks 8.30.1, actionlint 1.7.12, cargo-audit/deny/geiger, typos, zizmor, lighthouse v0.13, lefthook, yamllint). After `devcontainer up`, `fop-local-ci.sh --profile full --post-status --background` runs the entire local CI ladder.
 
 ### Bypassing in emergencies
 
