@@ -23,7 +23,6 @@
  */
 
 import {
-  type FormEvent,
   type ReactNode,
   useCallback,
   useEffect,
@@ -207,7 +206,9 @@ export function ConfigEditor({
     if (node) firstFieldRef.current = node;
   }, []);
 
-  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  // React 19 deprecated FormEvent in favor of inline event types via JSX
+  // inference. Typing the form-submit handler explicitly avoids that path.
+  const onSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     const errs = validateShape(schema, local);
     if (errs.length > 0) {
