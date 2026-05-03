@@ -123,7 +123,7 @@ export function NotificationPreferencesComponent() {
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1">
           <PhoneIcon size={16} />
-          <span>{t('notifications.phoneNumber', 'PhoneIcon Number')}</span>
+          <span>{t('notifications.phoneNumber', 'Phone Number')}</span>
         </div>
         <div className="pl-6">
           <input
@@ -132,7 +132,7 @@ export function NotificationPreferencesComponent() {
             onChange={e => update('phone_number', e.target.value || '')}
             placeholder="+49 123 4567890"
             className="input text-sm w-full max-w-xs"
-            aria-label={t('notifications.phoneNumber', 'PhoneIcon Number')}
+            aria-label={t('notifications.phoneNumber', 'Phone Number')}
           />
           <p className="text-xs text-gray-400 mt-1">{t('notifications.phoneHint', 'Required for SMS and WhatsApp notifications')}</p>
         </div>

@@ -70,7 +70,7 @@ export function SettingsPage() {
     { id: 'profile', label: t('settings.profile', 'Profile'), icon: UserIcon, to: '/profile' as const },
     { id: 'notifications', label: t('settings.notifications', 'Notifications'), icon: BellIcon, to: '/notifications' as const },
     { id: 'vehicles', label: t('settings.vehicles', 'Vehicles'), icon: CarIcon, to: '/vehicles' as const },
-    { id: 'shortcuts', label: t('settings.shortcuts', 'KeyboardIcon shortcuts'), icon: KeyboardIcon, to: null, hint: t('settings.pressShortcut', 'Press ⌘/') },
+    { id: 'shortcuts', label: t('settings.shortcuts', 'Keyboard shortcuts'), icon: KeyboardIcon, to: null, hint: t('settings.pressShortcut', 'Press ⌘/') },
   ];
 
   const workspaceSections = [
