@@ -8,6 +8,7 @@ import { api, type ParkingLot, type CreateLotRequest, type UpdateLotRequest, typ
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface LotForm {
   name: string;
@@ -224,10 +225,7 @@ export function AdminLotsPage() {
       {/* v11 SOTA hero — emerald tone (parking inventory = healthy operational state). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            {t('lots.eyebrow', 'OPERATIONS · PARKING NETWORK')}
-          </div>
+          <HeroEyebrow label={t('lots.eyebrow', 'OPERATIONS · PARKING NETWORK')} />
           <h1 className="admin-hero-headline">{t('admin.lots')}</h1>
           <p className="admin-hero-sub">{t('lots.count', '{{count}} lots online', { count: lots.length })}</p>
         </div>

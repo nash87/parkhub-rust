@@ -12,8 +12,9 @@
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 export interface HeroEyebrowProps {
-  /** Phosphor icon component (e.g. `ShieldCheck`, `MapPin`, `UserPlus`). */
-  icon: PhosphorIcon;
+  /** Optional Phosphor icon (e.g. `ShieldCheck`). Omit for an iconless
+      eyebrow (used by Admin shell + AdminUsers + AdminLots). */
+  icon?: PhosphorIcon;
   /** UPPERCASE eyebrow text — typically t('section.eyebrow', 'FALLBACK'). */
   label: string;
 }
@@ -22,7 +23,7 @@ export function HeroEyebrow({ icon: Icon, label }: HeroEyebrowProps) {
   return (
     <div className="admin-hero-eyebrow">
       <span className="admin-hero-dot" aria-hidden="true"></span>
-      <Icon weight="bold" className="w-3.5 h-3.5" />
+      {Icon && <Icon weight="bold" className="w-3.5 h-3.5" />}
       {label}
     </div>
   );
