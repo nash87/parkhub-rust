@@ -48,7 +48,8 @@ export function PaymentModal({ open, onClose, onSuccess, amountCents, currency =
     && cvc.length >= 3
     && name.trim().length > 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // React 19 deprecated React.FormEvent in favor of SyntheticEvent / inline JSX inference.
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
 
