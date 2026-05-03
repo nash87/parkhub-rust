@@ -6,6 +6,7 @@ import { VehiclesSkeleton } from '../components/Skeleton';
 import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 /**
  * Result contract between the add-vehicle action and the component:
@@ -115,11 +116,7 @@ export function VehiclesPage() {
       {/* v11 SOTA hero \u2014 primary tone, page-hero variant. */}
       <motion.section variants={item} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CarIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('vehicles.eyebrow', 'MY FLEET')}
-          </div>
+          <HeroEyebrow icon={CarIcon} label={t('vehicles.eyebrow', 'MY FLEET')} />
           <h1 className="admin-hero-headline">{t('vehicles.title', 'Meine Fahrzeuge')}</h1>
           <p className="admin-hero-sub">{t('vehicles.subtitle', 'Fahrzeuge verwalten')}</p>
         </div>

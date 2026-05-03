@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Plus, Trash, PencilIcon, Question, UserCircleIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const ALL_PERMISSIONS = [
   'manage_users',
@@ -135,11 +136,7 @@ export function AdminRolesPage() {
       {/* v11 SOTA hero — info tone (access control = security-critical). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <ShieldCheck weight="bold" className="w-3.5 h-3.5" />
-            {t('rbac.eyebrow', 'ACCESS CONTROL')}
-          </div>
+          <HeroEyebrow icon={ShieldCheck} label={t('rbac.eyebrow', 'ACCESS CONTROL')} />
           <h1 className="admin-hero-headline">{t('rbac.title')}</h1>
           <p className="admin-hero-sub">{t('rbac.subtitle')}</p>
         </div>
