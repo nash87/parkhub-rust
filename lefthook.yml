@@ -205,6 +205,34 @@ pre-push:
         OSV-Scanner found a vulnerability not in osv-scanner.toml.
         Triage upstream advisory or document the suppression with reason.
 
+    workflow-drift:
+      # Detects gitea ↔ github workflow drift (PR #519). Gating: missing
+      # files between sides fail; trigger/job-key drift is advisory.
+      # Only fires when workflow files touched, so doesn't slow down
+      # the typical Rust-only push.
+      glob: "{.github,.gitea}/workflows/**"
+      skip:
+        - run: 'test ! -x scripts/local-workflow-drift.sh'
+      run: ./scripts/local-workflow-drift.sh
+      fail_text: |
+        Workflow file missing on the other side (gitea ↔ github).
+        Add it, or document the exemption in scripts/local-workflow-drift.sh
+        EXEMPT lists.
+
+    image-scan:
+      # Local container image vulnerability scan (PR #513). Gating only on
+      # Dockerfile/Cargo.lock/package-lock changes — these are the inputs
+      # that determine image content. Stamp-cached so the script is fast
+      # if the inputs haven't changed since the last successful run.
+      glob: "{Dockerfile,Cargo.lock,parkhub-web/package-lock.json}"
+      skip:
+        - run: 'test ! -x scripts/local-image-scan.sh'
+        - run: 'test ! -x "$(command -v podman 2>/dev/null)"'
+      run: ./scripts/local-image-scan.sh
+      fail_text: |
+        Container image scan surfaced CRITICAL/HIGH vulnerabilities.
+        Triage with: trivy image parkhub-local:ci-* (see scripts/local-image-scan.sh)
+
     post-attestation:
       # Forks a deferred poll-and-post that waits until the SHA shows
       # up on GitHub (after `git push` transmits the commit) and then
