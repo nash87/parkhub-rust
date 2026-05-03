@@ -415,11 +415,11 @@ export function GuestPassPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
-                  <button onClick={() => sharePass(b)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" title={t('guestBooking.share')}>
+                  <button onClick={() => sharePass(b)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" aria-label={`${t('guestBooking.share')} ${b.guest_name || b.id}`} title={t('guestBooking.share')}>
                     <ShareNetworkIcon className="w-5 h-5" />
                   </button>
                   {isAdmin && b.status === 'active' && (
-                    <button onClick={() => handleCancel(b.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" title={t('guestBooking.cancel')} data-testid={`cancel-${b.id}`}>
+                    <button onClick={() => handleCancel(b.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500" aria-label={`${t('guestBooking.cancel')} ${b.guest_name || b.id}`} title={t('guestBooking.cancel')} data-testid={`cancel-${b.id}`}>
                       <TrashIcon className="w-5 h-5" />
                     </button>
                   )}

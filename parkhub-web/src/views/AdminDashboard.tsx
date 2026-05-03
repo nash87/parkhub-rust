@@ -187,7 +187,7 @@ export function AdminDashboardPage() {
                     </div>
                     <h3 className="font-semibold text-surface-900 dark:text-white text-sm">{t(`widgets.types.${w.widget_type}`)}</h3>
                   </div>
-                  <button onClick={() => toggleWidget(w.widget_type)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" title={t('widgets.remove')}>
+                  <button onClick={() => toggleWidget(w.widget_type)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={`${t('widgets.remove')} ${t(`widgets.types.${w.widget_type}`)}`} title={t('widgets.remove')}>
                     <MinusIcon size={14} />
                   </button>
                 </div>

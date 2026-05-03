@@ -285,6 +285,7 @@ export function AdminRolesPage() {
                   <button
                     onClick={() => startEdit(role)}
                     className="p-2 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700"
+                    aria-label={`${t('rbac.edit')} ${role.name}`}
                     title={t('rbac.edit')}
                   >
                     <PencilIcon className="w-4 h-4" />
@@ -293,6 +294,7 @@ export function AdminRolesPage() {
                     <button
                       onClick={() => handleDelete(role)}
                       className="p-2 rounded-lg text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      aria-label={`${t('rbac.delete')} ${role.name}`}
                       title={t('rbac.delete')}
                     >
                       <TrashIcon className="w-4 h-4" />
