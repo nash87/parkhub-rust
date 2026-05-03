@@ -138,7 +138,7 @@ export function AdminRolesPage() {
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
             <ShieldCheck weight="bold" className="w-3.5 h-3.5" />
-            ACCESS CONTROL
+            {t('rbac.eyebrow', 'ACCESS CONTROL')}
           </div>
           <h1 className="admin-hero-headline">{t('rbac.title')}</h1>
           <p className="admin-hero-sub">{t('rbac.subtitle')}</p>

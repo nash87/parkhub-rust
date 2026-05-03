@@ -123,7 +123,7 @@ export function AdminSettingsPage() {
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
             <GearSix weight="bold" className="w-3.5 h-3.5" />
-            SYSTEM CONFIG
+            {t('admin.settingsEyebrow', 'SYSTEM CONFIG')}
           </div>
           <h1 className="admin-hero-headline">{t('admin.systemSettings')}</h1>
           <p className="admin-hero-sub">{t('settings.subtitle', 'Booking rules, credits, and tenant policy')}</p>
