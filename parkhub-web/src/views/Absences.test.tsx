@@ -26,7 +26,7 @@ vi.mock('framer-motion', () => ({
 }));
 vi.mock('@phosphor-icons/react', () => {
   const C = (p: any) => <span {...p} />;
-  return { House: C, Calendar: C, CalendarCheck: C, Trash: C, Plus: C, CaretLeft: C, CaretRight: C, X: C, Airplane: C, FirstAidKit: C, Briefcase: C, NoteBlank: C };
+  return { HouseIcon: C, CalendarIcon: C, CalendarCheckIcon: C, TrashIcon: C, PlusIcon: C, CaretLeftIcon: C, CaretRightIcon: C, XIcon: C, AirplaneIcon: C, FirstAidKitIcon: C, BriefcaseIcon: C, NoteBlankIcon: C };
 });
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../constants/absenceConfig', () => ({
