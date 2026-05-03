@@ -271,8 +271,8 @@ describe('AdminTranslationsPage', () => {
   it('renders approve all and reject all buttons when pending exist', async () => {
     render(<AdminTranslationsPage />);
     await waitFor(() => {
-      expect(screen.getByText('Approve All')).toBeInTheDocument();
-      expect(screen.getByText('Reject All')).toBeInTheDocument();
+      expect(screen.getByLabelText('Approve All')).toBeInTheDocument();
+      expect(screen.getByLabelText('Reject All')).toBeInTheDocument();
     });
   });
 
@@ -284,7 +284,7 @@ describe('AdminTranslationsPage', () => {
 
     render(<AdminTranslationsPage />);
     await waitFor(() => {
-      expect(screen.queryByText('Approve All')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Approve All')).not.toBeInTheDocument();
     });
   });
 
@@ -314,10 +314,10 @@ describe('AdminTranslationsPage', () => {
   it('bulk approve opens confirm dialog and processes pending proposals', async () => {
     const user = userEvent.setup();
     render(<AdminTranslationsPage />);
-    await waitFor(() => expect(screen.getByText('Approve All')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('Approve All')).toBeInTheDocument());
 
     // Click Approve All to trigger handleBulkAction
-    await user.click(screen.getByText('Approve All'));
+    await user.click(screen.getByLabelText('Approve All'));
 
     // ConfirmDialog should appear
     await waitFor(() => {
@@ -337,9 +337,9 @@ describe('AdminTranslationsPage', () => {
   it('bulk reject opens confirm dialog and processes pending proposals', async () => {
     const user = userEvent.setup();
     render(<AdminTranslationsPage />);
-    await waitFor(() => expect(screen.getByText('Reject All')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('Reject All')).toBeInTheDocument());
 
-    await user.click(screen.getByText('Reject All'));
+    await user.click(screen.getByLabelText('Reject All'));
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
 
     mockReviewProposal.mockResolvedValue({ success: true, data: { ...MOCK_PROPOSALS[0], status: 'rejected' } });
@@ -353,9 +353,9 @@ describe('AdminTranslationsPage', () => {
   it('cancel on confirm dialog closes it without action', async () => {
     const user = userEvent.setup();
     render(<AdminTranslationsPage />);
-    await waitFor(() => expect(screen.getByText('Approve All')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText('Approve All')).toBeInTheDocument());
 
-    await user.click(screen.getByText('Approve All'));
+    await user.click(screen.getByLabelText('Approve All'));
     await waitFor(() => expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument());
 
     await user.click(screen.getByText('Cancel'));
@@ -443,7 +443,7 @@ describe('AdminTranslationsPage', () => {
     });
     render(<AdminTranslationsPage />);
     await waitFor(() => {
-      expect(screen.queryByText('Approve All')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Approve All')).not.toBeInTheDocument();
     });
   });
 
