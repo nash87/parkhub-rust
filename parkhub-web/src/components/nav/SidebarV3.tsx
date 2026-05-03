@@ -23,6 +23,7 @@
  *     heatmap is hidden (we degrade to the free/total big number only).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowsClockwiseIcon,
@@ -176,6 +177,7 @@ function formatUpNext(booking: Booking): string {
 // ----------------------------------------------------------------------
 
 export function SidebarV3() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -935,6 +937,7 @@ function LotFloorMap({
   floors: FloorSummary[];
   onOpenMap: () => void;
 }) {
+  const { t } = useTranslation();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const badgeColor =
     freePct < 0.15 ? 'oklch(0.78 0.14 25)' : freePct < 0.3 ? 'oklch(0.82 0.12 75)' : 'oklch(0.80 0.14 150)';
@@ -1089,13 +1092,14 @@ function LotFloorMap({
           color: 'oklch(0.92 0.005 260)',
         }}
       >
-        <MapPinIcon size={11} /> Open floor map
+        <MapPinIcon size={11} /> {t('sidebarV3.openFloorMap', 'Open floor map')}
       </button>
     </div>
   );
 }
 
 function EmptyPassCard() {
+  const { t } = useTranslation();
   return (
     <div
       className="flex items-center justify-between"
@@ -1115,7 +1119,7 @@ function EmptyPassCard() {
             color: 'oklch(0.60 0.015 260)',
           }}
         >
-          No active booking
+          {t('sidebarV3.noActiveBooking', 'No active booking')}
         </div>
         <div className="font-semibold" style={{ fontSize: 12.5, marginTop: 2, color: 'oklch(0.85 0.01 260)' }}>
           You&apos;re free to go
