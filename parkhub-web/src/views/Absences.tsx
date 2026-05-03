@@ -46,7 +46,7 @@ export function AbsencesPage() {
 
   const hoPattern = useMemo(() => patterns.find(p => p.absence_type === 'homeoffice'), [patterns]);
 
-  // CalendarIcon days
+  // Calendar days
   const calendarDays = useMemo(() => {
     const firstDay = new Date(calYear, calMonth, 1);
     const lastDay = new Date(calYear, calMonth + 1, 0);
@@ -140,7 +140,7 @@ export function AbsencesPage() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* CalendarIcon */}
+        {/* Calendar */}
         <div className="lg:col-span-3 bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{calMonthLabel}</h2>

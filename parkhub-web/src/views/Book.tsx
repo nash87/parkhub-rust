@@ -251,7 +251,7 @@ export function BookPage() {
   );
 }
 
-/** CheckIcon if a lot is currently open based on operating_hours. */
+/** Check if a lot is currently open based on operating_hours. */
 function isLotOpenNow(hours?: OperatingHoursData): boolean {
   if (!hours || hours.is_24h) return true;
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
