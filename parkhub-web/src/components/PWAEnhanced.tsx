@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { WifiSlash, ArrowDown, House, CalendarBlank, Car, User } from '@phosphor-icons/react';
+import { WifiSlash, ArrowDownIcon, House, CalendarBlank, CarIcon, User } from '@phosphor-icons/react';
 import { Link, useLocation } from 'react-router-dom';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export function BottomNavBar() {
     { path: '/', icon: House, label: t('nav.dashboard') },
     { path: '/book', icon: CalendarBlank, label: t('nav.book') },
     { path: '/bookings', icon: CalendarBlank, label: t('nav.bookings') },
-    { path: '/vehicles', icon: Car, label: t('nav.vehicles') },
+    { path: '/vehicles', icon: CarIcon, label: t('nav.vehicles') },
     { path: '/profile', icon: User, label: t('nav.profile') },
   ];
 
@@ -203,7 +203,7 @@ export function PullToRefresh({
     <div onTouchStart={handleTouchStart}>
       {pulling && (
         <div className="flex items-center justify-center py-3 text-primary-500 text-sm" style={{ height: pullDistance }}>
-          <ArrowDown size={20} className={`transition-transform ${pullDistance >= threshold ? 'rotate-180' : ''}`} />
+          <ArrowDownIcon size={20} className={`transition-transform ${pullDistance >= threshold ? 'rotate-180' : ''}`} />
           <span className="ml-2">{pullDistance >= threshold ? t('pwa.releaseToRefresh') : t('pwa.pullToRefresh')}</span>
         </div>
       )}

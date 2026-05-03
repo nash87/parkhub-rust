@@ -1,6 +1,6 @@
 import { useActionState, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Copy, ShareNetwork, Trash, QrCode, SpinnerGap, CheckCircle, CalendarBlank, MapPin } from '@phosphor-icons/react';
+import { UserPlusIcon, Copy, ShareNetwork, Trash, QrCodeIcon, SpinnerGap, CheckCircle, CalendarBlank, MapPinIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { getInMemoryToken } from '../api/client';
@@ -208,7 +208,7 @@ export function GuestPassPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UserPlus weight="bold" className="w-3.5 h-3.5" />
+            <UserPlusIcon weight="bold" className="w-3.5 h-3.5" />
             {t('guestBooking.eyebrow', 'GUEST CODES')}
           </div>
           <h1 className="admin-hero-headline">{t('guestBooking.title')}</h1>
@@ -216,7 +216,7 @@ export function GuestPassPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={() => { setShowForm(true); setCreatedPass(null); }} className="admin-hero-action" data-testid="create-guest-btn">
-            <UserPlus weight="bold" className="w-4 h-4" />
+            <UserPlusIcon weight="bold" className="w-4 h-4" />
             {t('guestBooking.create')}
           </button>
         </div>
@@ -248,7 +248,7 @@ export function GuestPassPage() {
               {/* QR Code */}
               <div className="flex-shrink-0 flex items-center justify-center bg-white rounded-xl p-4 border border-surface-200">
                 <div className="w-40 h-40 flex items-center justify-center" data-testid="qr-placeholder">
-                  <QrCode weight="thin" className="w-32 h-32 text-surface-300" />
+                  <QrCodeIcon weight="thin" className="w-32 h-32 text-surface-300" />
                   <span className="sr-only">{`/guest-pass/${createdPass.guest_code}`}</span>
                 </div>
               </div>
@@ -397,7 +397,7 @@ export function GuestPassPage() {
           </div>
         ) : bookings.length === 0 ? (
           <div className="text-center py-12 text-surface-400" data-testid="empty-state">
-            <UserPlus className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <UserPlusIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
             <p>{t('guestBooking.empty')}</p>
           </div>
         ) : (
@@ -413,7 +413,7 @@ export function GuestPassPage() {
                     <code className="text-xs bg-surface-100 dark:bg-surface-700 px-2 py-0.5 rounded font-mono text-primary-600 dark:text-primary-400">{b.guest_code}</code>
                   </div>
                   <div className="flex items-center gap-4 mt-1 text-sm text-surface-500">
-                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{b.lot_name} / {b.slot_number}</span>
+                    <span className="flex items-center gap-1"><MapPinIcon className="w-3.5 h-3.5" />{b.lot_name} / {b.slot_number}</span>
                     <span className="flex items-center gap-1"><CalendarBlank className="w-3.5 h-3.5" />{new Date(b.start_time).toLocaleString()} — {new Date(b.end_time).toLocaleString()}</span>
                   </div>
                 </div>

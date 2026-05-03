@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Users } from '@phosphor-icons/react';
+import { UsersIcon } from '@phosphor-icons/react';
 import { api, type TeamAbsenceEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import { ABSENCE_CONFIG, type AbsenceType } from '../constants/absenceConfig';
@@ -55,7 +55,7 @@ export function TeamPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Users weight="bold" className="w-3.5 h-3.5" />
+            <UsersIcon weight="bold" className="w-3.5 h-3.5" />
             {t('team.eyebrow', 'CO-WORKERS')}
           </div>
           <h1 className="admin-hero-headline">{t('team.title', 'Team')}</h1>
@@ -70,7 +70,7 @@ export function TeamPage() {
         </h2>
         {Object.keys(todayByUser).length === 0 ? (
           <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-8 text-center">
-            <Users weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
+            <UsersIcon weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
             <p className="text-surface-500 dark:text-surface-400">{t('team.noAbsencesToday', 'Heute keine Abwesenheiten')}</p>
           </div>
         ) : (

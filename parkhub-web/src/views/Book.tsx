@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
-  ArrowLeft, MapPin, Clock, Car, SpinnerGap, Check,
-  Lightning, Wheelchair, Motorcycle, Star,
+  ArrowLeft, MapPinIcon, Clock, CarIcon, SpinnerGap, Check,
+  Lightning, Wheelchair, Motorcycle, StarIcon,
   TrendUp, TrendDown,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
@@ -138,7 +138,7 @@ export function BookPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <MapPin weight="bold" className="w-3.5 h-3.5" />
+            <MapPinIcon weight="bold" className="w-3.5 h-3.5" />
             {t('book.eyebrow', 'RESERVE A SPOT')}
           </div>
           <h1 className="admin-hero-headline">{t('book.title')}</h1>
@@ -310,7 +310,7 @@ function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onS
   return (
     <div className="mb-6">
       <h3 className="text-lg font-semibold text-surface-900 dark:text-white mb-3 flex items-center gap-2">
-        <Star weight="duotone" className="w-5 h-5 text-amber-500" />
+        <StarIcon weight="duotone" className="w-5 h-5 text-amber-500" />
         {t('book.recommendedForYou', 'Recommended for you')}
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -329,7 +329,7 @@ function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onS
                 <span className="font-semibold text-surface-900 dark:text-white text-sm">{rec.lot_name} - Slot {rec.slot_number}</span>
                 <div className="flex items-center gap-0.5">
                   {[1, 2, 3, 4, 5].map(s => (
-                    <Star key={s} weight={s <= Math.round(rec.score / 20) ? 'fill' : 'regular'} className={`w-3 h-3 ${s <= Math.round(rec.score / 20) ? 'text-amber-500' : 'text-surface-300'}`} />
+                    <StarIcon key={s} weight={s <= Math.round(rec.score / 20) ? 'fill' : 'regular'} className={`w-3 h-3 ${s <= Math.round(rec.score / 20) ? 'text-amber-500' : 'text-surface-300'}`} />
                   ))}
                 </div>
               </div>
@@ -385,7 +385,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
           </div>
           {lot.address && (
             <p className="text-sm text-surface-500 dark:text-surface-400 mt-1 flex items-center gap-1">
-              <MapPin weight="regular" className="w-3.5 h-3.5 shrink-0" />{lot.address}
+              <MapPinIcon weight="regular" className="w-3.5 h-3.5 shrink-0" />{lot.address}
             </p>
           )}
           <div className="mt-3 flex items-center justify-between">
@@ -405,7 +405,7 @@ function StepSelectLot({ lots, loading, onSelect, t }: {
 }
 
 const SLOT_TYPE_ICON: Record<string, Icon> = {
-  electric: Lightning, handicap: Wheelchair, motorcycle: Motorcycle, vip: Star,
+  electric: Lightning, handicap: Wheelchair, motorcycle: Motorcycle, vip: StarIcon,
 };
 
 function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
@@ -503,7 +503,7 @@ function StepSelectSlot({ lot, slots, loading, selectedSlot, onSelectSlot,
       {vehicles.length > 0 && (
         <div>
           <label htmlFor="book-vehicle" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-1.5">
-            <Car weight="regular" className="inline w-4 h-4 mr-1" aria-hidden="true" />{t('book.vehicle')}
+            <CarIcon weight="regular" className="inline w-4 h-4 mr-1" aria-hidden="true" />{t('book.vehicle')}
           </label>
           <select id="book-vehicle" value={selectedVehicle} onChange={e => onVehicleChange(e.target.value)} className="input text-sm">
             <option value="">{t('book.noVehicle')}</option>

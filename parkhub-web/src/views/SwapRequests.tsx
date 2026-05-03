@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Swap, Check, X, SpinnerGap, Plus, ArrowClockwise,
+  Swap, Check, XIcon, SpinnerGap, Plus, ArrowClockwiseIcon,
   CalendarBlank, Clock, ChatText,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
@@ -15,7 +15,7 @@ function authHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
+    'XIcon-Requested-With': 'XMLHttpRequest',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
@@ -157,7 +157,7 @@ export function SwapRequestsPage() {
           </div>
           <div className="admin-hero-actions">
             <button onClick={loadData} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
-              <ArrowClockwise weight="bold" className="w-4 h-4" />
+              <ArrowClockwiseIcon weight="bold" className="w-4 h-4" />
             </button>
             <button onClick={() => setShowModal(true)} className="admin-hero-action">
               <Plus weight="bold" className="w-4 h-4" />
@@ -253,7 +253,7 @@ export function SwapRequestsPage() {
                           disabled={acting === req.id}
                           className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                         >
-                          <X weight="bold" className="w-4 h-4" /> {t('swap.decline')}
+                          <XIcon weight="bold" className="w-4 h-4" /> {t('swap.decline')}
                         </button>
                       </div>
                     )}
@@ -281,7 +281,7 @@ export function SwapRequestsPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-surface-900 dark:text-white">{t('swap.createTitle')}</h2>
                 <button onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">
-                  <X weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
 

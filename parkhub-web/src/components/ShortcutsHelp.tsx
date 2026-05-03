@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { X } from '@phosphor-icons/react';
+import { XIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 interface ShortcutsHelpProps {
@@ -83,7 +83,7 @@ export function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
           className="btn btn-ghost btn-icon"
           aria-label={t('common.close', 'Close')}
         >
-          <X weight="bold" className="w-4 h-4" />
+          <XIcon weight="bold" className="w-4 h-4" />
         </button>
       </div>
 

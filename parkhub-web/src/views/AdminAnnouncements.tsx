@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Megaphone, Plus, PencilSimple, Trash, SpinnerGap, Check, X,
-  Info, Warning, WarningCircle, CheckCircle, Clock,
+  Megaphone, Plus, PencilSimple, Trash, SpinnerGap, Check, XIcon,
+  Info, WarningIcon, WarningCircle, CheckCircle, Clock,
 } from '@phosphor-icons/react';
 import { api, type Announcement } from '../api/client';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +29,7 @@ const emptyForm: AnnouncementForm = {
 
 const severityIcons: Record<Severity, { color: string; bg: string; icon: typeof Info }> = {
   info:    { color: 'text-blue-600 dark:text-blue-400',   bg: 'bg-blue-100 dark:bg-blue-900/30',   icon: Info },
-  warning: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: Warning },
+  warning: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-100 dark:bg-amber-900/30', icon: WarningIcon },
   error:   { color: 'text-red-600 dark:text-red-400',     bg: 'bg-red-100 dark:bg-red-900/30',     icon: WarningCircle },
   success: { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', icon: CheckCircle },
 };
@@ -211,7 +211,7 @@ export function AdminAnnouncementsPage() {
                   {editingId ? t('admin.editAnnouncement') : t('admin.newAnnouncement')}
                 </h3>
                 <button onClick={closeForm} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
-                  <X weight="bold" className="w-5 h-5 text-surface-400" aria-hidden="true" />
+                  <XIcon weight="bold" className="w-5 h-5 text-surface-400" aria-hidden="true" />
                 </button>
               </div>
 

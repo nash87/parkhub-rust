@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Buildings, Plus, X, PencilSimple } from '@phosphor-icons/react';
+import { Buildings, Plus, XIcon, PencilSimple } from '@phosphor-icons/react';
 import { api, type TenantInfo, type CreateTenantRequest } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -160,7 +160,7 @@ export function AdminTenantsPage() {
                   {editing ? t('tenants.editTitle', 'Edit Tenant') : t('tenants.create', 'Create Tenant')}
                 </h3>
                 <button onClick={() => setShowModal(false)} className="p-1 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors">
-                  <X weight="bold" className="w-5 h-5 text-surface-500" />
+                  <XIcon weight="bold" className="w-5 h-5 text-surface-500" />
                 </button>
               </div>
 

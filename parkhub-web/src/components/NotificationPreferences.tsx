@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, SpinnerGap, FloppyDisk, EnvelopeSimple, DeviceMobile, ChatCircleDots, Phone } from '@phosphor-icons/react';
+import { BellIcon, SpinnerGap, FloppyDisk, EnvelopeSimple, DeviceMobile, ChatCircleDots, Phone } from '@phosphor-icons/react';
 import { api, type NotificationPreferences } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -77,7 +77,7 @@ export function NotificationPreferencesComponent() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 mb-3">
-        <Bell size={24} weight="duotone" className="text-primary-500" />
+        <BellIcon size={24} weight="duotone" className="text-primary-500" />
         <h3 className="font-semibold">Notification Preferences</h3>
       </div>
 

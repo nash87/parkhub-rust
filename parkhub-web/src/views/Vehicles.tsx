@@ -1,6 +1,6 @@
 import { useActionState, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Car, Plus, Trash, Star, X, SpinnerGap } from '@phosphor-icons/react';
+import { CarIcon, Plus, Trash, StarIcon, XIcon, SpinnerGap } from '@phosphor-icons/react';
 import { api, type Vehicle } from '../api/client';
 import { VehiclesSkeleton } from '../components/Skeleton';
 import { stagger, fadeUp } from '../constants/animations';
@@ -117,7 +117,7 @@ export function VehiclesPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Car weight="bold" className="w-3.5 h-3.5" />
+            <CarIcon weight="bold" className="w-3.5 h-3.5" />
             {t('vehicles.eyebrow', 'MY FLEET')}
           </div>
           <h1 className="admin-hero-headline">{t('vehicles.title', 'Meine Fahrzeuge')}</h1>
@@ -139,11 +139,11 @@ export function VehiclesPage() {
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md glass-modal shadow-2xl">
               <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200 dark:border-surface-800">
                 <h2 className="text-lg font-semibold text-surface-900 dark:text-white flex items-center gap-2">
-                  <Car weight="fill" className="w-5 h-5 text-primary-600" />
+                  <CarIcon weight="fill" className="w-5 h-5 text-primary-600" />
                   {t('vehicles.newVehicle', 'Neues Fahrzeug')}
                 </h2>
                 <button onClick={() => setShowForm(false)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800" aria-label={t('common.cancel', 'Close')}>
-                  <X weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" />
+                  <XIcon weight="bold" className="w-5 h-5 text-surface-500" aria-hidden="true" />
                 </button>
               </div>
               <form action={addAction} className="p-6 space-y-4">
@@ -188,7 +188,7 @@ export function VehiclesPage() {
       {vehicles.length === 0 ? (
         <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-16 text-center">
           <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-            <Car weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
+            <CarIcon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
           </motion.div>
           <p className="text-surface-500 dark:text-surface-400 mb-4 mt-4">{t('vehicles.noVehicles', 'Noch keine Fahrzeuge angelegt')}</p>
           <motion.button onClick={() => setShowForm(true)} className="btn btn-primary" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -217,7 +217,7 @@ export function VehiclesPage() {
                 {v.is_default && (
                   <div className="mt-3 pt-3 border-t border-surface-100 dark:border-surface-800">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-surface-500 dark:text-surface-400">
-                      <Star weight="fill" className="w-3 h-3 text-primary-500" /> {t('vehicles.isDefault', 'Standardfahrzeug')}
+                      <StarIcon weight="fill" className="w-3 h-3 text-primary-500" /> {t('vehicles.isDefault', 'Standardfahrzeug')}
                     </span>
                   </div>
                 )}

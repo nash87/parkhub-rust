@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Buildings, House, UsersThree, Car, ArrowRight, ArrowLeft, Check,
+  Buildings, House, UsersThree, CarIcon, ArrowRightIcon, ArrowLeft, Check,
   SunDim, Moon, ToggleLeft, ToggleRight, Info, ShieldCheck,
 } from '@phosphor-icons/react';
 import { useUseCase, type UseCase } from '../context/UseCaseContext';
@@ -127,7 +127,7 @@ export function UseCaseSelectorPage() {
           className="mb-7"
         >
           <div className="w-12 h-12 bg-primary-900 dark:bg-surface-800 flex items-center justify-center border border-primary-800 dark:border-surface-700">
-            <Car weight="fill" className="w-6 h-6 text-accent-500" />
+            <CarIcon weight="fill" className="w-6 h-6 text-accent-500" />
           </div>
         </motion.div>
 
@@ -225,7 +225,7 @@ export function UseCaseSelectorPage() {
                   className="btn btn-primary text-sm px-7 py-3 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {t('useCase.continue')}
-                  <ArrowRight weight="bold" className="w-4 h-4" />
+                  <ArrowRightIcon weight="bold" className="w-4 h-4" />
                 </button>
               </motion.div>
 
@@ -401,7 +401,7 @@ export function UseCaseSelectorPage() {
                       className="btn btn-primary text-sm px-7 py-3 cursor-pointer"
                     >
                       {t('onboarding.finish')}
-                      <ArrowRight weight="bold" className="w-4 h-4" />
+                      <ArrowRightIcon weight="bold" className="w-4 h-4" />
                     </motion.button>
                   )}
                 </AnimatePresence>

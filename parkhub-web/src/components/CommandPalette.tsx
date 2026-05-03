@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarCheck, Car, UserCircle, Users, GearSix, Coins, Calendar, CalendarPlus,
+  CalendarCheckIcon, CarIcon, UserCircleIcon, UsersIcon, GearSixIcon, CoinsIcon, CalendarIcon, CalendarPlus,
 } from '@phosphor-icons/react';
 
 interface Action {
@@ -15,13 +15,13 @@ interface Action {
 
 const ACTIONS: Action[] = [
   { labelKey: 'dashboard.bookSpot', path: '/book', icon: CalendarPlus, shortcut: 'Ctrl+B' },
-  { labelKey: 'nav.bookings', path: '/bookings', icon: CalendarCheck },
-  { labelKey: 'nav.vehicles', path: '/vehicles', icon: Car },
-  { labelKey: 'nav.profile', path: '/profile', icon: UserCircle },
-  { labelKey: 'nav.admin', path: '/admin', icon: GearSix },
-  { labelKey: 'nav.credits', path: '/credits', icon: Coins },
-  { labelKey: 'nav.calendar', path: '/calendar', icon: Calendar },
-  { labelKey: 'nav.team', path: '/team', icon: Users },
+  { labelKey: 'nav.bookings', path: '/bookings', icon: CalendarCheckIcon },
+  { labelKey: 'nav.vehicles', path: '/vehicles', icon: CarIcon },
+  { labelKey: 'nav.profile', path: '/profile', icon: UserCircleIcon },
+  { labelKey: 'nav.admin', path: '/admin', icon: GearSixIcon },
+  { labelKey: 'nav.credits', path: '/credits', icon: CoinsIcon },
+  { labelKey: 'nav.calendar', path: '/calendar', icon: CalendarIcon },
+  { labelKey: 'nav.team', path: '/team', icon: UsersIcon },
 ];
 
 const LISTBOX_ID = 'command-palette-listbox';

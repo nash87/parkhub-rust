@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, Warning } from '@phosphor-icons/react';
+import { ShieldCheck, WarningIcon } from '@phosphor-icons/react';
 import { api, type RateLimitGroup, type RateLimitHistoryBin } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -64,7 +64,7 @@ export function AdminRateLimitsPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Warning weight="bold" className="w-3.5 h-3.5" />
+            <WarningIcon weight="bold" className="w-3.5 h-3.5" />
             {t('rateLimits.eyebrow', 'API THROTTLE')}
           </div>
           <h1 className="admin-hero-headline">{t('rateLimits.title', 'Rate Limits')}</h1>
@@ -73,7 +73,7 @@ export function AdminRateLimitsPage() {
         <div className="admin-hero-actions">
           {totalBlocked > 0 ? (
             <span className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 px-3 py-1.5 rounded-full bg-amber-100/70 dark:bg-amber-900/30">
-              <Warning weight="bold" className="w-3.5 h-3.5" />
+              <WarningIcon weight="bold" className="w-3.5 h-3.5" />
               {t('rateLimits.blockedTotal', '{{count}} blocked (last hour)', { count: totalBlocked })}
             </span>
           ) : (

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Trash, MapPin, SpinnerGap } from '@phosphor-icons/react';
+import { StarIcon, Trash, MapPinIcon, SpinnerGap } from '@phosphor-icons/react';
 import { api, type Favorite, type ParkingLot, type ParkingSlot } from '../api/client';
 import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
@@ -93,7 +93,7 @@ export function FavoritesPage() {
           <div className="admin-hero-left">
             <div className="admin-hero-eyebrow">
               <span className="admin-hero-dot" aria-hidden="true"></span>
-              <Star weight="bold" className="w-3.5 h-3.5" />
+              <StarIcon weight="bold" className="w-3.5 h-3.5" />
               {t('favorites.eyebrow', 'SAVED LOTS')}
             </div>
             <h1 className="admin-hero-headline">{t('favorites.title')}</h1>
@@ -111,7 +111,7 @@ export function FavoritesPage() {
         {enriched.length === 0 ? (
           <motion.div variants={item} className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-16 text-center">
             <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}>
-              <Star weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
+              <StarIcon weight="light" className="w-20 h-20 text-surface-200 dark:text-surface-700 mx-auto" />
             </motion.div>
             <p className="text-surface-500 dark:text-surface-400 mb-2 mt-4">{t('favorites.empty')}</p>
             <p className="text-sm text-surface-400 dark:text-surface-500">{t('favorites.emptyHint')}</p>
@@ -134,14 +134,14 @@ export function FavoritesPage() {
                           ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
                           : 'bg-surface-100 dark:bg-surface-800 text-surface-400'
                       }`}>
-                        <Star weight="fill" className="w-5 h-5" />
+                        <StarIcon weight="fill" className="w-5 h-5" />
                       </div>
                       <div>
                         <p className="font-semibold text-surface-900 dark:text-white">
                           {t('favorites.slot')} {fav.slot_number || '—'}
                         </p>
                         <div className="flex items-center gap-1.5 text-sm text-surface-500 dark:text-surface-400">
-                          <MapPin weight="regular" className="w-3.5 h-3.5" />
+                          <MapPinIcon weight="regular" className="w-3.5 h-3.5" />
                           {fav.lot_name || t('favorites.unknownLot')}
                         </div>
                       </div>

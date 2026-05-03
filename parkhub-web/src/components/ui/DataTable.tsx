@@ -8,7 +8,7 @@ import {
   type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretUp, CaretDown, DownloadSimple, FilePdf } from '@phosphor-icons/react';
+import { CaretUpIcon, CaretDownIcon, DownloadSimpleIcon, FilePdf } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { downloadPdfTable, type CsvCell } from '../../utils/exportTable';
 
@@ -127,7 +127,7 @@ export function DataTable<T>({
             aria-label={`Export ${exportFilename} as CSV`}
             data-testid={`export-csv-${exportFilename}`}
           >
-            <DownloadSimple weight="bold" className="w-4 h-4" />
+            <DownloadSimpleIcon weight="bold" className="w-4 h-4" />
             Als CSV
           </button>
           <button
@@ -164,8 +164,8 @@ export function DataTable<T>({
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {canSort && (
                           <span className="inline-flex flex-col -space-y-1 ml-0.5" aria-hidden="true">
-                            <CaretUp weight="bold" className={`w-3 h-3 ${sorted === 'asc' ? 'text-primary-600' : 'text-surface-300 dark:text-surface-600'}`} />
-                            <CaretDown weight="bold" className={`w-3 h-3 ${sorted === 'desc' ? 'text-primary-600' : 'text-surface-300 dark:text-surface-600'}`} />
+                            <CaretUpIcon weight="bold" className={`w-3 h-3 ${sorted === 'asc' ? 'text-primary-600' : 'text-surface-300 dark:text-surface-600'}`} />
+                            <CaretDownIcon weight="bold" className={`w-3 h-3 ${sorted === 'desc' ? 'text-primary-600' : 'text-surface-300 dark:text-surface-600'}`} />
                           </span>
                         )}
                       </span>

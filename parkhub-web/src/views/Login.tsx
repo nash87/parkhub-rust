@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CarSimple, Eye, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
+import { CarSimpleIcon, EyeIcon, EyeSlash, SpinnerGap, ArrowLeft } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { FormField, FormInput } from '../components/ui/FormField';
 import { OAuthButtons } from '../components/OAuthButtons';
@@ -89,7 +89,7 @@ export function LoginPage() {
         >
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
-              <CarSimple weight="fill" className="w-6 h-6 text-white" />
+              <CarSimpleIcon weight="fill" className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">ParkHub</span>
           </div>
@@ -122,7 +122,7 @@ export function LoginPage() {
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
-              <CarSimple weight="fill" className="w-5 h-5 text-white" />
+              <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
             </div>
             <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
           </div>
@@ -188,7 +188,7 @@ export function LoginPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
-                  {showPassword ? <EyeSlash weight="bold" className="w-4 h-4" /> : <Eye weight="bold" className="w-4 h-4" />}
+                  {showPassword ? <EyeSlash weight="bold" className="w-4 h-4" /> : <EyeIcon weight="bold" className="w-4 h-4" />}
                 </button>
               </div>
             </div>

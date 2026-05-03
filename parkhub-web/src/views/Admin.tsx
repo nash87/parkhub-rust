@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  ChartBar, GearSix, Users, Megaphone, ChartLine, MapPin, Translate, PresentationChart, Gauge,
-  Buildings, ClockCounterClockwise, Database, Car, Wheelchair, Wrench, CurrencyDollar, UserPlus, Lightning,
-  PuzzlePiece, GraphicsCard, ShieldCheck, LockKey, MapTrifold, ArrowsClockwise, List, X, ArrowSquareOut,
+  ChartBar, GearSixIcon, UsersIcon, Megaphone, ChartLine, MapPinIcon, Translate, PresentationChart, Gauge,
+  Buildings, ClockCounterClockwiseIcon, Database, CarIcon, Wheelchair, Wrench, CurrencyDollar, UserPlusIcon, Lightning,
+  PuzzlePiece, GraphicsCard, ShieldCheck, LockKey, MapTrifold, ArrowsClockwiseIcon, List, XIcon, ArrowSquareOut,
 } from '@phosphor-icons/react';
 
 /**
@@ -40,27 +40,27 @@ function useAdminSections(): NavSection[] {
       items: [
         { key: 'reports', label: t('admin.overview', 'Overview'), to: '/admin', icon: ChartBar },
         { key: 'analytics', label: t('admin.analytics', 'Analytics'), to: '/admin/analytics', icon: PresentationChart },
-        { key: 'audit', label: t('admin.auditLog', 'Audit Log'), to: '/admin/audit-log', icon: ClockCounterClockwise },
+        { key: 'audit', label: t('admin.auditLog', 'Audit Log'), to: '/admin/audit-log', icon: ClockCounterClockwiseIcon },
       ],
     },
     {
       key: 'operations',
       label: t('admin.group.operations', 'Operations'),
       items: [
-        { key: 'lots', label: t('admin.lots', 'Lots'), to: '/admin/lots', icon: MapPin },
+        { key: 'lots', label: t('admin.lots', 'Lots'), to: '/admin/lots', icon: MapPinIcon },
         { key: 'zones', label: t('parkingZones.title', 'Zones'), to: '/admin/zones', icon: MapTrifold },
-        { key: 'fleet', label: t('admin.fleet', 'Fleet'), to: '/admin/fleet', icon: Car },
+        { key: 'fleet', label: t('admin.fleet', 'Fleet'), to: '/admin/fleet', icon: CarIcon },
         { key: 'chargers', label: t('admin.chargers', 'EV Chargers'), to: '/admin/chargers', icon: Lightning },
         { key: 'maintenance', label: t('admin.maintenance', 'Maintenance'), to: '/admin/maintenance', icon: Wrench },
         { key: 'accessible', label: t('admin.accessible', 'Accessible'), to: '/admin/accessible', icon: Wheelchair },
-        { key: 'visitors', label: t('admin.visitors', 'Visitors'), to: '/admin/visitors', icon: UserPlus },
+        { key: 'visitors', label: t('admin.visitors', 'Visitors'), to: '/admin/visitors', icon: UserPlusIcon },
       ],
     },
     {
       key: 'people',
       label: t('admin.group.peopleAccess', 'People & Access'),
       items: [
-        { key: 'users', label: t('admin.users', 'Users'), to: '/admin/users', icon: Users },
+        { key: 'users', label: t('admin.users', 'UsersIcon'), to: '/admin/users', icon: UsersIcon },
         { key: 'roles', label: t('rbac.title', 'Roles'), to: '/admin/roles', icon: LockKey },
         { key: 'tenants', label: t('admin.tenants', 'Tenants'), to: '/admin/tenants', icon: Buildings },
         { key: 'sso', label: t('admin.sso', 'SSO & SAML'), to: '/admin/sso', icon: ShieldCheck },
@@ -89,10 +89,10 @@ function useAdminSections(): NavSection[] {
       key: 'platform',
       label: t('admin.group.platform', 'Platform'),
       items: [
-        { key: 'settings', label: t('admin.settings', 'Settings'), to: '/admin/settings', icon: GearSix },
+        { key: 'settings', label: t('admin.settings', 'Settings'), to: '/admin/settings', icon: GearSixIcon },
         { key: 'modules', label: t('admin.modules.title', 'Modules & Features'), to: '/admin/modules', icon: PuzzlePiece },
         { key: 'plugins', label: t('admin.plugins', 'Plugins'), to: '/admin/plugins', icon: PuzzlePiece },
-        { key: 'updates', label: t('nav.updates', 'Updates'), to: '/admin/updates', icon: ArrowsClockwise },
+        { key: 'updates', label: t('nav.updates', 'Updates'), to: '/admin/updates', icon: ArrowsClockwiseIcon },
         { key: 'graphql', label: 'GraphQL Playground', to: '/api/v1/graphql/playground', icon: GraphicsCard, external: true },
       ],
     },
@@ -276,7 +276,7 @@ export function AdminPage() {
                   aria-label={t('admin.closeNav', 'Close admin navigation')}
                   className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"
                 >
-                  <X weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
               <AdminSidebar sections={sections} onNavigate={() => setDrawerOpen(false)} />

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Plus, Trash, Pencil, Question, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
+import { ShieldCheck, Plus, Trash, PencilIcon, Question, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -288,7 +288,7 @@ export function AdminSSOPage() {
                   className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500"
                   aria-label={t('sso.edit')}
                 >
-                  <Pencil size={16} />
+                  <PencilIcon size={16} />
                 </button>
                 <button
                   onClick={() => handleDelete(p.slug)}

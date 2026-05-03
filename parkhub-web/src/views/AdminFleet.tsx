@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Car, MagnifyingGlass, Flag, Lightning } from '@phosphor-icons/react';
+import { CarIcon, MagnifyingGlass, Flag, Lightning } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -111,7 +111,7 @@ export function AdminFleetPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Car weight="bold" className="w-3.5 h-3.5" />
+            <CarIcon weight="bold" className="w-3.5 h-3.5" />
             {t('fleet.eyebrow', 'OPERATIONS · FLEET')}
           </div>
           <h1 className="admin-hero-headline">{t('fleet.title', 'Fleet Management')}</h1>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { SpinnerGap, Check, GearSix } from '@phosphor-icons/react';
+import { SpinnerGap, Check, GearSixIcon } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -122,7 +122,7 @@ export function AdminSettingsPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <GearSix weight="bold" className="w-3.5 h-3.5" />
+            <GearSixIcon weight="bold" className="w-3.5 h-3.5" />
             {t('admin.settingsEyebrow', 'SYSTEM CONFIG')}
           </div>
           <h1 className="admin-hero-headline">{t('admin.systemSettings')}</h1>

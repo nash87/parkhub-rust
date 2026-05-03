@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  Clock, Car, X, SpinnerGap,
-  ArrowClockwise, Warning,
-  MagnifyingGlass, Funnel, QrCode, FilePdf, CalendarPlus,
+  Clock, CarIcon, XIcon, SpinnerGap,
+  ArrowClockwiseIcon, WarningIcon,
+  MagnifyingGlass, Funnel, QrCodeIcon, FilePdf, CalendarPlus,
 } from '@phosphor-icons/react';
 import type { TFunction } from 'i18next';
 import { api, type Booking, type Vehicle } from '../api/client';
@@ -144,7 +144,7 @@ export function BookingsPage() {
         </div>
         <div className="admin-hero-actions">
           <button onClick={loadData} className="admin-hero-iconbtn" title={t('common.refresh')} aria-label={t('common.refresh')}>
-            <ArrowClockwise weight="bold" className="w-4 h-4" />
+            <ArrowClockwiseIcon weight="bold" className="w-4 h-4" />
           </button>
         </div>
       </motion.section>
@@ -351,7 +351,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
 
       <div className="flex items-center gap-4 text-sm text-surface-600 dark:text-surface-400 mb-3">
         {booking.vehicle_plate && (
-          <span className="flex items-center gap-1"><Car weight="regular" className="w-3.5 h-3.5" /> {booking.vehicle_plate}</span>
+          <span className="flex items-center gap-1"><CarIcon weight="regular" className="w-3.5 h-3.5" /> {booking.vehicle_plate}</span>
         )}
         <span className="flex items-center gap-1">
           <Clock weight="regular" className="w-3.5 h-3.5" />
@@ -361,7 +361,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
 
       <div className="flex items-center justify-between pt-3 border-t border-surface-100 dark:border-surface-800">
         <p className={`text-sm ${isExpiring ? 'text-accent-600 dark:text-accent-400 font-medium' : 'text-surface-500 dark:text-surface-400'}`}>
-          {isExpiring && <Warning weight="fill" className="w-3.5 h-3.5 inline mr-1" />}
+          {isExpiring && <WarningIcon weight="fill" className="w-3.5 h-3.5 inline mr-1" />}
           {isUpcoming
             ? t('bookings.startsIn', { time: formatDistanceToNow(new Date(booking.start_time), { addSuffix: true, locale: dateFnsLocale }) })
             : isPast
@@ -376,7 +376,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
               aria-label={`${t('pass.showPass')} ${booking.lot_name}`}
               className="btn btn-sm btn-ghost text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20"
             >
-              <QrCode weight="bold" className="w-4 h-4" /> {t('pass.showPass')}
+              <QrCodeIcon weight="bold" className="w-4 h-4" /> {t('pass.showPass')}
             </button>
           )}
           <a
@@ -420,7 +420,7 @@ function BookingCard({ booking, now, vehicles, onCancel, cancelling, onShowPass,
             >
               {cancelling === booking.id
                 ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" />
-                : <><X weight="bold" className="w-4 h-4" /> {t('bookings.cancelBtn')}</>
+                : <><XIcon weight="bold" className="w-4 h-4" /> {t('bookings.cancelBtn')}</>
               }
             </button>
           )}

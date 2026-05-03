@@ -16,7 +16,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
-  CarSimple, GearSix, SignOut, SunDim, Moon,
+  CarSimpleIcon, GearSixIcon, SignOut, SunDim, Moon,
 } from '@phosphor-icons/react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -63,7 +63,7 @@ export function RailSidebar({ unreadCount, onLogout, isAdmin }: RailSidebarProps
         className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20 mb-4"
         title="ParkHub"
       >
-        <CarSimple weight="fill" className="w-5 h-5 text-white" />
+        <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
       </div>
 
       {/* Nav — sections separated by thin dividers since labels won't fit */}
@@ -88,7 +88,7 @@ export function RailSidebar({ unreadCount, onLogout, isAdmin }: RailSidebarProps
             />
             <RailIconButton
               to="/admin"
-              icon={GearSix}
+              icon={GearSixIcon}
               label={t('nav.admin')}
               active={isActivePath(location.pathname, '/admin')}
             />

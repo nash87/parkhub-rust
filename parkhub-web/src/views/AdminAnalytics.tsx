@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChartBar, TrendUp, Users, Clock, CurrencyDollar, Export, CalendarBlank } from '@phosphor-icons/react';
+import { ChartBar, TrendUp, UsersIcon, Clock, CurrencyDollar, Export, CalendarBlank } from '@phosphor-icons/react';
 import { getInMemoryToken } from '../api/client';
 
 interface DailyDataPoint { date: string; value: number; }
@@ -189,7 +189,7 @@ export function AdminAnalyticsPage() {
             <StatCard icon={CalendarBlank} label="Total Bookings" value={String(data.total_bookings)} sub={`Last ${range} days`} />
             <StatCard icon={CurrencyDollar} label="Total Revenue" value={`${data.total_revenue.toFixed(2)}`} sub={`Last ${range} days`} />
             <StatCard icon={Clock} label="Avg Duration" value={`${Math.round(data.avg_booking_duration_minutes)} min`} />
-            <StatCard icon={Users} label="Active Users" value={String(data.active_users)} sub="With bookings in period" />
+            <StatCard icon={UsersIcon} label="Active UsersIcon" value={String(data.active_users)} sub="With bookings in period" />
           </div>
 
           {/* Charts row */}
@@ -246,7 +246,7 @@ export function AdminAnalyticsPage() {
           {/* User growth */}
           <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800">
             <h3 className="text-sm font-medium text-surface-600 dark:text-surface-400 mb-4 flex items-center gap-2">
-              <Users weight="bold" className="w-4 h-4" />
+              <UsersIcon weight="bold" className="w-4 h-4" />
               User Growth (12 months)
             </h3>
             <MiniBarChart

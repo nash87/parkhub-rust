@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WebhooksLogo, Plus, Trash, Pencil, Question, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react';
+import { WebhooksLogo, Plus, Trash, PencilIcon, Question, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -248,7 +248,7 @@ export function AdminWebhooksPage() {
                     <ListChecks size={16} />
                   </button>
                   <button onClick={() => { setEditId(wh.id); setFormUrl(wh.url); setFormEvents(wh.events); setFormDesc(wh.description || ''); setShowForm(true); }} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" aria-label={t('webhooksV2.edit')}>
-                    <Pencil size={16} />
+                    <PencilIcon size={16} />
                   </button>
                   <button onClick={() => handleDelete(wh.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500" aria-label={t('webhooksV2.delete')}>
                     <Trash size={16} />

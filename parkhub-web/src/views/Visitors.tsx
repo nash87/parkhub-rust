@@ -1,6 +1,6 @@
 import { useActionState, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { UserPlus, QrCode, Trash, CheckCircle, Question, MagnifyingGlass, CalendarBlank, Envelope } from '@phosphor-icons/react';
+import { UserPlusIcon, QrCodeIcon, Trash, CheckCircle, Question, MagnifyingGlass, CalendarBlank, Envelope } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -144,7 +144,7 @@ export function VisitorsPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UserPlus weight="bold" className="w-3.5 h-3.5" />
+            <UserPlusIcon weight="bold" className="w-3.5 h-3.5" />
             {t('visitors.eyebrow', 'GUEST INVITES')}
           </div>
           <h1 className="admin-hero-headline">{t('visitors.title')}</h1>
@@ -167,7 +167,7 @@ export function VisitorsPage() {
             </div>
           )}
           <button onClick={() => setShowForm(true)} className="admin-hero-action">
-            <UserPlus weight="bold" className="w-4 h-4" />
+            <UserPlusIcon weight="bold" className="w-4 h-4" />
             {t('visitors.register')}
           </button>
         </div>
@@ -244,7 +244,7 @@ export function VisitorsPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-surface-400">
-          <UserPlus className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <UserPlusIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p>{t('visitors.empty')}</p>
         </div>
       ) : (
@@ -268,7 +268,7 @@ export function VisitorsPage() {
               <div className="flex items-center gap-2 ml-4">
                 {v.qr_code && (
                   <button onClick={() => setShowQr(v.qr_code)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 text-surface-500" title={t('visitors.showQr')}>
-                    <QrCode className="w-5 h-5" />
+                    <QrCodeIcon className="w-5 h-5" />
                   </button>
                 )}
                 {v.status === 'pending' && (
@@ -323,7 +323,7 @@ export function AdminVisitorsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <UserPlus weight="duotone" className="w-7 h-7 text-primary-500" />
+            <UserPlusIcon weight="duotone" className="w-7 h-7 text-primary-500" />
             {t('visitors.adminTitle')}
             <button onClick={() => setShowHelp(!showHelp)} className="text-surface-400 hover:text-primary-500 transition-colors" aria-label="Help">
               <Question weight="fill" className="w-5 h-5" />
@@ -378,7 +378,7 @@ export function AdminVisitorsPage() {
         </div>
       ) : visitors.length === 0 ? (
         <div className="text-center py-12 text-surface-400">
-          <UserPlus className="w-12 h-12 mx-auto mb-3 opacity-40" />
+          <UserPlusIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p>{t('visitors.empty')}</p>
         </div>
       ) : (

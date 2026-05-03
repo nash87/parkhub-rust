@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import {
-  SpinnerGap, MagnifyingGlass, Coins,
-  PencilSimple, X, Check, UserMinus, UserPlus,
+  SpinnerGap, MagnifyingGlass, CoinsIcon,
+  PencilSimple, XIcon, Check, UserMinus, UserPlusIcon,
   Lightning,
 } from '@phosphor-icons/react';
 import { api, type User } from '../api/client';
@@ -205,7 +205,7 @@ export function AdminUsersPage() {
                 {savingRole ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
               </button>
               <button onClick={() => setEditingId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('common.cancel')}>
-                <X weight="bold" className="w-4 h-4" />
+                <XIcon weight="bold" className="w-4 h-4" />
               </button>
             </div>
           );
@@ -231,7 +231,7 @@ export function AdminUsersPage() {
                 {savingQuota ? <SpinnerGap weight="bold" className="w-4 h-4 animate-spin" /> : <Check weight="bold" className="w-4 h-4" />}
               </button>
               <button onClick={() => setEditingQuotaId(null)} className="p-1 rounded hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-400" aria-label={t('admin.cancelEditQuota')}>
-                <X weight="bold" className="w-4 h-4" />
+                <XIcon weight="bold" className="w-4 h-4" />
               </button>
             </div>
           );
@@ -282,7 +282,7 @@ export function AdminUsersPage() {
               title={t('admin.grantCreditsFor')}
               aria-label={`${t('admin.grantCredits')} ${user.name}`}
             >
-              <Coins weight="bold" className="w-4 h-4" />
+              <CoinsIcon weight="bold" className="w-4 h-4" />
             </button>
             <button
               onClick={() => toggleActive(user)}
@@ -294,7 +294,7 @@ export function AdminUsersPage() {
               title={user.is_active ? t('admin.deactivate') : t('admin.activate')}
               aria-label={`${user.is_active ? t('admin.deactivate') : t('admin.activate')} ${user.name}`}
             >
-              {user.is_active ? <UserMinus weight="bold" className="w-4 h-4" /> : <UserPlus weight="bold" className="w-4 h-4" />}
+              {user.is_active ? <UserMinus weight="bold" className="w-4 h-4" /> : <UserPlusIcon weight="bold" className="w-4 h-4" />}
             </button>
           </div>
         );
@@ -342,7 +342,7 @@ export function AdminUsersPage() {
                 aria-label={t('admin.clearSearch')}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-surface-400 hover:text-surface-600 dark:hover:text-surface-200 transition-colors"
               >
-                <X weight="bold" className="w-3.5 h-3.5" />
+                <XIcon weight="bold" className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -410,7 +410,7 @@ export function AdminUsersPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.grantCredits')}</h3>
                 <button onClick={() => setCreditUserId(null)} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
-                  <X weight="bold" className="w-5 h-5 text-surface-400" />
+                  <XIcon weight="bold" className="w-5 h-5 text-surface-400" />
                 </button>
               </div>
               <p className="text-sm text-surface-500 dark:text-surface-400">

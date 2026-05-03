@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  UserCircle, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
-  DownloadSimple, Trash, CaretDown, CaretUp,
-  MapPin, Question,
+  UserCircleIcon, Envelope, PencilSimple, FloppyDisk, SpinnerGap, Lock,
+  DownloadSimpleIcon, Trash, CaretDownIcon, CaretUpIcon,
+  MapPinIcon, Question,
 } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
 import { api, type UserStats } from '../api/client';
@@ -136,7 +136,7 @@ export function ProfilePage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UserCircle weight="bold" className="w-3.5 h-3.5" />
+            <UserCircleIcon weight="bold" className="w-3.5 h-3.5" />
             {t('profile.eyebrow', 'ACCOUNT')}
           </div>
           <h1 className="admin-hero-headline">{t('profile.title', 'Profil')}</h1>
@@ -178,7 +178,7 @@ export function ProfilePage() {
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-surface-500 dark:text-surface-400">
-                  <span className="flex items-center gap-1.5"><UserCircle weight="regular" className="w-4 h-4" />@{user?.username}</span>
+                  <span className="flex items-center gap-1.5"><UserCircleIcon weight="regular" className="w-4 h-4" />@{user?.username}</span>
                   <span className="flex items-center gap-1.5"><Envelope weight="regular" className="w-4 h-4" />{user?.email}</span>
                 </div>
                 <div className="mt-3">
@@ -243,7 +243,7 @@ export function ProfilePage() {
           <h3 className="text-base font-semibold text-surface-900 dark:text-white">
             {t('profile.changePassword', 'Passwort \u00e4ndern')}
           </h3>
-          {pwOpen ? <CaretUp weight="bold" className="w-4 h-4 text-surface-400" /> : <CaretDown weight="bold" className="w-4 h-4 text-surface-400" />}
+          {pwOpen ? <CaretUpIcon weight="bold" className="w-4 h-4 text-surface-400" /> : <CaretDownIcon weight="bold" className="w-4 h-4 text-surface-400" />}
         </button>
         {pwOpen && (
           <div className="mt-4 space-y-3">
@@ -277,7 +277,7 @@ export function ProfilePage() {
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <button onClick={handleExportData} disabled={exporting} className="btn btn-secondary flex-1">
-            <DownloadSimple weight="bold" className="w-4 h-4" />
+            <DownloadSimpleIcon weight="bold" className="w-4 h-4" />
             <div className="text-left">
               <div className="font-medium">{t('gdpr.dataExport', 'Daten exportieren')}</div>
               <div className="text-xs opacity-60">{t('gdpr.dataExportDesc', 'Art. 20 Datenportabilit\u00e4t')}</div>
@@ -310,7 +310,7 @@ export function ProfilePage() {
       {/* Geofence Auto Check-in */}
       <motion.div variants={fadeUp} className="card p-6">
         <div className="flex items-start gap-3 mb-3">
-          <MapPin weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
+          <MapPinIcon weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400 mt-0.5" />
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{t('geofence.autoCheckIn')}</h3>

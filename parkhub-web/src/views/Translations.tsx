@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   Translate, MagnifyingGlass, ThumbsUp, ThumbsDown,
-  SpinnerGap, PaperPlaneTilt, X, Check, Clock,
+  SpinnerGap, PaperPlaneTilt, XIcon, Check, Clock,
   ChatCircleDots,
 } from '@phosphor-icons/react';
 import { api, type TranslationProposal, type ProposalStatus } from '../api/client';
@@ -46,7 +46,7 @@ function StatusBadge({ status, t }: { status: ProposalStatus; t: (key: string) =
   const icons = {
     pending: <Clock weight="bold" className="w-3 h-3" />,
     approved: <Check weight="bold" className="w-3 h-3" />,
-    rejected: <X weight="bold" className="w-3 h-3" />,
+    rejected: <XIcon weight="bold" className="w-3 h-3" />,
   };
   const labels = {
     pending: t('translations.statusPending'),
@@ -339,7 +339,7 @@ export function TranslationsPage() {
                   {t('translations.newProposal')}
                 </h3>
                 <button onClick={() => setShowPropose(false)} className="btn btn-ghost btn-icon btn-sm" aria-label={t('common.close')}>
-                  <X weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>
 

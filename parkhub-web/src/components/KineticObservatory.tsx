@@ -11,7 +11,7 @@
  * No 1px borders — ghost borders via color-mix / outline at low alpha.
  */
 import { motion } from 'framer-motion';
-import { ArrowUp, ArrowDown, CircleDashed } from '@phosphor-icons/react';
+import { ArrowUpIcon, ArrowDownIcon, CircleDashedIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { AnimatedCounter } from './AnimatedCounter';
 
@@ -62,7 +62,7 @@ export function KpiCard({
   const valueSize = size === 'sm' ? 'text-2xl' : size === 'lg' ? 'text-4xl' : 'text-3xl';
 
   const isPositive = delta ? delta.value >= 0 : false;
-  const DeltaIcon = isPositive ? ArrowUp : ArrowDown;
+  const DeltaIcon = isPositive ? ArrowUpIcon : ArrowDownIcon;
 
   return (
     <motion.div
@@ -128,7 +128,7 @@ function DeltaBadge({
   value: number;
   suffix?: string;
   positive: boolean;
-  Icon: typeof ArrowUp;
+  Icon: typeof ArrowUpIcon;
 }) {
   const color = positive
     ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
@@ -435,7 +435,7 @@ export function RecentActivityCard({
 
       {rows.length === 0 ? (
         <div className="py-12 text-center">
-          <CircleDashed weight="bold" className="w-8 h-8 text-surface-300 dark:text-surface-600 mx-auto mb-3" />
+          <CircleDashedIcon weight="bold" className="w-8 h-8 text-surface-300 dark:text-surface-600 mx-auto mb-3" />
           <p className="text-sm text-surface-500 dark:text-surface-400">{emptyText}</p>
         </div>
       ) : (

@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowsClockwise, CheckCircle, Warning, CloudArrowDown, Info,
-  Clock, Spinner, ArrowRight,
+  ArrowsClockwiseIcon, CheckCircle, WarningIcon, CloudArrowDown, Info,
+  Clock, Spinner, ArrowRightIcon,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -287,7 +287,7 @@ export function AdminUpdatesPage() {
             {checking ? (
               <Spinner weight="bold" className="w-4 h-4 animate-spin" />
             ) : (
-              <ArrowsClockwise weight="bold" className="w-4 h-4" />
+              <ArrowsClockwiseIcon weight="bold" className="w-4 h-4" />
             )}
             {t('updates.checkButton', 'Check for Updates')}
           </button>
@@ -333,7 +333,7 @@ export function AdminUpdatesPage() {
                 </div>
                 <div className="flex items-center gap-1.5 text-sm text-surface-600 dark:text-surface-300">
                   <span className="font-mono">{checkResult.current_version}</span>
-                  <ArrowRight weight="bold" className="w-3.5 h-3.5" />
+                  <ArrowRightIcon weight="bold" className="w-3.5 h-3.5" />
                   <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{checkResult.latest_version}</span>
                 </div>
               </div>
@@ -433,7 +433,7 @@ export function AdminUpdatesPage() {
             className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl"
             data-testid="update-error"
           >
-            <Warning weight="fill" className="w-6 h-6 text-red-600" />
+            <WarningIcon weight="fill" className="w-6 h-6 text-red-600" />
             <p className="text-sm font-medium text-red-800 dark:text-red-300">
               {t('updates.applyFailed', 'Update failed. Please try again or apply manually.')}
             </p>
@@ -520,7 +520,7 @@ export function AdminUpdatesPage() {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-surface-900 dark:text-white">
-                      {entry.from_version} <ArrowRight weight="bold" className="inline w-3 h-3 mx-1" /> {entry.to_version}
+                      {entry.from_version} <ArrowRightIcon weight="bold" className="inline w-3 h-3 mx-1" /> {entry.to_version}
                     </p>
                     <p className="text-xs text-surface-400">
                       {new Date(entry.applied_at).toLocaleString()}

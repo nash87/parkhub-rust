@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, X, Copy, Check, Question, ArrowsClockwise } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, CalendarBlank, LinkSimple, XIcon, Copy, Check, Question, ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { api, type CalendarEvent } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -363,7 +363,7 @@ export function CalendarPage() {
         {showHelp && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
             className="p-3 rounded-lg bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 text-sm text-primary-800 dark:text-primary-300 flex items-start gap-2">
-            <ArrowsClockwise size={18} className="mt-0.5 shrink-0" />
+            <ArrowsClockwiseIcon size={18} className="mt-0.5 shrink-0" />
             <span>{t('calendarDrag.help')}</span>
           </motion.div>
         )}
@@ -397,7 +397,7 @@ export function CalendarPage() {
                 </button>
                 <button onClick={confirmReschedule} disabled={rescheduling}
                   className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1">
-                  <ArrowsClockwise size={14} />
+                  <ArrowsClockwiseIcon size={14} />
                   {rescheduling ? t('calendarDrag.rescheduling') : t('calendarDrag.confirmBtn')}
                 </button>
               </div>
@@ -426,7 +426,7 @@ export function CalendarPage() {
                   aria-label={t('common.close', 'Close')}
                   className="p-1 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
                 >
-                  <X weight="bold" className="w-5 h-5 text-surface-500" />
+                  <XIcon weight="bold" className="w-5 h-5 text-surface-500" />
                 </button>
               </div>
 

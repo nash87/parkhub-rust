@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShareNetwork, Link as LinkIcon, Copy, Envelope, Question, Trash, CheckCircle, X, SpinnerGap } from '@phosphor-icons/react';
+import { ShareNetwork, Link as LinkIcon, Copy, Envelope, Question, Trash, CheckCircle, XIcon, SpinnerGap } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -151,7 +151,7 @@ export function BookingSharingModal({ bookingId, bookingLabel, onClose }: Bookin
               className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
               data-testid="sharing-close-btn"
             >
-              <X size={16} />
+              <XIcon size={16} />
             </button>
           )}
         </div>

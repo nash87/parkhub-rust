@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Wheelchair, Question, ToggleLeft, ToggleRight, ChartBar, Users } from '@phosphor-icons/react';
+import { Wheelchair, Question, ToggleLeft, ToggleRight, ChartBar, UsersIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -131,7 +131,7 @@ export function AdminAccessiblePage() {
           <StatCard tone="info" label={t('accessible.totalSlots', 'Accessible Slots')} value={stats.total_accessible_slots} icon={<Wheelchair weight="bold" className="w-3.5 h-3.5" />} />
           <StatCard tone="success" label={t('accessible.utilization', 'Utilization')} value={`${stats.utilization_percent.toFixed(0)}%`} icon={<ChartBar weight="bold" className="w-3.5 h-3.5" />} />
           <StatCard tone="accent" label={t('accessible.totalBookings', 'Active Bookings')} value={stats.total_accessible_bookings} icon={<Wheelchair weight="bold" className="w-3.5 h-3.5" />} />
-          <StatCard tone="warn" label={t('accessible.usersWithNeeds', 'Users with Needs')} value={stats.users_with_accessibility_needs} icon={<Users weight="bold" className="w-3.5 h-3.5" />} />
+          <StatCard tone="warn" label={t('accessible.usersWithNeeds', 'UsersIcon with Needs')} value={stats.users_with_accessibility_needs} icon={<UsersIcon weight="bold" className="w-3.5 h-3.5" />} />
         </div>
       )}
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { languages } from '../i18n';
 import {
-  ArrowRight, Globe, SunDim, Moon, CarSimple,
+  ArrowRightIcon, GlobeIcon, SunDim, Moon, CarSimpleIcon,
 } from '@phosphor-icons/react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -62,7 +62,7 @@ export function WelcomePage() {
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
-            <CarSimple weight="fill" className="w-5 h-5 text-white" />
+            <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
         </div>
@@ -123,14 +123,14 @@ export function WelcomePage() {
             className="btn btn-primary text-base px-7 py-3 shadow-lg shadow-primary-500/20 dark:shadow-primary-500/10 transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97]"
           >
             {t('welcome.getStarted')}
-            <ArrowRight weight="bold" className="w-5 h-5" />
+            <ArrowRightIcon weight="bold" className="w-5 h-5" />
           </button>
 
           <button
             onClick={() => setShowLanguages(!showLanguages)}
             className="btn btn-secondary gap-2 backdrop-blur-sm"
           >
-            <Globe weight="bold" className="w-4 h-4" />
+            <GlobeIcon weight="bold" className="w-4 h-4" />
             {languages.find(l => l.code === selectedLang)?.flag} {languages.find(l => l.code === selectedLang)?.native}
           </button>
         </div>

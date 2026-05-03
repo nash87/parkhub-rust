@@ -14,7 +14,7 @@ import { useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { DotsThree, X } from '@phosphor-icons/react';
+import { DotsThree, XIcon } from '@phosphor-icons/react';
 import { preloadRoute } from '../../lib/routePreload';
 import { NotificationBadge } from '../ui/NotificationBadge';
 import { NAV_SECTIONS, type NavItem } from '../Layout';
@@ -109,7 +109,7 @@ export function FloatingDock({ unreadCount, isAdmin }: FloatingDockProps) {
                 className="btn btn-ghost btn-icon w-6 h-6"
                 aria-label={t('common.close', 'Close')}
               >
-                <X weight="bold" className="w-3.5 h-3.5" />
+                <XIcon weight="bold" className="w-3.5 h-3.5" />
               </button>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-1">

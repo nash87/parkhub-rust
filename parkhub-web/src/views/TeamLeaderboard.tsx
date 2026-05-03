@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Lightning, Star } from '@phosphor-icons/react';
+import { TrophyIcon, Medal, Lightning, StarIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getInMemoryToken } from '../api/client';
@@ -170,7 +170,7 @@ export function TeamLeaderboardPage() {
             <div className="admin-hero-left">
               <div className="admin-hero-eyebrow">
                 <span className="admin-hero-dot" aria-hidden="true"></span>
-                <Trophy weight="bold" className="w-3.5 h-3.5" />
+                <TrophyIcon weight="bold" className="w-3.5 h-3.5" />
                 {t('leaderboard.eyebrow', 'TEAM RANKINGS')}
               </div>
               <h1 className="admin-hero-headline">{t('leaderboard.title', 'Team Leaderboard')}</h1>
@@ -179,7 +179,7 @@ export function TeamLeaderboardPage() {
           </section>
         </div>
         <div className="bg-white dark:bg-surface-900 rounded-2xl border border-surface-200 dark:border-surface-800 p-12 text-center" data-testid="empty-state">
-          <Trophy weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
+          <TrophyIcon weight="light" className="w-12 h-12 text-surface-200 dark:text-surface-700 mx-auto mb-3" />
           <p className="text-surface-500 dark:text-surface-400">{t('leaderboard.empty', 'No team data available')}</p>
         </div>
       </motion.div>
@@ -197,7 +197,7 @@ export function TeamLeaderboardPage() {
       {/* Header */}
       <motion.div variants={fadeUp}>
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-          <Trophy weight="fill" className="w-7 h-7 text-yellow-500" />
+          <TrophyIcon weight="fill" className="w-7 h-7 text-yellow-500" />
           {t('leaderboard.title', 'Team Leaderboard')}
         </h1>
         <p className="text-surface-500 dark:text-surface-400 mt-1">{t('leaderboard.subtitle', 'See how your team is doing')}</p>
@@ -209,7 +209,7 @@ export function TeamLeaderboardPage() {
           <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-950/30 flex items-center justify-center">
-                <Star weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                <StarIcon weight="fill" className="w-5 h-5 text-primary-600 dark:text-primary-400" />
               </div>
               <span className="text-sm text-surface-500 dark:text-surface-400">{t('leaderboard.mostActive', 'Most Active')}</span>
             </div>

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CarSimple, SpinnerGap, ArrowLeft, Check, X } from '@phosphor-icons/react';
+import { CarSimpleIcon, SpinnerGap, ArrowLeft, Check, XIcon } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { FormField, FormInput } from '../components/ui/FormField';
 import { OAuthButtons } from '../components/OAuthButtons';
@@ -30,7 +30,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 function PasswordRule({ met, label }: { met: boolean; label: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-xs ${met ? 'text-green-600 dark:text-green-400' : 'text-surface-400'}`}>
-      {met ? <Check weight="bold" className="w-3 h-3" /> : <X weight="bold" className="w-3 h-3" />}
+      {met ? <Check weight="bold" className="w-3 h-3" /> : <XIcon weight="bold" className="w-3 h-3" />}
       {label}
     </span>
   );
@@ -83,7 +83,7 @@ export function RegisterPage() {
 
         <div className="flex items-center gap-3 mb-8">
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
-            <CarSimple weight="fill" className="w-5 h-5 text-white" />
+            <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
           <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
         </div>

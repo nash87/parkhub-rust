@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { MapPin, NavigationArrow } from '@phosphor-icons/react';
+import { MapPinIcon, NavigationArrow } from '@phosphor-icons/react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 // Leaflet CSS is loaded at runtime (see loadLeafletCss below) to keep it out
@@ -129,7 +129,7 @@ export function MapViewPage() {
         <div className="admin-hero-left">
           <div className="admin-hero-eyebrow">
             <span className="admin-hero-dot" aria-hidden="true"></span>
-            <MapPin weight="bold" className="w-3.5 h-3.5" />
+            <MapPinIcon weight="bold" className="w-3.5 h-3.5" />
             {t('map.eyebrow', 'LIVE AVAILABILITY')}
           </div>
           <h1 className="admin-hero-headline">{t('map.title')}</h1>

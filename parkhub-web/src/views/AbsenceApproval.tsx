@@ -1,7 +1,7 @@
 import { useActionState, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Calendar, Check, X, Clock, Question, PaperPlaneTilt, ChatText,
+  CalendarIcon, Check, XIcon, Clock, Question, PaperPlaneTilt, ChatText,
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -172,7 +172,7 @@ function AdminPendingQueue({ requests, onAction }: { requests: AbsenceRequest[];
             <span className="text-xs text-surface-500">{t(typeLabels[req.absence_type] || req.absence_type)}</span>
           </div>
           <div className="text-sm text-surface-600 dark:text-surface-400 mb-2">
-            <Calendar size={14} className="inline mr-1" />
+            <CalendarIcon size={14} className="inline mr-1" />
             {formatDate(req.start_date)} — {formatDate(req.end_date)}
           </div>
           <p className="text-sm text-surface-700 dark:text-surface-300 mb-3">{req.reason}</p>
@@ -190,7 +190,7 @@ function AdminPendingQueue({ requests, onAction }: { requests: AbsenceRequest[];
             </button>
             <button onClick={() => handleReject(req.id)} disabled={processing === req.id}
               className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 flex items-center gap-1">
-              <X size={14} /> {t('absenceApproval.rejectBtn')}
+              <XIcon size={14} /> {t('absenceApproval.rejectBtn')}
             </button>
           </div>
         </motion.div>
@@ -296,7 +296,7 @@ export function AbsenceApprovalPage() {
                   </span>
                 </div>
                 <div className="text-sm text-surface-700 dark:text-surface-300 mb-1">
-                  <Calendar size={14} className="inline mr-1" />
+                  <CalendarIcon size={14} className="inline mr-1" />
                   {formatDate(req.start_date)} — {formatDate(req.end_date)}
                 </div>
                 <p className="text-sm text-surface-600 dark:text-surface-400">{req.reason}</p>
