@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { CurrencyDollar, ChartBar, DownloadSimpleIcon, Question, Buildings } from '@phosphor-icons/react';
+import { V11Meter } from '../components/v11/V11Meter';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 
@@ -192,14 +193,6 @@ function SummaryCard({ label, value, icon, tone = 'primary' }: {
   icon: React.ReactNode;
   tone?: 'primary' | 'accent' | 'info' | 'success' | 'warn' | 'danger';
 }) {
-  // v11 SOTA meter from PR #490 — same pattern as AdminReports stat cards.
-  return (
-    <div className={`v11-meter v11-meter--${tone}`}>
-      <div className="v11-meter-eyebrow">
-        {icon}
-        {label}
-      </div>
-      <div className="v11-meter-value">{value}</div>
-    </div>
-  );
+  // Delegates to the shared V11Meter primitive (no local bar variant needed).
+  return <V11Meter icon={icon} label={label} value={value} tone={tone} />;
 }
