@@ -417,6 +417,17 @@ if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; t
         [[ -f \$f ]] && yamllint -d 'rules: {line-length: disable, document-start: disable, truthy: disable}' \"\$f\"; \
       done"
   fi
+  # fop ci-audit: gitea+github workflow audit (missing --add-host, hardcoded
+  # localhost, etc). Advisory — surfaces findings but doesn't fail the gate.
+  if command -v fop >/dev/null 2>&1; then
+    run_direct "fop ci-audit (advisory)" \
+      "fop ci-audit . 2>&1 | grep -E '\\[(WARN|ERROR|FAIL)\\]' | head -30 || echo '✓ fop ci-audit: no findings'"
+  fi
+  # workflow drift detector — gitea ↔ github workflow file pairing.
+  # Gating: missing files fail the gate; trigger/job drift is advisory.
+  if [[ -x scripts/local-workflow-drift.sh ]]; then
+    run_direct "workflow drift (gitea ↔ github)" "./scripts/local-workflow-drift.sh"
+  fi
 fi
 
 # ─── Stage 2b: spell-check via typos (advisory, all profiles) ───────────────
