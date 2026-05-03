@@ -11,12 +11,15 @@ vi.mock('../api/client', () => ({
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }) }));
 vi.mock('framer-motion', () => ({
-  motion: { div: React.forwardRef(({ children, variants, ...p }: any, r: any) => <div ref={r} {...p}>{children}</div>) },
+  motion: {
+    div: React.forwardRef(({ children, variants, ...p }: any, r: any) => <div ref={r} {...p}>{children}</div>),
+    section: React.forwardRef(({ children, variants, ...p }: any, r: any) => <section ref={r} {...p}>{children}</section>),
+  },
   AnimatePresence: ({ children }: any) => <>{children}</>,
 }));
 vi.mock('@phosphor-icons/react', () => {
   const C = (p: any) => <span {...p} />;
-  return { Swap: C, Check: C, X: C, SpinnerGap: C, Plus: C, ArrowClockwise: C, CalendarBlank: C, Clock: C, ChatText: C };
+  return { SwapIcon: C, CheckIcon: C, XIcon: C, SpinnerGapIcon: C, PlusIcon: C, ArrowClockwiseIcon: C, CalendarBlankIcon: C, ClockIcon: C, ChatTextIcon: C };
 });
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('date-fns', () => ({ format: (_d: any, fmt: string) => fmt === 'dd.MM HH:mm' ? '10.04 08:00' : fmt === 'HH:mm' ? '08:00' : '10. Apr 2026' }));
