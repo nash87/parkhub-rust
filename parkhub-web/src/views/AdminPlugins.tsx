@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { PuzzlePiece, ToggleLeft, ToggleRight, Gear, Question, Lightning } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface PluginRoute {
   path: string;
@@ -127,11 +128,7 @@ export function AdminPluginsPage() {
       {/* v11 SOTA hero — info tone (extension surface = expand cluster trust boundary). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <PuzzlePiece weight="bold" className="w-3.5 h-3.5" />
-            {t('plugins.eyebrow', 'EXTENSIONS')}
-          </div>
+          <HeroEyebrow icon={PuzzlePiece} label={t('plugins.eyebrow', 'EXTENSIONS')} />
           <h1 className="admin-hero-headline">{t('plugins.title')}</h1>
           <p className="admin-hero-sub">{t('plugins.subtitle')}</p>
         </div>
