@@ -150,7 +150,7 @@ describe('AdminScheduledReportsPage', () => {
   });
 
   it('does not show success toast when send-now response is unsuccessful', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((url: string, _opts?: any) => {
       if (url.includes('send-now')) return Promise.resolve({ json: () => Promise.resolve({ success: false }) } as Response);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
     }) as any;
@@ -177,7 +177,7 @@ describe('AdminScheduledReportsPage', () => {
   });
 
   it('handles send-now error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((url: string, _opts?: any) => {
       if (url.includes('send-now')) return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
     }) as any;

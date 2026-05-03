@@ -135,7 +135,7 @@ describe('SwapRequestsPage', () => {
   });
 
   it('accept error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((url: string, _opts?: any) => {
       if (url.includes('/accept')) return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Already handled' } }) } as Response);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: requests }) } as Response);
     }) as any;
@@ -145,7 +145,7 @@ describe('SwapRequestsPage', () => {
   });
 
   it('decline error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((url: string, _opts?: any) => {
       if (url.includes('/decline')) return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: requests }) } as Response);
     }) as any;

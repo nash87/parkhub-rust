@@ -108,7 +108,7 @@ describe('AdminWebhooksPage', () => {
   });
 
   it('test webhook failure response', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((url: string, _opts?: any) => {
       if (url.includes('/test')) return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { success: false } }) } as Response);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: webhooks }) } as Response);
     }) as any;
