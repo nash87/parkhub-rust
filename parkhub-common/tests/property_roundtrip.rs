@@ -8,7 +8,10 @@
 //! stable Rust via `proptest`; an optional cargo-fuzz layer can wrap these
 //! targets later on nightly without rewriting the shape.
 
-use parkhub_common::{FuelType, SlotFeature, SlotStatus, SlotType, UserRole, VehicleType};
+use parkhub_common::{
+    BookingStatus, CreditTransactionType, FuelType, LotStatus, PaymentStatus, SlotFeature,
+    SlotStatus, SlotType, SwapRequestStatus, UserRole, VehicleType, WaitlistStatus,
+};
 use proptest::prelude::*;
 
 // ── strategies ─────────────────────────────────────────────────────────────
@@ -34,6 +37,66 @@ fn arb_fuel_type() -> impl Strategy<Value = FuelType> {
         Just(FuelType::PluginHybrid),
         Just(FuelType::Electric),
         Just(FuelType::Hydrogen),
+    ]
+}
+
+fn arb_booking_status() -> impl Strategy<Value = BookingStatus> {
+    prop_oneof![
+        Just(BookingStatus::Pending),
+        Just(BookingStatus::Confirmed),
+        Just(BookingStatus::Active),
+        Just(BookingStatus::Completed),
+        Just(BookingStatus::Cancelled),
+        Just(BookingStatus::Expired),
+        Just(BookingStatus::NoShow),
+    ]
+}
+
+fn arb_payment_status() -> impl Strategy<Value = PaymentStatus> {
+    prop_oneof![
+        Just(PaymentStatus::Pending),
+        Just(PaymentStatus::Paid),
+        Just(PaymentStatus::Failed),
+        Just(PaymentStatus::Refunded),
+        Just(PaymentStatus::PartialRefund),
+    ]
+}
+
+fn arb_waitlist_status() -> impl Strategy<Value = WaitlistStatus> {
+    prop_oneof![
+        Just(WaitlistStatus::Waiting),
+        Just(WaitlistStatus::Offered),
+        Just(WaitlistStatus::Accepted),
+        Just(WaitlistStatus::Declined),
+        Just(WaitlistStatus::Expired),
+    ]
+}
+
+fn arb_lot_status() -> impl Strategy<Value = LotStatus> {
+    prop_oneof![
+        Just(LotStatus::Open),
+        Just(LotStatus::Closed),
+        Just(LotStatus::Full),
+        Just(LotStatus::Maintenance),
+    ]
+}
+
+fn arb_swap_request_status() -> impl Strategy<Value = SwapRequestStatus> {
+    prop_oneof![
+        Just(SwapRequestStatus::Pending),
+        Just(SwapRequestStatus::Accepted),
+        Just(SwapRequestStatus::Declined),
+        Just(SwapRequestStatus::Cancelled),
+    ]
+}
+
+fn arb_credit_transaction_type() -> impl Strategy<Value = CreditTransactionType> {
+    prop_oneof![
+        Just(CreditTransactionType::Grant),
+        Just(CreditTransactionType::Deduction),
+        Just(CreditTransactionType::Refund),
+        Just(CreditTransactionType::MonthlyRefill),
+        Just(CreditTransactionType::Adjustment),
     ]
 }
 
@@ -133,6 +196,98 @@ proptest! {
     fn fuel_type_json_is_stable_through_roundtrip(f in arb_fuel_type()) {
         let json1 = serde_json::to_string(&f).unwrap();
         let decoded: FuelType = serde_json::from_str(&json1).unwrap();
+        let json2 = serde_json::to_string(&decoded).unwrap();
+        prop_assert_eq!(json1, json2);
+    }
+
+    // ── lifecycle / state-machine enums (added 2026-05-03) ─────────────────
+
+    #[test]
+    fn booking_status_roundtrips(s in arb_booking_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: BookingStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn booking_status_json_is_stable(s in arb_booking_status()) {
+        let json1 = serde_json::to_string(&s).unwrap();
+        let decoded: BookingStatus = serde_json::from_str(&json1).unwrap();
+        let json2 = serde_json::to_string(&decoded).unwrap();
+        prop_assert_eq!(json1, json2);
+    }
+
+    #[test]
+    fn payment_status_roundtrips(s in arb_payment_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: PaymentStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn payment_status_json_is_stable(s in arb_payment_status()) {
+        let json1 = serde_json::to_string(&s).unwrap();
+        let decoded: PaymentStatus = serde_json::from_str(&json1).unwrap();
+        let json2 = serde_json::to_string(&decoded).unwrap();
+        prop_assert_eq!(json1, json2);
+    }
+
+    #[test]
+    fn waitlist_status_roundtrips(s in arb_waitlist_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: WaitlistStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn waitlist_status_json_is_stable(s in arb_waitlist_status()) {
+        let json1 = serde_json::to_string(&s).unwrap();
+        let decoded: WaitlistStatus = serde_json::from_str(&json1).unwrap();
+        let json2 = serde_json::to_string(&decoded).unwrap();
+        prop_assert_eq!(json1, json2);
+    }
+
+    #[test]
+    fn lot_status_roundtrips(s in arb_lot_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: LotStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn lot_status_json_is_stable(s in arb_lot_status()) {
+        let json1 = serde_json::to_string(&s).unwrap();
+        let decoded: LotStatus = serde_json::from_str(&json1).unwrap();
+        let json2 = serde_json::to_string(&decoded).unwrap();
+        prop_assert_eq!(json1, json2);
+    }
+
+    #[test]
+    fn swap_request_status_roundtrips(s in arb_swap_request_status()) {
+        let json = serde_json::to_string(&s).unwrap();
+        let decoded: SwapRequestStatus = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(s, decoded);
+    }
+
+    #[test]
+    fn swap_request_status_json_is_stable(s in arb_swap_request_status()) {
+        let json1 = serde_json::to_string(&s).unwrap();
+        let decoded: SwapRequestStatus = serde_json::from_str(&json1).unwrap();
+        let json2 = serde_json::to_string(&decoded).unwrap();
+        prop_assert_eq!(json1, json2);
+    }
+
+    #[test]
+    fn credit_transaction_type_roundtrips(t in arb_credit_transaction_type()) {
+        let json = serde_json::to_string(&t).unwrap();
+        let decoded: CreditTransactionType = serde_json::from_str(&json).unwrap();
+        prop_assert_eq!(t, decoded);
+    }
+
+    #[test]
+    fn credit_transaction_type_json_is_stable(t in arb_credit_transaction_type()) {
+        let json1 = serde_json::to_string(&t).unwrap();
+        let decoded: CreditTransactionType = serde_json::from_str(&json1).unwrap();
         let json2 = serde_json::to_string(&decoded).unwrap();
         prop_assert_eq!(json1, json2);
     }
