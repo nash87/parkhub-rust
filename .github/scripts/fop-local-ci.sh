@@ -3,9 +3,14 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: .github/scripts/fop-local-ci.sh [--profile pr|full|cd] [--dry-run] [--post-status]
+Usage: .github/scripts/fop-local-ci.sh [--profile pr|full|cd] [--dry-run] [--post-status] [--background]
 
 Runs ParkHub's local-first CI through fop's build queue. The optional
+--background runs the gate in a detached subshell, logs to .fop/reports/
+local-ci-<profile>-<sha>-bg.log, returns immediately. Combine with
+--post-status for fire-and-forget background "full" runs that publish
+their own commit status context (fop/local-ci/full) when complete.
+
 --post-status flag publishes the commit status context for the selected
 profile. The GitHub PR attestation gate expects this exact command:
 
@@ -43,6 +48,7 @@ EOF
 profile="pr"
 dry_run=0
 post_status=0
+background=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -58,6 +64,10 @@ while [[ $# -gt 0 ]]; do
       post_status=1
       shift
       ;;
+    --background)
+      background=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -69,6 +79,31 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# ─── --background: re-exec self in detached subshell, log to file ───────────
+# When set, the rest of the run happens in a background subshell so the
+# developer's terminal is freed immediately. The post_commit_status mechanism
+# fires when the background run completes, posting the result via PAT.
+# Caller sees: PID + log path + immediate exit 0.
+if (( background )); then
+  background=0  # avoid recursion in the re-exec'd child
+  repo_root_for_bg="$(git rev-parse --show-toplevel)"
+  bg_log_dir="$repo_root_for_bg/.fop/reports"
+  mkdir -p "$bg_log_dir"
+  bg_sha="$(git rev-parse HEAD)"
+  bg_log="$bg_log_dir/local-ci-${profile}-${bg_sha:0:8}-bg.log"
+  # Re-build args without --background.
+  bg_args=("--profile" "$profile")
+  (( dry_run )) && bg_args+=("--dry-run")
+  (( post_status )) && bg_args+=("--post-status")
+  echo "▶ fop-local-ci backgrounded: profile=$profile log=$bg_log"
+  nohup "$0" "${bg_args[@]}" >"$bg_log" 2>&1 < /dev/null &
+  bg_pid=$!
+  disown 2>/dev/null || true
+  echo "  PID=$bg_pid sha=${bg_sha:0:8}"
+  echo "  watch: tail -f $bg_log"
+  exit 0
+fi
 
 case "$profile" in
   pr|full|cd) ;;
@@ -583,6 +618,23 @@ if command -v osv-scanner >/dev/null 2>&1; then
   run_step "osv-scanner (supply-chain)" "osv-scanner scan source --recursive --config=osv-scanner.toml ."
 else
   skip_step "osv-scanner" "osv-scanner not on PATH (install: https://google.github.io/osv-scanner/installation/)"
+fi
+
+# ─── Stage 10b: Lighthouse CI (perf + a11y; full+cd profiles, frontend touched) ───
+# Mirrors .github/workflows/lighthouse.yml. Skipped if MemAvailable < 6 GiB
+# (Lighthouse + headless Chromium need ~3 GB; the script enforces the floor).
+# The lighthouserc.json now asserts INP threshold (#510), so this catches
+# perf regressions before they ship.
+lh_should_run=0
+[[ "$profile" == "cd" ]] && lh_should_run=1
+[[ "$profile" == "full" ]] && (( diff_touch_frontend )) && lh_should_run=1
+if (( lh_should_run )); then
+  if [[ -x scripts/local-lighthouse.sh ]]; then
+    # Heavy step — queue through fop build batch-medium.
+    run_step_heavy "lighthouse CI (perf + a11y + INP threshold)" "./scripts/local-lighthouse.sh"
+  else
+    skip_step "lighthouse CI" "scripts/local-lighthouse.sh missing"
+  fi
 fi
 
 # ─── Stage 11: Grype (vuln scanner, defense-in-depth) ───────────────────────
