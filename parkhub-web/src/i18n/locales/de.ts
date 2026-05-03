@@ -116,6 +116,7 @@ export default {
       confirmPrint: 'Bestätigen & drucken',
     },
     settings: {
+      eyebrow: 'PRÄFERENZEN',
       title: 'Einstellungen',
       subtitle: 'Lege fest, wie ParkHub aussieht, sich anfühlt und verhält — für dich und dein Team.',
       scopeLabel: 'Bereich der Einstellungen',
@@ -173,6 +174,7 @@ export default {
       emptyBookingsSecondary: 'Befehlspalette öffnen',
     },
     bookings: {
+      eyebrow: 'MEINE RESERVIERUNGEN',
       title: 'Meine Buchungen',
       subtitle: 'Verwalten Sie Ihre Parkplatzreservierungen',
       active: 'Aktiv',
@@ -216,6 +218,7 @@ export default {
       loadError: 'Parkausweis konnte nicht geladen werden',
     },
     credits: {
+      eyebrow: 'GUTHABEN-KONTO',
       title: 'Meine Credits',
       subtitle: 'Ihr Parkplatz-Guthaben und Verlauf',
       balance: 'Guthaben',
@@ -244,6 +247,7 @@ export default {
       selectCredits: 'Creditanzahl wahlen',
     },
     absences: {
+      eyebrow: 'ABWESENHEIT',
       title: 'Abwesenheiten',
       subtitle: 'Verwalten Sie Ihre Verfugbarkeit und Home-Office-Tage',
       myCalendar: 'Mein Kalender',
@@ -296,6 +300,7 @@ export default {
       },
     },
     favorites: {
+      eyebrow: 'GEMERKTE PARKPLÄTZE',
       title: 'Meine Favoriten',
       subtitle: 'Deine gespeicherten Lieblingsparkplätze',
       empty: 'Noch keine Favoriten',
@@ -311,6 +316,7 @@ export default {
       count: '{{count}} Favorit(en)',
     },
     vehicles: {
+      eyebrow: 'MEINE FAHRZEUGE',
       title: 'Meine Fahrzeuge',
       subtitle: 'Verwalten Sie Ihre registrierten Fahrzeuge',
       add: 'Fahrzeug hinzufugen',
@@ -703,6 +709,7 @@ export default {
       nextReset: 'Nachster Reset',
     },
     notifications: {
+      eyebrow: 'EINGANG',
       title: 'Benachrichtigungen',
       allRead: 'Alles gelesen',
       markAllRead: 'Alle als gelesen',
@@ -724,6 +731,8 @@ export default {
       prefsSaveFailed: 'Einstellungen konnten nicht gespeichert werden',
     },
     calendar: {
+      eyebrow: 'TERMINKALENDER',
+      subtitle: 'Reservierungen über den Monat hinweg sehen und verwalten',
       title: 'Kalender',
       noBookings: 'Keine Buchungen an diesem Tag',
       selectDay: 'Klicke auf einen Tag',
@@ -841,6 +850,7 @@ export default {
       brandColor: 'Markenfarbe',
     },
     map: {
+      eyebrow: 'LIVE-VERFÜGBARKEIT',
       title: 'Parkplatzkarte',
       subtitle: 'Finde verfugbare Parkplatze in deiner Nahe',
       bookNow: 'Jetzt buchen',
@@ -849,6 +859,7 @@ export default {
       closed: 'Geschlossen',
     },
     team: {
+      eyebrow: 'KOLLEGEN',
       title: 'Team',
       subtitle: 'Wer ist heute im Buro?',
       inOffice: 'Im Buro',
@@ -861,6 +872,7 @@ export default {
       noUpcoming: 'Keine anstehenden Abwesenheiten',
     },
     profile: {
+      eyebrow: 'KONTO',
       title: 'Profil',
       subtitle: 'Kontoeinstellungen verwalten',
       saved: 'Profil gespeichert',
@@ -988,6 +1000,7 @@ export default {
       cancelBookingConfirm: 'Ja, stornieren',
     },
     book: {
+      eyebrow: 'PLATZ RESERVIEREN',
       title: 'Platz buchen',
       step1Label: 'Parkplatz auswahlen',
       step2Label: 'Stellplatz und Zeit wahlen',
@@ -1269,6 +1282,7 @@ export default {
       help: 'Dieses Modul bietet Abrechnungsanalysen nach Kostenstelle und Abteilung.',
     },
     visitors: {
+      eyebrow: 'GAST-EINLADUNGEN',
       title: 'Besucher-Voranmeldung',
       subtitle: 'Besucher vorab registrieren',
       adminTitle: 'Alle Besucher',
@@ -1305,6 +1319,7 @@ export default {
       },
     },
     evCharging: {
+      eyebrow: 'LADEVORGÄNGE',
       title: 'E-Ladestationen',
       subtitle: 'Ladesitzungen verwalten',
       adminTitle: 'Ladestationen-Verwaltung',
@@ -1324,6 +1339,7 @@ export default {
       status: { available: 'Verfuegbar', in_use: 'Belegt', offline: 'Offline', maintenance: 'Wartung' },
     },
     history: {
+      eyebrow: 'PARKHISTORIE',
       title: 'Parkverlauf',
       subtitle: 'Vergangene Buchungen und Statistiken',
       help: 'Verfolge deinen Parkverlauf mit detaillierten Statistiken. Filtere nach Parkplatz oder Zeitraum.',
@@ -1359,6 +1375,8 @@ export default {
     scheduledReports: { title: 'Geplante Berichte', subtitle: 'Automatischen E-Mail-Berichtsversand konfigurieren', help: 'Richten Sie wiederkehrende Berichte ein, die automatisch an angegebene Empfaenger geliefert werden.', helpLabel: 'Hilfe', create: 'Zeitplan erstellen', newSchedule: 'Neuer Zeitplan', editSchedule: 'Zeitplan bearbeiten', name: 'Name', nameRequired: 'Name ist erforderlich', reportType: 'Berichtstyp', frequency: 'Haeufigkeit', recipients: 'Empfaenger', recipientsPlaceholder: 'nutzer@beispiel.de, admin@beispiel.de', recipientsLabel: 'Empfaenger', recipientsRequired: 'Mindestens ein Empfaenger erforderlich', save: 'Speichern', created: 'Zeitplan erstellt', updated: 'Zeitplan aktualisiert', deleted: 'Zeitplan geloescht', sentNow: 'Bericht gesendet', sendNow: 'Jetzt senden', edit: 'Bearbeiten', delete: 'Loeschen', lastSent: 'Zuletzt gesendet', empty: 'Keine Zeitplaene konfiguriert' },
     apiVersion: { title: 'API-Version', version: 'Version', prefix: 'Praefix', status: 'Status', deprecations: 'Veraltete Endpunkte', tooltip: 'Aktuelle API-Version' },
     compliance: { title: 'Compliance', subtitle: 'DSGVO-Compliance-Ueberwachung', help: 'Ueberwachen Sie den DSGVO-Compliance-Status und erstellen Sie erforderliche Dokumentation.', helpLabel: 'Hilfe', overallStatus: 'Gesamtstatus', passed: 'Bestanden', warnings: 'Warnungen', failures: 'Fehler', downloadPdf: 'PDF herunterladen', downloadDataMap: 'Datenverzeichnis', auditJson: 'Audit (JSON)', auditCsv: 'Audit (CSV)', checksTitle: 'Compliance-Pruefungen', recommendation: 'Empfehlung' },
+    leaderboard: { eyebrow: 'TEAM-RANKING', title: 'Team-Bestenliste', subtitle: 'Sehen Sie, wie Ihr Team abschneidet', empty: 'Keine Team-Daten verfügbar' },
+    checkin: { eyebrow: 'EINCHECKEN', title: 'QR Check-In', subtitle: 'Buchung mit QR-Code aktivieren', noBooking: 'Keine aktive Buchung', noBookingHint: 'Buchen Sie zuerst einen Platz, um einzuchecken' },
     absenceApproval: { title: 'Abwesenheitsgenehmigung', subtitle: 'Abwesenheiten beantragen und verwalten', help: 'Beantragen Sie freie Zeit von Ihrem Parkplatz. Administratoren pruefen und genehmigen oder lehnen ab.', helpLabel: 'Hilfe', submitTitle: 'Antrag stellen', type: 'Typ', startDate: 'Startdatum', endDate: 'Enddatum', reason: 'Grund', reasonPlaceholder: 'Warum benoetigen Sie diese Abwesenheit?', submitBtn: 'Antrag stellen', submitting: 'Wird gesendet...', submitted: 'Antrag gesendet', requiredFields: 'Bitte alle Pflichtfelder ausfuellen', myRequests: 'Meine Antraege', pendingQueue: 'Warteschlange', noRequests: 'Noch keine Abwesenheitsantraege', noPending: 'Keine ausstehenden Antraege', commentPlaceholder: 'Kommentar (optional)', approveBtn: 'Genehmigen', rejectBtn: 'Ablehnen', approved: 'Antrag genehmigt', rejected: 'Antrag abgelehnt', rejectReasonRequired: 'Ablehnungsgrund erforderlich', types: { vacation: 'Urlaub', sick: 'Krank', homeoffice: 'Homeoffice', businessTrip: 'Dienstreise', personal: 'Persoenlich', other: 'Sonstiges' }, status: { pending: 'Ausstehend', approved: 'Genehmigt', rejected: 'Abgelehnt' } },
     sso: { title: 'SSO-Konfiguration', subtitle: 'SAML/SSO-Enterprise-Authentifizierung konfigurieren', help: 'SAML 2.0 Identity Provider fuer Enterprise Single Sign-On hinzufuegen. Benutzer authentifizieren sich ueber ihren Unternehmens-Identity-Provider.', helpLabel: 'Hilfe', addProvider: 'Anbieter hinzufuegen', newProvider: 'Neuer Anbieter', editProvider: 'Anbieter bearbeiten', slug: 'Slug', displayName: 'Anzeigename', entityId: 'Entity-ID', ssoUrl: 'SSO-URL', metadataUrl: 'Metadaten-URL', certificate: 'Zertifikat', save: 'Speichern', edit: 'Bearbeiten', delete: 'Loeschen', created: 'Anbieter erstellt', updated: 'Anbieter aktualisiert', deleted: 'Anbieter geloescht', empty: 'Keine SSO-Anbieter konfiguriert', requiredFields: 'Bitte alle Pflichtfelder ausfuellen', continueWith: 'Weiter mit {{provider}}', enabled: 'Aktiviert', disabled: 'Deaktiviert' },
     webhooksV2: { title: "Webhooks v2", subtitle: "Ausgehende Event-Abonnements mit Zustellungsverfolgung", help: "Konfigurieren Sie Webhooks fuer HTTP-Benachrichtigungen bei ParkHub-Ereignissen. Signiert mit HMAC-SHA256.", helpLabel: "Hilfe", create: "Webhook erstellen", newWebhook: "Neuer Webhook", editWebhook: "Webhook bearbeiten", url: "URL", events: "Ereignisse", description: "Beschreibung", descriptionPlaceholder: "Optionale Beschreibung", save: "Speichern", edit: "Bearbeiten", delete: "Loeschen", test: "Testen", deliveries: "Zustellungen", deliveryLog: "Zustellungsprotokoll", noDeliveries: "Noch keine Zustellungen", attempt: "Versuch", created: "Webhook erstellt", updated: "Webhook aktualisiert", deleted: "Webhook geloescht", testSuccess: "Test-Event erfolgreich zugestellt", testFailed: "Test-Zustellung fehlgeschlagen", empty: "Keine Webhooks konfiguriert", requiredFields: "URL und mindestens ein Ereignis erforderlich" },
@@ -1367,8 +1385,8 @@ export default {
     pwa: { offlineMessage: "Sie sind offline. Einige Funktionen sind moeglicherweise nicht verfuegbar.", nextBooking: "Ihre naechste Buchung", mobileNav: "Mobile Navigation", pullToRefresh: "Zum Aktualisieren ziehen", releaseToRefresh: "Loslassen zum Aktualisieren", installTitle: "ParkHub installieren", installDescription: "ParkHub zum Startbildschirm hinzufuegen", installButton: "Installieren", installDismiss: "Nicht jetzt" },
     notificationCenter: { title: "Benachrichtigungszentrale", bellTooltip: "Benachrichtigungszentrale oeffnen", help: "Ihre Benachrichtigungszentrale — Buchungsbestaetigungen, Erinnerungen, Wartelistenangebote, Wartungswarnungen und Systemankuendigungen. Klicken Sie auf eine Benachrichtigung, um zur entsprechenden Seite zu navigieren.", helpLabel: "Hilfe", markAllRead: "Alle als gelesen markieren", markRead: "Als gelesen markieren", deleteOne: "Benachrichtigung loeschen", deleted: "Benachrichtigung geloescht", empty: "Noch keine Benachrichtigungen", viewAll: "Alle Benachrichtigungen anzeigen", today: "Heute", yesterday: "Gestern", filter: { all: "Alle", unread: "Ungelesen", read: "Gelesen" }, types: { booking_confirmed: "Buchung bestaetigt", booking_cancelled: "Buchung storniert", booking_reminder: "Buchungserinnerung", waitlist_offer: "Wartelistenangebot", maintenance_alert: "Wartungswarnung", system_announcement: "Systemankuendigung", payment_received: "Zahlung eingegangen", visitor_arrived: "Besucher angekommen" } },
     mobileBooking: { title: "Schnellbuchung", subtitle: "Parken mit einem Tipp buchen", help: "Wischen Sie durch verfuegbare Parkplaetze in Ihrer Naehe, waehlen Sie ein Zeitfenster und bestaetigen Sie sofort.", helpLabel: "Hilfe", nearbyLots: "Parkplaetze in der Naehe", noNearbyLots: "Keine Parkplaetze in der Naehe", searchRadius: "Suchradius", quickBook: "Schnellbuchung", booking: "Buche...", selectSlot: "Zeitfenster waehlen", activeBooking: "Aktive Buchung", noActiveBooking: "Keine aktive Buchung", countdown: "Verbleibende Zeit", expiresIn: "Laeuft ab in {{time}}", lotDistance: "{{distance}} entfernt", availableSlots: "{{count}} Plaetze frei", booked: "Buchung bestaetigt!", swipeHint: "Wischen zum Durchsuchen" },
-    guestBooking: { title: 'Gastausweis', subtitle: 'Gast-Parkausweise erstellen und verwalten', create: 'Neuer Gastausweis', existing: 'Gastausweise', empty: 'Noch keine Gastausweise', formTitle: 'Gastausweis erstellen', guestName: 'Gastname', guestEmail: 'Gast-E-Mail', lot: 'Parkplatz', slot: 'Stellplatz', selectLot: 'Parkplatz waehlen', selectSlot: 'Stellplatz waehlen', startTime: 'Startzeit', endTime: 'Endzeit', creating: 'Wird erstellt...', created: 'Gastausweis erstellt', cancelled: 'Gastausweis storniert', cancel: 'Ausweis stornieren', passCreated: 'Gastausweis erstellt', shareInstructions: 'Teilen Sie diesen Ausweis mit Ihrem Gast', dateRange: 'Datum & Zeit', code: 'Zugangscode', codeCopied: 'Code in Zwischenablage kopiert', share: 'Teilen', shareTitle: 'Gast-Parkausweis', shareText: 'Hier ist Ihr Gast-Parkausweis fuer {{name}}. Zugangscode: {{code}}', linkCopied: 'Link in Zwischenablage kopiert', requiredFields: 'Bitte alle Pflichtfelder ausfuellen', status: { active: 'Aktiv', expired: 'Abgelaufen', cancelled: 'Storniert' } },
-    swap: { title: 'Tausch-Anfragen', subtitle: 'Parkplatz-Tausch anfragen und verwalten', create: 'Neuer Tausch', createTitle: 'Tausch-Anfrage erstellen', empty: 'Noch keine Tausch-Anfragen', emptyHint: 'Erstellen Sie eine Tausch-Anfrage, um Stellplaetze mit Kollegen zu tauschen', yourSlot: 'Ihr Stellplatz', theirSlot: 'Deren Stellplatz', yourBooking: 'Ihre Buchung', selectBooking: 'Buchung waehlen', targetBookingId: 'Ziel-Buchungs-ID', targetPlaceholder: 'Buchungs-ID zum Tauschen eingeben', messageLabel: 'Nachricht', messagePlaceholder: 'Optionale Nachricht fuer die andere Partei', send: 'Anfrage senden', created: 'Tausch-Anfrage gesendet', accepted: 'Tausch-Anfrage akzeptiert', declined: 'Tausch-Anfrage abgelehnt', accept: 'Akzeptieren', decline: 'Ablehnen', status: { pending: 'Ausstehend', accepted: 'Akzeptiert', declined: 'Abgelehnt' } },
+    guestBooking: { eyebrow: 'GAST-CODES', title: 'Gastausweis', subtitle: 'Gast-Parkausweise erstellen und verwalten', create: 'Neuer Gastausweis', existing: 'Gastausweise', empty: 'Noch keine Gastausweise', formTitle: 'Gastausweis erstellen', guestName: 'Gastname', guestEmail: 'Gast-E-Mail', lot: 'Parkplatz', slot: 'Stellplatz', selectLot: 'Parkplatz waehlen', selectSlot: 'Stellplatz waehlen', startTime: 'Startzeit', endTime: 'Endzeit', creating: 'Wird erstellt...', created: 'Gastausweis erstellt', cancelled: 'Gastausweis storniert', cancel: 'Ausweis stornieren', passCreated: 'Gastausweis erstellt', shareInstructions: 'Teilen Sie diesen Ausweis mit Ihrem Gast', dateRange: 'Datum & Zeit', code: 'Zugangscode', codeCopied: 'Code in Zwischenablage kopiert', share: 'Teilen', shareTitle: 'Gast-Parkausweis', shareText: 'Hier ist Ihr Gast-Parkausweis fuer {{name}}. Zugangscode: {{code}}', linkCopied: 'Link in Zwischenablage kopiert', requiredFields: 'Bitte alle Pflichtfelder ausfuellen', status: { active: 'Aktiv', expired: 'Abgelaufen', cancelled: 'Storniert' } },
+    swap: { eyebrow: 'TAUSCH-ANGEBOTE', title: 'Tausch-Anfragen', subtitle: 'Parkplatz-Tausch anfragen und verwalten', create: 'Neuer Tausch', createTitle: 'Tausch-Anfrage erstellen', empty: 'Noch keine Tausch-Anfragen', emptyHint: 'Erstellen Sie eine Tausch-Anfrage, um Stellplaetze mit Kollegen zu tauschen', yourSlot: 'Ihr Stellplatz', theirSlot: 'Deren Stellplatz', yourBooking: 'Ihre Buchung', selectBooking: 'Buchung waehlen', targetBookingId: 'Ziel-Buchungs-ID', targetPlaceholder: 'Buchungs-ID zum Tauschen eingeben', messageLabel: 'Nachricht', messagePlaceholder: 'Optionale Nachricht fuer die andere Partei', send: 'Anfrage senden', created: 'Tausch-Anfrage gesendet', accepted: 'Tausch-Anfrage akzeptiert', declined: 'Tausch-Anfrage abgelehnt', accept: 'Akzeptieren', decline: 'Ablehnen', status: { pending: 'Ausstehend', accepted: 'Akzeptiert', declined: 'Abgelehnt' } },
     webhookDashboard: { title: "Webhook-Zustellungen", subtitle: "Webhook-Zustellungsleistung ueberwachen", help: "Verfolgen Sie Webhook-Zustellungsverlauf, Erfolgsraten, Antwortzeiten und wiederholen Sie fehlgeschlagene Zustellungen.", helpLabel: "Hilfe", deliveryTimeline: "Zustellungszeitlinie", successRate: "Erfolgsrate", avgResponseTime: "Durchschn. Antwortzeit", topErrors: "Haeufigste Fehler", replay: "Wiederholen", replaying: "Wiederholen...", replayed: "Zustellung wiederholt", replayFailed: "Wiederholung fehlgeschlagen", noDeliveries: "Noch keine Zustellungen", stats: "Statistiken", totalDeliveries: "Zustellungen gesamt", successCount: "Erfolgreich", failureCount: "Fehlgeschlagen", responseTime: "{{ms}}ms", statusCode: "Status {{code}}" },
         tour: {
         back: 'Zurück',
