@@ -562,8 +562,6 @@ describe('CalendarPage', () => {
     const now = new Date();
     const testDate = new Date(now.getFullYear(), now.getMonth(), 10);
     const isoKey = testDate.toISOString().slice(0, 10);
-    const targetDate = new Date(now.getFullYear(), now.getMonth(), 20);
-    const targetIso = targetDate.toISOString().slice(0, 10);
     mockCalendarEvents.mockResolvedValue({
       success: true,
       data: [{

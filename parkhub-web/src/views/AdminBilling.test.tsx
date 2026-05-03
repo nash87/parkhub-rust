@@ -134,7 +134,6 @@ describe('AdminBillingPage', () => {
   });
 
   it('handles CSV export click', async () => {
-    const mockBlob = new Blob(['csv data'], { type: 'text/csv' });
     const createObjectURL = vi.fn(() => 'blob:test');
     const revokeObjectURL = vi.fn();
     Object.defineProperty(URL, 'createObjectURL', { value: createObjectURL, writable: true });

@@ -245,11 +245,11 @@ export function TeamLeaderboardPage() {
         <motion.div variants={fadeUp} className="glass-card p-6" data-testid="podium">
           <div className="flex items-end justify-center gap-4 h-40">
             {/* 2nd place */}
-            <PodiumSlot entry={podiumEntries.second} rank={2} height="h-24" t={t} />
+            <PodiumSlot entry={podiumEntries.second} rank={2} height="h-24" />
             {/* 1st place */}
-            <PodiumSlot entry={podiumEntries.first} rank={1} height="h-32" t={t} />
+            <PodiumSlot entry={podiumEntries.first} rank={1} height="h-32" />
             {/* 3rd place */}
-            <PodiumSlot entry={podiumEntries.third} rank={3} height="h-20" t={t} />
+            <PodiumSlot entry={podiumEntries.third} rank={3} height="h-20" />
           </div>
         </motion.div>
       )}
@@ -314,11 +314,10 @@ export function TeamLeaderboardPage() {
   );
 }
 
-function PodiumSlot({ entry, rank, height, t }: {
+function PodiumSlot({ entry, rank, height }: {
   entry: LeaderboardEntry;
   rank: number;
   height: string;
-  t: TFunction;
 }) {
   return (
     <div className="flex flex-col items-center w-24" data-testid={`podium-${rank}`}>

@@ -104,7 +104,7 @@ export function AdminFeaturesPage() {
       </motion.div>
 
       {/* Feature toggles by category */}
-      {grouped.map(({ category, modules }, gi) => (
+      {grouped.map(({ category, modules }) => (
         <motion.div
           key={category}
           variants={item}

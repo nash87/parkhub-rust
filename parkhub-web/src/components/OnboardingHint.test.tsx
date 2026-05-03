@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 // ── Mocks ──
 
@@ -168,7 +167,7 @@ describe('resetAllHints', () => {
       'parkhub_hint_b': '1',
       'other_key': 'keep',
     };
-    const removeSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key: string) => { delete store[key]; });
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation((key: string) => { delete store[key]; });
     vi.spyOn(Object, 'keys').mockReturnValueOnce(Object.keys(store));
     // We need to mock localStorage properly
     Object.defineProperty(window, 'localStorage', {

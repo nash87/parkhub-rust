@@ -194,7 +194,7 @@ export function VehiclesPage() {
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {vehicles.map((v, i) => {
+          {vehicles.map((v) => {
             const colorClass = v.color ? (colorBgMap[v.color] || 'bg-surface-400') : 'bg-surface-400';
             return (
               <motion.div key={v.id} variants={item} className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 p-5">

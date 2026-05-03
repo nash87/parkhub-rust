@@ -16,21 +16,12 @@ interface ShareLink {
   view_count: number;
 }
 
-interface InviteResponse {
-  invite_id: string;
-  booking_id: string;
-  email: string;
-  sent_at: string;
-  share_url: string;
-}
-
 interface BookingSharingProps {
   bookingId: string;
-  bookingLabel?: string;
   onClose?: () => void;
 }
 
-export function BookingSharingModal({ bookingId, bookingLabel, onClose }: BookingSharingProps) {
+export function BookingSharingModal({ bookingId, onClose }: BookingSharingProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'link' | 'invite'>('link');
   const [shareLink, setShareLink] = useState<ShareLink | null>(null);

@@ -2,12 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-interface WizardStep {
-  step: number;
-  name: string;
-  completed: boolean;
-}
-
 const THEMES = [
   { id: 'classic', label: 'Classic', color: 'bg-blue-600' },
   { id: 'glass', label: 'Glass', color: 'bg-sky-400/60' },
