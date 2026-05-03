@@ -10,7 +10,7 @@
 //!   no wall-clock reads. Use redactions (`{".field" => "[redacted]"}`)
 //!   for fields that are stable-shaped but non-stable-valued.
 //! - **Use the smallest stable surface.** Snapshot envelope/metadata,
-//!   not full payloads — a 4000-line OpenAPI spec would churn constantly.
+//!   not full payloads — a 4000-line `OpenAPI` spec would churn constantly.
 //! - **Review snapshot diffs with `cargo insta review` locally** before
 //!   committing. `.snap` files are committed; `.snap.new` is gitignored.
 //!
@@ -44,7 +44,7 @@ async fn snap_system_version_shape() {
     });
 }
 
-/// OpenAPI document metadata shape — title, openapi version, info.license.
+/// `OpenAPI` document metadata shape — title, openapi version, info.license.
 /// We only snapshot the envelope so the snapshot doesn't churn every time
 /// a handler is added. The raw spec is tested separately by openapi-drift.
 #[tokio::test]

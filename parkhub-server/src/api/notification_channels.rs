@@ -1,4 +1,4 @@
-//! Notification channel stubs: SMS and WhatsApp.
+//! Notification channel stubs: SMS and `WhatsApp`.
 //!
 //! These are stub implementations that log the notification instead of
 //! actually sending it. They validate and store preferences, and when
@@ -70,7 +70,7 @@ fn send_sms_stub(phone: &str, user_id: &str, booking_id: &str, event: Notificati
     );
 }
 
-/// Stub: logs "would send WhatsApp" with the phone number and event details.
+/// Stub: logs "would send `WhatsApp`" with the phone number and event details.
 fn send_whatsapp_stub(phone: &str, user_id: &str, booking_id: &str, event: NotificationEvent) {
     info!(
         channel = "whatsapp",
