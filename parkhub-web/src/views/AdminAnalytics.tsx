@@ -186,7 +186,7 @@ export function AdminAnalyticsPage() {
             <StatCard icon={CalendarBlankIcon} label="Total Bookings" value={String(data.total_bookings)} sub={`Last ${range} days`} />
             <StatCard icon={CurrencyDollarIcon} label="Total Revenue" value={`${data.total_revenue.toFixed(2)}`} sub={`Last ${range} days`} />
             <StatCard icon={ClockIcon} label="Avg Duration" value={`${Math.round(data.avg_booking_duration_minutes)} min`} />
-            <StatCard icon={UsersIcon} label="Active UsersIcon" value={String(data.active_users)} sub="With bookings in period" />
+            <StatCard icon={UsersIcon} label="Active Users" value={String(data.active_users)} sub="With bookings in period" />
           </div>
 
           {/* Charts row */}

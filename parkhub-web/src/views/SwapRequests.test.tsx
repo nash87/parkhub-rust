@@ -133,7 +133,8 @@ describe('SwapRequestsPage', () => {
 
   it('refresh button', async () => {
     render(<SwapRequestsPage />);
-    await waitFor(() => fireEvent.click(screen.getByText('common.refresh')));
+    // The refresh button is icon-only; assert via aria-label, not visible text.
+    await waitFor(() => fireEvent.click(screen.getByLabelText('common.refresh')));
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
   });
 
