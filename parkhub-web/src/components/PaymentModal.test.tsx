@@ -18,12 +18,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CreditCard: (p: any) => <span data-testid="icon-cc" {...p} />,
-  X: (p: any) => <span data-testid="icon-x" {...p} />,
-  Lock: (p: any) => <span data-testid="icon-lock" {...p} />,
-  SpinnerGap: (p: any) => <span data-testid="icon-spinner" {...p} />,
-  CheckCircle: (p: any) => <span data-testid="icon-check" {...p} />,
-  WarningCircle: (p: any) => <span data-testid="icon-warning" {...p} />,
+  CreditCardIcon: (p: any) => <span data-testid="icon-cc" {...p} />,
+  XIcon: (p: any) => <span data-testid="icon-x" {...p} />,
+  LockIcon: (p: any) => <span data-testid="icon-lock" {...p} />,
+  SpinnerGapIcon: (p: any) => <span data-testid="icon-spinner" {...p} />,
+  CheckCircleIcon: (p: any) => <span data-testid="icon-check" {...p} />,
+  WarningCircleIcon: (p: any) => <span data-testid="icon-warning" {...p} />,
 }));
 
 import { PaymentModal } from './PaymentModal';

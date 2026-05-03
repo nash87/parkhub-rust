@@ -10,13 +10,13 @@ vi.mock('../api/client', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ChartBar: (p: any) => <span {...p} />,
-  TrendUp: (p: any) => <span {...p} />,
-  Users: (p: any) => <span {...p} />,
-  Clock: (p: any) => <span {...p} />,
-  CurrencyDollar: (p: any) => <span {...p} />,
-  Export: (p: any) => <span {...p} />,
-  CalendarBlank: (p: any) => <span {...p} />,
+  ChartBarIcon: (p: any) => <span {...p} />,
+  TrendUpIcon: (p: any) => <span {...p} />,
+  UsersIcon: (p: any) => <span {...p} />,
+  ClockIcon: (p: any) => <span {...p} />,
+  CurrencyDollarIcon: (p: any) => <span {...p} />,
+  ExportIcon: (p: any) => <span {...p} />,
+  CalendarBlankIcon: (p: any) => <span {...p} />,
 }));
 
 import { AdminAnalyticsPage } from './AdminAnalytics';

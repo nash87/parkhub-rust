@@ -10,7 +10,7 @@ vi.mock('framer-motion', () => ({
 }));
 vi.mock('@phosphor-icons/react', () => {
   const C = (p: any) => <span {...p} />;
-  return { Clock: C, Plus: C, Trash: C, PaperPlaneTilt: C, Question: C, Pencil: C, ToggleLeft: C, ToggleRight: C };
+  return { ClockIcon: C, PlusIcon: C, TrashIcon: C, PaperPlaneTiltIcon: C, QuestionIcon: C, PencilIcon: C, ToggleLeftIcon: C, ToggleRightIcon: C };
 });
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 

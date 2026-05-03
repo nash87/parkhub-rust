@@ -24,7 +24,7 @@ vi.mock('framer-motion', () => ({
 }));
 vi.mock('@phosphor-icons/react', () => {
   const C = (p: any) => <span {...p} />;
-  return { Megaphone: C, Plus: C, PencilSimple: C, Trash: C, SpinnerGap: C, Check: C, X: C, Info: C, Warning: C, WarningCircle: C, CheckCircle: C, Clock: C };
+  return { MegaphoneIcon: C, PlusIcon: C, PencilSimpleIcon: C, TrashIcon: C, SpinnerGapIcon: C, CheckIcon: C, XIcon: C, InfoIcon: C, WarningIcon: C, WarningCircleIcon: C, CheckCircleIcon: C, ClockIcon: C };
 });
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../components/ui/ConfirmDialog', () => ({
