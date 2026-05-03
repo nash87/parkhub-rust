@@ -12,7 +12,7 @@ const loginSchema = z.object({
 
 const registerSchema = z.object({
   name: z.string().min(1, 'Required'),
-  email: z.string().email('Invalid email'),
+  email: z.email('Invalid email'),
   password: z
     .string()
     .min(8, '8+ characters')
