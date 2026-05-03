@@ -22,7 +22,7 @@ interface AnalyticsData {
 
 type DateRange = '7' | '30' | '90' | '365';
 
-function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: string; sub?: string }) {
+function StatCard({ icon: Icon, label, value, sub }: { icon: React.ComponentType<{ weight?: 'fill' | 'regular' | 'bold' | 'duotone' | 'thin' | 'light'; className?: string }>; label: string; value: string; sub?: string }) {
   return (
     <div className="bg-white dark:bg-surface-900 rounded-xl p-5 border border-surface-200 dark:border-surface-800 shadow-sm">
       <div className="flex items-center gap-3 mb-2">
@@ -101,7 +101,7 @@ export function AdminAnalyticsPage() {
 
   useEffect(() => {
     setLoading(true);
-    const base = (import.meta as any).env?.VITE_API_URL || '';
+    const base = (import.meta as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL || '';
     const token = getInMemoryToken();
     const headers: Record<string, string> = {
       Accept: 'application/json',

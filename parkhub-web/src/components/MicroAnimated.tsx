@@ -23,7 +23,12 @@ export function MicroAnimated({ children, noHover, noPress, ...rest }: Props) {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   if (!isEnabled('micro_animations') || prefersReducedMotion) {
-    return <div {...(rest as any)}>{children}</div>;
+    // Framer-only props (whileHover/whileTap) are already Omit'd from
+    // Props above. The remaining `initial/animate/transition/etc.` get
+    // string-coerced and silently ignored on a real div, which is
+    // acceptable. We assert HTMLAttributes<HTMLDivElement> rather than
+    // `any` to keep the tooling honest about the contract.
+    return <div {...(rest as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>;
   }
 
   return (
