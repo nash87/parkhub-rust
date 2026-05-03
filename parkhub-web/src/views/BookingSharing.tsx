@@ -140,6 +140,7 @@ export function BookingSharingModal({ bookingId, onClose }: BookingSharingProps)
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700"
+              aria-label={t('common.close', 'Close')}
               data-testid="sharing-close-btn"
             >
               <XIcon size={16} />

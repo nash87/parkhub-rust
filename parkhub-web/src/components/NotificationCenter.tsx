@@ -161,7 +161,7 @@ export function NotificationCenter() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200 dark:border-surface-700">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-surface-900 dark:text-white">{t('notificationCenter.title')}</h3>
-                <button onClick={() => setShowHelp(h => !h)} className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300" title={t('notificationCenter.helpLabel')}>
+                <button onClick={() => setShowHelp(h => !h)} className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300" aria-label={t('notificationCenter.helpLabel')} title={t('notificationCenter.helpLabel')}>
                   <QuestionIcon weight="bold" className="w-4 h-4" />
                 </button>
               </div>

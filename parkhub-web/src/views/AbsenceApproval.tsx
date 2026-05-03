@@ -237,7 +237,7 @@ export function AbsenceApprovalPage() {
           <h1 className="text-2xl font-bold text-surface-900 dark:text-surface-100">{t('absenceApproval.title')}</h1>
           <p className="text-surface-500 dark:text-surface-400 text-sm">{t('absenceApproval.subtitle')}</p>
         </div>
-        <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500" title={t('absenceApproval.helpLabel')}>
+        <button onClick={() => setShowHelp(!showHelp)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-500" aria-label={t('absenceApproval.helpLabel')} title={t('absenceApproval.helpLabel')}>
           <QuestionIcon size={20} />
         </button>
       </div>
