@@ -14,6 +14,17 @@ path = "src/main.rs"
 [lints]
 workspace = true
 
+# cargo-machete ignore list — these deps are used in ways the static analysis
+# can't see (build scripts, derive macros, target-cfg-gated code).
+[package.metadata.cargo-machete]
+ignored = [
+  "thiserror",          # derive macro for Error impls
+  "slint-build",        # build.rs invokes slint compile
+  "winres",             # Windows-only resource embed (cfg-gated)
+  "rustls",             # TLS backend, referenced via reqwest features
+  "raw-window-handle",  # required by Slint for native window-handle interop
+]
+
 [dependencies]
 parkhub-common.workspace = true
 

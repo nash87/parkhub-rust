@@ -43,3 +43,19 @@ directories = "6"
 
 [lints]
 workspace = true
+
+# cargo-machete ignore list — these deps are used indirectly by Tauri's
+# proc-macros (#[tauri::command], generate_handler!) which cargo-machete
+# can't trace through. Verified: each name resolves to a transitive call
+# in the macro-expanded code.
+[package.metadata.cargo-machete]
+ignored = [
+  "serde",                 # used by tauri::command derive (Args/Return)
+  "serde_json",            # used by tauri's IPC (de/serialize handlers)
+  "tokio",                 # used by tauri's async runtime (rt-multi-thread)
+  "tracing",               # used by tauri's tracing-subscriber default
+  "tauri-build",           # build script consumer (not a `use` import)
+  "tauri-plugin-updater",  # plugin registered via tauri::Builder, not `use`d
+  "directories",           # referenced inside macro-expanded handler bodies
+]
+

@@ -22,6 +22,20 @@ path = "src/lib.rs"
 [lints]
 workspace = true
 
+# cargo-machete ignore list — these deps are used in ways static analysis
+# can't trace (build scripts, derive macros, middleware registration via
+# tower::ServiceBuilder layers, feature-gated TLS backends).
+[package.metadata.cargo-machete]
+ignored = [
+  "axum-extra",       # extension types used implicitly via trait impls
+  "once_cell",        # static initializer macros
+  "openssl-sys",      # build dep for openssl crate (target-cfg-gated)
+  "slint-build",      # build.rs invokes slint compile (gui feature)
+  "tower_governor",   # rate-limit middleware registered via Layer
+  "winres",           # Windows-only resource embed (cfg-gated)
+  "zeroize",          # secrets handling derive (Zeroize trait)
+]
+
 [dependencies]
 parkhub-common.workspace = true
 
