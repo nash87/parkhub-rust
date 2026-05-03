@@ -178,3 +178,172 @@ proptest! {
         prop_assert!(b.overlaps(&b));
     }
 }
+
+// ── Boundary / adversarial expansions ──────────────────────────────────────
+//
+// The properties above cover the "happy path" of each validator. The block
+// below targets boundary conditions and adversarial inputs that have
+// historically harbored off-by-one bugs (string length cutoffs, empty
+// segments, sign edge cases, half-open vs closed ranges).
+
+// ── is_valid_email — adversarial ───────────────────────────────────────────
+
+proptest! {
+    /// No matter what valid-looking content surrounds it, an address
+    /// without a single `@` must be rejected. Catches accidental
+    /// short-circuits in the split-once branch.
+    #[test]
+    fn email_without_at_sign_rejected(s in "[a-z0-9.-]{1,80}") {
+        prop_assume!(!s.contains('@'));
+        prop_assert!(!is_valid_email(&s));
+    }
+
+    /// Any address whose total byte length exceeds 254 must be
+    /// rejected, regardless of the otherwise-valid shape.
+    #[test]
+    fn email_over_254_bytes_rejected(local_len in 250usize..=400) {
+        let local: String = "a".repeat(local_len);
+        let candidate = format!("{local}@example.com");
+        prop_assume!(candidate.len() > 254);
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// Local parts containing a `..` run must always be rejected,
+    /// regardless of position or surrounding characters. This is
+    /// the property that prevents `a..b@c.com` from leaking.
+    #[test]
+    fn email_consecutive_dots_in_local_rejected(
+        prefix in "[a-z]{1,8}",
+        suffix in "[a-z]{1,8}",
+    ) {
+        let candidate = format!("{prefix}..{suffix}@example.com");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+
+    /// Single-letter TLDs are not valid (RFC 5321 / ICANN minimum is 2).
+    /// This property would catch a regression where the TLD length
+    /// guard is dropped or weakened.
+    #[test]
+    fn email_single_letter_tld_rejected(
+        local in "[a-z][a-z0-9]{0,16}",
+        domain in "[a-z][a-z0-9-]{0,16}",
+        tld in "[a-z]",
+    ) {
+        let candidate = format!("{local}@{domain}.{tld}");
+        prop_assert!(!is_valid_email(&candidate));
+    }
+}
+
+// ── is_valid_e164_phone — boundaries ──────────────────────────────────────
+
+proptest! {
+    /// Numbers with fewer than 8 digits after `+` must be rejected.
+    /// Triangulates the `len < 8` boundary.
+    #[test]
+    fn phone_under_8_digits_rejected(
+        first in 1u8..=9,
+        rest_len in 0usize..7,
+    ) {
+        let mut buf = format!("+{}", char::from(b'0' + first));
+        for _ in 0..rest_len {
+            buf.push('5');
+        }
+        prop_assert!(!is_valid_e164_phone(&buf));
+    }
+
+    /// Numbers with 16+ digits after `+` must be rejected.
+    /// Triangulates the `len > 15` boundary.
+    #[test]
+    fn phone_over_15_digits_rejected(
+        first in 1u8..=9,
+        rest_len in 15usize..=64,
+    ) {
+        let mut buf = format!("+{}", char::from(b'0' + first));
+        for _ in 0..rest_len {
+            buf.push('5');
+        }
+        prop_assert!(!is_valid_e164_phone(&buf));
+    }
+
+    /// `+0…` is always rejected — country codes never start with 0
+    /// in E.164, even when the remaining digits would otherwise pass.
+    #[test]
+    fn phone_leading_zero_always_rejected(rest_len in 7usize..=14) {
+        let mut buf = String::from("+0");
+        for _ in 0..rest_len {
+            buf.push('5');
+        }
+        prop_assert!(!is_valid_e164_phone(&buf));
+    }
+}
+
+// ── is_valid_booking_duration — out-of-bounds ─────────────────────────────
+
+proptest! {
+    /// Anything strictly below `MIN_BOOKING_MINUTES` must be rejected,
+    /// including the entire negative range.
+    #[test]
+    fn booking_below_min_always_rejected(minutes in i32::MIN..MIN_BOOKING_MINUTES) {
+        prop_assert!(!is_valid_booking_duration(minutes));
+    }
+
+    /// Anything strictly above `MAX_BOOKING_MINUTES` must be rejected,
+    /// including very large positive values that should not panic.
+    #[test]
+    fn booking_above_max_always_rejected(minutes in (MAX_BOOKING_MINUTES + 1)..=i32::MAX) {
+        prop_assert!(!is_valid_booking_duration(minutes));
+    }
+}
+
+// ── TimeRange — half-open + degeneracy ────────────────────────────────────
+
+proptest! {
+    /// `TimeRange::new(t, t)` must always return `None`. The degenerate
+    /// case is the canonical off-by-one trap (`<` vs `<=`).
+    #[test]
+    fn time_range_new_degenerate_rejected(t in arb_utc_datetime()) {
+        prop_assert!(TimeRange::new(t, t).is_none());
+    }
+
+    /// `TimeRange::new(end, start)` with `start < end` must always
+    /// return `None`. Catches an accidentally swapped comparison.
+    #[test]
+    fn time_range_new_reversed_rejected(
+        start in arb_utc_datetime(),
+        delta_secs in 1i64..=(365 * 24 * 60 * 60),
+    ) {
+        let end = start + Duration::seconds(delta_secs);
+        prop_assert!(TimeRange::new(end, start).is_none());
+    }
+
+    /// Two ranges that meet at a single instant (`end_a == start_b`)
+    /// must NOT overlap — the half-open `[start, end)` semantics make
+    /// the boundary instant belong to `b` only. This guards the
+    /// `<` vs `<=` decision in `overlaps`.
+    #[test]
+    fn time_range_touching_does_not_overlap(
+        start_a in arb_utc_datetime(),
+        delta_a in 1i64..=86_400,
+        delta_b in 1i64..=86_400,
+    ) {
+        let mid = start_a + Duration::seconds(delta_a);
+        let end_b = mid + Duration::seconds(delta_b);
+        let a = TimeRange::new(start_a, mid).unwrap();
+        let b = TimeRange::new(mid, end_b).unwrap();
+        prop_assert!(!a.overlaps(&b));
+        prop_assert!(!b.overlaps(&a));
+    }
+
+    /// `duration()` must equal `end - start` exactly for every range
+    /// constructed via `new`. Catches accidental sign or order flips.
+    #[test]
+    fn time_range_duration_matches_subtraction(
+        start in arb_utc_datetime(),
+        delta_secs in 1i64..=(365 * 24 * 60 * 60),
+    ) {
+        let end = start + Duration::seconds(delta_secs);
+        let range = TimeRange::new(start, end).unwrap();
+        prop_assert_eq!(range.duration(), end - start);
+        prop_assert_eq!(range.duration(), Duration::seconds(delta_secs));
+    }
+}
