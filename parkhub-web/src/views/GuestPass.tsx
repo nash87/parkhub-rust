@@ -203,20 +203,24 @@ export function GuestPassPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6" data-testid="guest-pass-page">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <UserPlus weight="duotone" className="w-7 h-7 text-primary-500" />
-            {t('guestBooking.title')}
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('guestBooking.subtitle')}</p>
+      {/* v11 SOTA hero — primary tone, page-hero variant. Create button in hero-actions. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <UserPlus weight="bold" className="w-3.5 h-3.5" />
+            {t('guestBooking.eyebrow', 'GUEST CODES')}
+          </div>
+          <h1 className="admin-hero-headline">{t('guestBooking.title')}</h1>
+          <p className="admin-hero-sub">{t('guestBooking.subtitle')}</p>
         </div>
-        <button onClick={() => { setShowForm(true); setCreatedPass(null); }} className="btn btn-primary flex items-center gap-2" data-testid="create-guest-btn">
-          <UserPlus weight="bold" className="w-4 h-4" />
-          {t('guestBooking.create')}
-        </button>
-      </div>
+        <div className="admin-hero-actions">
+          <button onClick={() => { setShowForm(true); setCreatedPass(null); }} className="admin-hero-action" data-testid="create-guest-btn">
+            <UserPlus weight="bold" className="w-4 h-4" />
+            {t('guestBooking.create')}
+          </button>
+        </div>
+      </section>
 
       {/* Created pass card */}
       <AnimatePresence>

@@ -123,21 +123,26 @@ export function EVChargingPage() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-2">
-            <Lightning weight="duotone" className="w-7 h-7 text-yellow-500" />
-            {t('evCharging.title')}
-            <button onClick={() => setShowHelp(!showHelp)} className="text-surface-400 hover:text-primary-500" aria-label="Help">
-              <Question weight="fill" className="w-5 h-5" />
-            </button>
-          </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('evCharging.subtitle')}</p>
+      {/* v11 SOTA hero — primary tone, page-hero variant. Help + lot-select live in admin-hero-actions. */}
+      <section className="admin-hero page-hero">
+        <div className="admin-hero-left">
+          <div className="admin-hero-eyebrow">
+            <span className="admin-hero-dot" aria-hidden="true"></span>
+            <Lightning weight="bold" className="w-3.5 h-3.5" />
+            {t('evCharging.eyebrow', 'CHARGING SESSIONS')}
+          </div>
+          <h1 className="admin-hero-headline">{t('evCharging.title')}</h1>
+          <p className="admin-hero-sub">{t('evCharging.subtitle')}</p>
         </div>
-        <select value={selectedLot} onChange={e => setSelectedLot(e.target.value)} className="rounded-xl bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 px-3 py-2 text-sm">
-          {lots.map(lot => <option key={lot.id} value={lot.id}>{lot.name}</option>)}
-        </select>
-      </div>
+        <div className="admin-hero-actions">
+          <button onClick={() => setShowHelp(!showHelp)} className="admin-hero-iconbtn" aria-label="Help" title="Help">
+            <Question className="w-4 h-4" />
+          </button>
+          <select value={selectedLot} onChange={e => setSelectedLot(e.target.value)} className="rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 px-3 py-1.5 text-sm">
+            {lots.map(lot => <option key={lot.id} value={lot.id}>{lot.name}</option>)}
+          </select>
+        </div>
+      </section>
 
       {showHelp && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4 text-sm text-yellow-700 dark:text-yellow-300">
