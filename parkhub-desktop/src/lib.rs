@@ -1,9 +1,9 @@
-//! ParkHub Desktop — Tauri 2 shell.
+//! `ParkHub` Desktop — Tauri 2 shell.
 //!
-//! Wraps the parkhub-web frontend (React 19 + Astro 6 + Tailwind 4) inside a
-//! native window via Tauri's system-WebView backend (WKWebView on macOS,
-//! WebView2 on Windows, WebKitGTK on Linux). Backend-agnostic: the user
-//! configures a ParkHub server URL (Rust or Laravel edition) on first run;
+//! Wraps the `parkhub-web` frontend (React 19 + Astro 6 + Tailwind 4) inside a
+//! native window via Tauri's system-`WebView` backend (`WKWebView` on macOS,
+//! `WebView2` on Windows, `WebKitGTK` on Linux). Backend-agnostic: the user
+//! configures a `ParkHub` server URL (Rust or Laravel edition) on first run;
 //! everything else is the same HTTP/WebSocket contract the web UI already
 //! speaks.
 //!
@@ -12,12 +12,12 @@
 //!    arrive for free via Tauri 2's mobile targets).
 //!  - MIT licensed — no commercial royalty question.
 //!  - ~8 MB bundle per platform vs Electron's ~80 MB.
-//!  - System WebView is security-patched by the OS, not by us.
+//!  - System `WebView` is security-patched by the OS, not by us.
 //!
 //! The Slint `parkhub-client` crate stays alongside this one permanently
 //! — two distinct desktop experiences sharing the same backend contract.
-//! parkhub-client is the pure-Rust GPU-native option; parkhub-desktop is
-//! the web-UI-parity option. See parkhub-desktop/README.md for the
+//! `parkhub-client` is the pure-Rust GPU-native option; `parkhub-desktop` is
+//! the web-UI-parity option. See `parkhub-desktop/README.md` for the
 //! side-by-side comparison.
 
 use tauri::Manager;
