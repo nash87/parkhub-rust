@@ -25,11 +25,11 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Users: (props: any) => <span data-testid="icon-users" {...props} />,
-  Buildings: (props: any) => <span data-testid="icon-buildings" {...props} />,
-  CalendarCheck: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  UsersIcon: (props: any) => <span data-testid="icon-users" {...props} />,
+  BuildingsIcon: (props: any) => <span data-testid="icon-buildings" {...props} />,
+  CalendarCheckIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
 }));
 
 vi.mock('../components/SimpleChart', () => ({

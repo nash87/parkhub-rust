@@ -28,12 +28,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  CalendarPlus: (props: any) => <span data-testid="icon-cal-plus" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  CoinVertical: (props: any) => <span data-testid="icon-coin" {...props} />,
-  CalendarCheck: (props: any) => <span data-testid="icon-cal-check" {...props} />,
+  PlusIcon: (props: any) => <span data-testid="icon-plus" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  CalendarPlusIcon: (props: any) => <span data-testid="icon-cal-plus" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  CoinVerticalIcon: (props: any) => <span data-testid="icon-coin" {...props} />,
+  CalendarCheckIcon: (props: any) => <span data-testid="icon-cal-check" {...props} />,
 }));
 
 vi.mock('react-i18next', () => ({

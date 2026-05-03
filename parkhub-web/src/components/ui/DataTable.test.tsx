@@ -13,10 +13,10 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CaretUp: (props: any) => <span data-testid="icon-caret-up" {...props} />,
-  CaretDown: (props: any) => <span data-testid="icon-caret-down" {...props} />,
-  DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
-  FilePdf: (props: any) => <span data-testid="icon-pdf" {...props} />,
+  CaretUpIcon: (props: any) => <span data-testid="icon-caret-up" {...props} />,
+  CaretDownIcon: (props: any) => <span data-testid="icon-caret-down" {...props} />,
+  DownloadSimpleIcon: (props: any) => <span data-testid="icon-download" {...props} />,
+  FilePdfIcon: (props: any) => <span data-testid="icon-pdf" {...props} />,
 }));
 
 const mockPdfDownload = vi.fn();

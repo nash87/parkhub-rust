@@ -59,11 +59,11 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CarSimple: (props: any) => <span data-testid="icon-car" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  ArrowLeft: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
+  CarSimpleIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
 }));
 
 import { RegisterPage } from './Register';

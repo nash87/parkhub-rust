@@ -56,12 +56,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  Star: (props: any) => <span data-testid="icon-star" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  PlusIcon: (props: any) => <span data-testid="icon-plus" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  StarIcon: (props: any) => <span data-testid="icon-star" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({

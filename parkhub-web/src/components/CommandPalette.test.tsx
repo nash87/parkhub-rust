@@ -21,14 +21,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CalendarCheck: (props: any) => <span data-testid="icon-calendar-check" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  UserCircle: (props: any) => <span data-testid="icon-user" {...props} />,
-  Users: (props: any) => <span data-testid="icon-users" {...props} />,
-  GearSix: (props: any) => <span data-testid="icon-gear" {...props} />,
-  Coins: (props: any) => <span data-testid="icon-coins" {...props} />,
-  Calendar: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  CalendarPlus: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
+  CalendarCheckIcon: (props: any) => <span data-testid="icon-calendar-check" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  UserCircleIcon: (props: any) => <span data-testid="icon-user" {...props} />,
+  UsersIcon: (props: any) => <span data-testid="icon-users" {...props} />,
+  GearSixIcon: (props: any) => <span data-testid="icon-gear" {...props} />,
+  CoinsIcon: (props: any) => <span data-testid="icon-coins" {...props} />,
+  CalendarIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  CalendarPlusIcon: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
 }));
 
 import { CommandPalette } from './CommandPalette';

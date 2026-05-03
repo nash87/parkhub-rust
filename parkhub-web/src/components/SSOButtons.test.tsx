@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
 }));
 
 import { SSOButtons } from './SSOButtons';

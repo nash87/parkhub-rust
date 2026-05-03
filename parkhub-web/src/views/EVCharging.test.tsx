@@ -44,12 +44,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
-  Play: (props: any) => <span data-testid="icon-play" {...props} />,
-  Stop: (props: any) => <span data-testid="icon-stop" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  BatteryCharging: (props: any) => <span data-testid="icon-battery" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  PlayIcon: (props: any) => <span data-testid="icon-play" {...props} />,
+  StopIcon: (props: any) => <span data-testid="icon-stop" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  BatteryChargingIcon: (props: any) => <span data-testid="icon-battery" {...props} />,
 }));
 
 vi.mock('../context/AuthContext', () => ({

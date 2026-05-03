@@ -49,15 +49,15 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ShareNetwork: (props: any) => <span data-testid="icon-share" {...props} />,
-  Link: (props: any) => <span data-testid="icon-link" {...props} />,
-  Copy: (props: any) => <span data-testid="icon-copy" {...props} />,
-  Envelope: (props: any) => <span data-testid="icon-envelope" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ShareNetworkIcon: (props: any) => <span data-testid="icon-share" {...props} />,
+  LinkIcon: (props: any) => <span data-testid="icon-link" {...props} />,
+  CopyIcon: (props: any) => <span data-testid="icon-copy" {...props} />,
+  EnvelopeIcon: (props: any) => <span data-testid="icon-envelope" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

@@ -64,15 +64,15 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ClockCounterClockwise: (props: any) => <span data-testid="icon-clock" {...props} />,
-  DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
-  FunnelSimple: (props: any) => <span data-testid="icon-funnel" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
-  FileCsv: (props: any) => <span data-testid="icon-csv" {...props} />,
-  FileDoc: (props: any) => <span data-testid="icon-doc" {...props} />,
-  FileJs: (props: any) => <span data-testid="icon-js" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  CircleNotch: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ClockCounterClockwiseIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  DownloadSimpleIcon: (props: any) => <span data-testid="icon-download" {...props} />,
+  FunnelSimpleIcon: (props: any) => <span data-testid="icon-funnel" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
+  FileCsvIcon: (props: any) => <span data-testid="icon-csv" {...props} />,
+  FileDocIcon: (props: any) => <span data-testid="icon-doc" {...props} />,
+  FileJsIcon: (props: any) => <span data-testid="icon-js" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  CircleNotchIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
 }));
 
 import { AdminAuditLogPage } from './AdminAuditLog';

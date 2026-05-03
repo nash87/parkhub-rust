@@ -40,12 +40,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Sparkle: (props: any) => <span data-testid="icon-sparkle" {...props} />,
-  Brain: (props: any) => <span data-testid="icon-brain" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend" {...props} />,
-  CaretDown: (props: any) => <span data-testid="icon-caret" {...props} />,
+  SparkleIcon: (props: any) => <span data-testid="icon-sparkle" {...props} />,
+  BrainIcon: (props: any) => <span data-testid="icon-brain" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend" {...props} />,
+  CaretDownIcon: (props: any) => <span data-testid="icon-caret" {...props} />,
 }));
 
 vi.mock('../constants/animations', () => ({

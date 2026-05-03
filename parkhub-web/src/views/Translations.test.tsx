@@ -40,16 +40,16 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
-  ThumbsUp: (props: any) => <span data-testid="icon-thumbs-up" {...props} />,
-  ThumbsDown: (props: any) => <span data-testid="icon-thumbs-down" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  PaperPlaneTilt: (props: any) => <span data-testid="icon-send" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  ChatCircleDots: (props: any) => <span data-testid="icon-chat" {...props} />,
+  TranslateIcon: (props: any) => <span data-testid="icon-translate" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
+  ThumbsUpIcon: (props: any) => <span data-testid="icon-thumbs-up" {...props} />,
+  ThumbsDownIcon: (props: any) => <span data-testid="icon-thumbs-down" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  PaperPlaneTiltIcon: (props: any) => <span data-testid="icon-send" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  ChatCircleDotsIcon: (props: any) => <span data-testid="icon-chat" {...props} />,
 }));
 
 vi.mock('react-i18next', () => ({

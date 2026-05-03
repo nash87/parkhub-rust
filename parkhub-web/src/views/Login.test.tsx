@@ -71,15 +71,15 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CarSimple: (props: any) => <span data-testid="icon-car" {...props} />,
-  Eye: (props: any) => <span data-testid="icon-eye" {...props} />,
-  EyeSlash: (props: any) => <span data-testid="icon-eye-slash" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  ArrowLeft: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
-  Info: (props: any) => <span data-testid="icon-info" {...props} />,
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
-  Globe: (props: any) => <span data-testid="icon-globe" {...props} />,
+  CarSimpleIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  EyeIcon: (props: any) => <span data-testid="icon-eye" {...props} />,
+  EyeSlashIcon: (props: any) => <span data-testid="icon-eye-slash" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
+  InfoIcon: (props: any) => <span data-testid="icon-info" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  GlobeIcon: (props: any) => <span data-testid="icon-globe" {...props} />,
 }));
 
 import { LoginPage } from './Login';

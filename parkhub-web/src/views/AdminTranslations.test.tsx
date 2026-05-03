@@ -34,19 +34,19 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Translate: (props: any) => <span data-testid="icon-translate" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Eye: (props: any) => <span data-testid="icon-eye" {...props} />,
-  ThumbsUp: (props: any) => <span data-testid="icon-thumbs-up" {...props} />,
-  ThumbsDown: (props: any) => <span data-testid="icon-thumbs-down" {...props} />,
-  ChatCircleDots: (props: any) => <span data-testid="icon-chat" {...props} />,
-  ArrowsClockwise: (props: any) => <span data-testid="icon-refresh" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check-circle" {...props} />,
-  XCircle: (props: any) => <span data-testid="icon-x-circle" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
+  TranslateIcon: (props: any) => <span data-testid="icon-translate" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  EyeIcon: (props: any) => <span data-testid="icon-eye" {...props} />,
+  ThumbsUpIcon: (props: any) => <span data-testid="icon-thumbs-up" {...props} />,
+  ThumbsDownIcon: (props: any) => <span data-testid="icon-thumbs-down" {...props} />,
+  ChatCircleDotsIcon: (props: any) => <span data-testid="icon-chat" {...props} />,
+  ArrowsClockwiseIcon: (props: any) => <span data-testid="icon-refresh" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check-circle" {...props} />,
+  XCircleIcon: (props: any) => <span data-testid="icon-x-circle" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
 }));
 
 vi.mock('@tanstack/react-table', () => ({

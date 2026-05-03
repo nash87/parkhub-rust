@@ -38,12 +38,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Wheelchair: (props: any) => <span data-testid="icon-wheelchair" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  ToggleLeft: (props: any) => <span data-testid="icon-toggle-left" {...props} />,
-  ToggleRight: (props: any) => <span data-testid="icon-toggle-right" {...props} />,
-  ChartBar: (props: any) => <span data-testid="icon-chart" {...props} />,
-  Users: (props: any) => <span data-testid="icon-users" {...props} />,
+  WheelchairIcon: (props: any) => <span data-testid="icon-wheelchair" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  ToggleLeftIcon: (props: any) => <span data-testid="icon-toggle-left" {...props} />,
+  ToggleRightIcon: (props: any) => <span data-testid="icon-toggle-right" {...props} />,
+  ChartBarIcon: (props: any) => <span data-testid="icon-chart" {...props} />,
+  UsersIcon: (props: any) => <span data-testid="icon-users" {...props} />,
 }));
 
 import { AdminAccessiblePage } from './AdminAccessible';

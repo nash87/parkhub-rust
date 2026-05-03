@@ -47,10 +47,10 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CarSimple: (props: any) => <span data-testid="icon-car" {...props} />,
-  ArrowLeft: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check-circle" {...props} />,
+  CarSimpleIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check-circle" {...props} />,
 }));
 
 import { ForgotPasswordPage } from './ForgotPassword';

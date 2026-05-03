@@ -60,17 +60,17 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ClockCounterClockwise: (props: any) => <span data-testid="icon-history" {...props} />,
-  Star: (props: any) => <span data-testid="icon-star" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  FunnelSimple: (props: any) => <span data-testid="icon-filter" {...props} />,
-  CaretLeft: (props: any) => <span data-testid="icon-left" {...props} />,
-  CaretRight: (props: any) => <span data-testid="icon-right" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Coins: (props: any) => <span data-testid="icon-coins" {...props} />,
+  ClockCounterClockwiseIcon: (props: any) => <span data-testid="icon-history" {...props} />,
+  StarIcon: (props: any) => <span data-testid="icon-star" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  FunnelSimpleIcon: (props: any) => <span data-testid="icon-filter" {...props} />,
+  CaretLeftIcon: (props: any) => <span data-testid="icon-left" {...props} />,
+  CaretRightIcon: (props: any) => <span data-testid="icon-right" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CoinsIcon: (props: any) => <span data-testid="icon-coins" {...props} />,
 }));
 
 vi.mock('../components/OnboardingHint', () => ({

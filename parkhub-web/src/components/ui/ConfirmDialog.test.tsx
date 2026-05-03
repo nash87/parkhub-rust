@@ -14,7 +14,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 import { ConfirmDialog } from './ConfirmDialog';

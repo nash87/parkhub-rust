@@ -83,18 +83,18 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ArrowLeft: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
-  MapPin: (props: any) => <span data-testid="icon-pin" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
-  Wheelchair: (props: any) => <span data-testid="icon-wheelchair" {...props} />,
-  Motorcycle: (props: any) => <span data-testid="icon-motorcycle" {...props} />,
-  Star: (props: any) => <span data-testid="icon-star" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
-  TrendDown: (props: any) => <span data-testid="icon-trend-down" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
+  MapPinIcon: (props: any) => <span data-testid="icon-pin" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  WheelchairIcon: (props: any) => <span data-testid="icon-wheelchair" {...props} />,
+  MotorcycleIcon: (props: any) => <span data-testid="icon-motorcycle" {...props} />,
+  StarIcon: (props: any) => <span data-testid="icon-star" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  TrendDownIcon: (props: any) => <span data-testid="icon-trend-down" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({

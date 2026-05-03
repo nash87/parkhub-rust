@@ -47,10 +47,10 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Buildings: (props: any) => <span data-testid="icon-buildings" {...props} />,
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  PencilSimple: (props: any) => <span data-testid="icon-pencil" {...props} />,
+  BuildingsIcon: (props: any) => <span data-testid="icon-buildings" {...props} />,
+  PlusIcon: (props: any) => <span data-testid="icon-plus" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  PencilSimpleIcon: (props: any) => <span data-testid="icon-pencil" {...props} />,
 }));
 
 import { AdminTenantsPage } from './AdminTenants';

@@ -37,14 +37,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
-  Download: (props: any) => <span data-testid="icon-download" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  FileText: (props: any) => <span data-testid="icon-filetext" {...props} />,
-  Table: (props: any) => <span data-testid="icon-table" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check" {...props} />,
-  XCircle: (props: any) => <span data-testid="icon-x" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
+  DownloadIcon: (props: any) => <span data-testid="icon-download" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  FileTextIcon: (props: any) => <span data-testid="icon-filetext" {...props} />,
+  TableIcon: (props: any) => <span data-testid="icon-table" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  XCircleIcon: (props: any) => <span data-testid="icon-x" {...props} />,
 }));
 
 const mockToastError = vi.fn();

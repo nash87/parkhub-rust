@@ -100,22 +100,22 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CalendarCheck: (props: any) => <span data-testid="icon-calendar-check" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  Coins: (props: any) => <span data-testid="icon-coins" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  CalendarPlus: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
-  ArrowRight: (props: any) => <span data-testid="icon-arrow-right" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
-  MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
-  ChartLine: (props: any) => <span data-testid="icon-chart-line" {...props} />,
-  Gauge: (props: any) => <span data-testid="icon-gauge" {...props} />,
-  CurrencyDollar: (props: any) => <span data-testid="icon-dollar" {...props} />,
-  Timer: (props: any) => <span data-testid="icon-timer" {...props} />,
-  ArrowUp: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
-  ArrowDown: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
-  CircleDashed: (props: any) => <span data-testid="icon-circle-dashed" {...props} />,
-  Leaf: (props: any) => <span data-testid="icon-leaf" {...props} />,
+  CalendarCheckIcon: (props: any) => <span data-testid="icon-calendar-check" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  CoinsIcon: (props: any) => <span data-testid="icon-coins" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  CalendarPlusIcon: (props: any) => <span data-testid="icon-calendar-plus" {...props} />,
+  ArrowRightIcon: (props: any) => <span data-testid="icon-arrow-right" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  MapPinIcon: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  ChartLineIcon: (props: any) => <span data-testid="icon-chart-line" {...props} />,
+  GaugeIcon: (props: any) => <span data-testid="icon-gauge" {...props} />,
+  CurrencyDollarIcon: (props: any) => <span data-testid="icon-dollar" {...props} />,
+  TimerIcon: (props: any) => <span data-testid="icon-timer" {...props} />,
+  ArrowUpIcon: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
+  ArrowDownIcon: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
+  CircleDashedIcon: (props: any) => <span data-testid="icon-circle-dashed" {...props} />,
+  LeafIcon: (props: any) => <span data-testid="icon-leaf" {...props} />,
 }));
 
 vi.mock('../components/KineticObservatory', () => ({

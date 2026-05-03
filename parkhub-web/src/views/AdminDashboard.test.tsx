@@ -56,19 +56,19 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ChartBar: (props: any) => <span data-testid="icon-chart" {...props} />,
-  CurrencyCircleDollar: (props: any) => <span data-testid="icon-currency" {...props} />,
-  CalendarCheck: (props: any) => <span data-testid="icon-cal-check" {...props} />,
-  UsersThree: (props: any) => <span data-testid="icon-users" {...props} />,
-  Fire: (props: any) => <span data-testid="icon-fire" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  Wrench: (props: any) => <span data-testid="icon-wrench" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  Minus: (props: any) => <span data-testid="icon-minus" {...props} />,
-  GearSix: (props: any) => <span data-testid="icon-gear" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  ArrowsOutCardinal: (props: any) => <span data-testid="icon-arrows" {...props} />,
+  ChartBarIcon: (props: any) => <span data-testid="icon-chart" {...props} />,
+  CurrencyCircleDollarIcon: (props: any) => <span data-testid="icon-currency" {...props} />,
+  CalendarCheckIcon: (props: any) => <span data-testid="icon-cal-check" {...props} />,
+  UsersThreeIcon: (props: any) => <span data-testid="icon-users" {...props} />,
+  FireIcon: (props: any) => <span data-testid="icon-fire" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
+  WrenchIcon: (props: any) => <span data-testid="icon-wrench" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  PlusIcon: (props: any) => <span data-testid="icon-plus" {...props} />,
+  MinusIcon: (props: any) => <span data-testid="icon-minus" {...props} />,
+  GearSixIcon: (props: any) => <span data-testid="icon-gear" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  ArrowsOutCardinalIcon: (props: any) => <span data-testid="icon-arrows" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

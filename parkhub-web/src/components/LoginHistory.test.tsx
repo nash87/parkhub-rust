@@ -26,12 +26,12 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ClockCounterClockwise: (props: any) => <span data-testid="icon-ClockCounterClockwise" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-SpinnerGap" {...props} />,
-  Desktop: (props: any) => <span data-testid="icon-Desktop" {...props} />,
-  Globe: (props: any) => <span data-testid="icon-Globe" {...props} />,
-  ShieldWarning: (props: any) => <span data-testid="icon-ShieldWarning" {...props} />,
-  Check: (props: any) => <span data-testid="icon-Check" {...props} />,
+  ClockCounterClockwiseIcon: (props: any) => <span data-testid="icon-ClockCounterClockwise" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-SpinnerGap" {...props} />,
+  DesktopIcon: (props: any) => <span data-testid="icon-Desktop" {...props} />,
+  GlobeIcon: (props: any) => <span data-testid="icon-Globe" {...props} />,
+  ShieldWarningIcon: (props: any) => <span data-testid="icon-ShieldWarning" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-Check" {...props} />,
 }));
 
 import { LoginHistoryComponent } from './LoginHistory';

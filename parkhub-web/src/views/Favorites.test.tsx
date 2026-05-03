@@ -52,10 +52,10 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Star: (props: any) => <span data-testid="icon-star" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  StarIcon: (props: any) => <span data-testid="icon-star" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  MapPinIcon: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({
