@@ -97,20 +97,20 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  ArrowClockwise: (props: any) => <span data-testid="icon-refresh" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  MapPin: (props: any) => <span data-testid="icon-pin" {...props} />,
-  CalendarPlus: (props: any) => <span data-testid="icon-cal-plus" {...props} />,
-  Timer: (props: any) => <span data-testid="icon-timer" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
-  Funnel: (props: any) => <span data-testid="icon-funnel" {...props} />,
-  QrCode: (props: any) => <span data-testid="icon-qrcode" {...props} />,
-  FilePdf: (props: any) => <span data-testid="icon-pdf" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ArrowClockwiseIcon: (props: any) => <span data-testid="icon-refresh" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
+  MapPinIcon: (props: any) => <span data-testid="icon-pin" {...props} />,
+  CalendarPlusIcon: (props: any) => <span data-testid="icon-cal-plus" {...props} />,
+  TimerIcon: (props: any) => <span data-testid="icon-timer" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
+  FunnelIcon: (props: any) => <span data-testid="icon-funnel" {...props} />,
+  QrCodeIcon: (props: any) => <span data-testid="icon-qrcode" {...props} />,
+  FilePdfIcon: (props: any) => <span data-testid="icon-pdf" {...props} />,
 }));
 
 vi.mock('../components/Skeleton', () => ({

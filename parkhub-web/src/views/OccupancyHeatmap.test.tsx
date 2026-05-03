@@ -35,10 +35,10 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ChartBar: (props: any) => <span data-testid="icon-chart" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend" {...props} />,
+  ChartBarIcon: (props: any) => <span data-testid="icon-chart" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend" {...props} />,
 }));
 
 vi.mock('../api/client', () => ({

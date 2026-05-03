@@ -57,12 +57,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Coins: (props: any) => <span data-testid="icon-coins" {...props} />,
-  ArrowDown: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
-  ArrowUp: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
-  ArrowClockwise: (props: any) => <span data-testid="icon-clockwise" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
-  Sparkle: (props: any) => <span data-testid="icon-sparkle" {...props} />,
+  CoinsIcon: (props: any) => <span data-testid="icon-coins" {...props} />,
+  ArrowDownIcon: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
+  ArrowUpIcon: (props: any) => <span data-testid="icon-arrow-up" {...props} />,
+  ArrowClockwiseIcon: (props: any) => <span data-testid="icon-clockwise" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  SparkleIcon: (props: any) => <span data-testid="icon-sparkle" {...props} />,
 }));
 
 vi.mock('../constants/animations', () => ({

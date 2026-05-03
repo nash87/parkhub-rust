@@ -55,14 +55,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  UserPlus: (props: any) => <span data-testid="icon-user-plus" {...props} />,
-  QrCode: (props: any) => <span data-testid="icon-qr" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  Envelope: (props: any) => <span data-testid="icon-envelope" {...props} />,
+  UserPlusIcon: (props: any) => <span data-testid="icon-user-plus" {...props} />,
+  QrCodeIcon: (props: any) => <span data-testid="icon-qr" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  EnvelopeIcon: (props: any) => <span data-testid="icon-envelope" {...props} />,
 }));
 
 vi.mock('../context/AuthContext', () => ({

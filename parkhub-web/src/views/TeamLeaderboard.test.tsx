@@ -41,14 +41,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Trophy: (props: any) => <span data-testid="icon-trophy" {...props} />,
-  Medal: (props: any) => <span data-testid="icon-medal" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
-  UserCircle: (props: any) => <span data-testid="icon-user" {...props} />,
-  Star: (props: any) => <span data-testid="icon-star" {...props} />,
+  TrophyIcon: (props: any) => <span data-testid="icon-trophy" {...props} />,
+  MedalIcon: (props: any) => <span data-testid="icon-medal" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  UserCircleIcon: (props: any) => <span data-testid="icon-user" {...props} />,
+  StarIcon: (props: any) => <span data-testid="icon-star" {...props} />,
   Sun: (props: any) => <span data-testid="icon-sun" {...props} />,
-  UsersThree: (props: any) => <span data-testid="icon-users" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
+  UsersThreeIcon: (props: any) => <span data-testid="icon-users" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
 }));
 
 vi.mock('../constants/animations', () => ({

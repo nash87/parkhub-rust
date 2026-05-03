@@ -15,12 +15,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CreditCard: (props: any) => <span data-testid="icon-card" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Lock: (props: any) => <span data-testid="icon-lock" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check" {...props} />,
-  WarningCircle: (props: any) => <span data-testid="icon-warning" {...props} />,
+  CreditCardIcon: (props: any) => <span data-testid="icon-card" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  LockIcon: (props: any) => <span data-testid="icon-lock" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  WarningCircleIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 vi.mock('react-i18next', () => ({

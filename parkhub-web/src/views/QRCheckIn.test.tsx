@@ -71,14 +71,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  QrCode: (props: any) => <span data-testid="icon-qrcode" {...props} />,
-  SignIn: (props: any) => <span data-testid="icon-signin" {...props} />,
-  SignOut: (props: any) => <span data-testid="icon-signout" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  MapPin: (props: any) => <span data-testid="icon-mappin" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  ArrowClockwise: (props: any) => <span data-testid="icon-refresh" {...props} />,
+  QrCodeIcon: (props: any) => <span data-testid="icon-qrcode" {...props} />,
+  SignInIcon: (props: any) => <span data-testid="icon-signin" {...props} />,
+  SignOutIcon: (props: any) => <span data-testid="icon-signout" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  MapPinIcon: (props: any) => <span data-testid="icon-mappin" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  ArrowClockwiseIcon: (props: any) => <span data-testid="icon-refresh" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

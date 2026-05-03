@@ -59,15 +59,15 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CaretLeft: (props: any) => <span data-testid="icon-caret-left" {...props} />,
-  CaretRight: (props: any) => <span data-testid="icon-caret-right" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar-blank" {...props} />,
-  LinkSimple: (props: any) => <span data-testid="icon-link" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Copy: (props: any) => <span data-testid="icon-copy" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  ArrowsClockwise: (props: any) => <span data-testid="icon-reschedule" {...props} />,
+  CaretLeftIcon: (props: any) => <span data-testid="icon-caret-left" {...props} />,
+  CaretRightIcon: (props: any) => <span data-testid="icon-caret-right" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar-blank" {...props} />,
+  LinkSimpleIcon: (props: any) => <span data-testid="icon-link" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  CopyIcon: (props: any) => <span data-testid="icon-copy" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  ArrowsClockwiseIcon: (props: any) => <span data-testid="icon-reschedule" {...props} />,
 }));
 
 import { CalendarPage } from './Calendar';

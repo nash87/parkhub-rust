@@ -47,13 +47,13 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  Pencil: (props: any) => <span data-testid="icon-pencil" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  ToggleLeft: (props: any) => <span data-testid="icon-toggle-off" {...props} />,
-  ToggleRight: (props: any) => <span data-testid="icon-toggle-on" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
+  PlusIcon: (props: any) => <span data-testid="icon-plus" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  PencilIcon: (props: any) => <span data-testid="icon-pencil" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  ToggleLeftIcon: (props: any) => <span data-testid="icon-toggle-off" {...props} />,
+  ToggleRightIcon: (props: any) => <span data-testid="icon-toggle-on" {...props} />,
 }));
 
 const mockToastSuccess = vi.fn();

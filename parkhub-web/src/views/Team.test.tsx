@@ -39,7 +39,7 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Users: (props: any) => <span data-testid="icon-users" {...props} />,
+  UsersIcon: (props: any) => <span data-testid="icon-users" {...props} />,
 }));
 
 vi.mock('../constants/absenceConfig', () => ({

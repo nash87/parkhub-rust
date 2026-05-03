@@ -30,8 +30,8 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

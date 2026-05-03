@@ -5,9 +5,9 @@ import { render, screen } from '@testing-library/react';
 // ── Mocks ──
 
 vi.mock('@phosphor-icons/react', () => ({
-  CarSimple: (props: any) => <span data-testid="icon-car" {...props} />,
-  ArrowClockwise: (props: any) => <span data-testid="icon-reload" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  CarSimpleIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  ArrowClockwiseIcon: (props: any) => <span data-testid="icon-reload" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 import { ErrorBoundary } from './ErrorBoundary';

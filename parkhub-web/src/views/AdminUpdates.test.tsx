@@ -44,14 +44,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ArrowsClockwise: (props: any) => <span data-testid="icon-arrows-clockwise" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  CloudArrowDown: (props: any) => <span data-testid="icon-cloud" {...props} />,
-  Info: (props: any) => <span data-testid="icon-info" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Spinner: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  ArrowRight: (props: any) => <span data-testid="icon-arrow-right" {...props} />,
+  ArrowsClockwiseIcon: (props: any) => <span data-testid="icon-arrows-clockwise" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
+  CloudArrowDownIcon: (props: any) => <span data-testid="icon-cloud" {...props} />,
+  InfoIcon: (props: any) => <span data-testid="icon-info" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  SpinnerIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ArrowRightIcon: (props: any) => <span data-testid="icon-arrow-right" {...props} />,
 }));
 
 vi.mock('../api/client', () => ({

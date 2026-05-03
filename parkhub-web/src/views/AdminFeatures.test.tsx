@@ -55,14 +55,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ToggleLeft: (props: any) => <span data-testid="toggle-off" {...props} />,
-  ToggleRight: (props: any) => <span data-testid="toggle-on" {...props} />,
-  Info: (props: any) => <span data-testid="icon-info" {...props} />,
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
-  ArrowLeft: (props: any) => <span data-testid="icon-back" {...props} />,
-  ArrowClockwise: (props: any) => <span data-testid="icon-reset" {...props} />,
-  FloppyDisk: (props: any) => <span data-testid="icon-save" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
+  ToggleLeftIcon: (props: any) => <span data-testid="toggle-off" {...props} />,
+  ToggleRightIcon: (props: any) => <span data-testid="toggle-on" {...props} />,
+  InfoIcon: (props: any) => <span data-testid="icon-info" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-back" {...props} />,
+  ArrowClockwiseIcon: (props: any) => <span data-testid="icon-reset" {...props} />,
+  FloppyDiskIcon: (props: any) => <span data-testid="icon-save" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
 }));
 
 vi.mock('react-i18next', () => ({

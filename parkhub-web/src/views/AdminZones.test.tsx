@@ -38,10 +38,10 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  MapTrifold: (props: any) => <span data-testid="icon-map" {...props} />,
-  Pencil: (props: any) => <span data-testid="icon-pencil" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  Tag: (props: any) => <span data-testid="icon-tag" {...props} />,
+  MapTrifoldIcon: (props: any) => <span data-testid="icon-map" {...props} />,
+  PencilIcon: (props: any) => <span data-testid="icon-pencil" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  TagIcon: (props: any) => <span data-testid="icon-tag" {...props} />,
 }));
 
 const mockToastSuccess = vi.fn();

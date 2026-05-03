@@ -32,12 +32,12 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ShieldCheck: (props: any) => <span data-testid="icon-ShieldCheck" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-SpinnerGap" {...props} />,
-  Lock: (props: any) => <span data-testid="icon-Lock" {...props} />,
-  X: (props: any) => <span data-testid="icon-X" {...props} />,
-  Check: (props: any) => <span data-testid="icon-Check" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-Warning" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-ShieldCheck" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-SpinnerGap" {...props} />,
+  LockIcon: (props: any) => <span data-testid="icon-Lock" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-X" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-Check" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-Warning" {...props} />,
 }));
 
 import { TwoFactorSetupComponent } from './TwoFactorSetup';

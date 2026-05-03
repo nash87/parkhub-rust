@@ -8,8 +8,8 @@ vi.mock('react-router-dom', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CarSimple: (props: any) => <span data-testid="icon-car" {...props} />,
-  ArrowLeft: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
+  CarSimpleIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-arrow-left" {...props} />,
 }));
 
 import { NotFoundPage } from './NotFound';

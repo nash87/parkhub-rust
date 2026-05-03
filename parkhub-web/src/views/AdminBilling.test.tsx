@@ -39,11 +39,11 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CurrencyDollar: (props: any) => <span data-testid="icon-dollar" {...props} />,
-  ChartBar: (props: any) => <span data-testid="icon-chart" {...props} />,
-  DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  Buildings: (props: any) => <span data-testid="icon-buildings" {...props} />,
+  CurrencyDollarIcon: (props: any) => <span data-testid="icon-dollar" {...props} />,
+  ChartBarIcon: (props: any) => <span data-testid="icon-chart" {...props} />,
+  DownloadSimpleIcon: (props: any) => <span data-testid="icon-download" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  BuildingsIcon: (props: any) => <span data-testid="icon-buildings" {...props} />,
 }));
 
 import { AdminBillingPage } from './AdminBilling';

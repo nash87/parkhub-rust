@@ -61,14 +61,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  CarSimple: (props: any) => <span data-testid="icon-car" {...props} />,
-  CalendarCheck: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  CarSimpleIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  CalendarCheckIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
   ChartLineUp: (props: any) => <span data-testid="icon-chart" {...props} />,
-  Sparkle: (props: any) => <span data-testid="icon-sparkle" {...props} />,
-  ArrowRight: (props: any) => <span data-testid="icon-arrow" {...props} />,
-  Globe: (props: any) => <span data-testid="icon-globe" {...props} />,
-  SunDim: (props: any) => <span data-testid="icon-sun" {...props} />,
-  Moon: (props: any) => <span data-testid="icon-moon" {...props} />,
+  SparkleIcon: (props: any) => <span data-testid="icon-sparkle" {...props} />,
+  ArrowRightIcon: (props: any) => <span data-testid="icon-arrow" {...props} />,
+  GlobeIcon: (props: any) => <span data-testid="icon-globe" {...props} />,
+  SunDimIcon: (props: any) => <span data-testid="icon-sun" {...props} />,
+  MoonIcon: (props: any) => <span data-testid="icon-moon" {...props} />,
 }));
 
 vi.mock('../i18n', () => ({

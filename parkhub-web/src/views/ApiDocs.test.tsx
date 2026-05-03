@@ -17,8 +17,8 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@phosphor-icons/react', () => ({
   BookOpen: (props: any) => <span data-testid="icon-book" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  ArrowSquareOut: (props: any) => <span data-testid="icon-external" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  ArrowSquareOutIcon: (props: any) => <span data-testid="icon-external" {...props} />,
 }));
 
 // Inline component that represents the API docs admin sidebar link

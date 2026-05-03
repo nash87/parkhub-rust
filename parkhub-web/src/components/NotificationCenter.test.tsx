@@ -48,20 +48,20 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Bell: (props: any) => <span data-testid="icon-bell" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check-circle" {...props} />,
-  XCircle: (props: any) => <span data-testid="icon-x-circle" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Queue: (props: any) => <span data-testid="icon-queue" {...props} />,
-  Wrench: (props: any) => <span data-testid="icon-wrench" {...props} />,
-  Megaphone: (props: any) => <span data-testid="icon-megaphone" {...props} />,
-  CurrencyDollar: (props: any) => <span data-testid="icon-dollar" {...props} />,
-  UserPlus: (props: any) => <span data-testid="icon-user-plus" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  FunnelSimple: (props: any) => <span data-testid="icon-funnel" {...props} />,
+  BellIcon: (props: any) => <span data-testid="icon-bell" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check-circle" {...props} />,
+  XCircleIcon: (props: any) => <span data-testid="icon-x-circle" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  QueueIcon: (props: any) => <span data-testid="icon-queue" {...props} />,
+  WrenchIcon: (props: any) => <span data-testid="icon-wrench" {...props} />,
+  MegaphoneIcon: (props: any) => <span data-testid="icon-megaphone" {...props} />,
+  CurrencyDollarIcon: (props: any) => <span data-testid="icon-dollar" {...props} />,
+  UserPlusIcon: (props: any) => <span data-testid="icon-user-plus" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  FunnelSimpleIcon: (props: any) => <span data-testid="icon-funnel" {...props} />,
 }));
 
 const mockToastSuccess = vi.fn();

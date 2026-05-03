@@ -37,8 +37,8 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  MapPin: (props: any) => <span data-testid="icon-map-pin" {...props} />,
-  NavigationArrow: (props: any) => <span data-testid="icon-nav-arrow" {...props} />,
+  MapPinIcon: (props: any) => <span data-testid="icon-map-pin" {...props} />,
+  NavigationArrowIcon: (props: any) => <span data-testid="icon-nav-arrow" {...props} />,
 }));
 
 vi.mock('../constants/animations', () => ({

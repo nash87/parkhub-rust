@@ -43,13 +43,13 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  UploadSimple: (props: any) => <span data-testid="icon-upload" {...props} />,
-  DownloadSimple: (props: any) => <span data-testid="icon-download" {...props} />,
-  FileArrowUp: (props: any) => <span data-testid="icon-file-up" {...props} />,
-  FileArrowDown: (props: any) => <span data-testid="icon-file-down" {...props} />,
-  Table: (props: any) => <span data-testid="icon-table" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check" {...props} />,
+  UploadSimpleIcon: (props: any) => <span data-testid="icon-upload" {...props} />,
+  DownloadSimpleIcon: (props: any) => <span data-testid="icon-download" {...props} />,
+  FileArrowUpIcon: (props: any) => <span data-testid="icon-file-up" {...props} />,
+  FileArrowDownIcon: (props: any) => <span data-testid="icon-file-down" {...props} />,
+  TableIcon: (props: any) => <span data-testid="icon-table" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check" {...props} />,
 }));
 
 vi.mock('../api/client', () => ({

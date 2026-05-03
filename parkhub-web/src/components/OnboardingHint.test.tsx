@@ -21,8 +21,8 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Lightbulb: (props: any) => <span data-testid="icon-lightbulb" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  LightbulbIcon: (props: any) => <span data-testid="icon-lightbulb" {...props} />,
 }));
 
 vi.mock('react-i18next', () => ({

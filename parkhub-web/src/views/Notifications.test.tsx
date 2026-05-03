@@ -64,13 +64,13 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Bell: (props: any) => <span data-testid="icon-bell" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
-  Info: (props: any) => <span data-testid="icon-info" {...props} />,
-  CheckCircle: (props: any) => <span data-testid="icon-check-circle" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  ArrowClockwise: (props: any) => <span data-testid="icon-refresh" {...props} />,
+  BellIcon: (props: any) => <span data-testid="icon-bell" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
+  InfoIcon: (props: any) => <span data-testid="icon-info" {...props} />,
+  CheckCircleIcon: (props: any) => <span data-testid="icon-check-circle" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  ArrowClockwiseIcon: (props: any) => <span data-testid="icon-refresh" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

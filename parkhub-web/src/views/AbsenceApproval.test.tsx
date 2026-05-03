@@ -78,14 +78,14 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Calendar: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  PaperPlaneTilt: (props: any) => <span data-testid="icon-send" {...props} />,
-  ChatText: (props: any) => <span data-testid="icon-chat" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  CalendarIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  PaperPlaneTiltIcon: (props: any) => <span data-testid="icon-send" {...props} />,
+  ChatTextIcon: (props: any) => <span data-testid="icon-chat" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

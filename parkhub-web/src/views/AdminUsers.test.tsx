@@ -64,15 +64,15 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
-  Coins: (props: any) => <span data-testid="icon-coins" {...props} />,
-  PencilSimple: (props: any) => <span data-testid="icon-pencil" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  UserMinus: (props: any) => <span data-testid="icon-user-minus" {...props} />,
-  UserPlus: (props: any) => <span data-testid="icon-user-plus" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
+  CoinsIcon: (props: any) => <span data-testid="icon-coins" {...props} />,
+  PencilSimpleIcon: (props: any) => <span data-testid="icon-pencil" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  UserMinusIcon: (props: any) => <span data-testid="icon-user-minus" {...props} />,
+  UserPlusIcon: (props: any) => <span data-testid="icon-user-plus" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
 }));
 
 vi.mock('../components/ui/DataTable', () => ({

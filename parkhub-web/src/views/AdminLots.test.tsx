@@ -43,18 +43,18 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Plus: (props: any) => <span data-testid="icon-plus" {...props} />,
-  PencilSimple: (props: any) => <span data-testid="icon-pencil" {...props} />,
-  Trash: (props: any) => <span data-testid="icon-trash" {...props} />,
-  SpinnerGap: (props: any) => <span data-testid="icon-spinner" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  X: (props: any) => <span data-testid="icon-x" {...props} />,
-  MagnifyingGlass: (props: any) => <span data-testid="icon-search" {...props} />,
-  CurrencyEur: (props: any) => <span data-testid="icon-currency" {...props} />,
-  TrendUp: (props: any) => <span data-testid="icon-trend-up" {...props} />,
-  TrendDown: (props: any) => <span data-testid="icon-trend-down" {...props} />,
-  Clock: (props: any) => <span data-testid="icon-clock" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  PlusIcon: (props: any) => <span data-testid="icon-plus" {...props} />,
+  PencilSimpleIcon: (props: any) => <span data-testid="icon-pencil" {...props} />,
+  TrashIcon: (props: any) => <span data-testid="icon-trash" {...props} />,
+  SpinnerGapIcon: (props: any) => <span data-testid="icon-spinner" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  XIcon: (props: any) => <span data-testid="icon-x" {...props} />,
+  MagnifyingGlassIcon: (props: any) => <span data-testid="icon-search" {...props} />,
+  CurrencyEurIcon: (props: any) => <span data-testid="icon-currency" {...props} />,
+  TrendUpIcon: (props: any) => <span data-testid="icon-trend-up" {...props} />,
+  TrendDownIcon: (props: any) => <span data-testid="icon-trend-down" {...props} />,
+  ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({

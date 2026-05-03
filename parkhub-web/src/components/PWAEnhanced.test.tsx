@@ -37,12 +37,12 @@ vi.mock('react-router-dom', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  WifiSlash: (props: any) => <span data-testid="icon-wifi-slash" {...props} />,
-  ArrowDown: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
-  House: (props: any) => <span data-testid="icon-house" {...props} />,
-  CalendarBlank: (props: any) => <span data-testid="icon-calendar" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  User: (props: any) => <span data-testid="icon-user" {...props} />,
+  WifiSlashIcon: (props: any) => <span data-testid="icon-wifi-slash" {...props} />,
+  ArrowDownIcon: (props: any) => <span data-testid="icon-arrow-down" {...props} />,
+  HouseIcon: (props: any) => <span data-testid="icon-house" {...props} />,
+  CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  UserIcon: (props: any) => <span data-testid="icon-user" {...props} />,
 }));
 
 import { OfflineIndicator, CachedBookingCard, BottomNavBar, PullToRefresh } from './PWAEnhanced';

@@ -43,8 +43,8 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
-  Warning: (props: any) => <span data-testid="icon-warning" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
+  WarningIcon: (props: any) => <span data-testid="icon-warning" {...props} />,
 }));
 
 const mockToastError = vi.fn();

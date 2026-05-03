@@ -65,19 +65,19 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  Buildings: (props: any) => <span data-testid="icon-buildings" {...props} />,
-  House: (props: any) => <span data-testid="icon-house" {...props} />,
-  UsersThree: (props: any) => <span data-testid="icon-users" {...props} />,
-  Car: (props: any) => <span data-testid="icon-car" {...props} />,
-  ArrowRight: (props: any) => <span data-testid="icon-right" {...props} />,
-  ArrowLeft: (props: any) => <span data-testid="icon-left" {...props} />,
-  Check: (props: any) => <span data-testid="icon-check" {...props} />,
-  SunDim: (props: any) => <span data-testid="icon-sun" {...props} />,
-  Moon: (props: any) => <span data-testid="icon-moon" {...props} />,
-  ToggleLeft: (props: any) => <span data-testid="toggle-off" {...props} />,
-  ToggleRight: (props: any) => <span data-testid="toggle-on" {...props} />,
-  Info: (props: any) => <span data-testid="icon-info" {...props} />,
-  ShieldCheck: (props: any) => <span data-testid="icon-shield" {...props} />,
+  BuildingsIcon: (props: any) => <span data-testid="icon-buildings" {...props} />,
+  HouseIcon: (props: any) => <span data-testid="icon-house" {...props} />,
+  UsersThreeIcon: (props: any) => <span data-testid="icon-users" {...props} />,
+  CarIcon: (props: any) => <span data-testid="icon-car" {...props} />,
+  ArrowRightIcon: (props: any) => <span data-testid="icon-right" {...props} />,
+  ArrowLeftIcon: (props: any) => <span data-testid="icon-left" {...props} />,
+  CheckIcon: (props: any) => <span data-testid="icon-check" {...props} />,
+  SunDimIcon: (props: any) => <span data-testid="icon-sun" {...props} />,
+  MoonIcon: (props: any) => <span data-testid="icon-moon" {...props} />,
+  ToggleLeftIcon: (props: any) => <span data-testid="toggle-off" {...props} />,
+  ToggleRightIcon: (props: any) => <span data-testid="toggle-on" {...props} />,
+  InfoIcon: (props: any) => <span data-testid="icon-info" {...props} />,
+  ShieldCheckIcon: (props: any) => <span data-testid="icon-shield" {...props} />,
 }));
 
 vi.mock('react-i18next', () => ({

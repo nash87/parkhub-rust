@@ -45,12 +45,12 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  PuzzlePiece: (props: any) => <span data-testid="icon-puzzle" {...props} />,
-  ToggleLeft: (props: any) => <span data-testid="icon-toggle-left" {...props} />,
-  ToggleRight: (props: any) => <span data-testid="icon-toggle-right" {...props} />,
-  Gear: (props: any) => <span data-testid="icon-gear" {...props} />,
-  Question: (props: any) => <span data-testid="icon-question" {...props} />,
-  Lightning: (props: any) => <span data-testid="icon-lightning" {...props} />,
+  PuzzlePieceIcon: (props: any) => <span data-testid="icon-puzzle" {...props} />,
+  ToggleLeftIcon: (props: any) => <span data-testid="icon-toggle-left" {...props} />,
+  ToggleRightIcon: (props: any) => <span data-testid="icon-toggle-right" {...props} />,
+  GearIcon: (props: any) => <span data-testid="icon-gear" {...props} />,
+  QuestionIcon: (props: any) => <span data-testid="icon-question" {...props} />,
+  LightningIcon: (props: any) => <span data-testid="icon-lightning" {...props} />,
 }));
 
 vi.mock('react-hot-toast', () => ({
