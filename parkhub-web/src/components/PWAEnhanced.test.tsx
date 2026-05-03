@@ -208,10 +208,10 @@ describe('OfflineIndicator - events', () => {
     Object.defineProperty(navigator, 'onLine', { value: true, writable: true });
     render(<OfflineIndicator />);
     // Go offline
-    await act(() => { window.dispatchEvent(new Event('offline')); });
+    await act(async () => { window.dispatchEvent(new Event('offline')); });
     expect(screen.getByText('You are offline. Some features may be unavailable.')).toBeDefined();
     // Go back online
-    await act(() => { window.dispatchEvent(new Event('online')); });
+    await act(async () => { window.dispatchEvent(new Event('online')); });
     expect(screen.queryByText('You are offline. Some features may be unavailable.')).toBeNull();
   });
 });
