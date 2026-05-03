@@ -29,7 +29,6 @@ import {
   useFeatures,
   FEATURE_REGISTRY,
   USE_CASE_PRESETS,
-  type FeatureModule,
 } from './FeaturesContext';
 
 // Helper component to consume the context

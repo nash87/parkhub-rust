@@ -19,7 +19,7 @@ vi.mock('framer-motion', () => ({
   },
 }));
 
-import { GenerativeBg, useBgClass, type BgPattern } from './GenerativeBg';
+import { GenerativeBg, useBgClass } from './GenerativeBg';
 
 describe('GenerativeBg', () => {
   afterEach(() => {
