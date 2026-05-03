@@ -4,6 +4,7 @@ import { ShieldCheck, WarningIcon } from '@phosphor-icons/react';
 import { api, type RateLimitGroup, type RateLimitHistoryBin } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const groupColors: Record<string, string> = {
   auth: 'bg-red-500',
@@ -62,11 +63,7 @@ export function AdminRateLimitsPage() {
       {/* v11 SOTA hero — amber tone (throttle = traffic-shaping caution). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <WarningIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('rateLimits.eyebrow', 'API THROTTLE')}
-          </div>
+          <HeroEyebrow icon={WarningIcon} label={t('rateLimits.eyebrow', 'API THROTTLE')} />
           <h1 className="admin-hero-headline">{t('rateLimits.title', 'Rate Limits')}</h1>
           <p className="admin-hero-sub">{t('rateLimits.subtitle', 'Per-group request budgets and recent block history')}</p>
         </div>

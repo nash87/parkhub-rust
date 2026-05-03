@@ -10,6 +10,7 @@ import L from 'leaflet';
 // <head> — this view is lazy, so its CSS should be too.
 import { api, type LotMarker } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const LEAFLET_CSS_URL = new URL('leaflet/dist/leaflet.css', import.meta.url).href;
 let leafletCssPromise: Promise<void> | null = null;
@@ -127,11 +128,7 @@ export function MapViewPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. */}
       <motion.section variants={item} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <MapPinIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('map.eyebrow', 'LIVE AVAILABILITY')}
-          </div>
+          <HeroEyebrow icon={MapPinIcon} label={t('map.eyebrow', 'LIVE AVAILABILITY')} />
           <h1 className="admin-hero-headline">{t('map.title')}</h1>
           <p className="admin-hero-sub">{t('map.subtitle')}</p>
         </div>

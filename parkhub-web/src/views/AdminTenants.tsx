@@ -4,6 +4,7 @@ import { Buildings, Plus, XIcon, PencilSimple } from '@phosphor-icons/react';
 import { api, type TenantInfo, type CreateTenantRequest } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 export function AdminTenantsPage() {
   const { t } = useTranslation();
@@ -93,11 +94,7 @@ export function AdminTenantsPage() {
       {/* v11 SOTA hero — info tone (multi-tenant infrastructure). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Buildings weight="bold" className="w-3.5 h-3.5" />
-            {t('tenants.eyebrow', 'PEOPLE & ACCESS · TENANTS')}
-          </div>
+          <HeroEyebrow icon={Buildings} label={t('tenants.eyebrow', 'PEOPLE & ACCESS · TENANTS')} />
           <h1 className="admin-hero-headline">{t('tenants.title', 'Tenants')}</h1>
           <p className="admin-hero-sub">{t('tenants.subtitle', 'Manage isolated tenant environments and per-org domains')}</p>
         </div>

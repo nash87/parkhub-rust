@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { getInMemoryToken } from '../api/client';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface VersionInfo {
   version: string;
@@ -223,11 +224,7 @@ export function AdminUpdatesPage() {
       {/* v11 SOTA hero — amber tone (in-place upgrades carry rollback risk). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CloudArrowDown weight="bold" className="w-3.5 h-3.5" />
-            {t('updates.eyebrow', 'RELEASE CHANNEL')}
-          </div>
+          <HeroEyebrow icon={CloudArrowDown} label={t('updates.eyebrow', 'RELEASE CHANNEL')} />
           <h1 className="admin-hero-headline">{t('updates.title', 'System Updates')}</h1>
           <p className="admin-hero-sub">{t('updates.subtitle', 'Manage application updates and versioning')}</p>
         </div>

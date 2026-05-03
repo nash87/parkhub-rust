@@ -5,6 +5,7 @@ import { api, type Favorite, type ParkingLot, type ParkingSlot } from '../api/cl
 import { stagger, fadeUp } from '../constants/animations';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface EnrichedFavorite extends Favorite {
   lot_name?: string;
@@ -91,11 +92,7 @@ export function FavoritesPage() {
         {/* v11 SOTA hero — primary tone, page-hero variant. Count chip in hero-actions. */}
         <motion.section variants={item} className="admin-hero page-hero">
           <div className="admin-hero-left">
-            <div className="admin-hero-eyebrow">
-              <span className="admin-hero-dot" aria-hidden="true"></span>
-              <StarIcon weight="bold" className="w-3.5 h-3.5" />
-              {t('favorites.eyebrow', 'SAVED LOTS')}
-            </div>
+            <HeroEyebrow icon={StarIcon} label={t('favorites.eyebrow', 'SAVED LOTS')} />
             <h1 className="admin-hero-headline">{t('favorites.title')}</h1>
             <p className="admin-hero-sub">{t('favorites.subtitle')}</p>
           </div>

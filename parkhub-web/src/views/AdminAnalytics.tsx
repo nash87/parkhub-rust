@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChartBar, TrendUp, UsersIcon, Clock, CurrencyDollar, Export, CalendarBlank } from '@phosphor-icons/react';
 import { getInMemoryToken } from '../api/client';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface DailyDataPoint { date: string; value: number; }
 interface HourBin { hour: number; count: number; }
@@ -147,11 +148,7 @@ export function AdminAnalyticsPage() {
       {/* v11 SOTA hero — emerald tone (data + insights). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <ChartBar weight="bold" className="w-3.5 h-3.5" />
-            {t('analytics.eyebrow', 'USAGE & TRENDS')}
-          </div>
+          <HeroEyebrow icon={ChartBar} label={t('analytics.eyebrow', 'USAGE & TRENDS')} />
           <h1 className="admin-hero-headline">Analytics</h1>
           <p className="admin-hero-sub">Comprehensive parking analytics and trends</p>
         </div>

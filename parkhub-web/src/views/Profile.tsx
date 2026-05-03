@@ -15,6 +15,7 @@ import { TwoFactorSetupComponent } from '../components/TwoFactorSetup';
 import { NotificationPreferencesComponent } from '../components/NotificationPreferences';
 import { LoginHistoryComponent } from '../components/LoginHistory';
 import { ProfileThemeSection } from '../components/ProfileThemeSection';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 export function ProfilePage() {
   const { t } = useTranslation();
@@ -134,11 +135,7 @@ export function ProfilePage() {
       {/* v11 SOTA hero \u2014 primary tone, page-hero variant (visible on mobile). */}
       <motion.section variants={item} className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <UserCircleIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('profile.eyebrow', 'ACCOUNT')}
-          </div>
+          <HeroEyebrow icon={UserCircleIcon} label={t('profile.eyebrow', 'ACCOUNT')} />
           <h1 className="admin-hero-headline">{t('profile.title', 'Profil')}</h1>
           <p className="admin-hero-sub">{t('profile.subtitle', 'Pers\u00f6nliche Daten verwalten')}</p>
         </div>

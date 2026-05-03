@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapTrifold, PencilIcon, Question, Tag } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 type PricingTier = 'economy' | 'standard' | 'premium' | 'vip';
 
@@ -101,11 +102,7 @@ export function AdminZonesPage() {
       {/* v11 SOTA hero — emerald tone (spatial pricing = revenue lever). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <MapTrifold weight="bold" className="w-3.5 h-3.5" />
-            {t('parkingZones.eyebrow', 'SPATIAL PRICING')}
-          </div>
+          <HeroEyebrow icon={MapTrifold} label={t('parkingZones.eyebrow', 'SPATIAL PRICING')} />
           <h1 className="admin-hero-headline">{t('parkingZones.title')}</h1>
           <p className="admin-hero-sub">{t('parkingZones.subtitle')}</p>
         </div>

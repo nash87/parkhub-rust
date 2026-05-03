@@ -20,6 +20,7 @@ function authHeaders(): Record<string, string> {
   };
 }
 import { stagger, fadeUp, modalVariants, modalTransition } from '../constants/animations';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface SwapRequest {
   id: string;
@@ -147,11 +148,7 @@ export function SwapRequestsPage() {
         {/* v11 SOTA hero — primary tone, page-hero variant. Refresh + Create in hero-actions. */}
         <motion.section variants={fadeUp} className="admin-hero page-hero">
           <div className="admin-hero-left">
-            <div className="admin-hero-eyebrow">
-              <span className="admin-hero-dot" aria-hidden="true"></span>
-              <Swap weight="bold" className="w-3.5 h-3.5" />
-              {t('swap.eyebrow', 'SHIFT TRADE')}
-            </div>
+            <HeroEyebrow icon={Swap} label={t('swap.eyebrow', 'SHIFT TRADE')} />
             <h1 className="admin-hero-headline">{t('swap.title')}</h1>
             <p className="admin-hero-sub">{t('swap.subtitle')}</p>
           </div>

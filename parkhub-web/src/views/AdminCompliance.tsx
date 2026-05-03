@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Download, Question, FileText, Table, WarningIcon, CheckCircle, XCircle } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface ComplianceCheck {
   id: string;
@@ -118,11 +119,7 @@ export function AdminCompliancePage() {
       {/* v11 SOTA hero — info tone (governance, neutral data). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <FileText weight="bold" className="w-3.5 h-3.5" />
-            {t('compliance.eyebrow', 'GOVERNANCE & DATA')}
-          </div>
+          <HeroEyebrow icon={FileText} label={t('compliance.eyebrow', 'GOVERNANCE & DATA')} />
           <h1 className="admin-hero-headline">{t('compliance.title')}</h1>
           <p className="admin-hero-sub">{t('compliance.subtitle')}</p>
         </div>

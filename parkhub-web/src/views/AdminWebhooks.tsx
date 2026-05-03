@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WebhooksLogo, Plus, Trash, PencilIcon, Question, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const EVENTS = [
   'booking.created',
@@ -153,11 +154,7 @@ export function AdminWebhooksPage() {
       {/* v11 SOTA hero — info tone (event egress = trust boundary, secrets in payloads). */}
       <section className="admin-hero admin-hero--info">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <WebhooksLogo weight="bold" className="w-3.5 h-3.5" />
-            {t('webhooksV2.eyebrow', 'EVENT FAN-OUT')}
-          </div>
+          <HeroEyebrow icon={WebhooksLogo} label={t('webhooksV2.eyebrow', 'EVENT FAN-OUT')} />
           <h1 className="admin-hero-headline">{t('webhooksV2.title')}</h1>
           <p className="admin-hero-sub">{t('webhooksV2.subtitle')}</p>
         </div>

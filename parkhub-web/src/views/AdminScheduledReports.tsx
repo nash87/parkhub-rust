@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Plus, Trash, PaperPlaneTilt, Question, PencilIcon, ToggleLeft, ToggleRight } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface ReportSchedule {
   id: string;
@@ -158,11 +159,7 @@ export function AdminScheduledReportsPage() {
       {/* v11 SOTA hero — emerald tone (recurring report delivery, insight workflow). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Clock weight="bold" className="w-3.5 h-3.5" />
-            {t('scheduledReports.eyebrow', 'AUTOMATED DELIVERY')}
-          </div>
+          <HeroEyebrow icon={Clock} label={t('scheduledReports.eyebrow', 'AUTOMATED DELIVERY')} />
           <h1 className="admin-hero-headline">{t('scheduledReports.title')}</h1>
           <p className="admin-hero-sub">{t('scheduledReports.subtitle')}</p>
         </div>

@@ -28,6 +28,7 @@ import {
 import { useTheme, type DesignThemeId } from '../context/ThemeContext';
 import { useNavLayout } from '../hooks/useNavLayout';
 import { useDensity } from '../hooks/useDensity';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 type Scope = 'user' | 'workspace';
 
@@ -86,11 +87,7 @@ export function SettingsPage() {
           (workspace + appearance), distinct from amber AdminSettings. */}
       <section className="admin-hero page-hero mb-5">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <User weight="bold" className="w-3.5 h-3.5" />
-            {t('settings.eyebrow', 'PREFERENCES')}
-          </div>
+          <HeroEyebrow icon={User} label={t('settings.eyebrow', 'PREFERENCES')} />
           <h1 className="admin-hero-headline">{t('settings.title', 'Settings')}</h1>
           <p className="admin-hero-sub">
             {t('settings.subtitle', 'Control how ParkHub looks, feels, and behaves — for you and your workspace.')}

@@ -4,6 +4,7 @@ import { ClockCounterClockwiseIcon, DownloadSimpleIcon, FunnelSimple, Magnifying
 import { api, type AuditLogEntry } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const ACTION_TYPES = [
   'LoginSuccess', 'LoginFailed', 'Logout',
@@ -137,11 +138,7 @@ export function AdminAuditLogPage() {
       {/* v11 SOTA hero — primary tone (operational journal). */}
       <section className="admin-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <ClockCounterClockwiseIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('auditLog.eyebrow', 'EVENT JOURNAL')}
-          </div>
+          <HeroEyebrow icon={ClockCounterClockwiseIcon} label={t('auditLog.eyebrow', 'EVENT JOURNAL')} />
           <h1 className="admin-hero-headline">{t('auditLog.title', 'Audit Log')}</h1>
           <p className="admin-hero-sub">{t('auditLog.totalEntries', '{{count}} entries', { count: total })}</p>
         </div>

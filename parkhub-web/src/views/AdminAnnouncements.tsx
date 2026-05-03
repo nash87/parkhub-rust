@@ -8,6 +8,7 @@ import { api, type Announcement } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 type Severity = 'info' | 'warning' | 'error' | 'success';
 
@@ -180,11 +181,7 @@ export function AdminAnnouncementsPage() {
       {/* v11 SOTA hero — primary tone (default brand for live comms). */}
       <section className="admin-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Megaphone weight="bold" className="w-3.5 h-3.5" />
-            {t('announcements.eyebrow', 'LIVE COMMS')}
-          </div>
+          <HeroEyebrow icon={Megaphone} label={t('announcements.eyebrow', 'LIVE COMMS')} />
           <h1 className="admin-hero-headline">{t('admin.announcements')}</h1>
           <p className="admin-hero-sub">{t('announcements.subtitle', 'Surface comms into the product shell — severity-based and time-bounded.')}</p>
         </div>

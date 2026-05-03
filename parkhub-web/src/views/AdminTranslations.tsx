@@ -11,6 +11,7 @@ import { api, type TranslationProposal, type ProposalStatus } from '../api/clien
 import toast from 'react-hot-toast';
 import { DataTable } from '../components/ui/DataTable';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const columnHelper = createColumnHelper<TranslationProposal>();
 
@@ -212,11 +213,7 @@ export function AdminTranslationsPage() {
       {/* v11 SOTA hero — emerald tone (community-driven content moderation). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Translate weight="bold" className="w-3.5 h-3.5" />
-            {t('translations.admin.eyebrow', 'LOCALE CURATION')}
-          </div>
+          <HeroEyebrow icon={Translate} label={t('translations.admin.eyebrow', 'LOCALE CURATION')} />
           <h1 className="admin-hero-headline">{t('translations.admin.title')}</h1>
           <p className="admin-hero-sub">{t('translations.admin.subtitle', 'Review community translation proposals before they ship')}</p>
         </div>

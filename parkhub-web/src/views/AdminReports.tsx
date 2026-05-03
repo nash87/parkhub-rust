@@ -13,6 +13,7 @@ const HEATMAP_STATUSES = new Set(['confirmed', 'active', 'completed']);
 // parkhub-web/src/components/v11/). Local wrapper preserves the previous
 // API (color prop + value-derived bar) so call sites don't change.
 import { V11Meter, type V11MeterTone } from '../components/v11/V11Meter';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 function StatCard({ icon: Icon, label, value, color = 'primary' }: {
   icon: Icon;
@@ -118,11 +119,7 @@ export function AdminReportsPage() {
       {/* v11 SOTA hero — emerald tone (data + insight, paired with v11-meter stats below). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CalendarCheckIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('admin.reportsEyebrow', 'BUSINESS METRICS')}
-          </div>
+          <HeroEyebrow icon={CalendarCheckIcon} label={t('admin.reportsEyebrow', 'BUSINESS METRICS')} />
           <h1 className="admin-hero-headline">{t('admin.reports')}</h1>
           <p className="admin-hero-sub">{t('admin.reportsSubtitle', 'Booking volume, occupancy heatmaps, and revenue trends')}</p>
         </div>

@@ -4,6 +4,7 @@ import { Lightning, Play, Stop, Question, Clock, BatteryCharging } from '@phosph
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { getInMemoryToken } from '../api/client';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface EvCharger {
   id: string;
@@ -126,11 +127,7 @@ export function EVChargingPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. Help + lot-select live in admin-hero-actions. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Lightning weight="bold" className="w-3.5 h-3.5" />
-            {t('evCharging.eyebrow', 'CHARGING SESSIONS')}
-          </div>
+          <HeroEyebrow icon={Lightning} label={t('evCharging.eyebrow', 'CHARGING SESSIONS')} />
           <h1 className="admin-hero-headline">{t('evCharging.title')}</h1>
           <p className="admin-hero-sub">{t('evCharging.subtitle')}</p>
         </div>

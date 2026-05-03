@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { CarIcon, MagnifyingGlass, Flag, Lightning } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface FleetVehicle {
   id: string;
@@ -109,11 +110,7 @@ export function AdminFleetPage() {
       {/* v11 SOTA hero — amber tone (fleet monitoring + flag awareness). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <CarIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('fleet.eyebrow', 'OPERATIONS · FLEET')}
-          </div>
+          <HeroEyebrow icon={CarIcon} label={t('fleet.eyebrow', 'OPERATIONS · FLEET')} />
           <h1 className="admin-hero-headline">{t('fleet.title', 'Fleet Management')}</h1>
           <p className="admin-hero-sub">{t('fleet.subtitle', 'All vehicles across all users')}</p>
         </div>

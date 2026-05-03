@@ -8,6 +8,7 @@ import { api, type Booking, type ParkingLot, type PersonalParkingStats } from '.
 import { useTranslation } from 'react-i18next';
 import { stagger, fadeUp } from '../constants/animations';
 import { OnboardingHint } from '../components/OnboardingHint';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 export function ParkingHistoryPage() {
   const { t } = useTranslation();
@@ -71,11 +72,7 @@ export function ParkingHistoryPage() {
         {/* v11 SOTA hero — primary tone, page-hero variant. */}
         <motion.section variants={item} className="admin-hero page-hero">
           <div className="admin-hero-left">
-            <div className="admin-hero-eyebrow">
-              <span className="admin-hero-dot" aria-hidden="true"></span>
-              <ClockCounterClockwiseIcon weight="bold" className="w-3.5 h-3.5" />
-              {t('history.eyebrow', 'PARKING ARCHIVE')}
-            </div>
+            <HeroEyebrow icon={ClockCounterClockwiseIcon} label={t('history.eyebrow', 'PARKING ARCHIVE')} />
             <h1 className="admin-hero-headline">{t('history.title')}</h1>
             <p className="admin-hero-sub">{t('history.subtitle')}</p>
           </div>

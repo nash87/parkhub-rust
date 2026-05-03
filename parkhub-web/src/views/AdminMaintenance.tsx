@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Wrench, Plus, Trash, PencilSimple, Question, CalendarBlank, WarningIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface MaintenanceWindow {
   id: string;
@@ -150,11 +151,7 @@ export function AdminMaintenancePage() {
       {/* v11 SOTA hero — amber tone (caution = maintenance). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <Wrench weight="bold" className="w-3.5 h-3.5" />
-            {t('maintenance.eyebrow', 'MAINTENANCE')}
-          </div>
+          <HeroEyebrow icon={Wrench} label={t('maintenance.eyebrow', 'MAINTENANCE')} />
           <h1 className="admin-hero-headline">{t('maintenance.title', 'Maintenance Scheduling')}</h1>
           <p className="admin-hero-sub">{t('maintenance.subtitle', 'Schedule and manage maintenance windows')}</p>
         </div>

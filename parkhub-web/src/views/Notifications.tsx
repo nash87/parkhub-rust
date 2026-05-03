@@ -6,6 +6,7 @@ import {
 import { api, type Notification } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 const notifIcon: Record<string, typeof WarningIcon> = { warning: WarningIcon, info: Info, success: CheckCircle };
 const notifColor: Record<string, string> = { warning: 'text-amber-500', info: 'text-primary-500', success: 'text-emerald-500' };
@@ -98,11 +99,7 @@ export function NotificationsPage() {
       {/* v11 SOTA hero — primary tone, page-hero variant. Refresh + Mark-all-read live in hero-actions. */}
       <section className="admin-hero page-hero">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <BellIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('notifications.eyebrow', 'INBOX')}
-          </div>
+          <HeroEyebrow icon={BellIcon} label={t('notifications.eyebrow', 'INBOX')} />
           <h1 className="admin-hero-headline">{t('notifications.title')}</h1>
           <p className="admin-hero-sub">
             {unreadCount > 0 ? t('notifications.unreadCount', { count: unreadCount }) : t('notifications.allRead')}

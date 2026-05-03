@@ -4,6 +4,7 @@ import { SpinnerGap, Check, GearSixIcon } from '@phosphor-icons/react';
 import { api } from '../api/client';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
+import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
 interface AppSettings {
   company_name: string;
@@ -120,11 +121,7 @@ export function AdminSettingsPage() {
       {/* v11 SOTA hero — amber tone (config requires deliberate caution). */}
       <section className="admin-hero admin-hero--amber">
         <div className="admin-hero-left">
-          <div className="admin-hero-eyebrow">
-            <span className="admin-hero-dot" aria-hidden="true"></span>
-            <GearSixIcon weight="bold" className="w-3.5 h-3.5" />
-            {t('admin.settingsEyebrow', 'SYSTEM CONFIG')}
-          </div>
+          <HeroEyebrow icon={GearSixIcon} label={t('admin.settingsEyebrow', 'SYSTEM CONFIG')} />
           <h1 className="admin-hero-headline">{t('admin.systemSettings')}</h1>
           <p className="admin-hero-sub">{t('settings.subtitle', 'Booking rules, credits, and tenant policy')}</p>
         </div>
