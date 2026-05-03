@@ -26,7 +26,7 @@ const roles = [
 describe('AdminRolesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'DELETE') return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
       if (opts?.method === 'POST' || opts?.method === 'PUT') return Promise.resolve({ json: () => Promise.resolve({ success: true }) } as Response);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
@@ -127,7 +127,7 @@ describe('AdminRolesPage', () => {
   });
 
   it('handles save error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'POST') return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'Duplicate' } }) } as Response);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
     }) as any;
@@ -140,7 +140,7 @@ describe('AdminRolesPage', () => {
   });
 
   it('handles save network error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'POST') return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
     }) as any;
@@ -164,7 +164,7 @@ describe('AdminRolesPage', () => {
   });
 
   it('handles delete error response', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'DELETE') return Promise.resolve({ json: () => Promise.resolve({ success: false, error: { message: 'In use' } }) } as Response);
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
     }) as any;
@@ -174,7 +174,7 @@ describe('AdminRolesPage', () => {
   });
 
   it('handles delete network error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'DELETE') return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: roles }) } as Response);
     }) as any;

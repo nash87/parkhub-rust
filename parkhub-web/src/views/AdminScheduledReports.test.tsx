@@ -128,7 +128,7 @@ describe('AdminScheduledReportsPage', () => {
 
   it('handles save error', async () => {
     const user = userEvent.setup();
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'POST') return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
     }) as any;
@@ -167,7 +167,7 @@ describe('AdminScheduledReportsPage', () => {
   });
 
   it('handles delete error', async () => {
-    globalThis.fetch = vi.fn((url: string, opts?: any) => {
+    globalThis.fetch = vi.fn((_url: string, opts?: any) => {
       if (opts?.method === 'DELETE') return Promise.reject(new Error('net'));
       return Promise.resolve({ json: () => Promise.resolve({ success: true, data: { schedules } }) } as Response);
     }) as any;

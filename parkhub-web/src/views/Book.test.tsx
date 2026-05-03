@@ -563,7 +563,7 @@ describe('BookPage', () => {
     // Verify the badge mapping exists and has correct labels
     const badges = ['your_usual_spot', 'best_price', 'closest_entrance', 'available_now', 'preferred_lot', 'accessible'];
     const expectedLabels = ['Your usual spot', 'Best price', 'Closest', 'Available now', 'Preferred lot', 'Accessible'];
-    badges.forEach((badge, i) => {
+    badges.forEach((_badge, i) => {
       // The badgeLabels constant is embedded in the component; verify these strings exist in the source
       expect(expectedLabels[i]).toBeTruthy();
     });
