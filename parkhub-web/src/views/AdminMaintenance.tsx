@@ -93,7 +93,13 @@ export function AdminMaintenancePage() {
     }
     setSubmitting(true);
     try {
-      const body: any = {
+      const body: {
+        lot_id: string;
+        start_time: string;
+        end_time: string;
+        reason: string;
+        affected_slots?: string[];
+      } = {
         lot_id: form.lot_id,
         start_time: new Date(form.start_time).toISOString(),
         end_time: new Date(form.end_time).toISOString(),
@@ -256,7 +262,7 @@ export function AdminMaintenancePage() {
                     </p>
                     <p className="text-xs text-surface-500 dark:text-surface-400">
                       {new Date(w.start_time).toLocaleString()} — {new Date(w.end_time).toLocaleString()}
-                      {w.affected_slots.type === 'all' ? ` (${t('maintenance.allSlots', 'all slots')})` : ` (${(w.affected_slots as any).slot_ids?.length || 0} slots)`}
+                      {w.affected_slots.type === 'all' ? ` (${t('maintenance.allSlots', 'all slots')})` : ` (${w.affected_slots.slot_ids.length} slots)`}
                     </p>
                   </div>
                 </div>
