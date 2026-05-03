@@ -557,6 +557,30 @@ if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
   fi
 fi
 
+# ─── Stage 6d: dep hygiene (cargo machete + cargo sort, full+cd profiles) ───
+# cargo-machete: detects unused dependencies in Cargo.toml (catches deps
+# added during a PR but not actually `use`d, reducing build time + supply-
+# chain surface). MIT licensed.
+# cargo-sort: keeps Cargo.toml dep tables sorted alphabetically (catches
+# cosmetic drift; advisory).
+if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
+  if command -v cargo-machete >/dev/null 2>&1; then
+    # Gating — unused deps are real bloat. --skip-target-dir avoids false
+    # positives from the build cache.
+    run_step "cargo-machete (unused deps)" \
+      "cargo machete --skip-target-dir 2>&1 | tail -30"
+  else
+    skip_step "cargo-machete" "cargo-machete not installed (cargo install cargo-machete)"
+  fi
+  if command -v cargo-sort >/dev/null 2>&1; then
+    # Advisory: cosmetic — dep tables alphabetized.
+    run_step "cargo-sort (Cargo.toml hygiene, advisory)" \
+      "cargo sort --check --workspace 2>&1 | tail -20 || echo 'cargo-sort suggested re-sorting Cargo.toml (advisory — run: cargo sort --workspace)'"
+  else
+    skip_step "cargo-sort" "cargo-sort not installed (cargo install cargo-sort)"
+  fi
+fi
+
 # ─── Stage 7: cd profile extras ──────────────────────────────────────────────
 if [[ "$profile" == "cd" ]]; then
   run_step_heavy "release image preflight" "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
