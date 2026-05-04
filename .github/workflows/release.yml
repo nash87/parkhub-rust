@@ -730,7 +730,7 @@ jobs:
           cosign-release: 'v3.0.6'
 
       - name: Install syft
-        uses: anchore/sbom-action/download-syft@d8a2c0130026bf585de5c176ab8f7ce62d75bf04 # v0.20.7
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
 
       - name: Sign release archives (cosign keyless)
         # cosign 3.x default behaviour writes a Sigstore bundle file
