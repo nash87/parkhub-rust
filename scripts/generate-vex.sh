@@ -16,7 +16,9 @@ set -euo pipefail
 TOOL="${1:-cargo-audit}"
 INPUT="${2:-/dev/stdin}"
 DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-REPO_URL="${GITHUB_SERVER_URL:-https://gitea.test}/${GITHUB_REPOSITORY:-parkhub-rust}"
+REPO_HOST="${GITHUB_SERVER_URL:-https://github.com}"
+REPO_PATH="${GITHUB_REPOSITORY:-nash87/parkhub-rust}"
+REPO_URL="${REPO_HOST}/${REPO_PATH}"
 COMMIT="${GITHUB_SHA:-unknown}"
 
 # ── Known accepted vulnerabilities (edit as baseline changes) ──
