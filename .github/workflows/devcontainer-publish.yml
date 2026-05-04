@@ -27,8 +27,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
-  id-token: write   # for cosign keyless OIDC sign of the image
 
 env:
   REGISTRY: ghcr.io
@@ -39,6 +37,10 @@ jobs:
     name: Build & push devcontainer image
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write   # for cosign keyless OIDC sign of the image
 
     steps:
       - name: Checkout

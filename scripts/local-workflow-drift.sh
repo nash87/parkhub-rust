@@ -41,6 +41,8 @@ EXEMPT_GITEA_MISSING=(
   auto-merge.yml                  # github-only auto-merge of dependabot PRs
   deploy.yml                      # github-only Render/Fly/Koyeb dispatch
   tauri-mobile.yml                # macOS+Windows runners for Tauri builds
+  pr-title-lint.yml               # github-only pull_request_target PR metadata lint
+  stale.yml                       # github-only actions/stale PR lifecycle automation
 )
 
 # Files that are documented as gitea-only (no github mirror needed).

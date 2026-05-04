@@ -12,7 +12,7 @@ name: PR title lint
 # Bot PRs (Dependabot, Copilot) are exempt — they use proper prefixes.
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, edited, reopened, synchronize]
 
 permissions: {}

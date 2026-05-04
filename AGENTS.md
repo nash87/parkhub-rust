@@ -45,12 +45,15 @@ make act        # optional: run the actual workflow files locally via nektos/act
 ```
 Install pre-commit hooks once per clone: `pre-commit install` (config in `.pre-commit-config.yaml`). See [DEVELOPMENT.md](DEVELOPMENT.md) for the full loop. Mutation testing runs weekly via `.github/workflows/mutants.yml` (`.cargo/mutants.toml` gates survivors). OpenAPI parity with the PHP edition is enforced via [docs/openapi-parity.md](docs/openapi-parity.md) + `scripts/dump-openapi.sh` / `scripts/diff-openapi.sh`.
 
-## Dual-Remote Convention
-Two remotes are always configured on this repo:
-- `origin` — Gitea at `git@192.168.178.220:florian/parkhub-rust.git` (primary, source of truth)
-- `github` — `https://github.com/nash87/parkhub-rust.git` (public mirror)
+## Remote Convention
+GitHub `nash87/parkhub-rust` is the source of truth for this repo. Fresh clones
+should use GitHub as `origin`.
 
-Always `git push origin <branch>` first, then `git push github <branch>`. Never push only to GitHub. CI runs on GitHub; operator review happens on Gitea.
+Some workstation clones still have stale Gitea as `origin` and GitHub as
+`github`. In those clones, fetch/rebase/push via `github`; do not base ParkHub
+work on `origin/main`. Keep any Gitea remote as `gitea-restore` or similar
+unless an operator explicitly asks to restore mirroring. CI and PR review run
+from GitHub.
 
 ## Architecture
 ```
