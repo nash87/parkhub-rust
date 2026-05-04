@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install rustfmt
         run: rustup component add rustfmt
@@ -44,6 +46,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Prepare embedded web placeholder
         run: |
@@ -67,6 +71,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Install clippy
         run: rustup component add clippy
@@ -86,10 +92,16 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: rust:1.94.1-bookworm
+      # Resolve gitea.test (the in-cluster Gitea HTTP API at 192.168.178.233)
+      # so action ref rewrites + post-status calls work from inside the runner
+      # container. fop ci-audit flags missing-add-host on container blocks.
+      options: --add-host=gitea.test:192.168.178.233
     needs: [check]
     steps:
       - name: Checkout code
         uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Prepare embedded web placeholder
         run: |
