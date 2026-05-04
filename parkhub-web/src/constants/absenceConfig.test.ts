@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@phosphor-icons/react', () => ({
-  House: 'House',
-  Airplane: 'Airplane',
-  FirstAidKit: 'FirstAidKit',
-  Briefcase: 'Briefcase',
-  NoteBlank: 'NoteBlank',
+  HouseIcon: 'HouseIcon',
+  AirplaneIcon: 'AirplaneIcon',
+  FirstAidKitIcon: 'FirstAidKitIcon',
+  BriefcaseIcon: 'BriefcaseIcon',
+  NoteBlankIcon: 'NoteBlankIcon',
 }));
 
 import { ABSENCE_CONFIG, type AbsenceType } from './absenceConfig';
@@ -58,11 +58,11 @@ describe('ABSENCE_CONFIG', () => {
   });
 
   it('icons map to phosphor icon components', () => {
-    expect(ABSENCE_CONFIG.homeoffice.icon).toBe('House');
-    expect(ABSENCE_CONFIG.vacation.icon).toBe('Airplane');
-    expect(ABSENCE_CONFIG.sick.icon).toBe('FirstAidKit');
-    expect(ABSENCE_CONFIG.business_trip.icon).toBe('Briefcase');
-    expect(ABSENCE_CONFIG.other.icon).toBe('NoteBlank');
+    expect(ABSENCE_CONFIG.homeoffice.icon).toBe('HouseIcon');
+    expect(ABSENCE_CONFIG.vacation.icon).toBe('AirplaneIcon');
+    expect(ABSENCE_CONFIG.sick.icon).toBe('FirstAidKitIcon');
+    expect(ABSENCE_CONFIG.business_trip.icon).toBe('BriefcaseIcon');
+    expect(ABSENCE_CONFIG.other.icon).toBe('NoteBlankIcon');
   });
 
   it('all colors include dark mode variants', () => {
