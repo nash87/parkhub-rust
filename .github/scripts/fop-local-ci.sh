@@ -138,6 +138,7 @@ diff_touch_workflows=0
 diff_touch_php=0
 diff_touch_e2e=0
 diff_touch_image=0
+diff_touch_design_smoke=0
 
 compute_diff_paths() {
   if [[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] || [[ "$profile" != "pr" ]]; then
@@ -147,6 +148,7 @@ compute_diff_paths() {
     diff_touch_workflows=1
     diff_touch_php=1
     diff_touch_e2e=1
+    diff_touch_design_smoke=1
     return 0
   fi
 
@@ -166,6 +168,7 @@ compute_diff_paths() {
     diff_touch_workflows=1
     diff_touch_php=1
     diff_touch_e2e=1
+    diff_touch_design_smoke=1
     return 0
   fi
 
@@ -202,13 +205,17 @@ compute_diff_paths() {
   if grep -qE '^e2e/|^playwright\.config\.(ts|js|mjs|cjs)$' <<<"$diff_paths"; then
     diff_touch_e2e=1
   fi
+  if grep -qE '^(parkhub-web/(src/(design-v5|views|components|context|api|lib|styles)/|src/(App|main)\.tsx|e2e/|package(-lock)?\.json|astro\.config\.mjs|playwright\.config\.ts)|e2e/|playwright\.config\.ts)$' <<<"$diff_paths"; then
+    diff_touch_design_smoke=1
+  fi
   if grep -qE '^(Dockerfile|Containerfile.*|Cargo\.lock|parkhub-web/package-lock\.json)$' <<<"$diff_paths"; then
     diff_touch_image=1
   fi
 
-  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d image=%d (%d files)\n' \
+  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d design_smoke=%d image=%d (%d files)\n' \
     "$base_ref" "$diff_touch_rust" "$diff_touch_frontend" "$diff_touch_ts_export" \
-    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$diff_touch_image" "$(wc -l <<<"$diff_paths")"
+    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$diff_touch_design_smoke" \
+    "$diff_touch_image" "$(wc -l <<<"$diff_paths")"
 }
 
 # ─── pre-push hook result re-use (opt-in via FOP_LOCAL_CI_REUSE_PREPUSH=1) ───
@@ -472,6 +479,13 @@ if (( diff_touch_e2e )); then
   run_step "playwright spec list" "CI=true npx playwright test --list"
 else
   skip_step "playwright spec list" "diff-aware: e2e/ untouched"
+fi
+
+# ─── Stage 4c: Design-system route smoke (blocking when app UI changed) ──────
+if (( diff_touch_design_smoke )); then
+  run_step_heavy "v5 design smoke" "FOP_LOCAL_CI_DIRECT=1 ./scripts/v5-design-smoke-local.sh"
+else
+  skip_step "v5 design smoke" "diff-aware: no v5 route/design/e2e files touched"
 fi
 
 # ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───
