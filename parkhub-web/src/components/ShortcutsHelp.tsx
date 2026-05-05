@@ -73,7 +73,7 @@ export function ShortcutsHelp({ open, onClose }: ShortcutsHelpProps) {
         <h2
           id="shortcuts-help-title"
           className="text-lg font-bold text-surface-900 dark:text-white"
-          style={{ letterSpacing: '-0.02em' }}
+          style={{ letterSpacing: '0' }}
         >
           {t('shortcuts.title', 'Keyboard shortcuts')}
         </h2>

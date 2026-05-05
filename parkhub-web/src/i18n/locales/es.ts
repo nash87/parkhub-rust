@@ -708,7 +708,7 @@ export default {
       bookingConfirm: 'Confirmaciones de reserva',
       bookingReminder: 'Recordatorios de reserva',
       bookingCancelled: 'Cancelaciones de reserva',
-      stub: 'Próximamente',
+      stub: 'Proveedor requerido',
       prefsSaved: 'Preferencias de notificación guardadas',
       prefsSaveFailed: 'Error al guardar preferencias de notificación',
     },

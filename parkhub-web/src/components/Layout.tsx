@@ -216,7 +216,7 @@ function SidebarNav({
             }}
             aria-expanded={open}
             aria-controls={regionId}
-            className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normalr text-surface-500 dark:text-surface-500 hover:text-surface-700 dark:hover:text-surface-300 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
           >
             <motion.div
               animate={{ rotate: open ? 90 : 0 }}
@@ -229,7 +229,7 @@ function SidebarNav({
           </button>
         ) : (
           <div
-            className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500"
+            className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-normalr text-surface-500 dark:text-surface-500"
             aria-hidden={sectionIndex === 0 && !isDesktop ? undefined : undefined}
           >
             {sectionLabel}
@@ -465,7 +465,7 @@ export function Layout() {
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/20">
             <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>ParkHub</span>
+          <span className="text-xl font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>ParkHub</span>
         </div>
 
         <div className="flex-1 overflow-y-auto -mx-1 px-1">

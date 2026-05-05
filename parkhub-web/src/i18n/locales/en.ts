@@ -728,7 +728,7 @@ export default {
       bookingConfirm: 'Booking confirmations',
       bookingReminder: 'Booking reminders',
       bookingCancelled: 'Booking cancellations',
-      stub: 'Coming soon',
+      stub: 'Provider required',
       prefsSaved: 'Notification preferences saved',
       prefsSaveFailed: 'Failed to save notification preferences',
     },

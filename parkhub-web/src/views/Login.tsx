@@ -81,9 +81,9 @@ export function LoginPage() {
             <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
               <CarSimpleIcon weight="fill" className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">ParkHub</span>
+            <span className="text-xl font-bold text-white tracking-normal">ParkHub</span>
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4 leading-tight whitespace-pre-line" style={{ letterSpacing: '-0.02em' }}>
+          <h2 className="text-3xl font-bold text-white mb-4 leading-tight whitespace-pre-line" style={{ letterSpacing: '0' }}>
             {t('auth.heroTitle')}
           </h2>
           <p className="text-surface-400 text-sm leading-relaxed max-w-sm">
@@ -114,10 +114,10 @@ export function LoginPage() {
             <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
               <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
+            <span className="text-lg font-bold text-surface-900 dark:text-white tracking-normal">ParkHub</span>
           </div>
 
-          <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '0' }}>
             {t('auth.login')}
           </h1>
           <p className="text-surface-600 dark:text-surface-300 text-sm mb-8">

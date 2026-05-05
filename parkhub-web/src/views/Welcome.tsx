@@ -63,7 +63,7 @@ export function WelcomePage() {
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20">
             <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
-          <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
+          <span className="text-lg font-bold text-surface-900 dark:text-white tracking-normal">ParkHub</span>
         </div>
         <button
           onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
@@ -80,7 +80,7 @@ export function WelcomePage() {
             pulling framer-motion into the unauthenticated bundle. */}
         <div className="h-20 sm:h-24 mb-4 flex items-center" aria-live="polite" aria-atomic="true">
           <div key={greeting.lang} className="transition-opacity duration-300 ease-out">
-            <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.03em' }}>
+            <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>
               {greeting.text}
             </span>
             <span className="ml-4 text-4xl sm:text-5xl">{greeting.flag}</span>

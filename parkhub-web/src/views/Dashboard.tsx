@@ -168,7 +168,7 @@ export function DashboardPage() {
         className={`relative overflow-hidden rounded-2xl px-6 py-5 bg-gradient-to-r ${greetingGradient}`}
       >
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white tracking-tight" style={{ letterSpacing: '-0.025em' }}>
+          <h1 className="text-2xl sm:text-3xl font-bold text-surface-900 dark:text-white tracking-normal" style={{ letterSpacing: '0' }}>
             {t('dashboard.greeting', { timeOfDay, name })}
           </h1>
           {wsConnected && (
@@ -254,7 +254,7 @@ export function DashboardPage() {
         <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
+              <h2 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>
                 {t('dashboard.activeBookings')}
               </h2>
               {activeBookings.length > 0 && (
@@ -277,7 +277,7 @@ export function DashboardPage() {
               >
                 <CalendarPlusIcon weight="duotone" className="w-8 h-8 text-primary-600 dark:text-primary-400" />
               </div>
-              <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '-0.01em' }}>
+              <h3 className="text-base font-semibold text-surface-900 dark:text-white mb-1" style={{ letterSpacing: '0' }}>
                 {t('dashboard.emptyBookingsTitle')}
               </h3>
               <p className="text-sm text-surface-500 dark:text-surface-400 max-w-xs mb-5 leading-relaxed">
@@ -329,7 +329,7 @@ export function DashboardPage() {
         </div>
 
         <div className="card p-6">
-          <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4" style={{ letterSpacing: '-0.02em' }}>
+          <h2 className="text-lg font-semibold text-surface-900 dark:text-white mb-4" style={{ letterSpacing: '0' }}>
             {t('dashboard.quickActions')}
           </h2>
           <div className="space-y-2">

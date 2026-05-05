@@ -60,7 +60,7 @@ export function TopTabs({ unreadCount, onLogout, isAdmin }: TopTabsProps) {
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center shadow-sm">
           <CarSimpleIcon weight="fill" className="w-4 h-4 text-white" />
         </div>
-        <span className="text-base font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
+        <span className="text-base font-bold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>
           ParkHub
         </span>
       </NavLink>

@@ -105,7 +105,7 @@ function AdminSidebar({ sections, onNavigate }: { sections: NavSection[]; onNavi
     <nav aria-label="Admin navigation" className="flex flex-col gap-5">
       {sections.map(section => (
         <div key={section.key}>
-          <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+          <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400">
             {section.label}
           </div>
           <ul className="flex flex-col gap-0.5">
@@ -174,7 +174,7 @@ export function AdminPage() {
           <ListIcon weight="bold" className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+          <div className="text-[11px] font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400">
             {t('admin.title', 'Admin')}
           </div>
           <h1 className="m-0 truncate text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</h1>
@@ -183,10 +183,10 @@ export function AdminPage() {
 
       <header className="mb-5 hidden border-b border-surface-200 pb-4 dark:border-surface-800 lg:flex lg:items-end lg:justify-between lg:gap-6">
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+          <div className="text-[11px] font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400">
             {t('admin.title', 'Admin')}
           </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-surface-950 dark:text-white">
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-surface-950 dark:text-white">
             {currentLabel}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-surface-500 dark:text-surface-400">
@@ -224,7 +224,7 @@ export function AdminPage() {
             >
               <div className="flex items-center justify-between border-b border-surface-200 px-4 py-3 dark:border-surface-800">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                  <div className="text-[11px] font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400">
                     {t('admin.title', 'Admin')}
                   </div>
                   <h2 className="m-0 text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</h2>

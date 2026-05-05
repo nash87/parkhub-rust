@@ -202,7 +202,7 @@ export function VehiclesPage() {
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full flex-shrink-0 ${colorClass}`} />
                     <div>
-                      <p className="text-lg font-semibold text-surface-900 dark:text-white font-mono tracking-wider">{v.plate}</p>
+                      <p className="text-lg font-semibold text-surface-900 dark:text-white font-mono tracking-normal">{v.plate}</p>
                       {(v.make || v.model) && <p className="text-sm text-surface-500 dark:text-surface-400">{[v.make, v.model].filter(Boolean).join(' ')}</p>}
                       {v.color && <p className="text-xs text-surface-400 mt-0.5">{t(`vehicles.colors.${v.color}`, v.color)}</p>}
                     </div>

@@ -93,7 +93,7 @@ export function LobbyDisplayPage() {
     >
       {/* Header: lot name + clock */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-[4rem] leading-tight font-black tracking-tight truncate" data-testid="lobby-lot-name">
+        <h1 className="text-[4rem] leading-tight font-black tracking-normal truncate" data-testid="lobby-lot-name">
           {data.lot_name}
         </h1>
         <time className="text-3xl font-mono text-gray-400 tabular-nums shrink-0 ml-8" data-testid="lobby-clock">
@@ -115,7 +115,7 @@ export function LobbyDisplayPage() {
             {data.total_slots}
           </span>
         </div>
-        <p className="text-2xl text-gray-400 uppercase tracking-widest">
+        <p className="text-2xl text-gray-400 uppercase tracking-normal">
           {t('lobby.available', 'Available')}
         </p>
 

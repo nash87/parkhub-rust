@@ -127,7 +127,7 @@ export function TwoFactorSetupComponent() {
               value={code}
               onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="Enter 6-digit code"
-              className="flex-1 px-3 py-2 border rounded-lg text-center text-lg tracking-widest font-mono"
+              className="flex-1 px-3 py-2 border rounded-lg text-center text-lg tracking-normalst font-mono"
               maxLength={6}
             />
             <button

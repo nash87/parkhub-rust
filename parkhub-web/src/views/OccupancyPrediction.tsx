@@ -246,7 +246,7 @@ export function OccupancyPredictionPage() {
 
       {/* 7-day forecast */}
       <motion.div variants={fadeUp}>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400 mb-3 flex items-center gap-2">
           <TrendUpIcon weight="bold" className="w-4 h-4" />
           {t('prediction.weeklyForecast', '7-Day Forecast')}
         </h2>

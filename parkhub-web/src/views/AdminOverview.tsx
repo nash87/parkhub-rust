@@ -37,9 +37,9 @@ function AdminMetricCard({
     <div className="rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900">
       <div className="flex items-center gap-2 text-surface-500 dark:text-surface-400">
         <Icon weight="bold" className="h-4 w-4" />
-        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-normal">{label}</p>
       </div>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-surface-950 dark:text-white">
+      <p className="mt-3 text-3xl font-semibold tracking-normal text-surface-950 dark:text-white">
         {value}
       </p>
       <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">{helper}</p>
@@ -116,7 +116,7 @@ export function AdminOverviewPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 border-b border-surface-200 pb-5 dark:border-surface-800 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-surface-950 dark:text-white">
+          <h2 className="text-2xl font-semibold tracking-normal text-surface-950 dark:text-white">
             {t('admin.overview', 'Overview')}
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-surface-500 dark:text-surface-400">
@@ -160,7 +160,7 @@ export function AdminOverviewPage() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
         <section className="rounded-lg border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-surface-950 dark:text-white">
+          <h3 className="text-sm font-semibold uppercase tracking-normal text-surface-950 dark:text-white">
             {t('admin.operatingSnapshot', 'Operating snapshot')}
           </h3>
           <div className="mt-4">
@@ -172,7 +172,7 @@ export function AdminOverviewPage() {
         </section>
 
         <section className="rounded-lg border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-surface-950 dark:text-white">
+          <h3 className="text-sm font-semibold uppercase tracking-normal text-surface-950 dark:text-white">
             {t('admin.quickActions', 'Quick actions')}
           </h3>
           <div className="mt-4 grid gap-2">

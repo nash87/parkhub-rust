@@ -240,7 +240,7 @@ ensure_astro_types() {
   else
     # Stale if any source/config file is newer than types.d.ts (skips dist/, node_modules/)
     local newest_src
-    newest_src="$(find parkhub-web/src parkhub-web/astro.config.* parkhub-web/tsconfig.json -type f -newer "$types_file" 2>/dev/null | head -1)"
+    newest_src="$(find parkhub-web/src parkhub-web/astro.config.* parkhub-web/tsconfig.json -type f -newer "$types_file" 2>/dev/null | head -1 || true)"
     if [[ -n "$newest_src" ]]; then needs_sync=1; fi
   fi
   if (( needs_sync )); then
@@ -442,6 +442,7 @@ post_commit_status "pending" "fop local ${profile} running"
 
 # ─── Stage 1: working tree hygiene (always) ─────────────────────────────────
 run_direct "working tree whitespace" "git diff --check"
+run_direct "ui polish contract" "scripts/tests/test-ui-polish-contract.sh"
 
 # ─── Stage 2: workflow + GHA security (when workflows touched) ──────────────
 if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; then

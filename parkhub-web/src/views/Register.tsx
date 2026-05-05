@@ -85,7 +85,7 @@ export function RegisterPage() {
           <div className="w-9 h-9 rounded-lg bg-primary-600 flex items-center justify-center">
             <CarSimpleIcon weight="fill" className="w-5 h-5 text-white" />
           </div>
-          <span className="text-lg font-bold text-surface-900 dark:text-white tracking-tight">ParkHub</span>
+          <span className="text-lg font-bold text-surface-900 dark:text-white tracking-normal">ParkHub</span>
         </div>
 
         <h1 className="text-2xl font-bold text-surface-900 dark:text-white mb-1">{t('auth.register')}</h1>

@@ -83,7 +83,7 @@ export function KpiCard({
               {icon}
             </div>
           )}
-          <p className="text-xs font-medium uppercase tracking-wider text-surface-500 dark:text-surface-400">
+          <p className="text-xs font-medium uppercase tracking-normalr text-surface-500 dark:text-surface-400">
             {label}
           </p>
         </div>
@@ -97,7 +97,7 @@ export function KpiCard({
 
       <p
         className={`relative mt-4 ${valueSize} font-bold text-surface-900 dark:text-white`}
-        style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.03em', lineHeight: 1 }}
+        style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '0', lineHeight: 1 }}
       >
         {prefix}
         <AnimatedCounter value={value} duration={800} />
@@ -111,7 +111,7 @@ function LiveBadge() {
   return (
     <span
       data-testid="live-badge"
-      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-normalr bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
     >
       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot" />
       Live
@@ -206,7 +206,7 @@ export function TrendCard({
     >
       <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
+          <h3 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>
             {title}
           </h3>
           {subtitle && (
@@ -265,7 +265,7 @@ export function TrendCard({
       </svg>
 
       {labels && labels.length > 0 && (
-        <div className="flex justify-between mt-2 px-3 text-[10px] font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wider">
+        <div className="flex justify-between mt-2 px-3 text-[10px] font-medium text-surface-500 dark:text-surface-400 uppercase tracking-normalr">
           {labels.map((l) => (
             <span key={l}>{l}</span>
           ))}
@@ -320,7 +320,7 @@ export function SensorFeedCard({ title, subtitle, sensors }: SensorFeedCardProps
       className="card p-6"
     >
       <header className="mb-4">
-        <h3 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
+        <h3 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>
           {title}
         </h3>
         {subtitle && (
@@ -341,7 +341,7 @@ export function SensorFeedCard({ title, subtitle, sensors }: SensorFeedCardProps
                 <span className={`w-1.5 h-1.5 rounded-full ${styles.dot} ${s.status === 'active' ? 'pulse-dot' : ''}`} />
                 {s.name}
               </span>
-              <span className={`text-xs font-semibold uppercase tracking-wider ${styles.text}`}>
+              <span className={`text-xs font-semibold uppercase tracking-normalr ${styles.text}`}>
                 {styles.label}
               </span>
             </li>
@@ -414,7 +414,7 @@ export function RecentActivityCard({
       className="card p-6"
     >
       <header className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '-0.02em' }}>
+        <h3 className="text-lg font-semibold text-surface-900 dark:text-white" style={{ letterSpacing: '0' }}>
           {title}
         </h3>
         {(viewAllHref || onViewAll) && (
@@ -442,7 +442,7 @@ export function RecentActivityCard({
         <div className="overflow-x-auto">
           <table className="w-full text-sm" data-testid="recent-activity-table">
             <thead>
-              <tr className="text-left text-[11px] font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 border-b border-surface-200/50 dark:border-surface-800/50">
+              <tr className="text-left text-[11px] font-semibold uppercase tracking-normalr text-surface-500 dark:text-surface-400 border-b border-surface-200/50 dark:border-surface-800/50">
                 <th className="pb-2 pr-4">{columnLabels.vehicle}</th>
                 <th className="pb-2 pr-4">{columnLabels.slot}</th>
                 <th className="pb-2 pr-4 hidden sm:table-cell">{columnLabels.checkIn}</th>
@@ -474,7 +474,7 @@ export function RecentActivityCard({
                   </td>
                   <td className="py-3">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${ACTIVITY_STATUS_STYLES[r.status]}`}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-normalr ${ACTIVITY_STATUS_STYLES[r.status]}`}
                     >
                       {r.status.replace('_', ' ')}
                     </span>

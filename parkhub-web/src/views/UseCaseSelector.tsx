@@ -153,7 +153,7 @@ export function UseCaseSelectorPage() {
             >
               {/* Heading */}
               <div className="text-center mb-8 max-w-lg">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary-900 dark:text-surface-100 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-normal text-primary-900 dark:text-surface-100 mb-2">
                   {t('useCase.title')}
                 </h1>
                 <p className="text-surface-500 dark:text-surface-400 text-base">
@@ -236,7 +236,7 @@ export function UseCaseSelectorPage() {
                   applyPreset('business');
                   navigate('/welcome');
                 }}
-                className="mt-4 text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors cursor-pointer uppercase tracking-wider"
+                className="mt-4 text-xs text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors cursor-pointer uppercase tracking-normal"
               >
                 {t('useCase.skip')}
               </button>
@@ -251,7 +251,7 @@ export function UseCaseSelectorPage() {
             >
               {/* Heading */}
               <div className="text-center mb-6">
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary-900 dark:text-surface-100 mb-2">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-normal text-primary-900 dark:text-surface-100 mb-2">
                   {t('features.onboardingTitle')}
                 </h1>
                 <p className="text-surface-500 dark:text-surface-400 text-sm max-w-md mx-auto">
@@ -270,7 +270,7 @@ export function UseCaseSelectorPage() {
                     className="card overflow-hidden"
                   >
                     <div className="px-4 py-2.5 bg-surface-50 dark:bg-surface-800/50 border-b border-surface-200/50 dark:border-surface-700/50">
-                      <span className="text-[10px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-widest">
+                      <span className="text-[10px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-normal">
                         {t(`features.categories.${category}`)}
                       </span>
                     </div>
@@ -297,7 +297,7 @@ export function UseCaseSelectorPage() {
                                   <span className={`text-sm font-medium transition-colors ${enabled ? 'text-surface-900 dark:text-white' : 'text-surface-400 dark:text-surface-500'}`}>
                                     {t(`features.modules.${mod.id}.name`)}
                                   </span>
-                                  <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 transition-colors ${
+                                  <span className={`text-[9px] font-semibold uppercase tracking-normal px-1.5 py-0.5 transition-colors ${
                                     enabled
                                       ? 'bg-accent-100 dark:bg-accent-900/20 text-accent-700 dark:text-accent-400'
                                       : 'bg-surface-100 dark:bg-surface-800 text-surface-400 dark:text-surface-500'
@@ -353,7 +353,7 @@ export function UseCaseSelectorPage() {
                 <div className="flex items-start gap-3">
                   <ShieldCheckIcon weight="fill" className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-semibold text-surface-900 dark:text-white uppercase tracking-wider mb-1.5">
+                    <p className="text-xs font-semibold text-surface-900 dark:text-white uppercase tracking-normal mb-1.5">
                       {t('features.compliance.title')}
                     </p>
                     <ul className="space-y-1">

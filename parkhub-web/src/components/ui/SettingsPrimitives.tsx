@@ -49,7 +49,7 @@ export function SCard({
             {title && (
               <h2
                 className="text-base font-semibold text-surface-900 dark:text-white"
-                style={{ letterSpacing: '-0.01em' }}
+                style={{ letterSpacing: '0' }}
               >
                 {title}
               </h2>

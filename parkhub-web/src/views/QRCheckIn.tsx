@@ -258,7 +258,7 @@ export function QRCheckInPage() {
           {checkInStatus?.checked_in && !checkInStatus.checked_out_at && (
             <>
               <motion.div variants={fadeUp} className="stat-card p-6 text-center">
-                <p className="text-xs font-medium text-surface-400 dark:text-surface-500 uppercase tracking-wider mb-2">
+                <p className="text-xs font-medium text-surface-400 dark:text-surface-500 uppercase tracking-normal mb-2">
                   {t('checkin.elapsed')}
                 </p>
                 <p className="stat-value text-4xl font-mono" data-testid="elapsed-timer">{elapsed}</p>

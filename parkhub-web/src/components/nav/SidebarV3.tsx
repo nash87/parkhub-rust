@@ -337,14 +337,14 @@ export function SidebarV3() {
               borderRadius: 6,
               background: 'linear-gradient(135deg, var(--color-primary-400, #818cf8), var(--color-primary-600, #4f46e5))',
               fontSize: 11,
-              letterSpacing: '-0.03em',
+              letterSpacing: '0',
               boxShadow:
                 '0 0 0 1px color-mix(in oklch, var(--color-primary-500, #6366f1) 60%, transparent), 0 4px 12px -4px var(--color-primary-600, #4f46e5)',
             }}
           >
             P
           </div>
-          <div className="font-bold" style={{ fontSize: 13, letterSpacing: '-0.01em' }}>
+          <div className="font-bold" style={{ fontSize: 13, letterSpacing: '0' }}>
             ParkHub
           </div>
         </Link>
@@ -388,7 +388,7 @@ export function SidebarV3() {
               borderRadius: '50%',
               background: 'linear-gradient(135deg, var(--color-primary-400, #818cf8), var(--color-primary-600, #4f46e5))',
               fontSize: 11,
-              letterSpacing: '-0.02em',
+              letterSpacing: '0',
               border: '1.5px solid oklch(0.17 0.02 260)',
               boxShadow: userMenuOpen
                 ? '0 0 0 1.5px var(--color-primary-500, #6366f1)'
@@ -843,7 +843,7 @@ function NumberedNavItem({ item, active }: { item: NumberedItem; active: boolean
           fontSize: 10,
           color: active ? 'var(--color-primary-300, #a5b4fc)' : 'oklch(0.45 0.015 260)',
           width: 18,
-          letterSpacing: '-0.02em',
+          letterSpacing: '0',
         }}
       >
         {item.num}
@@ -854,7 +854,7 @@ function NumberedNavItem({ item, active }: { item: NumberedItem; active: boolean
         style={{
           fontSize: 13.5,
           fontWeight: active ? 600 : 500,
-          letterSpacing: '-0.01em',
+          letterSpacing: '0',
         }}
       >
         {item.label}

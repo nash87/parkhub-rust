@@ -62,7 +62,7 @@ export function TeamPage() {
 
       {/* Today */}
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400 mb-3">
           {t('team.today', 'Heute abwesend')} ({todayEntries.length})
         </h2>
         {Object.keys(todayByUser).length === 0 ? (
@@ -81,7 +81,7 @@ export function TeamPage() {
 
       {/* Upcoming */}
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400 mb-3">
           {t('team.upcoming', 'Kommende Abwesenheiten')} ({upcomingEntries.length})
         </h2>
         {Object.keys(upcomingByUser).length === 0 ? (
