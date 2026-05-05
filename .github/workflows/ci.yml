@@ -62,6 +62,9 @@ jobs:
       - name: Validate Fly config
         run: python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('fly.toml').read_text())"
 
+      - name: Validate Nix/Garnix contract
+        run: make nix-contract
+
   helm-validate:
     name: Helm validate
     runs-on: ubuntu-latest

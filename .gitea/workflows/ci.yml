@@ -13,6 +13,23 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  nix-garnix-contract:
+    name: Nix/Garnix contract
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.94.1-bookworm
+      # Resolve gitea.test (the in-cluster Gitea HTTP API at 192.168.178.233)
+      # so action ref rewrites work from inside the runner container.
+      options: --add-host=gitea.test:192.168.178.233
+    steps:
+      - name: Checkout code
+        uses: https://192.168.178.233/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Validate Nix/Garnix contract
+        run: bash scripts/check-nix-garnix-contract.sh
+
   fmt:
     name: Cargo Format
     runs-on: ubuntu-latest
