@@ -177,7 +177,7 @@ export function AdminPage() {
           <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
             {t('admin.title', 'Admin')}
           </div>
-          <div className="truncate text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</div>
+          <h1 className="m-0 truncate text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</h1>
         </div>
       </div>
 
@@ -227,7 +227,7 @@ export function AdminPage() {
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
                     {t('admin.title', 'Admin')}
                   </div>
-                  <div className="text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</div>
+                  <h2 className="m-0 text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</h2>
                 </div>
                 <button
                   type="button"

@@ -88,10 +88,40 @@ async function expectKnownRouteShell(page: Page) {
   await expect(page.locator('.blur-3xl')).toHaveCount(0);
 }
 
+function firstLotId(body: unknown): string | null {
+  const value = typeof body === 'object' && body !== null ? body as { data?: unknown } : {};
+  const lots = Array.isArray(value.data) ? value.data : Array.isArray(body) ? body : [];
+  const first = lots.find((lot): lot is { id: unknown } => (
+    typeof lot === 'object' && lot !== null && 'id' in lot
+  ));
+
+  return typeof first?.id === 'string' && first.id.length > 0 ? first.id : null;
+}
+
+async function resolvePublicSmokeRoute(page: Page, route: string) {
+  if (route !== '/lobby/1') return route;
+
+  const token = await loginBrowserViaApi(page);
+  const res = await page.context().request.get('/api/v1/lots', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) {
+    throw new Error(`Could not resolve demo lot for lobby smoke route: HTTP ${res.status()}`);
+  }
+
+  const lotId = firstLotId(await res.json());
+  if (!lotId) {
+    throw new Error('Could not resolve demo lot for lobby smoke route: no lots returned');
+  }
+
+  return `/lobby/${lotId}`;
+}
+
 test.describe('Pages — Public Routes', () => {
   for (const route of PUBLIC_ROUTES) {
     test(`${route} loads without errors`, async ({ page }) => {
-      const res = await gotoAppPage(page, route);
+      const smokePath = await resolvePublicSmokeRoute(page, route);
+      const res = await gotoAppPage(page, smokePath);
       expect(res?.status()).toBeLessThan(400);
       // Page should render some content
       await expect(page.locator('body')).not.toBeEmpty();

@@ -85,6 +85,11 @@ describe('AdminPage', () => {
     expect(screen.getAllByText('Administration').length).toBeGreaterThan(0);
   });
 
+  it('exposes the current admin route title as a page heading', () => {
+    render(<AdminPage />);
+    expect(screen.getAllByRole('heading', { level: 1, name: 'Overview' }).length).toBeGreaterThan(0);
+  });
+
   it('renders the subtitle', () => {
     render(<AdminPage />);
     expect(screen.getAllByText('Manage your ParkHub instance').length).toBeGreaterThan(0);

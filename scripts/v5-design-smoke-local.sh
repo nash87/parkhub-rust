@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_PORT="${SERVER_PORT:-8081}"
 SERVER_LOG="${SERVER_LOG:-/tmp/parkhub-v5-design-smoke-server.log}"
+SERVER_DATA_DIR="${SERVER_DATA_DIR:-$(mktemp -d "${TMPDIR:-/var/tmp/florian-offload/tmp}/parkhub-v5-design-smoke.${SERVER_PORT}.XXXXXX")}"
 export CI="${CI:-true}"
 
 cargo_target_dir() {
@@ -44,7 +45,7 @@ export PARKHUB_ADMIN_PASSWORD=demo
 export PARKHUB_DISABLE_RATE_LIMITS=true
 SERVER_BIN="$(cargo_target_dir)/release/parkhub-server"
 "${SERVER_BIN}" \
-  --headless --unattended --port "${SERVER_PORT}" > "${SERVER_LOG}" 2>&1 &
+  --headless --unattended --port "${SERVER_PORT}" --data-dir "${SERVER_DATA_DIR}" > "${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
 cleanup() {
   kill "${SERVER_PID}" 2>/dev/null || true
@@ -60,7 +61,7 @@ fi
 
 READY=0
 for _ in $(seq 1 45); do
-  if curl -sf "http://localhost:${SERVER_PORT}/health" >/dev/null; then
+  if curl -sf "http://127.0.0.1:${SERVER_PORT}/health" >/dev/null; then
     READY=1
     break
   fi
@@ -73,7 +74,7 @@ if [[ "${READY}" -ne 1 ]]; then
 fi
 
 echo "== route + v5 design smoke =="
-export E2E_BASE_URL="http://localhost:${SERVER_PORT}"
+export E2E_BASE_URL="http://127.0.0.1:${SERVER_PORT}"
 if [[ $# -gt 0 ]]; then
   cd "${REPO_ROOT}/parkhub-web"
   npx playwright test "$@"
