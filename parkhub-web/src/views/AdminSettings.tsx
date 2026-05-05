@@ -132,7 +132,7 @@ export function AdminSettingsPage() {
         <div className="space-y-6">
           {/* General */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.general')}</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.general')}</h3>
 
             <div>
               <label htmlFor="setting-company-name" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -171,7 +171,7 @@ export function AdminSettingsPage() {
 
           {/* Booking Rules */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.bookingRules')}</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.bookingRules')}</h3>
 
             <div>
               <label htmlFor="setting-max-bookings" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -215,7 +215,7 @@ export function AdminSettingsPage() {
         <div className="space-y-6">
           {/* Auto-Release */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.autoRelease')}</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.autoRelease')}</h3>
 
             <div>
               <label htmlFor="setting-auto-release" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">
@@ -238,7 +238,7 @@ export function AdminSettingsPage() {
 
           {/* Waitlist */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.waitlist')}</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.waitlist')}</h3>
 
             <ToggleRow
               label={t('admin.enableWaitlist')}
@@ -250,7 +250,7 @@ export function AdminSettingsPage() {
 
           {/* Credits System */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.creditsSystem')}</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.creditsSystem')}</h3>
 
             <ToggleRow
               label={t('admin.enableCredits')}
@@ -279,7 +279,7 @@ export function AdminSettingsPage() {
 
           {/* License Plate Mode */}
           <div className="card p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.licensePlate')}</h3>
+            <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.licensePlate')}</h3>
 
             <div>
               <label htmlFor="setting-license-plate" className="block text-sm font-medium text-surface-700 dark:text-surface-300 mb-2">

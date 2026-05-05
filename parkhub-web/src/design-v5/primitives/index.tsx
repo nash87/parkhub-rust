@@ -136,7 +136,7 @@ export function Card({
       style={{
         background: 'var(--v5-sur)',
         border: '1px solid var(--v5-bor)',
-        borderRadius: 14,
+        borderRadius: 8,
         boxShadow: 'var(--v5-shadow-card)',
         ...style,
       }}
@@ -153,7 +153,7 @@ export function SectionLabel({ children }: { children: ReactNode }) {
       className="v5-mono"
       style={{
         fontSize: 9,
-        letterSpacing: 1.4,
+        letterSpacing: 0,
         color: 'var(--v5-mut)',
         textTransform: 'uppercase',
         marginBottom: 8,
@@ -289,7 +289,7 @@ export function StatCard({
       style={{
         background: accent ? 'var(--v5-acc-muted)' : 'var(--v5-sur)',
         border: `1px solid ${accent ? 'color-mix(in oklch, var(--v5-acc) 50%, transparent)' : 'var(--v5-bor)'}`,
-        borderRadius: 12,
+        borderRadius: 8,
         padding: '12px 16px',
         animationDelay: `${delay}s`,
       }}
@@ -299,7 +299,7 @@ export function StatCard({
           className="v5-mono"
           style={{
             fontSize: 9,
-            letterSpacing: 1.3,
+            letterSpacing: 0,
             color: accent ? 'var(--v5-acc)' : 'var(--v5-mut)',
             textTransform: 'uppercase',
           }}
@@ -332,7 +332,7 @@ export function StatCard({
           fontSize: 26,
           fontWeight: 700,
           color: accent ? 'var(--v5-acc)' : 'var(--v5-txt)',
-          letterSpacing: '-0.5px',
+          letterSpacing: 0,
           margin: '4px 0',
           // Use Inter by default for the number for balanced weight; the
           // v5-mono class provides tabular-nums which applies either way.

@@ -253,29 +253,29 @@ export function GuestPassPage() {
               {/* Pass details */}
               <div className="flex-1 space-y-3">
                 <div>
-                  <span className="text-xs text-surface-400 uppercase tracking-wider">{t('guestBooking.guestName')}</span>
+                  <span className="text-xs text-surface-400 uppercase tracking-normal">{t('guestBooking.guestName')}</span>
                   <p className="font-semibold text-surface-900 dark:text-white">{createdPass.guest_name}</p>
                 </div>
                 <div className="flex gap-4">
                   <div>
-                    <span className="text-xs text-surface-400 uppercase tracking-wider">{t('guestBooking.lot')}</span>
+                    <span className="text-xs text-surface-400 uppercase tracking-normal">{t('guestBooking.lot')}</span>
                     <p className="text-sm text-surface-700 dark:text-surface-300">{createdPass.lot_name}</p>
                   </div>
                   <div>
-                    <span className="text-xs text-surface-400 uppercase tracking-wider">{t('guestBooking.slot')}</span>
+                    <span className="text-xs text-surface-400 uppercase tracking-normal">{t('guestBooking.slot')}</span>
                     <p className="text-sm text-surface-700 dark:text-surface-300">{createdPass.slot_number}</p>
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-surface-400 uppercase tracking-wider">{t('guestBooking.dateRange')}</span>
+                  <span className="text-xs text-surface-400 uppercase tracking-normal">{t('guestBooking.dateRange')}</span>
                   <p className="text-sm text-surface-700 dark:text-surface-300">
                     {new Date(createdPass.start_time).toLocaleString()} — {new Date(createdPass.end_time).toLocaleString()}
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-surface-400 uppercase tracking-wider">{t('guestBooking.code')}</span>
+                  <span className="text-xs text-surface-400 uppercase tracking-normal">{t('guestBooking.code')}</span>
                   <div className="flex items-center gap-2 mt-1">
-                    <code className="bg-surface-100 dark:bg-surface-700 px-3 py-1.5 rounded-lg text-lg font-mono font-bold tracking-widest text-primary-600 dark:text-primary-400" data-testid="guest-code">
+                    <code className="bg-surface-100 dark:bg-surface-700 px-3 py-1.5 rounded-lg text-lg font-mono font-bold tracking-normal text-primary-600 dark:text-primary-400" data-testid="guest-code">
                       {createdPass.guest_code}
                     </code>
                     <button onClick={() => copyCode(createdPass.guest_code)} className="p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700" data-testid="copy-code-btn">

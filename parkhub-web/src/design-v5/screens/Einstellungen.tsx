@@ -76,7 +76,7 @@ const SETTING_FIELDS: Array<{
 ];
 
 const SIDEBAR_LABELS: Record<V5SidebarVariant, string> = {
-  marble: 'Marble (Standard)',
+  marble: 'Standard (Empfohlen)',
   columns: 'Säulen (Live-Pass)',
   minimal: 'Minimal (nur Symbole)',
 };

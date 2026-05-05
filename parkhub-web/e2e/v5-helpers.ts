@@ -109,6 +109,10 @@ export async function loginAsAdmin(page: Page): Promise<void> {
   await page.waitForSelector('text=Active Bookings', { timeout: 30_000 });
 }
 
+export function v5ScreenTitle(page: Page) {
+  return page.getByTestId('v5-screen-title');
+}
+
 /**
  * Pre-seed localStorage so the v5 shell boots already on the target
  * screen + mode, then navigate to `/v5/index.html` and wait for the
@@ -135,9 +139,7 @@ export async function openV5(
   await page.goto('/v5/index.html', { waitUntil: 'domcontentloaded' });
 
   // Wait for the v5 shell to hydrate (h1 renders the screen label).
-  await page
-    .locator('header h1')
-    .waitFor({ state: 'visible', timeout: 30_000 });
+  await v5ScreenTitle(page).waitFor({ state: 'visible', timeout: 30_000 });
 
   // Suppress animations + hide live / chart / map surfaces. Same mask the
   // existing root `e2e/visual.spec.ts` uses — keeps baselines deterministic.

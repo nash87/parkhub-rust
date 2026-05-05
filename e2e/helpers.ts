@@ -177,8 +177,8 @@ export async function loginViaUi(page: Page): Promise<void> {
   }
 }
 
-/** All public frontend routes (no auth needed). */
-export const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password', '/welcome'];
+/** All public frontend routes (no auth needed). Keep in lockstep with App.tsx. */
+export const PUBLIC_ROUTES = ['/welcome', '/tour', '/login', '/register', '/forgot-password', '/choose', '/lobby/1', '/setup'];
 
 /** All protected frontend routes (auth needed). */
 export const PROTECTED_ROUTES = [
@@ -228,6 +228,7 @@ export const ADMIN_ROUTES = [
   '/admin/billing',
   '/admin/visitors',
   '/admin/chargers',
+  '/admin/widgets',
   '/admin/plugins',
   '/admin/compliance',
   '/admin/sso',

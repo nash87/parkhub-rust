@@ -218,7 +218,7 @@ export function NotificationCenter() {
               ) : (
                 Object.entries(grouped).map(([group, items]) => (
                   <div key={group}>
-                    <div className="px-4 py-1.5 text-xs font-semibold text-surface-400 uppercase tracking-wider bg-surface-50 dark:bg-surface-800/50">
+                    <div className="px-4 py-1.5 text-xs font-semibold text-surface-400 uppercase tracking-normalr bg-surface-50 dark:bg-surface-800/50">
                       {groupLabel(group)}
                     </div>
                     <AnimatePresence>

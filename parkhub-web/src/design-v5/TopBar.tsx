@@ -4,12 +4,14 @@ import { useV5Theme, V5_MODE_LABELS, V5_MODES } from './ThemeProvider';
 export function V5TopBar({
   title,
   breadcrumb,
+  onOpenNavigation,
   onOpenCommand,
   onToggleAssistant,
   assistantOpen,
 }: {
   title: string;
   breadcrumb: string;
+  onOpenNavigation?: () => void;
   onOpenCommand: () => void;
   onToggleAssistant: () => void;
   assistantOpen: boolean;
@@ -18,6 +20,7 @@ export function V5TopBar({
 
   return (
     <header
+      className="v5-topbar"
       style={{
         height: 52,
         borderBottom: '1px solid var(--v5-bor)',
@@ -29,24 +32,46 @@ export function V5TopBar({
         flexShrink: 0,
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <button
+        type="button"
+        className="v5-mobile-nav-trigger"
+        onClick={onOpenNavigation}
+        aria-label="Navigation öffnen"
+        style={{
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 34,
+          height: 34,
+          borderRadius: 8,
+          background: 'var(--v5-sur2)',
+          border: '1px solid var(--v5-bor)',
+          color: 'var(--v5-txt)',
+          cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        <V5NamedIcon name="list" size={15} color="var(--v5-txt)" />
+      </button>
+
+      <div className="v5-topbar-title" style={{ flex: 1, minWidth: 0 }}>
         <div
-          className="v5-mono"
+          className="v5-mono v5-topbar-breadcrumb"
           style={{
             fontSize: 9,
             color: 'var(--v5-mut)',
-            letterSpacing: 1.2,
+            letterSpacing: 0,
             marginBottom: 1,
           }}
         >
           {breadcrumb}
         </div>
         <h1
+          data-testid="v5-screen-title"
           style={{
             fontSize: 14,
             fontWeight: 700,
             color: 'var(--v5-txt)',
-            letterSpacing: '-0.3px',
+            letterSpacing: 0,
             margin: 0,
           }}
         >
@@ -56,13 +81,14 @@ export function V5TopBar({
 
       {/* Theme switcher — 3 modes */}
       <div
+        className="v5-topbar-theme"
         role="radiogroup"
         aria-label="Farbthema"
         style={{
           display: 'flex',
           background: 'var(--v5-sur2)',
           border: '1px solid var(--v5-bor)',
-          borderRadius: 9,
+          borderRadius: 8,
           overflow: 'hidden',
         }}
       >
@@ -94,6 +120,7 @@ export function V5TopBar({
 
       <button
         type="button"
+        className="v5-topbar-search"
         onClick={onOpenCommand}
         aria-label="Befehlspalette öffnen"
         style={{
@@ -102,7 +129,7 @@ export function V5TopBar({
           gap: 7,
           background: 'var(--v5-sur2)',
           border: '1px solid var(--v5-bor)',
-          borderRadius: 40,
+          borderRadius: 8,
           padding: '0 11px',
           height: 30,
           cursor: 'pointer',
@@ -110,9 +137,9 @@ export function V5TopBar({
         }}
       >
         <V5NamedIcon name="search" size={12} color="var(--v5-mut)" />
-        <span style={{ fontSize: 11 }}>Suchen…</span>
+        <span className="v5-topbar-search-label" style={{ fontSize: 11 }}>Suchen…</span>
         <kbd
-          className="v5-mono"
+          className="v5-mono v5-topbar-kbd"
           style={{
             fontSize: 9,
             color: 'var(--v5-mut)',
@@ -129,13 +156,14 @@ export function V5TopBar({
 
       <button
         type="button"
+        className="v5-topbar-assistant"
         onClick={onToggleAssistant}
         aria-pressed={assistantOpen}
         aria-label="Assistent umschalten"
         style={{
           height: 30,
           padding: '0 10px',
-          borderRadius: 20,
+          borderRadius: 8,
           background: assistantOpen ? 'var(--v5-acc-muted)' : 'transparent',
           border: `1px solid ${assistantOpen ? 'var(--v5-acc)' : 'var(--v5-bor)'}`,
           display: 'flex',
@@ -149,7 +177,7 @@ export function V5TopBar({
         }}
       >
         <V5NamedIcon name="assistant" size={12} color={assistantOpen ? 'var(--v5-acc)' : 'var(--v5-mut)'} />
-        Smart
+        <span className="v5-topbar-assistant-label">Smart</span>
       </button>
     </header>
   );

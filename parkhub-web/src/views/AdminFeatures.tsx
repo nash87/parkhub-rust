@@ -71,13 +71,13 @@ export function AdminFeaturesPage() {
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       {/* Header */}
       <motion.div variants={item}>
-        <Link to="/" className="inline-flex items-center gap-2 text-xs text-surface-500 hover:text-accent-600 mb-4 transition-colors cursor-pointer uppercase tracking-wider font-semibold">
+        <Link to="/" className="inline-flex items-center gap-2 text-xs text-surface-500 hover:text-accent-600 mb-4 transition-colors cursor-pointer uppercase tracking-normal font-semibold">
           <ArrowLeftIcon weight="bold" className="w-3.5 h-3.5" /> {t('nav.dashboard')}
         </Link>
-        <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-widest mb-1">
+        <p className="text-xs font-semibold text-accent-600 dark:text-accent-400 uppercase tracking-normal mb-1">
           {t('nav.admin')}
         </p>
-        <h1 className="text-2xl font-bold text-surface-900 dark:text-white tracking-tight">
+        <h1 className="text-2xl font-bold text-surface-900 dark:text-white tracking-normal">
           {t('features.title')}
         </h1>
         <p className="text-surface-500 dark:text-surface-400 mt-0.5 text-sm">
@@ -111,7 +111,7 @@ export function AdminFeaturesPage() {
           className="card overflow-hidden"
         >
           <div className="px-4 py-2.5 bg-surface-50 dark:bg-surface-800/50 border-b border-surface-200/50 dark:border-surface-700/50">
-            <span className="text-[10px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-widest">
+            <span className="text-[10px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-normal">
               {t(`features.categories.${category}`)}
             </span>
           </div>
@@ -138,7 +138,7 @@ export function AdminFeaturesPage() {
                         <span className={`text-sm font-semibold transition-colors ${enabled ? 'text-surface-900 dark:text-white' : 'text-surface-400 dark:text-surface-500'}`}>
                           {t(`features.modules.${mod.id}.name`)}
                         </span>
-                        <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 transition-colors ${
+                        <span className={`text-[9px] font-semibold uppercase tracking-normal px-1.5 py-0.5 transition-colors ${
                           enabled
                             ? 'bg-accent-100 dark:bg-accent-900/20 text-accent-700 dark:text-accent-400'
                             : 'bg-surface-100 dark:bg-surface-800 text-surface-400 dark:text-surface-500'
@@ -188,7 +188,7 @@ export function AdminFeaturesPage() {
         <div className="flex items-start gap-3">
           <ShieldCheckIcon weight="fill" className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-semibold text-surface-900 dark:text-white uppercase tracking-wider mb-1.5">
+            <p className="text-xs font-semibold text-surface-900 dark:text-white uppercase tracking-normal mb-1.5">
               {t('features.compliance.title')}
             </p>
             <ul className="space-y-1">

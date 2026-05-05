@@ -3,6 +3,17 @@ name: E2E Tests
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - '.gitea/workflows/e2e.yaml'
+      - '.github/workflows/e2e.yml'
+      - 'src/**'
+      - 'parkhub-web/**'
+      - 'parkhub-server/**'
+      - 'e2e/**'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
   workflow_dispatch:
 
 concurrency:
@@ -84,7 +95,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E tests
+      - name: Run E2E tests (root)
+        run: npx playwright test --project=chromium
+        env:
+          E2E_BASE_URL: http://localhost:8081
+          CI: true
+
+      - name: Run E2E tests (parkhub-web v5 + admin)
+        working-directory: parkhub-web
         run: npx playwright test --project=chromium
         env:
           E2E_BASE_URL: http://localhost:8081

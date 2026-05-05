@@ -57,7 +57,7 @@ export function useV5Theme(): V5ThemeCtx {
 export const V5_MODES = MODES;
 
 export const V5_MODE_LABELS: Record<V5Mode, string> = {
-  marble_light: '☀ Marble',
-  marble_dark: '● Marble Dark',
-  void: '◼ Void',
+  marble_light: 'Light',
+  marble_dark: 'Dark',
+  void: 'Focus Dark',
 };

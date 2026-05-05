@@ -294,7 +294,7 @@ export function TeamLeaderboardPage() {
               <div className="text-lg font-bold text-surface-900 dark:text-white" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {entry.ecoScore}
               </div>
-              <div className="text-[10px] text-surface-400 uppercase tracking-wider">{t('leaderboard.ecoScore', 'Eco Score')}</div>
+              <div className="text-[10px] text-surface-400 uppercase tracking-normal">{t('leaderboard.ecoScore', 'Eco Score')}</div>
             </div>
 
             {/* Bookings bar */}

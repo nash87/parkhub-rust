@@ -124,7 +124,7 @@ export function SettingsPage() {
               <s.icon weight="bold" className="w-3.5 h-3.5" />
               {s.label}
               {s.k === 'workspace' && (
-                <span className="text-[9px] font-bold uppercase px-1 rounded bg-primary-500/15 text-primary-600 dark:text-primary-400 tracking-wider">
+                <span className="text-[9px] font-bold uppercase px-1 rounded bg-primary-500/15 text-primary-600 dark:text-primary-400 tracking-normal">
                   Admin
                 </span>
               )}

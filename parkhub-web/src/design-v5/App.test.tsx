@@ -1,43 +1,58 @@
-import { describe, expect, it } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { V5MobileNav } from './App';
 
-/**
- * Static guards over `App.tsx`.
- *
- *  - All 26 navigation entries ship as real v5 screens; PlaceholderV5 is
- *    retired (#383) so its import + file must not come back.
- *  - URL-based deep-linking + View Transitions + keyboard-shortcut hook
- *    must stay wired into the shell (Tier-1 UX #386).
- */
-describe('design-v5/App', () => {
-  const appSrc = fs.readFileSync(
-    path.resolve(__dirname, './App.tsx'),
-    'utf8',
-  );
+describe('V5MobileNav', () => {
+  it('renders all navigation groups and marks the active screen', () => {
+    render(
+      <V5MobileNav
+        open
+        active="dashboard"
+        onClose={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
 
-  it('does not import PlaceholderV5', () => {
-    expect(appSrc).not.toMatch(/PlaceholderV5/);
+    expect(screen.getByRole('dialog', { name: 'Navigation' })).toBeInTheDocument();
+    expect(screen.getByText('Grundlagen')).toBeInTheDocument();
+    expect(screen.getByText('Flotte')).toBeInTheDocument();
+    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dashboard' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('button', { name: 'API-Schlüssel' })).toBeInTheDocument();
   });
 
-  it('has no Placeholder screen file on disk', () => {
-    const placeholderPath = path.resolve(__dirname, './screens/Placeholder.tsx');
-    expect(fs.existsSync(placeholderPath)).toBe(false);
+  it('navigates and closes from the mobile sheet controls', () => {
+    const onClose = vi.fn();
+    const onNavigate = vi.fn();
+    render(
+      <V5MobileNav
+        open
+        active="dashboard"
+        onClose={onClose}
+        onNavigate={onNavigate}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nutzer' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Navigation schließen' })[1]!);
+
+    expect(onNavigate).toHaveBeenCalledWith('nutzer');
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('imports startViewTransition for cross-screen fades', () => {
-    expect(appSrc).toMatch(/from '\.\/viewTransitions'/);
-    expect(appSrc).toMatch(/startViewTransition\(/);
-  });
+  it('does not mount the dialog while closed', () => {
+    render(
+      <V5MobileNav
+        open={false}
+        active="dashboard"
+        onClose={vi.fn()}
+        onNavigate={vi.fn()}
+      />,
+    );
 
-  it('wires deep-link hooks so /v5/<id> round-trips', () => {
-    expect(appSrc).toMatch(/from '\.\/useDeepLink'/);
-    expect(appSrc).toMatch(/useSyncScreenToUrl/);
-    expect(appSrc).toMatch(/readScreenFromUrl/);
-  });
-
-  it('wires the shared keyboard-shortcut hook', () => {
-    expect(appSrc).toMatch(/from '\.\/useKeyboardShortcuts'/);
-    expect(appSrc).toMatch(/useKeyboardShortcuts\(/);
+    expect(screen.queryByRole('dialog', { name: 'Navigation' })).toBeNull();
   });
 });

@@ -101,11 +101,11 @@ function ProposalCard({
       {/* Diff view */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200/40 dark:border-red-800/30 p-3">
-          <p className="text-[10px] font-semibold text-red-500 dark:text-red-400 uppercase tracking-wider mb-1">{t('translations.current')}</p>
+          <p className="text-[10px] font-semibold text-red-500 dark:text-red-400 uppercase tracking-normal mb-1">{t('translations.current')}</p>
           <p className="text-sm text-red-800 dark:text-red-200 break-words">{proposal.current_value || <em className="text-surface-400">{t('translations.empty')}</em>}</p>
         </div>
         <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200/40 dark:border-emerald-800/30 p-3">
-          <p className="text-[10px] font-semibold text-emerald-500 dark:text-emerald-400 uppercase tracking-wider mb-1">{t('translations.proposed')}</p>
+          <p className="text-[10px] font-semibold text-emerald-500 dark:text-emerald-400 uppercase tracking-normal mb-1">{t('translations.proposed')}</p>
           <p className="text-sm text-emerald-800 dark:text-emerald-200 break-words">{proposal.proposed_value}</p>
         </div>
       </div>
@@ -432,9 +432,9 @@ export function TranslationsPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-surface-200 dark:border-surface-700">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('translations.keyLabel')}</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider">{t('translations.value')}</th>
-                  <th className="text-right px-5 py-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-wider"></th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-normal">{t('translations.keyLabel')}</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-normal">{t('translations.value')}</th>
+                  <th className="text-right px-5 py-3 text-xs font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-normal"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 dark:divide-surface-800">

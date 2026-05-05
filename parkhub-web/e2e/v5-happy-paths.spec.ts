@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { loginAsAdmin, openV5, V5_LABELS, type V5Screen } from './v5-helpers';
+import { loginAsAdmin, openV5, v5ScreenTitle, V5_LABELS, type V5Screen } from './v5-helpers';
 
 /**
  * v5 happy-path suite — Rust mirror of parkhub-php #343 (T-1952).
@@ -138,7 +138,8 @@ const ANCHORS: Record<V5Screen, Anchor> = {
   },
   billing: {
     note: 'Abrechnung banner',
-    assert: async (p) => expect(p.getByText('Abrechnung').first()).toBeVisible(),
+    assert: async (p) =>
+      expect(p.locator('main').getByText('Abrechnung', { exact: true }).first()).toBeVisible(),
   },
   lobby: {
     note: 'lobby surface mounted (section-label or error card)',
@@ -207,16 +208,7 @@ const ANCHORS: Record<V5Screen, Anchor> = {
 };
 
 test.describe('v5 happy paths', () => {
-  // v5 is not yet viewport-responsive below ~900 px — the 230 px sidebar
-  // squeezes the main column and Playwright reports the <h1> as hidden on
-  // Pixel 5. Coverage for mobile-chrome lands with the v5 responsive
-  // refactor (tracked separately). Visual baselines on mobile-chrome are
-  // deliberately skipped for the same reason.
-  test.beforeEach(async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name === 'mobile-chrome',
-      'v5 is desktop-only until the responsive refactor ships — see docs/v5-test-coverage-plan.md',
-    );
+  test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
   });
 
@@ -235,7 +227,7 @@ test.describe('v5 happy paths', () => {
       await openV5(page, screen);
 
       // Shell loaded the correct screen.
-      await expect(page.locator('header h1')).toHaveText(V5_LABELS[screen]);
+      await expect(v5ScreenTitle(page)).toHaveText(V5_LABELS[screen]);
 
       // Real screen component mounted — not PlaceholderV5.
       await expect(

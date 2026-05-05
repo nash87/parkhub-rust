@@ -411,7 +411,7 @@ export function AdminUsersPage() {
           >
             <div className="card p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide">{t('admin.grantCredits')}</h3>
+                <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal">{t('admin.grantCredits')}</h3>
                 <button onClick={() => setCreditUserId(null)} className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors" aria-label={t('common.close')}>
                   <XIcon weight="bold" className="w-5 h-5 text-surface-400" />
                 </button>

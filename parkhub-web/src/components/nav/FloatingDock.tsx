@@ -100,7 +100,7 @@ export function FloatingDock({ unreadCount, isAdmin }: FloatingDockProps) {
             className="fixed bottom-[86px] left-1/2 -translate-x-1/2 z-40 w-[min(480px,92vw)] p-3 rounded-2xl bg-white/95 dark:bg-surface-900/95 backdrop-blur-2xl border border-surface-200 dark:border-surface-800 shadow-2xl"
           >
             <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-surface-500 dark:text-surface-500">
+              <span className="text-[11px] font-bold uppercase tracking-normalr text-surface-500 dark:text-surface-500">
                 {t('nav.more', 'More')}
               </span>
               <button

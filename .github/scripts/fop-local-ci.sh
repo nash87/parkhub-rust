@@ -138,6 +138,7 @@ diff_touch_workflows=0
 diff_touch_php=0
 diff_touch_e2e=0
 diff_touch_image=0
+diff_touch_design_smoke=0
 
 compute_diff_paths() {
   if [[ "${FOP_LOCAL_CI_NO_DIFF_AWARE:-}" == "1" ]] || [[ "$profile" != "pr" ]]; then
@@ -147,6 +148,7 @@ compute_diff_paths() {
     diff_touch_workflows=1
     diff_touch_php=1
     diff_touch_e2e=1
+    diff_touch_design_smoke=1
     return 0
   fi
 
@@ -166,6 +168,7 @@ compute_diff_paths() {
     diff_touch_workflows=1
     diff_touch_php=1
     diff_touch_e2e=1
+    diff_touch_design_smoke=1
     return 0
   fi
 
@@ -202,13 +205,17 @@ compute_diff_paths() {
   if grep -qE '^e2e/|^playwright\.config\.(ts|js|mjs|cjs)$' <<<"$diff_paths"; then
     diff_touch_e2e=1
   fi
+  if grep -qE '^(parkhub-web/(src/(design-v5|views|components|context|api|lib|styles)/|src/(App|main)\.tsx|e2e/|package(-lock)?\.json|astro\.config\.mjs|playwright\.config\.ts)|e2e/|playwright\.config\.ts)$' <<<"$diff_paths"; then
+    diff_touch_design_smoke=1
+  fi
   if grep -qE '^(Dockerfile|Containerfile.*|Cargo\.lock|parkhub-web/package-lock\.json)$' <<<"$diff_paths"; then
     diff_touch_image=1
   fi
 
-  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d image=%d (%d files)\n' \
+  printf 'ℹ diff-aware (vs %s): rust=%d frontend=%d ts_export=%d workflows=%d php=%d e2e=%d design_smoke=%d image=%d (%d files)\n' \
     "$base_ref" "$diff_touch_rust" "$diff_touch_frontend" "$diff_touch_ts_export" \
-    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$diff_touch_image" "$(wc -l <<<"$diff_paths")"
+    "$diff_touch_workflows" "$diff_touch_php" "$diff_touch_e2e" "$diff_touch_design_smoke" \
+    "$diff_touch_image" "$(wc -l <<<"$diff_paths")"
 }
 
 # ─── pre-push hook result re-use (opt-in via FOP_LOCAL_CI_REUSE_PREPUSH=1) ───
@@ -233,7 +240,7 @@ ensure_astro_types() {
   else
     # Stale if any source/config file is newer than types.d.ts (skips dist/, node_modules/)
     local newest_src
-    newest_src="$(find parkhub-web/src parkhub-web/astro.config.* parkhub-web/tsconfig.json -type f -newer "$types_file" 2>/dev/null | head -1)"
+    newest_src="$(find parkhub-web/src parkhub-web/astro.config.* parkhub-web/tsconfig.json -type f -newer "$types_file" 2>/dev/null | head -1 || true)"
     if [[ -n "$newest_src" ]]; then needs_sync=1; fi
   fi
   if (( needs_sync )); then
@@ -302,6 +309,10 @@ post_commit_status() {
 write_report() {
   local state="$1"
   local failed_step="${2:-}"
+  if [[ "$dry_run" -eq 1 ]]; then
+    echo "DRY-RUN: not writing local-ci ${state} report for ${sha:0:8}"
+    return 0
+  fi
   mkdir -p "$report_dir"
   cat > "$report_path" <<EOF
 {
@@ -334,6 +345,38 @@ EOF
 # multi-tab capacity contention where parkhub-php's CI port was starved by
 # blanket 6 GB requests for npm-class steps.
 #
+run_fop_step() {
+  local resource_profile="$1"
+  local command="$2"
+  local marker="__PARKHUB_FOP_STEP_OK_${RANDOM}_${RANDOM}__"
+  local log_file
+  local wrapped_command
+
+  log_file="$(mktemp -t parkhub-fop-step.XXXXXX.log)"
+  printf -v wrapped_command '%s\nprintf "%%s\\n" "$PARKHUB_FOP_STEP_MARKER"' "$command"
+
+  set +e
+  PARKHUB_FOP_STEP_MARKER="$marker" \
+    fop build --backend local --resource-profile "$resource_profile" . --preset custom -- \
+      bash -euo pipefail -c "$wrapped_command" 2>&1 | tee "$log_file"
+  local status=${PIPESTATUS[0]}
+  set -e
+
+  if [[ "$status" -ne 0 ]]; then
+    rm -f "$log_file"
+    return "$status"
+  fi
+
+  if ! grep -Fq "$marker" "$log_file"; then
+    echo "ERROR: fop build reported success but the inner step completion marker was missing." >&2
+    echo "This usually means the wrapped command exited before completion or fop masked its status." >&2
+    rm -f "$log_file"
+    return 1
+  fi
+
+  rm -f "$log_file"
+}
+
 # FOP_LOCAL_CI_DIRECT=1 bypasses the fop queue entirely (kernel handles memory).
 # Use only when the queue is unreachable (bootstrap chicken-and-egg, fop service
 # down, or for short frontend-only runs where the kernel + earlyoom are safer
@@ -353,7 +396,7 @@ run_step() {
     bash -euo pipefail -c "$command"
     return $?
   fi
-  fop build --backend local --resource-profile interactive-small . --preset custom -- bash -euo pipefail -c "$command"
+  run_fop_step interactive-small "$command"
 }
 
 run_step_heavy() {
@@ -368,7 +411,7 @@ run_step_heavy() {
     bash -euo pipefail -c "$command"
     return $?
   fi
-  fop build --backend local --resource-profile batch-medium . --preset custom -- bash -euo pipefail -c "$command"
+  run_fop_step batch-medium "$command"
 }
 
 run_direct() {
@@ -399,6 +442,7 @@ post_commit_status "pending" "fop local ${profile} running"
 
 # ─── Stage 1: working tree hygiene (always) ─────────────────────────────────
 run_direct "working tree whitespace" "git diff --check"
+run_direct "ui polish contract" "scripts/tests/test-ui-polish-contract.sh"
 
 # ─── Stage 2: workflow + GHA security (when workflows touched) ──────────────
 if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; then
@@ -461,7 +505,7 @@ fi
 if (( diff_touch_frontend )); then
   ensure_astro_types
   run_step "frontend typecheck" "cd parkhub-web && ./node_modules/.bin/tsc --noEmit"
-  run_step "frontend test and build" "cd parkhub-web && npm test && npm run build"
+  run_step "frontend test and build" "cd parkhub-web && CI=true npm test && CI=true npm run build"
 else
   skip_step "frontend typecheck" "diff-aware: parkhub-web/ untouched"
   skip_step "frontend test and build" "diff-aware: parkhub-web/ untouched"
@@ -474,6 +518,13 @@ else
   skip_step "playwright spec list" "diff-aware: e2e/ untouched"
 fi
 
+# ─── Stage 4c: Route + design-system smoke (blocking when app UI changed) ───
+if (( diff_touch_design_smoke )); then
+  run_step_heavy "frontend route + v5 design smoke" "FOP_LOCAL_CI_DIRECT=1 ./scripts/v5-design-smoke-local.sh"
+else
+  skip_step "frontend route + v5 design smoke" "diff-aware: no route/design/e2e files touched"
+fi
+
 # ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───
 if (( diff_touch_ts_export )); then
   run_step_heavy "typescript bindings drift" "mkdir -p parkhub-web/dist && printf '%s' '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"\$(git status --porcelain parkhub-web/src/generated/)\""
@@ -483,8 +534,8 @@ fi
 
 # ─── Stage 6: full profile extras (always full when invoked) ─────────────────
 if [[ "$profile" == "full" ]]; then
-  run_step_heavy "openapi drift" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { \"\$server_bin\" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
-  run_step_heavy "playwright chromium" "cd parkhub-web && npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true \"\$server_bin\" --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
+  run_step_heavy "openapi drift" "cd parkhub-web && CI=true npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { \"\$server_bin\" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
+  run_step_heavy "playwright chromium" "cd parkhub-web && CI=true npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true \"\$server_bin\" --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
 fi
 
 # ─── Stage 6b: Helm chart validation (full+cd profiles or helm/ touched) ────
@@ -693,7 +744,11 @@ elif [[ "$profile" == "cd" ]]; then
   skip_step "grype" "grype not on PATH (install: https://github.com/anchore/grype#installation)"
 fi
 
-write_report "success"
-post_commit_status "success" "fop local ${profile} passed"
+if [[ "$dry_run" -eq 1 ]]; then
+  printf '\ndry-run local CI completed; no success report or commit status was written.\n'
+else
+  write_report "success"
+  post_commit_status "success" "fop local ${profile} passed"
 
-printf '\nlocal CI passed: %s\n' "$report_path"
+  printf '\nlocal CI passed: %s\n' "$report_path"
+fi

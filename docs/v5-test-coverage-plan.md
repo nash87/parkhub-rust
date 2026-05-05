@@ -10,7 +10,7 @@ Test base-URL resolves in this order: `E2E_BASE_URL` env → `BASE_URL` env → 
 
 ## Viewports & Modes
 
-- **Viewports** — `chromium` (Desktop Chrome, 1280 × 720 default). The `mobile-chrome` project (Pixel 5, 393 × 851) is listed in `playwright.config.ts` but v5 specs **skip it internally**: the 230 px sidebar crowds the 393 px viewport, Playwright reports the `<h1>` as hidden, and v5 has no responsive breakpoint yet. Tracked as tech debt — mobile baselines land with the v5 responsive refactor.
+- **Viewports** — `chromium` (Desktop Chrome, 1280 × 720 default) and `mobile-chrome` (Pixel 5, 393 × 851). The blocking design-smoke gate renders every v5 screen on both projects. Visual baselines and deeper happy-path/a11y audits remain pinned to `chromium` until the dedicated v5 responsive baseline refactor lands.
 - **Modes** — `marble_light` and `void`. `marble_dark` is deliberately excluded from visual baselines (large per-run AA drift on the gradient background; functional coverage provided by `dark-mode.spec.ts`).
 
 ## Visual Surfaces
@@ -53,8 +53,9 @@ Every happy-path test also asserts the `PlaceholderV5` fallback ("Migration in A
 
 ## Execution
 
-- `cd parkhub-web && npx playwright test --project=chromium --project=mobile-chrome e2e/v5-happy-paths.spec.ts e2e/v5-visual.spec.ts`
-- CI: `.github/workflows/visual-regression.yml` runs `e2e/visual.spec.ts` (root; against rust server at :18181) and `parkhub-web/e2e/v5-visual.spec.ts` + `v5-happy-paths.spec.ts` on `chromium` + `mobile-chrome` after `parkhub-server --headless`. `continue-on-error: true` stays on during baseline stabilisation.
+- Route + v5 render gate: `npm run test:e2e:design-smoke`
+- Visual/happy-path baseline: `cd parkhub-web && npx playwright test --project=chromium e2e/v5-happy-paths.spec.ts e2e/v5-visual.spec.ts`
+- CI: `.github/workflows/visual-regression.yml` runs `e2e/visual.spec.ts` (root; against rust server at :18181) and `parkhub-web/e2e/v5-visual.spec.ts` + `v5-happy-paths.spec.ts` on `chromium` after `parkhub-server --headless`; the local/PR design-smoke gate covers v5 render/runtime checks on both `chromium` and `mobile-chrome`.
 
 ## Baselines
 

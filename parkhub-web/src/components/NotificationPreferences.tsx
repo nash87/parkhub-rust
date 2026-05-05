@@ -143,7 +143,7 @@ export function NotificationPreferencesComponent() {
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
           <DeviceMobileIcon size={16} />
           <span>{t('notifications.smsTitle', 'SMS Notifications')}</span>
-          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Coming soon')}</span>
+          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Provider required')}</span>
         </div>
         <div className="space-y-3 pl-6">
           <Toggle
@@ -169,7 +169,7 @@ export function NotificationPreferencesComponent() {
         <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
           <ChatCircleDotsIcon size={16} />
           <span>{t('notifications.whatsappTitle', 'WhatsApp Notifications')}</span>
-          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Coming soon')}</span>
+          <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full font-medium">{t('notifications.stub', 'Provider required')}</span>
         </div>
         <div className="space-y-3 pl-6">
           <Toggle

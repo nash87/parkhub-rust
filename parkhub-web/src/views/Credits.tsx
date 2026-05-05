@@ -55,7 +55,7 @@ export function CreditsPage() {
       <motion.div variants={item}>
         <p className="text-sm font-medium text-surface-500 dark:text-surface-400 mb-1">{t('credits.balance')}</p>
         <div className="flex items-baseline gap-2">
-          <span className="text-5xl font-bold tracking-tight text-surface-900 dark:text-white">
+          <span className="text-5xl font-bold tracking-normal text-surface-900 dark:text-white">
             {balance}
           </span>
           <span className="text-lg text-surface-400">/ {quota}</span>
@@ -111,7 +111,7 @@ export function CreditsPage() {
 
       {/* Transaction history */}
       <motion.div variants={item}>
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-normal text-surface-500 dark:text-surface-400 mb-3">
           {t('credits.history')}
         </h2>
 

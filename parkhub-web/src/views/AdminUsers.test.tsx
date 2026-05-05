@@ -171,6 +171,15 @@ describe('AdminUsersPage', () => {
     });
   });
 
+  it('does not render route-level theme placeholders', async () => {
+    render(<AdminUsersPage />);
+    await waitFor(() => expect(screen.getByText('Alice')).toBeInTheDocument());
+
+    expect(screen.queryByText('Void user ledger')).not.toBeInTheDocument();
+    expect(screen.queryByText('Marble user ledger')).not.toBeInTheDocument();
+    expect(screen.queryByText('Control posture')).not.toBeInTheDocument();
+  });
+
   it('shows user count', async () => {
     render(<AdminUsersPage />);
     await waitFor(() => {

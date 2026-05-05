@@ -21,6 +21,7 @@
     "test:e2e:local": "bash ../scripts/e2e-local.sh",
     "test:e2e:ui": "bash ../scripts/e2e-local.sh --ui",
     "test:e2e:design": "bash ../scripts/e2e-local.sh e2e/design-*.spec.ts",
+    "test:e2e:design-smoke": "bash ../scripts/v5-design-smoke-local.sh",
     "test:a11y": "bash ../scripts/e2e-local.sh e2e/design-accessibility.spec.ts",
     "lint": "biome check src/",
     "lint:fix": "biome check --write src/",

@@ -126,9 +126,9 @@ jobs:
       - name: Run v5 visual + happy-paths (parkhub-web config)
         # v5 specs live in parkhub-web/e2e/ and target the Astro bundle
         # served by parkhub-server itself (embedded via rust_embed at
-        # /v5/index.html). v5-visual.spec.ts internally skips every
-        # project except chromium; v5-happy-paths.spec.ts skips
-        # mobile-chrome — see docs/v5-test-coverage-plan.md.
+        # /v5/index.html). v5 visual/happy-path/a11y baselines stay on
+        # chromium; mobile v5 render/runtime coverage lives in the local
+        # design-smoke gate — see docs/v5-test-coverage-plan.md.
         working-directory: parkhub-web
         env:
           E2E_BASE_URL: http://127.0.0.1:18181

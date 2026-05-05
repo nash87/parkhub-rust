@@ -218,7 +218,7 @@ describe('ThemeContext', () => {
 
   // ── Design Theme Tests ──
 
-  it('defaults design theme to marble (v5 flagship)', () => {
+  it('defaults design theme to the standard v5 theme', () => {
     render(
       <ThemeProvider>
         <ThemeConsumer />
@@ -226,7 +226,7 @@ describe('ThemeContext', () => {
     );
 
     expect(screen.getByTestId('design-theme').textContent).toBe('marble');
-    expect(screen.getByTestId('design-theme-name').textContent).toBe('Marble');
+    expect(screen.getByTestId('design-theme-name').textContent).toBe('Standard');
   });
 
   it('exposes all 18 design themes (16 legacy + marble + void)', () => {

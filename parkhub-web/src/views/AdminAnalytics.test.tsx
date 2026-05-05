@@ -76,6 +76,19 @@ describe('AdminAnalyticsPage', () => {
     expect(screen.getByText('Analytics')).toBeTruthy();
   });
 
+  it('uses operational analytics copy instead of decorative surface labels', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(mockData),
+    });
+
+    render(<AdminAnalyticsPage />);
+
+    expect(screen.getByText('USAGE & TRENDS')).toBeTruthy();
+    expect(screen.queryByText('Void analytics deck')).toBeNull();
+    expect(screen.queryByText('Marble analytics deck')).toBeNull();
+    expect(screen.queryByText('Observatory')).toBeNull();
+  });
+
   it('shows loading skeletons initially', () => {
     global.fetch = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
     render(<AdminAnalyticsPage />);

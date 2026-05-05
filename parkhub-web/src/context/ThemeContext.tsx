@@ -24,8 +24,8 @@ export interface DesignThemeInfo {
 export const DESIGN_THEMES: DesignThemeInfo[] = [
   {
     id: 'marble',
-    name: 'Marble',
-    description: 'Editorial premium surface. Bright stone base, emerald accents, polished cards and spacious product framing.',
+    name: 'Standard',
+    description: 'Bright operational workspace. Neutral surfaces, emerald accents, polished cards and spacious product framing.',
     previewColors: {
       light: ['#f7f5f1', '#fffdfa', '#14b8a6', '#111827', '#ded7cd'],
       dark: ['#161a22', '#1f2937', '#34d399', '#f9fafb', '#374151'],
@@ -34,8 +34,8 @@ export const DESIGN_THEMES: DesignThemeInfo[] = [
   },
   {
     id: 'void',
-    name: 'Void',
-    description: 'Dark ops room. Inky canvas, cyan telemetry, cinematic contrast, and mission-control density.',
+    name: 'Operations Dark',
+    description: 'Dark operational workspace. Inky canvas, cyan telemetry, clear contrast, and high-density controls.',
     previewColors: {
       light: ['#eef6ff', '#ffffff', '#0ea5e9', '#0f172a', '#dbeafe'],
       dark: ['#020617', '#0f172a', '#22d3ee', '#e2e8f0', '#1e293b'],

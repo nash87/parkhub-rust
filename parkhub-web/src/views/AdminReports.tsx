@@ -158,7 +158,7 @@ export function AdminReportsPage() {
 
       {/* Summary Card */}
       <div className="card p-6">
-        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-4">{t('admin.overview')}</h3>
+        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal mb-4">{t('admin.overview')}</h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
             <span className="text-sm text-surface-600 dark:text-surface-400">{t('admin.utilizationRate')}</span>
@@ -189,7 +189,7 @@ export function AdminReportsPage() {
 
       {/* Bookings This Week Chart */}
       <div className="card p-6">
-        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-4">
+        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal mb-4">
           {t('admin.bookingsThisWeek')}
         </h3>
         <BarChart data={weeklyData} />
@@ -198,7 +198,7 @@ export function AdminReportsPage() {
       {/* Lot Occupancy Donut Chart */}
       {lotOccupancy.length > 0 && (
         <div className="card p-6">
-          <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-6">
+          <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal mb-6">
             {t('admin.lotOccupancy')}
           </h3>
           <div className="flex flex-col sm:flex-row items-center gap-8">
@@ -228,7 +228,7 @@ export function AdminReportsPage() {
 
       {/* Occupancy Heatmap */}
       <div className="card p-6">
-        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-wide mb-1">
+        <h3 className="text-sm font-semibold text-surface-900 dark:text-white uppercase tracking-normal mb-1">
           {t('heatmap.title')}
         </h3>
         <p className="text-xs text-surface-500 dark:text-surface-400 mb-4">

@@ -114,7 +114,7 @@ export function Assistant({
           <h2
             id="assistant-title"
             className="text-sm font-bold text-surface-900 dark:text-white"
-            style={{ letterSpacing: '-0.01em' }}
+            style={{ letterSpacing: '0' }}
           >
             {t('assistant.title', 'Assistant')}
           </h2>

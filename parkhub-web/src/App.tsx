@@ -68,6 +68,7 @@ const SWUpdatePrompt = lazy(() => import('./components/SWUpdatePrompt'), 'SWUpda
 // Admin pages
 const MapViewPage = lazy(() => import('./views/MapView'), 'MapViewPage', '/map');
 const AdminPage = lazy(() => import('./views/Admin'), 'AdminPage', '/admin');
+const AdminOverviewPage = lazy(() => import('./views/AdminOverview'), 'AdminOverviewPage', '/admin');
 const AdminSettingsPage = lazy(() => import('./views/AdminSettings'), 'AdminSettingsPage', '/admin/settings');
 const AdminUsersPage = lazy(() => import('./views/AdminUsers'), 'AdminUsersPage', '/admin/users');
 const AdminAnnouncementsPage = lazy(() => import('./views/AdminAnnouncements'), 'AdminAnnouncementsPage', '/admin/announcements');
@@ -248,7 +249,7 @@ function ViewTransitionRoutes() {
         <Route path="translations" element={<SuspenseRoute><TranslationsPage /></SuspenseRoute>} />
         <Route path="settings" element={<SuspenseRoute><SettingsPage /></SuspenseRoute>} />
         <Route path="admin" element={<AdminRoute><SuspenseRoute><AdminPage /></SuspenseRoute></AdminRoute>}>
-          <Route index element={<SuspenseRoute><AdminReportsPage /></SuspenseRoute>} />
+          <Route index element={<SuspenseRoute><AdminOverviewPage /></SuspenseRoute>} />
           <Route path="settings" element={<SuspenseRoute><AdminSettingsPage /></SuspenseRoute>} />
           <Route path="users" element={<SuspenseRoute><AdminUsersPage /></SuspenseRoute>} />
           <Route path="lots" element={<SuspenseRoute><AdminLotsPage /></SuspenseRoute>} />

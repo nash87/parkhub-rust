@@ -98,7 +98,7 @@ export function ParkingPassPage() {
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-2 text-primary-100">
               <TicketIcon size={20} />
-              <span className="text-sm font-medium uppercase tracking-wide">
+              <span className="text-sm font-medium uppercase tracking-normal">
                 {t('parkingPass.digitalPass')}
               </span>
             </div>

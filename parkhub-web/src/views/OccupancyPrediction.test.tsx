@@ -13,8 +13,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => {
       const map: Record<string, string> = {
-        'prediction.title': 'Smart Predictions',
-        'prediction.subtitle': 'AI-powered occupancy forecasts',
+        'prediction.title': 'Occupancy Forecast',
+        'prediction.subtitle': 'Pattern-based occupancy forecasts',
         'prediction.bestTime': 'Best Time to Book',
         'prediction.recommendReason': 'Based on your booking patterns and lot availability',
         'prediction.weeklyForecast': '7-Day Forecast',
@@ -40,8 +40,6 @@ vi.mock('framer-motion', () => ({
 }));
 
 vi.mock('@phosphor-icons/react', () => ({
-  SparkleIcon: (props: any) => <span data-testid="icon-sparkle" {...props} />,
-  BrainIcon: (props: any) => <span data-testid="icon-brain" {...props} />,
   CalendarBlankIcon: (props: any) => <span data-testid="icon-calendar" {...props} />,
   ClockIcon: (props: any) => <span data-testid="icon-clock" {...props} />,
   TrendUpIcon: (props: any) => <span data-testid="icon-trend" {...props} />,
@@ -99,7 +97,7 @@ describe('OccupancyPredictionPage', () => {
 
     render(<OccupancyPredictionPage />);
     await waitFor(() => {
-      expect(screen.getByText('Smart Predictions')).toBeInTheDocument();
+      expect(screen.getByText('Occupancy Forecast')).toBeInTheDocument();
     });
     expect(screen.getByTestId('prediction-page')).toBeInTheDocument();
   });

@@ -34,10 +34,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
-    // Pixel 5 viewport — v5 specs internally skip this project until the
-    // v5 responsive refactor lands (see docs/v5-test-coverage-plan.md).
-    // Listed here so non-v5 specs that DO opt into mobile-chrome can run
-    // it with `--project=mobile-chrome`, matching parkhub-php #343.
+    // Pixel 5 viewport — design-smoke renders every v5 screen here.
+    // Visual/happy-path/a11y baselines stay desktop-only until the
+    // responsive baseline refactor lands (see docs/v5-test-coverage-plan.md).
     { name: 'mobile-chrome', use: { ...devices['Pixel 5'] } },
   ],
   // Only start the Astro dev server when running in hermetic-local mode.

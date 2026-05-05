@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { CurrencyDollarIcon, ChartBarIcon, DownloadSimpleIcon, QuestionIcon, BuildingsIcon } from '@phosphor-icons/react';
-import { V11Meter } from '../components/v11/V11Meter';
+import { V11Meter, type V11MeterTone } from '../components/v11/V11Meter';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { HeroEyebrow } from '../components/v11/HeroEyebrow';
@@ -71,20 +71,17 @@ export function AdminBillingPage() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 3 }, (_, i) => <div key={i} className="h-24 skeleton rounded-xl" />)}
+      <div className="space-y-4" data-testid="billing-shell">
+        {Array.from({ length: 3 }, (_, i) => <div key={i} className="h-24 skeleton rounded-lg" />)}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* v11 SOTA hero — replaces plain h2/subtitle. Pairs with the
-          .admin-hero shipped on the Admin shell. Emerald tone matches
-          the Cost Center Billing identity. */}
+    <div className="space-y-6" data-testid="billing-shell">
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
-          <HeroEyebrow icon={CurrencyDollarIcon} label={t('billing.eyebrow', 'COST CENTER BILLING')} />
+          <HeroEyebrow icon={CurrencyDollarIcon} label={t('billing.eyebrow', 'Cost center billing')} />
           <h1 className="admin-hero-headline">{t('billing.title', 'Cost Center Billing')}</h1>
           <p className="admin-hero-sub">
             {t('billing.subtitle', 'Billing breakdown by cost center and department')}
@@ -94,7 +91,7 @@ export function AdminBillingPage() {
           <button
             onClick={() => setShowHelp(!showHelp)}
             className="admin-hero-iconbtn"
-            aria-label={t('billing.help_toggle', 'Toggle help')}
+            aria-label={t('billing.help_toggle', 'Toggle billing help')}
           >
             <QuestionIcon weight="bold" className="w-4 h-4" />
           </button>
@@ -107,14 +104,14 @@ export function AdminBillingPage() {
 
       {/* Help */}
       {showHelp && (
-        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
           <p className="text-sm text-emerald-800 dark:text-emerald-300">
             {t('billing.help', 'This module provides billing analytics by cost center and department. Track parking spending, credit usage, and generate CSV exports for finance teams. Assign cost centers and departments in user profiles.')}
           </p>
         </motion.div>
       )}
 
-      {/* v11 SOTA summary meters — emerald/blue/purple tones for visual rhythm. */}
+      {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-testid="billing-summary">
         <SummaryCard tone="success" label={t('billing.totalSpending', 'Total Spending')} value={`EUR ${totalAmount.toFixed(2)}`} icon={<CurrencyDollarIcon weight="bold" className="w-3.5 h-3.5" />} />
         <SummaryCard tone="info" label={t('billing.totalBookings', 'Total Bookings')} value={totalBookings} icon={<ChartBarIcon weight="bold" className="w-3.5 h-3.5" />} />
@@ -138,7 +135,7 @@ export function AdminBillingPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-surface-900 rounded-xl border border-surface-200 dark:border-surface-800 overflow-hidden" data-testid="billing-table">
+      <div className="bg-white dark:bg-surface-900 rounded-lg border border-surface-200 dark:border-surface-800 overflow-hidden" data-testid="billing-table">
         <table className="w-full">
           <thead>
             <tr className="border-b border-surface-100 dark:border-surface-800 bg-surface-50 dark:bg-surface-900">
@@ -188,8 +185,7 @@ function SummaryCard({ label, value, icon, tone = 'primary' }: {
   label: string;
   value: string | number;
   icon: React.ReactNode;
-  tone?: 'primary' | 'accent' | 'info' | 'success' | 'warn' | 'danger';
+  tone?: V11MeterTone;
 }) {
-  // Delegates to the shared V11Meter primitive (no local bar variant needed).
   return <V11Meter icon={icon} label={label} value={value} tone={tone} />;
 }
