@@ -145,7 +145,6 @@ export function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-6" data-testid="admin-analytics">
-      {/* v11 SOTA hero — emerald tone (data + insights). */}
       <section className="admin-hero admin-hero--emerald">
         <div className="admin-hero-left">
           <HeroEyebrow icon={ChartBarIcon} label={t('analytics.eyebrow', 'USAGE & TRENDS')} />
