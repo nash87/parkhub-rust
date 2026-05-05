@@ -138,7 +138,8 @@ const ANCHORS: Record<V5Screen, Anchor> = {
   },
   billing: {
     note: 'Abrechnung banner',
-    assert: async (p) => expect(p.getByText('Abrechnung').first()).toBeVisible(),
+    assert: async (p) =>
+      expect(p.locator('main').getByText('Abrechnung', { exact: true }).first()).toBeVisible(),
   },
   lobby: {
     note: 'lobby surface mounted (section-label or error card)',
