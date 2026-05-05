@@ -59,7 +59,7 @@ export function V5TopBar({
           style={{
             fontSize: 9,
             color: 'var(--v5-mut)',
-            letterSpacing: 1.2,
+            letterSpacing: 0,
             marginBottom: 1,
           }}
         >
@@ -71,7 +71,7 @@ export function V5TopBar({
             fontSize: 14,
             fontWeight: 700,
             color: 'var(--v5-txt)',
-            letterSpacing: '-0.3px',
+            letterSpacing: 0,
             margin: 0,
           }}
         >
@@ -88,7 +88,7 @@ export function V5TopBar({
           display: 'flex',
           background: 'var(--v5-sur2)',
           border: '1px solid var(--v5-bor)',
-          borderRadius: 9,
+          borderRadius: 8,
           overflow: 'hidden',
         }}
       >
@@ -129,7 +129,7 @@ export function V5TopBar({
           gap: 7,
           background: 'var(--v5-sur2)',
           border: '1px solid var(--v5-bor)',
-          borderRadius: 40,
+          borderRadius: 8,
           padding: '0 11px',
           height: 30,
           cursor: 'pointer',
@@ -163,7 +163,7 @@ export function V5TopBar({
         style={{
           height: 30,
           padding: '0 10px',
-          borderRadius: 20,
+          borderRadius: 8,
           background: assistantOpen ? 'var(--v5-acc-muted)' : 'transparent',
           border: `1px solid ${assistantOpen ? 'var(--v5-acc)' : 'var(--v5-bor)'}`,
           display: 'flex',
