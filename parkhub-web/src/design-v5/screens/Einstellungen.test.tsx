@@ -27,7 +27,7 @@ vi.mock('../Toast', () => ({
 vi.mock('../ThemeProvider', () => ({
   useV5Theme: () => ({ mode: 'marble_light', setMode: vi.fn(), isVoid: false, isDark: false }),
   V5_MODES: ['marble_light', 'marble_dark', 'void'] as const,
-  V5_MODE_LABELS: { marble_light: 'Marble', marble_dark: 'Marble Dark', void: 'Void' },
+  V5_MODE_LABELS: { marble_light: 'Light', marble_dark: 'Dark', void: 'Focus Dark' },
 }));
 
 import { EinstellungenV5 } from './Einstellungen';
