@@ -6,6 +6,18 @@ fail() {
   exit 1
 }
 
+require_lock=0
+case "${1:-}" in
+  "")
+    ;;
+  --require-lock|--strict)
+    require_lock=1
+    ;;
+  *)
+    fail "unknown argument: $1"
+    ;;
+esac
+
 require_file() {
   [[ -f "$1" ]] || fail "missing $1"
 }
@@ -39,7 +51,9 @@ require_grep '"node"[[:space:]]*:[[:space:]]*">=22\.12\.0"' parkhub-web/package.
 require_grep 'checks\.x86_64-linux\.\*' garnix.yaml 'Garnix must build Linux checks'
 require_grep 'devShells\.x86_64-linux\.default' garnix.yaml 'Garnix must build the Linux dev shell'
 
-if [[ ! -f flake.lock ]]; then
+if [[ ! -f flake.lock && "$require_lock" -eq 1 ]]; then
+  fail "flake.lock is not committed yet; run nix flake lock and commit it before release-grade Garnix use"
+elif [[ ! -f flake.lock ]]; then
   printf 'WARN: flake.lock is not committed yet; run nix flake lock once nix is available.\n' >&2
 fi
 
