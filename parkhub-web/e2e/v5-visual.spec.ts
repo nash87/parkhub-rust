@@ -46,10 +46,6 @@ test.describe('v5 visual regression', () => {
         );
         await openV5(page, screen, mode);
 
-        // react-query prefetches land after the initial paint; give the
-        // shell a brief window to settle populated vs empty states.
-        await page.waitForTimeout(400);
-
         await expect(page).toHaveScreenshot(
           `v5-${screen}-${mode}.png`,
           {
