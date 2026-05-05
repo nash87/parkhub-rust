@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
 
-const UNPROFESSIONAL_ROUTE_COPY = /\bAI-powered\b|\bAI-generated\b|\bKI-powered\b|lorem ipsum|Migration in Arbeit/i;
+const UNPROFESSIONAL_ROUTE_COPY = /\bAI-powered\b|\bAI-generated\b|\bKI-powered\b|lorem ipsum|Migration in Arbeit|Generative Background|Generativer Hintergrund|generative art/i;
 
 async function expectKnownRouteShell(page: Page) {
   const body = page.locator('body');

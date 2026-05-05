@@ -713,7 +713,7 @@ export default {
         booking_types: { name: 'Buchungstypen', desc: 'Ein- und mehrtägige sowie wiederkehrende Buchungen', help: 'Verschiedene Buchungstypen über einfache Reservierungen hinaus.' },
         invoices: { name: 'Rechnungen', desc: 'PDF-Rechnungen für Buchungen erstellen', help: 'Automatisch Rechnungen für abgeschlossene Buchungen generieren.' },
         self_registration: { name: 'Selbstregistrierung', desc: 'Benutzer können Konten ohne Admin-Genehmigung erstellen', help: 'Neue Benutzer können sich selbst registrieren.' },
-        generative_bg: { name: 'Generativer Hintergrund', desc: 'Animierte Hintergrunde auf offentlichen Seiten', help: 'Dezente animierte Muster auf Login- und Willkommensseiten.' },
+        generative_bg: { name: 'Oeffentlicher Seitenhintergrund', desc: 'Dezenter operativer Hintergrund auf oeffentlichen Seiten', help: 'Haelt Login-, Willkommens- und Onboarding-Seiten ruhig strukturiert ohne dekorative Effekte.' },
         micro_animations: { name: 'Mikro-Animationen', desc: 'Sanfte Ubergange und Hover-Effekte', help: 'Spring-Physik-Animationen und gestaffelte Listen.' },
         fab_quick_actions: { name: 'Schnellaktionen', desc: 'Schwebende Aktionsschaltflache für schnellen Zugriff', help: 'Befehlspalette (Strg+K) und schwebende Schaltfläche.' },
         rich_empty_states: { name: 'Illustrierte Leerzustande', desc: 'Illustrierte Leerzustande mit hilfreichen Vorschlagen', help: 'Hilfreiche Illustrationen wenn Listen leer sind.' },

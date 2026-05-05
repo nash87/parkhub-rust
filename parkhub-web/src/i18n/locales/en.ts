@@ -678,7 +678,7 @@ export default {
         booking_types: { name: 'Booking Types', desc: 'Support single-day, multi-day, and recurring bookings', help: 'Enable different booking types beyond simple single-slot reservations.' },
         invoices: { name: 'Invoices', desc: 'Generate PDF invoices for bookings', help: 'Automatically generate and download invoices for completed bookings.' },
         self_registration: { name: 'Self Registration', desc: 'Allow users to create accounts without admin approval', help: 'New users can register themselves. Disable for invite-only setups.' },
-        generative_bg: { name: 'Generative Background', desc: 'Animated generative art backgrounds on public pages', help: 'Adds subtle animated patterns to login, welcome, and onboarding screens.' },
+        generative_bg: { name: 'Public Page Background', desc: 'Subtle operational background on public pages', help: 'Keeps login, welcome, and onboarding screens visually structured without decorative effects.' },
         micro_animations: { name: 'Micro Animations', desc: 'Smooth transitions and hover effects throughout the UI', help: 'Enables spring physics animations, staggered lists, and hover feedback.' },
         fab_quick_actions: { name: 'Quick Actions', desc: 'Floating action button for fast access to common tasks', help: 'Shows a command palette (Ctrl+K) and floating button for quick navigation.' },
         rich_empty_states: { name: 'Rich Empty States', desc: 'Illustrated empty states with helpful suggestions', help: 'Shows helpful illustrations and action buttons when lists are empty.' },
