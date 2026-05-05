@@ -481,11 +481,11 @@ else
   skip_step "playwright spec list" "diff-aware: e2e/ untouched"
 fi
 
-# ─── Stage 4c: Design-system route smoke (blocking when app UI changed) ──────
+# ─── Stage 4c: Route + design-system smoke (blocking when app UI changed) ───
 if (( diff_touch_design_smoke )); then
-  run_step_heavy "v5 design smoke" "FOP_LOCAL_CI_DIRECT=1 ./scripts/v5-design-smoke-local.sh"
+  run_step_heavy "frontend route + v5 design smoke" "FOP_LOCAL_CI_DIRECT=1 ./scripts/v5-design-smoke-local.sh"
 else
-  skip_step "v5 design smoke" "diff-aware: no v5 route/design/e2e files touched"
+  skip_step "frontend route + v5 design smoke" "diff-aware: no route/design/e2e files touched"
 fi
 
 # ─── Stage 5: TypeScript bindings drift (Rust→TS contract; skip if both untouched) ───

@@ -64,11 +64,14 @@ if [[ "${READY}" -ne 1 ]]; then
   exit 1
 fi
 
-echo "== v5 design smoke =="
-cd "${REPO_ROOT}/parkhub-web"
+echo "== route + v5 design smoke =="
 export E2E_BASE_URL="http://localhost:${SERVER_PORT}"
 if [[ $# -gt 0 ]]; then
+  cd "${REPO_ROOT}/parkhub-web"
   npx playwright test "$@"
 else
+  export NODE_PATH="${REPO_ROOT}/parkhub-web/node_modules${NODE_PATH:+:${NODE_PATH}}"
+  npx --prefix parkhub-web playwright test --config playwright.config.ts --project=chromium e2e/pages.spec.ts
+  cd "${REPO_ROOT}/parkhub-web"
   npx playwright test --project=chromium e2e/v5-design-smoke.spec.ts
 fi
