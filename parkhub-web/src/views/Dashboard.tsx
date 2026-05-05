@@ -124,7 +124,7 @@ export function DashboardPage() {
       });
   }, [bookings, t]);
 
-  // Live sensor feed — derived from lots (placeholder until a real sensor API exists)
+  // Live sensor feed derived from known lots until the sensor endpoint lands.
   const sensorFeed = useMemo<SensorEntry[]>(() => {
     const lots = Array.from(new Set(bookings.map((b) => b.lot_name).filter(Boolean))).slice(0, 4);
     if (lots.length === 0) {
