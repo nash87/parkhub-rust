@@ -1,0 +1,9 @@
+# Garnix reads this file after the GitHub app is enabled for the repo.
+# Keep the first ParkHub Rust slice Linux-only: fop remains the full heavy
+# cargo/E2E gate, while Garnix proves flake evaluation, checks, and
+# dev-shell cacheability.
+builds:
+  include:
+    - 'checks.x86_64-linux.*'
+    - 'devShells.x86_64-linux.default'
+  exclude: []

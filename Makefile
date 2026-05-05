@@ -24,7 +24,7 @@ MAKEFLAGS += --no-print-directory
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
 
-.PHONY: help ci ci-post ci-security fmt clippy check client-check test lint drift frontend integration embed act pre-push clean
+.PHONY: help ci ci-post ci-security fmt clippy check client-check test lint drift frontend nix-contract integration embed act pre-push clean
 
 help:
 	@echo "parkhub-rust local CI mirror (see .github/workflows/*.yml)"
@@ -37,6 +37,7 @@ help:
 	@echo "  make test        — cargo test headless"
 	@echo "  make integration — integration tests (-- integration --test-threads=1)"
 	@echo "  make frontend    — parkhub-web vitest + build"
+	@echo "  make nix-contract — static Nix/Garnix CI contract"
 	@echo "  make drift       — openapi snapshot drift check"
 	@echo "  make act         — run workflows via nektos/act (if installed)"
 	@echo "  make pre-push    — alias for ci; run before git push"
@@ -80,6 +81,12 @@ integration: embed
 ## Mirrors: frontend job
 frontend:
 	cd parkhub-web && npm ci && npm test && npm run build
+
+## Static Nix/Garnix baseline contract. Real `nix flake check` requires nix
+## on PATH and a generated flake.lock; this gate keeps CI/Gitea/fop honest
+## until the host has Nix/Garnix tooling available.
+nix-contract:
+	bash scripts/check-nix-garnix-contract.sh
 
 ## Mirrors: openapi-drift.yml (starts headless server on :18181, dumps, diffs)
 drift: embed
