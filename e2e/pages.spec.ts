@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
 
@@ -12,8 +12,17 @@ function uniqueRoutes(routes: string[]) {
   return new Set(routes).size;
 }
 
-test('route smoke lists stay in lockstep with App.tsx', () => {
-  const appSource = readAppRoutesSource();
+type RouteGroups = {
+  publicRoutes: string[];
+  protectedRoutes: string[];
+  adminRoutes: string[];
+};
+
+function smokeRoute(routePath: string) {
+  return routePath.replace(':lotId', '1');
+}
+
+function extractRouteGroups(appSource: string): RouteGroups {
   const layoutStart = appSource.indexOf('<Route path="/"');
   const adminStart = appSource.indexOf('<Route path="admin"');
   const wildcardStart = appSource.indexOf('<Route path="*"');
@@ -24,37 +33,52 @@ test('route smoke lists stay in lockstep with App.tsx', () => {
   const publicBlock = appSource.slice(appSource.indexOf('<Routes'), layoutStart);
   const protectedBlock = appSource.slice(layoutStart, adminStart);
   const adminBlock = appSource.slice(adminStart, wildcardStart);
-  const publicRouteCount = publicBlock.match(/<Route path="\/(?!")/g)?.length ?? 0;
-  const protectedRouteCount = (protectedBlock.match(/<Route index\b/g)?.length ?? 0)
-    + (protectedBlock.match(/<Route path="[^/][^"]*"/g)?.length ?? 0);
-  const adminRouteCount = 1 + (adminBlock.match(/<Route path="(?!admin\b)[^/][^"]*"/g)?.length ?? 0);
 
-  expect(PUBLIC_ROUTES).toHaveLength(publicRouteCount);
-  expect(PROTECTED_ROUTES).toHaveLength(protectedRouteCount);
-  expect(ADMIN_ROUTES).toHaveLength(adminRouteCount);
+  const publicRoutes = [...publicBlock.matchAll(/<Route path="(\/[^"]+)"/g)]
+    .map(match => smokeRoute(match[1]));
+
+  const protectedRoutes = [...protectedBlock.matchAll(/<Route (index\b|path="([^"]+)")/g)]
+    .map((match) => {
+      if (match[1] === 'index') return '/';
+      const path = match[2];
+      return path === '/' ? null : `/${path}`;
+    })
+    .filter((route): route is string => Boolean(route));
+
+  const adminRoutes = [
+    '/admin',
+    ...[...adminBlock.matchAll(/<Route path="([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter(path => path !== 'admin')
+      .map(path => `/admin/${path}`),
+  ];
+
+  return { publicRoutes, protectedRoutes, adminRoutes };
+}
+
+function lazyModuleTestPath(modulePath: string) {
+  return `parkhub-web/src/${modulePath.slice('./'.length)}.test.tsx`;
+}
+
+test('route smoke lists stay in lockstep with App.tsx', () => {
+  const appSource = readAppRoutesSource();
+  const routeGroups = extractRouteGroups(appSource);
+
+  expect(PUBLIC_ROUTES).toEqual(routeGroups.publicRoutes);
+  expect(PROTECTED_ROUTES).toEqual(routeGroups.protectedRoutes);
+  expect(ADMIN_ROUTES).toEqual(routeGroups.adminRoutes);
   expect(uniqueRoutes(PUBLIC_ROUTES)).toBe(PUBLIC_ROUTES.length);
   expect(uniqueRoutes(PROTECTED_ROUTES)).toBe(PROTECTED_ROUTES.length);
   expect(uniqueRoutes(ADMIN_ROUTES)).toBe(ADMIN_ROUTES.length);
+});
 
-  for (const route of PUBLIC_ROUTES) {
-    const appRoute = route === '/lobby/1' ? '/lobby/:lotId' : route;
-    expect(appSource).toContain(`path="${appRoute}"`);
-  }
-  for (const route of PROTECTED_ROUTES) {
-    if (route === '/') {
-      expect(protectedBlock).toContain('<Route index');
-    } else {
-      expect(protectedBlock).toContain(`path="${route.slice(1)}"`);
-    }
-  }
-  for (const route of ADMIN_ROUTES) {
-    if (route === '/admin') {
-      expect(adminBlock).toContain('path="admin"');
-      expect(adminBlock).toContain('<Route index');
-    } else {
-      expect(adminBlock).toContain(`path="${route.slice('/admin/'.length)}"`);
-    }
-  }
+test('routed lazy modules keep colocated component coverage', () => {
+  const appSource = readAppRoutesSource();
+  const lazyModuleTestPaths = [...appSource.matchAll(/lazy\(\(\) => import\('([^']+)'\),/g)]
+    .map(match => lazyModuleTestPath(match[1]));
+  const missingTests = lazyModuleTestPaths.filter(path => !existsSync(path));
+
+  expect(missingTests).toEqual([]);
 });
 
 async function expectKnownRouteShell(page: Page) {
