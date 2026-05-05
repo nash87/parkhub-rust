@@ -51,6 +51,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+sleep 1
+if ! kill -0 "${SERVER_PID}" 2>/dev/null; then
+  echo "parkhub-server exited before the health check became reachable on :${SERVER_PORT}" >&2
+  tail -n 80 "${SERVER_LOG}" >&2 || true
+  exit 1
+fi
+
 READY=0
 for _ in $(seq 1 45); do
   if curl -sf "http://localhost:${SERVER_PORT}/health" >/dev/null; then

@@ -667,7 +667,7 @@ export default {
         booking_types: { name: 'Tipi di prenotazione', desc: 'Supporto prenotazioni singole, multi-giorno e ricorrenti', help: 'Abilita diversi tipi di prenotazione oltre alle semplici.' },
         invoices: { name: 'Fatture', desc: 'Generazione fatture PDF per le prenotazioni', help: 'Genera e scarica automaticamente fatture per prenotazioni completate.' },
         self_registration: { name: 'Registrazione libera', desc: 'Permetti la creazione di account senza approvazione admin', help: 'I nuovi utenti possono registrarsi. Disattiva per accesso solo su invito.' },
-        generative_bg: { name: 'Sfondo generativo', desc: 'Sfondi animati sulle pagine pubbliche', help: 'Aggiunge pattern animati sottili alle schermate di login e benvenuto.' },
+        generative_bg: { name: 'Sfondo pagine pubbliche', desc: 'Sfondo operativo discreto sulle pagine pubbliche', help: 'Mantiene login, benvenuto e onboarding strutturati senza effetti decorativi.' },
         micro_animations: { name: 'Micro-animazioni', desc: 'Transizioni fluide ed effetti hover nell\'interfaccia', help: 'Attiva animazioni fisiche, liste sfalsate e feedback visivo al hover.' },
         fab_quick_actions: { name: 'Azioni rapide', desc: 'Pulsante flottante per accesso rapido alle attività comuni', help: 'Mostra una palette comandi (Ctrl+K) e un pulsante flottante per la navigazione rapida.' },
         rich_empty_states: { name: 'Stati vuoti arricchiti', desc: 'Stati vuoti illustrati con suggerimenti utili', help: 'Mostra illustrazioni e pulsanti d\'azione quando le liste sono vuote.' },

@@ -605,7 +605,7 @@ export default {
         booking_types: { name: 'Tipos de reserva', desc: 'Suporte para reservas pontuais, de vários dias e recorrentes', help: 'Ative diferentes tipos de reserva além das simples.' },
         invoices: { name: 'Faturas', desc: 'Geração de faturas PDF para reservas', help: 'Gere e descarregue automaticamente faturas de reservas concluídas.' },
         self_registration: { name: 'Registo livre', desc: 'Permitir criação de contas sem aprovação admin', help: 'Novos utilizadores podem registar-se. Desative para acesso apenas por convite.' },
-        generative_bg: { name: 'Fundo generativo', desc: 'Fundos animados nas páginas públicas', help: 'Adiciona padrões animados subtis aos ecrãs de login e boas-vindas.' },
+        generative_bg: { name: 'Fundo de páginas públicas', desc: 'Fundo operacional discreto nas páginas públicas', help: 'Mantém login, boas-vindas e onboarding estruturados sem efeitos decorativos.' },
         micro_animations: { name: 'Micro-animações', desc: 'Transições fluidas e efeitos hover na interface', help: 'Ativa animações físicas, listas escalonadas e feedback visual ao hover.' },
         fab_quick_actions: { name: 'Ações rápidas', desc: 'Botão flutuante para acesso rápido a tarefas comuns', help: 'Mostra uma paleta de comandos (Ctrl+K) e botão flutuante para navegação rápida.' },
         rich_empty_states: { name: 'Estados vazios enriquecidos', desc: 'Estados vazios ilustrados com sugestões úteis', help: 'Mostra ilustrações e botões de ação quando as listas estão vazias.' },

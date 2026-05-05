@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
 
-const UNPROFESSIONAL_ROUTE_COPY = /\bAI-powered\b|\bAI-generated\b|\bKI-powered\b|lorem ipsum|Migration in Arbeit|Generative Background|Generativer Hintergrund|generative art/i;
+const UNPROFESSIONAL_ROUTE_COPY = /\bAI-powered\b|\bAI-generated\b|\bKI-powered\b|lorem ipsum|Migration in Arbeit|Generative Background|Generativer Hintergrund|generative art|Fondo generativo|Sfondo generativo|Fundo generativo|Arrière-plan génératif|Generatywne tło|Üretken Arka Plan|生成式背景|生成背景/i;
 
 async function expectKnownRouteShell(page: Page) {
   const body = page.locator('body');
