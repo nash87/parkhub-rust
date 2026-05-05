@@ -18,11 +18,7 @@ function attachRuntimeGuard(page: Page): string[] {
 }
 
 test.describe('v5 design smoke', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
-    test.skip(
-      testInfo.project.name !== 'chromium',
-      'design-smoke is the blocking desktop PR gate; responsive/mobile coverage remains visual-regression scope',
-    );
+  test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
   });
 
@@ -39,7 +35,12 @@ test.describe('v5 design smoke', () => {
     });
   }
 
-  test('keyboard focus enters the command surface', async ({ page }) => {
+  test('keyboard focus enters the command surface', async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name !== 'chromium',
+      'keyboard focus is the blocking desktop interaction gate',
+    );
+
     await openV5(page, 'dashboard');
     await page.keyboard.press('Tab');
 
@@ -55,7 +56,12 @@ test.describe('v5 design smoke', () => {
   });
 
   for (const screen of REPRESENTATIVE_A11Y_SCREENS) {
-    test(`${screen} has no serious or critical axe violations`, async ({ page }) => {
+    test(`${screen} has no serious or critical axe violations`, async ({ page }, testInfo) => {
+      test.skip(
+        testInfo.project.name !== 'chromium',
+        'axe gate runs on the desktop accessibility baseline',
+      );
+
       await openV5(page, screen);
 
       const results = await new AxeBuilder({ page })

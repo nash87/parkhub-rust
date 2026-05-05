@@ -7,6 +7,7 @@
     "test:e2e:a11y": "npx playwright test e2e/a11y.spec.ts",
     "test:e2e:visual": "npx playwright test e2e/visual.spec.ts",
     "test:e2e:smoke": "npx playwright test e2e/api.spec.ts e2e/pages.spec.ts",
+    "test:e2e:design-smoke": "./scripts/v5-design-smoke-local.sh",
     "test:e2e:ui": "npx playwright test --ui",
     "test:e2e:chromium": "npx playwright test --project=chromium",
     "test:e2e:report": "npx playwright show-report"
