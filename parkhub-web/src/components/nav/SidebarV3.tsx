@@ -553,8 +553,8 @@ export function SidebarV3() {
                   opacity: 0.6,
                   cursor: 'not-allowed',
                 }}
-                aria-label="Extend parking by 1 hour (coming soon)"
-                title="Extend parking — coming soon"
+                aria-label="Extend parking by 1 hour unavailable for this booking"
+                title="Extend parking is unavailable for this booking"
               >
                 +1h
               </button>
