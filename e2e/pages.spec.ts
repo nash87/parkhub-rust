@@ -1,5 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
+
+async function expectKnownRouteShell(page: Page) {
+  await expect(page.locator('body')).not.toContainText(/\b404\b|not found|nicht gefunden/i);
+}
 
 test.describe('Pages — Public Routes', () => {
   for (const route of PUBLIC_ROUTES) {
@@ -8,6 +12,7 @@ test.describe('Pages — Public Routes', () => {
       expect(res?.status()).toBeLessThan(400);
       // Page should render some content
       await expect(page.locator('body')).not.toBeEmpty();
+      await expectKnownRouteShell(page);
     });
   }
 
@@ -37,6 +42,7 @@ test.describe('Pages — Protected Routes (after login)', () => {
       const res = await gotoAppPage(page, route);
       expect(res?.status()).toBeLessThan(400);
       await expect(page.locator('body')).not.toBeEmpty();
+      await expectKnownRouteShell(page);
     });
   }
 
@@ -62,6 +68,7 @@ test.describe('Pages — Admin Routes (after admin login)', () => {
       const res = await gotoAppPage(page, route);
       expect(res?.status()).toBeLessThan(400);
       await expect(page.locator('body')).not.toBeEmpty();
+      await expectKnownRouteShell(page);
       await expect(page.locator('body')).not.toContainText(/returned an object instead of string/i);
     });
   }
