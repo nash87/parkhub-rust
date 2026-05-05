@@ -7,6 +7,7 @@ async function expectKnownRouteShell(page: Page) {
   const body = page.locator('body');
   await expect(body).not.toContainText(/\b404\b|not found|nicht gefunden/i);
   await expect(body).not.toContainText(UNPROFESSIONAL_ROUTE_COPY);
+  await expect(page.locator('.blur-3xl')).toHaveCount(0);
 }
 
 test.describe('Pages — Public Routes', () => {

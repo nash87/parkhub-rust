@@ -53,10 +53,9 @@ export function WelcomePage() {
   const greeting = CYCLE_GREETINGS[greetingIdx] ?? DEFAULT_GREETING;
 
   return (
-    <div className="min-h-dvh mesh-gradient-animated relative overflow-hidden">
-      {/* Decorative gradient orbs */}
-      <div className="absolute top-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-primary-400/20 via-primary-300/10 to-transparent dark:from-primary-600/10 dark:via-primary-500/5 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-[-15%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-accent-400/15 via-accent-300/8 to-transparent dark:from-accent-600/8 dark:via-accent-500/3 blur-3xl pointer-events-none" />
+    <div className="min-h-dvh bg-surface-50 dark:bg-surface-950 relative overflow-hidden welcome-page">
+      <div className="absolute inset-0 parking-grid opacity-[0.22] dark:opacity-[0.12] pointer-events-none" />
+      <div className="absolute inset-x-0 top-0 h-px bg-primary-500/40" />
 
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-10 py-5">

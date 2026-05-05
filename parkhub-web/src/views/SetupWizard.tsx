@@ -160,7 +160,7 @@ export function SetupWizardPage() {
         </div>
 
         {/* Step content */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-6 mb-4" data-testid="wizard-step-content">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm p-6 mb-4" data-testid="wizard-step-content">
           {currentStep === 1 && (
             <div className="space-y-4" data-testid="wizard-step-1">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('setup.step1', 'Company Info')}</h2>
@@ -288,7 +288,7 @@ export function SetupWizardPage() {
                   <button
                     key={theme.id}
                     onClick={() => setSelectedTheme(theme.id)}
-                    className={`flex flex-col items-center p-3 rounded-xl border-2 transition-all ${
+                    className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${
                       selectedTheme === theme.id
                         ? 'border-primary-600 ring-2 ring-primary-600/30'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-400'
