@@ -148,6 +148,7 @@ vi.mock('./views/Admin', async () => {
   return { AdminPage: () => <div data-testid="page-admin">Admin<Outlet /></div> };
 });
 vi.mock('./views/AdminSettings', () => ({ AdminSettingsPage: stub('admin-settings') }));
+vi.mock('./views/AdminOverview', () => ({ AdminOverviewPage: stub('admin-overview') }));
 vi.mock('./views/AdminUsers', () => ({ AdminUsersPage: stub('admin-users') }));
 vi.mock('./views/AdminAnnouncements', () => ({ AdminAnnouncementsPage: stub('admin-announcements') }));
 vi.mock('./views/AdminLots', () => ({ AdminLotsPage: stub('admin-lots') }));
@@ -538,7 +539,7 @@ describe('App', () => {
   }
 
   const adminRoutes: Array<[string, string]> = [
-    ['/admin', 'page-admin-reports'],
+    ['/admin', 'page-admin-overview'],
     ['/admin/settings', 'page-admin-settings'],
     ['/admin/users', 'page-admin-users'],
     ['/admin/lots', 'page-admin-lots'],
