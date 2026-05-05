@@ -753,75 +753,43 @@ body {
   margin-top: var(--density-row-gap);
 }
 
-/* ── Admin v11 SOTA-2026 hero ───────────────────────────────────────
- * Ports the v11 hero pattern from fop-web-ui (HealthyPulse, IncidentHero,
- * ParallelGuard) into the parkhub-rust admin shell. Replaces the plain
- * "Verwaltung" h1+subtitle with a colored-edge hero card carrying a
- * pulsing studio dot + UPPERCASE mono eyebrow + side meter column.
- *
- * Tokens used:
- *   --color-primary-500/700     teal (existing parkhub palette)
- *   --color-surface-*           white/50/100/800/900 (Tailwind-derived)
- * No new tokens needed — matches existing parkhub design language.
+/* ── Operational page header ────────────────────────────────────────
+ * Dense application header used by admin and workflow pages. Keep this
+ * restrained: no glowing chrome, pulsing markers, or hero-scale typography.
  */
 .admin-hero {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 24px;
-  padding: 24px 28px 24px 32px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in oklab, var(--color-primary-500) 32%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--color-primary-500) 8%, transparent) 0%,
-      color-mix(in oklab, var(--color-primary-500) 3%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-50, #fafafa);
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-surface-200, #e4e4e7);
+  background: var(--color-surface-50, #fafafa);
   overflow: hidden;
 }
 .dark .admin-hero {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--color-primary-500) 12%, transparent) 0%,
-      color-mix(in oklab, var(--color-primary-500) 4%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-900, #18181b);
+  border-color: var(--color-surface-800, #27272a);
+  background: var(--color-surface-900, #18181b);
 }
 .admin-hero::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--color-primary-500);
-  box-shadow: 0 0 24px color-mix(in oklab, var(--color-primary-500) 50%, transparent);
+  display: none;
 }
 .admin-hero-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font: 600 11px/1 ui-monospace, 'JetBrains Mono', monospace;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-primary-700);
-  margin-bottom: 12px;
+  gap: 6px;
+  font: 600 11px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--color-surface-500, #71717a);
+  margin-bottom: 8px;
 }
 .dark .admin-hero-eyebrow {
-  color: var(--color-primary-400, var(--color-primary-500));
+  color: var(--color-surface-400, #a1a1aa);
 }
 .admin-hero-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--color-primary-500);
-  box-shadow: 0 0 10px var(--color-primary-500);
-  animation: admin-hero-pulse 2.4s ease-in-out infinite;
+  display: none;
 }
 @keyframes admin-hero-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -831,14 +799,14 @@ body {
   .admin-hero-dot { animation: none; }
 }
 .admin-hero-headline {
-  font: 700 28px/1.1 ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.01em;
+  font: 600 24px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0;
   color: var(--color-surface-900, #18181b);
-  margin: 0 0 6px 0;
+  margin: 0 0 4px 0;
 }
 .dark .admin-hero-headline { color: #fff; }
 .admin-hero-sub {
-  font: 500 14px/1.45 ui-sans-serif, system-ui, sans-serif;
+  font: 400 14px/1.45 ui-sans-serif, system-ui, sans-serif;
   color: var(--color-surface-500, #71717a);
   margin: 0;
 }
@@ -847,20 +815,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in oklab, var(--color-primary-500) 18%, transparent);
-  background: color-mix(in oklab, var(--color-surface-100, #f4f4f5) 60%, transparent);
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-surface-200, #e4e4e7);
+  background: var(--color-surface-100, #f4f4f5);
 }
 .dark .admin-hero-meter {
-  background: color-mix(in oklab, var(--color-surface-800, #27272a) 60%, transparent);
+  border-color: var(--color-surface-800, #27272a);
+  background: var(--color-surface-950, #09090b);
 }
 .admin-hero-meter-h {
-  font: 600 9px/1 ui-monospace, 'JetBrains Mono', monospace;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font: 600 10px/1.2 ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: none;
   color: var(--color-surface-400, #a1a1aa);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .admin-hero-meter-row {
   display: flex;
@@ -868,8 +837,12 @@ body {
   gap: 2px;
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px dashed color-mix(in oklab, var(--color-primary-500) 22%, transparent);
-  background: color-mix(in oklab, var(--color-primary-500) 4%, transparent);
+  border: 1px solid var(--color-surface-200, #e4e4e7);
+  background: var(--color-surface-50, #fafafa);
+}
+.dark .admin-hero-meter-row {
+  border-color: var(--color-surface-800, #27272a);
+  background: var(--color-surface-900, #18181b);
 }
 .admin-hero-meter-row .lbl {
   font: 600 12px/1.2 ui-sans-serif, system-ui, sans-serif;
@@ -877,7 +850,7 @@ body {
 }
 .dark .admin-hero-meter-row .lbl { color: #fff; }
 .admin-hero-meter-row .meta {
-  font: 500 11px/1.35 ui-monospace, 'JetBrains Mono', monospace;
+  font: 400 11px/1.35 ui-sans-serif, system-ui, sans-serif;
   color: var(--color-surface-500, #71717a);
 }
 
@@ -1043,37 +1016,18 @@ body {
   box-shadow: 0 0 10px color-mix(in oklab, var(--color-primary-500) 50%, transparent);
 }
 
-/* ── Admin hero tone variants + action buttons ─────────────────────
- * Lets per-page hero use a different accent (emerald for billing,
- * blue for reports, etc.) while reusing the .admin-hero chrome.
- */
+/* ── Admin header tone variants + action buttons ─────────────────── */
 .admin-hero--emerald {
-  border-color: color-mix(in oklab, oklch(0.72 0.16 145) 32%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, oklch(0.72 0.16 145) 8%, transparent) 0%,
-      color-mix(in oklab, oklch(0.72 0.16 145) 3%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-50, #fafafa);
+  border-color: color-mix(in oklab, oklch(0.72 0.16 145) 18%, var(--color-surface-200, #e4e4e7));
 }
 .admin-hero--emerald::before {
-  background: oklch(0.72 0.16 145);
-  box-shadow: 0 0 24px color-mix(in oklab, oklch(0.72 0.16 145) 50%, transparent);
+  display: none;
 }
 .admin-hero--emerald .admin-hero-eyebrow,
 .admin-hero--emerald .admin-hero-dot { color: oklch(0.55 0.18 145); }
-.admin-hero--emerald .admin-hero-dot { background: oklch(0.72 0.16 145); box-shadow: 0 0 10px oklch(0.72 0.16 145); }
+.admin-hero--emerald .admin-hero-dot { display: none; }
 .dark .admin-hero--emerald {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, oklch(0.72 0.16 145) 12%, transparent) 0%,
-      color-mix(in oklab, oklch(0.72 0.16 145) 4%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-900, #18181b);
+  border-color: color-mix(in oklab, oklch(0.72 0.16 145) 22%, var(--color-surface-800, #27272a));
 }
 
 .admin-hero-actions {
@@ -1108,78 +1062,47 @@ body {
   gap: 8px;
   padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid color-mix(in oklab, var(--color-primary-500) 32%, transparent);
-  background: color-mix(in oklab, var(--color-primary-500) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-primary-500) 22%, transparent);
+  background: var(--color-surface-50, #fafafa);
   color: var(--color-primary-700);
   font: 600 13px/1 ui-sans-serif, system-ui, sans-serif;
   cursor: pointer;
   transition: background 120ms ease-out;
 }
 .admin-hero-action:hover {
-  background: color-mix(in oklab, var(--color-primary-500) 22%, transparent);
+  background: var(--color-surface-100, #f4f4f5);
 }
 .dark .admin-hero-action {
   color: var(--color-primary-300, var(--color-primary-500));
+  background: var(--color-surface-800, #27272a);
 }
 
 /* ── Admin hero info tone (accessibility, neutral data, blue) ──────── */
 .admin-hero--info {
-  border-color: color-mix(in oklab, oklch(0.62 0.18 240) 32%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, oklch(0.62 0.18 240) 8%, transparent) 0%,
-      color-mix(in oklab, oklch(0.62 0.18 240) 3%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-50, #fafafa);
+  border-color: color-mix(in oklab, oklch(0.62 0.18 240) 18%, var(--color-surface-200, #e4e4e7));
 }
 .admin-hero--info::before {
-  background: oklch(0.62 0.18 240);
-  box-shadow: 0 0 24px color-mix(in oklab, oklch(0.62 0.18 240) 50%, transparent);
+  display: none;
 }
 .admin-hero--info .admin-hero-eyebrow,
 .admin-hero--info .admin-hero-dot { color: oklch(0.50 0.18 240); }
-.admin-hero--info .admin-hero-dot { background: oklch(0.62 0.18 240); box-shadow: 0 0 10px oklch(0.62 0.18 240); }
+.admin-hero--info .admin-hero-dot { display: none; }
 .dark .admin-hero--info {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, oklch(0.62 0.18 240) 12%, transparent) 0%,
-      color-mix(in oklab, oklch(0.62 0.18 240) 4%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-900, #18181b);
+  border-color: color-mix(in oklab, oklch(0.62 0.18 240) 22%, var(--color-surface-800, #27272a));
 }
 
 /* ── Admin hero amber tone (maintenance, caution) ──────────────────── */
 .admin-hero--amber {
-  border-color: color-mix(in oklab, oklch(0.78 0.16 75) 32%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, oklch(0.78 0.16 75) 8%, transparent) 0%,
-      color-mix(in oklab, oklch(0.78 0.16 75) 3%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-50, #fafafa);
+  border-color: color-mix(in oklab, oklch(0.78 0.16 75) 20%, var(--color-surface-200, #e4e4e7));
 }
 .admin-hero--amber::before {
-  background: oklch(0.78 0.16 75);
-  box-shadow: 0 0 24px color-mix(in oklab, oklch(0.78 0.16 75) 50%, transparent);
+  display: none;
 }
 .admin-hero--amber .admin-hero-eyebrow,
 .admin-hero--amber .admin-hero-dot { color: oklch(0.61 0.18 75); }
-.admin-hero--amber .admin-hero-dot { background: oklch(0.78 0.16 75); box-shadow: 0 0 10px oklch(0.78 0.16 75); }
+.admin-hero--amber .admin-hero-dot { display: none; }
 .dark .admin-hero--amber {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, oklch(0.78 0.16 75) 12%, transparent) 0%,
-      color-mix(in oklab, oklch(0.78 0.16 75) 4%, transparent) 60%,
-      transparent 100%
-    ),
-    var(--color-surface-900, #18181b);
+  border-color: color-mix(in oklab, oklch(0.78 0.16 75) 24%, var(--color-surface-800, #27272a));
 }
 
 /* ── v11 SOTA warn banner (pairs with .admin-hero--amber) ──────────── */

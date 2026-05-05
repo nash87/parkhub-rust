@@ -346,8 +346,6 @@ export default {
       },
     },
     admin: {
-      studio_label: 'MARMOR GOVERNANCE STUDIO',
-      operational_focus: 'OPERATIVER FOKUS',
       settingsEyebrow: 'SYSTEM-KONFIGURATION',
       reportsEyebrow: 'GESCHÄFTSKENNZAHLEN',
       reportsSubtitle: 'Buchungsvolumen, Auslastungs-Heatmaps und Umsatztrends',
