@@ -1,7 +1,61 @@
+import { readFileSync } from 'node:fs';
 import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
 
 const UNPROFESSIONAL_ROUTE_COPY = /\bAI-powered\b|\bAI-generated\b|\bKI-powered\b|lorem ipsum|Migration in Arbeit|Generative Background|Generativer Hintergrund|generative art|Fondo generativo|Sfondo generativo|Fundo generativo|Arrière-plan génératif|Generatywne tło|Üretken Arka Plan|生成式背景|生成背景/i;
+
+function readAppRoutesSource() {
+  return readFileSync('parkhub-web/src/App.tsx', 'utf8');
+}
+
+function uniqueRoutes(routes: string[]) {
+  return new Set(routes).size;
+}
+
+test('route smoke lists stay in lockstep with App.tsx', () => {
+  const appSource = readAppRoutesSource();
+  const layoutStart = appSource.indexOf('<Route path="/"');
+  const adminStart = appSource.indexOf('<Route path="admin"');
+  const wildcardStart = appSource.indexOf('<Route path="*"');
+  expect(layoutStart).toBeGreaterThan(0);
+  expect(adminStart).toBeGreaterThan(layoutStart);
+  expect(wildcardStart).toBeGreaterThan(adminStart);
+
+  const publicBlock = appSource.slice(appSource.indexOf('<Routes'), layoutStart);
+  const protectedBlock = appSource.slice(layoutStart, adminStart);
+  const adminBlock = appSource.slice(adminStart, wildcardStart);
+  const publicRouteCount = publicBlock.match(/<Route path="\/(?!")/g)?.length ?? 0;
+  const protectedRouteCount = (protectedBlock.match(/<Route index\b/g)?.length ?? 0)
+    + (protectedBlock.match(/<Route path="[^/][^"]*"/g)?.length ?? 0);
+  const adminRouteCount = 1 + (adminBlock.match(/<Route path="(?!admin\b)[^/][^"]*"/g)?.length ?? 0);
+
+  expect(PUBLIC_ROUTES).toHaveLength(publicRouteCount);
+  expect(PROTECTED_ROUTES).toHaveLength(protectedRouteCount);
+  expect(ADMIN_ROUTES).toHaveLength(adminRouteCount);
+  expect(uniqueRoutes(PUBLIC_ROUTES)).toBe(PUBLIC_ROUTES.length);
+  expect(uniqueRoutes(PROTECTED_ROUTES)).toBe(PROTECTED_ROUTES.length);
+  expect(uniqueRoutes(ADMIN_ROUTES)).toBe(ADMIN_ROUTES.length);
+
+  for (const route of PUBLIC_ROUTES) {
+    const appRoute = route === '/lobby/1' ? '/lobby/:lotId' : route;
+    expect(appSource).toContain(`path="${appRoute}"`);
+  }
+  for (const route of PROTECTED_ROUTES) {
+    if (route === '/') {
+      expect(protectedBlock).toContain('<Route index');
+    } else {
+      expect(protectedBlock).toContain(`path="${route.slice(1)}"`);
+    }
+  }
+  for (const route of ADMIN_ROUTES) {
+    if (route === '/admin') {
+      expect(adminBlock).toContain('path="admin"');
+      expect(adminBlock).toContain('<Route index');
+    } else {
+      expect(adminBlock).toContain(`path="${route.slice('/admin/'.length)}"`);
+    }
+  }
+});
 
 async function expectKnownRouteShell(page: Page) {
   const body = page.locator('body');
