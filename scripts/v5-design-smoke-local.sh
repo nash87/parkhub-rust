@@ -71,7 +71,7 @@ if [[ $# -gt 0 ]]; then
   npx playwright test "$@"
 else
   export NODE_PATH="${REPO_ROOT}/parkhub-web/node_modules${NODE_PATH:+:${NODE_PATH}}"
-  npx --prefix parkhub-web playwright test --config playwright.config.ts --project=chromium e2e/pages.spec.ts
+  npx --prefix parkhub-web playwright test --config playwright.config.ts --project=chromium --project=mobile-chrome e2e/pages.spec.ts
   cd "${REPO_ROOT}/parkhub-web"
   npx playwright test --project=chromium e2e/v5-design-smoke.spec.ts
 fi
