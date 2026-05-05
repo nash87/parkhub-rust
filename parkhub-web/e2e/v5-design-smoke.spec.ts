@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { loginAsAdmin, openV5, V5_LABELS, V5_SCREENS, type V5Screen } from './v5-helpers';
+import { loginAsAdmin, openV5, v5ScreenTitle, V5_LABELS, V5_SCREENS, type V5Screen } from './v5-helpers';
 
 const REPRESENTATIVE_A11Y_SCREENS: V5Screen[] = ['dashboard', 'buchen', 'nutzer'];
 
@@ -28,7 +28,7 @@ test.describe('v5 design smoke', () => {
 
       await openV5(page, screen);
 
-      await expect(page.locator('header h1')).toHaveText(V5_LABELS[screen]);
+      await expect(v5ScreenTitle(page)).toHaveText(V5_LABELS[screen]);
       await expect(page.getByText('Migration in Arbeit')).toBeHidden();
       await expect(page.locator('main')).toContainText(/\S/);
       expect(runtimeErrors, runtimeErrors.join('\n')).toEqual([]);
