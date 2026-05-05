@@ -79,7 +79,7 @@ integration: embed
 
 ## Mirrors: frontend job
 frontend:
-	cd parkhub-web && npm ci && npm test && npm run build
+	cd parkhub-web && npm ci && CI=true npm test && CI=true npm run build
 
 ## Mirrors: openapi-drift.yml (starts headless server on :18181, dumps, diffs)
 drift: embed

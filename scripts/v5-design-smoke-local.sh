@@ -4,6 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_PORT="${SERVER_PORT:-8081}"
 SERVER_LOG="${SERVER_LOG:-/tmp/parkhub-v5-design-smoke-server.log}"
+export CI="${CI:-true}"
 
 cargo_target_dir() {
   cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory
@@ -22,11 +23,11 @@ build_server() {
 
 build_web() {
   if [[ "${FOP_LOCAL_CI_DIRECT:-0}" != "1" ]] && command -v fop >/dev/null 2>&1; then
-    fop --compact build --backend local . --preset custom -- bash -euo pipefail -c "cd parkhub-web && VITE_API_URL= npm run build"
+    fop --compact build --backend local . --preset custom -- bash -euo pipefail -c "cd parkhub-web && CI=true VITE_API_URL= npm run build"
     return
   fi
 
-  (cd parkhub-web && VITE_API_URL='' npm run build)
+  (cd parkhub-web && CI=true VITE_API_URL='' npm run build)
 }
 
 cd "$REPO_ROOT"

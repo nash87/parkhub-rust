@@ -14,6 +14,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVER_PORT="${SERVER_PORT:-8081}"
 WEB_PORT="${WEB_PORT:-4321}"
 SERVER_LOG="${SERVER_LOG:-/tmp/parkhub-e2e-server.log}"
+export CI="${CI:-true}"
 
 cargo_target_dir() {
   cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory
@@ -33,12 +34,12 @@ build_server() {
 
 build_web() {
   if command -v fop >/dev/null 2>&1; then
-    fop --compact build --backend local . --preset custom -- bash -lc "cd parkhub-web && VITE_API_URL= npm run build"
+    fop --compact build --backend local . --preset custom -- bash -lc "cd parkhub-web && CI=true VITE_API_URL= npm run build"
     return
   fi
 
   echo "   fop not found; falling back to npm build for local e2e" >&2
-  (cd parkhub-web && VITE_API_URL='' npm run build)
+  (cd parkhub-web && CI=true VITE_API_URL='' npm run build)
 }
 
 echo "== parkhub-server (release + e2e-bypass) =="
