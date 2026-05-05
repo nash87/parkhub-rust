@@ -1,8 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 import { gotoAppPage, loginBrowserViaApi, PUBLIC_ROUTES, PROTECTED_ROUTES, ADMIN_ROUTES } from './helpers';
 
+const UNPROFESSIONAL_ROUTE_COPY = /\bAI-powered\b|\bAI-generated\b|\bKI-powered\b|lorem ipsum|Migration in Arbeit/i;
+
 async function expectKnownRouteShell(page: Page) {
-  await expect(page.locator('body')).not.toContainText(/\b404\b|not found|nicht gefunden/i);
+  const body = page.locator('body');
+  await expect(body).not.toContainText(/\b404\b|not found|nicht gefunden/i);
+  await expect(body).not.toContainText(UNPROFESSIONAL_ROUTE_COPY);
 }
 
 test.describe('Pages — Public Routes', () => {

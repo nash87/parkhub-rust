@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,22 +7,14 @@ import {
   BuildingsIcon, ClockCounterClockwiseIcon, DatabaseIcon, CarIcon, WheelchairIcon, WrenchIcon, CurrencyDollarIcon, UserPlusIcon, LightningIcon,
   PuzzlePieceIcon, GraphicsCardIcon, ShieldCheckIcon, LockKeyIcon, MapTrifoldIcon, ArrowsClockwiseIcon, ListIcon, XIcon, ArrowSquareOutIcon,
 } from '@phosphor-icons/react';
-import { HeroEyebrow } from '../components/v11/HeroEyebrow';
 
-/**
- * Admin shell — categorised sidebar on desktop, mobile drawer on small
- * screens. Replaces the previous horizontal-scrolling tab bar which required
- * users to sideways-swipe through 24 tabs to find features like Modules or
- * Compliance. Sections are grouped by domain (Overview / Operations /
- * People & Access / Compliance & Data / Billing & Plans / Integrations),
- * matching the claude.ai/design v4 pattern used on the Settings hub.
- */
+type AdminIcon = ComponentType<{ className?: string; weight?: 'regular' | 'fill' | 'bold' | 'duotone' }>;
 
 type NavItem = {
   key: string;
   label: string;
   to: string;
-  icon: React.ComponentType<{ className?: string; weight?: 'regular' | 'fill' | 'bold' | 'duotone' }>;
+  icon: AdminIcon;
   external?: boolean;
 };
 
@@ -34,12 +26,13 @@ type NavSection = {
 
 function useAdminSections(): NavSection[] {
   const { t } = useTranslation();
+
   return [
     {
       key: 'overview',
       label: t('admin.group.overview', 'Overview'),
       items: [
-        { key: 'reports', label: t('admin.overview', 'Overview'), to: '/admin', icon: ChartBarIcon },
+        { key: 'overview', label: t('admin.overview', 'Overview'), to: '/admin', icon: ChartBarIcon },
         { key: 'analytics', label: t('admin.analytics', 'Analytics'), to: '/admin/analytics', icon: PresentationChartIcon },
         { key: 'audit', label: t('admin.auditLog', 'Audit Log'), to: '/admin/audit-log', icon: ClockCounterClockwiseIcon },
       ],
@@ -61,7 +54,7 @@ function useAdminSections(): NavSection[] {
       key: 'people',
       label: t('admin.group.peopleAccess', 'People & Access'),
       items: [
-        { key: 'users', label: t('admin.users', 'UsersIcon'), to: '/admin/users', icon: UsersIcon },
+        { key: 'users', label: t('admin.users', 'Users'), to: '/admin/users', icon: UsersIcon },
         { key: 'roles', label: t('rbac.title', 'Roles'), to: '/admin/roles', icon: LockKeyIcon },
         { key: 'tenants', label: t('admin.tenants', 'Tenants'), to: '/admin/tenants', icon: BuildingsIcon },
         { key: 'sso', label: t('admin.sso', 'SSO & SAML'), to: '/admin/sso', icon: ShieldCheckIcon },
@@ -107,56 +100,43 @@ function isActivePath(pathname: string, to: string): boolean {
 
 function AdminSidebar({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void }) {
   const location = useLocation();
+
   return (
-    <nav aria-label="Admin navigation" className="flex flex-col gap-6">
+    <nav aria-label="Admin navigation" className="flex flex-col gap-5">
       {sections.map(section => (
         <div key={section.key}>
-          <div className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-400">
+          <div className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
             {section.label}
           </div>
           <ul className="flex flex-col gap-0.5">
             {section.items.map(item => {
               const active = !item.external && isActivePath(location.pathname, item.to);
               const Icon = item.icon;
-              // v11 SOTA active state — gradient wash + 3px left-edge bar
-              // with primary glow + soft inner-tone tint. Replaces the
-              // plain bg-primary-50 fill so the sidebar matches the new
-              // .admin-hero + .v11-meter chrome shipped in #489 + #490.
-              const linkClass = `v11-nav-link ${active ? 'is-active' : ''} group flex items-center gap-2.5 px-3 py-2 text-sm font-medium`;
+              const linkClass = [
+                'group flex min-h-9 items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition-colors',
+                active
+                  ? 'bg-primary-600 text-white shadow-sm'
+                  : 'text-surface-600 hover:bg-surface-100 hover:text-surface-950 dark:text-surface-300 dark:hover:bg-surface-800 dark:hover:text-white',
+              ].join(' ');
               const content = (
                 <>
-                  <Icon weight={active ? 'fill' : 'regular'} className="w-4 h-4 shrink-0" />
-                  <span className="truncate flex-1">{item.label}</span>
-                  {item.external && <ArrowSquareOutIcon weight="regular" className="w-3 h-3 text-surface-400" />}
-                  {active && (
-                    <motion.span
-                      layoutId="admin-active-dot"
-                      className="w-1.5 h-1.5 rounded-full bg-primary-500 shrink-0"
-                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    />
-                  )}
+                  <Icon weight={active ? 'fill' : 'regular'} className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {item.external && <ArrowSquareOutIcon weight="regular" className="h-3.5 w-3.5 shrink-0 text-surface-400" />}
                 </>
               );
-              if (item.external) {
-                return (
-                  <li key={item.key}>
-                    <a
-                      href={item.to}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={linkClass}
-                      onClick={onNavigate}
-                    >
-                      {content}
-                    </a>
-                  </li>
-                );
-              }
+
               return (
                 <li key={item.key}>
-                  <Link to={item.to} className={linkClass} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
-                    {content}
-                  </Link>
+                  {item.external ? (
+                    <a href={item.to} target="_blank" rel="noopener noreferrer" className={linkClass} onClick={onNavigate}>
+                      {content}
+                    </a>
+                  ) : (
+                    <Link to={item.to} className={linkClass} aria-current={active ? 'page' : undefined} onClick={onNavigate}>
+                      {content}
+                    </Link>
+                  )}
                 </li>
               );
             })}
@@ -173,79 +153,58 @@ export function AdminPage() {
   const sections = useAdminSections();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Find current item label for mobile header
   const currentLabel = (() => {
     for (const section of sections) {
       for (const item of section.items) {
         if (!item.external && isActivePath(location.pathname, item.to)) return item.label;
       }
     }
-    return t('admin.title');
+    return t('admin.title', 'Admin');
   })();
 
   return (
     <div className="mx-auto max-w-7xl">
-      {/* Mobile header with drawer trigger */}
-      <div className="lg:hidden sticky top-0 z-30 -mx-4 px-4 py-3 flex items-center gap-3 bg-surface-50/90 dark:bg-surface-950/90 backdrop-blur border-b border-surface-200 dark:border-surface-700">
+      <div className="lg:hidden sticky top-0 z-30 -mx-4 mb-4 flex items-center gap-3 border-b border-surface-200 bg-surface-50/95 px-4 py-3 backdrop-blur dark:border-surface-800 dark:bg-surface-950/95">
         <button
           type="button"
           onClick={() => setDrawerOpen(true)}
           aria-label={t('admin.openNav', 'Open admin navigation')}
-          className="p-2 -ml-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"
+          className="rounded-md p-2 text-surface-700 hover:bg-surface-100 dark:text-surface-200 dark:hover:bg-surface-800"
         >
-          <ListIcon weight="bold" className="w-5 h-5" />
+          <ListIcon weight="bold" className="h-5 w-5" />
         </button>
-        <div className="flex-1 min-w-0">
-          <div className="text-[11px] uppercase tracking-wider text-surface-500 dark:text-surface-400">{t('admin.title')}</div>
-          <div className="text-sm font-semibold text-surface-900 dark:text-white truncate">{currentLabel}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+            {t('admin.title', 'Admin')}
+          </div>
+          <div className="truncate text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</div>
         </div>
       </div>
 
-      {/*
-        v11 SOTA-2026 hero — replaces plain "Verwaltung" h1/subtitle with a
-        bracketed governance-studio header card carrying the live operational
-        focus. Mirrors the pattern shipped on fop-web-ui v11 (HealthyPulse,
-        IncidentHero, ParallelGuard) — colored left-edge bar, pulsing dot,
-        mono UPPERCASE eyebrow, color-mix(oklab) gradient wash, side meter
-        column with stacked operational focus cards.
-      */}
-      <section className="admin-hero hidden lg:block mb-6">
-        <div className="admin-hero-left">
-          <HeroEyebrow label={t('admin.studio_label', 'MARBLE GOVERNANCE STUDIO')} />
-          <h1 className="admin-hero-headline">{t('admin.title')}</h1>
-          <p className="admin-hero-sub">{t('admin.subtitle')}</p>
+      <header className="mb-5 hidden border-b border-surface-200 pb-4 dark:border-surface-800 lg:flex lg:items-end lg:justify-between lg:gap-6">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+            {t('admin.title', 'Admin')}
+          </div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-surface-950 dark:text-white">
+            {currentLabel}
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-surface-500 dark:text-surface-400">
+            {t('admin.subtitle', 'Manage the ParkHub instance')}
+          </p>
         </div>
-        <aside className="admin-hero-meter" aria-label={t('admin.operational_focus', 'Operational focus')}>
-          <div className="admin-hero-meter-h">
-            {t('admin.operational_focus', 'OPERATIONAL FOCUS')}
-          </div>
-          <div className="admin-hero-meter-row">
-            <div className="lbl">{t('admin.focus.settings', 'Einstellungen')}</div>
-            <div className="meta">{t('admin.focus.settings_meta', 'Policy, booking rules, waitlist, credits')}</div>
-          </div>
-          <div className="admin-hero-meter-row">
-            <div className="lbl">{t('admin.focus.users', 'Benutzer')}</div>
-            <div className="meta">{t('admin.focus.users_meta', 'Quota, role, lifecycle and bulk actions')}</div>
-          </div>
-          <div className="admin-hero-meter-row">
-            <div className="lbl">{t('admin.focus.announcements', 'Ankuendigungen')}</div>
-            <div className="meta">{t('admin.focus.announcements_meta', 'Live comms surfaced into the product shell')}</div>
-          </div>
-        </aside>
-      </section>
+      </header>
 
       <div className="flex gap-6">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:block w-64 shrink-0 pt-2">
-          <div className="sticky top-4">
+        <aside className="hidden w-64 shrink-0 lg:block">
+          <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto pr-2">
             <AdminSidebar sections={sections} />
           </div>
         </aside>
 
-        {/* Mobile drawer */}
         {drawerOpen && (
           <motion.div
-            className="lg:hidden fixed inset-0 z-50"
+            className="fixed inset-0 z-50 lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -260,30 +219,33 @@ export function AdminPage() {
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 36 }}
-              className="absolute left-0 top-0 bottom-0 w-72 max-w-[82%] bg-white dark:bg-surface-900 shadow-2xl overflow-y-auto p-4"
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              className="relative flex h-full w-[min(22rem,88vw)] flex-col bg-white shadow-xl dark:bg-surface-950"
             >
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between border-b border-surface-200 px-4 py-3 dark:border-surface-800">
                 <div>
-                  <h2 className="font-bold text-surface-900 dark:text-white">{t('admin.title')}</h2>
-                  <p className="text-[11px] text-surface-500 dark:text-surface-400">{t('admin.subtitle')}</p>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">
+                    {t('admin.title', 'Admin')}
+                  </div>
+                  <div className="text-sm font-semibold text-surface-950 dark:text-white">{currentLabel}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDrawerOpen(false)}
                   aria-label={t('admin.closeNav', 'Close admin navigation')}
-                  className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800"
+                  className="rounded-md p-2 text-surface-600 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800"
                 >
-                  <XIcon weight="bold" className="w-4 h-4" />
+                  <XIcon weight="bold" className="h-5 w-5" />
                 </button>
               </div>
-              <AdminSidebar sections={sections} onNavigate={() => setDrawerOpen(false)} />
+              <div className="flex-1 overflow-y-auto px-3 py-4">
+                <AdminSidebar sections={sections} onNavigate={() => setDrawerOpen(false)} />
+              </div>
             </motion.aside>
           </motion.div>
         )}
 
-        {/* Content */}
-        <main className="min-w-0 flex-1 pt-2 pb-20 overflow-x-hidden">
+        <main className="min-w-0 flex-1">
           <Outlet />
         </main>
       </div>

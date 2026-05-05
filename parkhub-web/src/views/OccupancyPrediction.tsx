@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { SparkleIcon, BrainIcon, CalendarBlankIcon, ClockIcon, TrendUpIcon, CaretDownIcon } from '@phosphor-icons/react';
+import { CalendarBlankIcon, ClockIcon, TrendUpIcon, CaretDownIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getInMemoryToken } from '../api/client';
 import { staggerSlow, fadeUp } from '../constants/animations';
@@ -197,11 +197,10 @@ export function OccupancyPredictionPage() {
       <motion.div variants={fadeUp} className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 dark:text-white flex items-center gap-3">
-            <BrainIcon weight="fill" className="w-7 h-7 text-purple-500" />
-            {t('prediction.title', 'Smart Predictions')}
-            <SparkleIcon weight="fill" className="w-5 h-5 text-yellow-400" />
+            <TrendUpIcon weight="bold" className="w-7 h-7 text-primary-500" />
+            {t('prediction.title', 'Occupancy Forecast')}
           </h1>
-          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('prediction.subtitle', 'AI-powered occupancy forecasts')}</p>
+          <p className="text-surface-500 dark:text-surface-400 mt-1">{t('prediction.subtitle', 'Pattern-based occupancy forecasts')}</p>
         </div>
         {lots.length > 1 && (
           <div className="relative">
@@ -223,19 +222,19 @@ export function OccupancyPredictionPage() {
       {/* Best time recommendation */}
       <motion.div variants={fadeUp} className="glass-card p-6" data-testid="recommendation-card">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-400 flex items-center justify-center flex-shrink-0">
-            <SparkleIcon weight="fill" className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
+            <ClockIcon weight="fill" className="w-6 h-6 text-white" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-surface-900 dark:text-white">
               {t('prediction.bestTime', 'Best Time to Book')}
             </h2>
             <div className="mt-2 flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 text-sm font-medium">
                 <CalendarBlankIcon weight="fill" className="w-4 h-4" />
                 {recommendation.day}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-sm font-medium">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-950/30 text-primary-700 dark:text-primary-300 text-sm font-medium">
                 <ClockIcon weight="fill" className="w-4 h-4" />
                 {recommendation.timeSlot}
               </span>
