@@ -82,6 +82,18 @@ describe('AdminBillingPage', () => {
     render(<AdminBillingPage />);
     await waitFor(() => {
       expect(screen.getByText('Cost Center Billing')).toBeInTheDocument();
+      expect(screen.getByTestId('billing-shell')).toBeInTheDocument();
+    });
+  });
+
+  it('uses operational billing copy instead of decorative surface labels', async () => {
+    render(<AdminBillingPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cost center billing')).toBeInTheDocument();
+      expect(screen.queryByText('Void finance desk')).not.toBeInTheDocument();
+      expect(screen.queryByText('Marble finance desk')).not.toBeInTheDocument();
+      expect(screen.queryByText('Finance pulse')).not.toBeInTheDocument();
     });
   });
 

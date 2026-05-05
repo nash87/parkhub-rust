@@ -870,18 +870,14 @@ body {
   .admin-hero { grid-template-columns: 1fr; }
 }
 
-/* ── v11 SOTA stat meter — replaces the plain .stat-card ────────────
- * Used by AdminReports + (future) other admin overview screens.
- * Pairs with .admin-hero from PR #489 — same chrome vocabulary
- * (left-edge bar, mono eyebrow, color-mix wash, gradient bar).
- */
+/* Compact stat meter for operational admin summaries. */
 .v11-meter {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px 18px 22px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 24%, transparent);
   background:
     linear-gradient(
@@ -914,20 +910,19 @@ body {
   bottom: 0;
   width: 3px;
   background: var(--meter-tone, var(--color-primary-500));
-  box-shadow: 0 0 14px color-mix(in oklab, var(--meter-tone, var(--color-primary-500)) 40%, transparent);
 }
 .v11-meter-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font: 600 10px/1 ui-monospace, 'JetBrains Mono', monospace;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-surface-500, #71717a);
 }
 .v11-meter-value {
   font: 700 32px/1 ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   color: var(--color-surface-900, #18181b);
   font-variant-numeric: tabular-nums;
 }
@@ -962,7 +957,7 @@ body {
 .v11-meter--warn    { --meter-tone: oklch(0.78 0.16 75);  /* amber */ }
 .v11-meter--danger  { --meter-tone: oklch(0.65 0.22 25);  /* red */ }
 
-/* ── v11 SOTA sidebar nav pill (slice 3) ────────────────────────────
+/* ── Sidebar nav pill (slice 3) ─────────────────────────────────────
  * Replaces the plain `bg-primary-50 text-primary-700` active fill with
  * the v11 chrome vocabulary: 3px colored left-edge bar + tone glow,
  * color-mix(oklab) gradient wash, intensified hover transitions.
@@ -1105,13 +1100,13 @@ body {
   border-color: color-mix(in oklab, oklch(0.78 0.16 75) 24%, var(--color-surface-800, #27272a));
 }
 
-/* ── v11 SOTA warn banner (pairs with .admin-hero--amber) ──────────── */
+/* ── Warn banner (pairs with .admin-hero--amber) ──────────────────── */
 .v11-warn-banner {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid color-mix(in oklab, oklch(0.78 0.16 75) 28%, transparent);
   background: color-mix(in oklab, oklch(0.78 0.16 75) 6%, transparent);
   animation: v11-warn-pulse 4s ease-in-out infinite;
