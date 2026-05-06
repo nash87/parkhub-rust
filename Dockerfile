@@ -4,6 +4,14 @@
 # and a distroless runtime for minimal attack surface (~20 MB image).
 # =============================================================================
 
+# Global build-args (declared before the first FROM so every stage can
+# reference them). WOLFI_BASE defaults to the homelab LAN mirror to preserve
+# the "never pull from Docker Hub" convention for local + gitea-runner
+# builds. GitHub Actions cloud runners pass
+#   --build-arg WOLFI_BASE=cgr.dev/chainguard/wolfi-base:latest
+# to source the same Wolfi base from Chainguard's public registry.
+ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base:latest
+
 # ---------------------------------------------------------------------------
 # Stage 1: Frontend build (Astro/Vite)
 # ---------------------------------------------------------------------------
@@ -94,8 +102,12 @@ RUN mkdir -p /data && chown 65532:65532 /data
 #   - openssl: lettre's tokio1-native-tls dynamically links libssl/libcrypto at runtime
 #     (openssl-sys is `vendored` at BUILD time, but native-tls still dlopens the system libs)
 #   - libgcc: Rust panic unwinding (_Unwind_* symbols)
+#
+# WOLFI_BASE is a global build-arg declared at the top of the file (see
+# header comment). Cloud CI overrides it; local + gitea-runner builds use
+# the LAN mirror default.
 # ---------------------------------------------------------------------------
-FROM 192.168.178.250:5000/wolfi-base:latest AS runtime
+FROM ${WOLFI_BASE} AS runtime
 
 # `apk update && apk upgrade --no-cache --available` is mandatory to bump glibc
 # past CVE-2026-5450 — without `--available`, glibc 2.43-r6 sticks and grype

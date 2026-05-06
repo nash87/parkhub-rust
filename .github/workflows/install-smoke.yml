@@ -28,6 +28,11 @@ jobs:
           git clone --depth 1 https://github.com/nash87/parkhub-rust.git /tmp/smoke
       - name: Follow INSTALLATION.md Docker Compose steps
         working-directory: /tmp/smoke
+        env:
+          # Cloud runners can't reach the homelab LAN mirror; pull the same
+          # Wolfi base from Chainguard's public registry. Dockerfile defaults
+          # to the LAN mirror for local + gitea-runner builds.
+          WOLFI_BASE: cgr.dev/chainguard/wolfi-base:latest
         run: |
           # Step 2 — set admin password
           echo "PARKHUB_ADMIN_PASSWORD=$(openssl rand -base64 24)" > .env
