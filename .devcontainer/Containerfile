@@ -3,9 +3,12 @@
 # binaries CI uses. NOT a runtime image (production runtime is the Wolfi-based
 # Dockerfile at repo root).
 #
-# Base = rust:1.94.1-bookworm (matches builder stage 1 of the production
-# Dockerfile, so cargo/sccache/mold caches are interchangeable).
-FROM rust:1.94.1-bookworm
+# Base = rust:1.95-bookworm (matches builder stage 1 of the production
+# Dockerfile at root, so cargo/sccache/mold caches are interchangeable).
+# Pinned to the bookworm tag (not -slim) so apt-get can install the dev
+# tooling layer below (gnupg/jq/yamllint/python3 family) without bringing
+# in the full slim-vs-full apt-get install delta.
+FROM rust:1.95-bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG NODE_MAJOR=22
