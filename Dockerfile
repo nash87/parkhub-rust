@@ -78,17 +78,41 @@ FROM busybox:1.37.0@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681
 RUN mkdir -p /data && chown 65532:65532 /data
 
 # ---------------------------------------------------------------------------
-# Stage 7: Runtime — distroless/cc for minimal attack surface
-# No shell, no package manager, no wget — just glibc + libstdc++ + ca-certs.
-# Demo seeding and health checks are handled by the binary itself.
+# Stage 7: Runtime — Chainguard Wolfi (replaces gcr.io/distroless/cc-debian13)
 #
-# debian13 (trixie) matches rust:1.94-slim's base image, so OpenSSL
-# symbol versions align between build and runtime. Using debian12
-# caused `libssl.so.3: version OPENSSL_3.2.0 not found` at startup.
-# Digest-pinned for reproducibility and to satisfy CodeQL DS-0001
-# (':latest' tag used).
+# Wolfi tracks current upstream and is scanned daily by Chainguard, eliminating
+# the libc6 / libssl-debian13 CVE chain that blocks lefthook image-scan on
+# Debian-based distroless. Pulled from internal mirror (CLAUDE.md: never pull
+# from Docker Hub or external registries during builds — 429 + supply-chain).
+#
+# Stage adds tini for clean SIGTERM propagation to the tokio runtime + the
+# tokio-cron-scheduler subshell that distroless lacked entirely.
+#
+# Runtime apk set:
+#   - ca-certificates + ca-certificates-bundle: TLS roots for reqwest/rustls + lettre/native-tls
+#   - tini: PID 1 reaper for tokio runtime + scheduler
+#   - openssl: lettre's tokio1-native-tls dynamically links libssl/libcrypto at runtime
+#     (openssl-sys is `vendored` at BUILD time, but native-tls still dlopens the system libs)
+#   - libgcc: Rust panic unwinding (_Unwind_* symbols)
 # ---------------------------------------------------------------------------
-FROM gcr.io/distroless/cc-debian13@sha256:56aaf20ab2523a346a67c8e8f8e8dabe447447d0788b82284d14ad79cd5f93cc AS runtime
+FROM 192.168.178.250:5000/wolfi-base:latest AS runtime
+
+# `apk update && apk upgrade --no-cache --available` is mandatory to bump glibc
+# past CVE-2026-5450 — without `--available`, glibc 2.43-r6 sticks and grype
+# flags the won't-fix-on-Debian advisory chain. See memory recipe pitfall #1.
+RUN apk update && apk upgrade --no-cache --available \
+    && apk add --no-cache \
+        ca-certificates \
+        ca-certificates-bundle \
+        libgcc \
+        openssl \
+        tini \
+    && rm -rf /var/cache/apk/*
+
+# Wolfi base already ships nonroot:65532 baked in (verified via /etc/passwd:
+# `nonroot:x:65532:65532:Account created by apko:/home/nonroot:/bin/sh`).
+# distroless had the same UID; helm charts pin securityContext.runAsUser=65532.
+# No addgroup/adduser needed — drop-in compat across both bases.
 
 WORKDIR /app
 
@@ -101,7 +125,7 @@ COPY --from=builder --chown=65532:65532 /app/target/release-container/parkhub-se
 # discarded without this flag.
 COPY --from=data-setup --chown=65532:65532 /data /data
 
-# Drop to non-root (distroless built-in nonroot user)
+# Drop to non-root (recreated above to match prior distroless UID).
 USER 65532:65532
 
 # Environment
@@ -118,9 +142,13 @@ ENV RUST_LOG=info
 EXPOSE 10000
 
 # Health check — uses the binary's built-in --health-check mode so no shell
-# or external tools (wget/curl) are needed in the distroless image.
+# or external tools (wget/curl) are needed.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=5 \
     CMD ["/app/parkhub-server", "--health-check", "--port", "10000"]
+
+# tini reaps zombies + handles signals for tokio + scheduler. Distroless had
+# no init at all; this is an upgrade for clean pod terminations.
+ENTRYPOINT ["/sbin/tini", "--"]
 
 # Direct binary invocation — no shell wrapper required.
 # Demo seeding (SEED_DEMO_DATA=true / DEMO_MODE=true) is handled inside the
