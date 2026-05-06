@@ -89,11 +89,6 @@ reason = "unic-* family unmaintained; Slint 1.16 plans replacement"
 id = "RUSTSEC-2025-0141"
 reason = "bincode unmaintained (transitive via hyphenation -> printpdf 0.9)"
 
-# npm transitive (parkhub-web)
-[[IgnoredVulns]]
-id = "GHSA-48c2-rrv3-qjmp"
-reason = "yaml dev-dep CVE; non-prod; bumping in next dependabot wave"
-
 [[IgnoredVulns]]
 id = "GHSA-wrw7-89jp-8q8g"
 reason = "glib gtk-rs unchecked-callback PSK leak; not used by parkhub-server (Tauri-side only)"
