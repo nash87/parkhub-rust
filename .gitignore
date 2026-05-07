@@ -87,7 +87,10 @@ coverage/
 .aoe/
 .claude/
 .forge-operator/
-.fop/
+.fop/*
+# Exceptions: configs (committed) live alongside ignored runtime artifacts
+# (stamps, caches). See T-5467 fop-image-scan port (2026-05-07).
+!.fop/image-scan.toml
 
 # insta snapshot scratch files — accepted *.snap files ARE committed;
 # only .snap.new (pending review) is ignored. See src/api/snapshots.rs.

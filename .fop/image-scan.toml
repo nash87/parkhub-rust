@@ -1,0 +1,34 @@
+# fop-image-scan config -- T-5467 phase 7a (parkhub-rust port preparation).
+#
+# Mirrors the existing bash reference at scripts/local-image-scan.sh. Once
+# the host fop binary catches up (>= the version that ships `fop image
+# scan`, post-fop-operator PR #236), lefthook.yml's image-scan stage can
+# swap from `bash scripts/local-image-scan.sh` to `fop image scan` with
+# zero behaviour change.
+#
+# Config schema and defaults: see fop-image-scan crate docs at
+# https://gitea.test/fop/fop-operator/src/branch/main/crates/fop-image-scan/
+
+[image]
+# Local CI tag template; {hash} is substituted with the 10-char short
+# input hash. Matches the bash reference's image-tag default.
+tag_template = "parkhub-local:ci-{hash}"
+build_context = "."
+containerfile = "Dockerfile"
+
+[hash]
+# Files whose contents feed the input hash, in declaration order. Order
+# is part of the hash per memory invariant #1
+# (feedback_image_scan_lefthook_pattern_fleet.md).
+inputs = ["Dockerfile", "Cargo.lock", "parkhub-web/package-lock.json"]
+
+[scan]
+severity = ["CRITICAL", "HIGH"]
+trivyignore = ".trivyignore"
+fail_on_grype = "critical"
+
+[stamp]
+# Stamp file lives at .fop/image-scan-validated-<hash[0:10]>.stamp.
+# .fop/ is gitignored; stamps are local-only.
+dir = ".fop"
+prefix = "image-scan-validated"
