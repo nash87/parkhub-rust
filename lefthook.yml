@@ -220,18 +220,25 @@ pre-push:
         EXEMPT lists.
 
     image-scan:
-      # Local container image vulnerability scan (PR #513). Gating only on
-      # Dockerfile/Cargo.lock/package-lock changes — these are the inputs
-      # that determine image content. Stamp-cached so the script is fast
-      # if the inputs haven't changed since the last successful run.
-      glob: "{Dockerfile,Cargo.lock,parkhub-web/package-lock.json}"
+      # Local container image vulnerability scan (PR #513 + T-5467 fop port).
+      # Gating only on Dockerfile/Cargo.lock/package-lock changes -- these
+      # are the inputs that determine image content. Stamp-cached so the
+      # call is fast if the inputs haven't changed since the last
+      # successful run.
+      #
+      # Backed by `fop image scan` (fop-operator T-5467 PR #228+#231+#232+#233+
+      # #234+#236, MIT). Same hash + stamp + skip-clean semantics as the
+      # 110-line bash reference it replaced; per-repo config at
+      # `.fop/image-scan.toml`. Skips cleanly when the fop binary or
+      # podman/trivy/grype are missing (handled internally by the crate).
+      glob: "{Dockerfile,Cargo.lock,parkhub-web/package-lock.json,.fop/image-scan.toml}"
       skip:
-        - run: 'test ! -x scripts/local-image-scan.sh'
-        - run: 'test ! -x "$(command -v podman 2>/dev/null)"'
-      run: ./scripts/local-image-scan.sh
+        - run: 'test ! -x "$(command -v fop 2>/dev/null)"'
+      run: fop image scan
       fail_text: |
         Container image scan surfaced CRITICAL/HIGH vulnerabilities.
-        Triage with: trivy image parkhub-local:ci-* (see scripts/local-image-scan.sh)
+        Triage with: trivy image parkhub-local:ci-* (see .fop/image-scan.toml).
+        Run `fop image scan --explain` to print the resolved tag + inputs.
 
     post-attestation:
       # Forks a deferred poll-and-post that waits until the SHA shows
