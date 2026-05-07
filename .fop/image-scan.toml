@@ -1,0 +1,32 @@
+# fop-image-scan config -- T-5467 phase 7a (parkhub-rust port preparation).
+#
+# Repo-local config for the `lefthook.yml` image-scan stage. Keep this file
+# aligned with the Dockerfile and lockfiles that define the local image input
+# surface.
+#
+# The fop-image-scan CLI reads this file directly when lefthook runs
+# `fop image scan --config .fop/image-scan.toml`.
+
+[image]
+# Local CI tag template; {hash} is substituted with the 10-char short
+# input hash. Matches the bash reference's image-tag default.
+tag_template = "parkhub-local:ci-{hash}"
+build_context = "."
+containerfile = "Dockerfile"
+
+[hash]
+# Files whose contents feed the input hash, in declaration order. Keep the
+# order stable so unchanged image inputs reuse the same validation stamp.
+inputs = ["Dockerfile", "Cargo.lock", "parkhub-web/package-lock.json"]
+
+[scan]
+severity = ["CRITICAL", "HIGH"]
+trivyignore = ".trivyignore"
+fail_on_grype = "critical"
+
+[stamp]
+# Stamp file lives at .fop/image-scan-validated-<hash[0:10]>.stamp.
+# Runtime artifacts under .fop/* are gitignored; this config is explicitly
+# tracked via .gitignore's .fop/image-scan.toml exception.
+dir = ".fop"
+prefix = "image-scan-validated"
