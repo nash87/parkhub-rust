@@ -15,7 +15,7 @@ ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base:latest
 # ---------------------------------------------------------------------------
 # Stage 1: Frontend build (Astro/Vite)
 # ---------------------------------------------------------------------------
-FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS web-builder
+FROM node:26-alpine@sha256:e71ac5e964b9201072425d59d2e876359efa25dc96bb1768cb73295728d6e4ea AS web-builder
 WORKDIR /app
 COPY parkhub-web/package*.json ./
 RUN npm ci
