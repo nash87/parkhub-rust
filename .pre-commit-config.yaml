@@ -29,27 +29,27 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
 
-  # Rust — cargo fmt + clippy as system hooks (respect rust-toolchain.toml)
+  # Rust — fop-gated cargo fmt + clippy as system hooks (respect rust-toolchain.toml)
   - repo: local
     hooks:
       - id: cargo-fmt
-        name: cargo fmt --check
+        name: fop cargo fmt --check
         language: system
-        entry: cargo fmt --all -- --check
+        entry: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all -- --check
         pass_filenames: false
         files: \.rs$
 
       - id: cargo-clippy
-        name: cargo clippy (headless, -D warnings)
+        name: fop cargo clippy (headless, -D warnings)
         language: system
-        entry: bash -c 'mkdir -p parkhub-web/dist && [ -f parkhub-web/dist/index.html ] || printf "%s" "<!doctype html><html><body></body></html>" > parkhub-web/dist/index.html; cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones'
+        entry: fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc 'mkdir -p parkhub-web/dist && [ -f parkhub-web/dist/index.html ] || printf "%s" "<!doctype html><html><body></body></html>" > parkhub-web/dist/index.html; cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones'
         pass_filenames: false
         files: \.rs$
         stages: [pre-push]   # slow — run on push, not every commit
 
       - id: cargo-check
-        name: cargo check
+        name: fop cargo check
         language: system
-        entry: bash -c 'mkdir -p parkhub-web/dist && [ -f parkhub-web/dist/index.html ] || printf "%s" "<!doctype html><html><body></body></html>" > parkhub-web/dist/index.html; cargo check --locked --package parkhub-common --all-targets'
+        entry: fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc 'mkdir -p parkhub-web/dist && [ -f parkhub-web/dist/index.html ] || printf "%s" "<!doctype html><html><body></body></html>" > parkhub-web/dist/index.html; cargo check --locked --package parkhub-common --all-targets'
         pass_filenames: false
         files: \.rs$
