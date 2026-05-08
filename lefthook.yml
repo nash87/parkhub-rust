@@ -22,9 +22,8 @@
 #
 #     git push --no-verify
 #
-# Hook commands intentionally call `cargo` / `npx` directly (not `fop`)
-# because contributors may not have fop installed. fop users can run
-# `fop build` / `fop test` manually before pushing.
+# Rust build/test/lint hooks route through fop so the workstation build queue
+# can enforce memory/backpressure. Frontend-only npx hooks stay direct.
 ---
 min_version: 1.10.0
 
@@ -34,11 +33,11 @@ pre-commit:
   commands:
     fmt-rust:
       glob: "**/*.rs"
-      run: cargo fmt --all -- --check
+      run: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all -- --check
       stage_fixed: true
       fail_text: |
         cargo fmt found unformatted Rust files.
-        Fix with: cargo fmt --all
+        Fix with: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all
 
     lint-ts:
       # Biome (Rust-native, MIT) handles linting + formatting in one

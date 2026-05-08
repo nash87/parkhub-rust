@@ -43,7 +43,7 @@ echo "types-drift: regenerating ts-rs bindings..." >&2
 # This invokes the explicit ts_export integration test (see
 # parkhub-server/tests/ts_export.rs) which calls T::export_all_to(...)
 # for every DTO and stamps a warning header on each emitted .ts file.
-cargo test \
+fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test \
     --locked \
     --features gen-types \
     -p parkhub-server \
@@ -71,7 +71,8 @@ if [[ "$drift" -ne 0 ]]; then
 
 Regenerate locally:
 
-    cargo test --features gen-types -p parkhub-server --test ts_export -- --nocapture
+    fop build --backend local --resource-profile interactive-small . --preset custom -- \\
+        cargo test --features gen-types -p parkhub-server --test ts_export -- --nocapture
 
 Then \`git add parkhub-web/src/generated/\` and commit the updated bindings.
 EOF
