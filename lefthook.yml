@@ -107,14 +107,16 @@ pre-push:
       # excluded here because it pulls in tauri+webkit2gtk system deps
       # that not every dev box has installed.
       run: |
-        mkdir -p parkhub-web/dist
-        [ -f parkhub-web/dist/index.html ] || \
-          printf '%s' '<!doctype html><html><body></body></html>' \
-          > parkhub-web/dist/index.html
-        cargo check --locked -p parkhub-common --all-targets
-        cargo check --locked -p parkhub-server \
-          --no-default-features --features headless --all-targets
-        cargo check --locked -p parkhub-client --all-targets
+        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+          mkdir -p parkhub-web/dist
+          [ -f parkhub-web/dist/index.html ] || \
+            printf "%s" "<!doctype html><html><body></body></html>" \
+            > parkhub-web/dist/index.html
+          cargo check --locked -p parkhub-common --all-targets
+          cargo check --locked -p parkhub-server \
+            --no-default-features --features headless --all-targets
+          cargo check --locked -p parkhub-client --all-targets
+        '
       fail_text: |
         cargo check failed. Fix compile errors before pushing.
         Tip: this is the gate that catches missing struct fields and
@@ -124,14 +126,16 @@ pre-push:
       # Mirrors `.github/workflows/ci.yml#clippy` headless lints.
       # Same scope as cargo-check above (no parkhub-desktop / tauri).
       run: |
-        mkdir -p parkhub-web/dist
-        [ -f parkhub-web/dist/index.html ] || \
-          printf '%s' '<!doctype html><html><body></body></html>' \
-          > parkhub-web/dist/index.html
-        cargo clippy --locked -p parkhub-common --all-targets -- -D warnings
-        cargo clippy --locked -p parkhub-server \
-          --no-default-features --features headless --all-targets -- \
-          -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
+        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+          mkdir -p parkhub-web/dist
+          [ -f parkhub-web/dist/index.html ] || \
+            printf "%s" "<!doctype html><html><body></body></html>" \
+            > parkhub-web/dist/index.html
+          cargo clippy --locked -p parkhub-common --all-targets -- -D warnings
+          cargo clippy --locked -p parkhub-server \
+            --no-default-features --features headless --all-targets -- \
+            -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
+        '
       fail_text: |
         Clippy violations. Fix or annotate with `#[allow(...)]` + reason.
 
@@ -140,17 +144,19 @@ pre-push:
       # Mirrors `.github/workflows/ci.yml#test` headless scope so pre-
       # push stays under ~2 min on cached builds.
       run: |
-        mkdir -p parkhub-web/dist
-        [ -f parkhub-web/dist/index.html ] || \
-          printf '%s' '<!doctype html><html><body></body></html>' \
-          > parkhub-web/dist/index.html
-        cargo test --locked -p parkhub-common --lib
-        cargo test --locked -p parkhub-server \
-          --no-default-features --features headless --lib
+        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+          mkdir -p parkhub-web/dist
+          [ -f parkhub-web/dist/index.html ] || \
+            printf "%s" "<!doctype html><html><body></body></html>" \
+            > parkhub-web/dist/index.html
+          cargo test --locked -p parkhub-common --lib
+          cargo test --locked -p parkhub-server \
+            --no-default-features --features headless --lib
+        '
       fail_text: |
         Library tests failing. Run locally to debug:
-          cargo test -p parkhub-common --lib
-          cargo test -p parkhub-server --no-default-features --features headless --lib
+          fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test -p parkhub-common --lib
+          fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test -p parkhub-server --no-default-features --features headless --lib
 
     vitest:
       # Fast loop: only run vitest specs for files changed since main.
