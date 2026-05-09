@@ -28,13 +28,20 @@ jobs:
         continue-on-error: true
         with:
           fail-on-severity: high
-          # Reject:
-          # - GPL/AGPL: copyleft stronger than what we ship under (MIT/Apache).
-          # - BSL/SSPL/FSL: source-available "anti-cloud" licenses (SurrealDB,
-          #   MongoDB, Elastic, Redis 7+, Sentry's FSL family). Per the project
-          #   policy `feedback_license_commercial_safe.md` these are forbidden
-          #   for ParkHub deps; commit-time deny-list keeps drift catchable.
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BSL-1.0, BSL-1.1, SSPL-1.0, FSL-1.0-ALv2, FSL-1.0-MIT, FSL-1.1-MIT
+          # Reject (SPDX identifiers — verified against https://spdx.org/licenses/):
+          # - GPL-2.0/-3.0, AGPL-1.0/-3.0/-or-later: copyleft stronger than
+          #   what we ship under (MIT/Apache).
+          # - BUSL-1.1: Business Source License — source-available "anti-cloud"
+          #   model used by Sentry, MariaDB, etc. NOT the same as `BSL-1.0`
+          #   (Boost Software License, which is permissive — DON'T add it).
+          # - SSPL-1.0: Server Side Public License (Elastic, MongoDB current).
+          # - FSL-1.0-ALv2/-MIT, FSL-1.1-MIT: Functional Source License family
+          #   (Sentry, BoxyHQ, Discord) — Apache/MIT future-grant model that
+          #   today behaves as anti-cloud.
+          # Project policy is "MIT / Apache-2.0 / BSD / ISC only"; this list is
+          # drift protection for new deps (gate is advisory via continue-on-error
+          # until GitHub Dependency Graph is enabled — same as before).
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0, FSL-1.0-ALv2, FSL-1.0-MIT, FSL-1.1-MIT
           # Slint ships under a tri-license (GPL-3.0 OR Royalty-free OR Commercial).
           # ParkHub uses the non-GPL arm; deny.toml records the same exception.
           allow-dependencies-licenses: >-
