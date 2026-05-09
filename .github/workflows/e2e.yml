@@ -101,6 +101,15 @@ jobs:
           E2E_BASE_URL: http://localhost:8081
           CI: true
 
+      - name: Install Playwright browsers (parkhub-web)
+        # parkhub-web pins a different @playwright/test minor version than the
+        # repo root, so it bundles a different Chromium build. The root-level
+        # `npx playwright install` only fetches the root version's binary, and
+        # without this step the parkhub-web run fails 275 tests in 3ms each
+        # with "Executable doesn't exist at .../chromium_headless_shell-NNNN".
+        working-directory: parkhub-web
+        run: npx playwright install --with-deps chromium
+
       - name: Run E2E tests (parkhub-web v5 + admin)
         working-directory: parkhub-web
         run: npx playwright test --project=chromium
