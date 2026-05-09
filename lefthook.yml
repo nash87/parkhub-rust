@@ -22,8 +22,12 @@
 #
 #     git push --no-verify
 #
-# Rust build/test/lint hooks route through fop so the workstation build queue
-# can enforce memory/backpressure. Frontend-only npx hooks stay direct.
+# Rust build/test/lint hooks route through `./scripts/fop-wrap.sh`, which
+# wraps the command with `fop build --backend local` when `fop` is on PATH and
+# falls back to running bare otherwise. This keeps gates working on machines
+# without the homelab toolchain (fresh clones, CI runners, contributors who
+# haven't installed fop) while still benefiting from the workstation build
+# queue when it's available. Frontend-only npx hooks stay direct.
 ---
 min_version: 1.10.0
 
@@ -33,11 +37,11 @@ pre-commit:
   commands:
     fmt-rust:
       glob: "**/*.rs"
-      run: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all -- --check
+      run: ./scripts/fop-wrap.sh cargo fmt --all -- --check
       stage_fixed: true
       fail_text: |
         cargo fmt found unformatted Rust files.
-        Fix with: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all
+        Fix with: ./scripts/fop-wrap.sh cargo fmt --all
 
     lint-ts:
       # Biome (Rust-native, MIT) handles linting + formatting in one
@@ -106,7 +110,7 @@ pre-push:
       # excluded here because it pulls in tauri+webkit2gtk system deps
       # that not every dev box has installed.
       run: |
-        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+        ./scripts/fop-wrap.sh bash -lc '
           mkdir -p parkhub-web/dist
           [ -f parkhub-web/dist/index.html ] || \
             printf "%s" "<!doctype html><html><body></body></html>" \
@@ -125,7 +129,7 @@ pre-push:
       # Mirrors `.github/workflows/ci.yml#clippy` headless lints.
       # Same scope as cargo-check above (no parkhub-desktop / tauri).
       run: |
-        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+        ./scripts/fop-wrap.sh bash -lc '
           mkdir -p parkhub-web/dist
           [ -f parkhub-web/dist/index.html ] || \
             printf "%s" "<!doctype html><html><body></body></html>" \
@@ -143,7 +147,7 @@ pre-push:
       # Mirrors `.github/workflows/ci.yml#test` headless scope so pre-
       # push stays under ~2 min on cached builds.
       run: |
-        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+        ./scripts/fop-wrap.sh bash -lc '
           mkdir -p parkhub-web/dist
           [ -f parkhub-web/dist/index.html ] || \
             printf "%s" "<!doctype html><html><body></body></html>" \
@@ -154,8 +158,8 @@ pre-push:
         '
       fail_text: |
         Library tests failing. Run locally to debug:
-          fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test -p parkhub-common --lib
-          fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test -p parkhub-server --no-default-features --features headless --lib
+          ./scripts/fop-wrap.sh cargo test -p parkhub-common --lib
+          ./scripts/fop-wrap.sh cargo test -p parkhub-server --no-default-features --features headless --lib
 
     vitest:
       # Fast loop: only run vitest specs for files changed since main.

@@ -15,10 +15,14 @@ Self-hosted parking management platform for enterprises, universities, and resid
 ## Build
 ```sh
 # Default build (pure MIT, headless, no GUI — for Docker/server deployments)
-fop build --backend local . --preset custom -- cargo build --release --package parkhub-server
+# `./scripts/fop-wrap.sh` runs through fop's queue with the
+# `interactive-small` resource profile when fop is on PATH; otherwise it
+# runs the command directly so contributors without fop installed can
+# still build.
+./scripts/fop-wrap.sh cargo build --release --package parkhub-server
 
 # Optional desktop GUI build (pulls Slint, GPL-3.0)
-fop build --backend local . --preset custom -- cargo build --release --package parkhub-server --features gui
+./scripts/fop-wrap.sh cargo build --release --package parkhub-server --features gui
 
 # React frontend (must be built before server if modifying frontend)
 cd parkhub-web && npm install && npm run build
@@ -34,7 +38,7 @@ fop test . -- -p parkhub-common    # Common crate tests
 ## Lint
 ```sh
 fop clippy .
-fop build --backend local . --preset custom -- cargo fmt --all -- --check
+./scripts/fop-wrap.sh cargo fmt --all -- --check
 ```
 
 ## Pre-Push Gate (mandatory)
