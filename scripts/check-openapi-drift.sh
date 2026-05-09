@@ -68,7 +68,7 @@ echo "openapi-drift: building parkhub-server (debug, headless+full)..." >&2
 TARGET_DIR="$(cargo metadata --locked --format-version 1 --no-deps | jq -er '.target_directory')"
 # Debug build is faster than release for local checks; spec output is
 # identical because utoipa derives are compile-time.
-fop build --backend local --resource-profile interactive-small . --preset custom -- cargo build \
+./scripts/fop-wrap.sh cargo build \
     --locked \
     -p parkhub-server \
     --no-default-features \
@@ -120,7 +120,7 @@ if ! git diff --no-index --exit-code "$COMMITTED_SPEC" "$LIVE_SPEC"; then
 Regenerate locally:
 
     # In one terminal:
-    fop build --backend local --resource-profile interactive-small . --preset custom -- \\
+    ./scripts/fop-wrap.sh \\
         cargo run --no-default-features --features 'full,headless' \\
             -p parkhub-server -- --headless --port 18181
 

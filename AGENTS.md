@@ -30,14 +30,14 @@ cd parkhub-web && npm install && npm run build
 
 ## Test
 ```sh
-fop test . -- --workspace          # All workspace tests
-fop test . -- -p parkhub-server    # Server tests only
-fop test . -- -p parkhub-common    # Common crate tests
+./scripts/fop-wrap.sh cargo test --workspace          # All workspace tests
+./scripts/fop-wrap.sh cargo test -p parkhub-server    # Server tests only
+./scripts/fop-wrap.sh cargo test -p parkhub-common    # Common crate tests
 ```
 
 ## Lint
 ```sh
-fop clippy .
+./scripts/fop-wrap.sh cargo clippy --workspace -- -D warnings
 ./scripts/fop-wrap.sh cargo fmt --all -- --check
 ```
 
