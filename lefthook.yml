@@ -233,13 +233,14 @@ pre-push:
       #
       # Backed by `fop image scan` (fop-operator T-5467 PR #228+#231+#232+#233+
       # #234+#236, MIT). Same hash + stamp + skip-clean semantics as the
-      # 110-line bash reference it replaced; per-repo config at
-      # `.fop/image-scan.toml`. Skips cleanly when the fop binary or
-      # podman/trivy/grype are missing (handled internally by the crate).
+      # bash reference; per-repo config at `.fop/image-scan.toml`.
+      # Workstations still on fop < image-scan support fall back to the
+      # repo-local scanner, which skips cleanly if podman/trivy/grype are
+      # unavailable.
       glob: "{Dockerfile,Cargo.lock,parkhub-web/package-lock.json,.fop/image-scan.toml}"
       skip:
-        - run: 'test ! -x "$(command -v fop 2>/dev/null)"'
-      run: fop image scan
+        - run: 'test ! -x "$(command -v fop 2>/dev/null)" && test ! -x scripts/local-image-scan.sh'
+      run: 'if fop image scan --help >/dev/null 2>&1; then fop image scan; else ./scripts/local-image-scan.sh; fi'
       fail_text: |
         Container image scan surfaced CRITICAL/HIGH vulnerabilities.
         Triage with: trivy image parkhub-local:ci-* (see .fop/image-scan.toml).
