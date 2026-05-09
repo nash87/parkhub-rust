@@ -28,7 +28,13 @@ jobs:
         continue-on-error: true
         with:
           fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+          # Reject:
+          # - GPL/AGPL: copyleft stronger than what we ship under (MIT/Apache).
+          # - BSL/SSPL/FSL: source-available "anti-cloud" licenses (SurrealDB,
+          #   MongoDB, Elastic, Redis 7+, Sentry's FSL family). Per the project
+          #   policy `feedback_license_commercial_safe.md` these are forbidden
+          #   for ParkHub deps; commit-time deny-list keeps drift catchable.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BSL-1.0, BSL-1.1, SSPL-1.0, FSL-1.0-ALv2, FSL-1.0-MIT, FSL-1.1-MIT
           # Slint ships under a tri-license (GPL-3.0 OR Royalty-free OR Commercial).
           # ParkHub uses the non-GPL arm; deny.toml records the same exception.
           allow-dependencies-licenses: >-
