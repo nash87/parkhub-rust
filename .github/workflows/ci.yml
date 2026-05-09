@@ -108,7 +108,10 @@ jobs:
         continue-on-error: true
         with:
           fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+          # Mirror of `.github/workflows/dependency-review.yml` deny-list —
+          # keep both in sync. SPDX identifiers verified against
+          # https://spdx.org/licenses/ (BUSL-1.1, NOT BSL-1.1 which is Boost).
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0, FSL-1.0-ALv2, FSL-1.0-MIT, FSL-1.1-MIT
 
   local-ci-attestation:
     name: fop local CI attestation

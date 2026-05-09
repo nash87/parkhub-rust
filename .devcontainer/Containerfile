@@ -30,10 +30,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Node.js 22 from NodeSource (matches GHA setup-node@v4 default).
+# We don't `npm install -g npm@latest` here — NodeSource v22 ships with a
+# recent npm and the self-upgrade fails with `MODULE_NOT_FOUND` on the
+# bundled `npm-cli.js` (https://github.com/nodesource/distributions/issues/1733).
 RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/* \
-    && npm install -g npm@latest
+    && rm -rf /var/lib/apt/lists/*
 
 # Helm pinned (apt's helm is too old for Chart v2 features we use).
 RUN curl -fsSLO "https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz" \
