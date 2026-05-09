@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage, loginBrowserViaApi, loginViaApi, waitForAppDomReady, DEMO_ADMIN } from './helpers';
+import { gotoAppPage, loginBrowserViaApi, loginViaApi, waitForAppDomReady } from './helpers';
 
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:8082';
 
