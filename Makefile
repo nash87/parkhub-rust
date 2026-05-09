@@ -23,7 +23,14 @@ MAKEFLAGS += --no-print-directory
 
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
-FOP_BUILD         := fop build --backend local --resource-profile interactive-small . --preset custom --
+
+# FOP_BUILD wraps cargo/npx invocations with the fop build queue (memory cap +
+# sccache locality + queue accounting) when `fop` is on PATH. On machines
+# without fop (fresh clones following dev/SETUP.md, CI runners that don't
+# install the homelab toolchain) it falls back to running bare so `make ci`
+# still produces a correct pass/fail. See `scripts/fop-wrap.sh` for the same
+# pattern used in lefthook.
+FOP_BUILD := $(if $(shell command -v fop 2>/dev/null),fop build --backend local --resource-profile interactive-small . --preset custom --,)
 
 .PHONY: help ci ci-post ci-security fmt clippy check client-check test lint drift frontend nix-contract nix-contract-strict integration embed act pre-push clean
 
