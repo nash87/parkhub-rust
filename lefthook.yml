@@ -22,9 +22,8 @@
 #
 #     git push --no-verify
 #
-# Hook commands intentionally call `cargo` / `npx` directly (not `fop`)
-# because contributors may not have fop installed. fop users can run
-# `fop build` / `fop test` manually before pushing.
+# Rust build/test/lint hooks route through fop so the workstation build queue
+# can enforce memory/backpressure. Frontend-only npx hooks stay direct.
 ---
 min_version: 1.10.0
 
@@ -34,11 +33,11 @@ pre-commit:
   commands:
     fmt-rust:
       glob: "**/*.rs"
-      run: cargo fmt --all -- --check
+      run: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all -- --check
       stage_fixed: true
       fail_text: |
         cargo fmt found unformatted Rust files.
-        Fix with: cargo fmt --all
+        Fix with: fop build --backend local --resource-profile interactive-small . --preset custom -- cargo fmt --all
 
     lint-ts:
       # Biome (Rust-native, MIT) handles linting + formatting in one
@@ -107,14 +106,16 @@ pre-push:
       # excluded here because it pulls in tauri+webkit2gtk system deps
       # that not every dev box has installed.
       run: |
-        mkdir -p parkhub-web/dist
-        [ -f parkhub-web/dist/index.html ] || \
-          printf '%s' '<!doctype html><html><body></body></html>' \
-          > parkhub-web/dist/index.html
-        cargo check --locked -p parkhub-common --all-targets
-        cargo check --locked -p parkhub-server \
-          --no-default-features --features headless --all-targets
-        cargo check --locked -p parkhub-client --all-targets
+        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+          mkdir -p parkhub-web/dist
+          [ -f parkhub-web/dist/index.html ] || \
+            printf "%s" "<!doctype html><html><body></body></html>" \
+            > parkhub-web/dist/index.html
+          cargo check --locked -p parkhub-common --all-targets
+          cargo check --locked -p parkhub-server \
+            --no-default-features --features headless --all-targets
+          cargo check --locked -p parkhub-client --all-targets
+        '
       fail_text: |
         cargo check failed. Fix compile errors before pushing.
         Tip: this is the gate that catches missing struct fields and
@@ -124,14 +125,16 @@ pre-push:
       # Mirrors `.github/workflows/ci.yml#clippy` headless lints.
       # Same scope as cargo-check above (no parkhub-desktop / tauri).
       run: |
-        mkdir -p parkhub-web/dist
-        [ -f parkhub-web/dist/index.html ] || \
-          printf '%s' '<!doctype html><html><body></body></html>' \
-          > parkhub-web/dist/index.html
-        cargo clippy --locked -p parkhub-common --all-targets -- -D warnings
-        cargo clippy --locked -p parkhub-server \
-          --no-default-features --features headless --all-targets -- \
-          -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
+        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+          mkdir -p parkhub-web/dist
+          [ -f parkhub-web/dist/index.html ] || \
+            printf "%s" "<!doctype html><html><body></body></html>" \
+            > parkhub-web/dist/index.html
+          cargo clippy --locked -p parkhub-common --all-targets -- -D warnings
+          cargo clippy --locked -p parkhub-server \
+            --no-default-features --features headless --all-targets -- \
+            -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
+        '
       fail_text: |
         Clippy violations. Fix or annotate with `#[allow(...)]` + reason.
 
@@ -140,17 +143,19 @@ pre-push:
       # Mirrors `.github/workflows/ci.yml#test` headless scope so pre-
       # push stays under ~2 min on cached builds.
       run: |
-        mkdir -p parkhub-web/dist
-        [ -f parkhub-web/dist/index.html ] || \
-          printf '%s' '<!doctype html><html><body></body></html>' \
-          > parkhub-web/dist/index.html
-        cargo test --locked -p parkhub-common --lib
-        cargo test --locked -p parkhub-server \
-          --no-default-features --features headless --lib
+        fop build --backend local --resource-profile interactive-small . --preset custom -- bash -lc '
+          mkdir -p parkhub-web/dist
+          [ -f parkhub-web/dist/index.html ] || \
+            printf "%s" "<!doctype html><html><body></body></html>" \
+            > parkhub-web/dist/index.html
+          cargo test --locked -p parkhub-common --lib
+          cargo test --locked -p parkhub-server \
+            --no-default-features --features headless --lib
+        '
       fail_text: |
         Library tests failing. Run locally to debug:
-          cargo test -p parkhub-common --lib
-          cargo test -p parkhub-server --no-default-features --features headless --lib
+          fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test -p parkhub-common --lib
+          fop build --backend local --resource-profile interactive-small . --preset custom -- cargo test -p parkhub-server --no-default-features --features headless --lib
 
     vitest:
       # Fast loop: only run vitest specs for files changed since main.
@@ -228,13 +233,14 @@ pre-push:
       #
       # Backed by `fop image scan` (fop-operator T-5467 PR #228+#231+#232+#233+
       # #234+#236, MIT). Same hash + stamp + skip-clean semantics as the
-      # 110-line bash reference it replaced; per-repo config at
-      # `.fop/image-scan.toml`. Skips cleanly when the fop binary or
-      # podman/trivy/grype are missing (handled internally by the crate).
+      # bash reference; per-repo config at `.fop/image-scan.toml`.
+      # Workstations still on fop < image-scan support fall back to the
+      # repo-local scanner, which skips cleanly if podman/trivy/grype are
+      # unavailable.
       glob: "{Dockerfile,Cargo.lock,parkhub-web/package-lock.json,.fop/image-scan.toml}"
       skip:
-        - run: 'test ! -x "$(command -v fop 2>/dev/null)"'
-      run: fop image scan
+        - run: 'test ! -x "$(command -v fop 2>/dev/null)" && test ! -x scripts/local-image-scan.sh'
+      run: 'if fop image scan --help >/dev/null 2>&1; then fop image scan; else ./scripts/local-image-scan.sh; fi'
       fail_text: |
         Container image scan surfaced CRITICAL/HIGH vulnerabilities.
         Triage with: trivy image parkhub-local:ci-* (see .fop/image-scan.toml).

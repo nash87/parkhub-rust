@@ -23,6 +23,7 @@ MAKEFLAGS += --no-print-directory
 
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
+FOP_BUILD         := fop build --backend local --resource-profile interactive-small . --preset custom --
 
 .PHONY: help ci ci-post ci-security fmt clippy check client-check test lint drift frontend nix-contract nix-contract-strict integration embed act pre-push clean
 
@@ -50,38 +51,38 @@ embed:
 
 ## Mirrors: fmt job
 fmt:
-	cargo fmt --all -- --check
+	$(FOP_BUILD) cargo fmt --all -- --check
 
 ## Mirrors: clippy job
 clippy: embed
-	cargo clippy --locked --package parkhub-common --all-targets -- -D warnings
-	cargo clippy --locked --package parkhub-server $(SERVER_FEATURES) --all-targets -- \
+	$(FOP_BUILD) cargo clippy --locked --package parkhub-common --all-targets -- -D warnings
+	$(FOP_BUILD) cargo clippy --locked --package parkhub-server $(SERVER_FEATURES) --all-targets -- \
 		-D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones
 
 lint: fmt clippy
 
 ## Mirrors: check job
 check: embed
-	cargo check --locked --package parkhub-common --all-targets
-	cargo check --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
+	$(FOP_BUILD) cargo check --locked --package parkhub-common --all-targets
+	$(FOP_BUILD) cargo check --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
 
 ## Mirrors: client-check job
 client-check:
-	cargo check --locked --package parkhub-client --all-targets
+	$(FOP_BUILD) cargo check --locked --package parkhub-client --all-targets
 
 ## Mirrors: test job
 test: embed
-	TMPDIR=/tmp cargo test --locked --package parkhub-common --all-targets
-	TMPDIR=/tmp cargo test --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
+	$(FOP_BUILD) env TMPDIR=/tmp cargo test --locked --package parkhub-common --all-targets
+	$(FOP_BUILD) env TMPDIR=/tmp cargo test --locked --package parkhub-server $(SERVER_FEATURES) --all-targets
 
 ## Mirrors: integration job
 integration: embed
-	TMPDIR=/tmp cargo build --locked --package parkhub-server $(SERVER_FEATURES)
-	TMPDIR=/tmp RUST_LOG=warn cargo test --locked --package parkhub-server $(SERVER_FEATURES) -- integration --test-threads=1
+	$(FOP_BUILD) env TMPDIR=/tmp cargo build --locked --package parkhub-server $(SERVER_FEATURES)
+	$(FOP_BUILD) env TMPDIR=/tmp RUST_LOG=warn cargo test --locked --package parkhub-server $(SERVER_FEATURES) -- integration --test-threads=1
 
 ## Mirrors: frontend job
 frontend:
-	cd parkhub-web && npm ci && CI=true npm test && CI=true npm run build
+	$(FOP_BUILD) bash -lc 'cd parkhub-web && npm ci && CI=true npm test && CI=true npm run build'
 
 ## Static Nix/Garnix baseline contract. Real `nix flake check` requires nix
 ## on PATH and a generated flake.lock; this gate keeps CI/Gitea/fop honest
@@ -94,7 +95,7 @@ nix-contract-strict:
 
 ## Mirrors: openapi-drift.yml (starts headless server on :18181, dumps, diffs)
 drift: embed
-	cargo build --locked --release --package parkhub-server --no-default-features --features 'full,headless'
+	$(FOP_BUILD) cargo build --locked --release --package parkhub-server --no-default-features --features 'full,headless'
 	@mkdir -p /tmp/parkhub-drift-db
 	@SERVER_BIN="$$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)/release/parkhub-server"; \
 		"$$SERVER_BIN" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db > /tmp/parkhub-drift.log 2>&1 & \
