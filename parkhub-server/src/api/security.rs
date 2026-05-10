@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration as StdDuration, Instant};
+use std::time::{Duration as StdDuration, Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use parkhub_common::{ApiResponse, AuthTokens, LoginResponse};
@@ -455,12 +455,14 @@ pub async fn two_factor_verify(
         }
     };
 
-    if !totp.check_current(&req.code).unwrap_or(false) {
+    // Replay guard (audit M-1): same path also persists `totp_last_step`
+    // setting so the code can't be reused on a subsequent login.
+    if !verify_totp_with_replay_guard(&*state_guard, &totp, user.id, &req.code).await {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
                 "INVALID_CODE",
-                "The verification code is invalid or expired",
+                "The verification code is invalid, expired, or already used",
             )),
         );
     }
@@ -580,6 +582,80 @@ pub async fn is_2fa_enabled(state: &crate::AppState, user_id: Uuid) -> bool {
     matches!(state.db.get_setting(&key).await, Ok(Some(v)) if v == "true")
 }
 
+/// Find which TOTP step a code matches (current step or ±1 drift window).
+///
+/// `totp_rs::TOTP::check_current` returns a bool but doesn't reveal which of
+/// {step-1, step, step+1} matched. The audit M-1 replay guard needs the
+/// matched step so it can compare against the persisted last-used step.
+/// We brute-force the 3 candidates with `totp.generate(time)` and return the
+/// first matching step. None on no match.
+fn matching_totp_step(totp: &totp_rs::TOTP, code: &str) -> Option<u64> {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs();
+    let current_step = now / 30;
+    for offset in [-1i64, 0, 1] {
+        // Saturating math: at the start of Unix epoch we never look at a
+        // negative step. In practice now > 30, so this never underflows.
+        let step = ((current_step as i64) + offset).max(0) as u64;
+        let time = step * 30;
+        if totp.generate(time) == code {
+            return Some(step);
+        }
+    }
+    None
+}
+
+/// Replay-guarded TOTP verify (audit M-1). Returns true on a valid code that
+/// hasn't been used before; false otherwise. Persists the matched step on
+/// success so the same code can't be replayed within its 30-second window
+/// (or via the ±1 drift window).
+///
+/// The step is stored as a Unix-step integer in setting key
+/// `totp_last_step:{user_id}`. Any code whose derived step is ≤ the stored
+/// value is rejected — this also catches drift-window reuse where the same
+/// 30s code could have matched at step or step-1 across two requests.
+async fn verify_totp_with_replay_guard(
+    state: &crate::AppState,
+    totp: &totp_rs::TOTP,
+    user_id: Uuid,
+    code: &str,
+) -> bool {
+    let Some(matched_step) = matching_totp_step(totp, code) else {
+        return false;
+    };
+
+    let last_step_key = format!("totp_last_step:{user_id}");
+    if let Ok(Some(stored)) = state.db.get_setting(&last_step_key).await {
+        if let Ok(stored_step) = stored.parse::<u64>() {
+            if matched_step <= stored_step {
+                tracing::warn!(
+                    user_id = %user_id,
+                    step = matched_step,
+                    last_step = stored_step,
+                    "TOTP code reuse rejected (audit M-1 replay guard)"
+                );
+                return false;
+            }
+        }
+    }
+
+    // Persist new last-step. If the write fails we still accept the code
+    // (the alternative is locking out users on transient DB errors). This is
+    // the same forgiveness `verify_2fa_code` had before — not a regression.
+    if let Err(e) = state
+        .db
+        .set_setting(&last_step_key, &matched_step.to_string())
+        .await
+    {
+        tracing::warn!(
+            user_id = %user_id,
+            error = %e,
+            "Failed to persist totp_last_step (replay guard degrades to no-op for this request)"
+        );
+    }
+
+    true
+}
+
 /// Verify a TOTP code for a user during login.
 pub async fn verify_2fa_code(
     state: &crate::AppState,
@@ -610,7 +686,7 @@ pub async fn verify_2fa_code(
         return false;
     };
 
-    totp.check_current(code).unwrap_or(false)
+    verify_totp_with_replay_guard(state, &totp, user_id, code).await
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
