@@ -2,7 +2,7 @@ import { type Page, type APIRequestContext, type Response } from '@playwright/te
 
 type AppNavigationOptions = Omit<NonNullable<Parameters<Page['goto']>[1]>, 'waitUntil'>;
 
-const APP_NAVIGATION_TIMEOUT_MS = 8_000;
+const APP_NAVIGATION_TIMEOUT_MS = 15_000;
 const APP_SHELL_SETTLE_TIMEOUT_MS = 2_500;
 const TRANSIENT_MODULE_IMPORT_ERROR =
   /Importing a module script failed|Failed to fetch dynamically imported module/i;

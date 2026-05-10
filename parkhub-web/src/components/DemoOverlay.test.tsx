@@ -158,6 +158,7 @@ describe('DemoOverlay component', () => {
     mockGetDemoStatus.mockClear();
     mockVoteDemoReset.mockClear();
     Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true });
+    window.history.pushState({}, '', '/');
   });
 
   afterEach(() => {
@@ -361,6 +362,19 @@ describe('DemoOverlay component', () => {
     await waitFor(() => expect(screen.getByText('DEMO')).toBeInTheDocument());
     // Should be collapsed (no vote button visible)
     expect(screen.queryByText('Vote to Reset')).not.toBeInTheDocument();
+  });
+
+  it('keeps the mobile overlay at the top on public entry pages', async () => {
+    window.history.pushState({}, '', '/login');
+    Object.defineProperty(window, 'innerWidth', { value: 400, writable: true, configurable: true });
+    mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
+    mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
+    const { container } = render(<DemoOverlay />);
+
+    await waitFor(() => expect(screen.getByText('DEMO')).toBeInTheDocument());
+    const overlay = container.querySelector('[data-demo-overlay]');
+    expect(overlay?.className).toContain('max-sm:origin-top-right');
+    expect(overlay?.className).not.toContain('max-sm:bottom-20');
   });
 
   it('reloads when the backend signals a reset', async () => {
