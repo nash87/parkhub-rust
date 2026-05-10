@@ -13,7 +13,10 @@ FROM rust:1.95-bookworm
 ARG DEBIAN_FRONTEND=noninteractive
 ARG NODE_MAJOR=22
 ARG HELM_VERSION=v3.18.4
-ARG TRIVY_VERSION=0.59.0
+# aquasecurity/trivy retracts old releases — pinned versions stop resolving
+# on GitHub releases after a few months. Bump regularly. Latest tag at
+# https://github.com/aquasecurity/trivy/releases/latest.
+ARG TRIVY_VERSION=0.70.0
 ARG GRYPE_VERSION=0.91.0
 ARG GITLEAKS_VERSION=8.30.1
 ARG ACTIONLINT_VERSION=1.7.12
