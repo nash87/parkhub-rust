@@ -457,7 +457,7 @@ pub async fn two_factor_verify(
 
     // Replay guard (audit M-1): same path also persists `totp_last_step`
     // setting so the code can't be reused on a subsequent login.
-    if !verify_totp_with_replay_guard(&*state_guard, &totp, user.id, &req.code).await {
+    if !verify_totp_with_replay_guard(&state_guard, &totp, user.id, &req.code).await {
         return (
             StatusCode::BAD_REQUEST,
             Json(ApiResponse::error(
@@ -624,18 +624,17 @@ async fn verify_totp_with_replay_guard(
     };
 
     let last_step_key = format!("totp_last_step:{user_id}");
-    if let Ok(Some(stored)) = state.db.get_setting(&last_step_key).await {
-        if let Ok(stored_step) = stored.parse::<u64>() {
-            if matched_step <= stored_step {
-                tracing::warn!(
-                    user_id = %user_id,
-                    step = matched_step,
-                    last_step = stored_step,
-                    "TOTP code reuse rejected (audit M-1 replay guard)"
-                );
-                return false;
-            }
-        }
+    if let Ok(Some(stored)) = state.db.get_setting(&last_step_key).await
+        && let Ok(stored_step) = stored.parse::<u64>()
+        && matched_step <= stored_step
+    {
+        tracing::warn!(
+            user_id = %user_id,
+            step = matched_step,
+            last_step = stored_step,
+            "TOTP code reuse rejected (audit M-1 replay guard)"
+        );
+        return false;
     }
 
     // Persist new last-step. If the write fails we still accept the code
