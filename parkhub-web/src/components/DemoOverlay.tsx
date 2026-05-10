@@ -12,6 +12,11 @@ import { api, type DemoStatus } from '../api/client';
 // produced 1+ call/sec of /api/v1/demo/status (≈100/sec under E2E) and
 // Playwright's networkidle auto-wait never stabilized.
 const defaultReloadPage = () => window.location.reload();
+const PUBLIC_ENTRY_PATH_PREFIXES = ['/login', '/register', '/forgot-password', '/welcome', '/tour', '/setup', '/choose', '/lobby'];
+
+function isPublicEntryPath(pathname: string): boolean {
+  return PUBLIC_ENTRY_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
 
 function formatRelativeTime(isoString: string): string {
   const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
@@ -109,6 +114,10 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
   const seconds = localTimer % 60;
   const isLow = localTimer < 300;
   const voteProgress = demo.vote_threshold > 0 ? (demo.votes / demo.vote_threshold) * 100 : 0;
+  const pathname = typeof window === 'undefined' ? '/' : window.location.pathname;
+  const overlayPositionClass = isPublicEntryPath(pathname)
+    ? 'demo-overlay fixed top-3 left-1/2 -translate-x-1/2 z-40 max-sm:left-auto max-sm:right-3 max-sm:translate-x-0 max-sm:scale-90 max-sm:origin-top-right'
+    : 'demo-overlay fixed top-3 left-1/2 -translate-x-1/2 z-40 max-sm:top-auto max-sm:bottom-20 max-sm:left-auto max-sm:right-3 max-sm:translate-x-0 max-sm:scale-90 max-sm:origin-bottom-right';
 
   return (
     <motion.div
@@ -120,16 +129,16 @@ export function DemoOverlay({ reloadPage = defaultReloadPage }: { reloadPage?: (
       data-demo-overlay
       initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="demo-overlay fixed top-3 left-1/2 -translate-x-1/2 z-40 max-sm:top-auto max-sm:bottom-20 max-sm:left-auto max-sm:right-3 max-sm:translate-x-0 max-sm:scale-90 max-sm:origin-bottom-right"
+      className={overlayPositionClass}
     >
-      <div className="glass-card shadow-xl">
+      <div className="rounded-lg border border-surface-200 bg-white shadow-xl dark:border-surface-700 dark:bg-surface-900">
         <button
           onClick={() => setCollapsed(!collapsed)}
           aria-expanded={!collapsed}
           className="flex items-center gap-3 px-4 py-3 min-w-[200px]"
         >
           {/* Demo badge */}
-          <span className="flex items-center gap-1 rounded-md bg-primary-100 px-2.5 py-1 text-[0.75rem] font-semibold text-primary-900 dark:bg-primary-900/30 dark:text-primary-100">
+          <span className="flex items-center gap-1 rounded-md bg-primary-100 px-2.5 py-1 text-[0.75rem] font-semibold text-primary-900 dark:bg-primary-800 dark:text-white">
             <SparkleIcon weight="fill" className="w-3 h-3 animate-pulse" />
             {t('demo.badge')}
           </span>

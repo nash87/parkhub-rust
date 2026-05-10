@@ -1,5 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
-import { gotoAppPage, loginViaUi, waitForAppDomReady, PUBLIC_ROUTES, PROTECTED_ROUTES, MOBILE_DEVICES } from './helpers';
+import {
+  gotoAppPage,
+  loginBrowserViaApi,
+  loginViaUi,
+  waitForAppDomReady,
+  PUBLIC_ROUTES,
+  PROTECTED_ROUTES,
+  MOBILE_DEVICES,
+} from './helpers';
 
 /**
  * Chromium emits `console.error("Failed to load resource: ...")` for every
@@ -52,7 +60,7 @@ test.describe('DevTools — Console Errors', () => {
       if (msg.type() === 'error') errors.push(msg.text());
     });
 
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
 
     for (const route of PROTECTED_ROUTES) {
       await gotoAppPage(page, route);
@@ -77,7 +85,7 @@ test.describe('DevTools — Network', () => {
       }
     });
 
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
 
     for (const route of [...PUBLIC_ROUTES, ...PROTECTED_ROUTES]) {
       await gotoAppPage(page, route);
@@ -97,7 +105,7 @@ test.describe('DevTools — Network', () => {
       }
     });
 
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/');
     await waitForAppDomReady(page);
 
@@ -111,7 +119,7 @@ test.describe('DevTools — Network', () => {
 
 test.describe('DevTools — Performance', () => {
   test('LCP < 4s on dashboard', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/');
     await waitForMeasurementReady(page);
 
@@ -148,7 +156,7 @@ test.describe('DevTools — Performance', () => {
   });
 
   test('DOM nodes < 3000 on dashboard', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/');
     await waitForAppDomReady(page);
 
@@ -210,7 +218,7 @@ test.describe('DevTools — Accessibility', () => {
   });
 
   test('heading hierarchy — no skipped levels', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/');
     await waitForAppDomReady(page);
 
@@ -371,7 +379,7 @@ test.describe('DevTools — Interactions', () => {
   });
 
   test('theme switcher opens and toggles', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/profile');
 
     // Look for theme toggle / dark mode switch
@@ -385,7 +393,8 @@ test.describe('DevTools — Interactions', () => {
   });
 
   test('command palette opens with Ctrl+K', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
+    await gotoAppPage(page, '/');
     await page.keyboard.press('Control+k');
     // Give UI time to show palette
     await page.waitForTimeout(500);
