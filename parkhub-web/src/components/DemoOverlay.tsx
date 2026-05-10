@@ -12,7 +12,7 @@ import { api, type DemoStatus } from '../api/client';
 // produced 1+ call/sec of /api/v1/demo/status (≈100/sec under E2E) and
 // Playwright's networkidle auto-wait never stabilized.
 const defaultReloadPage = () => window.location.reload();
-const PUBLIC_ENTRY_PATH_PREFIXES = ['/login', '/register', '/forgot-password', '/welcome', '/tour', '/setup', '/lobby'];
+const PUBLIC_ENTRY_PATH_PREFIXES = ['/login', '/register', '/forgot-password', '/welcome', '/tour', '/setup', '/choose', '/lobby'];
 
 function isPublicEntryPath(pathname: string): boolean {
   return PUBLIC_ENTRY_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

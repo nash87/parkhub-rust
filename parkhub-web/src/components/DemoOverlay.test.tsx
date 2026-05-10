@@ -349,7 +349,7 @@ describe('DemoOverlay component', () => {
     const { container } = render(<DemoOverlay />);
     await waitFor(() => expect(mockGetDemoConfig).toHaveBeenCalled());
     await waitFor(() => {
-      expect(container.querySelector('.glass-card')).toBeNull();
+      expect(container.querySelector('[data-demo-overlay]')).toBeNull();
     });
   });
 
@@ -364,8 +364,8 @@ describe('DemoOverlay component', () => {
     expect(screen.queryByText('Vote to Reset')).not.toBeInTheDocument();
   });
 
-  it('keeps the mobile overlay at the top on public entry pages', async () => {
-    window.history.pushState({}, '', '/login');
+  it.each(['/login', '/choose'])('keeps the mobile overlay at the top on %s', async (path) => {
+    window.history.pushState({}, '', path);
     Object.defineProperty(window, 'innerWidth', { value: 400, writable: true, configurable: true });
     mockGetDemoConfig.mockResolvedValue({ success: true, data: { demo_mode: true } });
     mockGetDemoStatus.mockResolvedValue({ success: true, data: DEMO_STATUS });
