@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { gotoAppPage, loginViaUi, loginViaApi, waitForAppDomReady } from './helpers';
+import { gotoAppPage, loginBrowserViaApi, loginViaUi, loginViaApi, waitForAppDomReady } from './helpers';
 
 test.describe('Parking — Booking Flow', () => {
   test('login with demo credentials', async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('Parking — Booking Flow', () => {
   });
 
   test('navigate to booking flow', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/book');
     await waitForAppDomReady(page);
     // Booking page should show lots or booking form
@@ -17,7 +17,7 @@ test.describe('Parking — Booking Flow', () => {
   });
 
   test('view bookings list', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/bookings');
     await waitForAppDomReady(page);
     // Should show booking list (possibly empty)
@@ -25,7 +25,7 @@ test.describe('Parking — Booking Flow', () => {
   });
 
   test('view dashboard KPIs', async ({ page }) => {
-    await loginViaUi(page);
+    await loginBrowserViaApi(page);
     await gotoAppPage(page, '/');
     await waitForAppDomReady(page);
     // Dashboard should show statistics or KPI cards
