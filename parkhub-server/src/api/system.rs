@@ -297,6 +297,21 @@ pub async fn v1_health_info(
     }))
 }
 
+/// PHP-compatible alias for the detailed health response.
+#[utoipa::path(
+    get,
+    path = "/api/v1/health/detailed",
+    tag = "Health",
+    summary = "Detailed health check",
+    description = "Compatibility alias for `/health/detailed`.",
+    responses((status = 200, description = "Health check"))
+)]
+pub async fn v1_health_detailed(
+    State(state): State<SharedState>,
+) -> Json<crate::api::admin_ext::ExtendedHealthResponse> {
+    crate::api::admin_ext::detailed_health_check(State(state)).await
+}
+
 /// PHP-compatible discovery handshake.
 #[utoipa::path(
     get,
@@ -449,6 +464,18 @@ pub async fn server_status(State(state): State<SharedState>) -> Json<ApiResponse
         total_bookings: u32::try_from(db_stats.bookings).unwrap_or(u32::MAX),
         database_size_bytes: 0,
     }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/status",
+    tag = "Health",
+    summary = "Server status overview",
+    description = "Compatibility alias for `/status`.",
+    responses((status = 200, description = "Server status"))
+)]
+pub async fn v1_server_status(State(state): State<SharedState>) -> Json<ApiResponse<ServerStatus>> {
+    server_status(State(state)).await
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

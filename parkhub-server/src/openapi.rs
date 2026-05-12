@@ -253,8 +253,11 @@ use crate::{
     paths(
         // Authentication
         crate::api::auth::login,
+        crate::api::auth::login_alias,
         crate::api::auth::register,
+        crate::api::auth::register_alias,
         crate::api::auth::refresh_token,
+        crate::api::auth::refresh_token_alias,
         crate::api::auth::forgot_password,
         crate::api::auth::reset_password,
 
@@ -318,15 +321,18 @@ use crate::{
         crate::api::system::v1_health_live,
         crate::api::system::v1_health_ready,
         crate::api::system::v1_health_info,
+        crate::api::system::v1_health_detailed,
         crate::api::system::v1_discover,
         crate::api::system::handshake,
         crate::api::system::server_status,
+        crate::api::system::v1_server_status,
 
         // Users (mod.rs)
         crate::api::users::get_current_user,
         crate::api::users::update_current_user,
         crate::api::users::get_user,
         crate::api::users::change_password,
+        crate::api::users::auth_change_password,
         crate::api::users::user_stats,
         crate::api::users::get_user_preferences,
         crate::api::users::update_user_preferences,
@@ -752,6 +758,22 @@ mod tests {
     }
 
     #[test]
+    fn test_openapi_has_compat_alias_paths() {
+        let doc = ApiDoc::openapi();
+        let json = doc.to_json().unwrap();
+        for path in [
+            "/api/v1/login",
+            "/api/v1/register",
+            "/api/v1/refresh",
+            "/api/v1/auth/change-password",
+            "/api/v1/health/detailed",
+            "/api/v1/status",
+        ] {
+            assert!(json.contains(path), "Missing path: {path}");
+        }
+    }
+
+    #[test]
     fn test_openapi_has_lot_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
@@ -933,7 +955,13 @@ mod tests {
     fn test_openapi_has_health_paths() {
         let doc = ApiDoc::openapi();
         let json = doc.to_json().unwrap();
-        for path in ["/health", "/health/live", "/health/ready", "/status"] {
+        for path in [
+            "/health",
+            "/health/live",
+            "/health/ready",
+            "/status",
+            "/api/v1/status",
+        ] {
             assert!(json.contains(path), "Missing path: {path}");
         }
     }

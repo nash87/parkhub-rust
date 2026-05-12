@@ -662,6 +662,21 @@ pub async fn change_password(
     (StatusCode::OK, Json(ApiResponse::success(())))
 }
 
+/// `PATCH /api/v1/auth/change-password` — compatibility alias for password change.
+#[utoipa::path(patch, path = "/api/v1/auth/change-password", tag = "Users",
+    summary = "Change password",
+    description = "Compatibility alias for `/api/v1/users/me/password`.",
+    security(("bearer_auth" = [])),
+    responses((status = 200, description = "Success"))
+)]
+pub async fn auth_change_password(
+    State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
+    Json(req): Json<ChangePasswordRequest>,
+) -> (StatusCode, Json<ApiResponse<()>>) {
+    change_password(State(state), Extension(auth_user), Json(req)).await
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // USER STATS
 // ═══════════════════════════════════════════════════════════════════════════════
