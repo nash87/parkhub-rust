@@ -24,29 +24,41 @@ See also:
 
 ---
 
-## Current parity (2026-04-17)
+## Current parity (2026-05-12)
 
-A cross-repo diff from the running servers against the committed route
-listings shows roughly:
+Latest committed-dump comparison from `github/main`:
 
-| Source | Path count (normalised, `/api/v1/*`) |
-|--------|--------------------------------------|
-| Rust (`utoipa::path` macros) | ~223 |
-| PHP (Scramble-derived)       | ~279 |
-| Shared                       | ~140 |
-| Drift                        | ~160 (split ~80 / 80 between the two repos) |
+- Rust input: `parkhub-rust@779eba97f8e6e8ff7e7b65cd1574bb04e4ae00e0`
+  (`docs/openapi/rust.json`)
+- PHP input: `parkhub-php@e0883df46d1b7c587b7798bddddbb3ae19f06cd8`
+  (`docs/openapi/php.json`)
 
-The real shared set is almost certainly larger than 140 because the naive
-static extractor used for that number doesn't always resolve Laravel's
-nested `Route::prefix('admin')->group(...)` chains — an admin route
-declared inside that group as `Route::get('/compliance/report')` becomes
-`/api/v1/admin/compliance/report` at runtime, not the `/api/v1/compliance/report`
-a grep-level script captures.
+| Source | Path count (normalised) |
+|--------|-------------------------|
+| Rust (`utoipa`) | 233 |
+| PHP (Scramble) | 314 |
+| Shared | 201 |
+| Rust-only drift | 32 |
+| PHP-only drift | 113 |
+| Total drift | 145 |
 
-For that reason the numbers above are **upper bounds on drift**; the real
-drift is smaller. The only way to get a ground-truth number is to run both
-servers and compare the emitted OpenAPI JSON. `scripts/diff-openapi.sh`
-does exactly that — see "Methodology" below.
+The numbers above come from committed OpenAPI dumps, not grep/static route
+extractors. They still need a later live-server regeneration pass, but they are
+the current reviewable contract evidence on `github/main`.
+
+Current drift clusters:
+
+| Cluster | Rust-only | PHP-only |
+|---|---:|---:|
+| Admin/reporting/settings | 12 | 35 |
+| Auth/profile aliases | 1 | 7 |
+| Booking/QR | 3 | 16 |
+| Demo/discovery/public | 0 | 6 |
+| Health/docs/status | 8 | 1 |
+| Import/export | 1 | 3 |
+| Payments/billing | 1 | 2 |
+| User/tenant/vehicle | 1 | 4 |
+| Other | 5 | 39 |
 
 ## Methodology
 
@@ -92,7 +104,14 @@ review.
 
 ## Known drift categories
 
-The ~160 paths of apparent drift come from four patterns:
+With the current committed snapshots and the input-specific normalisation in
+`scripts/diff-openapi.sh`, the parity diff is still materially open:
+
+- Rust-only paths: `32`
+- PHP-only paths: `113`
+
+That means parity is **not** currently "just static-extractor noise". The
+remaining drift falls into four broad buckets:
 
 ### 1. Admin routing prefix chains (PHP side)
 
@@ -103,24 +122,28 @@ extractor just didn't see them correctly.
 
 **Action**: rely on the Scramble JSON dump (runtime-accurate), not `grep`.
 
-### 2. Genuine Rust-only endpoints
+### 2. Genuine Rust-only contract surfaces
 
-Some admin features land in Rust first, e.g. `/api/v1/admin/rate-limits/history`
-and `/api/v1/admin/heatmap`. These need PHP ports so self-hosted operators
-on the PHP shared-hosting variant don't lose functionality.
+Rust still exposes paths the PHP contract does not currently publish, including
+top-level operational surfaces (`/status`, `/health/detailed`, docs endpoints),
+admin export/settings endpoints, booking QR under `/api/v1/bookings/{id}/qr`,
+and the Rust-style payments/config surface.
 
-**Action**: file a follow-up fop task per affected endpoint.
+**Action**: close these in small batches instead of one mega-port:
+auth/profile/public aliases, health/docs surfaces, booking/payment aliases,
+then admin/export/settings tails.
 
-### 3. Genuine PHP-only endpoints
+### 3. Genuine PHP-only contract surfaces
 
-PHP sometimes ships features via the Scramble auto-derivation faster than
-they are `#[utoipa::path]`-annotated on the Rust side (e.g. several
-`/compliance/*` endpoints). Either the Rust code exists but lacks the
-macro, or the endpoint is PHP-only on purpose.
+PHP still publishes a substantially larger surface, including legacy public auth
+aliases (`/api/v1/login`, `/register`, `/refresh`), health/info aliases,
+demo/discovery endpoints, broader admin analytics/settings/reporting routes,
+and several booking/user convenience routes.
 
-**Action**: for each PHP-only path, decide (a) add the `#[utoipa::path]`
-macro on the existing Rust handler, (b) port the handler to Rust, or
-(c) mark it PHP-only in `docs/openapi/drift-allow`.
+**Action**: for each cluster decide whether it is
+(a) a missing Rust alias/annotation,
+(b) a real feature port still needed,
+or (c) an intentional divergence that must be documented explicitly.
 
 ### 4. Parameter-name noise
 
@@ -130,11 +153,7 @@ never appear in a real drift report.
 
 ## Open follow-up tasks
 
-- **CI drift gate**: CI job that dumps both specs and runs `diff-openapi.sh`.
-- **Port PHP-only endpoints**: Port the ~80 PHP-only endpoints to Rust (or classify them
-  as PHP-only in the drift allow-list).
-- **Annotate Rust-only endpoints**: Annotate ~80 Rust-only endpoints in Scramble so the PHP
-  spec reflects them, or port to PHP.
-- **Canonical spec**: Publish a canonical `docs/api/openapi.json` derived from
-  Rust (since `utoipa` is the hand-curated source of truth) and make
-  Scramble drift-test against it.
+- **Truthful repo messaging**: README/AGENTS must say parity is tracked, not yet hard-enforced end-to-end.
+- **Real cross-repo CI gate**: current workflows check only self-snapshot drift; add a second-repo checkout and run `diff-openapi.sh` for real Rust-vs-PHP gating once the diff is smaller.
+- **Alias tranche**: eliminate the cheap path mismatches first (`login/register/refresh`, health/detail, QR/payment/config, import aliases).
+- **Feature tranche**: close the remaining admin/reporting/demo/user feature gaps or explicitly classify intentional divergences.
