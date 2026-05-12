@@ -237,7 +237,10 @@ use announcements::{
     admin_create_announcement, admin_delete_announcement, admin_list_announcements,
     admin_update_announcement, get_active_announcements,
 };
-use auth::{forgot_password, login, logout, refresh_token, register, reset_password};
+use auth::{
+    forgot_password, login, login_alias, logout, refresh_token, refresh_token_alias, register,
+    register_alias, reset_password,
+};
 #[cfg(feature = "mod-bookings")]
 pub use bookings::{
     booking_checkin, cancel_booking, create_booking, get_booking, get_booking_invoice,
@@ -377,8 +380,8 @@ pub use misc::{
     get_impressum, get_impressum_admin, public_display, public_occupancy, update_impressum,
 };
 pub use users::{
-    change_password, gdpr_delete_account, gdpr_export_data, get_current_user, get_my_settings,
-    get_user, get_user_preferences, update_current_user, update_my_settings,
+    auth_change_password, change_password, gdpr_delete_account, gdpr_export_data, get_current_user,
+    get_my_settings, get_user, get_user_preferences, update_current_user, update_my_settings,
     update_user_preferences, user_stats,
 };
 
@@ -501,9 +504,9 @@ async fn admin_middleware(
 // build (e.g. `--no-default-features`), and the booking/integration helpers
 // intentionally group many small route blocks by domain.
 
-/// Rate-limited, pre-auth `/api/v1/auth/*` routes (login, 2FA-login, register,
-/// forgot-password, refresh, reset-password, logout) and the standalone
-/// `/api/v1/bookings/{id}/qr` route.
+/// Rate-limited, pre-auth auth routes and aliases:
+/// `/api/v1/auth/*`, legacy `/api/v1/{login,register,refresh}`, and the
+/// standalone `/api/v1/bookings/{id}/qr` route.
 ///
 /// Each sub-router has its own per-IP + per-identity rate-limit layers applied
 /// via `route_layer` (so only that route is affected), and `two_fa_store` is
@@ -518,6 +521,7 @@ fn auth_rate_limited_routes(
     let login_identity = identity_limiters.clone();
     let login_route = Router::new()
         .route("/api/v1/auth/login", post(login))
+        .route("/api/v1/login", post(login_alias))
         .layer(Extension(two_fa_store.clone()))
         .route_layer(middleware::from_fn(move |req, next| {
             identity_rate_limit_middleware(
@@ -554,6 +558,7 @@ fn auth_rate_limited_routes(
     let register_identity = identity_limiters.clone();
     let register_route = Router::new()
         .route("/api/v1/auth/register", post(register))
+        .route("/api/v1/register", post(register_alias))
         .route_layer(middleware::from_fn(move |req, next| {
             identity_rate_limit_middleware(
                 register_identity.clone(),
@@ -588,6 +593,7 @@ fn auth_rate_limited_routes(
     let refresh_identity = identity_limiters.clone();
     let refresh_route = Router::new()
         .route("/api/v1/auth/refresh", post(refresh_token))
+        .route("/api/v1/refresh", post(refresh_token_alias))
         .route_layer(middleware::from_fn(move |req, next| {
             identity_rate_limit_middleware(
                 refresh_identity.clone(),
@@ -660,8 +666,10 @@ fn public_routes(state: &SharedState, rate_limiters: &EndpointRateLimiters) -> R
         .route("/api/v1/health/live", get(v1_health_live))
         .route("/api/v1/health/ready", get(v1_health_ready))
         .route("/api/v1/health/info", get(v1_health_info))
+        .route("/api/v1/health/detailed", get(v1_health_detailed))
         .route("/handshake", post(handshake))
         .route("/status", get(server_status))
+        .route("/api/v1/status", get(v1_server_status))
         .route("/api/v1/discover", get(v1_discover))
         // Legal — public (DDG § 5 requires Impressum to be freely accessible)
         .route("/api/v1/legal/impressum", get(get_impressum))
@@ -877,6 +885,10 @@ fn user_core_routes() -> Router<SharedState> {
         .route(
             "/api/v1/users/me/password",
             axum::routing::patch(change_password),
+        )
+        .route(
+            "/api/v1/auth/change-password",
+            axum::routing::patch(auth_change_password),
         )
         // Admin-only: retrieve any user by ID
         .route("/api/v1/users/{id}", get(get_user))
@@ -2397,7 +2409,8 @@ async fn protected_identity_rate_limit_middleware(
 // Health & system handler re-exports from system module
 use system::{
     handshake, health_check, liveness_check, readiness_check, server_status, system_maintenance,
-    system_version, v1_discover, v1_health, v1_health_info, v1_health_live, v1_health_ready,
+    system_version, v1_discover, v1_health, v1_health_detailed, v1_health_info, v1_health_live,
+    v1_health_ready, v1_server_status,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -317,6 +317,27 @@ pub async fn login(
 
 #[utoipa::path(
     post,
+    path = "/api/v1/login",
+    tag = "Authentication",
+    summary = "Log in",
+    description = "Compatibility alias for `/api/v1/auth/login`.",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login successful"),
+        (status = 401, description = "Invalid credentials"),
+        (status = 403, description = "Account disabled"),
+    )
+)]
+pub async fn login_alias(
+    State(state): State<SharedState>,
+    Extension(temp_token_store): Extension<Arc<TwoFactorTempTokenStore>>,
+    Json(request): Json<LoginRequest>,
+) -> Response {
+    login(State(state), Extension(temp_token_store), Json(request)).await
+}
+
+#[utoipa::path(
+    post,
     path = "/api/v1/auth/register",
     tag = "Authentication",
     summary = "Register a new account",
@@ -587,6 +608,27 @@ pub async fn register(
 
 #[utoipa::path(
     post,
+    path = "/api/v1/register",
+    tag = "Authentication",
+    summary = "Register a new account",
+    description = "Compatibility alias for `/api/v1/auth/register`.",
+    request_body = RegisterRequest,
+    responses(
+        (status = 201, description = "Registration successful"),
+        (status = 400, description = "Invalid input"),
+        (status = 403, description = "Registration disabled"),
+        (status = 409, description = "Email already exists"),
+    )
+)]
+pub async fn register_alias(
+    State(state): State<SharedState>,
+    Json(request): Json<RegisterRequest>,
+) -> Response {
+    register(State(state), Json(request)).await
+}
+
+#[utoipa::path(
+    post,
     path = "/api/v1/auth/refresh",
     tag = "Authentication",
     summary = "Refresh access token",
@@ -731,6 +773,25 @@ pub async fn refresh_token(
         })),
         &cookie,
     )
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/refresh",
+    tag = "Authentication",
+    summary = "Refresh access token",
+    description = "Compatibility alias for `/api/v1/auth/refresh`.",
+    request_body = RefreshTokenRequest,
+    responses(
+        (status = 200, description = "Token refreshed successfully"),
+        (status = 401, description = "Invalid or expired refresh token"),
+    )
+)]
+pub async fn refresh_token_alias(
+    State(state): State<SharedState>,
+    Json(request): Json<RefreshTokenRequest>,
+) -> Response {
+    refresh_token(State(state), Json(request)).await
 }
 
 /// `POST /api/v1/auth/forgot-password`

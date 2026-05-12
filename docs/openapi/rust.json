@@ -7392,6 +7392,36 @@
         ]
       }
     },
+    "/api/v1/auth/change-password": {
+      "patch": {
+        "description": "Compatibility alias for `/api/v1/users/me/password`.",
+        "operationId": "auth_change_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Change password",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
     "/api/v1/auth/forgot-password": {
       "post": {
         "description": "Send a password reset email. Always returns 200 to prevent user enumeration.",
@@ -8565,6 +8595,21 @@
         ]
       }
     },
+    "/api/v1/health/detailed": {
+      "get": {
+        "description": "Compatibility alias for `/health/detailed`.",
+        "operationId": "v1_health_detailed",
+        "responses": {
+          "200": {
+            "description": "Health check"
+          }
+        },
+        "summary": "Detailed health check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
     "/api/v1/health/info": {
       "get": {
         "description": "Compatibility endpoint carrying runtime metadata and the canonical module map.",
@@ -8653,6 +8698,37 @@
         "summary": "Get Impressum (public)",
         "tags": [
           "Public"
+        ]
+      }
+    },
+    "/api/v1/login": {
+      "post": {
+        "description": "Compatibility alias for `/api/v1/auth/login`.",
+        "operationId": "login_alias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "403": {
+            "description": "Account disabled"
+          }
+        },
+        "summary": "Log in",
+        "tags": [
+          "Authentication"
         ]
       }
     },
@@ -10627,6 +10703,68 @@
         ]
       }
     },
+    "/api/v1/refresh": {
+      "post": {
+        "description": "Compatibility alias for `/api/v1/auth/refresh`.",
+        "operationId": "refresh_token_alias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully"
+          },
+          "401": {
+            "description": "Invalid or expired refresh token"
+          }
+        },
+        "summary": "Refresh access token",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/register": {
+      "post": {
+        "description": "Compatibility alias for `/api/v1/auth/register`.",
+        "operationId": "register_alias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Registration successful"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "403": {
+            "description": "Registration disabled"
+          },
+          "409": {
+            "description": "Email already exists"
+          }
+        },
+        "summary": "Register a new account",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
     "/api/v1/setup": {
       "post": {
         "description": "Create the first admin user and configure the system. Only works before setup is completed.",
@@ -10667,6 +10805,21 @@
         "summary": "Get setup status",
         "tags": [
           "Setup"
+        ]
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "description": "Compatibility alias for `/status`.",
+        "operationId": "v1_server_status",
+        "responses": {
+          "200": {
+            "description": "Server status"
+          }
+        },
+        "summary": "Server status overview",
+        "tags": [
+          "Health"
         ]
       }
     },

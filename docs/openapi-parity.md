@@ -26,39 +26,45 @@ See also:
 
 ## Current parity (2026-05-12)
 
-Latest committed-dump comparison from `github/main`:
+Latest alias-tranche comparison from regenerated local OpenAPI dumps:
 
-- Rust input: `parkhub-rust@779eba97f8e6e8ff7e7b65cd1574bb04e4ae00e0`
+- Rust input: `parkhub-rust@65752756ea9c775abca0a317c0ff42ac4535891e`
+  on branch `t-parkhub-openapi-alias-tranche`, based on
+  `github/main@24b763193130f1761d018893ed46334390cfd6ae`
   (`docs/openapi/rust.json`)
-- PHP input: `parkhub-php@e0883df46d1b7c587b7798bddddbb3ae19f06cd8`
+- PHP input: `parkhub-php@63a7a5228039657938733538aa53a24b7cf0b352`
+  on branch `t-parkhub-openapi-alias-tranche`, based on
+  `github/main@83a132283550d80e4a0553495bd05daf25093f8b`
   (`docs/openapi/php.json`)
 
 | Source | Path count (normalised) |
 |--------|-------------------------|
-| Rust (`utoipa`) | 233 |
-| PHP (Scramble) | 314 |
-| Shared | 201 |
-| Rust-only drift | 32 |
-| PHP-only drift | 113 |
-| Total drift | 145 |
+| Rust (`utoipa`) | 239 |
+| PHP (Scramble) | 318 |
+| Shared | 210 |
+| Rust-only drift | 29 |
+| PHP-only drift | 108 |
+| Total drift | 137 |
 
-The numbers above come from committed OpenAPI dumps, not grep/static route
-extractors. They still need a later live-server regeneration pass, but they are
-the current reviewable contract evidence on `github/main`.
+The numbers above come from regenerated OpenAPI dumps, not grep/static route
+extractors. This alias tranche reduced total drift from `145` to `137` by adding
+thin compatibility aliases for `login`, `register`, `refresh`,
+`auth/change-password`, `health/detailed`, `status`, and the public docs
+surfaces.
 
 Current drift clusters:
 
 | Cluster | Rust-only | PHP-only |
 |---|---:|---:|
-| Admin/reporting/settings | 12 | 35 |
-| Auth/profile aliases | 1 | 7 |
-| Booking/QR | 3 | 16 |
-| Demo/discovery/public | 0 | 6 |
-| Health/docs/status | 8 | 1 |
-| Import/export | 1 | 3 |
-| Payments/billing | 1 | 2 |
-| User/tenant/vehicle | 1 | 4 |
-| Other | 5 | 39 |
+| Admin/reporting/settings | 14 | 39 |
+| Auth/profile/setup aliases | 1 | 7 |
+| Booking/QR/calendar | 1 | 15 |
+| Health/docs/status | 5 | 3 |
+| Import/export | 1 | 4 |
+| Payments/billing/pricing | 4 | 1 |
+| Demo/discovery/public | 1 | 15 |
+| User/tenant/vehicle/notification | 2 | 12 |
+| Other | 0 | 12 |
 
 ## Methodology
 
@@ -107,8 +113,8 @@ review.
 With the current committed snapshots and the input-specific normalisation in
 `scripts/diff-openapi.sh`, the parity diff is still materially open:
 
-- Rust-only paths: `32`
-- PHP-only paths: `113`
+- Rust-only paths: `29`
+- PHP-only paths: `108`
 
 That means parity is **not** currently "just static-extractor noise". The
 remaining drift falls into four broad buckets:
@@ -125,9 +131,9 @@ extractor just didn't see them correctly.
 ### 2. Genuine Rust-only contract surfaces
 
 Rust still exposes paths the PHP contract does not currently publish, including
-top-level operational surfaces (`/status`, `/health/detailed`, docs endpoints),
-admin export/settings endpoints, booking QR under `/api/v1/bookings/{id}/qr`,
-and the Rust-style payments/config surface.
+top-level operational surfaces (`/status`, `/health*`, `/handshake`), admin
+export/settings endpoints, booking QR under `/api/v1/bookings/{id}/qr`, and the
+Rust-style payments/config surface.
 
 **Action**: close these in small batches instead of one mega-port:
 auth/profile/public aliases, health/docs surfaces, booking/payment aliases,
@@ -135,10 +141,9 @@ then admin/export/settings tails.
 
 ### 3. Genuine PHP-only contract surfaces
 
-PHP still publishes a substantially larger surface, including legacy public auth
-aliases (`/api/v1/login`, `/register`, `/refresh`), health/info aliases,
-demo/discovery endpoints, broader admin analytics/settings/reporting routes,
-and several booking/user convenience routes.
+PHP still publishes a substantially larger surface, including profile/setup
+aliases, demo/discovery endpoints, broader admin analytics/settings/reporting
+routes, and several booking/user convenience routes.
 
 **Action**: for each cluster decide whether it is
 (a) a missing Rust alias/annotation,
@@ -155,5 +160,7 @@ never appear in a real drift report.
 
 - **Truthful repo messaging**: README/AGENTS must say parity is tracked, not yet hard-enforced end-to-end.
 - **Real cross-repo CI gate**: current workflows check only self-snapshot drift; add a second-repo checkout and run `diff-openapi.sh` for real Rust-vs-PHP gating once the diff is smaller.
-- **Alias tranche**: eliminate the cheap path mismatches first (`login/register/refresh`, health/detail, QR/payment/config, import aliases).
+- **Alias tranche**: continue with the remaining cheap mismatches
+  (booking QR/payment/config, import aliases, profile/setup aliases) and classify
+  Rust top-level operational endpoints explicitly.
 - **Feature tranche**: close the remaining admin/reporting/demo/user feature gaps or explicitly classify intentional divergences.
