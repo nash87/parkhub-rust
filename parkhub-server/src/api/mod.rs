@@ -504,9 +504,9 @@ async fn admin_middleware(
 // build (e.g. `--no-default-features`), and the booking/integration helpers
 // intentionally group many small route blocks by domain.
 
-/// Rate-limited, pre-auth `/api/v1/auth/*` routes (login, 2FA-login, register,
-/// forgot-password, refresh, reset-password, logout) and the standalone
-/// `/api/v1/bookings/{id}/qr` route.
+/// Rate-limited, pre-auth auth routes and aliases:
+/// `/api/v1/auth/*`, legacy `/api/v1/{login,register,refresh}`, and the
+/// standalone `/api/v1/bookings/{id}/qr` route.
 ///
 /// Each sub-router has its own per-IP + per-identity rate-limit layers applied
 /// via `route_layer` (so only that route is affected), and `two_fa_store` is

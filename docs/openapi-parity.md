@@ -28,11 +28,13 @@ See also:
 
 Latest alias-tranche comparison from regenerated local OpenAPI dumps:
 
-- Rust input: `parkhub-rust` branch `t-parkhub-openapi-alias-tranche`
-  based on `github/main@24b763193130f1761d018893ed46334390cfd6ae`
+- Rust input: `parkhub-rust@65752756ea9c775abca0a317c0ff42ac4535891e`
+  on branch `t-parkhub-openapi-alias-tranche`, based on
+  `github/main@24b763193130f1761d018893ed46334390cfd6ae`
   (`docs/openapi/rust.json`)
-- PHP input: `parkhub-php` branch `t-parkhub-openapi-alias-tranche`
-  based on `github/main@83a132283550d80e4a0553495bd05daf25093f8b`
+- PHP input: `parkhub-php@63a7a5228039657938733538aa53a24b7cf0b352`
+  on branch `t-parkhub-openapi-alias-tranche`, based on
+  `github/main@83a132283550d80e4a0553495bd05daf25093f8b`
   (`docs/openapi/php.json`)
 
 | Source | Path count (normalised) |
