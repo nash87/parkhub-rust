@@ -54,3 +54,16 @@ Image tag — defaults to appVersion
 {{- define "parkhub.imageTag" -}}
 {{- default .Chart.AppVersion .Values.image.tag }}
 {{- end }}
+
+{{/*
+Image reference — tag by default, digest when image.digest is set.
+*/}}
+{{- define "parkhub.imageRef" -}}
+{{- $repository := required "image.repository is required" .Values.image.repository -}}
+{{- $digest := default "" .Values.image.digest -}}
+{{- if $digest -}}
+{{- printf "%s@%s" $repository $digest -}}
+{{- else -}}
+{{- printf "%s:%s" $repository (include "parkhub.imageTag" .) -}}
+{{- end -}}
+{{- end }}

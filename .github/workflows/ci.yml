@@ -90,6 +90,8 @@ jobs:
           helm template parkhub ./helm/parkhub --set pdb.enabled=true > /tmp/rendered-ha.yaml
           helm template parkhub ./helm/parkhub --set monitoring.serviceMonitor.enabled=true > /tmp/rendered-servicemonitor.yaml
           helm template parkhub ./helm/parkhub --set monitoring.prometheusRule.enabled=true > /tmp/rendered-prometheusrule.yaml
+          helm template parkhub ./helm/parkhub --set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            | grep -F 'ghcr.io/nash87/parkhub-rust@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           python3 -m pip install --user pyyaml
           python3 - <<'PY'
           import pathlib, yaml
