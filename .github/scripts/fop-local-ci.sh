@@ -449,6 +449,7 @@ if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; t
   if command -v actionlint >/dev/null 2>&1; then
     run_direct "actionlint" "actionlint -color"
   fi
+  run_direct "CI workflow policy" "bash scripts/check-ci-workflow-policy.sh"
   if command -v zizmor >/dev/null 2>&1; then
     # Audit-mode: surface findings, don't fail the gate yet
     run_direct "zizmor (audit)" "zizmor --no-progress --persona auditor .github/workflows/ || true"

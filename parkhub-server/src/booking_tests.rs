@@ -957,11 +957,15 @@ async fn test_rate_limit_register() {
     let app = router(state);
 
     let mut last_status = StatusCode::OK;
-    for i in 0..4 {
+    for _ in 0..4 {
+        // Use a validation-failing payload so this test measures only the
+        // route-local rate limiter. Successful registration hashes passwords
+        // and writes users; under full-suite load that can take long enough
+        // for the per-minute bucket to refill before the fourth request.
         let body = serde_json::json!({
-            "email": format!("ratelimit{i}@example.com"),
-            "password": "SecurePass1!",
-            "password_confirmation": "SecurePass1!",
+            "email": "not-an-email",
+            "password": "short",
+            "password_confirmation": "mismatch",
             "name": "RL User",
         });
         let resp = app

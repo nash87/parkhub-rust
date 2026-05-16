@@ -13,6 +13,8 @@
 #   2. For each matched pair: same `on:` triggers, same `jobs:` keys.
 #      Step bodies are NOT compared (they intentionally differ —
 #      gitea uses local action mirrors, github uses public).
+#   3. GitHub's required aggregate CI workflow keeps merge-queue coverage:
+#      `merge_group: { types: [checks_requested] }`.
 #
 # Usage:
 #   scripts/local-workflow-drift.sh [--strict]
@@ -67,6 +69,7 @@ norm() { printf '%s' "$1" | sed -E 's/\.(yml|yaml)$//'; }
 
 declare -a missing_in_gitea=()
 declare -a missing_in_github=()
+declare -a policy_violations=()
 declare -a trigger_drift=()
 declare -a job_drift=()
 
@@ -113,13 +116,26 @@ for f in "${gh_files[@]}"; do
     continue
   fi
 
-  drift=$(python3 - "$gh_path" "$gt_path" <<'PY' 2>/dev/null || true
+  drift=$(python3 - "$gh_path" "$gt_path" "$base" <<'PY' 2>/dev/null || true
 import sys, yaml
-gh, gt = sys.argv[1], sys.argv[2]
+gh, gt, base = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(gh) as f: gh_y = yaml.safe_load(f)
 with open(gt) as f: gt_y = yaml.safe_load(f)
-gh_on = sorted((gh_y.get('on') or gh_y.get(True) or {}).keys()) if isinstance(gh_y.get('on') or gh_y.get(True), dict) else []
-gt_on = sorted((gt_y.get('on') or gt_y.get(True) or {}).keys()) if isinstance(gt_y.get('on') or gt_y.get(True), dict) else []
+gh_on_raw = gh_y.get('on') or gh_y.get(True) or {}
+gt_on_raw = gt_y.get('on') or gt_y.get(True) or {}
+gh_on_cmp = dict(gh_on_raw) if isinstance(gh_on_raw, dict) else {}
+if base == 'ci':
+    merge_group = gh_on_cmp.get('merge_group')
+    types = []
+    if isinstance(merge_group, dict):
+        raw_types = merge_group.get('types') or []
+        types = raw_types if isinstance(raw_types, list) else [raw_types]
+    if 'checks_requested' not in types:
+        print('policy:github-ci-missing-merge_group-checks_requested')
+    # GitHub Merge Queue has no Gitea equivalent; compare remaining triggers.
+    gh_on_cmp.pop('merge_group', None)
+gh_on = sorted(gh_on_cmp.keys()) if isinstance(gh_on_cmp, dict) else []
+gt_on = sorted(gt_on_raw.keys()) if isinstance(gt_on_raw, dict) else []
 if gh_on != gt_on:
     print(f"on:gh={gh_on} on:gt={gt_on}")
 gh_jobs = sorted((gh_y.get('jobs') or {}).keys())
@@ -131,17 +147,22 @@ if gh_only or gt_only:
 PY
 )
   if [[ -n "$drift" ]]; then
-    if [[ "$drift" == on:* ]]; then
-      trigger_drift+=("$base: $drift")
-    else
-      job_drift+=("$base: $drift")
-    fi
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      if [[ "$line" == policy:* ]]; then
+        policy_violations+=("$base: ${line#policy:}")
+      elif [[ "$line" == on:* ]]; then
+        trigger_drift+=("$base: $line")
+      else
+        job_drift+=("$base: $line")
+      fi
+    done <<< "$drift"
   fi
 done
 
 # Report.
 exit_code=0
-total_drift=$((${#missing_in_gitea[@]} + ${#missing_in_github[@]} + ${#trigger_drift[@]} + ${#job_drift[@]}))
+total_drift=$((${#missing_in_gitea[@]} + ${#missing_in_github[@]} + ${#policy_violations[@]} + ${#trigger_drift[@]} + ${#job_drift[@]}))
 
 if (( total_drift == 0 )); then
   echo "✓ no workflow drift detected (gh:${#gh_files[@]} files, gt:${#gt_files[@]} files)"
@@ -157,6 +178,12 @@ fi
 if (( ${#missing_in_github[@]} > 0 )); then
   echo "✗ in .gitea/workflows but missing from .github/workflows:"
   for f in "${missing_in_github[@]}"; do echo "    $f"; done
+  exit_code=1
+fi
+
+if (( ${#policy_violations[@]} > 0 )); then
+  echo "✗ workflow policy violations:"
+  for d in "${policy_violations[@]}"; do echo "    $d"; done
   exit_code=1
 fi
 
