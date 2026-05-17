@@ -34,16 +34,50 @@ fn free_port() -> u16 {
 
 /// Locate the `parkhub-server` binary.
 ///
-/// Looks for:
-///  1. `target/debug/parkhub-server`
-///  2. `target/release/parkhub-server`
+/// Looks next to the current test executable first, then Cargo's configured
+/// target directory and finally the repository target directories. Local
+/// `fop build` routes Cargo artifacts to `/var/tmp/florian-offload`, so
+/// integration tests must not assume the default `target/` path.
 fn server_binary() -> PathBuf {
+    let mut searched = Vec::new();
+    if let Ok(current_exe) = std::env::current_exe()
+        && let Some(debug_dir) = current_exe.parent().and_then(|deps| deps.parent())
+    {
+        let debug = debug_dir.join("parkhub-server");
+        searched.push(debug.clone());
+        if debug.exists() {
+            return debug;
+        }
+        if let Some(target_dir) = debug_dir.parent() {
+            let release = target_dir.join("release/parkhub-server");
+            searched.push(release.clone());
+            if release.exists() {
+                return release;
+            }
+        }
+    }
+
+    if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR").map(PathBuf::from) {
+        let debug = target_dir.join("debug/parkhub-server");
+        searched.push(debug.clone());
+        if debug.exists() {
+            return debug;
+        }
+        let release = target_dir.join("release/parkhub-server");
+        searched.push(release.clone());
+        if release.exists() {
+            return release;
+        }
+    }
+
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let debug = root.join("target/debug/parkhub-server");
+    searched.push(debug.clone());
     if debug.exists() {
         return debug;
     }
     let release = root.join("target/release/parkhub-server");
+    searched.push(release.clone());
     if release.exists() {
         return release;
     }
@@ -52,15 +86,18 @@ fn server_binary() -> PathBuf {
         .parent()
         .map(|p| p.join("target/debug/parkhub-server"))
         .unwrap_or_default();
+    searched.push(ws_debug.clone());
     if ws_debug.exists() {
         return ws_debug;
     }
     panic!(
         "parkhub-server binary not found. Build with `cargo build -p parkhub-server` first.\n\
-         Searched: {}, {}, {}",
-        debug.display(),
-        release.display(),
-        ws_debug.display()
+         Searched: {}",
+        searched
+            .iter()
+            .map(|path| path.display().to_string())
+            .collect::<Vec<_>>()
+            .join(", ")
     );
 }
 

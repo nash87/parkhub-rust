@@ -25,6 +25,8 @@ on:
       - .github/ISSUE_TEMPLATE/**
       - .github/PULL_REQUEST_TEMPLATE.md
       - .github/agents/**
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
@@ -58,6 +60,9 @@ jobs:
         run: |
           python3 -m pip install --user yamllint
           ~/.local/bin/yamllint -d relaxed .github/workflows docker-compose.yml docker-compose.test.yml render.yaml koyeb.yaml
+
+      - name: Validate CI workflow policy
+        run: bash scripts/check-ci-workflow-policy.sh
 
       - name: Validate Fly config
         run: python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('fly.toml').read_text())"
@@ -257,7 +262,7 @@ jobs:
 
   fmt:
     name: Cargo Format Check
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -276,7 +281,7 @@ jobs:
 
   check:
     name: Cargo Check (headless)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -303,7 +308,7 @@ jobs:
 
   client-check:
     name: Desktop Client Check
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -329,7 +334,7 @@ jobs:
 
   clippy:
     name: Cargo Clippy (headless)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -358,7 +363,7 @@ jobs:
 
   test:
     name: Cargo Test (headless)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [check]
@@ -386,7 +391,7 @@ jobs:
 
   frontend:
     name: Frontend Build & Test
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     defaults:
@@ -415,7 +420,7 @@ jobs:
 
   integration:
     name: Integration Tests
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [test]
@@ -447,7 +452,7 @@ jobs:
 
   types-drift:
     name: TypeScript types drift
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -506,7 +511,7 @@ jobs:
 
   openapi-drift:
     name: OpenAPI drift
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || github.event.pull_request.user.type == 'Bot' || contains(github.event.pull_request.labels.*.name, 'github-ci-full')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:

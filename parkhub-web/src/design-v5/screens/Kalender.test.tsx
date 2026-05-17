@@ -86,12 +86,13 @@ describe('KalenderV5', () => {
     const { events } = makeEvents();
     mockCalendarEvents.mockResolvedValue({ success: true, data: events });
     renderScreen();
-    await waitFor(() => expect(screen.getByText('Parkhaus Nord')).toBeInTheDocument());
+    const grid = await screen.findByRole('grid', { name: /Kalender/ });
+    await waitFor(() => expect(within(grid).getByText('Parkhaus Nord')).toBeInTheDocument());
     // Event title visible in the grid
-    expect(screen.getByText('Urlaub')).toBeInTheDocument();
+    expect(within(grid).getByText('Urlaub')).toBeInTheDocument();
     // Summary stats (label + count)
-    expect(screen.getByText('Buchungen')).toBeInTheDocument();
-    expect(screen.getByText('Abwesenheit')).toBeInTheDocument();
+    expect(screen.getByText('Buchungen', { selector: 'div' })).toBeInTheDocument();
+    expect(screen.getByText('Abwesenheit', { selector: 'div' })).toBeInTheDocument();
   });
 
   it('shows selected-day detail card on click', async () => {

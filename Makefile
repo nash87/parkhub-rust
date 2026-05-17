@@ -136,6 +136,7 @@ ci-post:
 ## trivy-image or grype-image. Mirrors parkhub-php's ci-security target so the
 ## same mental model spans both repos.
 ci-security:
+	bash scripts/check-ci-workflow-policy.sh
 	scripts/ci/local-security-audit.sh --profile cd --strict-tools --fail-advisory
 
 pre-push: ci
