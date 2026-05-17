@@ -254,7 +254,7 @@ jobs:
           echo "::warning title=SBOM attestation missing (amd64)::cosign attest --type spdxjson failed; image signed + SBOM artifact still attached."
 
       - name: Upload SBOM artifact (amd64)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always() && hashFiles('sbom.spdx.json') != ''
         with:
           name: sbom-spdx-amd64-${{ github.sha }}
@@ -382,7 +382,7 @@ jobs:
           echo "::warning title=SBOM attestation missing (arm64)::cosign attest --type spdxjson failed; image signed + SBOM artifact still attached."
 
       - name: Upload SBOM artifact (arm64)
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always() && hashFiles('sbom.spdx.json') != ''
         with:
           name: sbom-spdx-arm64-${{ github.sha }}
