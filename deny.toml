@@ -17,7 +17,15 @@ ignore = [
     "RUSTSEC-2023-0071", # rsa Marvin Attack (transitive dep)
     "RUSTSEC-2025-0057", # fxhash unmaintained (transitive via selectors)
     "RUSTSEC-2023-0019", # kuchiki unmaintained (transitive via printpdf)
-    "RUSTSEC-2025-0141", # bincode unmaintained (transitive via hyphenation -> printpdf 0.9; upstream still uses 1.x)
+    # RUSTSEC-2025-0141 removed: was bincode 1.x unmaintained, but lockfile
+    # has moved to bincode 2.0.1 which is not affected. Drop to keep deny.toml
+    # free of stale suppressions (CLAUDE.md: advisory failure = lockfile bump).
+    #
+    # The two advisories below were previously only suppressed in workflow
+    # cargo-audit --ignore flags. They are added here so deny.toml is the
+    # single source of truth for all advisory ignores.
+    "RUSTSEC-2024-0384", # paste unmaintained (transitive, Slint/Tauri path)
+    "RUSTSEC-2026-0097", # transitive unmaintained dep (Slint/Tauri path)
     # Tauri-transitive advisories (webkit2gtk 4.1 → gtk3 stack on Linux).
     # The GTK4/WebKitGTK 6 migration is upstream-blocked on Tauri; these
     # are unmaintained-but-functional bindings until that lands.
