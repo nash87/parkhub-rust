@@ -1,0 +1,30 @@
+# Zizmor GHA SAST policy for nash87/parkhub-rust.
+#
+# Zizmor is GitHub Actions-specific static analysis. The workflow
+# security.yml runs it in audit-mode today. This config file exists
+# so the eventual promotion from audit-mode → required-gate can land
+# in a separate PR without re-bikeshedding the rule set.
+#
+# Reference: SOTA 2026 CI/CD research synthesis at memory
+# `reference_sota_2026_cicd_parkhub_research_2026_05_18`.
+#
+# Schema: https://docs.zizmor.sh/configuration/
+#
+# Kept in lock-step with nash87/parkhub-php/.zizmor.yaml so both
+# repos in the parkhub monorepo see the same rule set.
+
+rules:
+  ref-version-mismatch:
+    ignore:
+      - .github/workflows/dependabot-auto-merge.yml
+      - .github/workflows/auto-merge.yml
+
+# TODO follow-up (separate PR):
+# - Enable the `dependabot-cooldown` rule with the project's
+#   dependabot.yml cooldown profile (5d patch / 10d minor / 15d major)
+#   to actively enforce stabilityDays-style SOTA-2026 mitigation
+#   against newly-published-version supply-chain attacks. Schema +
+#   key names need verification against current zizmor docs first.
+# - cargo-deny scope `unmaintained` + `unsound` to `"workspace"`
+#   instead of "deny" — eliminates transitive ignore-list cancer.
+#   (Lives in deny.toml, not here; cross-referenced for visibility.)
