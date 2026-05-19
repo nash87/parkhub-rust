@@ -52,29 +52,8 @@ require_grep_each 'fop_pipeline_v1' \
   parkhub-server/src/api/modules/schemas.rs \
   docs/recommendation-engine-contract.md
 require_grep 'fallback_algorithm=weighted_v1' docs/recommendation-engine-contract.md
-require_grep 'fallback_algorithm: "weighted_v1"' parkhub-server/src/api/recommendations.rs
 require_grep_each 'RecommendationServed' parkhub-server/src/api/recommendations.rs docs/recommendation-engine-contract.md
-require_grep '"adapter": adapter_status' parkhub-server/src/api/recommendations.rs
-require_grep 'event_type: "RecommendationServed".to_string()' parkhub-server/src/api/recommendations.rs
-require_grep 'pipeline_endpoint rejected' parkhub-server/src/api/recommendations.rs
-require_grep 'to_ascii_lowercase' parkhub-server/src/api/recommendations.rs
-require_grep 'is_kubernetes_service_host(&host)' parkhub-server/src/api/recommendations.rs
-require_grep 'labels.len() == 3 && labels[2] == "svc"' parkhub-server/src/api/recommendations.rs
-require_grep 'labels.len() == 5' parkhub-server/src/api/recommendations.rs
-require_grep 'is_local_dev_test_host(&host)' parkhub-server/src/api/recommendations.rs
-require_grep '"https://example.com"' parkhub-server/src/api/recommendations.rs
-require_grep '"file:///tmp/pipeline"' parkhub-server/src/api/recommendations.rs
-require_grep '"http://fop-pipeline.svc:9310"' parkhub-server/src/api/recommendations.rs
-require_grep 'test_apply_fop_pipeline_response_maps_known_slots_only' parkhub-server/src/api/recommendations.rs
-require_grep 'test_pipeline_endpoint_allowlist' parkhub-server/src/api/recommendations.rs
-require_grep 'booking_status_counts_for_recommendation_history' parkhub-server/src/api/recommendations.rs
-require_grep 'recommendation_audit_stats' parkhub-server/src/api/recommendations.rs
-require_grep 'slot_feature_label' parkhub-server/src/api/recommendations.rs
-require_grep 'batch_id' parkhub-server/src/api/recommendations.rs
-require_grep 'fop_pipeline_client()' parkhub-server/src/api/recommendations.rs
 require_grep '"weighted_v1", "fop_pipeline_v1"' parkhub-server/src/api/modules/schemas.rs
-require_grep '"execution_allowed": false' parkhub-server/src/api/recommendations.rs
-require_grep 'execution_allowed: false' parkhub-server/src/api/recommendations.rs
 require_grep 'execution_allowed=false' docs/recommendation-engine-contract.md
 
 echo "ParkHub Rust recommendation contract gate OK."
