@@ -205,42 +205,44 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Audit-mode: findings are informational only, never block PRs.
-    # GitHub's check API reports a job's raw conclusion regardless of
-    # continue-on-error, so a failing step makes the job show as "fail" in
-    # the PR checks UI even though it never gates branch protection. The
-    # explicit "Mark advisory success" step below ensures the job check run
-    # always concludes as `success` so Dependabot and human reviewers see
-    # a clean green list without noise from expected advisory findings.
-    # Promote findings to errors (remove this step) once the workflow
-    # inventory has been triaged and a .zizmor.yaml baseline is committed.
+    # --no-exit-codes keeps findings advisory, while setup/tool failures still
+    # fail the job so missing SAST is visible. Promote findings to errors once
+    # the workflow inventory has been triaged and a .zizmor.yaml baseline is
+    # committed.
     permissions:
       contents: read  # checkout
-      security-events: write  # upload SARIF (when enabled by zizmor-action)
+    env:
+      ZIZMOR_VERSION: 1.24.1
+      ZIZMOR_LINUX_X64_SHA256: a8000f3c683319a523d3b20df0e75457ba591f049cfcbfa98966631b56733c03
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Install zizmor
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          echo "${ZIZMOR_LINUX_X64_SHA256}  /tmp/zizmor.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp zizmor
+          sudo install -m 0755 /tmp/zizmor /usr/local/bin/zizmor
+          zizmor --version
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
-        continue-on-error: true
-        with:
-          # auditor persona surfaces low-severity findings useful for hardening
-          # without flooding the PR with regular-user noise. Keep this aligned
-          # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
-          # and scoped to workflow manifests so PR audits cannot hang on live
-          # GitHub API checks.
-          inputs: .github/workflows .gitea/workflows
-          persona: auditor
-          online-audits: false
-          min-severity: high
-      - name: Mark advisory success
-        # Guarantee job conclusion = success regardless of zizmor exit code.
-        # continue-on-error at job level prevents the workflow from being
-        # blocked but does NOT change the individual job's check-run
-        # conclusion (GitHub API behaviour, confirmed upstream). This step
-        # runs unconditionally and always exits 0 so the check shows green.
-        if: always()
-        run: echo "Zizmor advisory scan complete — findings are informational only."
+        # auditor persona surfaces low-severity findings useful for hardening
+        # without flooding the PR with regular-user noise. Keep this aligned
+        # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
+        # and scoped to workflow manifests so PR audits cannot hang on live
+        # GitHub API checks. --no-exit-codes keeps findings advisory while
+        # still surfacing tool/setup failures as real workflow failures.
+        run: |
+          zizmor \
+            --no-progress \
+            --format=github \
+            --persona=auditor \
+            --min-severity=high \
+            --no-online-audits \
+            --no-exit-codes \
+            .github/workflows .gitea/workflows
 
   cargo-geiger:
     # Unsafe-block SAST for the Rust dep graph. Apache-2.0 OR MIT
