@@ -26,7 +26,8 @@ import { loginAsAdmin, openV5, V5_MODES, V5_SCREENS } from './v5-helpers';
 // blank PNGs — useless as a regression signal. Mirror set of the
 // v5-happy-paths KNOWN_BROKEN; fixme'd here so snapshot capture stays
 // no-op until the screen is repaired.
-const KNOWN_BROKEN = new Set<string>(['nutzer']);
+// nutzer was removed here after d91998c1 fixed the PaginatedResponse unwrap.
+const KNOWN_BROKEN = new Set<string>();
 
 test.describe('v5 visual regression', () => {
   test.beforeEach(async ({ page }, testInfo) => {
