@@ -1,0 +1,151 @@
+name: Schemathesis (contract fuzzing)
+
+on:
+  schedule:
+    # Nightly at 07:00 UTC — after the nightly E2E and mutation runs.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/openapi/rust.json'
+      - 'parkhub-server/**'
+      - 'parkhub-common/**'
+      - '.github/workflows/schemathesis.yml'
+
+concurrency:
+  group: schemathesis-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  contract-fuzz:
+    name: Fuzz OpenAPI contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Soft job — matches parkhub-php advisory posture (schemathesis.yml).
+    # Surfaces contract drift and unexpected 5xx without blocking merges
+    # during the baseline pass. Promote to required once the nightly report
+    # shows a clean baseline.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: parkhub-web/package-lock.json
+
+      # rust_embed requires parkhub-web/dist/ to exist at compile time.
+      - name: Build frontend (rust_embed source)
+        run: cd parkhub-web && npm ci && npm run build
+
+      - name: Build server (headless + e2e-bypass)
+        # e2e-bypass enables PARKHUB_DISABLE_RATE_LIMITS so schemathesis
+        # can fire rapid requests without hitting brute-force limiters.
+        # Matches the feature set used by the E2E workflow.
+        run: >
+          cargo build --locked --release -p parkhub-server
+          --no-default-features --features 'full,headless,e2e-bypass'
+
+      - name: Start server in background
+        shell: bash
+        env:
+          DEMO_MODE: 'true'
+          PARKHUB_ADMIN_PASSWORD: demo
+          PARKHUB_DISABLE_RATE_LIMITS: 'true'
+        run: |
+          mkdir -p /tmp/parkhub-schema-db
+          ./target/release/parkhub-server \
+            --headless --unattended --port 18282 \
+            --data-dir /tmp/parkhub-schema-db \
+            > /tmp/parkhub-schemathesis-server.log 2>&1 &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          READY=0
+          for _i in $(seq 1 45); do
+            if curl -sf http://localhost:18282/health > /dev/null 2>&1; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo 'Server did not become healthy within 45s'
+            tail -n 50 /tmp/parkhub-schemathesis-server.log
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: Install schemathesis
+        run: pip install --disable-pip-version-check 'schemathesis==4.15.2'
+
+      - name: Obtain auth token (best-effort)
+        continue-on-error: true
+        run: |
+          token=$(curl -fsS -X POST http://localhost:18282/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json' \
+            -d '{"email":"admin@parkhub.test","password":"demo"}' \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("token") or d.get("data",{}).get("token") or "")' \
+            || true)
+          if [ -n "${token}" ]; then
+            echo "SCHEMATHESIS_AUTH_HEADER=Authorization: Bearer ${token}" >> "${GITHUB_ENV}"
+            echo "Auth token acquired — authenticated endpoints will be fuzzed."
+          else
+            echo "No auth token — falling back to unauthenticated fuzzing."
+          fi
+
+      - name: Run schemathesis
+        continue-on-error: true
+        run: |
+          extra_args=()
+          if [ -n "${SCHEMATHESIS_AUTH_HEADER:-}" ]; then
+            extra_args+=(--header "${SCHEMATHESIS_AUTH_HEADER}")
+          fi
+          schemathesis run docs/openapi/rust.json \
+            --url http://localhost:18282 \
+            --workers 4 \
+            --checks all \
+            --max-examples 30 \
+            --max-failures 200 \
+            --continue-on-failure \
+            --request-timeout 15 \
+            --warnings off \
+            --report junit,har \
+            --report-dir schemathesis-report \
+            "${extra_args[@]}"
+
+      - name: Stop server
+        if: always()
+        run: kill "$SERVER_PID" 2>/dev/null || true
+
+      - name: Upload schemathesis report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: schemathesis-report
+          path: |
+            schemathesis-report/
+            /tmp/parkhub-schemathesis-server.log
+          retention-days: 14
+          if-no-files-found: warn
