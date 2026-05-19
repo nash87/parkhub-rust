@@ -45,6 +45,48 @@ Environment:
 EOF
 }
 
+# Allocate a parkhub-server port that is unlikely to collide with a sibling
+# fop-local-ci run for a different PR worktree on the same desktop.
+# Parallel `--background` runs each spawn a parkhub-server; without a unique
+# port the second-and-later runners fail with "Address already in use" and
+# the whole gate posts a false `failure` status.
+#
+# Order of preference:
+#   1. FOP_LOCAL_CI_SERVER_PORT  — explicit operator override
+#   2. SERVER_PORT               — caller already has one in env
+#   3. 8081 if free              — preserves docs + muscle memory
+#   4. random free port in ephemeral range (49152-65535) via ss
+#   5. fallback: 8082 + small random offset 0-199 (best-effort)
+allocate_parkhub_server_port() {
+  if [[ -n "${FOP_LOCAL_CI_SERVER_PORT:-}" ]]; then
+    printf '%s' "${FOP_LOCAL_CI_SERVER_PORT}"
+    return 0
+  fi
+  if [[ -n "${SERVER_PORT:-}" ]]; then
+    printf '%s' "${SERVER_PORT}"
+    return 0
+  fi
+  if command -v ss >/dev/null 2>&1; then
+    local in_use
+    in_use="$(ss -ltn 2>/dev/null | awk 'NR>1 {sub(/.*:/,"",$4); print $4}' | sort -un)"
+    if ! grep -qx '8081' <<<"$in_use"; then
+      printf '%s' '8081'
+      return 0
+    fi
+    if command -v shuf >/dev/null 2>&1; then
+      local picked
+      picked="$(comm -23 <(seq 49152 65535) <(printf '%s\n' "$in_use") 2>/dev/null | shuf -n 1)"
+      if [[ -n "$picked" ]]; then
+        printf '%s' "$picked"
+        return 0
+      fi
+    fi
+  fi
+  printf '%s' "$((8082 + RANDOM % 200))"
+}
+
+_SERVER_PORT="$(allocate_parkhub_server_port)"
+
 profile="pr"
 dry_run=0
 post_status=0
@@ -536,7 +578,7 @@ fi
 # ─── Stage 6: full profile extras (always full when invoked) ─────────────────
 if [[ "$profile" == "full" ]]; then
   run_step_heavy "openapi drift" "cd parkhub-web && CI=true npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; mkdir -p /tmp/parkhub-drift-db && { \"\$server_bin\" --headless --unattended --port 18181 --data-dir /tmp/parkhub-drift-db >/tmp/parkhub-drift.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:18181/health >/dev/null 2>&1 && break; sleep 1; done; ./scripts/dump-openapi.sh 18181; git diff --exit-code docs/openapi/rust.json"
-  run_step_heavy "playwright chromium" "cd parkhub-web && CI=true npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true \"\$server_bin\" --headless --unattended --port 8081 >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:8081/health >/dev/null 2>&1 && break; sleep 1; done; npx playwright test --project=chromium"
+  run_step_heavy "playwright chromium" "cd parkhub-web && CI=true npm run build && cd .. && cargo build --locked --release -p parkhub-server --no-default-features --features 'full,headless,e2e-bypass' && target_dir=\"\$(cargo metadata --locked --no-deps --format-version 1 | jq -r .target_directory)\" && server_bin=\"\$target_dir/release/parkhub-server\" && pid=''; cleanup() { if [[ -n \"\${pid:-}\" ]]; then kill \"\$pid\" 2>/dev/null || true; fi; }; trap cleanup EXIT; { DEMO_MODE=true PARKHUB_ADMIN_PASSWORD=demo PARKHUB_DISABLE_RATE_LIMITS=true \"\$server_bin\" --headless --unattended --port ${_SERVER_PORT} >/tmp/parkhub-e2e.log 2>&1 & pid=\$!; }; for i in \$(seq 1 45); do curl -sf http://localhost:${_SERVER_PORT}/health >/dev/null 2>&1 && break; sleep 1; done; E2E_BASE_URL=http://localhost:${_SERVER_PORT} npx playwright test --project=chromium"
 fi
 
 # ─── Stage 6b: Helm chart validation (full+cd profiles or helm/ touched) ────

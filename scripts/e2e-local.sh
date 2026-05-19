@@ -11,7 +11,45 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SERVER_PORT="${SERVER_PORT:-8081}"
+
+# Allocate a parkhub-server port that is unlikely to collide with a sibling
+# fop-local-ci run for a different PR worktree on the same desktop.
+#
+# Order of preference:
+#   1. FOP_LOCAL_CI_SERVER_PORT  — explicit operator override
+#   2. SERVER_PORT               — caller already has one in env
+#   3. 8081 if free              — preserves docs + muscle memory
+#   4. random free port in ephemeral range (49152-65535) via ss
+#   5. fallback: 8082 + small random offset 0-199 (best-effort)
+allocate_parkhub_server_port() {
+  if [[ -n "${FOP_LOCAL_CI_SERVER_PORT:-}" ]]; then
+    printf '%s' "${FOP_LOCAL_CI_SERVER_PORT}"
+    return 0
+  fi
+  if [[ -n "${SERVER_PORT:-}" ]]; then
+    printf '%s' "${SERVER_PORT}"
+    return 0
+  fi
+  if command -v ss >/dev/null 2>&1; then
+    local in_use
+    in_use="$(ss -ltn 2>/dev/null | awk 'NR>1 {sub(/.*:/,"",$4); print $4}' | sort -un)"
+    if ! grep -qx '8081' <<<"$in_use"; then
+      printf '%s' '8081'
+      return 0
+    fi
+    if command -v shuf >/dev/null 2>&1; then
+      local picked
+      picked="$(comm -23 <(seq 49152 65535) <(printf '%s\n' "$in_use") 2>/dev/null | shuf -n 1)"
+      if [[ -n "$picked" ]]; then
+        printf '%s' "$picked"
+        return 0
+      fi
+    fi
+  fi
+  printf '%s' "$((8082 + RANDOM % 200))"
+}
+
+SERVER_PORT="$(allocate_parkhub_server_port)"
 WEB_PORT="${WEB_PORT:-4321}"
 SERVER_LOG="${SERVER_LOG:-/tmp/parkhub-e2e-server.log}"
 export CI="${CI:-true}"
