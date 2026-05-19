@@ -56,7 +56,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2.77.6
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
           tool: cargo-deny
 
@@ -80,7 +80,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-audit
-        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2.77.6
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
           tool: cargo-audit
 
@@ -128,7 +128,7 @@ jobs:
           limit-severities-for-sarif: true
 
       - name: Upload Trivy results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         # GitHub Actions installation API rate-limits SARIF uploads
         # (~5000/hr shared across all SARIF-emitting steps in the org).
         # Local-first CI: scripts/local-security-audit.sh already runs
@@ -221,7 +221,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+        uses: zizmorcore/zizmor-action@5f14fd08f7cf1cb1609c1e344975f152c7ee938d # v0.5.6
         continue-on-error: true
         with:
           # auditor persona surfaces low-severity findings useful for hardening
@@ -268,7 +268,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-geiger
-        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2.77.6
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
           tool: cargo-geiger
 
@@ -326,7 +326,7 @@ jobs:
             --output=osv-scanner.sarif || true
 
       - name: Upload OSV-Scanner SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         # Advisory: GitHub's installation API rate limit (5000/hr per
         # installation) can transiently 429 the SARIF upload during a busy
         # PR queue. Job-level continue-on-error keeps the workflow green;
@@ -380,7 +380,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy image results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
+        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always() && hashFiles('trivy-image-results.sarif') != ''
         continue-on-error: true
         with:
