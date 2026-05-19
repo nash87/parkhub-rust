@@ -30,7 +30,7 @@ Default weights:
 | `max_results` | 5 | Maximum results returned by the endpoint. |
 | `pipeline_endpoint` | empty | Optional local/cluster fop-pipeline base URL. External hosts are rejected. |
 | `pipeline_name` | `parkhub-recommendations` | Pipeline name used by `POST /pipeline/{name}/run`. |
-| `pipeline_timeout_ms` | 750 | Total/connect timeout before fallback. |
+| `pipeline_timeout_ms` | 750 | Request timeout before fallback. |
 | `pipeline_fallback_enabled` | true | Fail-closed: fallback to `weighted_v1` is mandatory until certification. |
 | `explain` | true | Fail-closed: reasons and badges remain enabled until legal/privacy review approves disabling them. |
 | `profile_safe_mode` | true | Fail-closed privacy guardrail for current and future scoring inputs. |
@@ -43,7 +43,7 @@ Formula notes:
 - `availability`: every available, unbooked slot gets `weight_availability`.
 - `price`: normalize within the candidate lot set:
   `(1 - lot_hourly_rate / max_candidate_hourly_rate) * weight_price`, clamped at
-  zero for outlier rates; missing rates are treated as `0`.
+  zero for outlier rates; missing or zero rates receive no price bonus.
 - `distance`: `weight_distance / max(slot_number, 1)`.
 - `accessibility_bonus` and `feature_bonus`: additive opt-in tiebreakers.
   `is_accessible` and `features` are facility attributes only. They must never
@@ -67,9 +67,10 @@ schema and ignored by runtime loading.
 `fop_pipeline_v1` uses the fop-pipeline JSON/HTTP boundary:
 `POST {pipeline_endpoint}/pipeline/{pipeline_name}/run`. ParkHub sends the
 candidate slots, weights, `profile_safe_mode`, explanation requirement, and
-`fallback_algorithm=weighted_v1`. The adapter only accepts local, `.test`, or
-Kubernetes service hosts by default and records whether the pipeline was
-attempted, succeeded, or fell back.
+`fallback_algorithm=weighted_v1`. The adapter only accepts localhost/loopback,
+explicit local-dev `.test` hosts, or Kubernetes service hosts shaped as
+`<service>.<namespace>.svc` / `<service>.<namespace>.svc.cluster.local` by
+default and records whether the pipeline was attempted, succeeded, or fell back.
 
 The response continues to include reasons and badges. Shared parity fixtures
 live under `docs/recommendation-engine-fixtures/` and are the contract for Rust,
@@ -79,12 +80,15 @@ The stats endpoint also emits a machine-readable legal boundary:
 `legal_review_required=true`, `attorney_review_status=required_before_customer_wording`,
 and `execution_allowed=false` for generated/public profiling or legal wording.
 
-Every served recommendation batch includes a `recommendation_id` and writes a
-best-effort `RecommendationServed` audit event. The event stores the algorithm,
-SHA-256 config hash, SHA-256 weights hash, `profile_safe_mode`, `explain`,
-adapter status, candidate slot IDs, scores, reason badges, reasons, and the legal
-boundary. This is the trace key for later acceptance/rejection linkage and audit
-export.
+Every served recommendation batch writes a best-effort `RecommendationServed`
+audit event keyed by `batch_id`; each returned slot has its own
+`recommendation_id`. The event stores the algorithm, SHA-256 config hash,
+SHA-256 weights hash, `profile_safe_mode`, `explain`, adapter status,
+per-candidate recommendation IDs, candidate slot IDs, scores, reason badges,
+reasons, and the legal boundary. The stats endpoint is derived from these served
+audit events. Acceptance metrics remain `null` with
+`acceptance_metric_source=not_tracked` until explicit accept/reject events exist,
+so the endpoint does not infer acceptance from unrelated booking state.
 
 ## Compliance Boundary
 

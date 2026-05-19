@@ -18,11 +18,16 @@ use axum::{
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, fmt::Write as _, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Write as _,
+    sync::OnceLock,
+    time::Duration,
+};
 use uuid::Uuid;
 
 use parkhub_common::ApiResponse;
-use parkhub_common::models::{BookingStatus, SlotStatus};
+use parkhub_common::models::{BookingStatus, SlotFeature, SlotStatus};
 
 use super::modules::config_setting_key;
 use super::{AuthUser, SharedState, check_admin};
@@ -208,14 +213,9 @@ fn validate_pipeline_endpoint(endpoint: Option<String>) -> Option<String> {
         Ok(url) if matches!(url.scheme(), "http" | "https") => {
             let allowed_host = url.host_str().is_some_and(|host| {
                 let host = host.to_ascii_lowercase();
-                matches!(
-                    host.as_str(),
-                    "localhost" | "127.0.0.1" | "::1" | "fop-pipeline"
-                ) || host.ends_with(".svc.cluster.local")
-                    || host
-                        .rsplit('.')
-                        .next()
-                        .is_some_and(|suffix| matches!(suffix, "svc" | "test"))
+                is_loopback_or_localhost(&host)
+                    || is_local_dev_test_host(&host)
+                    || is_kubernetes_service_host(&host)
             });
             if allowed_host {
                 Some(endpoint)
@@ -236,6 +236,32 @@ fn validate_pipeline_endpoint(endpoint: Option<String>) -> Option<String> {
             None
         }
     }
+}
+
+fn is_loopback_or_localhost(host: &str) -> bool {
+    matches!(host, "localhost" | "127.0.0.1" | "::1")
+}
+
+fn is_local_dev_test_host(host: &str) -> bool {
+    let labels = host.split('.').collect::<Vec<_>>();
+    labels.len() >= 2
+        && labels.last().is_some_and(|suffix| *suffix == "test")
+        && labels.iter().all(|label| !label.is_empty())
+}
+
+fn is_kubernetes_service_host(host: &str) -> bool {
+    let labels = host.split('.').collect::<Vec<_>>();
+    let is_short_service = labels.len() == 3 && labels[2] == "svc";
+    let is_cluster_service =
+        labels.len() == 5 && labels[2] == "svc" && labels[3] == "cluster" && labels[4] == "local";
+    (is_short_service || is_cluster_service)
+        && labels[0..2]
+            .iter()
+            .all(|label| !label.is_empty() && label.chars().all(is_dns_label_char))
+}
+
+fn is_dns_label_char(ch: char) -> bool {
+    ch.is_ascii_alphanumeric() || ch == '-'
 }
 
 async fn read_module_string(db: &crate::db::Database, field: &str, default: &str) -> String {
@@ -358,7 +384,7 @@ pub enum RecommendationBadge {
 struct RecommendationScoreInput<'a> {
     slot_usage: i32,
     lot_usage: i32,
-    lot_rate: f64,
+    lot_rate: Option<f64>,
     max_price: f64,
     slot_number: i32,
     is_accessible: bool,
@@ -394,11 +420,16 @@ fn weighted_v1_candidate_score(
         reasons.push("Available now".to_string());
     }
 
-    let price_score = (1.0 - (input.lot_rate / input.max_price.max(1.0))).max(0.0) * weights.price;
-    score += price_score;
-    if price_score >= weights.price * 0.75 {
-        badges.push(RecommendationBadge::BestPrice);
-        reasons.push("Great price".to_string());
+    if let Some(lot_rate) = input
+        .lot_rate
+        .filter(|rate| rate.is_finite() && *rate > 0.0)
+    {
+        let price_score = (1.0 - (lot_rate / input.max_price.max(1.0))).max(0.0) * weights.price;
+        score += price_score;
+        if price_score >= weights.price * 0.75 {
+            badges.push(RecommendationBadge::BestPrice);
+            reasons.push("Great price".to_string());
+        }
     }
 
     let distance_score = weights.distance / f64::from(input.slot_number.max(1));
@@ -422,10 +453,23 @@ fn weighted_v1_candidate_score(
     (score, reasons, badges)
 }
 
+fn slot_feature_label(feature: &SlotFeature) -> &'static str {
+    match feature {
+        SlotFeature::NearExit => "Near exit",
+        SlotFeature::NearElevator => "Near elevator",
+        SlotFeature::NearStairs => "Near stairs",
+        SlotFeature::Covered => "Covered",
+        SlotFeature::SecurityCamera => "Security camera",
+        SlotFeature::WellLit => "Well lit",
+        SlotFeature::WideLane => "Wide lane",
+        SlotFeature::ChargingStation => "Charging station",
+    }
+}
+
 #[derive(Debug, Serialize)]
 struct FopPipelineRecommendationRequest<'a> {
     schema_version: &'static str,
-    recommendation_id: Uuid,
+    batch_id: Uuid,
     algorithm: &'static str,
     fallback_algorithm: &'static str,
     weights: RecommendationWeights,
@@ -464,6 +508,11 @@ fn pipeline_run_url(endpoint: &str, pipeline_name: &str) -> String {
     )
 }
 
+fn fop_pipeline_client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(reqwest::Client::new)
+}
+
 fn adapter_status_for_weighted_v1(
     engine: &RecommendationEngineConfig,
 ) -> RecommendationAdapterStatus {
@@ -499,7 +548,7 @@ fn adapter_status_for_fallback(
 
 async fn try_fop_pipeline_recommendations(
     engine: &RecommendationEngineConfig,
-    recommendation_id: Uuid,
+    batch_id: Uuid,
     candidates: &[SlotRecommendation],
 ) -> Result<Vec<SlotRecommendation>, String> {
     let endpoint = engine
@@ -509,7 +558,7 @@ async fn try_fop_pipeline_recommendations(
         .ok_or_else(|| "fop_pipeline_v1 endpoint is not configured".to_string())?;
     let request = FopPipelineRecommendationRequest {
         schema_version: "parkhub.recommendation.pipeline.v1",
-        recommendation_id,
+        batch_id,
         algorithm: "fop_pipeline_v1",
         fallback_algorithm: "weighted_v1",
         weights: engine.weights,
@@ -518,13 +567,9 @@ async fn try_fop_pipeline_recommendations(
         profile_safe_mode: engine.profile_safe_mode,
         candidates,
     };
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(engine.pipeline.timeout_ms))
-        .connect_timeout(Duration::from_millis(engine.pipeline.timeout_ms.min(1_000)))
-        .build()
-        .map_err(|err| format!("failed to build fop-pipeline client: {err}"))?;
-    let response = client
+    let response = fop_pipeline_client()
         .post(pipeline_run_url(endpoint, &engine.pipeline.pipeline_name))
+        .timeout(Duration::from_millis(engine.pipeline.timeout_ms))
         .json(&request)
         .send()
         .await
@@ -585,20 +630,76 @@ fn apply_fop_pipeline_response(
     }
 }
 
-/// Admin stats: recommendation acceptance rate
+/// Admin stats derived from RecommendationServed audit events.
 #[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct RecommendationStats {
     pub total_recommendations: i32,
     pub total_recommendations_served: i32,
-    pub accepted: i32,
-    pub acceptance_rate: f64,
+    pub accepted_recommendations: Option<i32>,
+    pub acceptance_rate: Option<f64>,
+    pub acceptance_metric_source: String,
     pub unique_users: i32,
-    pub avg_score: f64,
+    pub avg_score: Option<f64>,
+    pub metrics_source: String,
     pub algorithm: String,
     pub algorithm_weights: RecommendationWeights,
     pub algorithm_adapter: RecommendationAdapterStatus,
     pub legal_boundary: RecommendationLegalBoundary,
     pub top_recommended_lots: Vec<LotRecommendationCount>,
+}
+
+#[derive(Default)]
+struct RecommendationAuditStats {
+    total_batches: i32,
+    total_candidates_served: i32,
+    unique_users: i32,
+    avg_score: Option<f64>,
+    lot_counts: HashMap<Uuid, i32>,
+}
+
+fn recommendation_audit_stats(entries: &[crate::db::AuditLogEntry]) -> RecommendationAuditStats {
+    let mut stats = RecommendationAuditStats::default();
+    let mut unique_users = HashSet::new();
+    let mut score_total = 0.0;
+    let mut score_count = 0_i32;
+
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.event_type == "RecommendationServed")
+    {
+        stats.total_batches += 1;
+        if let Some(user_id) = entry.user_id {
+            unique_users.insert(user_id);
+        }
+        let Some(details) = entry.details.as_deref() else {
+            continue;
+        };
+        let Ok(details) = serde_json::from_str::<serde_json::Value>(details) else {
+            continue;
+        };
+        let Some(candidates) = details.get("candidates").and_then(|value| value.as_array()) else {
+            continue;
+        };
+        stats.total_candidates_served += candidates.len() as i32;
+        for candidate in candidates {
+            if let Some(score) = candidate.get("score").and_then(|value| value.as_f64()) {
+                score_total += score;
+                score_count += 1;
+            }
+            if let Some(lot_id) = candidate
+                .get("lot_id")
+                .and_then(|value| value.as_str())
+                .and_then(|raw| Uuid::parse_str(raw).ok())
+            {
+                *stats.lot_counts.entry(lot_id).or_default() += 1;
+            }
+        }
+    }
+
+    stats.unique_users = unique_users.len() as i32;
+    stats.avg_score =
+        (score_count > 0).then(|| (score_total / f64::from(score_count) * 10.0).round() / 10.0);
+    stats
 }
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -647,14 +748,11 @@ pub async fn get_recommendations(
         }
     };
 
-    // 2. Count slot usage frequency (completed/active bookings only)
+    // 2. Count slot usage frequency from intent + fulfilled lifecycle states.
     let mut slot_frequency: HashMap<Uuid, i32> = HashMap::new();
     let mut lot_frequency: HashMap<Uuid, i32> = HashMap::new();
     for b in &bookings {
-        if matches!(
-            b.status,
-            BookingStatus::Active | BookingStatus::Completed | BookingStatus::Confirmed
-        ) {
+        if booking_status_counts_for_recommendation_history(&b.status) {
             *slot_frequency.entry(b.slot_id).or_default() += 1;
             *lot_frequency.entry(b.lot_id).or_default() += 1;
         }
@@ -667,7 +765,7 @@ pub async fn get_recommendations(
 
     let engine = RecommendationEngineConfig::load(&state.db).await;
     let weights = engine.weights;
-    let recommendation_id = Uuid::new_v4();
+    let batch_id = Uuid::new_v4();
     let max_price = lots
         .iter()
         .filter(|lot| {
@@ -705,11 +803,16 @@ pub async fn get_recommendations(
 
             let freq = slot_frequency.get(&slot.id).copied().unwrap_or(0);
             let lot_freq = lot_frequency.get(&lot.id).copied().unwrap_or(0);
-            let base_rate = lot.pricing.rates.first().map(|r| r.price).unwrap_or(0.0);
+            let base_rate = lot
+                .pricing
+                .rates
+                .first()
+                .map(|r| r.price)
+                .filter(|price| price.is_finite() && *price > 0.0);
             let feature_names = slot
                 .features
                 .iter()
-                .map(|feature| format!("{feature:?}"))
+                .map(|feature| slot_feature_label(feature).to_string())
                 .collect::<Vec<_>>();
             let (score, reasons, badges) = weighted_v1_candidate_score(
                 &weights,
@@ -730,7 +833,7 @@ pub async fn get_recommendations(
                 .map_or_else(|| "Ground".to_string(), |f| f.name.clone());
 
             candidates.push(SlotRecommendation {
-                recommendation_id,
+                recommendation_id: Uuid::new_v4(),
                 slot_id: slot.id,
                 slot_number: slot.slot_number,
                 lot_id: lot.id,
@@ -743,13 +846,13 @@ pub async fn get_recommendations(
         }
     }
 
-    // Sort by score descending, take top 5
+    // Sort fallback candidates by score; max_results is applied after the
+    // optional fop_pipeline_v1 ranking so the pipeline sees the full set.
     candidates.sort_by(|a, b| {
         b.score
             .partial_cmp(&a.score)
             .unwrap_or(std::cmp::Ordering::Equal)
     });
-    candidates.truncate(engine.max_results);
     let adapter_status = if engine.algorithm == "fop_pipeline_v1" {
         if engine.pipeline.endpoint.is_none() {
             adapter_status_for_fallback(
@@ -759,7 +862,7 @@ pub async fn get_recommendations(
                 Some("fop_pipeline_v1 endpoint is not configured".to_string()),
             )
         } else {
-            match try_fop_pipeline_recommendations(&engine, recommendation_id, &candidates).await {
+            match try_fop_pipeline_recommendations(&engine, batch_id, &candidates).await {
                 Ok(ranked) => {
                     candidates = ranked;
                     RecommendationAdapterStatus {
@@ -775,7 +878,7 @@ pub async fn get_recommendations(
                 }
                 Err(err) => {
                     tracing::warn!(
-                        %recommendation_id,
+                        %batch_id,
                         error = %err,
                         "fop_pipeline_v1 recommendation attempt failed; falling back to weighted_v1"
                     );
@@ -786,10 +889,11 @@ pub async fn get_recommendations(
     } else {
         adapter_status_for_weighted_v1(&engine)
     };
+    candidates.truncate(engine.max_results);
     persist_recommendation_served_audit(
         &state.db,
         &auth_user,
-        recommendation_id,
+        batch_id,
         &engine,
         &adapter_status,
         &candidates,
@@ -800,10 +904,20 @@ pub async fn get_recommendations(
     Json(ApiResponse::success(candidates))
 }
 
+fn booking_status_counts_for_recommendation_history(status: &BookingStatus) -> bool {
+    matches!(
+        status,
+        BookingStatus::Pending
+            | BookingStatus::Confirmed
+            | BookingStatus::Active
+            | BookingStatus::Completed
+    )
+}
+
 async fn persist_recommendation_served_audit(
     db: &crate::db::Database,
     auth_user: &AuthUser,
-    recommendation_id: Uuid,
+    batch_id: Uuid,
     engine: &RecommendationEngineConfig,
     adapter_status: &RecommendationAdapterStatus,
     recommendations: &[SlotRecommendation],
@@ -814,6 +928,7 @@ async fn persist_recommendation_served_audit(
         .iter()
         .map(|rec| {
             serde_json::json!({
+                "recommendation_id": rec.recommendation_id,
                 "slot_id": rec.slot_id,
                 "lot_id": rec.lot_id,
                 "score": rec.score,
@@ -824,13 +939,14 @@ async fn persist_recommendation_served_audit(
         .collect();
 
     let details = serde_json::json!({
-        "recommendation_id": recommendation_id,
+        "batch_id": batch_id,
         "algorithm": &engine.algorithm,
         "config_hash": config_hash,
         "weights_hash": weights_hash,
         "adapter": adapter_status,
         "profile_safe_mode": engine.profile_safe_mode,
         "explain": engine.explain,
+        "recommendation_ids": recommendations.iter().map(|rec| rec.recommendation_id).collect::<Vec<_>>(),
         "candidate_ids": recommendations.iter().map(|rec| rec.slot_id).collect::<Vec<_>>(),
         "candidates": candidates,
         "legal_boundary": {
@@ -841,19 +957,19 @@ async fn persist_recommendation_served_audit(
     });
 
     let entry = crate::db::AuditLogEntry {
-        id: recommendation_id,
+        id: batch_id,
         timestamp: Utc::now(),
         event_type: "RecommendationServed".to_string(),
         user_id: Some(auth_user.user_id),
         username: None,
         details: Some(details.to_string()),
         target_type: Some("recommendation".to_string()),
-        target_id: Some(recommendation_id.to_string()),
+        target_id: Some(batch_id.to_string()),
         ip_address: None,
     };
 
     if let Err(err) = db.save_audit_log(&entry).await {
-        tracing::warn!(%recommendation_id, error = ?err, "failed to persist recommendation audit event");
+        tracing::warn!(%batch_id, error = ?err, "failed to persist recommendation audit event");
     }
 }
 
@@ -907,20 +1023,16 @@ pub async fn get_recommendation_stats(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
 
-    // Aggregate stats from booking data
-    let users = state_guard.db.list_users().await.unwrap_or_default();
     let lots = state_guard.db.list_parking_lots().await.unwrap_or_default();
-    let bookings = state_guard.db.list_bookings().await.unwrap_or_default();
-
-    let mut lot_counts: HashMap<Uuid, i32> = HashMap::new();
-    for b in &bookings {
-        if matches!(b.status, BookingStatus::Active | BookingStatus::Completed) {
-            *lot_counts.entry(b.lot_id).or_default() += 1;
-        }
-    }
+    let audit_entries = state_guard
+        .db
+        .list_all_audit_log()
+        .await
+        .unwrap_or_default();
+    let audit_stats = recommendation_audit_stats(&audit_entries);
 
     let top_lots: Vec<LotRecommendationCount> = {
-        let mut entries: Vec<_> = lot_counts.iter().collect();
+        let mut entries: Vec<_> = audit_stats.lot_counts.iter().collect();
         entries.sort_by(|a, b| b.1.cmp(a.1));
         entries
             .into_iter()
@@ -939,26 +1051,17 @@ pub async fn get_recommendation_stats(
             .collect()
     };
 
-    let total_bookings = bookings.len() as i32;
-    let accepted = bookings
-        .iter()
-        .filter(|booking| booking.status == BookingStatus::Completed)
-        .count() as i32;
-    let acceptance_rate = if total_bookings > 0 {
-        (f64::from(accepted) / f64::from(total_bookings) * 100.0 * 10.0).round() / 10.0
-    } else {
-        0.0
-    };
-    let avg_score = if total_bookings > 0 { 72.5 } else { 0.0 };
     let engine = RecommendationEngineConfig::load(&state_guard.db).await;
 
     let stats = RecommendationStats {
-        total_recommendations: total_bookings,
-        total_recommendations_served: total_bookings * 3,
-        accepted,
-        acceptance_rate,
-        unique_users: users.len() as i32,
-        avg_score,
+        total_recommendations: audit_stats.total_batches,
+        total_recommendations_served: audit_stats.total_candidates_served,
+        accepted_recommendations: None,
+        acceptance_rate: None,
+        acceptance_metric_source: "not_tracked".to_string(),
+        unique_users: audit_stats.unique_users,
+        avg_score: audit_stats.avg_score,
+        metrics_source: "audit_log.RecommendationServed".to_string(),
         algorithm: engine.algorithm.clone(),
         algorithm_weights: engine.weights,
         algorithm_adapter: adapter_status_for_weighted_v1(&engine),
@@ -1090,10 +1193,12 @@ mod tests {
         let stats = RecommendationStats {
             total_recommendations: 100,
             total_recommendations_served: 300,
-            accepted: 25,
-            acceptance_rate: 25.0,
+            accepted_recommendations: None,
+            acceptance_rate: None,
+            acceptance_metric_source: "not_tracked".to_string(),
             unique_users: 50,
-            avg_score: 72.5,
+            avg_score: None,
+            metrics_source: "audit_log.RecommendationServed".to_string(),
             algorithm: "weighted_v1".to_string(),
             algorithm_weights: RecommendationWeights::default(),
             algorithm_adapter: adapter_status_for_weighted_v1(
@@ -1112,6 +1217,8 @@ mod tests {
         };
         let json = serde_json::to_string(&stats).unwrap();
         assert!(json.contains("\"total_recommendations_served\":300"));
+        assert!(json.contains("\"accepted_recommendations\":null"));
+        assert!(json.contains("\"acceptance_metric_source\":\"not_tracked\""));
         assert!(json.contains("\"unique_users\":50"));
         assert!(json.contains("\"legal_review_required\":true"));
     }
@@ -1144,6 +1251,90 @@ mod tests {
     }
 
     #[test]
+    fn test_missing_or_zero_price_gets_no_price_bonus() {
+        let weights = RecommendationWeights::default();
+        let base = RecommendationScoreInput {
+            slot_usage: 0,
+            lot_usage: 0,
+            lot_rate: Some(8.0),
+            max_price: 8.0,
+            slot_number: 2,
+            is_accessible: false,
+            feature_names: &[],
+        };
+        let (priced_score, priced_reasons, priced_badges) =
+            weighted_v1_candidate_score(&weights, &base);
+        assert!(!priced_badges.contains(&RecommendationBadge::BestPrice));
+        assert!(!priced_reasons.contains(&"Great price".to_string()));
+
+        let missing_price = RecommendationScoreInput {
+            lot_rate: None,
+            ..base
+        };
+        let (missing_score, missing_reasons, missing_badges) =
+            weighted_v1_candidate_score(&weights, &missing_price);
+        assert!((missing_score - priced_score).abs() < f64::EPSILON);
+        assert!(!missing_badges.contains(&RecommendationBadge::BestPrice));
+        assert!(!missing_reasons.contains(&"Great price".to_string()));
+
+        let zero_price = RecommendationScoreInput {
+            lot_rate: Some(0.0),
+            ..base
+        };
+        let (zero_score, zero_reasons, zero_badges) =
+            weighted_v1_candidate_score(&weights, &zero_price);
+        assert!((zero_score - priced_score).abs() < f64::EPSILON);
+        assert!(!zero_badges.contains(&RecommendationBadge::BestPrice));
+        assert!(!zero_reasons.contains(&"Great price".to_string()));
+    }
+
+    #[test]
+    fn test_booking_history_statuses_include_pending_and_confirmed() {
+        assert!(booking_status_counts_for_recommendation_history(
+            &BookingStatus::Pending
+        ));
+        assert!(booking_status_counts_for_recommendation_history(
+            &BookingStatus::Confirmed
+        ));
+        assert!(booking_status_counts_for_recommendation_history(
+            &BookingStatus::Active
+        ));
+        assert!(booking_status_counts_for_recommendation_history(
+            &BookingStatus::Completed
+        ));
+        assert!(!booking_status_counts_for_recommendation_history(
+            &BookingStatus::Cancelled
+        ));
+        assert!(!booking_status_counts_for_recommendation_history(
+            &BookingStatus::Expired
+        ));
+        assert!(!booking_status_counts_for_recommendation_history(
+            &BookingStatus::NoShow
+        ));
+    }
+
+    #[test]
+    fn test_slot_feature_labels_are_user_visible() {
+        assert_eq!(slot_feature_label(&SlotFeature::NearExit), "Near exit");
+        assert_eq!(
+            slot_feature_label(&SlotFeature::NearElevator),
+            "Near elevator"
+        );
+        assert_eq!(slot_feature_label(&SlotFeature::NearStairs), "Near stairs");
+        assert_eq!(slot_feature_label(&SlotFeature::Covered), "Covered");
+        assert_eq!(
+            slot_feature_label(&SlotFeature::SecurityCamera),
+            "Security camera"
+        );
+        assert_eq!(slot_feature_label(&SlotFeature::WellLit), "Well lit");
+        assert_eq!(slot_feature_label(&SlotFeature::WideLane), "Wide lane");
+        assert_eq!(
+            slot_feature_label(&SlotFeature::ChargingStation),
+            "Charging station"
+        );
+    }
+
+    #[test]
     fn test_recommendation_engine_config_defaults_are_legacy_safe() {
         let cfg = RecommendationEngineConfig::default();
         assert_eq!(cfg.algorithm, "weighted_v1");
@@ -1165,8 +1356,25 @@ mod tests {
             Some("http://fop-pipeline.fop-agents.svc:9310".to_string())
         );
         assert_eq!(
+            validate_pipeline_endpoint(Some(
+                "http://fop-pipeline.fop-agents.svc.cluster.local:9310".to_string()
+            )),
+            Some("http://fop-pipeline.fop-agents.svc.cluster.local:9310".to_string())
+        );
+        assert_eq!(
+            validate_pipeline_endpoint(Some("http://localhost:9310".to_string())),
+            Some("http://localhost:9310".to_string())
+        );
+        assert_eq!(
             validate_pipeline_endpoint(Some("http://fop-pipeline.test:9310".to_string())),
             Some("http://fop-pipeline.test:9310".to_string())
+        );
+        assert!(validate_pipeline_endpoint(Some("http://fop-pipeline".to_string())).is_none());
+        assert!(
+            validate_pipeline_endpoint(Some("http://fop-pipeline.svc:9310".to_string())).is_none()
+        );
+        assert!(
+            validate_pipeline_endpoint(Some("http://svc.cluster.local:9310".to_string())).is_none()
         );
         assert!(validate_pipeline_endpoint(Some("https://example.com".to_string())).is_none());
         assert!(validate_pipeline_endpoint(Some("file:///tmp/pipeline".to_string())).is_none());
@@ -1239,6 +1447,113 @@ mod tests {
     }
 
     #[test]
+    fn test_apply_fop_pipeline_response_applies_max_results_after_ranking() {
+        let recommendation_id = Uuid::new_v4();
+        let slot_a = Uuid::new_v4();
+        let slot_b = Uuid::new_v4();
+        let lot_id = Uuid::new_v4();
+        let candidates = [slot_a, slot_b]
+            .into_iter()
+            .enumerate()
+            .map(|(idx, slot_id)| SlotRecommendation {
+                recommendation_id,
+                slot_id,
+                slot_number: idx as i32 + 1,
+                lot_id,
+                lot_name: "Lot".to_string(),
+                floor_name: "Ground".to_string(),
+                score: idx as f64,
+                reasons: vec!["Available now".to_string()],
+                reason_badges: vec![RecommendationBadge::AvailableNow],
+            })
+            .collect::<Vec<_>>();
+        let ranked = apply_fop_pipeline_response(
+            &candidates,
+            Some(FopPipelineRecommendationData {
+                ranked: vec![
+                    FopPipelineRankedRecommendation {
+                        slot_id: Some(slot_b),
+                        id: None,
+                        score: Some(50.0),
+                        reasons: None,
+                        reason_badges: None,
+                    },
+                    FopPipelineRankedRecommendation {
+                        slot_id: Some(slot_a),
+                        id: None,
+                        score: Some(49.0),
+                        reasons: None,
+                        reason_badges: None,
+                    },
+                ],
+            }),
+            1,
+        )
+        .unwrap();
+
+        assert_eq!(ranked.len(), 1);
+        assert_eq!(ranked[0].slot_id, slot_b);
+    }
+
+    #[test]
+    fn test_recommendation_audit_stats_are_derived_from_served_events() {
+        let user_id = Uuid::new_v4();
+        let lot_id = Uuid::new_v4();
+        let details = serde_json::json!({
+            "batch_id": Uuid::new_v4(),
+            "candidates": [
+                {
+                    "recommendation_id": Uuid::new_v4(),
+                    "slot_id": Uuid::new_v4(),
+                    "lot_id": lot_id,
+                    "score": 40.0,
+                    "reason_badges": ["available_now"],
+                    "reasons": ["Available now"]
+                },
+                {
+                    "recommendation_id": Uuid::new_v4(),
+                    "slot_id": Uuid::new_v4(),
+                    "lot_id": lot_id,
+                    "score": 60.0,
+                    "reason_badges": ["best_price"],
+                    "reasons": ["Great price"]
+                }
+            ]
+        });
+        let entries = vec![
+            crate::db::AuditLogEntry {
+                id: Uuid::new_v4(),
+                timestamp: Utc::now(),
+                event_type: "RecommendationServed".to_string(),
+                user_id: Some(user_id),
+                username: None,
+                details: Some(details.to_string()),
+                target_type: Some("recommendation".to_string()),
+                target_id: None,
+                ip_address: None,
+            },
+            crate::db::AuditLogEntry {
+                id: Uuid::new_v4(),
+                timestamp: Utc::now(),
+                event_type: "booking.created".to_string(),
+                user_id: Some(Uuid::new_v4()),
+                username: None,
+                details: None,
+                target_type: Some("booking".to_string()),
+                target_id: None,
+                ip_address: None,
+            },
+        ];
+
+        let stats = recommendation_audit_stats(&entries);
+        assert_eq!(stats.total_batches, 1);
+        assert_eq!(stats.total_candidates_served, 2);
+        assert_eq!(stats.unique_users, 1);
+        assert_eq!(stats.avg_score, Some(50.0));
+        assert_eq!(stats.lot_counts.get(&lot_id), Some(&2));
+    }
+
+    #[test]
     fn test_weighted_v1_fixture_matches_contract() {
         let fixture: WeightedV1Fixture = serde_json::from_str(include_str!(
             "../../../docs/recommendation-engine-fixtures/weighted_v1.basic.json"
@@ -1250,6 +1565,7 @@ mod tests {
             .candidate_lots
             .iter()
             .map(|lot| lot.hourly_rate)
+            .filter(|price| price.is_finite() && *price > 0.0)
             .fold(0.0_f64, f64::max)
             .max(1.0);
         assert!((max_price - fixture.price_normalization.max_candidate_hourly_rate).abs() < 0.01);
@@ -1278,7 +1594,8 @@ mod tests {
                             .copied()
                             .unwrap_or(0),
                         lot_usage: fixture.history.lot_usage.get(&lot.id).copied().unwrap_or(0),
-                        lot_rate: lot.hourly_rate,
+                        lot_rate: Some(lot.hourly_rate)
+                            .filter(|price| price.is_finite() && *price > 0.0),
                         max_price,
                         slot_number: slot.slot_number,
                         is_accessible: slot.is_accessible,
