@@ -7,3 +7,10 @@
 # Parking Pass module (helm/parkhub/values.yaml: `parkingPass: true`), not
 # a credential. Trivy's secret heuristic matches the substring "PASS".
 KSV-0109
+
+# CVE-2026-42570: devalue DoS via sparse array deserialization (HIGH)
+# Transitive via SvelteKit/Svelte build toolchain (parkhub-web).
+# Affects server-side deserialization paths only; parkhub-web is a static
+# Astro build (no SSR runtime), so the vulnerable code path is never
+# reached in production. npm bump tracked in t-6239-security-advisories.
+CVE-2026-42570
