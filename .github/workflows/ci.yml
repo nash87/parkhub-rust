@@ -64,6 +64,9 @@ jobs:
       - name: Validate CI workflow policy
         run: bash scripts/check-ci-workflow-policy.sh
 
+      - name: Validate recommendation contract gate
+        run: bash scripts/check-recommendation-contract.sh
+
       - name: Validate Fly config
         run: python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('fly.toml').read_text())"
 

@@ -136,3 +136,117 @@ pub(super) const MOD_WIDGETS_SCHEMA: &str = r#"{
   "required": ["max_widgets_per_dashboard"],
   "additionalProperties": false
 }"#;
+
+/// `mod-recommendations` — weighted recommendation engine contract.
+///
+/// The defaults preserve the legacy slot-ranking behavior. Operators can
+/// tune the rule weights through the generic module config editor without
+/// replacing the deterministic default scorer.
+pub(super) const MOD_RECOMMENDATIONS_SCHEMA: &str = r#"{
+  "type": "object",
+  "title": "Recommendations settings",
+  "description": "Weighted recommendation engine defaults. The weighted_v1 algorithm is deterministic and emits human-readable reasons for every score.",
+  "properties": {
+    "algorithm": {
+      "type": "string",
+      "enum": ["weighted_v1", "fop_pipeline_v1"],
+      "description": "Versioned scoring strategy. weighted_v1 is the rollback default; fop_pipeline_v1 calls the configured fop-pipeline HTTP adapter and falls back to weighted_v1 on any error."
+    },
+    "pipeline_endpoint": {
+      "type": "string",
+      "description": "Optional fop-pipeline base URL, for example http://fop-pipeline.fop-agents.svc:9310. Empty keeps fop_pipeline_v1 in configured-but-fallback mode."
+    },
+    "pipeline_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "fop-pipeline pipeline name used by POST /pipeline/{name}/run."
+    },
+    "pipeline_timeout_ms": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 5000,
+      "description": "Adapter timeout in milliseconds before falling back to weighted_v1."
+    },
+    "pipeline_fallback_enabled": {
+      "type": "boolean",
+      "const": true,
+      "description": "Fail-closed guardrail. weighted_v1 fallback stays mandatory until fop_pipeline_v1 is production-certified."
+    },
+    "weight_frequency": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Maximum points for repeatedly choosing the same slot."
+    },
+    "weight_preferred_lot": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Maximum points for a frequently used lot when the exact slot has no history."
+    },
+    "weight_availability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Points awarded to currently available slots."
+    },
+    "weight_price": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Maximum points for lower-priced lots."
+    },
+    "weight_distance": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Maximum points for slots near the entrance."
+    },
+    "weight_accessibility_bonus": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 25,
+      "description": "Optional extra points for facility-designated accessible slots only. This must not use inferred disability, health, or other sensitive user attributes; keep at 0 until tenant DPIA/privacy review and user-facing notice approve it."
+    },
+    "weight_feature_bonus": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 25,
+      "description": "Optional tiebreaker points for slots with feature metadata."
+    },
+    "max_results": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25,
+      "description": "Maximum recommendations returned to the client."
+    },
+    "explain": {
+      "type": "boolean",
+      "const": true,
+      "description": "Fail-closed guardrail. Reason strings and badges must stay enabled before legal/privacy review approves disabling them."
+    },
+    "profile_safe_mode": {
+      "type": "boolean",
+      "const": true,
+      "description": "Fail-closed privacy guardrail. Sensitive personal attributes are blocked from scoring inputs; this must stay enabled before legal/privacy review approves disabling it."
+    }
+  },
+  "required": [
+    "algorithm",
+    "pipeline_endpoint",
+    "pipeline_name",
+    "pipeline_timeout_ms",
+    "pipeline_fallback_enabled",
+    "weight_frequency",
+    "weight_preferred_lot",
+    "weight_availability",
+    "weight_price",
+    "weight_distance",
+    "weight_accessibility_bonus",
+    "weight_feature_bonus",
+    "max_results",
+    "explain",
+    "profile_safe_mode"
+  ],
+  "additionalProperties": false
+}"#;

@@ -137,6 +137,7 @@ ci-post:
 ## same mental model spans both repos.
 ci-security:
 	bash scripts/check-ci-workflow-policy.sh
+	bash scripts/check-recommendation-contract.sh
 	scripts/ci/local-security-audit.sh --profile cd --strict-tools --fail-advisory
 
 pre-push: ci

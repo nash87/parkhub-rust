@@ -2336,6 +2336,10 @@
             },
             "type": "array"
           },
+          "recommendation_id": {
+            "format": "uuid",
+            "type": "string"
+          },
           "score": {
             "format": "double",
             "type": "number"
@@ -2350,6 +2354,7 @@
           }
         },
         "required": [
+          "recommendation_id",
           "slot_id",
           "slot_number",
           "lot_id",

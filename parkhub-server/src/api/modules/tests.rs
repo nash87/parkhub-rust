@@ -892,8 +892,8 @@ fn test_config_schema_strings_are_valid_json() {
     }
 }
 
-/// The five modules that ship a schema in v3: themes,
-/// announcements, notifications, email-templates, widgets. Other
+/// Modules that ship a runtime config schema: themes, announcements,
+/// notifications, email-templates, widgets, recommendations. Other
 /// modules intentionally keep `config_schema: None`.
 #[test]
 fn test_expected_modules_have_schemas() {
@@ -908,13 +908,14 @@ fn test_expected_modules_have_schemas() {
         "notifications",
         "email-templates",
         "widgets",
+        "recommendations",
     ]
     .into_iter()
     .map(String::from)
     .collect();
     assert_eq!(
         with_schema, expected,
-        "expected exactly the v3 5-module set to ship a schema"
+        "expected exactly the runtime-configurable module set to ship a schema"
     );
 }
 

@@ -66,6 +66,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate recommendation contract gate
+        run: bash scripts/check-recommendation-contract.sh
+
       - name: Prepare embedded web placeholder
         run: |
           mkdir -p parkhub-web/dist
