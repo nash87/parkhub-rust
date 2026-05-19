@@ -682,7 +682,7 @@ fn recommendation_audit_stats(entries: &[crate::db::AuditLogEntry]) -> Recommend
         };
         stats.total_candidates_served += candidates.len() as i32;
         for candidate in candidates {
-            if let Some(score) = candidate.get("score").and_then(|value| value.as_f64()) {
+            if let Some(score) = candidate.get("score").and_then(serde_json::Value::as_f64) {
                 score_total += score;
                 score_count += 1;
             }
