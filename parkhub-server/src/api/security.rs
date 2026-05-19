@@ -626,16 +626,15 @@ async fn verify_totp_with_replay_guard(
     let last_step_key = format!("totp_last_step:{user_id}");
     if let Ok(Some(stored)) = state.db.get_setting(&last_step_key).await
         && let Ok(stored_step) = stored.parse::<u64>()
+        && matched_step <= stored_step
     {
-        if matched_step <= stored_step {
-            tracing::warn!(
-                user_id = %user_id,
-                step = matched_step,
-                last_step = stored_step,
-                "TOTP code reuse rejected (audit M-1 replay guard)"
-            );
-            return false;
-        }
+        tracing::warn!(
+            user_id = %user_id,
+            step = matched_step,
+            last_step = stored_step,
+            "TOTP code reuse rejected (audit M-1 replay guard)"
+        );
+        return false;
     }
 
     // Persist new last-step. If the write fails we still accept the code
