@@ -100,9 +100,9 @@ reason = "rand 0.7.3 transitive; bumped where direct, locked elsewhere"
 [[IgnoredVulns]]
 id = "GHSA-77vg-94rm-hx3p"
 reason = "devalue DoS via sparse array; transitive via SvelteKit build toolchain; npm bump pending in t-6239-security-advisories"
-ignoreUntil = "2026-08-19"
+ignoreUntil = "2026-08-19T00:00:00Z"
 
 [[IgnoredVulns]]
 id = "GHSA-58qx-3vcg-4xpx"
 reason = "ws header overflow (moderate); dev-only transitive via Vite/Playwright toolchain; npm bump pending in t-6239-security-advisories"
-ignoreUntil = "2026-08-19"
+ignoreUntil = "2026-08-19T00:00:00Z"
