@@ -222,7 +222,6 @@ jobs:
       - name: Install zizmor
         run: |
           python3 -m pip install --user --disable-pip-version-check 'zizmor==1.24.1'
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: Run zizmor
         continue-on-error: true
         run: |
@@ -231,7 +230,7 @@ jobs:
           # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
           # and scoped to workflow manifests so PR audits cannot hang on live
           # GitHub API checks.
-          zizmor \
+          python3 -m zizmor \
             --persona=auditor \
             --min-severity=high \
             --no-online-audits \
@@ -240,7 +239,7 @@ jobs:
             .gitea/workflows
       - name: Mark advisory success
         # Guarantee job conclusion = success regardless of zizmor exit code.
-        # continue-on-error at job level prevents the workflow from being
+        # continue-on-error on the advisory step prevents the workflow from being
         # blocked but does NOT change the individual job's check-run
         # conclusion (GitHub API behaviour, confirmed upstream). This step
         # runs unconditionally and always exits 0 so the check shows green.
