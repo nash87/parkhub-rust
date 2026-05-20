@@ -214,8 +214,14 @@ jobs:
         with:
           persist-credentials: false
       - name: Install zizmor
+        env:
+          ZIZMOR_VERSION: "1.24.1"
         run: |
-          python3 -m pip install --user --disable-pip-version-check 'zizmor==1.24.1'
+          curl -fsSL -o /tmp/zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp zizmor
+          sudo install -m 0755 /tmp/zizmor /usr/local/bin/zizmor
+          zizmor --version
       - name: Run zizmor
         run: |
           # auditor persona surfaces low-severity findings useful for hardening
@@ -223,7 +229,7 @@ jobs:
           # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
           # and scoped to workflow manifests so PR audits cannot hang on live
           # GitHub API checks.
-          python3 -m zizmor \
+          zizmor \
             --persona=auditor \
             --min-severity=high \
             --no-online-audits \
