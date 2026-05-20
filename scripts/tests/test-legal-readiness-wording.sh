@@ -32,4 +32,23 @@ if rg --pcre2 -n "$pattern" "${scan_paths[@]}"; then
     exit 1
 fi
 
+require_text() {
+    local file="$1"
+    local text="$2"
+
+    if ! grep -Fq "$text" "$file"; then
+        echo "ERROR: $file is missing required legal-readiness text: $text" >&2
+        exit 1
+    fi
+}
+
+require_text docs/release-checklist.md "scripts/tests/test-legal-readiness-wording.sh"
+require_text docs/release-checklist.md "scripts/tests/test-legal-openapi-contract.sh"
+require_text docs/release-checklist.md "fop legal catalog"
+require_text docs/release-checklist.md "attorney review"
+require_text docs/release-checklist.md "citation"
+require_text docs/release-checklist.md 'GitHub `nash87/parkhub-rust` remains the CI/review source of truth'
+require_text docs/COMPLIANCE.md "Operator Legal Readiness Checklist"
+require_text docs/COMPLIANCE.md "Module / Plugin Enablement Policy"
+
 echo "ParkHub legal-readiness wording contract OK."
