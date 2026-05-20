@@ -126,13 +126,6 @@ const ANCHORS: Record<V5Screen, Anchor> = {
   },
   nutzer: {
     note: 'Nutzer banner',
-    // KNOWN BROKEN on github/main (a8fba08): NutzerV5 throws
-    // "h.filter is not a function" during hydration, the v5 shell never
-    // mounts and <header><h1> is never emitted. Bug lives in the screen
-    // component (not this test), so this anchor is correct as-written —
-    // we skip instead of tightening / relaxing. Raised in coverage PR so
-    // it's visible; fix is tracked separately.
-    // TODO: flip back to assert once NutzerV5 renders again.
     assert: async (p) =>
       expect(p.locator('main').getByText('Nutzer', { exact: true }).first()).toBeVisible(),
   },

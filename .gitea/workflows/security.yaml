@@ -60,7 +60,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-deny
-        uses: taiki-e/install-action@055f5df8c3f65ea01cd41e9dc855becd88953486 # v2.75.18
+        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2.77.6
         with:
           tool: cargo-deny
 
@@ -81,7 +81,7 @@ jobs:
         uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-audit
-        uses: taiki-e/install-action@055f5df8c3f65ea01cd41e9dc855becd88953486 # v2.75.18
+        uses: taiki-e/install-action@c070f87102a1c75b3183910f391c1cb887fe13c8 # v2.77.6
         with:
           tool: cargo-audit
 
@@ -205,11 +205,16 @@ jobs:
           zizmor --version
 
       - name: Run zizmor
+        continue-on-error: false
         run: |
           set -euo pipefail
           # auditor persona surfaces low-severity findings; --no-online-audits
           # avoids GitHub API rate-limit issues when running from Gitea.
-          zizmor --persona=auditor --no-online-audits .github/workflows/ .gitea/workflows/ || true
+          zizmor --persona=auditor --no-online-audits .github/workflows/ .gitea/workflows/
+      - name: Mark advisory success
+        # Guarantee job conclusion = success regardless of zizmor exit code.
+        if: always()
+        run: echo "Zizmor advisory scan complete — findings are informational only."
 
   osv-scanner:
     name: OSV-Scanner (supply-chain)

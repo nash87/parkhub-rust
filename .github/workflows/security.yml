@@ -201,32 +201,35 @@ jobs:
         continue-on-error: false
 
   zizmor:
-    name: Zizmor (GHA SAST, audit-mode)
+    name: Zizmor (GHA SAST)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Audit-mode: surface findings as informational; do NOT fail the gate yet.
-    # Promote findings to errors once the workflow inventory has been triaged.
-    continue-on-error: false
+    # Blocking high-severity workflow SAST. Keep this aligned with the
+    # local release supply-chain policy: release/security gates must not
+    # be hidden behind soft-fail workflow markers.
     permissions:
       contents: read  # checkout
-      security-events: write  # upload SARIF (when enabled by zizmor-action)
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Install zizmor
+        run: |
+          python3 -m pip install --user --disable-pip-version-check 'zizmor==1.24.1'
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
-        continue-on-error: false
-        with:
+        run: |
           # auditor persona surfaces low-severity findings useful for hardening
           # without flooding the PR with regular-user noise. Keep this aligned
           # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
           # and scoped to workflow manifests so PR audits cannot hang on live
           # GitHub API checks.
-          inputs: .github/workflows .gitea/workflows
-          persona: auditor
-          online-audits: false
-          min-severity: high
+          python3 -m zizmor \
+            --persona=auditor \
+            --min-severity=high \
+            --no-online-audits \
+            --format=github \
+            .github/workflows \
+            .gitea/workflows
 
   cargo-geiger:
     # Unsafe-block SAST for the Rust dep graph. Apache-2.0 OR MIT
@@ -313,12 +316,8 @@ jobs:
 
       - name: Upload OSV-Scanner SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
-        # Advisory: GitHub's installation API rate limit (5000/hr per
-        # installation) can transiently 429 the SARIF upload during a busy
-        # PR queue. Job-level continue-on-error keeps the workflow green;
-        # this step-level flag keeps the per-job CHECK green too so the
-        # rollup doesn't show a red X for what is actually a transient
-        # rate-limit blip.
+        # Blocking upload path: transient API rate limits must be retried or
+        # fixed explicitly instead of being hidden by a soft-fail marker.
         continue-on-error: false
         if: always() && hashFiles('osv-scanner.sarif') != ''
         with:

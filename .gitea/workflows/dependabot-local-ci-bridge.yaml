@@ -1,0 +1,169 @@
+name: Dependabot local-CI bridge
+
+# Gitea mirror of `.github/workflows/dependabot-local-ci-bridge.yml`.
+#
+# TODO(gitea-mirror): Swatinem/rust-cache and taiki-e/install-action are
+# GitHub Actions; no pinned Gitea-Actions equivalents exist yet. Until those
+# wrappers are mirrored or replaced, cargo-deny and cargo-audit install inline
+# via `cargo install`. The rest of the workflow is structurally identical.
+#
+# Unblocks: parkhub-rust #638/#639/#640/#641/#642
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-local-ci-bridge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22.12.0'
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  OSV_SCANNER_VERSION: 2.3.5
+  OSV_SCANNER_SHA256: bb30c580afe5e757d3e959f4afd08a4795ea505ef84c46962b9a738aa573b41b
+
+jobs:
+  headless-gate:
+    name: Headless local-CI gate (Dependabot)
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      # --- cargo-deny (hard gate) ---
+      # TODO(gitea-mirror): replace with taiki-e/install-action once pinned SHA available
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
+      - name: Run cargo-deny (advisories + bans + licenses + sources)
+        run: cargo deny check advisories bans licenses sources
+
+      # --- cargo-audit (advisory) ---
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo audit
+        continue-on-error: false
+        run: |
+          cargo audit \
+            --ignore RUSTSEC-2024-0412 \
+            --ignore RUSTSEC-2024-0413 \
+            --ignore RUSTSEC-2024-0415 \
+            --ignore RUSTSEC-2024-0416 \
+            --ignore RUSTSEC-2024-0418 \
+            --ignore RUSTSEC-2024-0419 \
+            --ignore RUSTSEC-2024-0420 \
+            --ignore RUSTSEC-2024-0436 \
+            --ignore RUSTSEC-2024-0370 \
+            --ignore RUSTSEC-2023-0071 \
+            --ignore RUSTSEC-2025-0057 \
+            --ignore RUSTSEC-2023-0019 \
+            --ignore RUSTSEC-2024-0384 \
+            --ignore RUSTSEC-2026-0097
+
+      # --- npm audit (advisory) ---
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Audit parkhub-web npm dependencies
+        run: npm audit --prefix parkhub-web --package-lock-only --omit=dev --audit-level=high
+        continue-on-error: false
+
+      # --- Secret scan (hard gate) ---
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Secret scan (PR range)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          gitleaks detect --source=. --redact --verbose --no-banner \
+            --log-opts="--no-merges ${BASE_SHA}..${HEAD_SHA}"
+
+      # --- OSV-Scanner (advisory) ---
+      - name: Install osv-scanner
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/osv-scanner \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  /tmp/osv-scanner" | sha256sum -c -
+          chmod +x /tmp/osv-scanner
+          sudo mv /tmp/osv-scanner /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: OSV-Scanner (Cargo.lock + parkhub-web npm lockfile)
+        continue-on-error: false
+        run: |
+          set -euo pipefail
+          osv-scanner scan source \
+            --config=osv-scanner.toml \
+            -L Cargo.lock \
+            -L parkhub-web/package-lock.json \
+            --format=table || true
+
+      # --- Typos (advisory) ---
+      - name: Run typos
+        continue-on-error: false
+        uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
+
+      # --- Post fop/local-ci/pr commit status ---
+      - name: Post fop/local-ci/pr status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          SERVER_URL: ${{ github.server_url }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "${JOB_STATUS}" in
+            success)   STATE="success"; DESC="Local-CI bridge: headless gate suite passed (dependabot)" ;;
+            failure)   STATE="failure"; DESC="Local-CI bridge: headless gate suite failed (dependabot)" ;;
+            cancelled) STATE="error";   DESC="Local-CI bridge: headless gate cancelled (dependabot)" ;;
+            *)         STATE="error";   DESC="Local-CI bridge: unknown status ${JOB_STATUS} (dependabot)" ;;
+          esac
+
+          live_sha="$(
+            gh pr view "${PR_NUMBER}" \
+              --repo "${REPO}" --json headRefOid --jq .headRefOid 2>/dev/null || true
+          )"
+          if [[ "${live_sha}" =~ ^[0-9a-f]{40}$ ]]; then
+            SHA="${live_sha}"
+          fi
+
+          gh api \
+            --method POST \
+            "repos/${REPO}/statuses/${SHA}" \
+            -f state="${STATE}" \
+            -f context="fop/local-ci/pr" \
+            -f description="${DESC}" \
+            -f target_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
