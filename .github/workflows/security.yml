@@ -215,27 +215,31 @@ jobs:
     # inventory has been triaged and a .zizmor.yaml baseline is committed.
     permissions:
       contents: read  # checkout
-      security-events: write  # upload SARIF (when enabled by zizmor-action)
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
+      - name: Install zizmor
+        run: |
+          python3 -m pip install --user --disable-pip-version-check 'zizmor==1.24.1'
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
         continue-on-error: true
-        with:
+        run: |
           # auditor persona surfaces low-severity findings useful for hardening
           # without flooding the PR with regular-user noise. Keep this aligned
           # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
           # and scoped to workflow manifests so PR audits cannot hang on live
           # GitHub API checks.
-          inputs: .github/workflows .gitea/workflows
-          persona: auditor
-          online-audits: false
-          min-severity: high
+          python3 -m zizmor \
+            --persona=auditor \
+            --min-severity=high \
+            --no-online-audits \
+            --format=github \
+            .github/workflows \
+            .gitea/workflows
       - name: Mark advisory success
         # Guarantee job conclusion = success regardless of zizmor exit code.
-        # continue-on-error at job level prevents the workflow from being
+        # continue-on-error on the advisory step prevents the workflow from being
         # blocked but does NOT change the individual job's check-run
         # conclusion (GitHub API behaviour, confirmed upstream). This step
         # runs unconditionally and always exits 0 so the check shows green.
