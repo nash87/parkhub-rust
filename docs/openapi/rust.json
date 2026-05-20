@@ -2028,202 +2028,6 @@
         ],
         "type": "string"
       },
-      "RecommendationFeedbackAction": {
-        "enum": [
-          "accepted",
-          "rejected"
-        ],
-        "type": "string"
-      },
-      "RecommendationFeedbackApiResponseSchema": {
-        "properties": {
-          "data": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/RecommendationFeedbackResponse"
-              }
-            ]
-          },
-          "error": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/RecommendationFeedbackErrorSchema"
-              }
-            ]
-          },
-          "meta": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/RecommendationFeedbackMetaSchema"
-              }
-            ]
-          },
-          "success": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "success"
-        ],
-        "type": "object"
-      },
-      "RecommendationFeedbackErrorSchema": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "RecommendationFeedbackMetaSchema": {
-        "properties": {
-          "page": {
-            "format": "int32",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "per_page": {
-            "format": "int32",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "total": {
-            "format": "int32",
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "total_pages": {
-            "format": "int32",
-            "type": [
-              "integer",
-              "null"
-            ]
-          }
-        },
-        "type": "object"
-      },
-      "RecommendationFeedbackReasonCode": {
-        "enum": [
-          "booked",
-          "dismissed",
-          "not_relevant",
-          "too_expensive",
-          "too_far",
-          "unavailable",
-          "other"
-        ],
-        "type": "string"
-      },
-      "RecommendationFeedbackRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "action": {
-            "$ref": "#/components/schemas/RecommendationFeedbackAction"
-          },
-          "batch_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "idempotency_key": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "lot_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "reason_code": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/RecommendationFeedbackReasonCode"
-              }
-            ]
-          },
-          "recommendation_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "slot_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "source": {
-            "$ref": "#/components/schemas/RecommendationFeedbackSource"
-          }
-        },
-        "required": [
-          "recommendation_id",
-          "batch_id",
-          "action",
-          "slot_id",
-          "lot_id",
-          "source",
-          "idempotency_key"
-        ],
-        "type": "object"
-      },
-      "RecommendationFeedbackResponse": {
-        "properties": {
-          "action": {
-            "$ref": "#/components/schemas/RecommendationFeedbackAction"
-          },
-          "batch_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "event_type": {
-            "type": "string"
-          },
-          "metrics_source": {
-            "type": "string"
-          },
-          "recommendation_id": {
-            "format": "uuid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "recommendation_id",
-          "batch_id",
-          "action",
-          "event_type",
-          "metrics_source"
-        ],
-        "type": "object"
-      },
-      "RecommendationFeedbackSource": {
-        "enum": [
-          "recommendation_card",
-          "booking_flow",
-          "admin_test"
-        ],
-        "type": "string"
-      },
       "RecommendationQuery": {
         "properties": {
           "lot_id": {
@@ -2510,10 +2314,6 @@
       },
       "SlotRecommendation": {
         "properties": {
-          "batch_id": {
-            "format": "uuid",
-            "type": "string"
-          },
           "floor_name": {
             "type": "string"
           },
@@ -2536,10 +2336,6 @@
             },
             "type": "array"
           },
-          "recommendation_id": {
-            "format": "uuid",
-            "type": "string"
-          },
           "score": {
             "format": "double",
             "type": "number"
@@ -2554,8 +2350,6 @@
           }
         },
         "required": [
-          "recommendation_id",
-          "batch_id",
           "slot_id",
           "slot_number",
           "lot_id",
@@ -10790,52 +10584,6 @@
         "summary": "Get VAPID public key",
         "tags": [
           "Push"
-        ]
-      }
-    },
-    "/api/v1/recommendations/feedback": {
-      "post": {
-        "description": "Records accept/reject feedback for a served recommendation. Unknown recommendation IDs fail closed and free-text feedback is not accepted.",
-        "operationId": "post_recommendation_feedback",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RecommendationFeedbackRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RecommendationFeedbackApiResponseSchema"
-                }
-              }
-            },
-            "description": "Recommendation feedback recorded"
-          },
-          "403": {
-            "description": "Admin feedback source requires admin access"
-          },
-          "404": {
-            "description": "Unknown recommendation_id or candidate for feedback"
-          },
-          "409": {
-            "description": "Idempotency key replayed with a different feedback payload"
-          }
-        },
-        "security": [
-          {
-            "bearer_auth": []
-          }
-        ],
-        "summary": "Record recommendation feedback",
-        "tags": [
-          "Recommendations"
         ]
       }
     },
