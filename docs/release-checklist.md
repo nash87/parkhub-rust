@@ -13,8 +13,24 @@ Use this before tagging a ParkHub release from this repo.
 ## Contract and parity
 
 - Regenerate and commit the local OpenAPI snapshot when the contract changed.
+- Run `scripts/tests/test-legal-openapi-contract.sh` after changes to legal,
+  compliance, module, plugin, export, erasure, or privacy surfaces.
 - Review any remaining runtime-sensitive gaps and make sure they are documented.
 - Do not silently introduce new shared-frontend branching requirements.
+
+## Legal readiness
+
+- Run `scripts/tests/test-legal-readiness-wording.sh`; public docs must describe
+  deployment-dependent readiness, not absolute legal compliance.
+- Confirm the operator checklist in `docs/COMPLIANCE.md` reflects the enabled
+  modules, integrations, processors, retention settings, and jurisdictions.
+- Confirm privacy notice, Impressum, AVV/DPA, VVT, cookie/TTDSG, BFSG/EAA, and
+  AI Act transparency templates are still starting points, not legal advice.
+- Confirm any security-sensitive or legally sensitive module change is
+  audit-logged and documented with a rollback path before release.
+- Treat `fop legal catalog` as reference-only: attorney review, citation
+  verification, deployment-specific configuration review, and final legal
+  judgment remain required.
 
 ## Quality bar
 
@@ -28,4 +44,5 @@ Use this before tagging a ParkHub release from this repo.
 - If this release changes a shared customer-visible feature, verify whether
   `parkhub-php` needs a matching change.
 - If parity is not yet closed, record the gap explicitly in release notes.
-- Push order remains `origin` first, then `github`.
+- GitHub `nash87/parkhub-rust` remains the CI/review source of truth. Do not
+  base releases on a stale Gitea mirror.
