@@ -22,15 +22,17 @@ Use this before tagging a ParkHub release from this repo.
 
 - Run `scripts/tests/test-legal-readiness-wording.sh`; public docs must describe
   deployment-dependent readiness, not absolute legal compliance.
+- Review `docs/legal-readiness.md` as the operator-facing audit hub for German,
+  EU, and international readiness obligations.
 - Confirm the operator checklist in `docs/COMPLIANCE.md` reflects the enabled
   modules, integrations, processors, retention settings, and jurisdictions.
 - Confirm privacy notice, Impressum, AVV/DPA, VVT, cookie/TTDSG, BFSG/EAA, and
   AI Act transparency templates are still starting points, not legal advice.
 - Confirm any security-sensitive or legally sensitive module change is
   audit-logged and documented with a rollback path before release.
-- Treat `fop legal catalog` as reference-only: attorney review, citation
-  verification, deployment-specific configuration review, and final legal
-  judgment remain required.
+- Treat `fop legal catalog` as reference-only, not legal advice: attorney review,
+  citation verification, human signoff, deployment-specific configuration
+  review, and final legal judgment remain required.
 
 ## Quality bar
 

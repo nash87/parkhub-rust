@@ -406,6 +406,7 @@ ParkHub ships privacy, security, and documentation features intended to support 
 
 | Document | Scope |
 |----------|-------|
+| [Legal Readiness Hub](docs/legal-readiness.md) | Operator-facing audit entry point for German, EU, and international legal-readiness obligations |
 | [GDPR Guide](docs/GDPR.md) | Data inventory, user rights (Art. 15–22), retention, TOMs |
 | [Compliance Matrix](docs/COMPLIANCE.md) | DSGVO, TTDSG, DDG, BDSG, GoBD, NIS2, UK GDPR, CCPA, nDSG, LGPD |
 | [Compliance Report](COMPLIANCE-REPORT.md) | Automated compliance checks with scoring |
@@ -416,7 +417,7 @@ ParkHub ships privacy, security, and documentation features intended to support 
 | [EU AI Act Transparency Template](legal/ai-act-transparency-template.md) | Art. 50 transparency notice — required if the operator enables AI/ML features |
 | [Third-Party Licenses](LICENSE-THIRD-PARTY.md) | All Rust crate and npm dependency licenses |
 
-See [`legal/`](legal/) for the full template set — all documents are operator-customizable starting points, not binding legal texts or legal advice.
+See [`docs/legal-readiness.md`](docs/legal-readiness.md) for the operator-facing audit hub and [`legal/`](legal/) for the full template set. All documents are operator-customizable starting points, not binding legal texts or legal advice.
 
 **Key readiness features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3, audit logging, data export (Art. 15/20), account erasure (Art. 17), no tracking by default, and no bundled third-party data processor in the core self-hosted runtime. Operators remain responsible for the final privacy notice, Impressum, AVV/DPA coverage, VVT records, retention settings, accessibility assessment, AI transparency notices if AI features are enabled, and attorney review.
 

@@ -44,11 +44,30 @@ require_text() {
 
 require_text docs/release-checklist.md "scripts/tests/test-legal-readiness-wording.sh"
 require_text docs/release-checklist.md "scripts/tests/test-legal-openapi-contract.sh"
+require_text docs/release-checklist.md "docs/legal-readiness.md"
 require_text docs/release-checklist.md "fop legal catalog"
+require_text docs/release-checklist.md "reference-only, not legal advice"
 require_text docs/release-checklist.md "attorney review"
 require_text docs/release-checklist.md "citation"
+require_text docs/release-checklist.md "human signoff"
+require_text docs/release-checklist.md "deployment-specific configuration"
 require_text docs/release-checklist.md 'GitHub `nash87/parkhub-rust` remains the CI/review source of truth'
+require_text docs/legal-readiness.md "# ParkHub Legal Readiness Hub"
+require_text docs/legal-readiness.md "operator-facing audit hub"
+require_text docs/legal-readiness.md "German, EU, and international"
+require_text docs/legal-readiness.md "deployment-dependent"
+require_text docs/legal-readiness.md "not legal advice"
+require_text docs/legal-readiness.md "reference-only catalog"
+require_text docs/legal-readiness.md "attorney review"
+require_text docs/legal-readiness.md "citation verification"
+require_text docs/legal-readiness.md "human signoff"
+require_text docs/legal-readiness.md "deployment-specific configuration"
 require_text docs/COMPLIANCE.md "Operator Legal Readiness Checklist"
 require_text docs/COMPLIANCE.md "Module / Plugin Enablement Policy"
+
+if rg --pcre2 -n "GDPR compliant|DSGVO compliant|legally compliant|certified|guaranteed" docs/legal-readiness.md docs/release-checklist.md; then
+    echo "ERROR: legal-readiness hub/checklist contain absolute legal-status wording." >&2
+    exit 1
+fi
 
 echo "ParkHub legal-readiness wording contract OK."
