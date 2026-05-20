@@ -6,7 +6,9 @@ image:
   repository: ghcr.io/nash87/parkhub-rust
   pullPolicy: IfNotPresent
   tag: ""  # defaults to appVersion
-  digest: ""  # optional sha256:...; when set, renders repository@digest
+  # Optional sha256:... digest. A leading @ is accepted for copy/paste safety.
+  # When set, this renders repository@digest and image.tag is ignored.
+  digest: ""
 
 imagePullSecrets: []
 nameOverride: ""
