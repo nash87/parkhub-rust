@@ -1,0 +1,44 @@
+{
+  "schema_version": "parkhub.recommendation.fixture.v1",
+  "algorithm": "exact_cover_v1",
+  "workflow": "batch_allocation",
+  "profile_safe_mode": true,
+  "required_constraints": [
+    "accessible",
+    "ev",
+    "tenant:alpha",
+    "tenant:beta"
+  ],
+  "options": [
+    {
+      "id": "slot-a",
+      "covers": ["tenant:alpha", "ev"],
+      "weight": 90
+    },
+    {
+      "id": "slot-b",
+      "covers": ["tenant:beta", "accessible"],
+      "weight": 80
+    },
+    {
+      "id": "slot-c",
+      "covers": ["tenant:beta"],
+      "weight": 70
+    }
+  ],
+  "expected": {
+    "status": "solved",
+    "selected_option_ids": ["slot-a", "slot-b"],
+    "covered_constraints": [
+      "accessible",
+      "ev",
+      "tenant:alpha",
+      "tenant:beta"
+    ]
+  },
+  "legal_boundary": {
+    "execution_allowed": false,
+    "human_review_required": true,
+    "note": "Exact-cover allocation is operational scheduling support, not legal advice or a compliance certification."
+  }
+}

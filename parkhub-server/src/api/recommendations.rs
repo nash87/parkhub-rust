@@ -67,6 +67,7 @@ pub struct RecommendationEngineConfig {
     pub explain: bool,
     pub profile_safe_mode: bool,
     pub pipeline: RecommendationPipelineConfig,
+    pub allocation: RecommendationAllocationConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -77,6 +78,13 @@ pub struct RecommendationPipelineConfig {
     pub fallback_enabled: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct RecommendationAllocationConfig {
+    pub strategy: String,
+    pub exact_cover_max_options: usize,
+    pub exact_cover_max_search_nodes: usize,
+}
+
 impl Default for RecommendationPipelineConfig {
     fn default() -> Self {
         Self {
@@ -84,6 +92,16 @@ impl Default for RecommendationPipelineConfig {
             pipeline_name: "parkhub-recommendations".to_string(),
             timeout_ms: 750,
             fallback_enabled: true,
+        }
+    }
+}
+
+impl Default for RecommendationAllocationConfig {
+    fn default() -> Self {
+        Self {
+            strategy: "weighted_v1".to_string(),
+            exact_cover_max_options: 256,
+            exact_cover_max_search_nodes: 10_000,
         }
     }
 }
@@ -109,6 +127,7 @@ impl Default for RecommendationEngineConfig {
             explain: true,
             profile_safe_mode: true,
             pipeline: RecommendationPipelineConfig::default(),
+            allocation: RecommendationAllocationConfig::default(),
         }
     }
 }
@@ -193,6 +212,22 @@ impl RecommendationEngineConfig {
             );
             cfg.algorithm = "weighted_v1".to_string();
         }
+        cfg.allocation.strategy =
+            read_module_string(db, "allocation_strategy", "weighted_v1").await;
+        if !matches!(
+            cfg.allocation.strategy.as_str(),
+            "weighted_v1" | "exact_cover_v1"
+        ) {
+            tracing::warn!(
+                allocation_strategy = %cfg.allocation.strategy,
+                "unknown allocation strategy requested; falling back to weighted_v1"
+            );
+            cfg.allocation.strategy = "weighted_v1".to_string();
+        }
+        cfg.allocation.exact_cover_max_options =
+            read_module_usize(db, "exact_cover_max_options", 256, 1, 256).await;
+        cfg.allocation.exact_cover_max_search_nodes =
+            read_module_usize(db, "exact_cover_max_search_nodes", 10_000, 1, 10_000).await;
         cfg
     }
 }
@@ -643,6 +678,7 @@ pub struct RecommendationStats {
     pub metrics_source: String,
     pub algorithm: String,
     pub algorithm_weights: RecommendationWeights,
+    pub allocation: RecommendationAllocationConfig,
     pub algorithm_adapter: RecommendationAdapterStatus,
     pub legal_boundary: RecommendationLegalBoundary,
     pub top_recommended_lots: Vec<LotRecommendationCount>,
@@ -981,6 +1017,7 @@ fn recommendation_config_hash(engine: &RecommendationEngineConfig) -> String {
         "explain": engine.explain,
         "profile_safe_mode": engine.profile_safe_mode,
         "pipeline": &engine.pipeline,
+        "allocation": &engine.allocation,
     });
     sha256_hex(
         serde_json::to_string(&payload)
@@ -1064,6 +1101,7 @@ pub async fn get_recommendation_stats(
         metrics_source: "audit_log.RecommendationServed".to_string(),
         algorithm: engine.algorithm.clone(),
         algorithm_weights: engine.weights,
+        allocation: engine.allocation,
         algorithm_adapter: adapter_status_for_weighted_v1(&engine),
         legal_boundary: RecommendationLegalBoundary {
             legal_review_required: true,
@@ -1201,6 +1239,7 @@ mod tests {
             metrics_source: "audit_log.RecommendationServed".to_string(),
             algorithm: "weighted_v1".to_string(),
             algorithm_weights: RecommendationWeights::default(),
+            allocation: RecommendationAllocationConfig::default(),
             algorithm_adapter: adapter_status_for_weighted_v1(
                 &RecommendationEngineConfig::default(),
             ),

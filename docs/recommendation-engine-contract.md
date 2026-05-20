@@ -16,6 +16,14 @@ adapter algorithm for the external fop-pipeline service and must fall back to
 `weighted_v1` on every missing endpoint, timeout, non-2xx response, invalid
 response, or unknown slot ID.
 
+`exact_cover_v1` is a separate batch-allocation strategy for operational
+scheduling workflows: recurring reservations, tenant quotas, EV/fleet/zone
+constraints, accessible-space facility constraints, and maintenance-window
+exclusions. It is not the default quick-booking scorer and must not replace
+`weighted_v1` for ordinary single-slot recommendations. It reports solved vs
+fallback status, selected option IDs, covered constraints, search-node count,
+and the same legal boundary used by served recommendations.
+
 Default weights:
 
 | Key | Default | Meaning |
@@ -55,6 +63,18 @@ Changing `weighted_v1` semantics is not allowed. Any ML or tenant-specific
 strategy must be introduced as a new algorithm version and must pass parity
 fixtures against `weighted_v1` before rollout.
 
+Changing `exact_cover_v1` semantics must be done through new shared fixtures.
+The first parity fixture is
+`docs/recommendation-engine-fixtures/exact_cover_v1.batch_basic.json`; Rust and
+PHP must keep the selected option IDs and covered constraints identical.
+
+`exact_cover_v1` is deterministic by contract. The same normalized input must
+return the same selected option IDs, covered constraints, fallback status, and
+search-node count in Rust and PHP. Candidate ordering must not use randomness,
+wall-clock time, database iteration order, or locale-sensitive sorting. Equal
+weights are ordered by stable option ID. No-solution cases must return an
+explicit fallback status rather than a partial allocation.
+
 ## Config Boundary
 
 The Rust module registry exposes a JSON Schema for `recommendations` through the
@@ -63,6 +83,14 @@ existing admin module config editor. Values are persisted under
 legacy-safe defaults. The `explain` and `profile_safe_mode` settings are
 reserved, fail-closed fields: attempts to set them to `false` are rejected by
 schema and ignored by runtime loading.
+
+Batch allocation has its own config surface under the same module:
+`allocation_strategy` (`weighted_v1` or `exact_cover_v1`),
+`exact_cover_max_options` (1..256), and `exact_cover_max_search_nodes`
+(1..10000). The quick-booking endpoint does not switch to exact-cover when this
+is enabled; `exact_cover_v1` is exposed through the admin-only
+`POST /api/v1/recommendations/allocation/exact-cover` utility for batch or
+recurring scheduling inputs.
 
 `fop_pipeline_v1` uses the fop-pipeline JSON/HTTP boundary:
 `POST {pipeline_endpoint}/pipeline/{pipeline_name}/run`. ParkHub sends the
@@ -90,15 +118,34 @@ audit events. Acceptance metrics remain `null` with
 `acceptance_metric_source=not_tracked` until explicit accept/reject events exist,
 so the endpoint does not infer acceptance from unrelated booking state.
 
+Every served `exact_cover_v1` allocation must also preserve an immutable
+allocation trace. At minimum the trace stores request ID, solver name and
+version, SHA-256 config hash, constraint set hash, candidate set hash,
+selected option IDs, rejected candidate IDs, tie-break inputs, actor or service
+principal, tenant ID, timestamp, fallback status, and retention/deletion class.
+These traces are operational evidence and may be personal data if they can be
+linked to a person or vehicle, so export and erasure handling must be designed
+before customer rollout.
+
 ## Compliance Boundary
 
 This is engineering compliance, not legal advice. For German/EU/international
 use, the recommendation surface must keep:
 
 - data minimization: no sensitive categories, location history beyond parking
-  usage, or unrelated profile attributes in the score inputs;
+  usage, or unrelated profile attributes in the score inputs; recommendation
+  and allocation inputs/outputs must use pseudonymous IDs only and must not
+  include names, emails, license plates, IP addresses, or free-text personal
+  data;
 - explainability: every score must keep a reason or badge that can be audited;
 - operator control: weight changes must be authenticated, audited, and reversible;
+- hard constraints: accessible-space, EV/fleet, tenant quota, reserved-inventory,
+  and maintenance-window requirements that represent user-declared needs, legal
+  obligations, or operator policy must be modeled as eligibility constraints,
+  not as soft scoring bonuses that weights can override;
+- config governance: fairness/accessibility/eligibility parameters need explicit
+  min/max bounds, per-tenant defaults, role-based update permission, change
+  reason, rollback evidence, and a legal-review flag before sensitive changes;
 - security evidence: SBOM/provenance/vulnerability handling remains part of the
   ParkHub CI/CD baseline before business rollout;
 - legal review: public ToS/privacy/profiling wording must go through `fop legal`

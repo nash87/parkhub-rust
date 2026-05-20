@@ -1,0 +1,24 @@
+{
+  "schema_version": "parkhub.recommendation.fixture.v1",
+  "algorithm": "exact_cover_v1",
+  "workflow": "batch_allocation",
+  "profile_safe_mode": true,
+  "required_constraints": [],
+  "options": [
+    {
+      "id": "slot-a",
+      "covers": ["tenant:alpha"],
+      "weight": 90
+    }
+  ],
+  "expected": {
+    "status": "solved",
+    "selected_option_ids": [],
+    "covered_constraints": []
+  },
+  "legal_boundary": {
+    "execution_allowed": false,
+    "human_review_required": true,
+    "note": "No constraints means no exact-cover allocation is required."
+  }
+}

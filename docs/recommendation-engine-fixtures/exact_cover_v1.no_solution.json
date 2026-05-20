@@ -1,0 +1,24 @@
+{
+  "schema_version": "parkhub.recommendation.fixture.v1",
+  "algorithm": "exact_cover_v1",
+  "workflow": "batch_allocation",
+  "profile_safe_mode": true,
+  "required_constraints": ["tenant:alpha", "maintenance:open"],
+  "options": [
+    {
+      "id": "slot-a",
+      "covers": ["tenant:alpha"],
+      "weight": 90
+    }
+  ],
+  "expected": {
+    "status": "fallback_no_solution",
+    "selected_option_ids": [],
+    "covered_constraints": []
+  },
+  "legal_boundary": {
+    "execution_allowed": false,
+    "human_review_required": true,
+    "note": "Missing maintenance-window coverage must fail closed and let the caller use a safe fallback."
+  }
+}
