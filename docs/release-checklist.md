@@ -24,6 +24,8 @@ Use this before tagging a ParkHub release from this repo.
   deployment-dependent readiness, not absolute legal compliance.
 - Review `docs/legal-readiness.md` as the operator-facing audit hub for German,
   EU, and international readiness obligations.
+- Complete or update `docs/deployment-readiness-record.md` for the target
+  deployment before production use, business use, or customer-facing evaluation.
 - Confirm the operator checklist in `docs/COMPLIANCE.md` reflects the enabled
   modules, integrations, processors, retention settings, and jurisdictions.
 - Confirm privacy notice, Impressum, AVV/DPA, VVT, cookie/TTDSG, BFSG/EAA, and

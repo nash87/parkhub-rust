@@ -23,6 +23,8 @@ deployment-specific configuration review before go-live.
   for operator-specific legal texts.
 - Use `docs/release-checklist.md` before release to confirm the legal-readiness
   wording and OpenAPI static guards still pass.
+- Use `docs/deployment-readiness-record.md` as the per-deployment evidence
+  record for jurisdiction, modules, processors, CI/CD evidence, and signoff.
 - Treat `fop legal catalog` as a reference-only catalog. It helps locate legal
   topics and citations, but it is not legal advice and does not replace attorney
   review, citation verification, human signoff, or deployment-specific
@@ -40,6 +42,7 @@ deployment-specific configuration review before go-live.
 | AI/ML transparency | `legal/ai-act-transparency-template.md`, module enablement policy | Use only when AI/ML features are enabled; document transparency notices, human review boundaries, and feature-specific risk review. |
 | Security and audit trail | `docs/SECURITY.md`, `docs/FEATURES.md`, audit log behavior | Confirm authentication, encryption, audit logging, backup, incident, and vulnerability-response settings for the target deployment. |
 | International privacy posture | `docs/COMPLIANCE.md` | Review UK GDPR, Swiss nDSG, CCPA, LGPD, and any sector or local rules that apply to the operator. |
+| Deployment signoff record | `docs/deployment-readiness-record.md` | Capture jurisdiction, business context, enabled modules, processors, CI/CD evidence, legal review, and final human go-live decision for each deployment. |
 
 ## Release Audit Steps
 
@@ -50,9 +53,11 @@ deployment-specific configuration review before go-live.
 3. Review `docs/COMPLIANCE.md` and `docs/GDPR.md` for drift from the actual
    enabled modules, integrations, processors, jurisdictions, and retention
    settings.
-4. Confirm legal templates are marked as operator-customizable starting points,
+4. Complete or update `docs/deployment-readiness-record.md` for the target
+   deployment before production use, business use, or customer-facing evaluation.
+5. Confirm legal templates are marked as operator-customizable starting points,
    not final legal texts.
-5. Confirm the release notes describe material legal-readiness changes as
+6. Confirm the release notes describe material legal-readiness changes as
    readiness support or operator obligations, not as absolute legal status.
 
 ## Module Enablement Rules

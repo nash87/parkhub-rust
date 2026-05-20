@@ -407,6 +407,7 @@ ParkHub ships privacy, security, and documentation features intended to support 
 | Document | Scope |
 |----------|-------|
 | [Legal Readiness Hub](docs/legal-readiness.md) | Operator-facing audit entry point for German, EU, and international legal-readiness obligations |
+| [Deployment Readiness Record](docs/deployment-readiness-record.md) | Per-deployment jurisdiction, module, processor, CI/CD evidence, and human signoff record |
 | [GDPR Guide](docs/GDPR.md) | Data inventory, user rights (Art. 15–22), retention, TOMs |
 | [Compliance Matrix](docs/COMPLIANCE.md) | DSGVO, TTDSG, DDG, BDSG, GoBD, NIS2, UK GDPR, CCPA, nDSG, LGPD |
 | [Compliance Report](COMPLIANCE-REPORT.md) | Automated compliance checks with scoring |
