@@ -70,7 +70,7 @@ jobs:
 
       # --- cargo-deny (hard gate: mirrors security.yml: cargo-deny) ---
       - name: Install cargo-deny
-        uses: taiki-e/install-action@711e1c3275189d76dcc4d34ddea63bf96ac49090 # v2.76.0
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
           tool: cargo-deny
 
@@ -79,7 +79,7 @@ jobs:
 
       # --- cargo-audit (advisory: mirrors security.yml: cargo-audit) ---
       - name: Install cargo-audit
-        uses: taiki-e/install-action@711e1c3275189d76dcc4d34ddea63bf96ac49090 # v2.76.0
+        uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
           tool: cargo-audit
 
