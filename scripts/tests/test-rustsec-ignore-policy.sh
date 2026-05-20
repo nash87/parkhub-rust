@@ -19,7 +19,7 @@ for advisory in "${ignored[@]}"; do
 done
 
 inline_matches="$(
-  rg -n -- '--ignore[[:space:]]+RUSTSEC-' \
+  grep -R -n -E -- '--ignore[[:space:]]+RUSTSEC-' \
     .github/workflows \
     .gitea/workflows \
     .github/scripts/fop-local-ci.sh \
@@ -44,7 +44,7 @@ required_call_sites=(
 )
 
 for path in "${required_call_sites[@]}"; do
-  if ! rg -q "scripts/ci/cargo-audit-with-deny-ignores.sh" "${path}"; then
+  if ! grep -qF "scripts/ci/cargo-audit-with-deny-ignores.sh" "${path}"; then
     echo "${path} does not use the centralized cargo-audit RustSec wrapper" >&2
     exit 1
   fi
