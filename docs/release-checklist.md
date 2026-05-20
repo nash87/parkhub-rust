@@ -26,6 +26,8 @@ Use this before tagging a ParkHub release from this repo.
   EU, and international readiness obligations.
 - Complete or update `docs/deployment-readiness-record.md` for the target
   deployment before production use, business use, or customer-facing evaluation.
+- Review `docs/legal-readiness-parity.md` for Rust/PHP legal-readiness parity
+  when a change affects shared legal, privacy, module, plugin, or release policy.
 - Confirm the operator checklist in `docs/COMPLIANCE.md` reflects the enabled
   modules, integrations, processors, retention settings, and jurisdictions.
 - Confirm privacy notice, Impressum, AVV/DPA, VVT, cookie/TTDSG, BFSG/EAA, and
