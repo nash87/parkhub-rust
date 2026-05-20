@@ -215,7 +215,6 @@ jobs:
     # inventory has been triaged and a .zizmor.yaml baseline is committed.
     permissions:
       contents: read  # checkout
-      security-events: write  # upload SARIF (when enabled by zizmor-action)
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -233,6 +232,13 @@ jobs:
           persona: auditor
           online-audits: false
           min-severity: high
+          # Keep the repository selected-actions allowlist tight. The action's
+          # default Advanced Security path invokes github/codeql-action/upload-sarif
+          # internally, which is intentionally not allowlisted for this advisory
+          # job. Annotation mode still surfaces findings in PRs without granting
+          # security-events: write.
+          advanced-security: false
+          annotations: true
       - name: Mark advisory success
         # Guarantee job conclusion = success regardless of zizmor exit code.
         # continue-on-error at job level prevents the workflow from being
