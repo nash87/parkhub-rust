@@ -165,25 +165,11 @@ run_if_available cargo-deny "cargo deny (advisories+bans+licenses+sources)" \
 
 # ─── cargo audit mirrors security.yml cargo-audit job ────────────────────────
 # cargo-audit is dual MIT/Apache-2.0 (github.com/RustSec/rustsec).
-# Ignore list MUST stay in sync with .github/workflows/security.yml; if you
-# update one, update the other in the same commit.
+# RustSec ignore policy is centralized in deny.toml and expanded through the
+# repo-local wrapper below.
 if optional_tool cargo-audit; then
   section "cargo audit"
-  cargo audit \
-    --ignore RUSTSEC-2024-0412 \
-    --ignore RUSTSEC-2024-0413 \
-    --ignore RUSTSEC-2024-0415 \
-    --ignore RUSTSEC-2024-0416 \
-    --ignore RUSTSEC-2024-0418 \
-    --ignore RUSTSEC-2024-0419 \
-    --ignore RUSTSEC-2024-0420 \
-    --ignore RUSTSEC-2024-0436 \
-    --ignore RUSTSEC-2024-0370 \
-    --ignore RUSTSEC-2023-0071 \
-    --ignore RUSTSEC-2025-0057 \
-    --ignore RUSTSEC-2023-0019 \
-    --ignore RUSTSEC-2024-0384 \
-    --ignore RUSTSEC-2026-0097
+  scripts/ci/cargo-audit-with-deny-ignores.sh
 else
   section "cargo audit"
   echo "cargo-audit not installed; skipping (install: cargo install cargo-audit)"
