@@ -83,6 +83,14 @@ require_grep_each 'exact_cover_v1' \
   parkhub-server/src/api/recommendation_allocation.rs \
   docs/recommendation-engine-contract.md
 require_grep 'allocation trace' docs/recommendation-engine-contract.md
+require_grep 'allocation_trace_id' docs/recommendation-engine-contract.md parkhub-server/src/api/recommendation_allocation.rs
+require_grep 'ExactCoverAllocationServed' parkhub-server/src/api/recommendation_allocation.rs
+require_grep 'constraint_set_hash' parkhub-server/src/api/recommendation_allocation.rs
+require_grep 'candidate_set_hash' parkhub-server/src/api/recommendation_allocation.rs
+require_grep 'tenant_id' parkhub-server/src/api/recommendation_allocation.rs
+require_grep 'tenant ID' docs/recommendation-engine-contract.md
+require_grep 'resolve_tenant_id' parkhub-server/src/api/recommendation_allocation.rs
+require_grep 'retention_deletion_class' parkhub-server/src/api/recommendation_allocation.rs
 require_grep 'pseudonymous IDs only' docs/recommendation-engine-contract.md
 require_grep 'eligibility constraints' docs/recommendation-engine-contract.md
 require_grep 'legal-review flag' docs/recommendation-engine-contract.md

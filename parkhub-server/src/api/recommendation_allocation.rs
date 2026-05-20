@@ -6,8 +6,11 @@
 //! covered exactly once.
 
 use axum::{Extension, Json, extract::State, http::StatusCode};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
+use uuid::Uuid;
 
 use parkhub_common::ApiResponse;
 
@@ -65,6 +68,7 @@ pub struct ExactCoverAllocationRequest {
 
 #[derive(Debug, Serialize)]
 pub struct ExactCoverAllocationResponse {
+    pub allocation_trace_id: Uuid,
     pub result: ExactCoverResult,
     pub legal_boundary: ExactCoverLegalBoundary,
 }
@@ -165,10 +169,25 @@ pub async fn solve_exact_cover_allocation(
         .unwrap_or_default()
         .bounded(DEFAULT_MAX_OPTIONS, DEFAULT_MAX_SEARCH_NODES);
     let result = solve_exact_cover_v1(&request.required_constraints, &request.options, limits);
+    let allocation_trace_id = Uuid::new_v4();
+
+    {
+        let state_guard = state.read().await;
+        audit_exact_cover_allocation(
+            &state_guard,
+            allocation_trace_id,
+            &auth_user,
+            &request,
+            limits,
+            &result,
+        )
+        .await;
+    }
 
     (
         StatusCode::OK,
         Json(ApiResponse::success(ExactCoverAllocationResponse {
+            allocation_trace_id,
             result,
             legal_boundary: ExactCoverLegalBoundary {
                 legal_review_required: true,
@@ -187,6 +206,144 @@ impl ExactCoverLimits {
             max_search_nodes: self.max_search_nodes.clamp(1, max_search_nodes),
         }
     }
+}
+
+async fn audit_exact_cover_allocation(
+    app_state: &crate::AppState,
+    trace_id: Uuid,
+    auth_user: &AuthUser,
+    request: &ExactCoverAllocationRequest,
+    limits: ExactCoverLimits,
+    result: &ExactCoverResult,
+) {
+    let tenant_id = super::resolve_tenant_id(app_state, auth_user.user_id).await;
+    let selected = result
+        .selected_option_ids
+        .iter()
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    let rejected_candidate_ids = request
+        .options
+        .iter()
+        .filter_map(|option| {
+            let id = option.id.trim();
+            (!id.is_empty() && !selected.contains(id)).then(|| id.to_string())
+        })
+        .collect::<Vec<_>>();
+
+    let details = serde_json::json!({
+        "request_id": trace_id,
+        "solver_name": "exact_cover_v1",
+        "solver_version": 1,
+        "config_hash": exact_cover_config_hash(limits),
+        "constraint_set_hash": exact_cover_constraint_hash(&request.required_constraints),
+        "candidate_set_hash": exact_cover_candidate_hash(&request.options),
+        "selected_option_ids": &result.selected_option_ids,
+        "rejected_candidate_ids": rejected_candidate_ids,
+        "covered_constraints": &result.covered_constraints,
+        "search_nodes": result.search_nodes,
+        "tie_break_inputs": {
+            "candidate_order": "weight_desc_then_option_id_asc",
+            "constraint_order": "fewest_candidates_then_constraint_asc",
+            "max_options": limits.max_options,
+            "max_search_nodes": limits.max_search_nodes,
+        },
+        "actor": {
+            "user_id": auth_user.user_id,
+            "api_key_id": auth_user.api_key_id,
+        },
+        "tenant_id": tenant_id,
+        "fallback_status": status_name(result.status),
+        "retention_deletion_class": "operational_evidence_personal_data_possible",
+        "legal_boundary": {
+            "legal_review_required": true,
+            "attorney_review_status": "required_before_customer_wording",
+            "execution_allowed": false
+        }
+    });
+
+    let entry = crate::db::AuditLogEntry {
+        id: trace_id,
+        timestamp: Utc::now(),
+        event_type: "ExactCoverAllocationServed".to_string(),
+        user_id: Some(auth_user.user_id),
+        username: None,
+        details: Some(details.to_string()),
+        target_type: Some("recommendation_allocation".to_string()),
+        target_id: Some(trace_id.to_string()),
+        ip_address: None,
+    };
+
+    if let Err(err) = app_state.db.save_audit_log(&entry).await {
+        tracing::warn!(
+            %trace_id,
+            error = ?err,
+            "failed to persist exact-cover allocation audit trace"
+        );
+    }
+}
+
+fn exact_cover_config_hash(limits: ExactCoverLimits) -> String {
+    hash_json(&serde_json::json!({
+        "strategy": "exact_cover_v1",
+        "max_options": limits.max_options,
+        "max_search_nodes": limits.max_search_nodes,
+    }))
+}
+
+fn status_name(status: ExactCoverStatus) -> &'static str {
+    match status {
+        ExactCoverStatus::Solved => "solved",
+        ExactCoverStatus::FallbackNoSolution => "fallback_no_solution",
+        ExactCoverStatus::FallbackInputLimited => "fallback_input_limited",
+        ExactCoverStatus::FallbackSearchLimited => "fallback_search_limited",
+    }
+}
+
+fn exact_cover_constraint_hash(required_constraints: &[String]) -> String {
+    hash_json(&serde_json::json!(
+        normalize_constraints(required_constraints)
+            .into_iter()
+            .collect::<Vec<_>>()
+    ))
+}
+
+fn exact_cover_candidate_hash(options: &[ExactCoverOption]) -> String {
+    let mut normalized = options
+        .iter()
+        .filter_map(|option| {
+            let id = option.id.trim();
+            (!id.is_empty()).then(|| {
+                serde_json::json!({
+                    "id": id,
+                    "covers": normalize_constraints(&option.covers).into_iter().collect::<Vec<_>>(),
+                    "weight": option.weight,
+                })
+            })
+        })
+        .collect::<Vec<_>>();
+    normalized.sort_by(|a, b| {
+        let left = a
+            .get("id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        let right = b
+            .get("id")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("");
+        left.cmp(right)
+    });
+    hash_json(&serde_json::json!(normalized))
+}
+
+fn hash_json(value: &serde_json::Value) -> String {
+    let payload = serde_json::to_vec(value).unwrap_or_default();
+    let digest = Sha256::digest(&payload);
+    digest.iter().fold(String::new(), |mut output, byte| {
+        use std::fmt::Write as _;
+        let _ = write!(&mut output, "{byte:02x}");
+        output
+    })
 }
 
 fn fallback(status: ExactCoverStatus, search_nodes: usize) -> ExactCoverResult {

@@ -90,7 +90,9 @@ Batch allocation has its own config surface under the same module:
 (1..10000). The quick-booking endpoint does not switch to exact-cover when this
 is enabled; `exact_cover_v1` is exposed through the admin-only
 `POST /api/v1/recommendations/allocation/exact-cover` utility for batch or
-recurring scheduling inputs.
+recurring scheduling inputs. The endpoint returns `allocation_trace_id` so an
+operator can connect a solver result to the immutable audit trace without
+logging raw request payloads in customer-facing surfaces.
 
 `fop_pipeline_v1` uses the fop-pipeline JSON/HTTP boundary:
 `POST {pipeline_endpoint}/pipeline/{pipeline_name}/run`. ParkHub sends the
