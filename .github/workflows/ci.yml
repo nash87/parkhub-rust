@@ -64,6 +64,9 @@ jobs:
       - name: Validate CI workflow policy
         run: bash scripts/check-ci-workflow-policy.sh
 
+      - name: Validate release supply-chain policy
+        run: bash scripts/check-release-supply-chain-policy.sh
+
       - name: Validate Fly config
         run: python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('fly.toml').read_text())"
 
@@ -112,7 +115,7 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
         # Advisory until GitHub Dependency Graph is consistently available for this repo.
-        continue-on-error: true
+        continue-on-error: false
         with:
           fail-on-severity: high
           # Mirror of `.github/workflows/dependency-review.yml` deny-list —

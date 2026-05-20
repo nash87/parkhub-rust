@@ -117,7 +117,7 @@ jobs:
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           scan-type: fs
           scan-ref: .
@@ -135,9 +135,9 @@ jobs:
         # Trivy + osv-scanner + cargo-audit + cargo-deny pre-push, so the
         # GitHub Security tab is informational, not load-bearing. Match
         # the OSV-scanner + trivy-image upload steps which already have
-        # continue-on-error: true for the same reason.
+        # continue-on-error: false for the same reason.
         if: always() && hashFiles('trivy-results.sarif') != ''
-        continue-on-error: true
+        continue-on-error: false
         with:
           sarif_file: trivy-results.sarif
 
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     # Advisory until typo backlog is cleared. Promote to required once green.
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read
     steps:
@@ -198,7 +198,7 @@ jobs:
           persist-credentials: false
       - name: Run typos
         uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
-        continue-on-error: true
+        continue-on-error: false
 
   zizmor:
     name: Zizmor (GHA SAST, audit-mode)
@@ -206,7 +206,7 @@ jobs:
     timeout-minutes: 10
     # Audit-mode: surface findings as informational; do NOT fail the gate yet.
     # Promote findings to errors once the workflow inventory has been triaged.
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read  # checkout
       security-events: write  # upload SARIF (when enabled by zizmor-action)
@@ -216,7 +216,7 @@ jobs:
           persist-credentials: false
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
-        continue-on-error: true
+        continue-on-error: false
         with:
           # auditor persona surfaces low-severity findings useful for hardening
           # without flooding the PR with regular-user noise. Keep this aligned
@@ -239,7 +239,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read
     steps:
@@ -259,7 +259,7 @@ jobs:
           tool: cargo-geiger
 
       - name: Run cargo-geiger
-        continue-on-error: true
+        continue-on-error: false
         run: cargo geiger --output-format Ascii --frozen
 
   osv-scanner:
@@ -279,7 +279,7 @@ jobs:
     name: OSV-Scanner (multi-ecosystem SCA, advisory)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read         # checkout source + lockfiles for SCA
       security-events: write # upload OSV-Scanner SARIF to GitHub Security tab
@@ -302,7 +302,7 @@ jobs:
           osv-scanner --version
 
       - name: Scan Cargo.lock + npm lockfile (SARIF)
-        continue-on-error: true
+        continue-on-error: false
         run: |
           set -euo pipefail
           osv-scanner scan source \
@@ -319,7 +319,7 @@ jobs:
         # this step-level flag keeps the per-job CHECK green too so the
         # rollup doesn't show a red X for what is actually a transient
         # rate-limit blip.
-        continue-on-error: true
+        continue-on-error: false
         if: always() && hashFiles('osv-scanner.sarif') != ''
         with:
           sarif_file: osv-scanner.sarif
@@ -353,7 +353,7 @@ jobs:
 
       - name: Run Trivy image vulnerability + secret scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           image-ref: ${{ env.IMAGE_REF }}
           scanners: vuln,secret
@@ -368,7 +368,7 @@ jobs:
       - name: Upload Trivy image results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
         if: always() && hashFiles('trivy-image-results.sarif') != ''
-        continue-on-error: true
+        continue-on-error: false
         with:
           sarif_file: trivy-image-results.sarif
           category: trivy-image
@@ -381,7 +381,7 @@ jobs:
     timeout-minutes: 15
     # Advisory until the trivy-image baseline stabilises; promote to required
     # once both scanners agree on the suppressed-set.
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read  # checkout
       packages: read  # pull the published OCI image from GHCR

@@ -95,7 +95,7 @@ jobs:
             --certificate-oidc-issuer "${ISSUER}" \
             "${repo}@${DIGEST}"
 
-      - name: Verify SPDX SBOM attestation (keyless, advisory until first signed)
+      - name: Verify SPDX SBOM attestation (keyless, required after signed image)
         # Advisory: the SBOM attestation step in docker-publish.yml was only
         # added in this PR — the existing :latest image was published before
         # SBOM signing was wired, so the attestation won't exist on the
@@ -103,7 +103,7 @@ jobs:
         # signing enabled, this step will start passing and can be promoted
         # to required (drop continue-on-error).
         if: steps.digest.outputs.skip != 'true'
-        continue-on-error: true
+        continue-on-error: false
         env:
           IMAGE: ${{ env.IMAGE_REF }}
           DIGEST: ${{ steps.digest.outputs.digest }}

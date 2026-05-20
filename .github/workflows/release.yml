@@ -631,7 +631,7 @@ jobs:
     # artifacts. The `if: always() && build-linux == success` condition
     # is what actually gates — release runs even if macos/arm64/windows
     # failed, provided linux-x64 produced an artifact. The downloads
-    # below use `continue-on-error: true`, so missing artifacts are
+    # below use `continue-on-error: false`, so missing artifacts are
     # silently skipped and the release still publishes with whatever
     # platforms succeeded.
     needs: [build-linux, build-linux-arm64, build-macos, build-windows, tauri-linux, tauri-macos, tauri-windows]
@@ -650,37 +650,37 @@ jobs:
 
       - name: Download Linux ARM64 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-linux-arm64
 
       - name: Download macOS universal artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-macos-universal
 
       - name: Download Windows artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-windows-x64
 
       - name: Download Tauri Linux installers
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-desktop-linux-x64
 
       - name: Download Tauri macOS installers
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-desktop-macos
 
       - name: Download Tauri Windows installers
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-desktop-windows-x64
 
@@ -710,7 +710,7 @@ jobs:
         # before that). Make it advisory so cosign signing + Syft SBOM
         # + Create Release still publish the artifacts even when the
         # SLSA attestations API is rate-limited.
-        continue-on-error: true
+        continue-on-error: false
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-path: |

@@ -116,7 +116,7 @@ jobs:
         # currently exceeds the 45-minute job timeout after many legacy
         # failures. Keep it bounded and advisory so it cannot cancel the whole
         # workflow before reports are uploaded.
-        continue-on-error: true
+        continue-on-error: false
         timeout-minutes: 15
         working-directory: parkhub-web
         run: npx playwright test --project=chromium --max-failures=20

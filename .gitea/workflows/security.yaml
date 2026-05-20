@@ -115,7 +115,7 @@ jobs:
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           scan-type: fs
           scan-ref: .
@@ -183,7 +183,7 @@ jobs:
     timeout-minutes: 10
     # Audit-mode: surface findings as informational; do NOT fail the gate yet.
     # Promote findings to errors once the workflow inventory has been triaged.
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read   # read-only — zizmor only needs to parse workflow YAMLs
     env:
@@ -217,7 +217,7 @@ jobs:
     timeout-minutes: 15
     # Supply-chain advisory mode: known transitive advisories are documented
     # in deny.toml; OSV findings are surfaced informationally for now.
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read   # read-only — only parses lockfiles
     env:
@@ -245,7 +245,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read   # read-only — Grype scans the filesystem
     env:
@@ -312,7 +312,7 @@ jobs:
 
       - name: Run Trivy image vulnerability + secret scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           image-ref: ${{ env.IMAGE_REF }}
           scanners: vuln,secret
@@ -340,7 +340,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read   # checkout
       packages: read   # pull the published OCI image
