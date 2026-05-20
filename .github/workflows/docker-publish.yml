@@ -182,9 +182,9 @@ jobs:
           sbom: true
 
       - name: Attest image provenance (amd64)
-        # GHA installation API rate-limit hits this step intermittently
-        # (observed v5.0.6 runs 25108343024 + 25108620933 on the same SHA).
-        # Make it advisory so cosign signing + Syft SBOM still complete.
+        # Blocking image provenance for the published amd64 digest. If the
+        # GitHub attestation API is rate-limited, rerun instead of publishing
+        # an unsigned image.
         continue-on-error: false
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
@@ -498,13 +498,13 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           limit-severities-for-sarif: true
-          exit-code: '0'
+          exit-code: '1'
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
         if: always() && hashFiles('trivy-results.sarif') != ''
-        # Advisory: GitHub's SARIF upload API can hit installation rate limits;
-        # keep Security tab upload failures from blocking the deploy.
+        # Blocking upload path: retry transient GitHub API failures instead of
+        # hiding Security tab drift behind a permissive marker.
         continue-on-error: false
         with:
           sarif_file: trivy-results.sarif

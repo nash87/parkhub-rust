@@ -626,14 +626,11 @@ jobs:
 
   release:
     name: Create Release
-    # `needs:` here enforces *timing*, not gating: it ensures every build
-    # job finishes (success OR failure) before we try to download their
-    # artifacts. The `if: always() && build-linux == success` condition
-    # is what actually gates — release runs even if macos/arm64/windows
-    # failed, provided linux-x64 produced an artifact. The downloads
-    # below use `continue-on-error: false`, so missing artifacts are
-    # silently skipped and the release still publishes with whatever
-    # platforms succeeded.
+    # `needs:` here enforces timing: every build job finishes before release
+    # packaging starts. Linux x64 is the minimum required artifact; optional
+    # platform downloads run only when their corresponding build job succeeded.
+    # That preserves partial releases without hiding a missing artifact from a
+    # successful build behind a permissive marker.
     needs: [build-linux, build-linux-arm64, build-macos, build-windows, tauri-linux, tauri-macos, tauri-windows]
     if: always() && needs.build-linux.result == 'success'
     runs-on: ubuntu-latest
@@ -649,36 +646,42 @@ jobs:
           name: parkhub-linux-x64
 
       - name: Download Linux ARM64 artifact
+        if: needs.build-linux-arm64.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: false
         with:
           name: parkhub-linux-arm64
 
       - name: Download macOS universal artifact
+        if: needs.build-macos.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: false
         with:
           name: parkhub-macos-universal
 
       - name: Download Windows artifact
+        if: needs.build-windows.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: false
         with:
           name: parkhub-windows-x64
 
       - name: Download Tauri Linux installers
+        if: needs.tauri-linux.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: false
         with:
           name: parkhub-desktop-linux-x64
 
       - name: Download Tauri macOS installers
+        if: needs.tauri-macos.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: false
         with:
           name: parkhub-desktop-macos
 
       - name: Download Tauri Windows installers
+        if: needs.tauri-windows.result == 'success'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         continue-on-error: false
         with:
@@ -705,11 +708,9 @@ jobs:
           cat checksums.txt
 
       - name: Attest release artifacts
-        # GHA installation API rate-limit hits this step intermittently
-        # (v5.0.6 release.yml run 25108343017 failed here, then v5.0.4
-        # before that). Make it advisory so cosign signing + Syft SBOM
-        # + Create Release still publish the artifacts even when the
-        # SLSA attestations API is rate-limited.
+        # Blocking SLSA provenance for the minimum release artifact set. If the
+        # GitHub attestation API is rate-limited, rerun instead of publishing
+        # an unsigned release.
         continue-on-error: false
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:

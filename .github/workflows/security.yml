@@ -185,10 +185,11 @@ jobs:
           fi
 
   typos:
-    name: Typos (advisory)
+    name: Typos (spelling gate)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Advisory until typo backlog is cleared. Promote to required once green.
+    # Blocking spelling gate scoped by .typos.toml to human-facing English
+    # surfaces so generated/vendor noise does not hide copy regressions.
     continue-on-error: false
     permissions:
       contents: read
@@ -205,8 +206,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Blocking high-severity workflow SAST. Keep this aligned with the
-    # local release supply-chain policy: release/security gates must not
-    # be hidden behind soft-fail workflow markers.
+    # local release supply-chain policy: release/security gates must not hide
+    # failures behind permissive workflow markers.
     permissions:
       contents: read  # checkout
     steps:
@@ -240,11 +241,10 @@ jobs:
   cargo-geiger:
     # Unsafe-block SAST for the Rust dep graph. Apache-2.0 OR MIT
     # (github.com/geiger-rs/cargo-geiger). Surfaces supply-chain unsafe-usage
-    # growth before it lands in production. Advisory because legitimate unsafe
-    # usage in low-level deps (memmap2, mio, etc.) is unavoidable; we want to
-    # observe the trend rather than block PRs. No untrusted github.event inputs
-    # are used — all parameters are controlled constants.
-    name: cargo-geiger (unsafe-block SAST, advisory)
+    # growth before it lands in production. Legitimate unsafe usage belongs in
+    # explicit review exceptions rather than a permissive workflow marker. No
+    # untrusted github.event inputs are used; all parameters are controlled.
+    name: cargo-geiger (unsafe-block SAST)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -285,7 +285,7 @@ jobs:
     # requires hand-written `#[kani::proof]` harnesses, not a drop-in gate.
     # All workflow inputs come from controlled `env:` constants — no use of
     # github.event.* untrusted strings (no injection surface).
-    name: OSV-Scanner (multi-ecosystem SCA, advisory)
+    name: OSV-Scanner (multi-ecosystem SCA)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     continue-on-error: false
@@ -318,12 +318,12 @@ jobs:
             -L Cargo.lock \
             -L parkhub-web/package-lock.json \
             --format=sarif \
-            --output=osv-scanner.sarif || true
+            --output=osv-scanner.sarif
 
       - name: Upload OSV-Scanner SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
         # Blocking upload path: transient API rate limits must be retried or
-        # fixed explicitly instead of being hidden by a soft-fail marker.
+        # fixed explicitly instead of being hidden by a permissive marker.
         continue-on-error: false
         if: always() && hashFiles('osv-scanner.sarif') != ''
         with:
@@ -368,7 +368,7 @@ jobs:
           output: trivy-image-results.sarif
           trivyignores: .trivyignore
           limit-severities-for-sarif: true
-          exit-code: '0'
+          exit-code: '1'
 
       - name: Upload Trivy image results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@68bde559dea0fdcac2102bfdf6230c5f70eb485e # v4
@@ -384,8 +384,8 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Advisory until the trivy-image baseline stabilises; promote to required
-    # once both scanners agree on the suppressed-set.
+    # Blocking second-opinion image CVE scan. Suppress accepted findings in the
+    # scanner config rather than marking the workflow permissive.
     continue-on-error: false
     permissions:
       contents: read  # checkout

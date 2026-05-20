@@ -24,7 +24,8 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
-        # Advisory until GitHub Dependency Graph is consistently available for this repo.
+        # Blocking dependency and license review when GitHub Dependency Graph is
+        # available for the repo.
         continue-on-error: false
         with:
           fail-on-severity: high
@@ -40,8 +41,7 @@ jobs:
           #   those license identifiers in deny-licenses. Keep them out of this
           #   action input and handle any FSL introduction during legal review.
           # Project policy is "MIT / Apache-2.0 / BSD / ISC only"; this list is
-          # drift protection for new deps (gate is advisory via continue-on-error
-          # until GitHub Dependency Graph is enabled — same as before).
+          # drift protection for new deps.
           deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0
           # Slint ships under a tri-license (GPL-3.0 OR Royalty-free OR Commercial).
           # ParkHub uses the non-GPL arm; deny.toml records the same exception.

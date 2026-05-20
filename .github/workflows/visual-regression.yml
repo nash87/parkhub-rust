@@ -49,7 +49,8 @@ jobs:
     # can never mutate the repo even if a dependency is compromised.
     permissions:
       contents: read
-    # Soft-fail: diffs surface as downloadable artifacts but don't block merge.
+    # Scheduled/manual visual gate. Diffs mark this run red and are also
+    # uploaded as artifacts for baseline triage.
     continue-on-error: false
 
     steps:
