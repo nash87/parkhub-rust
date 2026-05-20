@@ -527,7 +527,8 @@ When a user submits a DSAR:
 A DPIA (Art. 35 DSGVO) is required when data processing is "likely to result in a high
 risk to the rights and freedoms of natural persons."
 
-**For most ParkHub deployments, a DPIA is NOT required** because:
+Many routine ParkHub deployments may not require a DPIA, but the operator must
+assess the concrete use case because:
 
 - No systematic monitoring of publicly accessible areas (unless combined with CCTV)
 - No large-scale processing of special category data (Art. 9)

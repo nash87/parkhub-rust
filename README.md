@@ -13,8 +13,8 @@
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB.svg?style=flat-square&logo=react&logoColor=black" alt="React 19"></a>
   <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4.svg?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4"></a>
   <img src="https://img.shields.io/badge/Tests-1785%2B-success.svg?style=flat-square" alt="1785+ tests">
-  <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-konform-green.svg?style=flat-square" alt="GDPR Compliant"></a>
-  <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-Audited-brightgreen.svg?style=flat-square" alt="Compliance Audited"></a>
+  <a href="docs/GDPR.md"><img src="https://img.shields.io/badge/DSGVO-readiness_docs-green.svg?style=flat-square" alt="GDPR readiness docs"></a>
+  <a href="COMPLIANCE-REPORT.md"><img src="https://img.shields.io/badge/Compliance-operator_checklist-brightgreen.svg?style=flat-square" alt="Compliance operator checklist"></a>
   <a href="docker-compose.yml"><img src="https://img.shields.io/badge/Docker-ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white" alt="Docker Ready"></a>
 </p>
 
@@ -22,7 +22,7 @@
   <strong>Ihre Daten. Ihr Server. Ihre Kontrolle.</strong><br>
   The on-premise parking management runtime for the canonical ParkHub product.<br>
   Ships as a <strong>single binary</strong> with zero external dependencies. Zero cloud. Zero tracking.<br>
-  100% GDPR compliant by design.
+  GDPR/DSGVO-ready building blocks; final compliance depends on deployment, contracts, and operator configuration.
 </p>
 
 <p align="center">
@@ -100,7 +100,7 @@ Cross-runtime ownership and release discipline live in [docs/parity-governance.m
 
 Most parking management SaaS costs 200–2,000 EUR/month, stores your data on US cloud infrastructure, and requires a data processing agreement just to get started.
 
-ParkHub is different. It runs on your server — a Raspberry Pi, a VPS, or your company network. Your data never leaves your premises, which means **no GDPR processor agreement needed**, no CLOUD Act exposure, and no monthly fees. The entire source code is MIT-licensed and auditable.
+ParkHub is different. It runs on your server — a Raspberry Pi, a VPS, or your company network. If you operate it entirely on infrastructure you control, the core product avoids a ParkHub platform processor relationship; external hosting, SMTP, payment, analytics, or support providers still need the operator's own processor and transfer review. The entire source code is MIT-licensed and auditable.
 
 ---
 
@@ -281,8 +281,8 @@ cosign itself is Apache-2.0 licensed, so verification adds no proprietary depend
 | **Self-hosted / On-premise** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Open source** | ✅ MIT | ❌ No | ❌ No | ❌ No |
 | **Monthly SaaS fee** | 🆓 Free | 💰 High | 💰 High | 💰 High |
-| **GDPR compliant by default** | ✅ Yes | ⚠️ Contract needed | ⚠️ Contract needed | ⚠️ Contract needed |
-| **Data leaves your premises** | ✅ Never | ❌ Always | ❌ Always | ❌ Always |
+| **GDPR/DSGVO readiness controls** | ✅ Self-hosted controls + templates | ⚠️ Contract needed | ⚠️ Contract needed | ⚠️ Contract needed |
+| **Data leaves your premises** | ✅ Avoidable in operator-controlled deployments | ❌ Always | ❌ Always | ❌ Always |
 | **Single binary deployment** | ✅ Yes | ❌ No | ❌ No | ❌ No |
 | **Customizable / Extensible** | ✅ 72 modules · runtime toggles · JSON Schema config | ❌ No | ❌ No | ❌ No |
 | **Multi-language UI** | ✅ 10 languages | ⚠️ Limited | ⚠️ Limited | ⚠️ Limited |
@@ -398,9 +398,9 @@ A feature-equivalent **PHP edition** (Laravel 13 + MySQL/SQLite/PostgreSQL) exis
 
 ---
 
-## 📜 Legal Compliance
+## 📜 Legal Readiness
 
-ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regulatory frameworks**:
+ParkHub ships privacy, security, and documentation features intended to support GDPR/DSGVO readiness. Compliance is deployment-dependent and must be verified by the operator. The docs map ParkHub features and templates against **9 regulatory frameworks**:
 
 **GDPR** (EU) | **DSGVO** (DE) | **TTDSG** (DE) | **DDG** (DE) | **BDSG** (DE) | **NIS2** (EU) | **CCPA** (US) | **UK GDPR** | **nDSG** (CH)
 
@@ -410,15 +410,15 @@ ParkHub is built for GDPR/DSGVO compliance by design. Audited against **9 regula
 | [Compliance Matrix](docs/COMPLIANCE.md) | DSGVO, TTDSG, DDG, BDSG, GoBD, NIS2, UK GDPR, CCPA, nDSG, LGPD |
 | [Compliance Report](COMPLIANCE-REPORT.md) | Automated compliance checks with scoring |
 | [Security Model](docs/SECURITY.md) | Auth, encryption, OWASP Top 10, vulnerability disclosure |
-| [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Ready-to-use Datenschutzerklärung (German) |
-| [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG §5 provider identification (German) |
+| [Privacy Template](docs/PRIVACY-TEMPLATE.md) | Datenschutzerklärung starting point (German) |
+| [Impressum Template](docs/IMPRESSUM-TEMPLATE.md) | DDG §5 provider identification starting point (German) |
 | [BFSG Accessibility Template](legal/bfsg-barrierefreiheit-template.md) | German Accessibility Improvement Act (BFSG) statement — required for most commercial deployments from 2025-06-28 |
 | [EU AI Act Transparency Template](legal/ai-act-transparency-template.md) | Art. 50 transparency notice — required if the operator enables AI/ML features |
 | [Third-Party Licenses](LICENSE-THIRD-PARTY.md) | All Rust crate and npm dependency licenses |
 
-See [`legal/`](legal/) for the full template set — all documents are operator-customizable, not binding legal texts.
+See [`legal/`](legal/) for the full template set — all documents are operator-customizable starting points, not binding legal texts or legal advice.
 
-**Key compliance features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3, audit logging, data export (Art. 15/20), account erasure (Art. 17), no cookies, no tracking, no third-party data processors by default.
+**Key readiness features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3, audit logging, data export (Art. 15/20), account erasure (Art. 17), no tracking by default, and no bundled third-party data processor in the core self-hosted runtime. Operators remain responsible for the final privacy notice, Impressum, AVV/DPA coverage, VVT records, retention settings, accessibility assessment, AI transparency notices if AI features are enabled, and attorney review.
 
 ---
 
