@@ -61,6 +61,10 @@ Image reference — tag by default, digest when image.digest is set.
 {{- define "parkhub.imageRef" -}}
 {{- $repository := required "image.repository is required" .Values.image.repository -}}
 {{- $digest := trimPrefix "@" (trim (default "" .Values.image.digest)) -}}
+{{- $tag := trim (default "" .Values.image.tag) -}}
+{{- if and $digest $tag -}}
+{{- fail "image.tag must be empty when image.digest is set" -}}
+{{- end -}}
 {{- if $digest -}}
 {{- if not (hasPrefix "sha256:" $digest) -}}
 {{- fail "image.digest must be empty or start with sha256:" -}}

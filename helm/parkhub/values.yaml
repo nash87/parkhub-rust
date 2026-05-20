@@ -7,7 +7,7 @@ image:
   pullPolicy: IfNotPresent
   tag: ""  # defaults to appVersion
   # Optional sha256:... digest. A leading @ is accepted for copy/paste safety.
-  # When set, this renders repository@digest and image.tag is ignored.
+  # When set, this renders repository@digest; keep image.tag empty.
   digest: ""
 
 imagePullSecrets: []
