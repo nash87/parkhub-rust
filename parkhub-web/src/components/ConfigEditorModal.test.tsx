@@ -100,6 +100,7 @@ describe('ConfigEditorModal', () => {
     await waitFor(() => expect(screen.getByTestId('cfg-field-mode')).toBeInTheDocument());
 
     fireEvent.change(screen.getByTestId('cfg-field-mode'), { target: { value: 'pro' } });
+    await waitFor(() => expect(screen.getByTestId('cfg-field-mode')).toHaveValue('pro'));
     fireEvent.click(screen.getByTestId('config-editor-save'));
 
     await waitFor(() => expect(patchModuleConfigMock).toHaveBeenCalledTimes(1));
