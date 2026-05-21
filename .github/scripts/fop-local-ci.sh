@@ -37,8 +37,8 @@ Environment:
                               even if no workflow / helm chart files touched
   FOP_LOCAL_CI_AUDIT_STRICT=1 fail the gate on any cargo-audit finding (default:
                               advisory; CI enforces strict)
-  FOP_LOCAL_CI_QUEUE_BIN       queue wrapper binary. Defaults to `nido` when
-                              available, otherwise `fop`.
+  FOP_LOCAL_CI_QUEUE_BIN       queue wrapper binary. Defaults to `nido build`
+                              when available, otherwise `fop`.
   FOP_LOCAL_CI_DIRECT=1       bypass fop build queue entirely (kernel + earlyoom
                               handle memory). Use only when fop queue is
                               unreachable (bootstrap chicken-and-egg) or when
@@ -162,7 +162,11 @@ cd "$repo_root"
 
 queue_bin="${FOP_LOCAL_CI_QUEUE_BIN:-}"
 if [[ -z "$queue_bin" ]]; then
-  if command -v nido >/dev/null 2>&1; then
+  supports_queue_build() {
+    command -v "$1" >/dev/null 2>&1 && "$1" build --help >/dev/null 2>&1
+  }
+
+  if supports_queue_build nido; then
     queue_bin="nido"
   else
     queue_bin="fop"

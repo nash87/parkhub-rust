@@ -93,7 +93,7 @@ require_text docs/legal-readiness-parity.md "qualified counsel"
 require_text docs/COMPLIANCE.md "Operator Legal Readiness Checklist"
 require_text docs/COMPLIANCE.md "Module / Plugin Enablement Policy"
 require_text .github/scripts/fop-local-ci.sh "FOP_LOCAL_CI_QUEUE_BIN"
-require_text .github/scripts/fop-local-ci.sh "command -v nido"
+require_text .github/scripts/fop-local-ci.sh "supports_queue_build nido"
 require_text .github/scripts/fop-local-ci.sh "\"\$queue_bin\" build"
 
 if rg --pcre2 --ignore-case -n "GDPR compliant|DSGVO compliant|legally compliant|certified|guaranteed" docs/legal-readiness.md docs/release-checklist.md; then
