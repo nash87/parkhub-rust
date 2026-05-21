@@ -30,10 +30,11 @@ deployment.
   obligations, human signoff boundaries, and release-review language equivalent.
 - Use deployment-dependent language. Do not describe either runtime or a live
   deployment as having a final legal status.
-- Treat the Nido/fop legal catalog (`nido legal catalog --json`, equivalent to
-  `fop legal catalog`) as reference-only. Attorney review, citation
-  verification, deployment-specific configuration review, human signoff, and
-  final legal judgment remain required.
+- Treat the Nido/fop legal catalog service (current CLI entrypoint:
+  `fop legal catalog --json`; `nido legal` is not exposed by the installed Nido
+  CLI yet) as reference-only. Attorney review, citation verification,
+  deployment-specific configuration review, human signoff, and final legal
+  judgment remain required.
 - Record accepted parity gaps in the release notes or a follow-up issue before
   tagging a release.
 
