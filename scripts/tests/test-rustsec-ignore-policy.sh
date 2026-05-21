@@ -6,11 +6,6 @@ cd "${repo_root}"
 
 mapfile -t ignored < <(scripts/ci/cargo-audit-with-deny-ignores.sh --print-ignores)
 
-if [[ "${#ignored[@]}" -eq 0 ]]; then
-  echo "no RustSec ignores parsed from deny.toml" >&2
-  exit 1
-fi
-
 for advisory in "${ignored[@]}"; do
   if [[ ! "${advisory}" =~ ^RUSTSEC-[0-9]{4}-[0-9]{4}$ ]]; then
     echo "parsed RustSec ignore ID is malformed: ${advisory}" >&2
@@ -18,8 +13,33 @@ for advisory in "${ignored[@]}"; do
   fi
 done
 
+tmp_deny="$(mktemp)"
+trap 'rm -f "${tmp_deny}"' EXIT
+cat >"${tmp_deny}" <<'TOML'
+[advisories]
+ignore = []
+TOML
+mapfile -t empty_ignores < <(CARGO_DENY_CONFIG="${tmp_deny}" scripts/ci/cargo-audit-with-deny-ignores.sh --print-ignores)
+if [[ "${#empty_ignores[@]}" -ne 0 ]]; then
+  echo "empty RustSec ignore lists must remain valid" >&2
+  exit 1
+fi
+
+cat >"${tmp_deny}" <<'TOML'
+[advisories]
+ignore = [
+  "RUSTSEC-2024-0001", # comment with ] must not close the array
+  "RUSTSEC-2024-0002",
+]
+TOML
+mapfile -t comment_bracket_ignores < <(CARGO_DENY_CONFIG="${tmp_deny}" scripts/ci/cargo-audit-with-deny-ignores.sh --print-ignores)
+if [[ "${comment_bracket_ignores[*]}" != "RUSTSEC-2024-0001 RUSTSEC-2024-0002" ]]; then
+  echo "RustSec ignore parser must only close on a TOML array closing line" >&2
+  exit 1
+fi
+
 inline_matches="$(
-  grep -R -n -E -- '--ignore[[:space:]]+RUSTSEC-' \
+  grep -R -n -E -- '--ignore([[:space:]]+|=)RUSTSEC-' \
     .github/workflows \
     .gitea/workflows \
     .github/scripts/fop-local-ci.sh \
@@ -43,8 +63,10 @@ required_call_sites=(
   "scripts/ci/local-security-audit.sh"
 )
 
+wrapper_pattern='(^|[^[:alnum:]_./-])(bash[[:space:]]+)?(\./)?scripts/ci/cargo-audit-with-deny-ignores\.sh([^[:alnum:]_./-]|$)'
+
 for path in "${required_call_sites[@]}"; do
-  if ! grep -qF "scripts/ci/cargo-audit-with-deny-ignores.sh" "${path}"; then
+  if ! grep -Eq -- "${wrapper_pattern}" "${path}"; then
     echo "${path} does not use the centralized cargo-audit RustSec wrapper" >&2
     exit 1
   fi

@@ -32,7 +32,7 @@ mapfile -t rustsec_ignores < <(
         }
         line = substr(line, RSTART + RLENGTH)
       }
-      if ($0 ~ /\]/) {
+      if ($0 ~ /^[[:space:]]*\][[:space:]]*(#.*)?$/) {
         in_ignore = 0
       }
     }
@@ -40,7 +40,9 @@ mapfile -t rustsec_ignores < <(
 )
 
 if [[ "${1:-}" == "--print-ignores" ]]; then
-  printf '%s\n' "${rustsec_ignores[@]}"
+  if [[ "${#rustsec_ignores[@]}" -gt 0 ]]; then
+    printf '%s\n' "${rustsec_ignores[@]}"
+  fi
   exit 0
 fi
 
