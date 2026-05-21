@@ -141,4 +141,9 @@ if rg --pcre2 --ignore-case -n "GDPR compliant|DSGVO compliant|legally compliant
     exit 1
 fi
 
+if rg --pcre2 --ignore-case -n "Guaranteed response times|No Lock-In Guarantee" docs/FEATURES.md; then
+    echo "ERROR: feature docs contain absolute commercial guarantee wording." >&2
+    exit 1
+fi
+
 echo "ParkHub legal-readiness wording contract OK."

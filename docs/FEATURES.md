@@ -707,16 +707,16 @@ The following capabilities are natural candidates for a commercial support or ad
 
 | Add-on concept | Description |
 |----------------|-------------|
-| **Professional support SLA** | Guaranteed response times, escalation path, private Slack channel |
+| **Professional support SLA** | Contracted response targets, escalation path, private Slack channel |
 | **Managed cloud hosting** | Hosted ParkHub instance with SLA, backups, and zero-ops onboarding |
 | **Advanced SAML / IdP provisioning** | SCIM user sync, Just-In-Time provisioning, directory group → role mapping |
 | **Extended audit retention** | Audit log retention beyond the default rolling window |
 | **White-label licensing** | Rebrand the binary for resale under your own product name |
 | **Custom plugin development** | Bespoke integrations built and maintained by the core team |
 
-### No Lock-In Guarantee
+### Portability And No Lock-In
 
-Because ParkHub uses an embedded file-based database (redb), your data is always portable. Export the entire database as a single file, or use the GDPR export endpoints to retrieve structured JSON. Migrating away requires no ETL pipeline.
+Because ParkHub uses an embedded file-based database (redb), your data remains portable by design. Export the entire database as a single file, or use the GDPR export endpoints to retrieve structured JSON. Migrating away requires no ETL pipeline.
 
 ---
 
