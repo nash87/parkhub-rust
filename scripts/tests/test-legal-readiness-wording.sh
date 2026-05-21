@@ -26,6 +26,13 @@ if [[ -f COMPLIANCE-REPORT.md ]]; then
     scan_paths+=(COMPLIANCE-REPORT.md)
 fi
 
+for scan_path in "${scan_paths[@]}"; do
+    if [[ ! -e "$scan_path" ]]; then
+        echo "ERROR: legal-readiness scan path is missing: $scan_path" >&2
+        exit 1
+    fi
+done
+
 pattern="100%[[:space:]-]+GDPR|GDPR[[:space:]-]+compliant|DSGVO[[:space:]-]+konform|Compliance[[:space:]-]+Audited|complies with all GDPR|No DPA needed|no GDPR processor agreement needed|no mandatory data processor agreements|DPIA is NOT required|not required for typical deployments|legally compliant|guarantees compliance|legal compliance is guaranteed|certifies compliance|(GDPR|DSGVO|compliance|legal)[^.\n]{0,40}(certified|guaranteed)|(certified|guaranteed)[^.\n]{0,40}(GDPR|DSGVO|compliance|legal)"
 
 if rg --pcre2 --ignore-case -n "$pattern" "${scan_paths[@]}"; then

@@ -5,7 +5,7 @@ script=".github/scripts/fop-local-ci.sh"
 
 line_of() {
   local pattern="$1"
-  grep -nF "$pattern" "$script" | head -n 1 | cut -d: -f1
+  grep -nF "$pattern" "$script" | head -n 1 | cut -d: -f1 || true
 }
 
 install_line="$(line_of 'run_step "frontend npm install" "cd parkhub-web && npm ci"')"

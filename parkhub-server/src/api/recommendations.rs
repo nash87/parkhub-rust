@@ -358,6 +358,7 @@ pub struct RecommendationQuery {
 
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct SlotRecommendation {
+    #[schema(value_type = String, format = Uuid)]
     pub recommendation_id: Uuid,
     pub slot_id: Uuid,
     pub slot_number: i32,
