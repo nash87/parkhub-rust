@@ -1,7 +1,7 @@
 # ParkHub Feature Showcase
 
 > **Self-hosted parking management for enterprises, universities, and residential complexes.**
-> Single Rust binary · Zero cloud · Zero tracking · 100% GDPR compliant.
+> Single Rust binary · Zero cloud · Zero tracking · GDPR/DSGVO-ready building blocks.
 
 [Live Demo](https://parkhub-rust-demo.onrender.com) · [API Docs](API.md) · [Installation](INSTALLATION.md) · [GDPR Guide](GDPR.md)
 
@@ -224,7 +224,7 @@ Manage EV infrastructure alongside parking:
 
 ### Compliance & Audit
 
-ParkHub is audited for GDPR/DSGVO, UK GDPR, CCPA, nDSG, and TTDSG.
+ParkHub maps product features and operator templates to GDPR/DSGVO, UK GDPR, CCPA, nDSG, and TTDSG readiness requirements. Final compliance depends on the production deployment, enabled modules, processor contracts, and legal review.
 
 | Compliance feature | Details |
 |--------------------|---------|
@@ -233,7 +233,7 @@ ParkHub is audited for GDPR/DSGVO, UK GDPR, CCPA, nDSG, and TTDSG.
 | Art. 30 — Processing record | Auto-generated data map in compliance dashboard |
 | Audit log | Every write operation logged with actor, action, timestamp, and affected resource |
 | Audit export | Filter by action type, user, or date range; export as CSV or PDF |
-| Compliance dashboard | 10 automated GDPR checks with pass/fail status |
+| Compliance dashboard | 10 automated readiness checks with pass/fail status |
 | TOM summary | Technical and organisational measures documented and exportable |
 | DDG §5 Impressum | Operator-customisable legal notice served at `/api/v1/legal/impressum` |
 
@@ -292,7 +292,9 @@ Fifteen safe modules can be flipped at runtime without redeploying:
 
 `announcements` · `widgets` · `themes` · `favorites` · `social` · `lobby-display` · `accessible` · `calendar-drag` · `ev-charging` · `maintenance` · `geofence` · `map` · `graphql` · `api-docs` · `setup-wizard`
 
-Security-sensitive modules (`auth`, `payments`, `rbac`, `webhooks`, `audit-export`, `multi-tenant`, `notifications`) keep `runtime_toggleable = false` and can only change via a rebuild with different Cargo features.
+Runtime-safe modules are limited to low-risk UI, presentation, mapping, documentation, and convenience surfaces whose enablement should not materially change authentication, payment handling, tenant boundaries, outbound data sharing, or legal notices.
+
+Security-sensitive or legally sensitive modules (`auth`, `payments`, `rbac`, `webhooks`, `audit-export`, `multi-tenant`, `notifications`, plus any AI/ML, analytics, third-party integration, or custom plugin that processes personal data) must stay operator-reviewed. Enable them only after configuration review, processor/DPA review where applicable, retention and privacy-notice updates, and audit logging verification. These modules keep `runtime_toggleable = false` unless the operator has a documented approval process and rollback plan.
 
 ### JSON Schema Config Editor
 

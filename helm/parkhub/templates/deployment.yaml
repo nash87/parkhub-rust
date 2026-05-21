@@ -41,7 +41,7 @@ spec:
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           # trivy:ignore:KSV0125 -- ghcr.io is ParkHub's signed public release registry
-          image: "{{ .Values.image.repository }}:{{ include "parkhub.imageTag" . }}"
+          image: {{ include "parkhub.imageRef" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http

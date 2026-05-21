@@ -7,10 +7,9 @@
 # Global build-args (declared before the first FROM so every stage can
 # reference them). WOLFI_BASE defaults to the homelab LAN mirror to preserve
 # the "never pull from Docker Hub" convention for local + gitea-runner
-# builds. GitHub Actions cloud runners pass
-#   --build-arg WOLFI_BASE=cgr.dev/chainguard/wolfi-base:latest
-# to source the same Wolfi base from Chainguard's public registry.
-ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base:latest
+# builds. GitHub Actions cloud runners pass the same digest against
+# cgr.dev/chainguard/wolfi-base so release builds never depend on a mutable tag.
+ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base@sha256:4973aa3c2ccbe13fe2049aab539b0ab342ec584bd5b54a269d55d4891091c639
 
 # ---------------------------------------------------------------------------
 # Stage 1: Frontend build (Astro/Vite)

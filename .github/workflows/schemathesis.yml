@@ -28,11 +28,9 @@ jobs:
     name: Fuzz OpenAPI contract
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    # Soft job — matches parkhub-php advisory posture (schemathesis.yml).
-    # Surfaces contract drift and unexpected 5xx without blocking merges
-    # during the baseline pass. Promote to required once the nightly report
-    # shows a clean baseline.
-    continue-on-error: true
+    # Blocking contract fuzzing for OpenAPI changes. The path filter keeps it
+    # off unrelated PRs, while failures on API surfaces must be fixed.
+    continue-on-error: false
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -100,7 +98,7 @@ jobs:
         run: pip install --disable-pip-version-check 'schemathesis==4.15.2'
 
       - name: Obtain auth token (best-effort)
-        continue-on-error: true
+        continue-on-error: false
         run: |
           token=$(curl -fsS -X POST http://localhost:18282/api/v1/auth/login \
             -H 'Content-Type: application/json' \
@@ -116,7 +114,7 @@ jobs:
           fi
 
       - name: Run schemathesis
-        continue-on-error: true
+        continue-on-error: false
         run: |
           extra_args=()
           if [ -n "${SCHEMATHESIS_AUTH_HEADER:-}" ]; then

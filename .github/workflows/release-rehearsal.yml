@@ -189,7 +189,7 @@ jobs:
           name: parkhub-linux-x64
       - name: Download Linux ARM64 artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        continue-on-error: true
+        continue-on-error: false
         with:
           name: parkhub-linux-arm64
       - name: Generate checksums
