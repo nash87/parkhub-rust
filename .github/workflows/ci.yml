@@ -56,7 +56,7 @@ jobs:
 
       - name: Lint YAML manifests
         run: |
-          python3 -m pip install --user yamllint
+          python3 -m pip install --user yamllint pyyaml
           ~/.local/bin/yamllint -d relaxed .github/workflows docker-compose.yml docker-compose.test.yml render.yaml koyeb.yaml
 
       - name: Validate CI workflow policy
