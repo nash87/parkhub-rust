@@ -32,7 +32,7 @@ jobs:
           # Cloud runners can't reach the homelab LAN mirror; pull the same
           # Wolfi base from Chainguard's public registry. Dockerfile defaults
           # to the LAN mirror for local + gitea-runner builds.
-          WOLFI_BASE: cgr.dev/chainguard/wolfi-base:latest
+          WOLFI_BASE: cgr.dev/chainguard/wolfi-base@sha256:4973aa3c2ccbe13fe2049aab539b0ab342ec584bd5b54a269d55d4891091c639
         run: |
           # Step 2 — set admin password
           echo "PARKHUB_ADMIN_PASSWORD=$(openssl rand -base64 24)" > .env

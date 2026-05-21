@@ -115,7 +115,7 @@ jobs:
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           scan-type: fs
           scan-ref: .
@@ -178,12 +178,11 @@ jobs:
           fi
 
   zizmor:
-    name: Zizmor (GHA SAST, audit-mode)
+    name: Zizmor (GHA SAST)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Audit-mode: surface findings as informational; do NOT fail the gate yet.
-    # Promote findings to errors once the workflow inventory has been triaged.
-    continue-on-error: true
+    # Blocking workflow SAST for mirrored CI.
+    continue-on-error: false
     permissions:
       contents: read   # read-only — zizmor only needs to parse workflow YAMLs
     env:
@@ -205,24 +204,24 @@ jobs:
           zizmor --version
 
       - name: Run zizmor
-        continue-on-error: true
+        continue-on-error: false
         run: |
           set -euo pipefail
           # auditor persona surfaces low-severity findings; --no-online-audits
           # avoids GitHub API rate-limit issues when running from Gitea.
           zizmor --persona=auditor --no-online-audits .github/workflows/ .gitea/workflows/
-      - name: Mark advisory success
-        # Guarantee job conclusion = success regardless of zizmor exit code.
+      - name: Record zizmor completion
+        # Keep a clear log marker while preserving the blocking job result.
         if: always()
-        run: echo "Zizmor advisory scan complete — findings are informational only."
+        run: echo "Zizmor scan complete."
 
   osv-scanner:
     name: OSV-Scanner (supply-chain)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Supply-chain advisory mode: known transitive advisories are documented
-    # in deny.toml; OSV findings are surfaced informationally for now.
-    continue-on-error: true
+    # Blocking supply-chain scan; known transitive advisories are documented in
+    # deny.toml or the OSV config.
+    continue-on-error: false
     permissions:
       contents: read   # read-only — only parses lockfiles
     env:
@@ -250,7 +249,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read   # read-only — Grype scans the filesystem
     env:
@@ -317,7 +316,7 @@ jobs:
 
       - name: Run Trivy image vulnerability + secret scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           image-ref: ${{ env.IMAGE_REF }}
           scanners: vuln,secret
@@ -345,7 +344,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read   # checkout
       packages: read   # pull the published OCI image

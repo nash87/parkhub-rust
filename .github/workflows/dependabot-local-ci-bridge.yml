@@ -84,7 +84,7 @@ jobs:
           tool: cargo-audit
 
       - name: Run cargo audit
-        continue-on-error: true
+        continue-on-error: false
         run: |
           cargo audit \
             --ignore RUSTSEC-2024-0412 \
@@ -110,7 +110,7 @@ jobs:
 
       - name: Audit parkhub-web npm dependencies
         run: npm audit --prefix parkhub-web --package-lock-only --omit=dev --audit-level=high
-        continue-on-error: true
+        continue-on-error: false
 
       # --- Secret scan (hard gate: mirrors security.yml: secret-scan) ---
       - name: Install gitleaks
@@ -144,7 +144,7 @@ jobs:
           osv-scanner --version
 
       - name: OSV-Scanner (Cargo.lock + parkhub-web npm lockfile)
-        continue-on-error: true
+        continue-on-error: false
         run: |
           set -euo pipefail
           osv-scanner scan source \
@@ -155,7 +155,7 @@ jobs:
 
       # --- Typos (advisory: mirrors security.yml: typos) ---
       - name: Run typos
-        continue-on-error: true
+        continue-on-error: false
         uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
 
       # --- Post fop/local-ci/pr commit status ---

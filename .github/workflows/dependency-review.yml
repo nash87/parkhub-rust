@@ -24,8 +24,9 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
-        # Advisory until GitHub Dependency Graph is consistently available for this repo.
-        continue-on-error: true
+        # Blocking dependency and license review when GitHub Dependency Graph is
+        # available for the repo.
+        continue-on-error: false
         with:
           fail-on-severity: high
           # Reject (SPDX identifiers — verified against https://spdx.org/licenses/):
@@ -35,13 +36,13 @@ jobs:
           #   model used by Sentry, MariaDB, etc. NOT the same as `BSL-1.0`
           #   (Boost Software License, which is permissive — DON'T add it).
           # - SSPL-1.0: Server Side Public License (Elastic, MongoDB current).
-          # - FSL-1.0-ALv2/-MIT, FSL-1.1-MIT: Functional Source License family
-          #   (Sentry, BoxyHQ, Discord) — Apache/MIT future-grant model that
-          #   today behaves as anti-cloud.
+          # - Functional Source License variants are still banned by project
+          #   policy, but GitHub's dependency-review-action currently rejects
+          #   those license identifiers in deny-licenses. Keep them out of this
+          #   action input and handle any FSL introduction during legal review.
           # Project policy is "MIT / Apache-2.0 / BSD / ISC only"; this list is
-          # drift protection for new deps (gate is advisory via continue-on-error
-          # until GitHub Dependency Graph is enabled — same as before).
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0, FSL-1.0-ALv2, FSL-1.0-MIT, FSL-1.1-MIT
+          # drift protection for new deps.
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0
           # Slint ships under a tri-license (GPL-3.0 OR Royalty-free OR Commercial).
           # ParkHub uses the non-GPL arm; deny.toml records the same exception.
           allow-dependencies-licenses: >-

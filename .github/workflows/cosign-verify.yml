@@ -5,9 +5,9 @@ name: Cosign Verify
 # `.github/workflows/docker-publish.yml`. Runs on PR + push so
 # regressions in the supply-chain wiring surface before tag time.
 #
-# First-PR caveat: when no `:latest` exists yet, the verify steps log a
-# notice and exit 0 — they only fail if an image exists but lacks a
-# signature/attestation matching the expected identity.
+# First-PR caveat: when no `:latest` exists yet, the resolver logs a notice and
+# exits 0. Once an image exists, both signature and SBOM attestation verification
+# are required and fail closed.
 
 on:
   pull_request:
@@ -95,15 +95,9 @@ jobs:
             --certificate-oidc-issuer "${ISSUER}" \
             "${repo}@${DIGEST}"
 
-      - name: Verify SPDX SBOM attestation (keyless, advisory until first signed)
-        # Advisory: the SBOM attestation step in docker-publish.yml was only
-        # added in this PR — the existing :latest image was published before
-        # SBOM signing was wired, so the attestation won't exist on the
-        # current image. Once a fresh image is built post-merge with SBOM
-        # signing enabled, this step will start passing and can be promoted
-        # to required (drop continue-on-error).
+      - name: Verify SPDX SBOM attestation (keyless, required)
         if: steps.digest.outputs.skip != 'true'
-        continue-on-error: true
+        continue-on-error: false
         env:
           IMAGE: ${{ env.IMAGE_REF }}
           DIGEST: ${{ steps.digest.outputs.digest }}
@@ -112,10 +106,8 @@ jobs:
         run: |
           set -euo pipefail
           repo="${IMAGE%:*}"
-          if ! cosign verify-attestation \
+          cosign verify-attestation \
             --type spdxjson \
             --certificate-identity-regexp "${IDENTITY_REGEX}" \
             --certificate-oidc-issuer "${ISSUER}" \
-            "${repo}@${DIGEST}" 2>&1; then
-            echo "::notice::SBOM attestation not yet present (advisory). First image built after merge will produce it."
-          fi
+            "${repo}@${DIGEST}"
