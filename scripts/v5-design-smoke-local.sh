@@ -45,15 +45,16 @@ SERVER_LOG="${SERVER_LOG:-/tmp/parkhub-v5-design-smoke-server.log}"
 SERVER_DATA_DIR="${SERVER_DATA_DIR:-$(mktemp -d "${TMPDIR:-/var/tmp/florian-offload/tmp}/parkhub-v5-design-smoke.${SERVER_PORT}.XXXXXX")}"
 SERVER_TARGET_DIR="${SERVER_DATA_DIR}/cargo-target"
 export CI="${CI:-true}"
+export CARGO_TARGET_DIR="${SERVER_TARGET_DIR}"
 
 build_server() {
   if [[ "${FOP_LOCAL_CI_DIRECT:-0}" != "1" ]] && command -v fop >/dev/null 2>&1; then
-    CARGO_TARGET_DIR="${SERVER_TARGET_DIR}" fop --compact build --backend local . --preset custom -- cargo build --locked --release -p parkhub-server \
+    fop --compact build --backend local . --preset custom -- cargo build --locked --release -p parkhub-server \
       --no-default-features --features 'full,headless,e2e-bypass'
     return
   fi
 
-  CARGO_TARGET_DIR="${SERVER_TARGET_DIR}" cargo build --locked --release -p parkhub-server \
+  cargo build --locked --release -p parkhub-server \
     --no-default-features --features 'full,headless,e2e-bypass'
 }
 
