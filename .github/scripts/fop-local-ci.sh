@@ -485,6 +485,8 @@ post_commit_status "pending" "fop local ${profile} running"
 # ─── Stage 1: working tree hygiene (always) ─────────────────────────────────
 run_direct "working tree whitespace" "git diff --check"
 run_direct "ui polish contract" "scripts/tests/test-ui-polish-contract.sh"
+run_direct "legal-readiness wording contract" "scripts/tests/test-legal-readiness-wording.sh"
+run_direct "legal/module OpenAPI contract" "scripts/tests/test-legal-openapi-contract.sh"
 
 # ─── Stage 2: workflow + GHA security (when workflows touched) ──────────────
 if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; then
