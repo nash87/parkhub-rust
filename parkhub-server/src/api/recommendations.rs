@@ -133,7 +133,7 @@ impl Default for RecommendationEngineConfig {
 }
 
 impl RecommendationEngineConfig {
-    async fn load(db: &crate::db::Database) -> Self {
+    pub(crate) async fn load(db: &crate::db::Database) -> Self {
         let mut cfg = Self::default();
         cfg.weights.frequency =
             read_module_f64(db, "weight_frequency", cfg.weights.frequency, 0.0, 100.0).await;

@@ -14,7 +14,10 @@ use uuid::Uuid;
 
 use parkhub_common::ApiResponse;
 
-use super::{AuthUser, SharedState, check_admin};
+use super::{
+    AuthUser, SharedState, check_admin,
+    recommendations::{RecommendationAllocationConfig, RecommendationEngineConfig},
+};
 
 const DEFAULT_MAX_OPTIONS: usize = 256;
 const DEFAULT_MAX_SEARCH_NODES: usize = 10_000;
@@ -158,20 +161,19 @@ pub async fn solve_exact_cover_allocation(
     Extension(auth_user): Extension<AuthUser>,
     Json(request): Json<ExactCoverAllocationRequest>,
 ) -> (StatusCode, Json<ApiResponse<ExactCoverAllocationResponse>>) {
-    let state_guard = state.read().await;
-    if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
-    }
-    drop(state_guard);
+    let engine = {
+        let state_guard = state.read().await;
+        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
+            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+        }
+        RecommendationEngineConfig::load(&state_guard.db).await
+    };
 
-    let limits = request
-        .limits
-        .unwrap_or_default()
-        .bounded(DEFAULT_MAX_OPTIONS, DEFAULT_MAX_SEARCH_NODES);
+    let limits = effective_limits(request.limits, &engine.allocation);
     let result = solve_exact_cover_v1(&request.required_constraints, &request.options, limits);
     let allocation_trace_id = Uuid::new_v4();
 
-    {
+    let audit_result = {
         let state_guard = state.read().await;
         audit_exact_cover_allocation(
             &state_guard,
@@ -181,7 +183,21 @@ pub async fn solve_exact_cover_allocation(
             limits,
             &result,
         )
-        .await;
+        .await
+    };
+    if let Err(err) = audit_result {
+        tracing::error!(
+            %allocation_trace_id,
+            error = ?err,
+            "failed to persist exact-cover allocation audit trace"
+        );
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "AUDIT_TRACE_PERSIST_FAILED",
+                "Failed to persist exact-cover allocation audit trace",
+            )),
+        );
     }
 
     (
@@ -197,6 +213,21 @@ pub async fn solve_exact_cover_allocation(
             },
         })),
     )
+}
+
+fn effective_limits(
+    request_limits: Option<ExactCoverLimits>,
+    allocation: &RecommendationAllocationConfig,
+) -> ExactCoverLimits {
+    let configured = ExactCoverLimits {
+        max_options: allocation.exact_cover_max_options,
+        max_search_nodes: allocation.exact_cover_max_search_nodes,
+    }
+    .bounded(DEFAULT_MAX_OPTIONS, DEFAULT_MAX_SEARCH_NODES);
+
+    request_limits
+        .unwrap_or(configured)
+        .bounded(configured.max_options, configured.max_search_nodes)
 }
 
 impl ExactCoverLimits {
@@ -215,7 +246,7 @@ async fn audit_exact_cover_allocation(
     request: &ExactCoverAllocationRequest,
     limits: ExactCoverLimits,
     result: &ExactCoverResult,
-) {
+) -> anyhow::Result<()> {
     let tenant_id = super::resolve_tenant_id(app_state, auth_user.user_id).await;
     let selected = result
         .selected_option_ids
@@ -274,13 +305,7 @@ async fn audit_exact_cover_allocation(
         ip_address: None,
     };
 
-    if let Err(err) = app_state.db.save_audit_log(&entry).await {
-        tracing::warn!(
-            %trace_id,
-            error = ?err,
-            "failed to persist exact-cover allocation audit trace"
-        );
-    }
+    app_state.db.save_audit_log(&entry).await
 }
 
 fn exact_cover_config_hash(limits: ExactCoverLimits) -> String {
@@ -571,6 +596,49 @@ mod tests {
     }
 
     #[test]
+    fn exact_cover_limits_respect_module_caps_and_request_overrides() {
+        let allocation = RecommendationAllocationConfig {
+            strategy: "exact_cover_v1".to_string(),
+            exact_cover_max_options: 8,
+            exact_cover_max_search_nodes: 500,
+        };
+
+        assert_eq!(
+            effective_limits(None, &allocation),
+            ExactCoverLimits {
+                max_options: 8,
+                max_search_nodes: 500,
+            }
+        );
+        assert_eq!(
+            effective_limits(
+                Some(ExactCoverLimits {
+                    max_options: 99,
+                    max_search_nodes: 10_000,
+                }),
+                &allocation,
+            ),
+            ExactCoverLimits {
+                max_options: 8,
+                max_search_nodes: 500,
+            }
+        );
+        assert_eq!(
+            effective_limits(
+                Some(ExactCoverLimits {
+                    max_options: 3,
+                    max_search_nodes: 50,
+                }),
+                &allocation,
+            ),
+            ExactCoverLimits {
+                max_options: 3,
+                max_search_nodes: 50,
+            }
+        );
+    }
+
+    #[test]
     fn exact_cover_v1_shared_fixtures_match_contract() {
         let fixtures = [
             include_str!(
@@ -603,7 +671,7 @@ mod tests {
                 ExactCoverLimits::default(),
             );
 
-            assert_eq!(status_name(result.status), fixture.expected.status);
+            assert_eq!(super::status_name(result.status), fixture.expected.status);
             assert_eq!(
                 result.selected_option_ids,
                 fixture.expected.selected_option_ids
@@ -612,15 +680,6 @@ mod tests {
                 result.covered_constraints,
                 fixture.expected.covered_constraints
             );
-        }
-    }
-
-    fn status_name(status: ExactCoverStatus) -> &'static str {
-        match status {
-            ExactCoverStatus::Solved => "solved",
-            ExactCoverStatus::FallbackNoSolution => "fallback_no_solution",
-            ExactCoverStatus::FallbackInputLimited => "fallback_input_limited",
-            ExactCoverStatus::FallbackSearchLimited => "fallback_search_limited",
         }
     }
 }
