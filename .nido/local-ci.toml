@@ -1,0 +1,35 @@
+# ParkHub Rust local CI entrypoints for Nido-first tabs.
+#
+# `nido ci run --gate legal-docs` is the cheap author-time evidence gate.
+# `nido ci run --gate pr` delegates to the repository's existing SHA-keyed
+# fop/Nido local CI attestation script and must pass before pushing/releasing.
+
+[[gates]]
+name = "legal-docs"
+
+[[gates.steps]]
+name = "legal-readiness-wording"
+command = "scripts/tests/test-legal-readiness-wording.sh"
+timeout_secs = 60
+allow_failure = false
+
+[[gates.steps]]
+name = "legal-module-openapi-contract"
+command = "scripts/tests/test-legal-openapi-contract.sh"
+timeout_secs = 60
+allow_failure = false
+
+[[gates.steps]]
+name = "working-tree-whitespace"
+command = "git diff --check"
+timeout_secs = 60
+allow_failure = false
+
+[[gates]]
+name = "pr"
+
+[[gates.steps]]
+name = "parkhub-pr-local-ci"
+command = "NO_COLOR=true .github/scripts/fop-local-ci.sh --profile pr --post-status"
+timeout_secs = 7200
+allow_failure = false

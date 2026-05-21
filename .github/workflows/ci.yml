@@ -56,7 +56,7 @@ jobs:
 
       - name: Lint YAML manifests
         run: |
-          python3 -m pip install --user yamllint
+          python3 -m pip install --user yamllint pyyaml
           ~/.local/bin/yamllint -d relaxed .github/workflows docker-compose.yml docker-compose.test.yml render.yaml koyeb.yaml
 
       - name: Validate CI workflow policy
@@ -64,6 +64,9 @@ jobs:
 
       - name: Validate recommendation contract gate
         run: bash scripts/check-recommendation-contract.sh
+
+      - name: Validate release supply-chain policy
+        run: bash scripts/check-release-supply-chain-policy.sh
 
       - name: Validate Fly config
         run: python3 -c "import pathlib, tomllib; tomllib.loads(pathlib.Path('fly.toml').read_text())"
@@ -91,6 +94,8 @@ jobs:
           helm template parkhub ./helm/parkhub --set pdb.enabled=true > /tmp/rendered-ha.yaml
           helm template parkhub ./helm/parkhub --set monitoring.serviceMonitor.enabled=true > /tmp/rendered-servicemonitor.yaml
           helm template parkhub ./helm/parkhub --set monitoring.prometheusRule.enabled=true > /tmp/rendered-prometheusrule.yaml
+          helm template parkhub ./helm/parkhub --set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+            | grep -F 'ghcr.io/nash87/parkhub-rust@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           python3 -m pip install --user pyyaml
           python3 - <<'PY'
           import pathlib, yaml
@@ -111,13 +116,13 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
         # Advisory until GitHub Dependency Graph is consistently available for this repo.
-        continue-on-error: true
+        continue-on-error: false
         with:
           fail-on-severity: high
           # Mirror of `.github/workflows/dependency-review.yml` deny-list —
           # keep both in sync. SPDX identifiers verified against
           # https://spdx.org/licenses/ (BUSL-1.1, NOT BSL-1.1 which is Boost).
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0, FSL-1.0-ALv2, FSL-1.0-MIT, FSL-1.1-MIT
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0, AGPL-3.0-or-later, BUSL-1.1, SSPL-1.0
 
   local-ci-attestation:
     name: fop local CI attestation

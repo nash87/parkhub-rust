@@ -37,7 +37,7 @@ jobs:
 
       - name: Run Scorecard
         uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
-        continue-on-error: true
+        continue-on-error: false
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
@@ -59,4 +59,4 @@ jobs:
           else
             echo "Scorecard CLI not available in PATH; SARIF artifact uploaded above."
           fi
-        continue-on-error: true
+        continue-on-error: false

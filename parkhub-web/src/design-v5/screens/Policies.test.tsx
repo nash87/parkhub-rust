@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mockList = vi.fn();
@@ -61,12 +62,15 @@ describe('PoliciesV5', () => {
   });
 
   it('save mutation fires with updated body', async () => {
+    const user = userEvent.setup();
     mockList.mockResolvedValue({ success: true, data: [P1] });
     mockUpdate.mockResolvedValue({ success: true, data: { ...P1, body: 'Neu' } });
     renderScreen();
     await waitFor(() => expect(screen.getByTestId('policies-editor')).toBeInTheDocument());
-    fireEvent.change(screen.getByTestId('policies-editor'), { target: { value: 'Neu' } });
-    fireEvent.click(screen.getByTestId('policies-save'));
+    const editor = screen.getByTestId('policies-editor');
+    fireEvent.change(editor, { target: { value: 'Neu' } });
+    await waitFor(() => expect(screen.getByTestId('policies-save')).toBeEnabled());
+    await user.click(screen.getByTestId('policies-save'));
     await waitFor(() => {
       expect(mockUpdate).toHaveBeenCalledWith('p1', 'Neu');
       expect(mockToast).toHaveBeenCalledWith('Richtlinie gespeichert', 'success');
@@ -74,12 +78,15 @@ describe('PoliciesV5', () => {
   });
 
   it('save error surfaces via toast', async () => {
+    const user = userEvent.setup();
     mockList.mockResolvedValue({ success: true, data: [P1] });
     mockUpdate.mockResolvedValue({ success: false, data: null, error: { code: 'X', message: 'denied' } });
     renderScreen();
     await waitFor(() => expect(screen.getByTestId('policies-editor')).toBeInTheDocument());
-    fireEvent.change(screen.getByTestId('policies-editor'), { target: { value: 'Neu' } });
-    fireEvent.click(screen.getByTestId('policies-save'));
+    const editor = screen.getByTestId('policies-editor');
+    fireEvent.change(editor, { target: { value: 'Neu' } });
+    await waitFor(() => expect(screen.getByTestId('policies-save')).toBeEnabled());
+    await user.click(screen.getByTestId('policies-save'));
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('denied', 'error'));
   });
 

@@ -1,12 +1,15 @@
 # Legal Compliance Matrix — ParkHub Rust
 
-> **Version:** 3.3.0 | **Last updated:** 2026-04-12
+> **Version:** 3.3.0 | **Last updated:** 2026-05-21
 
-This document maps ParkHub Rust features to legal requirements across German, EU, and
-international data protection regulations. It is intended for operators evaluating ParkHub
-for deployment in regulated environments.
+This document maps ParkHub Rust features, templates, and operator tasks to legal-readiness
+topics across German, EU, and international data protection regulations. It is intended for
+operators evaluating ParkHub for deployment in regulated environments.
 
-**This document is informational and does not constitute legal advice.**
+**This document is informational and does not constitute legal advice. Shipped templates
+and product features do not create legal compliance by themselves; final production use
+requires attorney review, citation checks, and deployment-specific configuration
+verification.**
 
 ---
 
@@ -26,9 +29,10 @@ for deployment in regulated environments.
 
 ### DSGVO (Datenschutz-Grundverordnung)
 
-The German implementation of the EU GDPR. ParkHub's self-hosted architecture means the
-operator is the sole data controller with no mandatory data processor agreements for
-core functionality.
+The German implementation of the EU GDPR. ParkHub's self-hosted architecture can avoid a
+ParkHub platform processor relationship when the operator runs the core system on
+infrastructure they control. External hosting, SMTP, payment, analytics, AI, support, or
+managed operations still require the operator's own AVV/DPA and transfer review.
 
 | Requirement | How ParkHub Complies | Module / Feature |
 |-------------|---------------------|------------------|
@@ -37,27 +41,27 @@ core functionality.
 | Art. 7 — Conditions for consent | Push notifications require explicit browser consent; all other processing based on contract/legal obligation | Web Push module |
 | Art. 12 — Transparent communication | Privacy notice template with plain-language explanations | `legal/datenschutz-template.md` |
 | Art. 13/14 — Information obligations | Ready-to-use Datenschutzerklärung template | [PRIVACY-TEMPLATE.md](PRIVACY-TEMPLATE.md) |
-| Art. 15 — Right of access | `GET /api/v1/user/export` — full data export | GDPR module |
+| Art. 15 — Right of access | `GET /api/v1/users/me/export` — full data export | GDPR module |
 | Art. 16 — Right to rectification | Profile editing via Settings page and API | Core |
 | Art. 17 — Right to erasure | `DELETE /api/v1/users/me/delete` (anonymization with booking retention) | GDPR module |
 | Art. 18 — Right to restriction | Admin can deactivate accounts | Admin module |
-| Art. 20 — Data portability | JSON export via `/api/v1/user/export`, CSV via admin reports | GDPR + Data Export modules |
+| Art. 20 — Data portability | JSON export via `/api/v1/users/me/export`, CSV via admin reports | GDPR + Data Export modules |
 | Art. 21 — Right to object | Notification preferences toggle, contact form for objections | Notifications module |
-| Art. 25 — Privacy by design | Self-hosted = no third-party processors; only required fields collected | Architecture |
-| Art. 28 — Processor agreements | No DPA needed for core (on-premise); AVV template for SMTP | `legal/avv-template.md` |
+| Art. 25 — Privacy by design | Self-hosted design, data minimization, and configurable retention support privacy-by-design obligations | Architecture |
+| Art. 28 — Processor agreements | Core on-premise operation may avoid a ParkHub platform DPA; external processors still need operator review and AVV/DPA coverage | `legal/avv-template.md` |
 | Art. 30 — Records of processing | VVT template with all processing activities | `legal/vvt-template.md` |
 | Art. 32 — Security of processing | See [SECURITY.md](SECURITY.md) — encryption, access control, audit logging | Core |
 | Art. 33/34 — Breach notification | Breach notification template in [GDPR.md](GDPR.md); audit log for forensics | Core |
-| Art. 35 — DPIA | Guidance in GDPR.md; not required for typical deployments | Documentation |
+| Art. 35 — DPIA | Guidance in GDPR.md; operator must assess whether a DPIA is required for the deployment | Documentation |
 | Art. 37 — DPO appointment | Guidance provided; operator responsibility | Documentation |
 
 ### TTDSG (Telekommunikation-Telemedien-Datenschutz-Gesetz)
 
 | Requirement | How ParkHub Complies | Module / Feature |
 |-------------|---------------------|------------------|
-| §25 Abs. 1 — Consent for non-essential storage | Not applicable — ParkHub uses no cookies and no non-essential localStorage | Core |
-| §25 Abs. 2 Nr. 2 — Technically necessary exemption | All localStorage entries (token, theme, features, language, hints) qualify as technically necessary | Core |
-| §25 — Cookie consent banner | **Not required** — no tracking cookies, no analytics, no advertising | Architecture |
+| §25 Abs. 1 — Consent for non-essential storage | Core runtime avoids tracking cookies; operators must reassess if they add analytics, ads, or non-essential storage | Core |
+| §25 Abs. 2 Nr. 2 — Technically necessary exemption | Local storage entries are intended for authentication, theme, feature, language, and onboarding behavior; verify necessity for the deployed configuration | Core |
+| §25 — Cookie consent banner | Usually avoidable for the core no-tracking deployment; verify after enabling integrations or custom scripts | Architecture |
 
 ### DDG (Digitale-Dienste-Gesetz)
 
@@ -98,8 +102,9 @@ Relevant for operators using ParkHub for commercial parking with revenue trackin
 
 ### GDPR (General Data Protection Regulation)
 
-Identical to DSGVO coverage above. ParkHub complies with all GDPR requirements through
-its self-hosted architecture and built-in privacy features.
+Identical to DSGVO coverage above. ParkHub provides self-hosted architecture, privacy
+features, and templates that can support GDPR readiness when the operator completes the
+required notices, records, contracts, retention settings, and review.
 
 ### ePrivacy Directive (2002/58/EC)
 
@@ -141,7 +146,7 @@ The UK retained the GDPR post-Brexit as the UK GDPR, alongside the Data Protecti
 |-------------|---------------------|-------|
 | UK GDPR — all articles | Substantively identical to EU GDPR | Same features apply |
 | UK DPA 2018 | No special category data processed | No additional requirements |
-| PECR (Privacy and Electronic Communications Regulations) | Same analysis as TTDSG — technically necessary storage exempt | No consent banner needed |
+| PECR (Privacy and Electronic Communications Regulations) | Similar analysis to TTDSG for core technical storage; operator must verify deployed storage and communications | Cookie/banner decision is deployment-specific |
 | Companies Act 2006 s.82 | Impressum template covers required business identification | Operator adapts template |
 
 **Note for UK operators:** The Impressum concept does not exist in UK law, but business
@@ -238,8 +243,10 @@ All retention periods are configurable by the operator. The following are recomm
 
 ### Self-Hosted Deployment (Default)
 
-**No sub-processors.** All data is processed exclusively on the operator's infrastructure.
-No Auftragsverarbeitungsvertrag (AVV / DPA) is required for the core system.
+The core self-hosted runtime does not bundle a ParkHub-operated sub-processor. If all data
+is processed exclusively on infrastructure controlled by the operator, no ParkHub platform
+AVV/DPA is usually involved. Hosting providers, SMTP, payment, analytics, AI services,
+managed support, backups, or custom integrations may still be sub-processors.
 
 ### Optional Sub-Processors (if enabled by operator)
 
@@ -263,12 +270,24 @@ a sub-processor:
 
 ---
 
-## Compliance Checklist
+## Operator Legal Readiness Checklist
 
-### Pre-Launch (All Deployments)
+This checklist separates shipped ParkHub materials from production obligations. It is not
+legal advice; complete it with counsel for the jurisdiction, sector, and deployment model.
 
-- [ ] Privacy notice published (adapted from template)
-- [ ] Impressum published (German operators)
+### Shipped Templates / Features To Adapt
+
+- [ ] Privacy notice / Datenschutzerklärung adapted from template and published
+- [ ] Impressum adapted from template and published where required
+- [ ] AVV/DPA template reviewed for external processors and managed operations
+- [ ] VVT / Art. 30 records created from the processing-activity template
+- [ ] Cookie/localStorage policy adapted to the enabled modules and scripts
+- [ ] BFSG/EAA accessibility statement adapted if the deployment is in scope
+- [ ] EU AI Act transparency notice adapted if AI/ML features are enabled
+- [ ] AGB and withdrawal templates adapted if B2C paid services are offered
+
+### Production Configuration Obligations
+
 - [ ] HTTPS configured with TLS 1.2+
 - [ ] `RUST_LOG=warn` in production
 - [ ] AES-256-GCM database encryption enabled
@@ -277,6 +296,9 @@ a sub-processor:
 - [ ] Data export endpoint tested
 - [ ] Account deletion/anonymization tested
 - [ ] Backup strategy documented
+- [ ] Retention settings configured for account, booking, payment, audit, login, and backup data
+- [ ] Processor agreements and transfer safeguards documented for hosting, SMTP, payment, analytics, AI, backup, and support providers
+- [ ] Attorney review completed for notices, contracts, citations, consent decisions, retention periods, and jurisdiction-specific obligations
 
 ### German Law Specific
 
@@ -289,15 +311,25 @@ a sub-processor:
 - [ ] DSB appointment evaluated (§38 BDSG)
 - [ ] §147 AO retention configured for booking/payment records
 
+### Module / Plugin Enablement Policy
+
+- [ ] Runtime-safe modules limited to low-risk UI, presentation, mapping, docs, and convenience features
+- [ ] Security-sensitive modules reviewed before enablement: `auth`, `payments`, `rbac`, `webhooks`, `audit-export`, `multi-tenant`, `notifications`
+- [ ] Legally sensitive modules reviewed before enablement: AI/ML, analytics, third-party integrations, custom plugins, payments, messaging, and any module processing new personal-data categories
+- [ ] Audit logging verified for every module toggle, config write, webhook, export, admin change, and custom plugin action
+- [ ] Privacy notice, VVT, retention schedule, and processor list updated before enabling a legally sensitive module
+- [ ] Rollback plan documented before enabling a module that changes authentication, payments, tenant boundaries, outbound data sharing, or automated decision support
+
 ### EU / International
 
 - [ ] Data subject rights accessible (export, deletion, rectification)
 - [ ] Breach notification process documented
-- [ ] Cookie/localStorage policy documented (even if no banner needed)
+- [ ] Cookie/localStorage and consent decision documented for the actual deployment
 - [ ] Third-party sub-processors listed in privacy notice
 - [ ] International transfer safeguards (SCCs) for non-EU sub-processors
 - [ ] NIS2 self-assessment completed (if in scope)
 - [ ] BFSG/EAA accessibility assessment (if B2C with >10 employees)
+- [ ] AI Act transparency and human-review flow documented if AI/ML features are enabled
 
 ### CCPA Specific (California)
 

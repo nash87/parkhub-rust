@@ -18,8 +18,9 @@ test.describe('Admin Analytics', () => {
   test('navigate to admin analytics page', async ({ page }) => {
     await page.goto('/admin/analytics');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: 'Analytics' })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('Comprehensive parking analytics and trends')).toBeVisible();
+    const analyticsPage = page.getByTestId('admin-analytics');
+    await expect(analyticsPage.getByRole('heading', { name: 'Analytics' })).toBeVisible({ timeout: 15_000 });
+    await expect(analyticsPage.getByText('Comprehensive parking analytics and trends')).toBeVisible();
   });
 
   test('analytics page shows time range buttons', async ({ page }) => {

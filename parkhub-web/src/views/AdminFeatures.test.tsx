@@ -81,7 +81,7 @@ vi.mock('react-i18next', () => ({
         'features.saveChanges': 'Save Changes',
         'features.saved': 'Saved!',
         'features.compliance.title': 'Compliance',
-        'features.compliance.gdpr': 'GDPR compliant',
+        'features.compliance.gdpr': 'GDPR Art. 15 Export',
         'features.compliance.audit': 'Audit trail',
         'features.compliance.encryption': 'End-to-end encryption',
         'common.info': 'More info',
@@ -133,7 +133,7 @@ describe('AdminFeaturesPage', () => {
   it('renders compliance section', () => {
     render(<AdminFeaturesPage />);
     expect(screen.getByText('Compliance')).toBeInTheDocument();
-    expect(screen.getByText('GDPR compliant')).toBeInTheDocument();
+    expect(screen.getByText('GDPR Art. 15 Export')).toBeInTheDocument();
     expect(screen.getByText('Audit trail')).toBeInTheDocument();
     expect(screen.getByText('End-to-end encryption')).toBeInTheDocument();
   });

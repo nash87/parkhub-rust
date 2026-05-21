@@ -153,10 +153,14 @@ use, the recommendation surface must keep:
 - legal review: public ToS/privacy/profiling wording must go through `fop legal`
   plus attorney review before being treated as customer-ready.
 
-`fop legal catalog` currently marks the local Claude-for-Legal catalog as
-reference-only with attorney review and human signoff required, and execution
-disabled. ParkHub mirrors that boundary in recommendation stats so operators can
-see that compliance support is present but not a substitute for counsel.
+The Nido/fop legal catalog service (current CLI entrypoint:
+`fop legal catalog --json`; `nido legal` is not exposed by the installed Nido
+CLI yet) currently marks the local Claude-for-Legal catalog as reference-only.
+Its release evidence fields include `source_revision`, `generated_at`,
+`requires_attorney_review=true`, `requires_human_signoff=true`,
+`execution_allowed=false`, and `safety_boundary`. ParkHub mirrors that boundary
+in recommendation stats so operators can see that compliance support is present
+but not a substitute for counsel.
 
 2026 compliance posture gates before business rollout:
 
