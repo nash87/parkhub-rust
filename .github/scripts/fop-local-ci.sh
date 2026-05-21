@@ -503,6 +503,7 @@ run_direct "ui polish contract" "scripts/tests/test-ui-polish-contract.sh"
 run_direct "recommendation contract gate" "bash scripts/check-recommendation-contract.sh"
 run_direct "legal-readiness wording contract" "scripts/tests/test-legal-readiness-wording.sh"
 run_direct "legal/module OpenAPI contract" "scripts/tests/test-legal-openapi-contract.sh"
+run_direct "local CI frontend dependency contract" "scripts/tests/test-fop-local-ci-frontend-install.sh"
 
 # ─── Stage 2: workflow + GHA security (when workflows touched) ──────────────
 if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; then
@@ -565,6 +566,7 @@ fi
 
 # ─── Stage 4: Frontend (skip if parkhub-web/ untouched) ──────────────────────
 if (( diff_touch_frontend )); then
+  run_step "frontend npm install" "cd parkhub-web && npm ci"
   ensure_astro_types
   run_step "frontend typecheck" "cd parkhub-web && ./node_modules/.bin/tsc --noEmit"
   run_step "frontend test and build" "cd parkhub-web && CI=true npm test && CI=true npm run build"
