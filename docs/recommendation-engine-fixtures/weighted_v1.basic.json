@@ -1,0 +1,80 @@
+{
+  "schema_version": "parkhub.recommendation.fixture.v1",
+  "algorithm": "weighted_v1",
+  "weights": {
+    "frequency": 40,
+    "preferred_lot": 20,
+    "availability": 30,
+    "price": 20,
+    "distance": 10,
+    "accessibility_bonus": 0,
+    "feature_bonus": 2
+  },
+  "max_results": 5,
+  "price_normalization": {
+    "max_candidate_hourly_rate": 8
+  },
+  "history": {
+    "slot_usage": {
+      "slot-usual": 3
+    },
+    "lot_usage": {
+      "lot-a": 3
+    }
+  },
+  "candidate_lots": [
+    {
+      "id": "lot-a",
+      "hourly_rate": 2,
+      "slots": [
+        {
+          "id": "slot-usual",
+          "slot_number": 1,
+          "status": "available",
+          "is_accessible": true,
+          "features": ["covered"]
+        },
+        {
+          "id": "slot-preferred-lot",
+          "slot_number": 5,
+          "status": "available",
+          "is_accessible": false,
+          "features": []
+        }
+      ]
+    },
+    {
+      "id": "lot-b",
+      "hourly_rate": 8,
+      "slots": [
+        {
+          "id": "slot-standard",
+          "slot_number": 2,
+          "status": "available",
+          "is_accessible": false,
+          "features": []
+        }
+      ]
+    }
+  ],
+  "expected_ranked_slots": [
+    {
+      "slot_id": "slot-usual",
+      "score": 69,
+      "badges": ["your_usual_spot", "available_now", "best_price", "closest_entrance", "accessible"],
+      "reasons": ["Used 3 times before", "Great price", "Near entrance", "Accessible", "Features: Covered"]
+    },
+    {
+      "slot_id": "slot-preferred-lot",
+      "score": 53,
+      "badges": ["preferred_lot", "available_now", "best_price"],
+      "reasons": ["In your preferred lot (used 3 times)", "Great price"]
+    },
+    {
+      "slot_id": "slot-standard",
+      "score": 35,
+      "badges": ["available_now", "closest_entrance"],
+      "reasons": ["Available now", "Near entrance"]
+    }
+  ]
+}

@@ -8,7 +8,7 @@
 
 use super::schemas::{
     MOD_ANNOUNCEMENTS_SCHEMA, MOD_EMAIL_TEMPLATES_SCHEMA, MOD_NOTIFICATIONS_SCHEMA,
-    MOD_THEMES_SCHEMA, MOD_WIDGETS_SCHEMA,
+    MOD_RECOMMENDATIONS_SCHEMA, MOD_THEMES_SCHEMA, MOD_WIDGETS_SCHEMA,
 };
 use super::{ConfigSchema, ModuleCategory, ModuleInfo};
 
@@ -887,13 +887,29 @@ pub(super) fn registry_defs() -> Vec<ModuleDef> {
         ModuleDef {
             name: "recommendations",
             category: ModuleCategory::Experimental,
-            description: "Slot recommendations based on user history.",
+            description: "Configurable weighted slot recommendation engine.",
             enabled: cfg!(feature = "mod-recommendations"),
             runtime_toggleable: false,
-            config_keys: &[],
+            config_keys: &[
+                "algorithm",
+                "pipeline_endpoint",
+                "pipeline_name",
+                "pipeline_timeout_ms",
+                "pipeline_fallback_enabled",
+                "weight_frequency",
+                "weight_preferred_lot",
+                "weight_availability",
+                "weight_price",
+                "weight_distance",
+                "weight_accessibility_bonus",
+                "weight_feature_bonus",
+                "max_results",
+                "explain",
+                "profile_safe_mode",
+            ],
             ui_route: None,
             depends_on: &[],
-            config_schema: None,
+            config_schema: Some(MOD_RECOMMENDATIONS_SCHEMA),
         },
         ModuleDef {
             name: "operating-hours",

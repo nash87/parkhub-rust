@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, fontProviders } from 'astro/config';
+import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import reactCompiler from 'babel-plugin-react-compiler';
@@ -141,24 +141,7 @@ export default defineConfig({
       },
     },
   },
-  fonts: /** @type {any} */ (process.env.CI || process.env.DOCKER ? [] : [
-    {
-      name: 'Outfit',
-      cssVariable: '--font-outfit',
-      provider: fontProviders.google(),
-      weights: [400, 500, 600, 700, 800],
-      styles: ['normal'],
-      subsets: ['latin'],
-      fallbacks: ['system-ui', 'sans-serif'],
-    },
-    {
-      name: 'Work Sans',
-      cssVariable: '--font-work-sans',
-      provider: fontProviders.google(),
-      weights: [300, 400, 500, 600, 700],
-      styles: ['normal'],
-      subsets: ['latin'],
-      fallbacks: ['system-ui', 'sans-serif'],
-    },
-  ]),
+  // fop/local builds must be deterministic and offline. UI fonts are bundled
+  // through @fontsource packages instead of fetched from Google Fonts metadata.
+  fonts: /** @type {any} */ ([]),
 });

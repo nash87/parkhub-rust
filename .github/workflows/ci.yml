@@ -62,6 +62,9 @@ jobs:
       - name: Validate CI workflow policy
         run: bash scripts/check-ci-workflow-policy.sh
 
+      - name: Validate recommendation contract gate
+        run: bash scripts/check-recommendation-contract.sh
+
       - name: Validate release supply-chain policy
         run: bash scripts/check-release-supply-chain-policy.sh
 
