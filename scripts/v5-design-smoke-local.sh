@@ -82,7 +82,12 @@ export DEMO_MODE=true
 export PARKHUB_ADMIN_PASSWORD=demo
 export PARKHUB_DISABLE_RATE_LIMITS=true
 SERVER_BIN="$(cargo_target_dir)/release/parkhub-server"
-"${SERVER_BIN}" \
+SERVER_RUN_BIN="${SERVER_DATA_DIR}/parkhub-server-e2e-bypass"
+# The release target path is shared across worktrees. Copy the e2e-bypass
+# build before launch so a sibling CI build cannot overwrite it mid-smoke.
+cp "${SERVER_BIN}" "${SERVER_RUN_BIN}"
+chmod 0755 "${SERVER_RUN_BIN}"
+"${SERVER_RUN_BIN}" \
   --headless --unattended --port "${SERVER_PORT}" --data-dir "${SERVER_DATA_DIR}" > "${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
 cleanup() {
