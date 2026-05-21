@@ -5,7 +5,7 @@ usage() {
   cat <<'EOF'
 Usage: .github/scripts/fop-local-ci.sh [--profile pr|full|cd] [--dry-run] [--post-status] [--background]
 
-Runs ParkHub's local-first CI through fop's build queue. The optional
+Runs ParkHub's local-first CI through the Nido/fop build queue. The optional
 --background runs the gate in a detached subshell, logs to .fop/reports/
 local-ci-<profile>-<sha>-bg.log, returns immediately. Combine with
 --post-status for fire-and-forget background "full" runs that publish
@@ -37,6 +37,8 @@ Environment:
                               even if no workflow / helm chart files touched
   FOP_LOCAL_CI_AUDIT_STRICT=1 fail the gate on any cargo-audit finding (default:
                               advisory; CI enforces strict)
+  FOP_LOCAL_CI_QUEUE_BIN       queue wrapper binary. Defaults to `nido` when
+                              available, otherwise `fop`.
   FOP_LOCAL_CI_DIRECT=1       bypass fop build queue entirely (kernel + earlyoom
                               handle memory). Use only when fop queue is
                               unreachable (bootstrap chicken-and-egg) or when
@@ -157,6 +159,15 @@ esac
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
+
+queue_bin="${FOP_LOCAL_CI_QUEUE_BIN:-}"
+if [[ -z "$queue_bin" ]]; then
+  if command -v nido >/dev/null 2>&1; then
+    queue_bin="nido"
+  else
+    queue_bin="fop"
+  fi
+fi
 
 sha="$(git rev-parse HEAD)"
 context="fop/local-ci/${profile}"
@@ -381,7 +392,7 @@ write_report() {
 EOF
 }
 
-# run_step: light fop queue allocation (~2 GB) — frontend/tsc/vitest/astro/npm
+# run_step: light queue allocation (~2 GB) — frontend/tsc/vitest/astro/npm
 # run_step_heavy: heavy allocation (~6 GB) — cargo {fmt,check,clippy,test,build}
 # Backports parkhub-php's --resource-profile pattern (PR #385) to fix the
 # multi-tab capacity contention where parkhub-php's CI port was starved by
@@ -399,7 +410,7 @@ run_fop_step() {
 
   set +e
   PARKHUB_FOP_STEP_MARKER="$marker" \
-    fop build --backend local --resource-profile "$resource_profile" . --preset custom -- \
+    "$queue_bin" build --backend local --resource-profile "$resource_profile" . --preset custom -- \
       bash -euo pipefail -c "$wrapped_command" 2>&1 | tee "$log_file"
   local status=${PIPESTATUS[0]}
   set -e
@@ -410,8 +421,8 @@ run_fop_step() {
   fi
 
   if ! grep -Fq "$marker" "$log_file"; then
-    echo "ERROR: fop build reported success but the inner step completion marker was missing." >&2
-    echo "This usually means the wrapped command exited before completion or fop masked its status." >&2
+    echo "ERROR: $queue_bin build reported success but the inner step completion marker was missing." >&2
+    echo "This usually means the wrapped command exited before completion or $queue_bin masked its status." >&2
     rm -f "$log_file"
     return 1
   fi
