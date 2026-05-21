@@ -24,9 +24,36 @@ or final legal judgment for a specific operator.
 | Target launch date | |
 | ParkHub Rust commit / tag | |
 | CI run / local fop attestation | |
-| Nido/fop legal catalog service (`fop legal catalog --json`; note installed `nido legal` availability) `generated_at` / `source_revision` / `safety_boundary` | |
-| Legal catalog safety flags (`requires_attorney_review`, `requires_human_signoff`, `execution_allowed`) | |
 | Review record owner | |
+
+## Nido/fop Legal Catalog Service Evidence
+
+This section is the Nido/fop legal catalog service evidence for the release
+candidate.
+
+Capture the live Nido/fop legal catalog output for the exact release candidate:
+
+```bash
+NO_COLOR=true fop legal catalog --json > legal-catalog-<deployment-or-sha>.json
+```
+
+The current installed Nido CLI does not expose `nido legal`; use the
+`fop legal catalog --json` entrypoint until Nido exposes an equivalent command.
+Attach the JSON output or copy the fields below. Treat the catalog as
+reference-only; attorney review, citation verification, deployment-specific
+configuration review, human signoff, and final legal judgment remain required.
+
+| Field | Captured value |
+| --- | --- |
+| Capture command | |
+| Captured by / date | |
+| Catalog id / source / version | |
+| Catalog `source_revision` | |
+| Catalog `generated_at` | |
+| Catalog `requires_attorney_review` | |
+| Catalog `requires_human_signoff` | |
+| Catalog `execution_allowed` | |
+| Catalog `safety_boundary` | |
 
 ## Jurisdiction And Business Context
 
