@@ -66,6 +66,10 @@ build_web() {
   (cd parkhub-web && CI=true VITE_API_URL='' npm run build)
 }
 
+server_binary_path() {
+  find "${SERVER_TARGET_DIR}" -type f -path '*/release/parkhub-server' -print -quit
+}
+
 cd "$REPO_ROOT"
 
 echo "== parkhub-web build =="
@@ -78,7 +82,11 @@ echo "== start parkhub-server on :${SERVER_PORT} =="
 export DEMO_MODE=true
 export PARKHUB_ADMIN_PASSWORD=demo
 export PARKHUB_DISABLE_RATE_LIMITS=true
-SERVER_BIN="${SERVER_TARGET_DIR}/release/parkhub-server"
+SERVER_BIN="$(server_binary_path)"
+if [[ -z "${SERVER_BIN}" ]]; then
+  echo "parkhub-server release binary not found under ${SERVER_TARGET_DIR}" >&2
+  exit 1
+fi
 SERVER_RUN_BIN="${SERVER_DATA_DIR}/parkhub-server-e2e-bypass"
 # The default release target path is shared across worktrees. Build under this
 # smoke run's temp dir and copy before launch so sibling CI cannot overwrite it.
