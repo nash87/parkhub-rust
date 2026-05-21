@@ -77,30 +77,15 @@ jobs:
       - name: Run cargo-deny (advisories + bans + licenses + sources)
         run: cargo deny check advisories bans licenses sources
 
-      # --- cargo-audit (advisory: mirrors security.yml: cargo-audit) ---
+      # --- cargo-audit (hard gate: mirrors security.yml: cargo-audit) ---
       - name: Install cargo-audit
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
           tool: cargo-audit
 
       - name: Run cargo audit
-        continue-on-error: true
-        run: |
-          cargo audit \
-            --ignore RUSTSEC-2024-0412 \
-            --ignore RUSTSEC-2024-0413 \
-            --ignore RUSTSEC-2024-0415 \
-            --ignore RUSTSEC-2024-0416 \
-            --ignore RUSTSEC-2024-0418 \
-            --ignore RUSTSEC-2024-0419 \
-            --ignore RUSTSEC-2024-0420 \
-            --ignore RUSTSEC-2024-0436 \
-            --ignore RUSTSEC-2024-0370 \
-            --ignore RUSTSEC-2023-0071 \
-            --ignore RUSTSEC-2025-0057 \
-            --ignore RUSTSEC-2023-0019 \
-            --ignore RUSTSEC-2024-0384 \
-            --ignore RUSTSEC-2026-0097
+        continue-on-error: false
+        run: scripts/ci/cargo-audit-with-deny-ignores.sh
 
       # --- npm audit (advisory: mirrors ci.yml: parkhub-web npm audit) ---
       - name: Set up Node.js
@@ -110,7 +95,7 @@ jobs:
 
       - name: Audit parkhub-web npm dependencies
         run: npm audit --prefix parkhub-web --package-lock-only --omit=dev --audit-level=high
-        continue-on-error: true
+        continue-on-error: false
 
       # --- Secret scan (hard gate: mirrors security.yml: secret-scan) ---
       - name: Install gitleaks
@@ -144,7 +129,7 @@ jobs:
           osv-scanner --version
 
       - name: OSV-Scanner (Cargo.lock + parkhub-web npm lockfile)
-        continue-on-error: true
+        continue-on-error: false
         run: |
           set -euo pipefail
           osv-scanner scan source \
@@ -155,7 +140,7 @@ jobs:
 
       # --- Typos (advisory: mirrors security.yml: typos) ---
       - name: Run typos
-        continue-on-error: true
+        continue-on-error: false
         uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
 
       # --- Post fop/local-ci/pr commit status ---

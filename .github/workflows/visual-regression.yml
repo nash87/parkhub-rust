@@ -5,7 +5,7 @@ name: Visual Regression
 # GitHub-hosted runners render with slight anti-aliasing / font-hinting
 # differences from local baselines, which made the per-PR gate noisy
 # without providing matching merge-blocking value (the job was already
-# `continue-on-error: true`).
+# `continue-on-error: false`).
 #
 # Run manually via `workflow_dispatch` when intentionally rebasing
 # baselines.
@@ -49,8 +49,9 @@ jobs:
     # can never mutate the repo even if a dependency is compromised.
     permissions:
       contents: read
-    # Soft-fail: diffs surface as downloadable artifacts but don't block merge.
-    continue-on-error: true
+    # Scheduled/manual visual gate. Diffs mark this run red and are also
+    # uploaded as artifacts for baseline triage.
+    continue-on-error: false
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6

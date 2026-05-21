@@ -182,10 +182,10 @@ jobs:
           sbom: true
 
       - name: Attest image provenance (amd64)
-        # GHA installation API rate-limit hits this step intermittently
-        # (observed v5.0.6 runs 25108343024 + 25108620933 on the same SHA).
-        # Make it advisory so cosign signing + Syft SBOM still complete.
-        continue-on-error: true
+        # Blocking image provenance for the published amd64 digest. If the
+        # GitHub attestation API is rate-limited, rerun instead of publishing
+        # an unsigned image.
+        continue-on-error: false
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -228,7 +228,7 @@ jobs:
         # pending cosign 3.x SBOM regression fix (PR #460); drop once we
         # observe a green run.
         id: attest_sbom
-        continue-on-error: true
+        continue-on-error: false
         env:
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -321,7 +321,7 @@ jobs:
           sbom: true
 
       - name: Attest image provenance (arm64)
-        continue-on-error: true
+        continue-on-error: false
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -356,7 +356,7 @@ jobs:
 
       - name: Attach SBOM as cosign attestation (arm64, keyless OIDC)
         id: attest_sbom
-        continue-on-error: true
+        continue-on-error: false
         env:
           IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -490,7 +490,7 @@ jobs:
         # Per-arch package sets are near-identical for Rust headless builds,
         # so the missed coverage is negligible (REVIEW option a).
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.manifest.outputs.digest }}
           format: sarif
@@ -498,14 +498,14 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           limit-severities-for-sarif: true
-          exit-code: '0'
+          exit-code: '1'
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always() && hashFiles('trivy-results.sarif') != ''
-        # Advisory: GitHub's SARIF upload API can hit installation rate limits;
-        # keep Security tab upload failures from blocking the deploy.
-        continue-on-error: true
+        # Blocking upload path: retry transient GitHub API failures instead of
+        # hiding Security tab drift behind a permissive marker.
+        continue-on-error: false
         with:
           sarif_file: trivy-results.sarif
 

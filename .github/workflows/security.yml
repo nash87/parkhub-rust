@@ -85,22 +85,7 @@ jobs:
           tool: cargo-audit
 
       - name: Run cargo audit
-        run: |
-          cargo audit \
-            --ignore RUSTSEC-2024-0412 \
-            --ignore RUSTSEC-2024-0413 \
-            --ignore RUSTSEC-2024-0415 \
-            --ignore RUSTSEC-2024-0416 \
-            --ignore RUSTSEC-2024-0418 \
-            --ignore RUSTSEC-2024-0419 \
-            --ignore RUSTSEC-2024-0420 \
-            --ignore RUSTSEC-2024-0436 \
-            --ignore RUSTSEC-2024-0370 \
-            --ignore RUSTSEC-2023-0071 \
-            --ignore RUSTSEC-2025-0057 \
-            --ignore RUSTSEC-2023-0019 \
-            --ignore RUSTSEC-2024-0384 \
-            --ignore RUSTSEC-2026-0097
+        run: scripts/ci/cargo-audit-with-deny-ignores.sh
 
   trivy-fs:
     name: Trivy Filesystem Scan
@@ -117,7 +102,7 @@ jobs:
 
       - name: Run Trivy filesystem scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           scan-type: fs
           scan-ref: .
@@ -135,9 +120,9 @@ jobs:
         # Trivy + osv-scanner + cargo-audit + cargo-deny pre-push, so the
         # GitHub Security tab is informational, not load-bearing. Match
         # the OSV-scanner + trivy-image upload steps which already have
-        # continue-on-error: true for the same reason.
+        # continue-on-error: false for the same reason.
         if: always() && hashFiles('trivy-results.sarif') != ''
-        continue-on-error: true
+        continue-on-error: false
         with:
           sarif_file: trivy-results.sarif
 
@@ -185,11 +170,12 @@ jobs:
           fi
 
   typos:
-    name: Typos (advisory)
+    name: Typos (spelling gate)
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Advisory until typo backlog is cleared. Promote to required once green.
-    continue-on-error: true
+    # Blocking spelling gate scoped by .typos.toml to human-facing English
+    # surfaces so generated/vendor noise does not hide copy regressions.
+    continue-on-error: false
     permissions:
       contents: read
     steps:
@@ -198,21 +184,15 @@ jobs:
           persist-credentials: false
       - name: Run typos
         uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
-        continue-on-error: true
+        continue-on-error: false
 
   zizmor:
-    name: Zizmor (GHA SAST, audit-mode)
+    name: Zizmor (GHA SAST)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Audit-mode: findings are informational only, never block PRs.
-    # GitHub's check API reports a job's raw conclusion regardless of
-    # continue-on-error, so a failing step makes the job show as "fail" in
-    # the PR checks UI even though it never gates branch protection. The
-    # explicit "Mark advisory success" step below ensures the job check run
-    # always concludes as `success` so Dependabot and human reviewers see
-    # a clean green list without noise from expected advisory findings.
-    # Promote findings to errors (remove this step) once the workflow
-    # inventory has been triaged and a .zizmor.yaml baseline is committed.
+    # Blocking high-severity workflow SAST. Keep this aligned with the
+    # local release supply-chain policy: release/security gates must not hide
+    # failures behind permissive workflow markers.
     permissions:
       contents: read  # checkout
     steps:
@@ -220,44 +200,40 @@ jobs:
         with:
           persist-credentials: false
       - name: Install zizmor
+        env:
+          ZIZMOR_VERSION: "1.24.1"
         run: |
-          python3 -m pip install --user --disable-pip-version-check 'zizmor==1.24.1'
+          curl -fsSL -o /tmp/zizmor.tar.gz \
+            "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-x86_64-unknown-linux-gnu.tar.gz"
+          tar -xzf /tmp/zizmor.tar.gz -C /tmp zizmor
+          sudo install -m 0755 /tmp/zizmor /usr/local/bin/zizmor
+          zizmor --version
       - name: Run zizmor
-        continue-on-error: true
         run: |
           # auditor persona surfaces low-severity findings useful for hardening
           # without flooding the PR with regular-user noise. Keep this aligned
           # with .github/scripts/fop-local-ci.sh: offline, high-severity-only,
           # and scoped to workflow manifests so PR audits cannot hang on live
           # GitHub API checks.
-          python3 -m zizmor \
+          zizmor \
             --persona=auditor \
             --min-severity=high \
             --no-online-audits \
             --format=github \
             .github/workflows \
             .gitea/workflows
-      - name: Mark advisory success
-        # Guarantee job conclusion = success regardless of zizmor exit code.
-        # continue-on-error on the advisory step prevents the workflow from being
-        # blocked but does NOT change the individual job's check-run
-        # conclusion (GitHub API behaviour, confirmed upstream). This step
-        # runs unconditionally and always exits 0 so the check shows green.
-        if: always()
-        run: echo "Zizmor advisory scan complete — findings are informational only."
 
   cargo-geiger:
     # Unsafe-block SAST for the Rust dep graph. Apache-2.0 OR MIT
     # (github.com/geiger-rs/cargo-geiger). Surfaces supply-chain unsafe-usage
-    # growth before it lands in production. Advisory because legitimate unsafe
-    # usage in low-level deps (memmap2, mio, etc.) is unavoidable; we want to
-    # observe the trend rather than block PRs. No untrusted github.event inputs
-    # are used — all parameters are controlled constants.
-    name: cargo-geiger (unsafe-block SAST, advisory)
+    # growth before it lands in production. Legitimate unsafe usage belongs in
+    # explicit review exceptions rather than a permissive workflow marker. No
+    # untrusted github.event inputs are used; all parameters are controlled.
+    name: cargo-geiger (unsafe-block SAST)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read
     steps:
@@ -277,7 +253,7 @@ jobs:
           tool: cargo-geiger
 
       - name: Run cargo-geiger
-        continue-on-error: true
+        continue-on-error: false
         run: cargo geiger --output-format Ascii --frozen
 
   osv-scanner:
@@ -294,10 +270,10 @@ jobs:
     # requires hand-written `#[kani::proof]` harnesses, not a drop-in gate.
     # All workflow inputs come from controlled `env:` constants — no use of
     # github.event.* untrusted strings (no injection surface).
-    name: OSV-Scanner (multi-ecosystem SCA, advisory)
+    name: OSV-Scanner (multi-ecosystem SCA)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
+    continue-on-error: false
     permissions:
       contents: read         # checkout source + lockfiles for SCA
       security-events: write # upload OSV-Scanner SARIF to GitHub Security tab
@@ -320,24 +296,20 @@ jobs:
           osv-scanner --version
 
       - name: Scan Cargo.lock + npm lockfile (SARIF)
-        continue-on-error: true
+        continue-on-error: false
         run: |
           set -euo pipefail
           osv-scanner scan source \
             -L Cargo.lock \
             -L parkhub-web/package-lock.json \
             --format=sarif \
-            --output=osv-scanner.sarif || true
+            --output=osv-scanner.sarif
 
       - name: Upload OSV-Scanner SARIF to GitHub Security tab
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
-        # Advisory: GitHub's installation API rate limit (5000/hr per
-        # installation) can transiently 429 the SARIF upload during a busy
-        # PR queue. Job-level continue-on-error keeps the workflow green;
-        # this step-level flag keeps the per-job CHECK green too so the
-        # rollup doesn't show a red X for what is actually a transient
-        # rate-limit blip.
-        continue-on-error: true
+        # Blocking upload path: transient API rate limits must be retried or
+        # fixed explicitly instead of being hidden by a permissive marker.
+        continue-on-error: false
         if: always() && hashFiles('osv-scanner.sarif') != ''
         with:
           sarif_file: osv-scanner.sarif
@@ -371,7 +343,7 @@ jobs:
 
       - name: Run Trivy image vulnerability + secret scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        continue-on-error: true
+        continue-on-error: false
         with:
           image-ref: ${{ env.IMAGE_REF }}
           scanners: vuln,secret
@@ -381,12 +353,12 @@ jobs:
           output: trivy-image-results.sarif
           trivyignores: .trivyignore
           limit-severities-for-sarif: true
-          exit-code: '0'
+          exit-code: '1'
 
       - name: Upload Trivy image results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
         if: always() && hashFiles('trivy-image-results.sarif') != ''
-        continue-on-error: true
+        continue-on-error: false
         with:
           sarif_file: trivy-image-results.sarif
           category: trivy-image
@@ -397,9 +369,9 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Advisory until the trivy-image baseline stabilises; promote to required
-    # once both scanners agree on the suppressed-set.
-    continue-on-error: true
+    # Blocking second-opinion image CVE scan. Suppress accepted findings in the
+    # scanner config rather than marking the workflow permissive.
+    continue-on-error: false
     permissions:
       contents: read  # checkout
       packages: read  # pull the published OCI image from GHCR
