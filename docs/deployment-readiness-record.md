@@ -24,7 +24,8 @@ or final legal judgment for a specific operator.
 | Target launch date | |
 | ParkHub Rust commit / tag | |
 | CI run / local fop attestation | |
-| Nido/fop legal catalog service (`fop legal catalog --json`; note installed `nido legal` availability) generated_at / source_revision | |
+| Nido/fop legal catalog service (`fop legal catalog --json`; note installed `nido legal` availability) `generated_at` / `source_revision` / `safety_boundary` | |
+| Legal catalog safety flags (`requires_attorney_review`, `requires_human_signoff`, `execution_allowed`) | |
 | Review record owner | |
 
 ## Jurisdiction And Business Context

@@ -39,6 +39,9 @@ Use this before tagging a ParkHub release from this repo.
   CLI yet) as reference-only, not legal advice: attorney review, citation
   verification, human signoff, deployment-specific configuration review, and
   final legal judgment remain required.
+- Capture the current legal catalog `source_revision`, `generated_at`,
+  `requires_attorney_review`, `requires_human_signoff`, `execution_allowed`, and
+  `safety_boundary` values in the deployment readiness record before release.
 
 ## Quality bar
 
