@@ -68,8 +68,7 @@ describe('PoliciesV5', () => {
     renderScreen();
     await waitFor(() => expect(screen.getByTestId('policies-editor')).toBeInTheDocument());
     const editor = screen.getByTestId('policies-editor');
-    await user.clear(editor);
-    await user.type(editor, 'Neu');
+    fireEvent.change(editor, { target: { value: 'Neu' } });
     await waitFor(() => expect(screen.getByTestId('policies-save')).toBeEnabled());
     await user.click(screen.getByTestId('policies-save'));
     await waitFor(() => {
@@ -85,8 +84,7 @@ describe('PoliciesV5', () => {
     renderScreen();
     await waitFor(() => expect(screen.getByTestId('policies-editor')).toBeInTheDocument());
     const editor = screen.getByTestId('policies-editor');
-    await user.clear(editor);
-    await user.type(editor, 'Neu');
+    fireEvent.change(editor, { target: { value: 'Neu' } });
     await waitFor(() => expect(screen.getByTestId('policies-save')).toBeEnabled());
     await user.click(screen.getByTestId('policies-save'));
     await waitFor(() => expect(mockToast).toHaveBeenCalledWith('denied', 'error'));
