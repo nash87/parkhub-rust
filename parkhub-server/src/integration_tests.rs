@@ -107,6 +107,40 @@ async fn body_json(response: http::Response<Body>) -> serde_json::Value {
     serde_json::from_slice(&bytes).expect("parse JSON")
 }
 
+#[tokio::test]
+async fn openapi_docs_route_keeps_slot_recommendation_id() {
+    let app = router(test_state().await);
+    let response = app
+        .oneshot(
+            Request::get("/api-docs/openapi.json")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let value = body_json(response).await;
+    let schema = &value["components"]["schemas"]["SlotRecommendation"];
+    let properties = schema["properties"]
+        .as_object()
+        .expect("SlotRecommendation properties should be an object");
+    assert!(
+        properties.contains_key("recommendation_id"),
+        "SlotRecommendation schema: {}",
+        serde_json::to_string_pretty(schema).unwrap()
+    );
+
+    let required = schema["required"]
+        .as_array()
+        .expect("SlotRecommendation required should be an array");
+    assert!(
+        required
+            .iter()
+            .any(|field| field.as_str() == Some("recommendation_id"))
+    );
+}
+
 fn demo_mode_enabled_from_env() -> bool {
     matches!(std::env::var("DEMO_MODE").as_deref(), Ok("true" | "1"))
 }

@@ -419,7 +419,7 @@ ParkHub ships privacy, security, and documentation features intended to support 
 | [EU AI Act Transparency Template](legal/ai-act-transparency-template.md) | Art. 50 transparency notice — required if the operator enables AI/ML features |
 | [Third-Party Licenses](LICENSE-THIRD-PARTY.md) | All Rust crate and npm dependency licenses |
 
-See [`docs/legal-readiness.md`](docs/legal-readiness.md) for the operator-facing audit hub and [`legal/`](legal/) for the full template set. All documents are operator-customizable starting points, not binding legal texts or legal advice.
+See [`docs/legal-readiness.md`](docs/legal-readiness.md) for the operator-facing audit hub and [`legal/`](legal/) for the full template set. The Nido/fop legal catalog service (current CLI entrypoint: `fop legal catalog --json`; `nido legal` is not exposed by the installed Nido CLI yet) is reference-only and does not replace attorney review, citation verification, deployment-specific configuration review, human signoff, or final legal judgment. All documents are operator-customizable starting points, not binding legal texts or legal advice.
 
 **Key readiness features:** Argon2id passwords, AES-256-GCM encryption at rest, TLS 1.3, audit logging, data export (Art. 15/20), account erasure (Art. 17), no tracking by default, and no bundled third-party data processor in the core self-hosted runtime. Operators remain responsible for the final privacy notice, Impressum, AVV/DPA coverage, VVT records, retention settings, accessibility assessment, AI transparency notices if AI features are enabled, and attorney review.
 

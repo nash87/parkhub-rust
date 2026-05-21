@@ -27,10 +27,18 @@ deployment-specific configuration review before go-live.
   record for jurisdiction, modules, processors, CI/CD evidence, and signoff.
 - Use `docs/legal-readiness-parity.md` when comparing Rust and PHP
   legal-readiness obligations, release gates, and module/plugin review policy.
-- Treat `fop legal catalog` as a reference-only catalog. It helps locate legal
-  topics and citations, but it is not legal advice and does not replace attorney
-  review, citation verification, human signoff, or deployment-specific
-  configuration review.
+- Treat the Nido/fop legal catalog service (current CLI entrypoint:
+  `fop legal catalog --json`; `nido legal` is not exposed by the installed Nido
+  CLI yet) as a reference-only catalog. It helps locate legal topics and
+  citations, but it is not legal advice and does not replace attorney review,
+  citation verification, human signoff, or deployment-specific configuration
+  review.
+- For release evidence, capture the current legal catalog output in
+  `docs/deployment-readiness-record.md`: `id`, `source`, `source_revision`,
+  `generated_at`, `requires_attorney_review`, `requires_human_signoff`,
+  `execution_allowed`, and `safety_boundary`. A release remains review-gated
+  when the catalog says `requires_attorney_review=true`,
+  `requires_human_signoff=true`, and `execution_allowed=false`.
 
 ## Source Map
 
@@ -60,9 +68,11 @@ deployment-specific configuration review before go-live.
    deployment before production use, business use, or customer-facing evaluation.
 5. Review `docs/legal-readiness-parity.md` when a change should stay aligned
    across Rust and PHP.
-6. Confirm legal templates are marked as operator-customizable starting points,
+6. Capture the current `fop legal catalog --json` evidence fields and safety
+   flags in the deployment record.
+7. Confirm legal templates are marked as operator-customizable starting points,
    not final legal texts.
-7. Confirm the release notes describe material legal-readiness changes as
+8. Confirm the release notes describe material legal-readiness changes as
    readiness support or operator obligations, not as absolute legal status.
 
 ## Module Enablement Rules

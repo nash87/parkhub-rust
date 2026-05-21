@@ -383,7 +383,7 @@ This is the standard approach recommended by German DPAs.
 
 ### No new files created.
 
-All existing templates are legally sound for their purpose as operator-customizable templates. The project correctly disclaims that templates do not constitute legal advice.
+All existing templates are structured as operator-customizable starting points with explicit disclaimers. The project correctly states that templates do not constitute legal advice.
 
 ---
 

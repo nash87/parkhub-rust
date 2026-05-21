@@ -3,7 +3,7 @@
 //! Generates `OpenAPI` 3.0 specification and Swagger UI.
 
 use axum::Router;
-use utoipa::OpenApi;
+use utoipa::{Modify, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
@@ -43,6 +43,7 @@ use crate::{
     servers(
         (url = "/", description = "Local server")
     ),
+    modifiers(&SlotRecommendationSchemaPatch),
     tags(
         (name = "Authentication", description = "User login, registration, and password management"),
         (name = "Users", description = "User profile and account management"),
@@ -691,6 +692,41 @@ use crate::{
 )]
 pub struct ApiDoc;
 
+struct SlotRecommendationSchemaPatch;
+
+impl Modify for SlotRecommendationSchemaPatch {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        use utoipa::openapi::{
+            RefOr,
+            schema::{KnownFormat, ObjectBuilder, Schema, SchemaFormat, Type},
+        };
+
+        let Some(components) = openapi.components.as_mut() else {
+            return;
+        };
+        let Some(RefOr::T(Schema::Object(schema))) =
+            components.schemas.get_mut("SlotRecommendation")
+        else {
+            return;
+        };
+
+        schema.properties.insert(
+            "recommendation_id".to_string(),
+            ObjectBuilder::new()
+                .schema_type(Type::String)
+                .format(Some(SchemaFormat::KnownFormat(KnownFormat::Uuid)))
+                .into(),
+        );
+        if !schema
+            .required
+            .iter()
+            .any(|field| field == "recommendation_id")
+        {
+            schema.required.insert(0, "recommendation_id".to_string());
+        }
+    }
+}
+
 /// Create Swagger UI router
 pub fn swagger_ui() -> SwaggerUi {
     SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi())
@@ -711,6 +747,30 @@ mod tests {
         let json = doc.to_json().expect("Failed to generate OpenAPI JSON");
         assert!(json.contains("ParkHub API"));
         assert!(json.contains("1.0.0"));
+    }
+
+    #[test]
+    fn test_openapi_slot_recommendation_keeps_recommendation_id() {
+        let doc = ApiDoc::openapi();
+        let value: serde_json::Value = serde_json::from_str(&doc.to_json().unwrap()).unwrap();
+        let schema = &value["components"]["schemas"]["SlotRecommendation"];
+        let properties = schema["properties"]
+            .as_object()
+            .expect("SlotRecommendation properties should be an object");
+        assert!(
+            properties.contains_key("recommendation_id"),
+            "SlotRecommendation schema: {}",
+            serde_json::to_string_pretty(schema).unwrap()
+        );
+
+        let required = schema["required"]
+            .as_array()
+            .expect("SlotRecommendation required should be an array");
+        assert!(
+            required
+                .iter()
+                .any(|field| field.as_str() == Some("recommendation_id"))
+        );
     }
 
     #[test]

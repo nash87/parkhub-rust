@@ -76,6 +76,17 @@ TARGET_DIR="$(cargo metadata --locked --format-version 1 --no-deps | jq -er '.ta
     >&2
 
 BIN="$TARGET_DIR/debug/parkhub-server"
+if command -v fop >/dev/null 2>&1 && [[ -d /var/tmp/fop-targets ]]; then
+    FOP_BIN="$(
+        find /var/tmp/fop-targets -path '*/debug/parkhub-server' -type f \
+            -printf '%T@ %p\n' 2>/dev/null \
+            | sort -nr \
+            | awk 'NR == 1 {print $2}'
+    )"
+    if [[ -n "$FOP_BIN" && "$FOP_BIN" -nt "$BIN" ]]; then
+        BIN="$FOP_BIN"
+    fi
+fi
 if [[ ! -x "$BIN" ]]; then
     echo "openapi-drift: built binary not found at $BIN" >&2
     exit 1
