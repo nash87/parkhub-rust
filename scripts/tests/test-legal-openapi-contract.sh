@@ -15,7 +15,19 @@ cd "$REPO_ROOT"
 node <<'NODE'
 const fs = require('fs');
 
-const spec = JSON.parse(fs.readFileSync('docs/openapi/rust.json', 'utf8'));
+const specPath = 'docs/openapi/rust.json';
+if (!fs.existsSync(specPath)) {
+  console.error(`ERROR: OpenAPI snapshot missing at ${specPath}`);
+  process.exit(1);
+}
+
+let spec;
+try {
+  spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+} catch (error) {
+  console.error(`ERROR: OpenAPI snapshot at ${specPath} is not valid JSON: ${error.message}`);
+  process.exit(1);
+}
 const paths = spec.paths || {};
 
 const required = [

@@ -1,6 +1,6 @@
 # Legal Compliance Matrix — ParkHub Rust
 
-> **Version:** 3.3.0 | **Last updated:** 2026-04-12
+> **Version:** 3.3.0 | **Last updated:** 2026-05-21
 
 This document maps ParkHub Rust features, templates, and operator tasks to legal-readiness
 topics across German, EU, and international data protection regulations. It is intended for
@@ -41,11 +41,11 @@ managed operations still require the operator's own AVV/DPA and transfer review.
 | Art. 7 — Conditions for consent | Push notifications require explicit browser consent; all other processing based on contract/legal obligation | Web Push module |
 | Art. 12 — Transparent communication | Privacy notice template with plain-language explanations | `legal/datenschutz-template.md` |
 | Art. 13/14 — Information obligations | Ready-to-use Datenschutzerklärung template | [PRIVACY-TEMPLATE.md](PRIVACY-TEMPLATE.md) |
-| Art. 15 — Right of access | `GET /api/v1/user/export` — full data export | GDPR module |
+| Art. 15 — Right of access | `GET /api/v1/users/me/export` — full data export | GDPR module |
 | Art. 16 — Right to rectification | Profile editing via Settings page and API | Core |
 | Art. 17 — Right to erasure | `DELETE /api/v1/users/me/delete` (anonymization with booking retention) | GDPR module |
 | Art. 18 — Right to restriction | Admin can deactivate accounts | Admin module |
-| Art. 20 — Data portability | JSON export via `/api/v1/user/export`, CSV via admin reports | GDPR + Data Export modules |
+| Art. 20 — Data portability | JSON export via `/api/v1/users/me/export`, CSV via admin reports | GDPR + Data Export modules |
 | Art. 21 — Right to object | Notification preferences toggle, contact form for objections | Notifications module |
 | Art. 25 — Privacy by design | Self-hosted design, data minimization, and configurable retention support privacy-by-design obligations | Architecture |
 | Art. 28 — Processor agreements | Core on-premise operation may avoid a ParkHub platform DPA; external processors still need operator review and AVV/DPA coverage | `legal/avv-template.md` |

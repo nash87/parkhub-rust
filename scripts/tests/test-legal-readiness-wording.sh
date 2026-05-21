@@ -36,6 +36,11 @@ require_text() {
     local file="$1"
     local text="$2"
 
+    if [[ ! -r "$file" ]]; then
+        echo "ERROR: required legal-readiness file is missing or unreadable: $file" >&2
+        exit 1
+    fi
+
     if ! grep -Fq "$text" "$file"; then
         echo "ERROR: $file is missing required legal-readiness text: $text" >&2
         exit 1
