@@ -9,8 +9,9 @@ This release-candidate evidence was captured for the ParkHub Rust
 | --- | --- |
 | Repository | `nash87/parkhub-rust` |
 | Pull request | `#663` |
-| Head SHA | `e8bbb475d638469d4d9a0421ef3d7a7c4d61d3fa` |
-| Local Nido PR gate report | `.fop/reports/local-ci-pr-e8bbb475d638469d4d9a0421ef3d7a7c4d61d3fa.json` |
+| Head SHA | Verify against the current PR head before release. |
+| Local Nido PR gate report | `.fop/reports/local-ci-pr-<current-pr-head-sha>.json` must exist and pass for the current PR head. |
+| Candidate feature SHA | `e8bbb475d638469d4d9a0421ef3d7a7c4d61d3fa` |
 
 ## Capture
 
