@@ -42,6 +42,10 @@ Use this before tagging a ParkHub release from this repo.
 - Capture the current legal catalog `source_revision`, `generated_at`,
   `requires_attorney_review`, `requires_human_signoff`, `execution_allowed`, and
   `safety_boundary` values in the deployment readiness record before release.
+- For the current `exact_cover_v1` release candidate, review
+  `docs/release-evidence/2026-05-21-exact-cover-nido-legal-catalog.md` and
+  replace it with a fresh capture if the head SHA, legal catalog revision, or
+  deployment target changes before release.
 
 ## Quality bar
 
