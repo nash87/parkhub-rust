@@ -13,6 +13,25 @@ locale = "en"
 # Domain term: "parkhub" is the product name, not a typo of "parking" etc.
 parkhub = "parkhub"
 
+# German UI/demo copy used in simulation fixtures and docs.
+Adresse = "Adresse"
+Als = "Als"
+Assistent = "Assistent"
+ein = "ein"
+ist = "ist"
+Lokal = "Lokal"
+MUC = "MUC"
+Sie = "Sie"
+ue = "ue"
+
+# Proper name used in simulation fixtures.
+Ines = "Ines"
+
+# Locale names and rendered asset references.
+Hashi = "Hashi"
+PN = "PN"
+Portugues = "Portugues"
+
 # Crate / library names that look like typos to typos:
 ser = "ser"           # serde common abbreviation in test fixtures
 de = "de"             # serde Deserialize abbreviation
@@ -26,6 +45,24 @@ unmaped = "unmaped"   # rare; kept here only if it surfaces in a vendor file
 extend-exclude = [
     "Cargo.lock",
     "package-lock.json",
+    "docs/openapi/*.json",
+    "docs/plans/**",
+    "docs/*TEMPLATE*.md",
+    "legal/**",
+    "scripts/simulate_month.py",
+    "tests/simulation/generator.rs",
+    "ui/**",
+    "parkhub-client/ui/**",
+    "parkhub-server/src/api/bookings.rs",
+    "parkhub-server/src/api/vehicles.rs",
+    "parkhub-web/src/i18n/locales/**",
+    "parkhub-web/src/design-v5/**",
+    "parkhub-web/src/views/**",
+    "parkhub-web/e2e/v5-happy-paths.spec.ts",
+    "docs/v5-test-coverage-plan.md",
+    "fonts/**",
+    "parkhub-client/fonts/**",
+    "scripts/__pycache__/**",
     "*.min.js",
     "*.min.css",
     "parkhub-web/dist/**",

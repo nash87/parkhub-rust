@@ -99,3 +99,5 @@ if errors:
 
 print("CI workflow policy OK")
 PY
+
+scripts/tests/test-rustsec-ignore-policy.sh

@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # Default to LAN mirror; cloud CI sets WOLFI_BASE in env to override.
-        WOLFI_BASE: ${WOLFI_BASE:-192.168.178.250:5000/wolfi-base:latest}
+        # Default to the digest-pinned LAN mirror; cloud CI may override.
+        WOLFI_BASE: ${WOLFI_BASE:-192.168.178.250:5000/wolfi-base@sha256:4973aa3c2ccbe13fe2049aab539b0ab342ec584bd5b54a269d55d4891091c639}
     container_name: parkhub
     restart: unless-stopped
     # Pass CLI flags so the server runs headless on port 8080.

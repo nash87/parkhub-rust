@@ -494,6 +494,7 @@ if (( diff_touch_workflows )) || [[ "${FOP_LOCAL_CI_RUN_LINTERS:-}" == "1" ]]; t
     run_direct "actionlint" "actionlint -color"
   fi
   run_direct "CI workflow policy" "bash scripts/check-ci-workflow-policy.sh"
+  run_direct "release supply-chain policy" "bash scripts/check-release-supply-chain-policy.sh"
   if command -v zizmor >/dev/null 2>&1; then
     # Audit-mode: surface findings, don't fail the gate yet
     run_direct "zizmor (audit)" "zizmor --no-progress --persona auditor .github/workflows/ || true"
@@ -625,9 +626,8 @@ fi
 
 # ─── Stage 6c: cargo audit (RustSec) + cargo-geiger (unsafe SAST) ───────────
 # Mirrors .github/workflows/security.yml cargo-audit + cargo-geiger jobs.
-# cargo audit: gating on full+cd profiles; same RUSTSEC ignore list as the
-# workflow (kept in sync via deny.toml — cargo-audit reads its own DB but
-# respects --ignore CLI flags).
+# cargo audit: gating on full+cd profiles; RustSec ignores are centralized in
+# deny.toml and expanded by scripts/ci/cargo-audit-with-deny-ignores.sh.
 # cargo-geiger: advisory only (unsafe-block trend tracking, not a hard gate).
 if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
   if command -v cargo-audit >/dev/null 2>&1; then
@@ -636,9 +636,9 @@ if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
     # crate ID. For local runs we accept warnings as advisory unless
     # FOP_LOCAL_CI_AUDIT_STRICT=1 is set (CI enforces strictly).
     if [[ "${FOP_LOCAL_CI_AUDIT_STRICT:-}" == "1" ]]; then
-      run_step "cargo audit (RustSec, strict)" "cargo audit --deny warnings"
+      run_step "cargo audit (RustSec, strict)" "scripts/ci/cargo-audit-with-deny-ignores.sh --deny warnings"
     else
-      run_step "cargo audit (RustSec, advisory)" "cargo audit || echo 'cargo-audit found advisories (advisory — see above)'"
+      run_step "cargo audit (RustSec, advisory)" "scripts/ci/cargo-audit-with-deny-ignores.sh || echo 'cargo-audit found advisories (advisory — see above)'"
     fi
   else
     skip_step "cargo audit" "cargo-audit not installed (cargo install cargo-audit)"
@@ -725,9 +725,8 @@ fi
 # for CI/CD hardening (template injection, cache poisoning, persist-credentials,
 # excessive-permissions). Uses --persona=auditor to match the workflow.
 #
-# Advisory mode: matches workflow's `continue-on-error: true` — zizmor surfaces
-# findings as informational but does NOT fail the gate. Promote to a hard
-# failure (drop the `|| true`) once the open-finding inventory is at zero.
+# Local audit mode: zizmor surfaces findings as informational for contributor
+# ergonomics. The workflow itself is blocking when it runs.
 # Suppressions live in zizmor.yml with per-rule justification.
 if command -v zizmor >/dev/null 2>&1; then
   run_step "zizmor (GHA SAST, advisory)" "zizmor --persona=auditor --min-severity=high --no-online-audits .github/workflows/ .gitea/workflows/ || echo 'zizmor returned non-zero (advisory — see findings above)'"
