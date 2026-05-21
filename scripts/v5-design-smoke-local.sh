@@ -54,7 +54,9 @@ build_server() {
     return
   fi
 
-  cargo build --locked --release -p parkhub-server \
+  # Local CI direct mode already opted out of the fop queue. Bypass the cargo
+  # shim here so the smoke run's isolated CARGO_TARGET_DIR is honored.
+  FOP_CARGO_SHIM_BYPASS=1 cargo build --locked --release -p parkhub-server \
     --no-default-features --features 'full,headless,e2e-bypass'
 }
 
