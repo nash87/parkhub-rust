@@ -3,7 +3,7 @@ export default {
     app: { name: 'ParkHub', tagline: 'Self-hosted parking management' },
     welcome: {
       greeting: 'Welcome to ParkHub',
-      subtitle: 'Book parking spots, manage lots, track credits. Self-hosted, open source, GDPR compliant.',
+      subtitle: 'Book parking spots, manage lots, track credits. Self-hosted, open source, with privacy controls.',
       selectLanguage: 'Select your language',
       getStarted: 'Get Started',
       selfHosted: 'Self-hosted',
@@ -1876,7 +1876,7 @@ export default {
             body: 'All connections use TLS 1.3. Passwords stored as Argon2 hashes. Session tokens with family rotation plus optional Redis revocation for multi-replica setups.',
           },
           gdpr: {
-            title: 'GDPR-compliant from day one',
+            title: 'Privacy controls from day one',
             body: 'Right of access (Art. 15), right to erasure (Art. 17), data portability (Art. 20) as self-service endpoints. Audit log for every data access. Imprint and privacy policy pages built in.',
           },
           minimization: {

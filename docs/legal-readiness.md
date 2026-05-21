@@ -27,8 +27,9 @@ deployment-specific configuration review before go-live.
   record for jurisdiction, modules, processors, CI/CD evidence, and signoff.
 - Use `docs/legal-readiness-parity.md` when comparing Rust and PHP
   legal-readiness obligations, release gates, and module/plugin review policy.
-- Treat `fop legal catalog` as a reference-only catalog. It helps locate legal
-  topics and citations, but it is not legal advice and does not replace attorney
+- Treat the Nido/fop legal catalog (`nido legal catalog --json`, equivalent to
+  `fop legal catalog`) as a reference-only catalog. It helps locate legal topics
+  and citations, but it is not legal advice and does not replace attorney
   review, citation verification, human signoff, or deployment-specific
   configuration review.
 

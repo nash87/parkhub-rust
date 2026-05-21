@@ -44,7 +44,7 @@
     "publisher": "ParkHub",
     "category": "Business",
     "shortDescription": "Self-hosted parking management",
-    "longDescription": "ParkHub \u2014 self-hosted parking management desktop client. Connects to a ParkHub server (Rust or Laravel edition) over HTTPS. GDPR compliant. MIT licensed.",
+    "longDescription": "ParkHub \u2014 self-hosted parking management desktop client. Connects to a ParkHub server (Rust or Laravel edition) over HTTPS. Includes privacy controls. MIT licensed.",
     "copyright": "\u00a9 2026 nash87. MIT licensed.",
     "homepage": "https://nash87.github.io/parkhub-site/",
     "macOS": {

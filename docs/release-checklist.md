@@ -34,7 +34,8 @@ Use this before tagging a ParkHub release from this repo.
   AI Act transparency templates are still starting points, not legal advice.
 - Confirm any security-sensitive or legally sensitive module change is
   audit-logged and documented with a rollback path before release.
-- Treat `fop legal catalog` as reference-only, not legal advice: attorney review,
+- Treat the Nido/fop legal catalog (`nido legal catalog --json`, equivalent to
+  `fop legal catalog`) as reference-only, not legal advice: attorney review,
   citation verification, human signoff, deployment-specific configuration
   review, and final legal judgment remain required.
 

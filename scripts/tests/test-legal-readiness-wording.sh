@@ -2,8 +2,8 @@
 #
 # Static guard for legal-readiness wording.
 #
-# ParkHub ships controls and templates that support compliant deployments, but
-# live compliance depends on operator configuration, contracts, jurisdiction,
+# ParkHub ships controls and templates that support legal-readiness work, but
+# live legal posture depends on operator configuration, contracts, jurisdiction,
 # and attorney review. Keep public docs from drifting back to absolute legal
 # conclusions.
 #
@@ -18,15 +18,17 @@ scan_paths=(
     README.md
     docs
     legal
+    parkhub-desktop
+    parkhub-web/src
 )
 
 if [[ -f COMPLIANCE-REPORT.md ]]; then
     scan_paths+=(COMPLIANCE-REPORT.md)
 fi
 
-pattern="100% GDPR|GDPR compliant|DSGVO-konform|Compliance-Audited|Compliance Audited|complies with all GDPR|No DPA needed|no GDPR processor agreement needed|no mandatory data processor agreements|DPIA is NOT required|not required for typical deployments"
+pattern="100%[[:space:]-]+GDPR|GDPR[[:space:]-]+compliant|DSGVO[[:space:]-]+konform|Compliance[[:space:]-]+Audited|complies with all GDPR|No DPA needed|no GDPR processor agreement needed|no mandatory data processor agreements|DPIA is NOT required|not required for typical deployments|legally compliant|guarantees compliance|legal compliance is guaranteed|certifies compliance|(GDPR|DSGVO|compliance|legal)[^.\n]{0,40}(certified|guaranteed)|(certified|guaranteed)[^.\n]{0,40}(GDPR|DSGVO|compliance|legal)"
 
-if rg --pcre2 -n "$pattern" "${scan_paths[@]}"; then
+if rg --pcre2 --ignore-case -n "$pattern" "${scan_paths[@]}"; then
     echo "ERROR: legal-readiness docs contain absolute compliance wording." >&2
     echo "Use deployment-dependent wording and require operator/legal review." >&2
     exit 1
@@ -52,6 +54,7 @@ require_text docs/release-checklist.md "scripts/tests/test-legal-openapi-contrac
 require_text docs/release-checklist.md "docs/legal-readiness.md"
 require_text docs/release-checklist.md "docs/deployment-readiness-record.md"
 require_text docs/release-checklist.md "docs/legal-readiness-parity.md"
+require_text docs/release-checklist.md "Nido/fop legal catalog"
 require_text docs/release-checklist.md "fop legal catalog"
 require_text docs/release-checklist.md "reference-only, not legal advice"
 require_text docs/release-checklist.md "attorney review"
@@ -71,6 +74,7 @@ require_text docs/legal-readiness.md "attorney review"
 require_text docs/legal-readiness.md "citation verification"
 require_text docs/legal-readiness.md "human signoff"
 require_text docs/legal-readiness.md "deployment-specific configuration"
+require_text docs/legal-readiness.md "Nido/fop legal catalog"
 require_text docs/legal-readiness.md "docs/deployment-readiness-record.md"
 require_text docs/legal-readiness.md "docs/legal-readiness-parity.md"
 require_text docs/deployment-readiness-record.md "# Deployment Readiness Record"
@@ -83,12 +87,13 @@ require_text docs/deployment-readiness-record.md "Final human go-live signoff"
 require_text docs/legal-readiness-parity.md "# Legal Readiness Parity"
 require_text docs/legal-readiness-parity.md "Rust and PHP"
 require_text docs/legal-readiness-parity.md "Module/plugin review"
+require_text docs/legal-readiness-parity.md "Nido/fop legal catalog"
 require_text docs/legal-readiness-parity.md "fop legal catalog"
 require_text docs/legal-readiness-parity.md "qualified counsel"
 require_text docs/COMPLIANCE.md "Operator Legal Readiness Checklist"
 require_text docs/COMPLIANCE.md "Module / Plugin Enablement Policy"
 
-if rg --pcre2 -n "GDPR compliant|DSGVO compliant|legally compliant|certified|guaranteed" docs/legal-readiness.md docs/release-checklist.md; then
+if rg --pcre2 --ignore-case -n "GDPR compliant|DSGVO compliant|legally compliant|certified|guaranteed" docs/legal-readiness.md docs/release-checklist.md; then
     echo "ERROR: legal-readiness hub/checklist contain absolute legal-status wording." >&2
     exit 1
 fi
