@@ -1089,6 +1089,7 @@ pub async fn get_recommendation_stats(
     };
 
     let engine = RecommendationEngineConfig::load(&state_guard.db).await;
+    let algorithm_adapter = adapter_status_for_weighted_v1(&engine);
 
     let stats = RecommendationStats {
         total_recommendations: audit_stats.total_batches,
@@ -1102,7 +1103,7 @@ pub async fn get_recommendation_stats(
         algorithm: engine.algorithm.clone(),
         algorithm_weights: engine.weights,
         allocation: engine.allocation,
-        algorithm_adapter: adapter_status_for_weighted_v1(&engine),
+        algorithm_adapter,
         legal_boundary: RecommendationLegalBoundary {
             legal_review_required: true,
             attorney_review_status: "required_before_customer_wording".to_string(),
