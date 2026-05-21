@@ -624,9 +624,8 @@ fi
 
 # ─── Stage 6c: cargo audit (RustSec) + cargo-geiger (unsafe SAST) ───────────
 # Mirrors .github/workflows/security.yml cargo-audit + cargo-geiger jobs.
-# cargo audit: gating on full+cd profiles; same RUSTSEC ignore list as the
-# workflow (kept in sync via deny.toml — cargo-audit reads its own DB but
-# respects --ignore CLI flags).
+# cargo audit: gating on full+cd profiles; RustSec ignores are centralized in
+# deny.toml and expanded by scripts/ci/cargo-audit-with-deny-ignores.sh.
 # cargo-geiger: advisory only (unsafe-block trend tracking, not a hard gate).
 if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
   if command -v cargo-audit >/dev/null 2>&1; then
@@ -635,9 +634,9 @@ if [[ "$profile" == "cd" || "$profile" == "full" ]]; then
     # crate ID. For local runs we accept warnings as advisory unless
     # FOP_LOCAL_CI_AUDIT_STRICT=1 is set (CI enforces strictly).
     if [[ "${FOP_LOCAL_CI_AUDIT_STRICT:-}" == "1" ]]; then
-      run_step "cargo audit (RustSec, strict)" "cargo audit --deny warnings"
+      run_step "cargo audit (RustSec, strict)" "scripts/ci/cargo-audit-with-deny-ignores.sh --deny warnings"
     else
-      run_step "cargo audit (RustSec, advisory)" "cargo audit || echo 'cargo-audit found advisories (advisory — see above)'"
+      run_step "cargo audit (RustSec, advisory)" "scripts/ci/cargo-audit-with-deny-ignores.sh || echo 'cargo-audit found advisories (advisory — see above)'"
     fi
   else
     skip_step "cargo audit" "cargo-audit not installed (cargo install cargo-audit)"

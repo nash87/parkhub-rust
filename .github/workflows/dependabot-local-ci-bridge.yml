@@ -77,7 +77,7 @@ jobs:
       - name: Run cargo-deny (advisories + bans + licenses + sources)
         run: cargo deny check advisories bans licenses sources
 
-      # --- cargo-audit (advisory: mirrors security.yml: cargo-audit) ---
+      # --- cargo-audit (hard gate: mirrors security.yml: cargo-audit) ---
       - name: Install cargo-audit
         uses: taiki-e/install-action@711e1c3275189d76dcc4d34ddea63bf96ac49090 # v2.76.0
         with:
@@ -85,22 +85,7 @@ jobs:
 
       - name: Run cargo audit
         continue-on-error: false
-        run: |
-          cargo audit \
-            --ignore RUSTSEC-2024-0412 \
-            --ignore RUSTSEC-2024-0413 \
-            --ignore RUSTSEC-2024-0415 \
-            --ignore RUSTSEC-2024-0416 \
-            --ignore RUSTSEC-2024-0418 \
-            --ignore RUSTSEC-2024-0419 \
-            --ignore RUSTSEC-2024-0420 \
-            --ignore RUSTSEC-2024-0436 \
-            --ignore RUSTSEC-2024-0370 \
-            --ignore RUSTSEC-2023-0071 \
-            --ignore RUSTSEC-2025-0057 \
-            --ignore RUSTSEC-2023-0019 \
-            --ignore RUSTSEC-2024-0384 \
-            --ignore RUSTSEC-2026-0097
+        run: scripts/ci/cargo-audit-with-deny-ignores.sh
 
       # --- npm audit (advisory: mirrors ci.yml: parkhub-web npm audit) ---
       - name: Set up Node.js

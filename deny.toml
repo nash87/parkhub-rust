@@ -24,8 +24,11 @@ ignore = [
     "RUSTSEC-2024-0411", # glib (gtk-rs core, unmaintained)
     "RUSTSEC-2024-0414", # gio (gtk-rs, unmaintained)
     "RUSTSEC-2024-0417", # pango (gtk-rs, unmaintained)
+    "RUSTSEC-2024-0429", # glib VariantStrIter unsoundness (Tauri GTK3 stack; patched at glib >=0.20)
     "RUSTSEC-2025-0081", # soup2 / webkit2gtk transitive unmaintained
     "RUSTSEC-2025-0075", # another webkit2gtk transitive
+    "RUSTSEC-2024-0384", # instant unmaintained (Tauri/kuchikiki transitive)
+    "RUSTSEC-2026-0097", # rand thread_rng unsoundness (Tauri/kuchikiki transitive; no compatible lockfile bump)
     # Slint/Tauri Unicode database crates (unic-*) — pulled via Slint's
     # compiler for .slint file parsing. The unic-* family was superseded
     # by the built-in `char` methods + the icu crates; maintainers moved on
