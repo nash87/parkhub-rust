@@ -62,7 +62,7 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 argon2 = { version = "0.5", features = ["std", "rand"] }  # 0.6 is RC only
 
 # Network discovery
-mdns-sd = "0.19"  # updated from 0.11
+mdns-sd = "0.20"  # updated from 0.11
 
 # Internal crates
 parkhub-common = { path = "parkhub-common" }
