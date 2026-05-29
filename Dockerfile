@@ -81,7 +81,7 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
 # copy the empty directory tree into the final image.
 # UID 65532 is the built-in "nonroot" user in gcr.io/distroless/cc-debian12.
 # ---------------------------------------------------------------------------
-FROM busybox:1.37.0@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681e7cf6c83d5e AS data-setup
+FROM busybox:1.38.0@sha256:fd8d9aa63ba2f0982b5304e1ee8d3b90a210bc1ffb5314d980eb6962f1a9715d AS data-setup
 RUN mkdir -p /data && chown 65532:65532 /data
 
 # ---------------------------------------------------------------------------
