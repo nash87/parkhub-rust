@@ -14,7 +14,7 @@ ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base@sha256:4973aa3c2ccbe13fe2049aab53
 # ---------------------------------------------------------------------------
 # Stage 1: Frontend build (Astro/Vite)
 # ---------------------------------------------------------------------------
-FROM node:26-alpine@sha256:e71ac5e964b9201072425d59d2e876359efa25dc96bb1768cb73295728d6e4ea AS web-builder
+FROM node:26-alpine@sha256:7c6af15abe4e3de859690e7db171d0d711bf37d27528eddfe625b2fe89e097f8 AS web-builder
 WORKDIR /app
 COPY parkhub-web/package*.json ./
 RUN npm ci
@@ -24,7 +24,7 @@ RUN DOCKER=1 npm run build
 # ---------------------------------------------------------------------------
 # Stage 2: Cargo chef — prepare dependency recipe
 # ---------------------------------------------------------------------------
-FROM rust:1.95-slim@sha256:5021128d455987e7e7d6586bd7288fa876614821292614acbb761c21fc1ebb15 AS chef
+FROM rust:1.96-slim@sha256:26abcef3d79b8d890c4ceb17093154573e1f6479cf6dd7c1450043b8458350f6 AS chef
 RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config libssl-dev cmake make perl clang curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -81,7 +81,7 @@ RUN touch parkhub-common/src/lib.rs parkhub-server/src/main.rs && \
 # copy the empty directory tree into the final image.
 # UID 65532 is the built-in "nonroot" user in gcr.io/distroless/cc-debian12.
 # ---------------------------------------------------------------------------
-FROM busybox:1.37.0@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681e7cf6c83d5e AS data-setup
+FROM busybox:1.38.0@sha256:fd8d9aa63ba2f0982b5304e1ee8d3b90a210bc1ffb5314d980eb6962f1a9715d AS data-setup
 RUN mkdir -p /data && chown 65532:65532 /data
 
 # ---------------------------------------------------------------------------
