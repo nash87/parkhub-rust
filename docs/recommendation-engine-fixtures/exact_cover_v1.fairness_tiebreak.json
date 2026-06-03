@@ -27,8 +27,9 @@
     "covered_constraints": ["tenant:alpha"]
   },
   "legal_boundary": {
+    "legal_review_required": true,
+    "attorney_review_status": "required_before_customer_wording",
     "execution_allowed": false,
-    "human_review_required": true,
-    "note": "Equal-weight candidates use stable option-id ordering as the deterministic fairness tie-break."
+    "disclaimer": "Equal-weight candidates use stable option-id ordering as the deterministic fairness tie-break; attorney review, citation verification, client authorization, and final legal judgment remain required before customer-facing legal or profiling claims ship."
   }
 }

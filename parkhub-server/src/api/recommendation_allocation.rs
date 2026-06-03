@@ -12,10 +12,12 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use uuid::Uuid;
 
+use crate::db::Database;
 use parkhub_common::ApiResponse;
+use parkhub_common::models::UserRole;
 
 use super::{
-    AuthUser, SharedState, check_admin,
+    AuthUser, SharedState,
     recommendations::{RecommendationAllocationConfig, RecommendationEngineConfig},
 };
 
@@ -161,30 +163,25 @@ pub async fn solve_exact_cover_allocation(
     Extension(auth_user): Extension<AuthUser>,
     Json(request): Json<ExactCoverAllocationRequest>,
 ) -> (StatusCode, Json<ApiResponse<ExactCoverAllocationResponse>>) {
-    let engine = {
-        let state_guard = state.read().await;
-        if let Err((status, msg)) = check_admin(&state_guard, &auth_user).await {
-            return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
-        }
-        RecommendationEngineConfig::load(&state_guard.db).await
-    };
+    let db = database_from_shared_state(&state).await;
+    if let Err((status, msg)) = check_admin_db(&db, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
+    let engine = RecommendationEngineConfig::load(&db).await;
 
     let limits = effective_limits(request.limits, &engine.allocation);
     let result = solve_exact_cover_v1(&request.required_constraints, &request.options, limits);
     let allocation_trace_id = Uuid::new_v4();
 
-    let audit_result = {
-        let state_guard = state.read().await;
-        audit_exact_cover_allocation(
-            &state_guard,
-            allocation_trace_id,
-            &auth_user,
-            &request,
-            limits,
-            &result,
-        )
-        .await
-    };
+    let audit_result = audit_exact_cover_allocation(
+        &db,
+        allocation_trace_id,
+        &auth_user,
+        &request,
+        limits,
+        &result,
+    )
+    .await;
     if let Err(err) = audit_result {
         tracing::error!(
             %allocation_trace_id,
@@ -215,6 +212,20 @@ pub async fn solve_exact_cover_allocation(
     )
 }
 
+async fn database_from_shared_state(state: &SharedState) -> Database {
+    state.read().await.db.clone()
+}
+
+async fn check_admin_db(
+    db: &Database,
+    auth_user: &AuthUser,
+) -> Result<(), (StatusCode, &'static str)> {
+    match db.get_user(&auth_user.user_id.to_string()).await {
+        Ok(Some(user)) if matches!(user.role, UserRole::Admin | UserRole::SuperAdmin) => Ok(()),
+        _ => Err((StatusCode::FORBIDDEN, "Admin access required")),
+    }
+}
+
 fn effective_limits(
     request_limits: Option<ExactCoverLimits>,
     allocation: &RecommendationAllocationConfig,
@@ -240,14 +251,14 @@ impl ExactCoverLimits {
 }
 
 async fn audit_exact_cover_allocation(
-    app_state: &crate::AppState,
+    db: &Database,
     trace_id: Uuid,
     auth_user: &AuthUser,
     request: &ExactCoverAllocationRequest,
     limits: ExactCoverLimits,
     result: &ExactCoverResult,
 ) -> anyhow::Result<()> {
-    let tenant_id = super::resolve_tenant_id(app_state, auth_user.user_id).await;
+    let tenant_id = resolve_tenant_id_db(db, auth_user.user_id).await;
     let selected = result
         .selected_option_ids
         .iter()
@@ -305,7 +316,15 @@ async fn audit_exact_cover_allocation(
         ip_address: None,
     };
 
-    app_state.db.save_audit_log(&entry).await
+    db.save_audit_log(&entry).await
+}
+
+async fn resolve_tenant_id_db(db: &Database, user_id: Uuid) -> Option<String> {
+    db.get_user(&user_id.to_string())
+        .await
+        .ok()
+        .flatten()
+        .and_then(|user| user.tenant_id)
 }
 
 fn exact_cover_config_hash(limits: ExactCoverLimits) -> String {
@@ -501,6 +520,7 @@ mod tests {
         required_constraints: Vec<String>,
         options: Vec<ExactCoverFixtureOption>,
         expected: ExactCoverFixtureExpected,
+        legal_boundary: ExactCoverFixtureLegalBoundary,
     }
 
     #[derive(Debug, Deserialize)]
@@ -515,6 +535,14 @@ mod tests {
         status: String,
         selected_option_ids: Vec<String>,
         covered_constraints: Vec<String>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct ExactCoverFixtureLegalBoundary {
+        legal_review_required: bool,
+        attorney_review_status: String,
+        execution_allowed: bool,
+        disclaimer: String,
     }
 
     fn option(id: &str, covers: &[&str], weight: i64) -> ExactCoverOption {
@@ -679,6 +707,18 @@ mod tests {
             assert_eq!(
                 result.covered_constraints,
                 fixture.expected.covered_constraints
+            );
+            assert!(fixture.legal_boundary.legal_review_required);
+            assert_eq!(
+                fixture.legal_boundary.attorney_review_status,
+                "required_before_customer_wording"
+            );
+            assert!(!fixture.legal_boundary.execution_allowed);
+            assert!(
+                fixture
+                    .legal_boundary
+                    .disclaimer
+                    .contains("attorney review")
             );
         }
     }

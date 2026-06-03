@@ -17,8 +17,9 @@
     "covered_constraints": []
   },
   "legal_boundary": {
+    "legal_review_required": true,
+    "attorney_review_status": "required_before_customer_wording",
     "execution_allowed": false,
-    "human_review_required": true,
-    "note": "No constraints means no exact-cover allocation is required."
+    "disclaimer": "No constraints means no exact-cover allocation is required; attorney review, citation verification, client authorization, and final legal judgment remain required before customer-facing legal or profiling claims ship."
   }
 }

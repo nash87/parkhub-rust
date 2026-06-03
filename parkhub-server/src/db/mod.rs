@@ -210,6 +210,7 @@ pub(crate) fn pagination_offset(page: i32, per_page: i32) -> (usize, usize) {
 }
 
 /// Main database wrapper with optional encryption support
+#[derive(Clone)]
 pub struct Database {
     pub(crate) inner: Arc<RwLock<RedbDatabase>>,
     encryptor: Option<Encryptor>,

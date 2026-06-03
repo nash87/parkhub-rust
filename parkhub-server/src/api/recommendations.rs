@@ -212,18 +212,15 @@ impl RecommendationEngineConfig {
             );
             cfg.algorithm = "weighted_v1".to_string();
         }
-        cfg.allocation.strategy =
+        let requested_allocation_strategy =
             read_module_string(db, "allocation_strategy", "weighted_v1").await;
-        if !matches!(
-            cfg.allocation.strategy.as_str(),
-            "weighted_v1" | "exact_cover_v1"
-        ) {
+        if !is_supported_allocation_strategy(&requested_allocation_strategy) {
             tracing::warn!(
-                allocation_strategy = %cfg.allocation.strategy,
+                allocation_strategy = %requested_allocation_strategy,
                 "unknown allocation strategy requested; falling back to weighted_v1"
             );
-            cfg.allocation.strategy = "weighted_v1".to_string();
         }
+        cfg.allocation.strategy = normalize_allocation_strategy(requested_allocation_strategy);
         cfg.allocation.exact_cover_max_options =
             read_module_usize(db, "exact_cover_max_options", 256, 1, 256).await;
         cfg.allocation.exact_cover_max_search_nodes =
@@ -282,6 +279,19 @@ fn is_local_dev_test_host(host: &str) -> bool {
     labels.len() >= 2
         && labels.last().is_some_and(|suffix| *suffix == "test")
         && labels.iter().all(|label| !label.is_empty())
+}
+
+fn normalize_allocation_strategy(strategy: String) -> String {
+    let strategy = strategy.trim();
+    if is_supported_allocation_strategy(strategy) {
+        strategy.to_string()
+    } else {
+        "weighted_v1".to_string()
+    }
+}
+
+fn is_supported_allocation_strategy(strategy: &str) -> bool {
+    matches!(strategy.trim(), "weighted_v1" | "exact_cover_v1")
 }
 
 fn is_kubernetes_service_host(host: &str) -> bool {
@@ -1418,6 +1428,22 @@ mod tests {
         );
         assert!(validate_pipeline_endpoint(Some("https://example.com".to_string())).is_none());
         assert!(validate_pipeline_endpoint(Some("file:///tmp/pipeline".to_string())).is_none());
+    }
+
+    #[test]
+    fn test_allocation_strategy_falls_back_to_weighted_v1() {
+        assert_eq!(
+            normalize_allocation_strategy("exact_cover_v1".to_string()),
+            "exact_cover_v1"
+        );
+        assert_eq!(
+            normalize_allocation_strategy(" weighted_v1 ".to_string()),
+            "weighted_v1"
+        );
+        assert_eq!(
+            normalize_allocation_strategy("unknown_strategy".to_string()),
+            "weighted_v1"
+        );
     }
 
     #[test]

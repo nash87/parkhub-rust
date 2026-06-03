@@ -7,10 +7,10 @@ cd "$ROOT"
 fixture="docs/recommendation-engine-fixtures/weighted_v1.basic.json"
 expected_fixture_sha="fe8ffc6a8cdb645f48ded1bebcaf3f48eb4d8576c95520a75378e2f4394b4bfa"
 exact_cover_fixtures=(
-  "030e4381665b2409e6fb82cef2c37a574b787a8bdb4cee1ecc21726d34b80da6 docs/recommendation-engine-fixtures/exact_cover_v1.batch_basic.json"
-  "16f438ec0825dbf76502b3af438cf1010a96fc0ec3f744c60c2564576d4aaa71 docs/recommendation-engine-fixtures/exact_cover_v1.empty.json"
-  "0d396cdb0c725b93eaf0418784d3fb1091cb5533b2f0ea3ce96264319d223eb4 docs/recommendation-engine-fixtures/exact_cover_v1.fairness_tiebreak.json"
-  "6f450243b60cab68ecd3f2186ba32697a15efd032420f924ec97b3d8a9b83ecf docs/recommendation-engine-fixtures/exact_cover_v1.no_solution.json"
+  "6dfcb84cd4eb61339135552ac82be5c2bb5d2f20682fac78b8ae4d10d9dad116 docs/recommendation-engine-fixtures/exact_cover_v1.batch_basic.json"
+  "b81532d1e4be7cab0e909701aee355a45a52d183981f7523b877d1dd9b5628da docs/recommendation-engine-fixtures/exact_cover_v1.empty.json"
+  "ded9af5e6b86cb6657a19c6d27a04b317da44d6f6e0f212d581039a89e1e6dfb docs/recommendation-engine-fixtures/exact_cover_v1.fairness_tiebreak.json"
+  "971ba4478425b038464de9ab7e3c411d631ab9f8eef9b738f8df90b0c237c378 docs/recommendation-engine-fixtures/exact_cover_v1.no_solution.json"
 )
 
 require_file() {
@@ -74,6 +74,10 @@ for entry in "${exact_cover_fixtures[@]}"; do
     exit 1
   fi
   require_grep '"algorithm": "exact_cover_v1"' "$exact_cover_fixture"
+  require_grep '"legal_review_required": true' "$exact_cover_fixture"
+  require_grep '"attorney_review_status": "required_before_customer_wording"' "$exact_cover_fixture"
+  require_grep '"execution_allowed": false' "$exact_cover_fixture"
+  require_grep 'attorney review, citation verification, client authorization, and final legal judgment remain required' "$exact_cover_fixture"
 done
 
 require_grep '"selected_option_ids": ["slot-a", "slot-b"]' docs/recommendation-engine-fixtures/exact_cover_v1.batch_basic.json
