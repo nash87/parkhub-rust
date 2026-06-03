@@ -84,7 +84,7 @@ function AccountFooter({
           width: 26,
           height: 26,
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, var(--v5-acc), oklch(0.4 0.1 175))',
+          background: 'var(--v5-acc)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -200,7 +200,7 @@ function MarbleLayout({ active, onNavigate, userLabel, userEmail }: SidebarProps
                     height: 34,
                     padding: '0 8px 0 12px',
                     cursor: 'pointer',
-                    borderRadius: 8,
+                    borderRadius: 4,
                     margin: '1px 5px',
                     background: isActive ? 'var(--v5-acc-muted)' : 'transparent',
                     borderLeft: `2px solid ${isActive ? 'var(--v5-acc)' : 'transparent'}`,
@@ -332,7 +332,7 @@ function VoidLayout({ active, onNavigate, userLabel, userEmail }: SidebarProps) 
                 borderRight: 0,
                 borderBottom: 0,
                 background: isActive
-                  ? 'oklch(0.72 0.14 175 / 0.07)'
+                  ? 'var(--v5-acc-muted)'
                   : isHover
                     ? 'rgba(255, 255, 255, 0.02)'
                     : 'transparent',

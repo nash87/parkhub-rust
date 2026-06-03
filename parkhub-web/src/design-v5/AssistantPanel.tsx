@@ -13,7 +13,7 @@ interface Suggestion {
 const TYPE_COLOR: Record<SuggestionType, string> = {
   booking: 'var(--v5-acc)',
   ev: 'var(--v5-ev)',
-  swap: 'var(--v5-purple)',
+  swap: 'var(--v5-coral)',
   info: 'var(--v5-ok)',
 };
 

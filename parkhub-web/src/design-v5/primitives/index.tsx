@@ -52,17 +52,17 @@ export function V5NamedIcon({ name, ...rest }: { name: IconKey } & Omit<Paramete
 }
 
 export type BadgeVariant =
-  | 'primary' | 'success' | 'warning' | 'error' | 'info' | 'gray' | 'ev' | 'purple';
+  | 'primary' | 'success' | 'warning' | 'error' | 'info' | 'gray' | 'ev' | 'coral';
 
 const BADGE_COLORS: Record<BadgeVariant, { bg: string; fg: string }> = {
-  primary: { bg: 'oklch(0.57 0.14 175 / 0.12)', fg: 'oklch(0.57 0.14 175)' },
+  primary: { bg: 'rgba(245, 176, 66, 0.12)', fg: 'var(--v5-acc)' },
   success: { bg: 'oklch(0.65 0.17 160 / 0.12)', fg: 'oklch(0.65 0.17 160)' },
   warning: { bg: 'oklch(0.74 0.16 75 / 0.12)', fg: 'oklch(0.74 0.16 75)' },
   error: { bg: 'oklch(0.58 0.22 25 / 0.12)', fg: 'oklch(0.58 0.22 25)' },
   info: { bg: 'oklch(0.58 0.18 260 / 0.12)', fg: 'oklch(0.58 0.18 260)' },
   gray: { bg: 'oklch(0.5 0 0 / 0.15)', fg: 'oklch(0.7 0 0)' },
   ev: { bg: 'oklch(0.62 0.18 260 / 0.12)', fg: 'oklch(0.62 0.18 260)' },
-  purple: { bg: 'oklch(0.62 0.18 295 / 0.12)', fg: 'oklch(0.62 0.18 295)' },
+  coral: { bg: 'rgba(232, 131, 106, 0.12)', fg: 'var(--v5-coral)' },
 };
 
 export function Badge({
@@ -136,7 +136,7 @@ export function Card({
       style={{
         background: 'var(--v5-sur)',
         border: '1px solid var(--v5-bor)',
-        borderRadius: 8,
+        borderRadius: 4,
         boxShadow: 'var(--v5-shadow-card)',
         ...style,
       }}
