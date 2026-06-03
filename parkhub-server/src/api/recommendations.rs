@@ -220,7 +220,7 @@ impl RecommendationEngineConfig {
                 "unknown allocation strategy requested; falling back to weighted_v1"
             );
         }
-        cfg.allocation.strategy = normalize_allocation_strategy(requested_allocation_strategy);
+        cfg.allocation.strategy = normalize_allocation_strategy(&requested_allocation_strategy);
         cfg.allocation.exact_cover_max_options =
             read_module_usize(db, "exact_cover_max_options", 256, 1, 256).await;
         cfg.allocation.exact_cover_max_search_nodes =
@@ -281,7 +281,7 @@ fn is_local_dev_test_host(host: &str) -> bool {
         && labels.iter().all(|label| !label.is_empty())
 }
 
-fn normalize_allocation_strategy(strategy: String) -> String {
+fn normalize_allocation_strategy(strategy: &str) -> String {
     let strategy = strategy.trim();
     if is_supported_allocation_strategy(strategy) {
         strategy.to_string()
@@ -1433,15 +1433,15 @@ mod tests {
     #[test]
     fn test_allocation_strategy_falls_back_to_weighted_v1() {
         assert_eq!(
-            normalize_allocation_strategy("exact_cover_v1".to_string()),
+            normalize_allocation_strategy("exact_cover_v1"),
             "exact_cover_v1"
         );
         assert_eq!(
-            normalize_allocation_strategy(" weighted_v1 ".to_string()),
+            normalize_allocation_strategy(" weighted_v1 "),
             "weighted_v1"
         );
         assert_eq!(
-            normalize_allocation_strategy("unknown_strategy".to_string()),
+            normalize_allocation_strategy("unknown_strategy"),
             "weighted_v1"
         );
     }
