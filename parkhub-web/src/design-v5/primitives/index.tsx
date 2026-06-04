@@ -82,7 +82,7 @@ export function Badge({
         alignItems: 'center',
         gap: 4,
         padding: '2px 8px',
-        borderRadius: 999,
+        borderRadius: 2,
         fontSize: 10,
         fontWeight: 500,
         background: bg,
@@ -206,7 +206,7 @@ export function Toggle({
       style={{
         width: 38,
         height: 21,
-        borderRadius: 11,
+        borderRadius: 4,
         background: checked ? 'var(--v5-acc)' : 'var(--v5-bor)',
         cursor: disabled ? 'default' : 'pointer',
         position: 'relative',
@@ -223,10 +223,10 @@ export function Toggle({
           left: checked ? 19 : 2.5,
           width: 16,
           height: 16,
-          borderRadius: '50%',
-          background: '#fff',
+          borderRadius: 2,
+          background: 'var(--v5-sur)',
           transition: 'left 0.2s',
-          boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)',
+          boxShadow: 'var(--v5-shadow-card)',
         }}
       />
     </button>
@@ -289,7 +289,7 @@ export function StatCard({
       style={{
         background: accent ? 'var(--v5-acc-muted)' : 'var(--v5-sur)',
         border: `1px solid ${accent ? 'color-mix(in oklch, var(--v5-acc) 50%, transparent)' : 'var(--v5-bor)'}`,
-        borderRadius: 8,
+        borderRadius: 4,
         padding: '12px 16px',
         animationDelay: `${delay}s`,
       }}
@@ -311,7 +311,7 @@ export function StatCard({
             style={{
               width: 26,
               height: 26,
-              borderRadius: 8,
+              borderRadius: 4,
               background: accent ? 'var(--v5-acc-muted)' : 'var(--v5-sur2)',
               display: 'flex',
               alignItems: 'center',

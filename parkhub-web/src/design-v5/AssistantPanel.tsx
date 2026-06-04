@@ -92,14 +92,14 @@ export function V5AssistantPanel({
             fontSize: 13,
             fontWeight: 700,
             color: 'var(--v5-txt)',
-            letterSpacing: '-0.2px',
+            letterSpacing: 0,
           }}
         >
           Assistent
         </span>
         <Badge variant="primary">Beta</Badge>
         <span style={{ marginLeft: 'auto' }}>
-          <Badge variant="purple">Lokal</Badge>
+          <Badge variant="gray">Lokal</Badge>
         </span>
       </div>
 
@@ -118,7 +118,7 @@ export function V5AssistantPanel({
           style={{
             fontSize: 10,
             color: 'var(--v5-mut)',
-            letterSpacing: 1.2,
+            letterSpacing: 0,
             textTransform: 'uppercase',
             marginBottom: 2,
           }}
@@ -133,7 +133,7 @@ export function V5AssistantPanel({
               style={{
                 background: 'var(--v5-sur2)',
                 border: '1px solid var(--v5-bor)',
-                borderRadius: 11,
+                borderRadius: 4,
                 padding: 12,
                 animation: `ph-v5-fadeUp 0.28s ease ${i * 0.07}s both`,
               }}
@@ -170,7 +170,7 @@ export function V5AssistantPanel({
                 onClick={() => toast(`${s.action} ausgeführt`, 'success')}
                 style={{
                   padding: '5px 10px',
-                  borderRadius: 7,
+                  borderRadius: 4,
                   background: `color-mix(in oklch, ${color} 15%, transparent)`,
                   color,
                   border: `1px solid color-mix(in oklch, ${color} 30%, transparent)`,
@@ -191,7 +191,7 @@ export function V5AssistantPanel({
           style={{
             fontSize: 10,
             color: 'var(--v5-mut)',
-            letterSpacing: 1.2,
+            letterSpacing: 0,
             textTransform: 'uppercase',
             marginBottom: 2,
           }}
@@ -227,7 +227,7 @@ export function V5AssistantPanel({
           fontSize: 9,
           fontWeight: 500,
           color: 'var(--v5-mut)',
-          letterSpacing: '0.06em',
+          letterSpacing: 0,
           textTransform: 'uppercase',
           textAlign: 'center',
           flexShrink: 0,
