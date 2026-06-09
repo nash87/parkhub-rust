@@ -329,6 +329,22 @@ p { line-height: 1.6; }
   background: var(--color-primary-600);
 }
 
+/* WCAG AA: amber TEXT on light surfaces. The securanido --color-primary-700
+   (#ab7220) reads at 4.01:1 on white (axe color-contrast, serious — caught
+   on the login "Forgot password?" link). 39 call sites use text-primary-700
+   on light backgrounds, so fix the utility's computed color once instead of
+   touching every view: --color-primary-800 (#7d5316) → 6.729:1 on white ✓.
+   Backgrounds/borders/rings keep the palette value; dark-mode variants
+   (e.g. dark:text-primary-400) still override via their own rules.
+   Design-debt: migrate call sites to a semantic on-surface accent token. */
+@layer utilities {
+  /* :not(.dark) scoping keeps dark-mode variants (dark:text-primary-400)
+     authoritative — the override only applies where the violation exists. */
+  :root:not(.dark) .text-primary-700 {
+    color: var(--color-primary-800);
+  }
+}
+
 @utility btn-secondary {
   background: var(--theme-bg-muted);
   color: var(--theme-text);
