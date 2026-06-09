@@ -25,3 +25,16 @@ body:
         - UI/UX improvement
         - Documentation
         - DevOps/CI
+  - type: checkboxes
+    id: spec
+    attributes:
+      label: Spec-driven development
+      description: For non-trivial features, a spec file helps align on requirements before implementation begins. See [specs/README.md](../specs/README.md).
+      options:
+        - label: I have created or will create a spec file at `specs/<feature-id>/spec.md` before the PR is opened
+  - type: input
+    id: spec_link
+    attributes:
+      label: Link to spec (optional)
+      description: Link to an existing `specs/<feature-id>/spec.md` draft PR or file, if already written.
+      placeholder: "https://github.com/nash87/parkhub-rust/blob/…/specs/…/spec.md"

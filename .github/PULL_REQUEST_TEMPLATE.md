@@ -22,6 +22,10 @@
 - [ ] User input is validated before use
 - [ ] No new `unsafe` blocks without justification
 
+## Spec reference
+<!-- If this implements a non-trivial feature: link to specs/<feature-id>/spec.md or docs/plans/<plan>.md -->
+<!-- Small fixes and doc changes do not need a spec. -->
+
 ## Checklist
 - [ ] Code follows project style (Rust fmt, no Clippy warnings, pedantic + nursery)
 - [ ] Documentation updated if needed (docs/, README.md)

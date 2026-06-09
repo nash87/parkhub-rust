@@ -53,6 +53,43 @@ duplicate work.
 
 ---
 
+## Spec-Driven Development
+
+For non-trivial features and API changes, we follow a spec-first workflow before
+writing implementation code. The goal is to align on requirements and design early —
+before a large PR is opened — so review stays focused on correctness rather than scope.
+
+**When a spec is required:**
+
+- PRs labeled `feature` or `enhancement`
+- Any new API endpoint or breaking change to an existing one
+- Changes that affect the PHP parity contract (`docs/openapi-parity.md`)
+
+**When a spec is not required:**
+
+- Bug fixes
+- Documentation updates
+- Dependency bumps
+- Tooling and CI changes
+
+**The workflow:**
+
+1. Create `specs/<feature-id>/spec.md` using the template in
+   [`.specify/templates/spec.md`](.specify/templates/spec.md).
+   Open a draft PR so maintainers can comment on requirements.
+2. After the spec is agreed, add `specs/<feature-id>/plan.md` with the technical design.
+3. Use `specs/<feature-id>/tasks.md` to track implementation slices.
+4. Link the spec from the PR template's "Spec reference" field.
+
+The [`specs/`](specs/) directory contains a full index and the workflow description.
+The [`.specify/memory/constitution.md`](.specify/memory/constitution.md) captures the
+binding engineering principles for this project.
+
+For large features, the `/speckit.specify` slash command in Claude Code or Copilot
+can scaffold the three spec files from the templates automatically.
+
+---
+
 ## Development Setup
 
 ### Prerequisites

@@ -4,9 +4,9 @@
 
 | Version | Supported              |
 |---------|------------------------|
-| 4.9.x   | Yes (current)          |
-| 4.8.x   | Security fixes only    |
-| < 4.8   | No                     |
+| 5.1.x   | Yes (current)          |
+| 5.0.x   | Security fixes only    |
+| < 5.0   | No                     |
 
 ## Known Accepted Advisories
 
