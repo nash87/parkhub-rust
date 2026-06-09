@@ -305,13 +305,28 @@ p { line-height: 1.6; }
 }
 
 @utility btn-primary {
-  background: var(--color-primary-700);
-  color: white;
+  /* WCAG AA fix: use design-system token pair instead of --color-primary-700 (#ab7220).
+     light (marble_light fallback): --v5-acc=#9e6208, --v5-accent-fg=#fff → 4.995:1 ✓
+     dark/void: --v5-acc=#f5b042, --v5-accent-fg=#0a0908 (dark ink) → 10.584:1 ✓
+     Fallback --color-primary-800 (#7d5316) gives 6.729:1 with white if v5 tokens absent. */
+  background: var(--v5-acc, var(--color-primary-800));
+  color: var(--v5-accent-fg, white);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .btn-primary:hover {
+  /* Light mode hover: --color-primary-800 (#7d5316) with white → 6.729:1 ✓ */
   background: var(--color-primary-800);
+}
+
+/* Earned-amber hover for dark/void modes: lighter amber shift while keeping dark ink */
+:root.dark[data-design-theme="marble"] .btn-primary:hover,
+:root[data-design-theme="marble"].dark .btn-primary:hover,
+:root[data-design-theme="void"] .btn-primary:hover,
+[data-ph-mode="marble_dark"] .btn-primary:hover,
+[data-ph-mode="void"] .btn-primary:hover {
+  /* --color-primary-600 (#d8942f) with dark ink (#0a0908) → 7.766:1 ✓ */
+  background: var(--color-primary-600);
 }
 
 @utility btn-secondary {
