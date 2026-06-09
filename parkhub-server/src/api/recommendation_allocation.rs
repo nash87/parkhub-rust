@@ -188,13 +188,7 @@ pub async fn solve_exact_cover_allocation(
             error = ?err,
             "failed to persist exact-cover allocation audit trace"
         );
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "AUDIT_TRACE_PERSIST_FAILED",
-                "Failed to persist exact-cover allocation audit trace",
-            )),
-        );
+        return audit_persist_failure_response();
     }
 
     (
@@ -209,6 +203,21 @@ pub async fn solve_exact_cover_allocation(
                 disclaimer: "exact_cover_v1 is operational scheduling support; attorney review, citation verification, client authorization, and final legal judgment remain required before customer-facing legal or profiling claims ship.",
             },
         })),
+    )
+}
+
+/// Compliance fail-closed response when the immutable audit trace cannot be
+/// persisted. A served `exact_cover_v1` allocation MUST NOT report success
+/// (with an `allocation_trace_id`) unless its audit record was durably written,
+/// otherwise operators are left with a trace id that has no audit evidence.
+fn audit_persist_failure_response() -> (StatusCode, Json<ApiResponse<ExactCoverAllocationResponse>>)
+{
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ApiResponse::error(
+            "AUDIT_TRACE_PERSIST_FAILED",
+            "Failed to persist exact-cover allocation audit trace",
+        )),
     )
 }
 
@@ -664,6 +673,59 @@ mod tests {
                 max_search_nodes: 50,
             }
         );
+    }
+
+    #[test]
+    fn exact_cover_limits_bounded_clamps_both_max_fields_into_caps() {
+        // Over-cap request values clamp down to the module-config maximums for
+        // BOTH exact_cover_max_options and exact_cover_max_search_nodes.
+        let over_cap = ExactCoverLimits {
+            max_options: 9_999,
+            max_search_nodes: 9_999_999,
+        };
+        assert_eq!(
+            over_cap.bounded(16, 250),
+            ExactCoverLimits {
+                max_options: 16,
+                max_search_nodes: 250,
+            }
+        );
+
+        // Zero / below-floor request values clamp up to the inclusive floor of 1
+        // so the solver is never handed a degenerate limit.
+        let below_floor = ExactCoverLimits {
+            max_options: 0,
+            max_search_nodes: 0,
+        };
+        assert_eq!(
+            below_floor.bounded(16, 250),
+            ExactCoverLimits {
+                max_options: 1,
+                max_search_nodes: 1,
+            }
+        );
+
+        // In-range values pass through untouched.
+        let in_range = ExactCoverLimits {
+            max_options: 8,
+            max_search_nodes: 100,
+        };
+        assert_eq!(in_range.bounded(16, 250), in_range);
+    }
+
+    #[test]
+    fn audit_persist_failure_response_fails_closed_with_error_code() {
+        // Compliance contract: if the immutable audit trace cannot be persisted,
+        // the endpoint MUST fail closed (5xx) instead of returning success with
+        // an allocation_trace_id that has no backing audit record.
+        let (status, Json(body)) = audit_persist_failure_response();
+
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(!body.success);
+        assert!(body.data.is_none());
+        let error = body.error.expect("error payload present");
+        assert_eq!(error.code, "AUDIT_TRACE_PERSIST_FAILED");
+        assert!(error.message.contains("audit trace"));
     }
 
     #[test]

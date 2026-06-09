@@ -80,6 +80,14 @@ pub struct RecommendationPipelineConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RecommendationAllocationConfig {
+    /// Kept as `String` (not an enum) intentionally: the value is read from
+    /// module config at runtime via [`read_module_string`] and normalized with
+    /// [`normalize_allocation_strategy`], which falls back to `"weighted_v1"`
+    /// on unknown values.  A strict-deserializing enum would reject any future
+    /// or typo'd value at the parse boundary rather than degrading gracefully,
+    /// breaking the documented unknown-strategy-fallback contract.  New
+    /// strategies are added by extending [`is_supported_allocation_strategy`]
+    /// and [`normalize_allocation_strategy`] without a breaking API change.
     pub strategy: String,
     pub exact_cover_max_options: usize,
     pub exact_cover_max_search_nodes: usize,
@@ -403,6 +411,7 @@ pub struct RecommendationQuery {
 
 #[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct SlotRecommendation {
+    #[schema(value_type = String, format = Uuid)]
     pub recommendation_id: Uuid,
     pub slot_id: Uuid,
     pub slot_number: i32,
