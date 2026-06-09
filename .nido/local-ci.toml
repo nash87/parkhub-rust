@@ -3,8 +3,17 @@
 # `nido ci run --gate recommendation-contract` is the cheap author-time
 # cross-language recommendation fixture and policy gate.
 # `nido ci run --gate legal-docs` keeps legal-readiness evidence current.
-# `nido ci run --gate pr` delegates to the repository's existing SHA-keyed
-# fop/Nido local CI attestation script and must pass before pushing/releasing.
+# `nido ci run --gate pr` delegates to the repository's SHA-keyed local CI
+# orchestrator and must pass before pushing/releasing.
+#
+# Transition note (T-nido-ci-migration):
+#   - canonical script: .github/scripts/nido-local-ci.sh
+#   - legacy compat shim: .github/scripts/fop-local-ci.sh (exec-delegates)
+#   - posted contexts: nido/local-ci/pr (canonical) + fop/local-ci/pr (compat)
+#   - report paths: .nido/reports/local-ci-pr-<sha>.json (canonical)
+#                   .fop/reports/local-ci-pr-<sha>.json  (compat copy)
+#   - status_context value below intentionally left as-is; the script posts
+#     both contexts and the gate in ci.yml accepts either.
 
 [[gates]]
 name = "recommendation-contract"
@@ -53,6 +62,6 @@ name = "pr"
 
 [[gates.steps]]
 name = "parkhub-pr-local-ci"
-command = "NO_COLOR=true .github/scripts/fop-local-ci.sh --profile pr --post-status"
+command = "NO_COLOR=true .github/scripts/nido-local-ci.sh --profile pr --post-status"
 timeout_secs = 7200
 allow_failure = false

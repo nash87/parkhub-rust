@@ -2,12 +2,16 @@ name: Dependabot local-CI bridge
 
 # Gitea mirror of `.github/workflows/dependabot-local-ci-bridge.yml`.
 #
-# TODO(gitea-mirror): Swatinem/rust-cache and taiki-e/install-action are
-# GitHub Actions; no pinned Gitea-Actions equivalents exist yet. Until those
-# wrappers are mirrored or replaced, cargo-deny and cargo-audit install inline
-# via `cargo install`. The rest of the workflow is structurally identical.
+# Posts nido/local-ci/pr (canonical) and fop/local-ci/pr (compat) for
+# Dependabot PRs so the local-ci-attestation gate clears regardless of
+# which context is currently required.
 #
-# Unblocks: parkhub-rust #638/#639/#640/#641/#642
+# TODO(gitea-mirror): Swatinem/rust-cache is a GitHub Action; no pinned
+# Gitea-Actions equivalent exists yet. cargo-deny and cargo-audit install
+# inline via `cargo install` (same as the GitHub workflow after removing
+# taiki-e/install-action per actions-allowlist constraint).
+#
+# Unblocks: parkhub-rust #638/#639/#640/#641/#642 + dependabot-blocked PRs
 
 on:
   pull_request:
@@ -117,8 +121,8 @@ jobs:
         continue-on-error: false
         uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
 
-      # --- Post fop/local-ci/pr commit status ---
-      - name: Post fop/local-ci/pr status
+      # --- Post commit statuses (nido canonical + fop compat) ---
+      - name: Post nido/local-ci/pr and fop/local-ci/pr status
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -145,10 +149,16 @@ jobs:
             SHA="${live_sha}"
           fi
 
-          gh api \
-            --method POST \
-            "repos/${REPO}/statuses/${SHA}" \
-            -f state="${STATE}" \
-            -f context="fop/local-ci/pr" \
-            -f description="${DESC}" \
-            -f target_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+          post_status() {
+            local ctx="$1"
+            gh api \
+              --method POST \
+              "repos/${REPO}/statuses/${SHA}" \
+              -f state="${STATE}" \
+              -f context="${ctx}" \
+              -f description="${DESC}" \
+              -f target_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+          }
+
+          post_status "nido/local-ci/pr"
+          post_status "fop/local-ci/pr"
