@@ -98,6 +98,30 @@ Shared feature/API changes also need the cross-runtime docs kept in sync:
 
 ---
 
+## 3a. Nido-first CI
+
+`nido ci run --gate pr` is the canonical local entry point (SOTA 2026). It
+routes through the nido build queue for OOM-safe, capacity-gated execution
+with admission control via `nido guard preflight`.
+
+```bash
+nido ci run --gate pr          # canonical; routes through nido queue
+nido ci plan --gate pr --json  # dry-run: show execution plan without running
+make nido-ci                   # Makefile wrapper for the same invocation
+```
+
+The gate steps are defined in `.nido/local-ci.toml` and mirror the hard-gate
+steps from `fop-local-ci.sh --profile pr`: `fmt-check`, `check-headless`,
+`clippy-headless`, `frontend`, and `test-headless`.
+
+The legacy `make ci` / `fop-local-ci.sh --profile pr --post-status` path
+**must not be removed** — GitHub branch protection checks the `fop/local-ci/pr`
+commit status context, and that attestation path still goes through
+`fop-local-ci.sh`. Use `nido ci run` for local iteration; use `make ci-post`
+before merging to post the required status.
+
+---
+
 ## 4. `act` — run the actual workflows locally
 
 [`nektos/act`](https://github.com/nektos/act) executes the YAML workflows
