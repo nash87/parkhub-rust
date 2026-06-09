@@ -96,3 +96,7 @@ reason = "glib gtk-rs unchecked-callback PSK leak; not used by parkhub-server (T
 [[IgnoredVulns]]
 id = "GHSA-cq8v-f236-94qc"
 reason = "rand 0.7.3 transitive; bumped where direct, locked elsewhere"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0173"
+reason = "proc-macro-error2 unmaintained (transitive via validator_derive -> validator 0.20); no fixed version published"
