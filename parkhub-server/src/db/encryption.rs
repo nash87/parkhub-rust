@@ -20,6 +20,7 @@ use sha2::Sha256;
 /// request, so the cost is paid only once per process start.
 pub(super) const PBKDF2_ITERATIONS: u32 = 600_000;
 
+#[derive(Clone)]
 pub(super) struct Encryptor {
     cipher: Aes256Gcm,
 }

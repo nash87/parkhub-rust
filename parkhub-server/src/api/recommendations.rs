@@ -67,6 +67,7 @@ pub struct RecommendationEngineConfig {
     pub explain: bool,
     pub profile_safe_mode: bool,
     pub pipeline: RecommendationPipelineConfig,
+    pub allocation: RecommendationAllocationConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -77,6 +78,21 @@ pub struct RecommendationPipelineConfig {
     pub fallback_enabled: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct RecommendationAllocationConfig {
+    /// Kept as `String` (not an enum) intentionally: the value is read from
+    /// module config at runtime via [`read_module_string`] and normalized with
+    /// [`normalize_allocation_strategy`], which falls back to `"weighted_v1"`
+    /// on unknown values.  A strict-deserializing enum would reject any future
+    /// or typo'd value at the parse boundary rather than degrading gracefully,
+    /// breaking the documented unknown-strategy-fallback contract.  New
+    /// strategies are added by extending [`is_supported_allocation_strategy`]
+    /// and [`normalize_allocation_strategy`] without a breaking API change.
+    pub strategy: String,
+    pub exact_cover_max_options: usize,
+    pub exact_cover_max_search_nodes: usize,
+}
+
 impl Default for RecommendationPipelineConfig {
     fn default() -> Self {
         Self {
@@ -84,6 +100,16 @@ impl Default for RecommendationPipelineConfig {
             pipeline_name: "parkhub-recommendations".to_string(),
             timeout_ms: 750,
             fallback_enabled: true,
+        }
+    }
+}
+
+impl Default for RecommendationAllocationConfig {
+    fn default() -> Self {
+        Self {
+            strategy: "weighted_v1".to_string(),
+            exact_cover_max_options: 256,
+            exact_cover_max_search_nodes: 10_000,
         }
     }
 }
@@ -109,12 +135,13 @@ impl Default for RecommendationEngineConfig {
             explain: true,
             profile_safe_mode: true,
             pipeline: RecommendationPipelineConfig::default(),
+            allocation: RecommendationAllocationConfig::default(),
         }
     }
 }
 
 impl RecommendationEngineConfig {
-    async fn load(db: &crate::db::Database) -> Self {
+    pub(crate) async fn load(db: &crate::db::Database) -> Self {
         let mut cfg = Self::default();
         cfg.weights.frequency =
             read_module_f64(db, "weight_frequency", cfg.weights.frequency, 0.0, 100.0).await;
@@ -193,6 +220,19 @@ impl RecommendationEngineConfig {
             );
             cfg.algorithm = "weighted_v1".to_string();
         }
+        let requested_allocation_strategy =
+            read_module_string(db, "allocation_strategy", "weighted_v1").await;
+        if !is_supported_allocation_strategy(&requested_allocation_strategy) {
+            tracing::warn!(
+                allocation_strategy = %requested_allocation_strategy,
+                "unknown allocation strategy requested; falling back to weighted_v1"
+            );
+        }
+        cfg.allocation.strategy = normalize_allocation_strategy(&requested_allocation_strategy);
+        cfg.allocation.exact_cover_max_options =
+            read_module_usize(db, "exact_cover_max_options", 256, 1, 256).await;
+        cfg.allocation.exact_cover_max_search_nodes =
+            read_module_usize(db, "exact_cover_max_search_nodes", 10_000, 1, 10_000).await;
         cfg
     }
 }
@@ -247,6 +287,19 @@ fn is_local_dev_test_host(host: &str) -> bool {
     labels.len() >= 2
         && labels.last().is_some_and(|suffix| *suffix == "test")
         && labels.iter().all(|label| !label.is_empty())
+}
+
+fn normalize_allocation_strategy(strategy: &str) -> String {
+    let strategy = strategy.trim();
+    if is_supported_allocation_strategy(strategy) {
+        strategy.to_string()
+    } else {
+        "weighted_v1".to_string()
+    }
+}
+
+fn is_supported_allocation_strategy(strategy: &str) -> bool {
+    matches!(strategy.trim(), "weighted_v1" | "exact_cover_v1")
 }
 
 fn is_kubernetes_service_host(host: &str) -> bool {
@@ -644,6 +697,7 @@ pub struct RecommendationStats {
     pub metrics_source: String,
     pub algorithm: String,
     pub algorithm_weights: RecommendationWeights,
+    pub allocation: RecommendationAllocationConfig,
     pub algorithm_adapter: RecommendationAdapterStatus,
     pub legal_boundary: RecommendationLegalBoundary,
     pub top_recommended_lots: Vec<LotRecommendationCount>,
@@ -982,6 +1036,7 @@ fn recommendation_config_hash(engine: &RecommendationEngineConfig) -> String {
         "explain": engine.explain,
         "profile_safe_mode": engine.profile_safe_mode,
         "pipeline": &engine.pipeline,
+        "allocation": &engine.allocation,
     });
     sha256_hex(
         serde_json::to_string(&payload)
@@ -1053,6 +1108,7 @@ pub async fn get_recommendation_stats(
     };
 
     let engine = RecommendationEngineConfig::load(&state_guard.db).await;
+    let algorithm_adapter = adapter_status_for_weighted_v1(&engine);
 
     let stats = RecommendationStats {
         total_recommendations: audit_stats.total_batches,
@@ -1065,7 +1121,8 @@ pub async fn get_recommendation_stats(
         metrics_source: "audit_log.RecommendationServed".to_string(),
         algorithm: engine.algorithm.clone(),
         algorithm_weights: engine.weights,
-        algorithm_adapter: adapter_status_for_weighted_v1(&engine),
+        allocation: engine.allocation,
+        algorithm_adapter,
         legal_boundary: RecommendationLegalBoundary {
             legal_review_required: true,
             attorney_review_status: "required_before_customer_wording".to_string(),
@@ -1202,6 +1259,7 @@ mod tests {
             metrics_source: "audit_log.RecommendationServed".to_string(),
             algorithm: "weighted_v1".to_string(),
             algorithm_weights: RecommendationWeights::default(),
+            allocation: RecommendationAllocationConfig::default(),
             algorithm_adapter: adapter_status_for_weighted_v1(
                 &RecommendationEngineConfig::default(),
             ),
@@ -1379,6 +1437,22 @@ mod tests {
         );
         assert!(validate_pipeline_endpoint(Some("https://example.com".to_string())).is_none());
         assert!(validate_pipeline_endpoint(Some("file:///tmp/pipeline".to_string())).is_none());
+    }
+
+    #[test]
+    fn test_allocation_strategy_falls_back_to_weighted_v1() {
+        assert_eq!(
+            normalize_allocation_strategy("exact_cover_v1"),
+            "exact_cover_v1"
+        );
+        assert_eq!(
+            normalize_allocation_strategy(" weighted_v1 "),
+            "weighted_v1"
+        );
+        assert_eq!(
+            normalize_allocation_strategy("unknown_strategy"),
+            "weighted_v1"
+        );
     }
 
     #[test]

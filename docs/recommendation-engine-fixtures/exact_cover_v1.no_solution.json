@@ -1,0 +1,25 @@
+{
+  "schema_version": "parkhub.recommendation.fixture.v1",
+  "algorithm": "exact_cover_v1",
+  "workflow": "batch_allocation",
+  "profile_safe_mode": true,
+  "required_constraints": ["tenant:alpha", "maintenance:open"],
+  "options": [
+    {
+      "id": "slot-a",
+      "covers": ["tenant:alpha"],
+      "weight": 90
+    }
+  ],
+  "expected": {
+    "status": "fallback_no_solution",
+    "selected_option_ids": [],
+    "covered_constraints": []
+  },
+  "legal_boundary": {
+    "legal_review_required": true,
+    "attorney_review_status": "required_before_customer_wording",
+    "execution_allowed": false,
+    "disclaimer": "Missing maintenance-window coverage must fail closed and let the caller use a safe fallback; attorney review, citation verification, client authorization, and final legal judgment remain required before customer-facing legal or profiling claims ship."
+  }
+}

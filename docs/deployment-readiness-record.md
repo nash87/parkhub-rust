@@ -43,6 +43,12 @@ Attach the JSON output or copy the fields below. Treat the catalog as
 reference-only; attorney review, citation verification, deployment-specific
 configuration review, human signoff, and final legal judgment remain required.
 
+For the current `exact_cover_v1` release candidate, a captured catalog summary
+lives at
+`docs/release-evidence/2026-05-21-exact-cover-nido-legal-catalog.md`. Replace
+that evidence with a fresh capture when the release candidate SHA, deployment
+target, or legal catalog revision changes.
+
 | Field | Captured value |
 | --- | --- |
 | Capture command | |

@@ -168,6 +168,8 @@ pub mod rate_dashboard;
 #[cfg(feature = "mod-rbac")]
 pub mod rbac;
 #[cfg(feature = "mod-recommendations")]
+pub mod recommendation_allocation;
+#[cfg(feature = "mod-recommendations")]
 pub mod recommendations;
 #[cfg(feature = "mod-recurring")]
 pub mod recurring;
@@ -290,6 +292,8 @@ use notification_center::{
 };
 #[cfg(feature = "mod-notifications")]
 use notifications::{list_notifications, mark_all_notifications_read, mark_notification_read};
+#[cfg(feature = "mod-recommendations")]
+use recommendation_allocation::solve_exact_cover_allocation;
 #[cfg(feature = "mod-recommendations")]
 use recommendations::{get_recommendation_stats, get_recommendations};
 #[cfg(feature = "mod-recurring")]
@@ -1397,6 +1401,10 @@ fn booking_protected_routes() -> Router<SharedState> {
     {
         router = router
             .route("/api/v1/bookings/recommendations", get(get_recommendations))
+            .route(
+                "/api/v1/recommendations/allocation/exact-cover",
+                post(solve_exact_cover_allocation),
+            )
             .route(
                 "/api/v1/recommendations/stats",
                 get(get_recommendation_stats),

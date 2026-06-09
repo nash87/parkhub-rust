@@ -172,6 +172,23 @@ pub(super) const MOD_RECOMMENDATIONS_SCHEMA: &str = r#"{
       "const": true,
       "description": "Fail-closed guardrail. weighted_v1 fallback stays mandatory until fop_pipeline_v1 is production-certified."
     },
+    "allocation_strategy": {
+      "type": "string",
+      "enum": ["weighted_v1", "exact_cover_v1"],
+      "description": "Batch-allocation strategy. weighted_v1 keeps quick booking as the default; exact_cover_v1 is admin-only operational scheduling support for recurring/batch constraints."
+    },
+    "exact_cover_max_options": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 256,
+      "description": "Maximum candidate options accepted by exact_cover_v1 before failing closed with fallback_input_limited."
+    },
+    "exact_cover_max_search_nodes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000,
+      "description": "Maximum Algorithm X search nodes before exact_cover_v1 fails closed with fallback_search_limited."
+    },
     "weight_frequency": {
       "type": "number",
       "minimum": 0,
@@ -237,6 +254,9 @@ pub(super) const MOD_RECOMMENDATIONS_SCHEMA: &str = r#"{
     "pipeline_name",
     "pipeline_timeout_ms",
     "pipeline_fallback_enabled",
+    "allocation_strategy",
+    "exact_cover_max_options",
+    "exact_cover_max_search_nodes",
     "weight_frequency",
     "weight_preferred_lot",
     "weight_availability",
