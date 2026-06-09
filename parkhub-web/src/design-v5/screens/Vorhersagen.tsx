@@ -164,7 +164,7 @@ export function VorhersagenV5({ navigate: _navigate }: { navigate: (id: ScreenId
     <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="v5-ani" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Vorhersagen</span>
-        <Badge variant="purple">Smart</Badge>
+        <Badge variant="coral">Smart</Badge>
       </div>
 
       {recommendation && (

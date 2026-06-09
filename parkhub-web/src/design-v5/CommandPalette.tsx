@@ -42,8 +42,7 @@ export function V5CommandPalette({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'color-mix(in oklch, #000 55%, transparent)',
-        backdropFilter: 'blur(4px)',
+        background: 'color-mix(in oklch, var(--v5-bg) 72%, transparent)',
         zIndex: 1000,
         display: 'flex',
         alignItems: 'flex-start',
@@ -58,9 +57,9 @@ export function V5CommandPalette({
           width: 540,
           background: 'var(--v5-sur)',
           border: '1px solid var(--v5-bor)',
-          borderRadius: 16,
+          borderRadius: 4,
           overflow: 'hidden',
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.35)',
+          boxShadow: 'var(--v5-shadow-card)',
           animation: 'ph-v5-fadeUp 0.14s ease',
         }}
       >
@@ -88,7 +87,7 @@ export function V5CommandPalette({
                 color: 'var(--v5-mut)',
                 background: 'var(--v5-bg)',
                 border: '1px solid var(--v5-bor)',
-                borderRadius: 5,
+                borderRadius: 4,
                 padding: '2px 6px',
               }}
             >
@@ -113,7 +112,7 @@ export function V5CommandPalette({
                         style={{
                           width: 26,
                           height: 26,
-                          borderRadius: 8,
+                          borderRadius: 4,
                           background: 'var(--v5-sur2)',
                           display: 'flex',
                           alignItems: 'center',

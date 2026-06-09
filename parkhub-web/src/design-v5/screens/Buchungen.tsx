@@ -16,7 +16,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'cancelled', label: 'Storniert' },
 ];
 
-type BadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'gray' | 'ev' | 'purple';
+type BadgeVariant = 'primary' | 'success' | 'warning' | 'error' | 'info' | 'gray' | 'ev' | 'coral';
 
 function statusVariant(s: Booking['status']): BadgeVariant {
   switch (s) {

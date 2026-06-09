@@ -17,7 +17,7 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 
 function roleVariant(role: User['role']): BadgeVariant {
   switch (role) {
-    case 'superadmin': return 'purple';
+    case 'superadmin': return 'coral';
     case 'admin': return 'info';
     case 'premium': return 'warning';
     default: return 'gray';
