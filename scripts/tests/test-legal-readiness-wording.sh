@@ -159,7 +159,7 @@ require_text docs/COMPLIANCE.md "Operator Legal Readiness Checklist"
 require_text docs/COMPLIANCE.md "Module / Plugin Enablement Policy"
 require_text .github/scripts/nido-local-ci.sh "FOP_LOCAL_CI_QUEUE_BIN"
 require_text .github/scripts/nido-local-ci.sh "supports_queue_build nido"
-require_text .github/scripts/nido-local-ci.sh "\"$queue_bin\" build"
+require_text .github/scripts/nido-local-ci.sh "\"\$queue_bin\" build"
 
 if rg --pcre2 --ignore-case -n "GDPR compliant|DSGVO compliant|legally compliant|certified|guaranteed" docs/legal-readiness.md docs/release-checklist.md; then
     echo "ERROR: legal-readiness hub/checklist contain absolute legal-status wording." >&2
