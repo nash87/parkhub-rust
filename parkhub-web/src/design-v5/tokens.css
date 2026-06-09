@@ -6,14 +6,12 @@
    semantic signals). Per-mode bundles are scoped to [data-ph-mode="..."] and
    cascaded into the --v5-* variable namespace used by the v5 primitives.
 
-   Nido platform-ui tokens vendored 2026-06-09 (nido SHA: 2118d03fa).
-   The platform-ui brand uses a cool teal/slate palette; ParkHub v5 uses a warm
-   Securanido/Nuanju palette. No exact color value overlap exists, so all --v5-*
-   palette tokens remain parkhub-only hex (annotated below). The vendored files
-   establish provenance and make nido structural tokens (spacing, motion, shadow,
-   z-index, typography scale) available for future aliasing without value change.
-   Deferred aliasing candidates: --v5-shadow-card/lift → --shadow-xs/--shadow-md
-   (needs visual verification before swapping the `none` default).
+   Nido securanido tokens vendored 2026-06-09 (nido SHA: 2118d03fa).
+   The securanido brand IS the warm Nuanju palette — 11 --v5-* tokens now alias
+   root-scoped nido tokens (render identical; provenance over hand-forked hex).
+   Only :root-scoped securanido tokens are used for aliasing; [data-mode] semantic
+   bundles are NOT aliased (parkhub uses [data-ph-mode], those selectors never match).
+   Remaining --v5-* values (25 parkhub-only) have no exact nido root match.
 
    Contrast audit (WCAG 2.1 AA, all modes, 2026-06-03):
      text / bg:      void 17.37, marble_dark 16.58, marble_light 15.63  ✓
@@ -24,30 +22,32 @@
      faint #5a5346:  2.62:1 — decorative/scrollbar ONLY, not text        ⚠
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* Nido design system — platform-ui brand (vendored; cluster-internal origin) */
+/* Nido design system — securanido brand (vendored; cluster-internal origin) */
 @import './vendor/nido-shared.css';
-@import './vendor/nido-platform-ui.css';
+@import './vendor/nido-securanido.css';
 
-/* Status tokens shared across all modes (OKLCH wide gamut)
-   parkhub-only: OKLCH values intentionally differ from platform-ui hex equivalents
-   (--color-success/warning/danger/info) to preserve wide-gamut rendering. */
+/* Status tokens shared across all modes (OKLCH wide gamut + 1 nido alias) */
 :where([data-ph-mode]) {
-  --v5-ok: oklch(0.65 0.17 160);   /* parkhub-only: wide-gamut green; cf. nido --color-success: #22c55e */
-  --v5-warn: oklch(0.74 0.16 75);  /* parkhub-only: wide-gamut amber; cf. nido --color-warning: #eab308 */
-  --v5-err: oklch(0.58 0.22 25);   /* parkhub-only: wide-gamut red;   cf. nido --color-danger: #ef4444 */
-  --v5-info: oklch(0.58 0.18 260); /* parkhub-only: wide-gamut blue;  cf. nido --color-info: #3b82f6 */
+  --v5-ok: oklch(0.65 0.17 160);   /* parkhub-only: wide-gamut green (OKLCH; cf. nido --color-success-default: #9bbf6e) */
+  --v5-warn: oklch(0.74 0.16 75);  /* parkhub-only: wide-gamut amber (OKLCH; cf. nido --color-warning-default: #f5b042) */
+  --v5-err: oklch(0.58 0.22 25);   /* parkhub-only: wide-gamut red   (OKLCH; cf. nido --color-error-default: #e8836a) */
+  --v5-info: oklch(0.58 0.18 260); /* parkhub-only: wide-gamut blue  (OKLCH; no warm securanido equivalent) */
   --v5-ev: oklch(0.62 0.18 260);   /* parkhub-only: EV session signal (no nido equivalent) */
-  --v5-coral: #e8836a;              /* parkhub-only: coral accent (no nido equivalent) */
+  --v5-coral: var(--color-error-default); /* nido alias: #e8836a = --color-error-default */
   /* Default font family — V5SettingsProvider may override via inline style on <html>. */
   --v5-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* parkhub-only */
 }
 
-/* marble_light: warm ivory/amber palette — parkhub-only (no nido platform-ui hex equivalents) */
+/* marble_light: warm ivory/amber palette — all parkhub-only (no exact root-scoped securanido match)
+   Closest securanido tokens for future reference:
+     --v5-bg #f7f3ec  → --color-primary-50 #fdf6e9 (not exact, 4 steps off)
+     --v5-txt #1e1a16 → --color-gray-700 #1d1811 (not exact, 1 channel off)
+     --v5-acc #9e6208 → --color-primary-800 #7d5316 (not exact — lighter amber needed) */
 [data-ph-mode="marble_light"] {
   --v5-bg: #f7f3ec;                   /* parkhub-only: warm ivory */
   --v5-sur: #fff;                     /* parkhub-only: surface white */
   --v5-sur2: #f0ece4;                 /* parkhub-only: warm off-white */
-  --v5-bor: rgba(30, 26, 22, 0.16);  /* parkhub-only: warm dark border (fixed 2026-06-04: was rgba(244,239,230,0.5) near-invisible) */
+  --v5-bor: rgba(30, 26, 22, 0.16);  /* parkhub-only: warm dark border (fixed 2026-06-04) */
   --v5-txt: #1e1a16;                  /* parkhub-only: warm near-black */
   --v5-mut: #6b6358;                  /* parkhub-only: warm muted brown */
   --v5-acc: #9e6208;                  /* parkhub-only: amber gold (light mode) */
@@ -61,39 +61,39 @@
   color-scheme: light;
 }
 
-/* marble_dark: warm charcoal/gold palette — parkhub-only (no nido platform-ui hex equivalents) */
+/* marble_dark: warm charcoal/gold palette — 3 nido aliases + 12 parkhub-only */
 [data-ph-mode="marble_dark"] {
-  --v5-bg: #12100e;                   /* parkhub-only: warm deep charcoal */
-  --v5-sur: #181410;                  /* parkhub-only: warm surface dark */
-  --v5-sur2: #1e1a16;                 /* parkhub-only: warm surface raised */
-  --v5-bor: #2a2520;                  /* parkhub-only: warm dark border */
-  --v5-txt: #f4efe6;                  /* parkhub-only: warm near-white */
-  --v5-mut: #8a847a;                  /* parkhub-only: warm muted */
-  --v5-acc: #f5b042;                  /* parkhub-only: gold amber (dark mode) */
+  --v5-bg: #12100e;                   /* parkhub-only: deep charcoal (cf. --color-gray-900 #0a0908, not exact) */
+  --v5-sur: #181410;                  /* parkhub-only: surface dark (cf. --color-gray-800 #15110c, not exact) */
+  --v5-sur2: #1e1a16;                 /* parkhub-only: surface raised (cf. --color-gray-700 #1d1811, not exact) */
+  --v5-bor: #2a2520;                  /* parkhub-only: warm border (cf. --color-gray-600 #2a2318, not exact) */
+  --v5-txt: var(--color-gray-50);     /* nido alias: #f4efe6 = --color-gray-50 */
+  --v5-mut: #8a847a;                  /* parkhub-only: warm muted (cf. --color-gray-300 #8a8276, not exact) */
+  --v5-acc: var(--color-primary-500); /* nido alias: #f5b042 = --color-primary-500 */
   --v5-acc-muted: rgba(245, 176, 66, 0.12); /* parkhub-only */
   --v5-row-hover: rgba(245, 176, 66, 0.06); /* parkhub-only */
   --v5-nav-bg: #181410;               /* parkhub-only */
   --v5-dot: #2a2520;                  /* parkhub-only */
-  --v5-accent-fg: #0a0908;            /* parkhub-only: dark text on gold */
+  --v5-accent-fg: var(--color-gray-900); /* nido alias: #0a0908 = --color-gray-900 */
   --v5-shadow-card: none;             /* parkhub-only: deferred alias candidate → --shadow-xs */
   --v5-shadow-lift: none;             /* parkhub-only: deferred alias candidate → --shadow-md */
   color-scheme: dark;
 }
 
-/* void: editorial near-black palette — parkhub-only (no nido platform-ui hex equivalents) */
+/* void: editorial near-black palette — 7 nido aliases + 8 parkhub-only */
 [data-ph-mode="void"] {
-  --v5-bg: #0a0908;                   /* parkhub-only: deepest void near-black */
-  --v5-sur: #15110c;                  /* parkhub-only: void surface */
-  --v5-sur2: #1e1a16;                 /* parkhub-only: void surface raised */
-  --v5-bor: rgba(244, 239, 230, 0.12); /* parkhub-only: light-on-dark border */
-  --v5-txt: #f4efe6;                  /* parkhub-only: warm near-white */
-  --v5-mut: #a39d90;                  /* parkhub-only: warm muted (lighter than marble_dark) */
-  --v5-acc: #f5b042;                  /* parkhub-only: gold amber */
+  --v5-bg: var(--color-gray-900);     /* nido alias: #0a0908 = --color-gray-900 */
+  --v5-sur: var(--color-gray-800);    /* nido alias: #15110c = --color-gray-800 */
+  --v5-sur2: #1e1a16;                 /* parkhub-only: void surface raised (cf. --color-gray-700 #1d1811, not exact) */
+  --v5-bor: rgba(244, 239, 230, 0.12); /* parkhub-only: light-on-dark alpha border (no root-scoped nido equivalent) */
+  --v5-txt: var(--color-gray-50);     /* nido alias: #f4efe6 = --color-gray-50 */
+  --v5-mut: var(--color-gray-200);    /* nido alias: #a39d90 = --color-gray-200 */
+  --v5-acc: var(--color-primary-500); /* nido alias: #f5b042 = --color-primary-500 */
   --v5-acc-muted: rgba(245, 176, 66, 0.1);  /* parkhub-only */
   --v5-row-hover: rgba(245, 176, 66, 0.05); /* parkhub-only */
-  --v5-nav-bg: #0a0908;               /* parkhub-only */
-  --v5-dot: #2a2418;                  /* parkhub-only: warm-tinted dot */
-  --v5-accent-fg: #0a0908;            /* parkhub-only: dark text on gold */
+  --v5-nav-bg: var(--color-gray-900); /* nido alias: #0a0908 = --color-gray-900 */
+  --v5-dot: #2a2418;                  /* parkhub-only: warm-tinted dot (cf. --color-gray-600 #2a2318, 1 channel off) */
+  --v5-accent-fg: var(--color-gray-900); /* nido alias: #0a0908 = --color-gray-900 */
   --v5-shadow-card: none;             /* parkhub-only: deferred alias candidate → --shadow-xs */
   --v5-shadow-lift: none;             /* parkhub-only: deferred alias candidate → --shadow-md */
   color-scheme: dark;
