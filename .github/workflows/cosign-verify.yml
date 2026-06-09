@@ -41,12 +41,12 @@ jobs:
       EXPECTED_IDENTITY_REGEX: ^https://github.com/${{ github.repository }}/.github/workflows/docker-publish.yml@refs/(heads|tags)/.+$
       EXPECTED_OIDC_ISSUER: https://token.actions.githubusercontent.com
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
 
       - name: Log in to GHCR (read-only)
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
