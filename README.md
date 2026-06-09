@@ -448,6 +448,15 @@ Contributions are very welcome! Here's how to get started:
 
 ---
 
+## Built on the Securanido Platform
+
+ParkHub is developed and maintained by the [Securanido](https://securanido.com) team —
+a platform for self-hosted, privacy-first software. If you are interested in the
+infrastructure, agent orchestration, and compliance tooling behind ParkHub,
+visit [securanido.com](https://securanido.com).
+
+---
+
 ## 📄 License
 
 MIT — see [LICENSE](LICENSE).

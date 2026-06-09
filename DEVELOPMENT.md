@@ -14,8 +14,8 @@ everything here exists to reproduce them locally before `git push`.
 git clone git@github.com:nash87/parkhub-rust.git
 cd parkhub-rust
 
-# Optional local restore mirror. Do not pull, rebase, or base PR work from it.
-git remote add gitea-restore git@192.168.178.220:florian/parkhub-rust.git
+# Optional: add a local mirror remote here if you maintain an internal Gitea instance.
+# git remote add gitea-restore git@<internal-gitea-host>/<owner>/parkhub-rust.git
 
 # Bootstrap (rust-toolchain.toml pins 1.94.1 — rustup installs it automatically)
 cargo build --locked --package parkhub-common
