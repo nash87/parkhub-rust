@@ -10,7 +10,19 @@
      [data-design-theme="marble"].dark    → marble_dark  bundle
      [data-design-theme="void"]           → void         bundle   (dark-first)
      other themes                         → marble_light fallback
+
+   Nido platform-ui tokens vendored 2026-06-09 (nido SHA: 2118d03fa).
+   TECH-DEBT (deferred): This file duplicates the --v5-* palette from tokens.css
+   for the legacy v4 selector surface. Dedup opportunity: once the app fully
+   adopts [data-ph-mode], this bridge can be removed and tokens.css is the
+   single source. Until then, both files must be kept in sync when palette
+   values change. The vendor imports below establish provenance; the --v5-*
+   definitions below are still parkhub-only (no exact nido color overlap).
    ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Nido design system — platform-ui brand (vendored; cluster-internal origin) */
+@import './vendor/nido-shared.css';
+@import './vendor/nido-platform-ui.css';
 
 /* Shared status tokens — same across all bundles */
 :root {

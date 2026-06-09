@@ -6,6 +6,15 @@
    semantic signals). Per-mode bundles are scoped to [data-ph-mode="..."] and
    cascaded into the --v5-* variable namespace used by the v5 primitives.
 
+   Nido platform-ui tokens vendored 2026-06-09 (nido SHA: 2118d03fa).
+   The platform-ui brand uses a cool teal/slate palette; ParkHub v5 uses a warm
+   Securanido/Nuanju palette. No exact color value overlap exists, so all --v5-*
+   palette tokens remain parkhub-only hex (annotated below). The vendored files
+   establish provenance and make nido structural tokens (spacing, motion, shadow,
+   z-index, typography scale) available for future aliasing without value change.
+   Deferred aliasing candidates: --v5-shadow-card/lift → --shadow-xs/--shadow-md
+   (needs visual verification before swapping the `none` default).
+
    Contrast audit (WCAG 2.1 AA, all modes, 2026-06-03):
      text / bg:      void 17.37, marble_dark 16.58, marble_light 15.63  ✓
      gold / bg:      void 10.58, marble_dark 10.10                       ✓
@@ -15,69 +24,78 @@
      faint #5a5346:  2.62:1 — decorative/scrollbar ONLY, not text        ⚠
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* Status tokens shared across all modes (OKLCH wide gamut) */
+/* Nido design system — platform-ui brand (vendored; cluster-internal origin) */
+@import './vendor/nido-shared.css';
+@import './vendor/nido-platform-ui.css';
+
+/* Status tokens shared across all modes (OKLCH wide gamut)
+   parkhub-only: OKLCH values intentionally differ from platform-ui hex equivalents
+   (--color-success/warning/danger/info) to preserve wide-gamut rendering. */
 :where([data-ph-mode]) {
-  --v5-ok: oklch(0.65 0.17 160);
-  --v5-warn: oklch(0.74 0.16 75);
-  --v5-err: oklch(0.58 0.22 25);
-  --v5-info: oklch(0.58 0.18 260);
-  --v5-ev: oklch(0.62 0.18 260);
-  --v5-coral: #e8836a;
+  --v5-ok: oklch(0.65 0.17 160);   /* parkhub-only: wide-gamut green; cf. nido --color-success: #22c55e */
+  --v5-warn: oklch(0.74 0.16 75);  /* parkhub-only: wide-gamut amber; cf. nido --color-warning: #eab308 */
+  --v5-err: oklch(0.58 0.22 25);   /* parkhub-only: wide-gamut red;   cf. nido --color-danger: #ef4444 */
+  --v5-info: oklch(0.58 0.18 260); /* parkhub-only: wide-gamut blue;  cf. nido --color-info: #3b82f6 */
+  --v5-ev: oklch(0.62 0.18 260);   /* parkhub-only: EV session signal (no nido equivalent) */
+  --v5-coral: #e8836a;              /* parkhub-only: coral accent (no nido equivalent) */
   /* Default font family — V5SettingsProvider may override via inline style on <html>. */
-  --v5-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --v5-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* parkhub-only */
 }
 
+/* marble_light: warm ivory/amber palette — parkhub-only (no nido platform-ui hex equivalents) */
 [data-ph-mode="marble_light"] {
-  --v5-bg: #f7f3ec;
-  --v5-sur: #fff;
-  --v5-sur2: #f0ece4;
-  --v5-bor: rgba(30, 26, 22, 0.16);
-  --v5-txt: #1e1a16;
-  --v5-mut: #6b6358;
-  --v5-acc: #9e6208;
-  --v5-acc-muted: rgba(158, 98, 8, 0.1);
-  --v5-row-hover: rgba(158, 98, 8, 0.07);
-  --v5-nav-bg: #fff;
-  --v5-dot: #ddd8d0;
-  --v5-accent-fg: #fff;
-  --v5-shadow-card: none;
-  --v5-shadow-lift: none;
+  --v5-bg: #f7f3ec;                   /* parkhub-only: warm ivory */
+  --v5-sur: #fff;                     /* parkhub-only: surface white */
+  --v5-sur2: #f0ece4;                 /* parkhub-only: warm off-white */
+  --v5-bor: rgba(30, 26, 22, 0.16);  /* parkhub-only: warm dark border (fixed 2026-06-04: was rgba(244,239,230,0.5) near-invisible) */
+  --v5-txt: #1e1a16;                  /* parkhub-only: warm near-black */
+  --v5-mut: #6b6358;                  /* parkhub-only: warm muted brown */
+  --v5-acc: #9e6208;                  /* parkhub-only: amber gold (light mode) */
+  --v5-acc-muted: rgba(158, 98, 8, 0.1);  /* parkhub-only */
+  --v5-row-hover: rgba(158, 98, 8, 0.07); /* parkhub-only */
+  --v5-nav-bg: #fff;                  /* parkhub-only */
+  --v5-dot: #ddd8d0;                  /* parkhub-only: warm dot/tick mark */
+  --v5-accent-fg: #fff;               /* parkhub-only: text on amber gold */
+  --v5-shadow-card: none;             /* parkhub-only: deferred alias candidate → --shadow-xs */
+  --v5-shadow-lift: none;             /* parkhub-only: deferred alias candidate → --shadow-md */
   color-scheme: light;
 }
 
+/* marble_dark: warm charcoal/gold palette — parkhub-only (no nido platform-ui hex equivalents) */
 [data-ph-mode="marble_dark"] {
-  --v5-bg: #12100e;
-  --v5-sur: #181410;
-  --v5-sur2: #1e1a16;
-  --v5-bor: #2a2520;
-  --v5-txt: #f4efe6;
-  --v5-mut: #8a847a;
-  --v5-acc: #f5b042;
-  --v5-acc-muted: rgba(245, 176, 66, 0.12);
-  --v5-row-hover: rgba(245, 176, 66, 0.06);
-  --v5-nav-bg: #181410;
-  --v5-dot: #2a2520;
-  --v5-accent-fg: #0a0908;
-  --v5-shadow-card: none;
-  --v5-shadow-lift: none;
+  --v5-bg: #12100e;                   /* parkhub-only: warm deep charcoal */
+  --v5-sur: #181410;                  /* parkhub-only: warm surface dark */
+  --v5-sur2: #1e1a16;                 /* parkhub-only: warm surface raised */
+  --v5-bor: #2a2520;                  /* parkhub-only: warm dark border */
+  --v5-txt: #f4efe6;                  /* parkhub-only: warm near-white */
+  --v5-mut: #8a847a;                  /* parkhub-only: warm muted */
+  --v5-acc: #f5b042;                  /* parkhub-only: gold amber (dark mode) */
+  --v5-acc-muted: rgba(245, 176, 66, 0.12); /* parkhub-only */
+  --v5-row-hover: rgba(245, 176, 66, 0.06); /* parkhub-only */
+  --v5-nav-bg: #181410;               /* parkhub-only */
+  --v5-dot: #2a2520;                  /* parkhub-only */
+  --v5-accent-fg: #0a0908;            /* parkhub-only: dark text on gold */
+  --v5-shadow-card: none;             /* parkhub-only: deferred alias candidate → --shadow-xs */
+  --v5-shadow-lift: none;             /* parkhub-only: deferred alias candidate → --shadow-md */
   color-scheme: dark;
 }
 
+/* void: editorial near-black palette — parkhub-only (no nido platform-ui hex equivalents) */
 [data-ph-mode="void"] {
-  --v5-bg: #0a0908;
-  --v5-sur: #15110c;
-  --v5-sur2: #1e1a16;
-  --v5-bor: rgba(244, 239, 230, 0.12);
-  --v5-txt: #f4efe6;
-  --v5-mut: #a39d90;
-  --v5-acc: #f5b042;
-  --v5-acc-muted: rgba(245, 176, 66, 0.1);
-  --v5-row-hover: rgba(245, 176, 66, 0.05);
-  --v5-nav-bg: #0a0908;
-  --v5-dot: #2a2418;
-  --v5-accent-fg: #0a0908;
-  --v5-shadow-card: none;
-  --v5-shadow-lift: none;
+  --v5-bg: #0a0908;                   /* parkhub-only: deepest void near-black */
+  --v5-sur: #15110c;                  /* parkhub-only: void surface */
+  --v5-sur2: #1e1a16;                 /* parkhub-only: void surface raised */
+  --v5-bor: rgba(244, 239, 230, 0.12); /* parkhub-only: light-on-dark border */
+  --v5-txt: #f4efe6;                  /* parkhub-only: warm near-white */
+  --v5-mut: #a39d90;                  /* parkhub-only: warm muted (lighter than marble_dark) */
+  --v5-acc: #f5b042;                  /* parkhub-only: gold amber */
+  --v5-acc-muted: rgba(245, 176, 66, 0.1);  /* parkhub-only */
+  --v5-row-hover: rgba(245, 176, 66, 0.05); /* parkhub-only */
+  --v5-nav-bg: #0a0908;               /* parkhub-only */
+  --v5-dot: #2a2418;                  /* parkhub-only: warm-tinted dot */
+  --v5-accent-fg: #0a0908;            /* parkhub-only: dark text on gold */
+  --v5-shadow-card: none;             /* parkhub-only: deferred alias candidate → --shadow-xs */
+  --v5-shadow-lift: none;             /* parkhub-only: deferred alias candidate → --shadow-md */
   color-scheme: dark;
 }
 
