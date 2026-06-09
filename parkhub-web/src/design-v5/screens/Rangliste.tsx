@@ -8,7 +8,7 @@ import type { ScreenId } from '../nav';
 interface BadgeDef {
   key: string;
   label: string;
-  variant: 'primary' | 'success' | 'warning' | 'info' | 'purple';
+  variant: 'primary' | 'success' | 'warning' | 'info' | 'coral';
 }
 
 interface LeaderboardEntry {
@@ -35,7 +35,7 @@ function computeBadges(stats: UserBookingStats): BadgeDef[] {
   if (stats.ev_count > 0) badges.push({ key: 'ev', label: 'EV', variant: 'success' });
   if (stats.morning_count > 0) badges.push({ key: 'early', label: 'Früh', variant: 'warning' });
   if (stats.swaps_accepted > 0) badges.push({ key: 'team', label: 'Teamplayer', variant: 'info' });
-  if (stats.this_month >= 10) badges.push({ key: 'frequent', label: 'Vielparker', variant: 'purple' });
+  if (stats.this_month >= 10) badges.push({ key: 'frequent', label: 'Vielparker', variant: 'coral' });
   return badges;
 }
 

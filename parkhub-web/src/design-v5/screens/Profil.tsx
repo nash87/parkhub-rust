@@ -160,7 +160,7 @@ export function ProfilV5({ navigate: _navigate }: { navigate: (id: ScreenId) => 
     <div style={{ padding: 16, flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="v5-ani" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--v5-txt)' }}>Mein Profil</span>
-        <Badge variant={user.role === 'admin' || user.role === 'superadmin' ? 'purple' : 'primary'}>
+        <Badge variant={user.role === 'admin' || user.role === 'superadmin' ? 'coral' : 'primary'}>
           {user.role}
         </Badge>
       </div>
