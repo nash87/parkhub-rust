@@ -136,12 +136,17 @@ jobs:
       contents: read  # checkout-only (no writes from this gate job)
       statuses: write  # cross-token visibility: workflow GITHUB_TOKEN with read-only cannot see PAT-posted statuses; write scope is the documented workaround per github.com/orgs/community/discussions/40769
     steps:
-      - name: Require fop local CI commit status (adaptive backoff)
+      - name: Require local CI commit status (adaptive backoff)
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.pull_request.head.sha }}
           REPO: ${{ github.repository }}
-          CONTEXT: fop/local-ci/pr
+          # Transition period: accept nido/local-ci/pr (canonical, posted by
+          # nido-local-ci.sh) OR fop/local-ci/pr (compat, posted by both the
+          # new script and legacy callers). The branch-protection required check
+          # context remains fop/local-ci/pr until the orchestrator flips it.
+          CONTEXT_NIDO: nido/local-ci/pr
+          CONTEXT_FOP: fop/local-ci/pr
         run: |
           # Adaptive backoff: short polls early (catch fast posts), longer
           # polls later (avoid API hammering during real waits).
@@ -152,11 +157,13 @@ jobs:
           status=""
           combined=""
           last_api_error=""
+          # Accepts either nido/local-ci/pr (canonical) or fop/local-ci/pr (compat).
+          # Returns the most recent state for whichever context was posted last.
           read_local_ci_status() {
             api_error="$(mktemp)"
             if status_line="$(
               gh api "repos/${REPO}/commits/${SHA}/status" \
-                --jq "[.state, (([.statuses[] | select(.context == \"${CONTEXT}\")] | sort_by(.created_at) | reverse | .[0].state) // \"\")] | @tsv" \
+                --jq "[.state, (([.statuses[] | select(.context == \"${CONTEXT_NIDO}\" or .context == \"${CONTEXT_FOP}\")] | sort_by(.created_at) | reverse | .[0].state) // \"\")] | @tsv" \
                 2>"${api_error}"
             )"; then
               last_api_error=""
@@ -176,8 +183,8 @@ jobs:
                   -H "Accept: application/vnd.github+json" \
                   "https://api.github.com/repos/${REPO}/commits/${SHA}/status" \
                   2>"${public_api_error}" \
-                  | jq -r --arg context "${CONTEXT}" \
-                    '[.state, (([.statuses[] | select(.context == $context)] | sort_by(.created_at) | reverse | .[0].state) // "")] | @tsv'
+                  | jq -r --argjson ctxs "[\"${CONTEXT_NIDO}\",\"${CONTEXT_FOP}\"]" \
+                    '[.state, (([.statuses[] | select(.context as $c | $ctxs | index($c) != null)] | sort_by(.created_at) | reverse | .[0].state) // "")] | @tsv'
               )"; then
                 last_api_error=""
                 combined="${status_line%%$'\t'*}"
@@ -203,44 +210,44 @@ jobs:
 
           for delay in "${delays[@]}"; do
             read_local_ci_status
-            echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
+            echo "Observed combined=${combined:-unknown} local-ci=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
             case "$status" in
               success)
-                echo "${CONTEXT}=success after ${SECONDS}s"
+                echo "local-ci=success after ${SECONDS}s"
                 exit 0
                 ;;
               failure|error)
-                echo "::error::${CONTEXT}=${status} — local-CI explicitly failed; see commit status for details"
+                echo "::error::local-ci=${status} — local-CI explicitly failed; see commit status for details"
                 gh api "repos/${REPO}/commits/${SHA}/status" \
-                  --jq ".statuses[] | select(.context == \"${CONTEXT}\") | {state, description, target_url, created_at}" \
+                  --jq ".statuses[] | select(.context == \"${CONTEXT_NIDO}\" or .context == \"${CONTEXT_FOP}\") | {context, state, description, target_url, created_at}" \
                   || true
                 exit 1
                 ;;
             esac
-            echo "Waiting ${delay}s for ${CONTEXT} on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
+            echo "Waiting ${delay}s for local-ci on ${SHA} (current=${status:-pending}, combined=${combined:-unknown}, elapsed=${SECONDS}s)..."
             sleep "$delay"
           done
           read_local_ci_status
-          echo "Observed combined=${combined:-unknown} ${CONTEXT}=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
+          echo "Observed combined=${combined:-unknown} local-ci=${status:-pending} on ${SHA} (elapsed=${SECONDS}s)"
           case "$status" in
             success)
-              echo "${CONTEXT}=success after ${SECONDS}s"
+              echo "local-ci=success after ${SECONDS}s"
               exit 0
               ;;
             failure|error)
-              echo "::error::${CONTEXT}=${status} — local-CI explicitly failed; see commit status for details"
+              echo "::error::local-ci=${status} — local-CI explicitly failed; see commit status for details"
               gh api "repos/${REPO}/commits/${SHA}/status" \
-                --jq ".statuses[] | select(.context == \"${CONTEXT}\") | {state, description, target_url, created_at}" \
+                --jq ".statuses[] | select(.context == \"${CONTEXT_NIDO}\" or .context == \"${CONTEXT_FOP}\") | {context, state, description, target_url, created_at}" \
                 || true
               exit 1
               ;;
           esac
-          echo "::error::Timed out waiting for ${CONTEXT}=success after ${SECONDS}s."
+          echo "::error::Timed out waiting for local-ci=success after ${SECONDS}s."
           if [[ -n "${last_api_error}" ]]; then
             echo "::error::Last commit-status API error: ${last_api_error}"
           fi
           echo "Run locally:"
-          echo "  .github/scripts/fop-local-ci.sh --profile pr --post-status"
+          echo "  .github/scripts/nido-local-ci.sh --profile pr --post-status"
           exit 1
 
   cargo-deny:

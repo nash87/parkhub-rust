@@ -89,12 +89,21 @@ nohup bash -c "
   for i in \$(seq 1 30); do
     sleep 5
     if gh api 'repos/${repo}/commits/${sha}' >/dev/null 2>&1; then
+      # Post nido/local-ci/pr (canonical) first.
+      gh api --method POST 'repos/${repo}/statuses/${sha}' \
+        -f state='${state}' \
+        -f context='nido/local-ci/pr' \
+        -f description='${description}' >/dev/null 2>&1 \
+        && echo \"\$(date -u +%FT%TZ) posted nido ${state} on ${sha:0:8}\" \
+        || echo \"\$(date -u +%FT%TZ) nido post failed on ${sha:0:8}\"
+      # Post fop/local-ci/pr (compat) so the existing required check keeps
+      # passing until branch protection is flipped to nido/local-ci/pr.
       gh api --method POST 'repos/${repo}/statuses/${sha}' \
         -f state='${state}' \
         -f context='fop/local-ci/pr' \
         -f description='${description}' >/dev/null 2>&1 \
-        && echo \"\$(date -u +%FT%TZ) posted ${state} on ${sha:0:8}\" \
-        || echo \"\$(date -u +%FT%TZ) post failed on ${sha:0:8}\"
+        && echo \"\$(date -u +%FT%TZ) posted fop-compat ${state} on ${sha:0:8}\" \
+        || echo \"\$(date -u +%FT%TZ) fop-compat post failed on ${sha:0:8}\"
       exit 0
     fi
   done

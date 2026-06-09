@@ -1,8 +1,10 @@
 # Local CI/CD — script index
 
-> **TL;DR**: `.github/scripts/fop-local-ci.sh --profile pr|full|cd [--background] [--post-status]` is the canonical orchestrator. It mirrors every GHA gate that has a workstation analog. Below is the menu of standalone scripts you can also invoke directly.
+> **TL;DR**: `.github/scripts/nido-local-ci.sh --profile pr|full|cd [--background] [--post-status]` is the canonical orchestrator. It mirrors every GHA gate that has a workstation analog. Below is the menu of standalone scripts you can also invoke directly.
+>
+> **Migration note**: the script was renamed from `fop-local-ci.sh` to `nido-local-ci.sh`. The old path is a deprecation shim that exec-delegates to the new name. `NIDO_LOCAL_CI_*` env vars are canonical; `FOP_LOCAL_CI_*` are accepted as fallback aliases.
 
-ParkHub's CI/CD is **local-first** — the lefthook pre-push hook posts a `fop/local-ci/pr=success` status check via PAT, and GitHub's `local-ci-attestation` job (`.github/workflows/ci.yml:90-207`) waits up to 36.5min for it. If found, all 7 Rust gates SKIP on the PR. Bot/fork PRs (`pull_request.user.type == 'Bot'`) skip the shortcut and run full GHA in parallel.
+ParkHub's CI/CD is **local-first** — the lefthook pre-push hook posts both `nido/local-ci/pr=success` (canonical) and `fop/local-ci/pr=success` (compat) status checks via PAT, and GitHub's `local-ci-attestation` job accepts either. If found, all 7 Rust gates SKIP on the PR. Bot/fork PRs (`pull_request.user.type == 'Bot'`) skip the shortcut and run full GHA in parallel.
 
 This doc indexes the 13 standalone `scripts/local-*.sh` mirrors so contributors know what's available.
 
@@ -13,10 +15,10 @@ This doc indexes the 13 standalone `scripts/local-*.sh` mirrors so contributors 
 | Want to... | Run |
 |------------|-----|
 | Verify everything before push | `lefthook run pre-push` (auto on `git push`) |
-| Run the local-CI orchestrator manually | `.github/scripts/fop-local-ci.sh --profile full --post-status` |
-| Same, in background | `… --background` (returns terminal instantly, posts `fop/local-ci/full` on completion) |
+| Run the local-CI orchestrator manually | `.github/scripts/nido-local-ci.sh --profile full --post-status` |
+| Same, in background | `… --background` (returns terminal instantly, posts `nido/local-ci/full` + `fop/local-ci/full` on completion) |
 | First-time devcontainer | `devcontainer up` (pulls prebuilt `ghcr.io/nash87/parkhub-rust-devcontainer:latest`) |
-| Audit gitea/github workflows | `fop ci-audit .` (auto-runs in fop-local-ci.sh Stage 2) |
+| Audit gitea/github workflows | `fop ci-audit .` (auto-runs in nido-local-ci.sh Stage 2) |
 
 ---
 
@@ -28,7 +30,7 @@ This doc indexes the 13 standalone `scripts/local-*.sh` mirrors so contributors 
 Build container image with podman + scan with trivy + grype. Stamp-cached on `Dockerfile + Cargo.lock + parkhub-web/package-lock.json` SHA so re-runs are fast when nothing changed. Auto-fires on pre-push when those files touch (PR #529).
 
 #### `scripts/local-sbom.sh`
-Generate SPDX-JSON SBOM via syft. Optional cosign sign-blob via `FOP_LOCAL_SBOM_SIGN_KEY` (developer key — keyless OIDC has no workstation analog). Wired as Stage 7c of `fop-local-ci.sh` cd profile.
+Generate SPDX-JSON SBOM via syft. Optional cosign sign-blob via `FOP_LOCAL_SBOM_SIGN_KEY` (developer key — keyless OIDC has no workstation analog). Wired as Stage 7c of `nido-local-ci.sh` cd profile.
 
 #### `scripts/local-scorecard.sh`
 Run OSSF Scorecard via `gcr.io/openssf/scorecard:stable` against the github remote. Auto-detects `nash87/parkhub-rust` from `git remote get-url github`, pulls `GH_TOKEN` from `gh auth token`. Manual invocation only (90+s, network-bound).
@@ -75,11 +77,11 @@ Compares `.gitea/workflows/*` to `.github/workflows/*`, flags missing files (gat
 
 ## Architecture invariants (for future tabs)
 
-1. **`fop ci doctor [--fix]`** regenerates `.fop/local-ci.toml` (gitignored).
-2. **`.github/scripts/fop-local-ci.sh`** is the canonical orchestrator. Profiles: `pr` (fast diff-aware), `full` (+ openapi drift, playwright chromium, helm, cargo-audit), `cd` (+ image scan, SBOM, install-smoke, release preflight). `--post-status` publishes `fop/local-ci/{profile}=success` via PAT; `--background` re-execs in detached subshell.
-3. **GitHub `local-ci-attestation` job** waits for `fop/local-ci/pr=success` and skips Rust gates if found. Bot/fork PRs run full GHA.
+1. **`fop ci doctor [--fix]`** regenerates `.nido/local-ci.toml` (gitignored).
+2. **`.github/scripts/nido-local-ci.sh`** is the canonical orchestrator. Profiles: `pr` (fast diff-aware), `full` (+ openapi drift, playwright chromium, helm, cargo-audit), `cd` (+ image scan, SBOM, install-smoke, release preflight). `--post-status` publishes both `nido/local-ci/{profile}=success` (canonical) and `fop/local-ci/{profile}=success` (compat) via PAT; `--background` re-execs in detached subshell. Legacy path `.github/scripts/fop-local-ci.sh` is a deprecation shim.
+3. **GitHub `local-ci-attestation` job** waits for either `nido/local-ci/pr=success` or `fop/local-ci/pr=success` and skips Rust gates if found. Bot/fork PRs run full GHA.
 4. **`.devcontainer/`** ships every binary at GHA-pinned versions. `devcontainer.json` defaults to the prebuilt image at `ghcr.io/nash87/parkhub-rust-devcontainer:latest` (published by `.github/workflows/devcontainer-publish.yml` weekly + on `.devcontainer/**` change).
-5. **`fop ci-audit .`** flags workflow issues across both `.github` + `.gitea` sides. Auto-runs in Stage 2 of `fop-local-ci.sh`.
+5. **`fop ci-audit .`** flags workflow issues across both `.github` + `.gitea` sides. Auto-runs in Stage 2 of `nido-local-ci.sh`.
 
 ## Memory
 

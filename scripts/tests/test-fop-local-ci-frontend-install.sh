@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script=".github/scripts/fop-local-ci.sh"
+script=".github/scripts/nido-local-ci.sh"
 
 line_of() {
   local pattern="$1"

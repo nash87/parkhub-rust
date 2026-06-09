@@ -1,17 +1,18 @@
 name: Dependabot local-CI bridge
 
-# Bridge workflow: posts `fop/local-ci/pr: success/failure` commit status for
-# Dependabot-authored PRs. The status is normally posted by a developer
-# running `.github/scripts/fop-local-ci.sh --profile pr --post-status` locally.
+# Bridge workflow: posts both `nido/local-ci/pr` (canonical) and
+# `fop/local-ci/pr` (compat) commit statuses for Dependabot-authored PRs.
+# The status is normally posted by a developer running
+# `.github/scripts/nido-local-ci.sh --profile pr --post-status` locally.
 # Dependabot pushes from GitHub-side; no local developer means no invocation,
 # so the `local-ci-attestation` gate in ci.yml blocks indefinitely.
 #
 # This workflow runs the essential headless gate suite
 # (cargo-deny + cargo-audit + npm-audit + secret-scan + osv-scanner + typos)
-# and posts the status result so Dependabot PRs can merge cleanly.
+# and posts both status contexts so Dependabot PRs can merge cleanly
+# regardless of which context branch-protection currently requires.
 #
-# Ported from parkhub-php PR #511 (commit on branch
-# t-dependabot-local-ci-bridge-v2). Rust-specific gate mapping:
+# Rust-specific gate mapping (ported from parkhub-php):
 #   composer audit  -> cargo deny check (hard)
 #   -               -> cargo audit    (advisory; RUSTSEC ignores from security.yml)
 #   npm audit root  -> npm audit parkhub-web (advisory)
@@ -22,7 +23,7 @@ name: Dependabot local-CI bridge
 # Advisory: this workflow is NOT yet a required check. Monitor the first few
 # Dependabot cycles before promoting to required in branch protection.
 #
-# Unblocks: parkhub-rust #638/#639/#640/#641/#642
+# Unblocks: parkhub-rust #638/#639/#640/#641/#642 + dependabot-blocked PRs
 
 on:
   pull_request:
@@ -143,12 +144,14 @@ jobs:
         continue-on-error: false
         uses: crate-ci/typos@5ca5db740be4c6b2e6ce383819386a7340babd1e # v1.45.1
 
-      # --- Post fop/local-ci/pr commit status ---
-      # Uses gh api (same tooling as local-ci-attestation in ci.yml) to avoid
-      # introducing actions/github-script which has no existing pinned SHA.
+      # --- Post commit statuses (nido canonical + fop compat) ---
+      # Posts nido/local-ci/pr (canonical, new context) and fop/local-ci/pr
+      # (compat, existing branch-protection required check) so Dependabot PRs
+      # clear the gate regardless of which context is currently required.
+      # Uses gh api to avoid introducing actions/github-script (no pinned SHA).
       # All github.event.* values are passed through env vars to prevent
       # expression injection in the run shell.
-      - name: Post fop/local-ci/pr status
+      - name: Post nido/local-ci/pr and fop/local-ci/pr status
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -178,10 +181,19 @@ jobs:
             SHA="${live_sha}"
           fi
 
-          gh api \
-            --method POST \
-            "repos/${REPO}/statuses/${SHA}" \
-            -f state="${STATE}" \
-            -f context="fop/local-ci/pr" \
-            -f description="${DESC}" \
-            -f target_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+          post_status() {
+            local ctx="$1"
+            gh api \
+              --method POST \
+              "repos/${REPO}/statuses/${SHA}" \
+              -f state="${STATE}" \
+              -f context="${ctx}" \
+              -f description="${DESC}" \
+              -f target_url="${SERVER_URL}/${REPO}/actions/runs/${RUN_ID}"
+          }
+
+          # Canonical context (nido-first) — posted first.
+          post_status "nido/local-ci/pr"
+          # Compat context — satisfies the existing branch-protection required
+          # check (fop/local-ci/pr) until the orchestrator flips it to nido.
+          post_status "fop/local-ci/pr"

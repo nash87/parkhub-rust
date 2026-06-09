@@ -24,13 +24,17 @@ MAKEFLAGS += --no-print-directory
 EMBED_PLACEHOLDER := parkhub-web/dist/index.html
 SERVER_FEATURES   := --no-default-features --features headless
 
-# FOP_BUILD wraps cargo/npx invocations with the fop build queue (memory cap +
-# sccache locality + queue accounting) when `fop` is on PATH. On machines
-# without fop (fresh clones following dev/SETUP.md, CI runners that don't
-# install the homelab toolchain) it falls back to running bare so `make ci`
-# still produces a correct pass/fail. See `scripts/fop-wrap.sh` for the same
-# pattern used in lefthook.
-FOP_BUILD := $(if $(shell command -v fop 2>/dev/null),fop build --backend local --resource-profile interactive-small . --preset custom --,)
+# NIDO_BUILD wraps cargo/npx invocations with the nido/fop build queue (memory
+# cap + sccache locality + queue accounting) when nido or fop is on PATH. On
+# machines without either (fresh clones, CI runners that don't install the
+# homelab toolchain) it falls back to running bare so `make ci` still produces
+# a correct pass/fail. See `scripts/fop-wrap.sh` for the same pattern in
+# lefthook.
+# TODO(T-7009): switch to nido build once --resource-profile lands; fop is the
+#               compat runtime.
+NIDO_BUILD := $(if $(shell command -v fop 2>/dev/null),fop build --backend local --resource-profile interactive-small . --preset custom --,)
+# Compat alias: callers using FOP_BUILD still work transparently.
+FOP_BUILD ?= $(NIDO_BUILD)
 
 .PHONY: help ci ci-post ci-security fmt clippy check client-check test lint drift frontend nix-contract nix-contract-strict integration embed act pre-push clean
 
@@ -122,13 +126,13 @@ ci: fmt clippy check client-check test frontend drift
 	@echo ""
 	@echo "Core local gate passed. Run 'make act' for the full workflow YAML."
 
-## Full local PR gate + post `fop/local-ci/pr` commit status to GitHub.
-## Used by lefthook pre-push so the local-ci-attestation gate clears
-## without manual `make ci-post` follow-up. Mirrors parkhub-php pattern.
-## fop-local-ci.sh runs the whole gate (cargo + frontend + trivy + zizmor +
-## osv-scanner) inside fop's queue + posts the success status when clean.
+## Full local PR gate + post both nido/local-ci/pr and fop/local-ci/pr
+## commit statuses to GitHub. Used by lefthook pre-push so the
+## local-ci-attestation gate clears without manual `make ci-post`.
+## nido-local-ci.sh runs the whole gate (cargo + frontend + trivy + zizmor +
+## osv-scanner) inside fop's queue + posts both success statuses when clean.
 ci-post:
-	.github/scripts/fop-local-ci.sh --profile pr --post-status
+	.github/scripts/nido-local-ci.sh --profile pr --post-status
 
 ## Local OSS security subset for .github/workflows/security.yml: code scanning
 ## and workflow hygiene checks that are commercial-license-safe

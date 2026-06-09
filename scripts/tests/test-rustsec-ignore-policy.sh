@@ -42,7 +42,7 @@ inline_matches="$(
   grep -R -n -E -- '--ignore([[:space:]]+|=)RUSTSEC-' \
     .github/workflows \
     .gitea/workflows \
-    .github/scripts/fop-local-ci.sh \
+    .github/scripts/nido-local-ci.sh \
     scripts/ci/local-security-audit.sh || true
 )"
 
@@ -59,7 +59,7 @@ required_call_sites=(
   ".gitea/workflows/security.yaml"
   ".gitea/workflows/nightly.yaml"
   ".gitea/workflows/dependabot-local-ci-bridge.yaml"
-  ".github/scripts/fop-local-ci.sh"
+  ".github/scripts/nido-local-ci.sh"
   "scripts/ci/local-security-audit.sh"
 )
 

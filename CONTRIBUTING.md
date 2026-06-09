@@ -522,8 +522,8 @@ Beyond the lefthook gate, the repo ships **13 standalone `scripts/local-*.sh` mi
 | Want to… | Run |
 |----------|-----|
 | Verify everything before push | `lefthook run pre-push` |
-| Run the local-CI orchestrator manually | `.github/scripts/fop-local-ci.sh --profile full --post-status` |
-| Same, in background (terminal returns instantly) | `… --background` (posts `fop/local-ci/full` status when complete) |
+| Run the local-CI orchestrator manually | `.github/scripts/nido-local-ci.sh --profile full --post-status` |
+| Same, in background (terminal returns instantly) | `… --background` (posts `nido/local-ci/full` + `fop/local-ci/full` statuses when complete) |
 | First-time devcontainer | `devcontainer up` (pulls prebuilt `ghcr.io/nash87/parkhub-rust-devcontainer:latest`) |
 | Audit gitea/github workflow drift | `./scripts/local-workflow-drift.sh` |
 | Container image vuln scan | `./scripts/local-image-scan.sh` (stamp-cached) |
@@ -539,9 +539,9 @@ Beyond the lefthook gate, the repo ships **13 standalone `scripts/local-*.sh` mi
 | Fuzz smoke (jwt + webhook) | `./scripts/local-fuzz-smoke.sh` |
 | Install smoke (docker-compose path) | `./scripts/local-install-smoke.sh` |
 
-**Trust-inversion architecture**: `scripts/post-attestation-deferred.sh` (called from `lefthook.yml`) posts a `fop/local-ci/pr=success` status check via PAT after pre-push gates pass. GitHub's `local-ci-attestation` job (`ci.yml:90-207`) waits up to 36.5 min for it; if found, **all 7 Rust gates skip on the PR** ("LOCAL-FIRST: skipped on PR; covered by fop/local-ci/pr"). Bot/fork PRs (Dependabot, Copilot SWE Agent) skip the local-CI shortcut and run the full GHA suite in parallel.
+**Trust-inversion architecture**: `scripts/post-attestation-deferred.sh` (called from `lefthook.yml`) posts both `nido/local-ci/pr=success` (canonical) and `fop/local-ci/pr=success` (compat) status checks via PAT after pre-push gates pass. GitHub's `local-ci-attestation` job accepts either context; if found, **all 7 Rust gates skip on the PR** ("LOCAL-FIRST: skipped on PR; covered by local-ci/pr"). Bot/fork PRs (Dependabot, Copilot SWE Agent) skip the local-CI shortcut and run the full GHA suite in parallel.
 
-**Dev container**: `.devcontainer/Containerfile` ships every binary at GHA-pinned versions (rust 1.94.1, node 22, helm v3.18.4, trivy 0.59.0, grype 0.91.0, syft, gitleaks 8.30.1, actionlint 1.7.12, cargo-audit/deny/geiger, typos, zizmor, lighthouse v0.13, lefthook, yamllint). After `devcontainer up`, `fop-local-ci.sh --profile full --post-status --background` runs the entire local CI ladder.
+**Dev container**: `.devcontainer/Containerfile` ships every binary at GHA-pinned versions (rust 1.94.1, node 22, helm v3.18.4, trivy 0.59.0, grype 0.91.0, syft, gitleaks 8.30.1, actionlint 1.7.12, cargo-audit/deny/geiger, typos, zizmor, lighthouse v0.13, lefthook, yamllint). After `devcontainer up`, `nido-local-ci.sh --profile full --post-status --background` runs the entire local CI ladder.
 
 ### Bypassing in emergencies
 
