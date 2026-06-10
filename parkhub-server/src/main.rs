@@ -38,6 +38,8 @@ mod health;
 mod jobs;
 #[allow(dead_code)]
 mod jwt;
+#[cfg(feature = "mod-mcp")]
+mod mcp;
 #[allow(dead_code)]
 mod metrics;
 #[cfg(feature = "full")]
@@ -384,6 +386,14 @@ async fn main() -> Result<()> {
                 info!("Demo data already present ({lot_count} lots) — skipping seed.");
             }
         }
+    }
+
+    // ── MCP stdio server (short-circuits normal HTTP startup) ─────────────────
+    #[cfg(feature = "mod-mcp")]
+    if cli.mcp {
+        info!("Launching MCP server over stdio");
+        mcp::run(db).await?;
+        return Ok(());
     }
 
     // Start mDNS service for autodiscovery
