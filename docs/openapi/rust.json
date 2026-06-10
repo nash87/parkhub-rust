@@ -231,6 +231,14 @@
         ],
         "type": "object"
       },
+      "AllocationTransparencyMode": {
+        "description": "Current algorithmic transparency mode for allocation and recommendation\nendpoints. Controls whether the scored/exact-cover path is active\n(`algorithmic`) or disabled (`fifo_only`).\n\nCustomers who want to remain outside EU AI Act \"AI-system\" scope can set\n`fifo_only`: algorithmic endpoints refuse with `409 ALGORITHMIC_DISABLED`\nand direct callers to the rule-based waitlist path. The FIFO ordering\nitself lives in the waitlist module; this switch does not add a new\nallocator.",
+        "enum": [
+          "algorithmic",
+          "fifo_only"
+        ],
+        "type": "string"
+      },
       "AnnouncementSeverity": {
         "description": "Announcement severity level",
         "enum": [
@@ -313,6 +321,42 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "AutomatedDecisionNotice": {
+        "description": "EU AI Act Art. 50 automated-decision transparency notice.\n\nIncluded in every response that carries a scored or constraint-based\nallocation decision. The `basis` list is truthful per endpoint: it names\nonly the data inputs the algorithm actually consumed, not aspirational\ninputs.\n\n`review_contact` names the role (not an email address) the subject should\ncontact to request human review under Art. 22 GDPR. `art22_review_available`\nis `true` because all algorithmic decisions in this system can be reviewed\nby an administrator.",
+        "properties": {
+          "art22_review_available": {
+            "description": "Whether a human review of this decision is available (Art. 22 GDPR).",
+            "type": "boolean"
+          },
+          "basis": {
+            "description": "Data inputs used by the decision algorithm for this specific endpoint.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "is_automated": {
+            "description": "Always `true` for responses served by the algorithmic path.",
+            "type": "boolean"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/AllocationTransparencyMode",
+            "description": "Active transparency mode at the time of the decision."
+          },
+          "review_contact": {
+            "description": "Role to contact for human-review requests (Art. 22 GDPR).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "is_automated",
+          "basis",
+          "review_contact",
+          "art22_review_available",
+          "mode"
+        ],
         "type": "object"
       },
       "BookingFiltersParams": {
@@ -1315,6 +1359,168 @@
         ],
         "type": "object"
       },
+      "ExactCoverAllocationRequest": {
+        "properties": {
+          "limits": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExactCoverLimits"
+              }
+            ]
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/ExactCoverOption"
+            },
+            "type": "array"
+          },
+          "required_constraints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "required_constraints",
+          "options"
+        ],
+        "type": "object"
+      },
+      "ExactCoverAllocationResponse": {
+        "properties": {
+          "allocation_trace_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "automated_decision": {
+            "$ref": "#/components/schemas/AutomatedDecisionNotice",
+            "description": "EU AI Act Art. 50 automated-decision transparency notice."
+          },
+          "legal_boundary": {
+            "$ref": "#/components/schemas/ExactCoverLegalBoundary"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ExactCoverResult"
+          }
+        },
+        "required": [
+          "allocation_trace_id",
+          "result",
+          "legal_boundary",
+          "automated_decision"
+        ],
+        "type": "object"
+      },
+      "ExactCoverLegalBoundary": {
+        "properties": {
+          "attorney_review_status": {
+            "type": "string"
+          },
+          "disclaimer": {
+            "type": "string"
+          },
+          "execution_allowed": {
+            "type": "boolean"
+          },
+          "legal_review_required": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "legal_review_required",
+          "attorney_review_status",
+          "execution_allowed",
+          "disclaimer"
+        ],
+        "type": "object"
+      },
+      "ExactCoverLimits": {
+        "properties": {
+          "max_options": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_search_nodes": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_options",
+          "max_search_nodes"
+        ],
+        "type": "object"
+      },
+      "ExactCoverOption": {
+        "properties": {
+          "covers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "weight": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "covers",
+          "weight"
+        ],
+        "type": "object"
+      },
+      "ExactCoverResult": {
+        "properties": {
+          "covered_constraints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "search_nodes": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "selected_option_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ExactCoverStatus"
+          },
+          "strategy": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy",
+          "status",
+          "selected_option_ids",
+          "covered_constraints",
+          "search_nodes"
+        ],
+        "type": "object"
+      },
+      "ExactCoverStatus": {
+        "enum": [
+          "solved",
+          "fallback_no_solution",
+          "fallback_input_limited",
+          "fallback_search_limited"
+        ],
+        "type": "string"
+      },
       "ExtendBookingRequest": {
         "description": "Extend booking request",
         "properties": {
@@ -2176,6 +2382,27 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "RecommendationsResponse": {
+        "description": "Combined response for `GET /api/v1/bookings/recommendations`.\n\nWraps the recommendation list with an EU AI Act Art. 50 transparency\nnotice so callers always know they are receiving automated decisions and\nhave a path to request human review.",
+        "properties": {
+          "automated_decision": {
+            "$ref": "#/components/schemas/AutomatedDecisionNotice",
+            "description": "EU AI Act Art. 50 automated-decision transparency notice."
+          },
+          "recommendations": {
+            "description": "Ranked slot recommendations.",
+            "items": {
+              "$ref": "#/components/schemas/SlotRecommendation"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "recommendations",
+          "automated_decision"
+        ],
         "type": "object"
       },
       "RefreshTokenRequest": {
@@ -8329,7 +8556,7 @@
     },
     "/api/v1/bookings/recommendations": {
       "get": {
-        "description": "Returns top slot recommendations based on user history, favorites, and availability.",
+        "description": "Returns top slot recommendations based on user history, favorites, and availability. Includes an EU AI Act Art. 50 transparency notice. Returns 409 when algorithmic allocation is disabled.",
         "operationId": "get_recommendations",
         "parameters": [
           {
@@ -8344,7 +8571,10 @@
         ],
         "responses": {
           "200": {
-            "description": "Slot recommendations"
+            "description": "Slot recommendations with automated-decision notice"
+          },
+          "409": {
+            "description": "Algorithmic allocation disabled (fifo_only mode)"
           }
         },
         "summary": "Get smart parking recommendations",
@@ -11072,6 +11302,52 @@
         "summary": "Get VAPID public key",
         "tags": [
           "Push"
+        ]
+      }
+    },
+    "/api/v1/recommendations/allocation/exact-cover": {
+      "post": {
+        "description": "Admin-only: solve a batch allocation using exact-cover Algorithm X. Includes an EU AI Act Art. 50 transparency notice. Returns 409 when algorithmic allocation is disabled.",
+        "operationId": "solve_exact_cover_allocation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExactCoverAllocationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExactCoverAllocationResponse"
+                }
+              }
+            },
+            "description": "Allocation result with automated-decision notice"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "409": {
+            "description": "Algorithmic allocation disabled (fifo_only mode)"
+          },
+          "500": {
+            "description": "Audit trace persist failed"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Exact-cover batch allocation",
+        "tags": [
+          "Admin"
         ]
       }
     },
