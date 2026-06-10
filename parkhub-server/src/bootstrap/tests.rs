@@ -25,6 +25,7 @@ fn parse_args(args: &[&str]) -> CliArgs {
         data_dir: None,
         version: false,
         health_check: false,
+        mcp: false,
     };
     let mut i = 0;
     let owned: Vec<String> = args.iter().map(std::string::ToString::to_string).collect();

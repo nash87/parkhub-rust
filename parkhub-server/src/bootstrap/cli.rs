@@ -27,6 +27,9 @@ pub(crate) struct CliArgs {
     /// Perform a health check against the running server and exit 0/1.
     /// Used as the Docker HEALTHCHECK command (works in distroless images).
     pub(crate) health_check: bool,
+    /// Run as an MCP (Model Context Protocol) server over stdio.
+    /// Requires the `mod-mcp` feature and the `PARKHUB_API_KEY` env var.
+    pub(crate) mcp: bool,
 }
 
 impl CliArgs {
@@ -41,6 +44,7 @@ impl CliArgs {
             data_dir: None,
             version: false,
             health_check: false,
+            mcp: false,
         };
 
         let mut i = 1;
@@ -52,6 +56,7 @@ impl CliArgs {
                 "--headless" => cli.headless = true,
                 "--unattended" => cli.unattended = true,
                 "--health-check" => cli.health_check = true,
+                "--mcp" => cli.mcp = true,
                 "-p" | "--port" => {
                     if i + 1 < args.len() {
                         cli.port = args[i + 1].parse().ok();
@@ -87,6 +92,7 @@ impl CliArgs {
         println!("    -p, --port PORT    Set the server port (default: 7878)");
         println!("    --data-dir PATH    Set custom data directory");
         println!("    --health-check     Check if a running server is healthy (exits 0/1)");
+        println!("    --mcp              Run as MCP server over stdio (requires mod-mcp feature)");
         println!();
         println!("ENVIRONMENT VARIABLES:");
         println!("    PARKHUB_DB_PASSPHRASE    Database encryption passphrase");
@@ -94,6 +100,7 @@ impl CliArgs {
         println!("    SEED_DEMO_DATA           Seed demo lots/users on first start (true/1)");
         println!("    DEMO_MODE                Enable demo UI and seed data on first start");
         println!("    RUST_LOG                 Logging filter (e.g., debug,info)");
+        println!("    PARKHUB_API_KEY          API key for MCP server auth (required with --mcp)");
         println!();
         println!("EXAMPLES:");
         println!("    parkhub-server                    # Start with GUI");
