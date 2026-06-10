@@ -152,7 +152,7 @@ impl FromStr for RetentionClass {
 // ─────────────────────────────────────────────────────────────────────────────
 
 fn policy_settings_key(class: RetentionClass) -> String {
-    format!("retention.policy.{}", class.as_str())
+    format!("retention_policy_{}", class.as_str())
 }
 
 /// Load the effective TTL for a class: admin override from settings, or the
