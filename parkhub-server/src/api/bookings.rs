@@ -814,6 +814,15 @@ pub async fn cancel_booking(
         "Booking cancelled"
     );
 
+    // P1-2: promote the next FIFO waitlist entry to Offered status (AI-Act
+    // compliant — strict FIFO by created_at, no reordering).
+    {
+        let lot_id = booking.lot_id;
+        let claim_window =
+            crate::api::noshow::lot_claim_window_minutes(&state_guard, &lot_id.to_string()).await;
+        crate::api::noshow::promote_next_waitlist_offer(&state_guard, lot_id, claim_window).await;
+    }
+
     // Send cancellation confirmation email (async, best-effort)
     #[cfg(feature = "mod-email")]
     if let Some(ref user) = user {
