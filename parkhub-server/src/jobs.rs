@@ -53,6 +53,15 @@ pub fn start_background_jobs(state: SharedState) {
         |s| Box::pin(async move { purge_expired_bookings(&s).await }),
     );
 
+    // ── RetentionPurge: every 24 hours (first run after 90 s) ───────────────
+    spawn_recurring_job(
+        "retention_purge",
+        state.clone(),
+        Some(tokio::time::Duration::from_secs(90)),
+        tokio::time::Duration::from_secs(86400),
+        |s| Box::pin(async move { retention_purge(&s).await }),
+    );
+
     // ── AggregateOccupancy: every 15 minutes ────────────────────────────────
     spawn_recurring_job(
         "aggregate_occupancy",
@@ -64,7 +73,7 @@ pub fn start_background_jobs(state: SharedState) {
 
     info!(
         "Background jobs started: AutoRelease (5m), ExpandRecurring (1h), \
-         PurgeExpired (24h), AggregateOccupancy (15m)"
+         PurgeExpired (24h), AggregateOccupancy (15m), RetentionPurge (24h)"
     );
 }
 
@@ -460,6 +469,22 @@ async fn purge_expired_bookings(state: &SharedState) -> anyhow::Result<()> {
     }
 
     info!("PurgeExpired: deleted {deleted} booking(s)");
+    Ok(())
+}
+
+/// Run the GDPR retention engine across all registered surfaces.
+///
+/// Uses `dry_run = false` — this is the scheduled production purge. Evidence
+/// entries are written to the audit log automatically by the engine.
+async fn retention_purge(state: &SharedState) -> anyhow::Result<()> {
+    let guard = state.read().await;
+    let engine = crate::api::retention::RetentionEngine::new();
+    let report = engine.run(&guard.db, false).await?;
+    info!(
+        "RetentionPurge: {} records affected across {} results",
+        report.total_records_affected,
+        report.results.len()
+    );
     Ok(())
 }
 

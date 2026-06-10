@@ -717,6 +717,25 @@ pub(super) fn registry_defs() -> Vec<ModuleDef> {
             depends_on: &[],
             config_schema: None,
         },
+        ModuleDef {
+            name: "retention",
+            category: ModuleCategory::Compliance,
+            description: "GDPR retention / deletion policy engine: per-class TTLs, scheduled purge, deletion-evidence log.",
+            enabled: true,
+            runtime_toggleable: false,
+            config_keys: &[
+                "retention.policy.operational_presence",
+                "retention.policy.booking_history",
+                "retention.policy.security_audit_log",
+                "retention.policy.hr_labour",
+                "retention.policy.anpr_raw",
+                "retention.policy.ev_session",
+                "retention.policy.billing_fiscal",
+            ],
+            ui_route: Some("/admin/retention"),
+            depends_on: &["gdpr"],
+            config_schema: None,
+        },
         // ── Enterprise ──────────────────────────────────────────────────────
         ModuleDef {
             name: "multi-tenant",

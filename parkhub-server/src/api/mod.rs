@@ -173,6 +173,7 @@ pub mod recommendation_allocation;
 pub mod recommendations;
 #[cfg(feature = "mod-recurring")]
 pub mod recurring;
+pub mod retention;
 #[cfg(feature = "mod-scheduled-reports")]
 pub mod scheduled_reports;
 pub mod security;
@@ -1244,6 +1245,25 @@ fn admin_core_routes() -> Router<SharedState> {
                 get(get_user_roles).put(assign_user_roles),
             );
     }
+
+    // ── Retention / GDPR deletion-policy engine ────────────────────────────
+    admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/retention/policies",
+            get(retention::list_retention_policies),
+        )
+        .route(
+            "/api/v1/admin/retention/policies/{class}",
+            put(retention::update_retention_policy),
+        )
+        .route(
+            "/api/v1/admin/retention/run",
+            post(retention::run_retention),
+        )
+        .route(
+            "/api/v1/admin/retention/evidence",
+            get(retention::list_retention_evidence),
+        );
 
     // ── Module runtime toggle — PATCH /api/v1/admin/modules/{name} ──
     // Flips the `module.{name}.runtime_enabled` admin setting for a
