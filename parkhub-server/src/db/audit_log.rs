@@ -54,4 +54,31 @@ impl Database {
         entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         Ok(entries)
     }
+
+    /// Delete audit log entries by their string IDs.
+    ///
+    /// Used by the retention engine to purge rows whose TTL has elapsed.
+    /// Returns the number of rows actually deleted (entries that were not
+    /// found are silently skipped).
+    pub async fn delete_audit_log_entries(&self, ids: &[String]) -> Result<u64> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let db = self.inner.write().await;
+        let write_txn = db.begin_write()?;
+        drop(db);
+
+        let mut deleted = 0u64;
+        {
+            let mut table = write_txn.open_table(AUDIT_LOG)?;
+            for id in ids {
+                if table.remove(id.as_str())?.is_some() {
+                    deleted += 1;
+                }
+            }
+        }
+        write_txn.commit()?;
+        Ok(deleted)
+    }
 }

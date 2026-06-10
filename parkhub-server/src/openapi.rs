@@ -100,6 +100,15 @@ use crate::{
             ApiError,
             FieldError,
 
+            // Retention/deletion policy engine (admin)
+            crate::api::retention::RetentionClass,
+            crate::api::retention::RetentionPolicyResponse,
+            crate::api::retention::UpdatePolicyRequest,
+            crate::api::retention::RunRequest,
+            crate::api::retention::RunReport,
+            crate::api::retention::ClassRunResult,
+            crate::api::retention::EvidenceEntry,
+
             // Auth
             LoginRequest,
             RegisterRequest,
@@ -664,6 +673,12 @@ use crate::{
         // Rate limits dashboard (admin)
         crate::api::rate_dashboard::admin_rate_limit_stats,
         crate::api::rate_dashboard::admin_rate_limit_history,
+
+        // Retention/deletion policy engine (admin)
+        crate::api::retention::list_retention_policies,
+        crate::api::retention::update_retention_policy,
+        crate::api::retention::run_retention,
+        crate::api::retention::list_retention_evidence,
 
         // Recommendations — stats
         crate::api::recommendations::get_recommendation_stats,

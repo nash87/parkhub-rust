@@ -465,6 +465,46 @@
         ],
         "type": "object"
       },
+      "ClassRunResult": {
+        "description": "Result from a single class purge run (reported in the evidence log and\nreturned from the run API).",
+        "properties": {
+          "class": {
+            "type": "string"
+          },
+          "dry_run": {
+            "type": "boolean"
+          },
+          "newest_deleted_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "oldest_deleted_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_count": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "surface": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "class",
+          "surface",
+          "record_count",
+          "dry_run"
+        ],
+        "type": "object"
+      },
       "ComponentHealth": {
         "description": "Individual component health",
         "properties": {
@@ -1194,6 +1234,63 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "EvidenceEntry": {
+        "description": "Evidence entry returned by GET /api/v1/admin/retention/evidence.",
+        "properties": {
+          "dry_run": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "newest_deleted_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "oldest_deleted_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "purged_class": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_count": {
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "surface": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "timestamp"
+        ],
         "type": "object"
       },
       "ExtendBookingRequest": {
@@ -2154,6 +2251,55 @@
         ],
         "type": "object"
       },
+      "RetentionClass": {
+        "description": "All recognised retention / deletion classes.\n\nThe serialised form (snake_case string) matches the value stored in the\n`details.retention_deletion_class` field of audit log entries.",
+        "enum": [
+          "operational_presence",
+          "booking_history",
+          "security_audit_log",
+          "hr_labour",
+          "anpr_raw",
+          "ev_session",
+          "billing_fiscal"
+        ],
+        "type": "string"
+      },
+      "RetentionPolicyResponse": {
+        "description": "Policy entry returned by GET /api/v1/admin/retention/policies.",
+        "properties": {
+          "class": {
+            "type": "string"
+          },
+          "default_ttl_days": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "is_legal_hold": {
+            "type": "boolean"
+          },
+          "statutory_minimum_days": {
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ttl_days": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "class",
+          "ttl_days",
+          "default_ttl_days",
+          "is_legal_hold"
+        ],
+        "type": "object"
+      },
       "ReviewRequest": {
         "properties": {
           "comment": {
@@ -2169,6 +2315,41 @@
         "required": [
           "status"
         ],
+        "type": "object"
+      },
+      "RunReport": {
+        "description": "Result from a full [`RetentionEngine::run`] across all classes.",
+        "properties": {
+          "dry_run": {
+            "type": "boolean"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ClassRunResult"
+            },
+            "type": "array"
+          },
+          "total_records_affected": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dry_run",
+          "results",
+          "total_records_affected"
+        ],
+        "type": "object"
+      },
+      "RunRequest": {
+        "description": "Request body for POST /api/v1/admin/retention/run.",
+        "properties": {
+          "dry_run": {
+            "description": "When true the engine counts matching rows but does not delete them.",
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "SaveWidgetLayoutRequest": {
@@ -3039,6 +3220,21 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "UpdatePolicyRequest": {
+        "description": "Request body for PUT /api/v1/admin/retention/policies/{class}.",
+        "properties": {
+          "ttl_days": {
+            "description": "Desired TTL in days. Must not be below the statutory minimum for legal-hold classes.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ttl_days"
+        ],
         "type": "object"
       },
       "UpdatePreferencesRequest": {
@@ -6084,6 +6280,135 @@
         "summary": "Reset database (admin)",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/retention/evidence": {
+      "get": {
+        "description": "Returns deletion-evidence records written after each purge run.",
+        "operationId": "list_retention_evidence",
+        "responses": {
+          "200": {
+            "description": "Evidence list"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List retention evidence log",
+        "tags": [
+          "Retention"
+        ]
+      }
+    },
+    "/api/v1/admin/retention/policies": {
+      "get": {
+        "description": "Returns the effective TTL for every retention class (admin-configured override or class default).",
+        "operationId": "list_retention_policies",
+        "responses": {
+          "200": {
+            "description": "Policy list"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List retention policies",
+        "tags": [
+          "Retention"
+        ]
+      }
+    },
+    "/api/v1/admin/retention/policies/{class}": {
+      "put": {
+        "description": "Overrides the TTL for a retention class. Rejected when the requested TTL is below the statutory minimum for legal-hold classes.",
+        "operationId": "update_retention_policy",
+        "parameters": [
+          {
+            "description": "Retention class slug, e.g. billing_fiscal",
+            "in": "path",
+            "name": "class",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Policy updated"
+          },
+          "400": {
+            "description": "TTL below statutory minimum or unknown class"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update retention policy TTL",
+        "tags": [
+          "Retention"
+        ]
+      }
+    },
+    "/api/v1/admin/retention/run": {
+      "post": {
+        "description": "Triggers an immediate retention purge across all surfaces. Set dry_run=true to count without deleting.",
+        "operationId": "run_retention",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Run report"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Engine error"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Run retention purge",
+        "tags": [
+          "Retention"
         ]
       }
     },
