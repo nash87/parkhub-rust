@@ -9,7 +9,7 @@
 # the "never pull from Docker Hub" convention for local + gitea-runner
 # builds. GitHub Actions cloud runners pass the same digest against
 # cgr.dev/chainguard/wolfi-base so release builds never depend on a mutable tag.
-ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base@sha256:4973aa3c2ccbe13fe2049aab539b0ab342ec584bd5b54a269d55d4891091c639
+ARG WOLFI_BASE=192.168.178.250:5000/wolfi-base@sha256:865267010fd5c6a45c7ab456848573010ec521b0d2677a0a966f3f2211b71eda
 
 # ---------------------------------------------------------------------------
 # Stage 1: Frontend build (Astro/Vite)
