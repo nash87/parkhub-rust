@@ -241,8 +241,8 @@ impl AuditLogSurface {
             return false;
         };
         json.get("retention_evidence")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
+            .and_then(serde_json::Value::as_bool)
+            .is_some_and(|b| b)
     }
 }
 
@@ -544,21 +544,21 @@ pub async fn update_retention_policy(
     };
 
     // Enforce statutory minimum for legal-hold classes.
-    if let Some(min) = class.statutory_minimum_days() {
-        if req.ttl_days < min {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(
-                    "BELOW_STATUTORY_MINIMUM",
-                    format!(
-                        "TTL for {class} must be at least {min} days (statutory minimum); \
-                         requested {ttl}",
-                        class = class.as_str(),
-                        ttl = req.ttl_days,
-                    ),
-                )),
-            );
-        }
+    if let Some(min) = class.statutory_minimum_days()
+        && req.ttl_days < min
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(ApiResponse::error(
+                "BELOW_STATUTORY_MINIMUM",
+                format!(
+                    "TTL for {class} must be at least {min} days (statutory minimum); \
+                     requested {ttl}",
+                    class = class.as_str(),
+                    ttl = req.ttl_days,
+                ),
+            )),
+        );
     }
 
     let key = policy_settings_key(class);
@@ -671,7 +671,10 @@ pub async fn list_retention_evidence(
                 && e.details.as_deref().is_some_and(|d| {
                     serde_json::from_str::<serde_json::Value>(d)
                         .ok()
-                        .and_then(|v| v.get("retention_evidence").and_then(|b| b.as_bool()))
+                        .and_then(|v| {
+                            v.get("retention_evidence")
+                                .and_then(serde_json::Value::as_bool)
+                        })
                         .unwrap_or(false)
                 })
         })
@@ -850,7 +853,7 @@ mod tests {
         let anpr_ev = evidence.iter().find(|e| {
             e.details
                 .as_deref()
-                .map_or(false, |d| d.contains("\"purged_class\":\"anpr_raw\""))
+                .is_some_and(|d| d.contains("\"purged_class\":\"anpr_raw\""))
         });
         assert!(anpr_ev.is_some(), "evidence entry for anpr_raw must exist");
         let details: serde_json::Value =
@@ -860,9 +863,8 @@ mod tests {
             1,
             "evidence must record the count"
         );
-        assert_eq!(
-            details["dry_run"].as_bool().unwrap(),
-            false,
+        assert!(
+            !details["dry_run"].as_bool().unwrap(),
             "evidence must record dry_run=false"
         );
     }
