@@ -164,6 +164,7 @@ pub mod push;
 // shadowed the richer PWA install experience.
 /// No-show release config + waitlist claim offer endpoints (P1-1 + P1-2).
 /// Always compiled: the promotion helper is called unconditionally by jobs.rs.
+pub mod fairness;
 pub mod noshow;
 #[cfg(feature = "mod-qr")]
 pub mod qr;
@@ -1248,6 +1249,17 @@ fn admin_core_routes() -> Router<SharedState> {
                 get(get_user_roles).put(assign_user_roles),
             );
     }
+
+    // ── Fairness & transparency (§87 BetrVG) ──────────────────────────────
+    admin_routes = admin_routes
+        .route(
+            "/api/v1/admin/fairness/report",
+            get(fairness::get_fairness_report),
+        )
+        .route(
+            "/api/v1/admin/transparency/data-collection",
+            get(fairness::get_data_collection_disclosure),
+        );
 
     // ── Retention / GDPR deletion-policy engine ────────────────────────────
     admin_routes = admin_routes

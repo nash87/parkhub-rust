@@ -100,6 +100,13 @@ use crate::{
             ApiError,
             FieldError,
 
+            // Fairness & transparency (§87 BetrVG)
+            crate::api::fairness::FairnessReport,
+            crate::api::fairness::FrequencyBucket,
+            crate::api::fairness::DenialReasonCategory,
+            crate::api::fairness::DataCollectionDisclosure,
+            crate::api::fairness::DataCategoryDisclosure,
+
             // Retention/deletion policy engine (admin)
             crate::api::retention::RetentionClass,
             crate::api::retention::RetentionPolicyResponse,
@@ -691,6 +698,10 @@ use crate::{
         // Rate limits dashboard (admin)
         crate::api::rate_dashboard::admin_rate_limit_stats,
         crate::api::rate_dashboard::admin_rate_limit_history,
+
+        // Fairness & transparency — §87 BetrVG
+        crate::api::fairness::get_fairness_report,
+        crate::api::fairness::get_data_collection_disclosure,
 
         // Retention/deletion policy engine (admin)
         crate::api::retention::list_retention_policies,
