@@ -18,20 +18,23 @@ use parkhub_common::models::UserRole;
 
 use super::{
     AuthUser, SharedState,
-    recommendations::{RecommendationAllocationConfig, RecommendationEngineConfig},
+    recommendations::{
+        AllocationTransparencyMode, AutomatedDecisionNotice, RecommendationAllocationConfig,
+        RecommendationEngineConfig, automated_decision_for_allocation,
+    },
 };
 
 const DEFAULT_MAX_OPTIONS: usize = 256;
 const DEFAULT_MAX_SEARCH_NODES: usize = 10_000;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ExactCoverOption {
     pub id: String,
     pub covers: Vec<String>,
     pub weight: i64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ExactCoverLimits {
     pub max_options: usize,
     pub max_search_nodes: usize,
@@ -46,7 +49,7 @@ impl Default for ExactCoverLimits {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct ExactCoverResult {
     pub strategy: &'static str,
     pub status: ExactCoverStatus,
@@ -55,7 +58,7 @@ pub struct ExactCoverResult {
     pub search_nodes: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExactCoverStatus {
     Solved,
@@ -64,21 +67,23 @@ pub enum ExactCoverStatus {
     FallbackSearchLimited,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::ToSchema)]
 pub struct ExactCoverAllocationRequest {
     pub required_constraints: Vec<String>,
     pub options: Vec<ExactCoverOption>,
     pub limits: Option<ExactCoverLimits>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct ExactCoverAllocationResponse {
     pub allocation_trace_id: Uuid,
     pub result: ExactCoverResult,
     pub legal_boundary: ExactCoverLegalBoundary,
+    /// EU AI Act Art. 50 automated-decision transparency notice.
+    pub automated_decision: AutomatedDecisionNotice,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct ExactCoverLegalBoundary {
     pub legal_review_required: bool,
     pub attorney_review_status: &'static str,
@@ -156,8 +161,26 @@ pub fn solve_exact_cover_v1(
 
 /// Admin-only exact-cover allocation utility for batch/recurring workflows.
 ///
+/// Returns 409 ALGORITHMIC_DISABLED when `allocation_transparency_mode` is
+/// `fifo_only`; in that mode use the waitlist for rule-based slot assignment.
+///
 /// This intentionally lives outside the quick-booking recommendation endpoint:
 /// `weighted_v1` remains the default scorer for ordinary single-slot requests.
+#[utoipa::path(
+    post,
+    path = "/api/v1/recommendations/allocation/exact-cover",
+    tag = "Admin",
+    summary = "Exact-cover batch allocation",
+    description = "Admin-only: solve a batch allocation using exact-cover Algorithm X. Includes an EU AI Act Art. 50 transparency notice. Returns 409 when algorithmic allocation is disabled.",
+    request_body = ExactCoverAllocationRequest,
+    responses(
+        (status = 200, description = "Allocation result with automated-decision notice", body = ExactCoverAllocationResponse),
+        (status = 409, description = "Algorithmic allocation disabled (fifo_only mode)"),
+        (status = 403, description = "Admin access required"),
+        (status = 500, description = "Audit trace persist failed"),
+    ),
+    security(("bearer_auth" = []))
+)]
 pub async fn solve_exact_cover_allocation(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
@@ -168,6 +191,17 @@ pub async fn solve_exact_cover_allocation(
         return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
     }
     let engine = RecommendationEngineConfig::load(&db).await;
+
+    // EU AI Act Art. 50 gate: refuse the algorithmic path when fifo_only.
+    if engine.transparency_mode == AllocationTransparencyMode::FifoOnly {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "ALGORITHMIC_DISABLED",
+                "Algorithmic allocation is disabled; use the waitlist for rule-based slot assignment",
+            )),
+        );
+    }
 
     let limits = effective_limits(request.limits, &engine.allocation);
     let result = solve_exact_cover_v1(&request.required_constraints, &request.options, limits);
@@ -191,6 +225,7 @@ pub async fn solve_exact_cover_allocation(
         return audit_persist_failure_response();
     }
 
+    let transparency_mode = engine.transparency_mode;
     (
         StatusCode::OK,
         Json(ApiResponse::success(ExactCoverAllocationResponse {
@@ -202,6 +237,7 @@ pub async fn solve_exact_cover_allocation(
                 execution_allowed: false,
                 disclaimer: "exact_cover_v1 is operational scheduling support; attorney review, citation verification, client authorization, and final legal judgment remain required before customer-facing legal or profiling claims ship.",
             },
+            automated_decision: automated_decision_for_allocation(transparency_mode),
         })),
     )
 }

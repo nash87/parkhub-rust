@@ -210,6 +210,18 @@ use crate::{
             // Recommendations
             crate::api::recommendations::SlotRecommendation,
             crate::api::recommendations::RecommendationQuery,
+            crate::api::recommendations::AutomatedDecisionNotice,
+            crate::api::recommendations::AllocationTransparencyMode,
+            crate::api::recommendations::RecommendationsResponse,
+
+            // Exact-cover allocation (EU AI Act Art. 50 transparency)
+            crate::api::recommendation_allocation::ExactCoverAllocationRequest,
+            crate::api::recommendation_allocation::ExactCoverOption,
+            crate::api::recommendation_allocation::ExactCoverLimits,
+            crate::api::recommendation_allocation::ExactCoverAllocationResponse,
+            crate::api::recommendation_allocation::ExactCoverResult,
+            crate::api::recommendation_allocation::ExactCoverStatus,
+            crate::api::recommendation_allocation::ExactCoverLegalBoundary,
 
             // Translations
             crate::api::translations::CreateProposalRequest,
@@ -480,6 +492,7 @@ use crate::{
 
         // Recommendations
         crate::api::recommendations::get_recommendations,
+        crate::api::recommendation_allocation::solve_exact_cover_allocation,
 
         // Translations
         crate::api::translations::list_overrides,

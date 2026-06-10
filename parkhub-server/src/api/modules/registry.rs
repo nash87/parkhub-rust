@@ -925,6 +925,7 @@ pub(super) fn registry_defs() -> Vec<ModuleDef> {
                 "max_results",
                 "explain",
                 "profile_safe_mode",
+                "allocation_transparency_mode",
             ],
             ui_route: None,
             depends_on: &[],

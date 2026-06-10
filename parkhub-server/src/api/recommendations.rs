@@ -32,6 +32,118 @@ use parkhub_common::models::{BookingStatus, SlotFeature, SlotStatus};
 use super::modules::config_setting_key;
 use super::{AuthUser, SharedState, check_admin};
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EU AI Act Art. 50 — Transparency
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Current algorithmic transparency mode for allocation and recommendation
+/// endpoints. Controls whether the scored/exact-cover path is active
+/// (`algorithmic`) or disabled (`fifo_only`).
+///
+/// Customers who want to remain outside EU AI Act "AI-system" scope can set
+/// `fifo_only`: algorithmic endpoints refuse with `409 ALGORITHMIC_DISABLED`
+/// and direct callers to the rule-based waitlist path. The FIFO ordering
+/// itself lives in the waitlist module; this switch does not add a new
+/// allocator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AllocationTransparencyMode {
+    /// Scored / algorithmic allocation active (default). EU AI Act Art. 50
+    /// transparency disclosures are included in every relevant response.
+    Algorithmic,
+    /// Algorithmic allocation disabled. Endpoints that would serve a scored
+    /// decision refuse with 409 ALGORITHMIC_DISABLED.
+    FifoOnly,
+}
+
+impl AllocationTransparencyMode {
+    /// Parse from the raw settings-store string; unknown values fall back to
+    /// `Algorithmic` (fail-safe).
+    pub(crate) fn from_setting(s: &str) -> Self {
+        match s.trim() {
+            "fifo_only" => Self::FifoOnly,
+            _ => Self::Algorithmic,
+        }
+    }
+}
+
+/// EU AI Act Art. 50 automated-decision transparency notice.
+///
+/// Included in every response that carries a scored or constraint-based
+/// allocation decision. The `basis` list is truthful per endpoint: it names
+/// only the data inputs the algorithm actually consumed, not aspirational
+/// inputs.
+///
+/// `review_contact` names the role (not an email address) the subject should
+/// contact to request human review under Art. 22 GDPR. `art22_review_available`
+/// is `true` because all algorithmic decisions in this system can be reviewed
+/// by an administrator.
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+pub struct AutomatedDecisionNotice {
+    /// Always `true` for responses served by the algorithmic path.
+    pub is_automated: bool,
+    /// Data inputs used by the decision algorithm for this specific endpoint.
+    pub basis: Vec<String>,
+    /// Role to contact for human-review requests (Art. 22 GDPR).
+    pub review_contact: &'static str,
+    /// Whether a human review of this decision is available (Art. 22 GDPR).
+    pub art22_review_available: bool,
+    /// Active transparency mode at the time of the decision.
+    pub mode: AllocationTransparencyMode,
+}
+
+/// Build the transparency notice for scored-recommendation responses.
+///
+/// Basis reflects what the `weighted_v1` / `fop_pipeline_v1` algorithm
+/// actually uses: booking history frequency, admin-configured weights
+/// (policy_rules), and the resulting composite score.
+pub(crate) fn automated_decision_for_recommendations(
+    mode: AllocationTransparencyMode,
+) -> AutomatedDecisionNotice {
+    AutomatedDecisionNotice {
+        is_automated: true,
+        basis: vec![
+            "booking_history".into(),
+            "policy_rules".into(),
+            "priority_score".into(),
+        ],
+        review_contact: "administrator",
+        art22_review_available: true,
+        mode,
+    }
+}
+
+/// Build the transparency notice for exact-cover allocation responses.
+///
+/// Basis reflects what the `exact_cover_v1` solver actually uses: the
+/// caller-supplied option weights (policy_rules) and the resulting tie-break
+/// ordering (priority_score). Booking history is NOT a direct input to the
+/// solver — it takes abstract constraints and options.
+pub(crate) fn automated_decision_for_allocation(
+    mode: AllocationTransparencyMode,
+) -> AutomatedDecisionNotice {
+    AutomatedDecisionNotice {
+        is_automated: true,
+        basis: vec!["policy_rules".into(), "priority_score".into()],
+        review_contact: "administrator",
+        art22_review_available: true,
+        mode,
+    }
+}
+
+/// Combined response for `GET /api/v1/bookings/recommendations`.
+///
+/// Wraps the recommendation list with an EU AI Act Art. 50 transparency
+/// notice so callers always know they are receiving automated decisions and
+/// have a path to request human review.
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct RecommendationsResponse {
+    /// Ranked slot recommendations.
+    pub recommendations: Vec<SlotRecommendation>,
+    /// EU AI Act Art. 50 automated-decision transparency notice.
+    pub automated_decision: AutomatedDecisionNotice,
+}
+
 const RECOMMENDATION_MODULE: &str = "recommendations";
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, utoipa::ToSchema)]
@@ -68,6 +180,9 @@ pub struct RecommendationEngineConfig {
     pub profile_safe_mode: bool,
     pub pipeline: RecommendationPipelineConfig,
     pub allocation: RecommendationAllocationConfig,
+    /// EU AI Act Art. 50 transparency mode. Read from
+    /// `allocation_transparency_mode` module setting.
+    pub transparency_mode: AllocationTransparencyMode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -136,6 +251,7 @@ impl Default for RecommendationEngineConfig {
             profile_safe_mode: true,
             pipeline: RecommendationPipelineConfig::default(),
             allocation: RecommendationAllocationConfig::default(),
+            transparency_mode: AllocationTransparencyMode::Algorithmic,
         }
     }
 }
@@ -233,6 +349,9 @@ impl RecommendationEngineConfig {
             read_module_usize(db, "exact_cover_max_options", 256, 1, 256).await;
         cfg.allocation.exact_cover_max_search_nodes =
             read_module_usize(db, "exact_cover_max_search_nodes", 10_000, 1, 10_000).await;
+        let transparency_raw =
+            read_module_string(db, "allocation_transparency_mode", "algorithmic").await;
+        cfg.transparency_mode = AllocationTransparencyMode::from_setting(&transparency_raw);
         cfg
     }
 }
@@ -701,6 +820,8 @@ pub struct RecommendationStats {
     pub algorithm_adapter: RecommendationAdapterStatus,
     pub legal_boundary: RecommendationLegalBoundary,
     pub top_recommended_lots: Vec<LotRecommendationCount>,
+    /// EU AI Act Art. 50 automated-decision transparency notice.
+    pub automated_decision: AutomatedDecisionNotice,
 }
 
 #[derive(Default)]
@@ -772,23 +893,39 @@ pub struct LotRecommendationCount {
 }
 
 /// `GET /api/v1/bookings/recommendations` — suggest optimal parking slots
+///
+/// Returns 409 ALGORITHMIC_DISABLED when `allocation_transparency_mode` is
+/// `fifo_only`; in that mode use the waitlist for rule-based slot assignment.
 #[utoipa::path(
     get,
     path = "/api/v1/bookings/recommendations",
     tag = "Bookings",
     summary = "Get smart parking recommendations",
-    description = "Returns top slot recommendations based on user history, favorites, and availability.",
+    description = "Returns top slot recommendations based on user history, favorites, and availability. Includes an EU AI Act Art. 50 transparency notice. Returns 409 when algorithmic allocation is disabled.",
     params(("lot_id" = Option<String>, Query, description = "Filter by lot")),
     responses(
-        (status = 200, description = "Slot recommendations"),
+        (status = 200, description = "Slot recommendations with automated-decision notice"),
+        (status = 409, description = "Algorithmic allocation disabled (fifo_only mode)"),
     )
 )]
 pub async fn get_recommendations(
     State(state): State<SharedState>,
     Extension(auth_user): Extension<AuthUser>,
     Query(query): Query<RecommendationQuery>,
-) -> Json<ApiResponse<Vec<SlotRecommendation>>> {
+) -> (StatusCode, Json<ApiResponse<RecommendationsResponse>>) {
     let state = state.read().await;
+
+    // EU AI Act Art. 50 gate: refuse the algorithmic path when fifo_only.
+    let engine = RecommendationEngineConfig::load(&state.db).await;
+    if engine.transparency_mode == AllocationTransparencyMode::FifoOnly {
+        return (
+            StatusCode::CONFLICT,
+            Json(ApiResponse::error(
+                "ALGORITHMIC_DISABLED",
+                "Algorithmic slot recommendations are disabled; use the waitlist for rule-based slot assignment",
+            )),
+        );
+    }
 
     // 1. Get user's booking history
     let bookings = match state
@@ -799,7 +936,15 @@ pub async fn get_recommendations(
         Ok(b) => b,
         Err(e) => {
             tracing::error!("Failed to load bookings for recommendations: {}", e);
-            return Json(ApiResponse::success(vec![]));
+            return (
+                StatusCode::OK,
+                Json(ApiResponse::success(RecommendationsResponse {
+                    recommendations: vec![],
+                    automated_decision: automated_decision_for_recommendations(
+                        engine.transparency_mode,
+                    ),
+                })),
+            );
         }
     };
 
@@ -815,10 +960,17 @@ pub async fn get_recommendations(
 
     // 3. Get all lots and available slots
     let Ok(lots) = state.db.list_parking_lots().await else {
-        return Json(ApiResponse::success(vec![]));
+        return (
+            StatusCode::OK,
+            Json(ApiResponse::success(RecommendationsResponse {
+                recommendations: vec![],
+                automated_decision: automated_decision_for_recommendations(
+                    engine.transparency_mode,
+                ),
+            })),
+        );
     };
 
-    let engine = RecommendationEngineConfig::load(&state.db).await;
     let weights = engine.weights;
     let batch_id = Uuid::new_v4();
     let max_price = lots
@@ -954,9 +1106,16 @@ pub async fn get_recommendations(
         &candidates,
     )
     .await;
+    let transparency_mode = engine.transparency_mode;
     drop(state);
 
-    Json(ApiResponse::success(candidates))
+    (
+        StatusCode::OK,
+        Json(ApiResponse::success(RecommendationsResponse {
+            recommendations: candidates,
+            automated_decision: automated_decision_for_recommendations(transparency_mode),
+        })),
+    )
 }
 
 fn booking_status_counts_for_recommendation_history(status: &BookingStatus) -> bool {
@@ -1130,6 +1289,7 @@ pub async fn get_recommendation_stats(
             disclaimer: "fop legal output is reference-only drafting support; attorney review, citation verification, client authorization, and final legal judgment remain required before customer-facing profiling or legal wording ships.".to_string(),
         },
         top_recommended_lots: top_lots,
+        automated_decision: automated_decision_for_recommendations(engine.transparency_mode),
     };
 
     (StatusCode::OK, Json(ApiResponse::success(stats)))
@@ -1273,6 +1433,9 @@ mod tests {
                 lot_name: "Main Lot".to_string(),
                 count: 120,
             }],
+            automated_decision: automated_decision_for_recommendations(
+                AllocationTransparencyMode::Algorithmic,
+            ),
         };
         let json = serde_json::to_string(&stats).unwrap();
         assert!(json.contains("\"total_recommendations_served\":300"));
@@ -1280,6 +1443,130 @@ mod tests {
         assert!(json.contains("\"acceptance_metric_source\":\"not_tracked\""));
         assert!(json.contains("\"unique_users\":50"));
         assert!(json.contains("\"legal_review_required\":true"));
+        assert!(json.contains("\"is_automated\":true"));
+        assert!(json.contains("\"automated_decision\""));
+    }
+
+    // ── EU AI Act Art. 50 transparency ──────────────────────────────────────
+
+    #[test]
+    fn test_allocation_transparency_mode_serialization_roundtrip() {
+        assert_eq!(
+            serde_json::to_string(&AllocationTransparencyMode::Algorithmic).unwrap(),
+            "\"algorithmic\""
+        );
+        assert_eq!(
+            serde_json::to_string(&AllocationTransparencyMode::FifoOnly).unwrap(),
+            "\"fifo_only\""
+        );
+        assert_eq!(
+            serde_json::from_str::<AllocationTransparencyMode>("\"algorithmic\"").unwrap(),
+            AllocationTransparencyMode::Algorithmic
+        );
+        assert_eq!(
+            serde_json::from_str::<AllocationTransparencyMode>("\"fifo_only\"").unwrap(),
+            AllocationTransparencyMode::FifoOnly
+        );
+    }
+
+    #[test]
+    fn test_allocation_transparency_mode_from_setting() {
+        assert_eq!(
+            AllocationTransparencyMode::from_setting("fifo_only"),
+            AllocationTransparencyMode::FifoOnly
+        );
+        assert_eq!(
+            AllocationTransparencyMode::from_setting("algorithmic"),
+            AllocationTransparencyMode::Algorithmic
+        );
+        // Unknown values fall back to Algorithmic (fail-safe).
+        assert_eq!(
+            AllocationTransparencyMode::from_setting("unknown"),
+            AllocationTransparencyMode::Algorithmic
+        );
+        assert_eq!(
+            AllocationTransparencyMode::from_setting(""),
+            AllocationTransparencyMode::Algorithmic
+        );
+        // Whitespace is trimmed before matching.
+        assert_eq!(
+            AllocationTransparencyMode::from_setting("  fifo_only  "),
+            AllocationTransparencyMode::FifoOnly
+        );
+    }
+
+    #[test]
+    fn test_default_transparency_mode_is_algorithmic() {
+        let cfg = RecommendationEngineConfig::default();
+        assert_eq!(
+            cfg.transparency_mode,
+            AllocationTransparencyMode::Algorithmic
+        );
+    }
+
+    #[test]
+    fn test_automated_decision_notice_for_recommendations_is_truthful() {
+        let notice =
+            automated_decision_for_recommendations(AllocationTransparencyMode::Algorithmic);
+        assert!(notice.is_automated);
+        assert!(notice.basis.contains(&"booking_history".to_string()));
+        assert!(notice.basis.contains(&"policy_rules".to_string()));
+        assert!(notice.basis.contains(&"priority_score".to_string()));
+        assert_eq!(notice.review_contact, "administrator");
+        assert!(notice.art22_review_available);
+        assert_eq!(notice.mode, AllocationTransparencyMode::Algorithmic);
+    }
+
+    #[test]
+    fn test_automated_decision_notice_for_allocation_excludes_booking_history() {
+        // exact_cover_v1 takes abstract constraints/options — booking history
+        // is NOT a direct input; the basis must not claim it is.
+        let notice = automated_decision_for_allocation(AllocationTransparencyMode::Algorithmic);
+        assert!(notice.is_automated);
+        assert!(!notice.basis.contains(&"booking_history".to_string()));
+        assert!(notice.basis.contains(&"policy_rules".to_string()));
+        assert!(notice.basis.contains(&"priority_score".to_string()));
+    }
+
+    #[test]
+    fn test_automated_decision_notice_mode_field_matches_current_mode() {
+        let algorithmic_notice =
+            automated_decision_for_recommendations(AllocationTransparencyMode::Algorithmic);
+        assert_eq!(
+            algorithmic_notice.mode,
+            AllocationTransparencyMode::Algorithmic
+        );
+
+        let fifo_notice =
+            automated_decision_for_recommendations(AllocationTransparencyMode::FifoOnly);
+        assert_eq!(fifo_notice.mode, AllocationTransparencyMode::FifoOnly);
+    }
+
+    #[test]
+    fn test_automated_decision_notice_serializes_mode_as_snake_case() {
+        let notice =
+            automated_decision_for_recommendations(AllocationTransparencyMode::Algorithmic);
+        let json = serde_json::to_string(&notice).unwrap();
+        assert!(json.contains("\"mode\":\"algorithmic\""));
+
+        let notice_fifo =
+            automated_decision_for_recommendations(AllocationTransparencyMode::FifoOnly);
+        let json_fifo = serde_json::to_string(&notice_fifo).unwrap();
+        assert!(json_fifo.contains("\"mode\":\"fifo_only\""));
+    }
+
+    #[test]
+    fn test_recommendations_response_wraps_list_and_notice() {
+        let notice =
+            automated_decision_for_recommendations(AllocationTransparencyMode::Algorithmic);
+        let response = RecommendationsResponse {
+            recommendations: vec![],
+            automated_decision: notice,
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"recommendations\":[]"));
+        assert!(json.contains("\"automated_decision\""));
+        assert!(json.contains("\"is_automated\":true"));
     }
 
     #[test]
@@ -1406,6 +1693,11 @@ mod tests {
         assert!(cfg.pipeline.endpoint.is_none());
         assert!((cfg.weights.preferred_lot - 20.0).abs() < f64::EPSILON);
         assert!((cfg.weights.feature_bonus - 2.0).abs() < f64::EPSILON);
+        // Default mode is algorithmic (fail-safe: unknown values → Algorithmic).
+        assert_eq!(
+            cfg.transparency_mode,
+            AllocationTransparencyMode::Algorithmic
+        );
     }
 
     #[test]

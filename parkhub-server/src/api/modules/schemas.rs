@@ -246,6 +246,11 @@ pub(super) const MOD_RECOMMENDATIONS_SCHEMA: &str = r#"{
       "type": "boolean",
       "const": true,
       "description": "Fail-closed privacy guardrail. Sensitive personal attributes are blocked from scoring inputs; this must stay enabled before legal/privacy review approves disabling it."
+    },
+    "allocation_transparency_mode": {
+      "type": "string",
+      "enum": ["algorithmic", "fifo_only"],
+      "description": "EU AI Act Art. 50 transparency mode. algorithmic (default): scored allocation active, transparency notice included in every response. fifo_only: algorithmic endpoints refuse with 409 ALGORITHMIC_DISABLED; use the waitlist for rule-based slot assignment to remain outside AI Act scope."
     }
   },
   "required": [
@@ -266,7 +271,8 @@ pub(super) const MOD_RECOMMENDATIONS_SCHEMA: &str = r#"{
     "weight_feature_bonus",
     "max_results",
     "explain",
-    "profile_safe_mode"
+    "profile_safe_mode",
+    "allocation_transparency_mode"
   ],
   "additionalProperties": false
 }"#;
