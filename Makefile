@@ -146,6 +146,15 @@ ci-security:
 
 pre-push: ci
 
+## Nido-first CI front door (nido-first SOTA 2026).
+# `nido ci run --gate pr` is the canonical local entry; it routes through the
+# nido build queue for OOM-safe capacity-gated execution. Under capacity
+# pressure `nido guard preflight` gates admission automatically.
+# The legacy `make ci` / fop-local-ci.sh path remains the GitHub attestation
+# path (posts fop/local-ci/pr commit status) and must not be removed.
+nido-ci:
+	nido ci run --gate pr
+
 ## Mutation testing (CI/CD audit gap #5 — Rust counterpart of parkhub-php #436).
 ## cargo-mutants runs nightly on GHA but never locally — added as a soft-gate
 ## advisory target. Skipped cleanly when cargo-mutants binary isn't installed

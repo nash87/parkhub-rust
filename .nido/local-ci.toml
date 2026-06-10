@@ -1,10 +1,15 @@
-# ParkHub Rust local CI entrypoints for Nido-first tabs.
+# parkhub-rust — Nido-first local CI profile.
 #
 # `nido ci run --gate recommendation-contract` is the cheap author-time
 # cross-language recommendation fixture and policy gate.
 # `nido ci run --gate legal-docs` keeps legal-readiness evidence current.
-# `nido ci run --gate pr` delegates to the repository's SHA-keyed local CI
-# orchestrator and must pass before pushing/releasing.
+# `nido ci run --gate pr` is the canonical front door: it delegates to the
+# repository's SHA-keyed local CI attestation script
+# (`.github/scripts/nido-local-ci.sh --profile pr`) and must pass before
+# pushing/releasing. Delegation keeps this TOML drift-free against the
+# script's diff-aware skipping, pre-push reuse, and background execution.
+# `nido ci run --gate full` decomposes the heavy author-time steps for
+# nido ci plan discoverability, partial runs, and offload routing.
 #
 # Transition note (T-nido-ci-migration):
 #   - canonical script: .github/scripts/nido-local-ci.sh
@@ -65,3 +70,82 @@ name = "parkhub-pr-local-ci"
 command = "NO_COLOR=true .github/scripts/nido-local-ci.sh --profile pr --post-status"
 timeout_secs = 7200
 allow_failure = false
+
+[[gates]]
+name = "full"
+
+# Full gate: pr steps + OpenAPI drift + Playwright e2e.
+[[gates.steps]]
+name = "whitespace-check"
+command = "git diff --check"
+timeout_secs = 10
+allow_failure = false
+
+[[gates.steps]]
+name = "fmt-check"
+command = "cargo fmt --all -- --check"
+timeout_secs = 120
+allow_failure = false
+
+[[gates.steps]]
+name = "check-headless"
+command = "mkdir -p parkhub-web/dist && printf '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo check --locked --package parkhub-common --all-targets && cargo check --locked --package parkhub-server --no-default-features --features headless --all-targets"
+timeout_secs = 600
+allow_failure = false
+
+[[gates.steps]]
+name = "clippy-headless"
+command = "mkdir -p parkhub-web/dist && printf '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo clippy --locked --package parkhub-common --all-targets -- -D warnings && cargo clippy --locked --package parkhub-server --no-default-features --features headless --all-targets -- -D warnings -A clippy::cognitive_complexity -A clippy::assigning_clones"
+timeout_secs = 600
+allow_failure = false
+
+[[gates.steps]]
+name = "frontend"
+command = "cd parkhub-web && ./node_modules/.bin/tsc --noEmit && CI=true npm test && CI=true npm run build"
+timeout_secs = 600
+allow_failure = false
+
+[[gates.steps]]
+name = "test-headless"
+command = "cargo test --locked --package parkhub-common --all-targets && cargo test --locked --package parkhub-server --no-default-features --features headless --all-targets"
+timeout_secs = 900
+allow_failure = false
+
+# TypeScript bindings drift check (Rust→TS contract).
+[[gates.steps]]
+name = "ts-bindings-drift"
+command = "mkdir -p parkhub-web/dist && printf '<!doctype html><html><body></body></html>' > parkhub-web/dist/index.html && cargo test --locked --features gen-types -p parkhub-server --test ts_export -- --nocapture && git diff --exit-code parkhub-web/src/generated/ && test -z \"$(git status --porcelain parkhub-web/src/generated/)\""
+timeout_secs = 600
+allow_failure = false
+
+[[gates]]
+name = "cd"
+
+# CD gate: delegates to the nido-local-ci.sh cd profile which covers
+# SBOM generation, image scan, Lighthouse CI, grype, cargo audit strict,
+# and the full release image preflight.
+[[gates.steps]]
+name = "fop-local-ci-cd"
+command = ".github/scripts/nido-local-ci.sh --profile cd"
+timeout_secs = 3600
+allow_failure = false
+
+[[offload_targets]]
+name = "local-workstation"
+kind = "ssh"
+labels = ["local", "rust", "parkhub"]
+capacity_probe = "nido guard preflight"
+run = "nido ci run --gate {gate}"
+verify = "nido ci policy --check --json"
+timeout_secs = 900
+
+[legal]
+public_release_safe = true
+denied_license_families = ["AGPL", "GPL", "SSPL", "BUSL"]
+
+[remote]
+provider = "github"
+repository = "nash87/parkhub-rust"
+protected_branch = "main"
+# GitHub branch protection checks this exact context — do NOT rename.
+status_context = "fop/local-ci/pr"
