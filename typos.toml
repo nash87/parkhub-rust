@@ -43,6 +43,9 @@ unmaped = "unmaped"   # rare; kept here only if it surfaces in a vendor file
 
 [files]
 extend-exclude = [
+    # Bilingual Betriebsvereinbarung template — German legal vocabulary is
+    # intentional; the spelling gate is scoped to English surfaces.
+    "docs/betriebsvereinbarung-muster.md",
     "Cargo.lock",
     "package-lock.json",
     "docs/openapi/*.json",

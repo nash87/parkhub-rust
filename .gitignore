@@ -104,3 +104,6 @@ coverage/
 # the CI drift-gate watches); these stray copies are build byproducts.
 parkhub-server/bindings/
 parkhub-common/bindings/
+
+# Local CI attestation reports (canonical nido path; .fop is the compat copy)
+.nido/reports/
