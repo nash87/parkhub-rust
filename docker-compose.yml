@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         # Default to the digest-pinned LAN mirror; cloud CI may override.
-        WOLFI_BASE: ${WOLFI_BASE:-192.168.178.250:5000/wolfi-base@sha256:4973aa3c2ccbe13fe2049aab539b0ab342ec584bd5b54a269d55d4891091c639}
+        WOLFI_BASE: ${WOLFI_BASE:-192.168.178.250:5000/wolfi-base@sha256:865267010fd5c6a45c7ab456848573010ec521b0d2677a0a966f3f2211b71eda}
     container_name: parkhub
     restart: unless-stopped
     # Pass CLI flags so the server runs headless on port 8080.
