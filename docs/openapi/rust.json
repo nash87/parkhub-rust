@@ -465,6 +465,28 @@
         ],
         "type": "object"
       },
+      "ClaimOfferRequest": {
+        "description": "Request body for claiming a waitlist offer",
+        "properties": {
+          "end_time": {
+            "description": "Booking end time (defaults to `start_time + 2h` if omitted).",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_time": {
+            "description": "Booking start time (defaults to now if omitted).",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "ClassRunResult": {
         "description": "Result from a single class purge run (reported in the evidence log and\nreturned from the run API).",
         "properties": {
@@ -1573,6 +1595,26 @@
         },
         "required": [
           "logo"
+        ],
+        "type": "object"
+      },
+      "LotNoshowConfig": {
+        "description": "Per-lot no-show and claim-window configuration.",
+        "properties": {
+          "check_in_deadline_minutes": {
+            "description": "Minutes after booking start that a missing check-in triggers release.\n`0` disables auto-release for this lot.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "claim_window_minutes": {
+            "description": "Minutes the promoted waitlist user has to claim their offer before it\npasses to the next entry.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "check_in_deadline_minutes",
+          "claim_window_minutes"
         ],
         "type": "object"
       },
@@ -3035,6 +3077,26 @@
         },
         "required": [
           "enabled"
+        ],
+        "type": "object"
+      },
+      "UpdateLotNoshowConfigRequest": {
+        "description": "Request body for updating per-lot no-show config",
+        "properties": {
+          "check_in_deadline_minutes": {
+            "description": "Minutes after booking start before auto-release. `0` = disabled for this lot.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "claim_window_minutes": {
+            "description": "Minutes the promoted user has to claim. Must be ≥ 1.",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "check_in_deadline_minutes",
+          "claim_window_minutes"
         ],
         "type": "object"
       },
@@ -9306,6 +9368,102 @@
         ]
       }
     },
+    "/api/v1/lots/{id}/noshow-config": {
+      "get": {
+        "description": "Returns per-lot check-in deadline and claim window minutes. `check_in_deadline_minutes = 0` means auto-release is disabled for this lot.",
+        "operationId": "get_lot_noshow_config",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotNoshowConfig"
+                }
+              }
+            },
+            "description": "Config values"
+          },
+          "404": {
+            "description": "Lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Get per-lot no-show config",
+        "tags": [
+          "Waitlist"
+        ]
+      },
+      "put": {
+        "description": "Admin-only. Sets per-lot check-in deadline and claim window.",
+        "operationId": "update_lot_noshow_config",
+        "parameters": [
+          {
+            "description": "Parking lot ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLotNoshowConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotNoshowConfig"
+                }
+              }
+            },
+            "description": "Updated config"
+          },
+          "400": {
+            "description": "Invalid values"
+          },
+          "403": {
+            "description": "Forbidden — admin only"
+          },
+          "404": {
+            "description": "Lot not found"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Update per-lot no-show config",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
     "/api/v1/lots/{id}/pricing": {
       "get": {
         "description": "Returns the current pricing configuration for the specified parking lot.",
@@ -12175,6 +12333,79 @@
           }
         ],
         "summary": "Join waitlist",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
+    "/api/v1/waitlist/offers": {
+      "get": {
+        "description": "Returns waitlist entries with status `offered` belonging to the authenticated user.",
+        "operationId": "list_my_offers",
+        "responses": {
+          "200": {
+            "description": "Active offers"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "List my waitlist offers",
+        "tags": [
+          "Waitlist"
+        ]
+      }
+    },
+    "/api/v1/waitlist/offers/{id}/claim": {
+      "post": {
+        "description": "Converts an active waitlist offer into a confirmed booking. Finds the first available slot in the offered lot. Promotion order is strict FIFO by `created_at` (AI-Act compliant). Idempotent: if the entry is already Accepted the request is rejected with 409 so the caller must use the booking referenced in `accepted_booking_id`.",
+        "operationId": "claim_offer",
+        "parameters": [
+          {
+            "description": "Waitlist entry ID",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimOfferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Booking created from offer"
+          },
+          "403": {
+            "description": "Not your offer"
+          },
+          "404": {
+            "description": "Offer not found"
+          },
+          "409": {
+            "description": "No available slot or entry not in offered state"
+          },
+          "410": {
+            "description": "Offer expired"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ],
+        "summary": "Claim a waitlist offer",
         "tags": [
           "Waitlist"
         ]

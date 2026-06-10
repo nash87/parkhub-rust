@@ -162,6 +162,9 @@ pub mod push;
 // The dynamic Rust manifest was narrower (7 fields) than the Astro one
 // (17 fields incl. screenshots, shortcuts, categories, lang, dir) and
 // shadowed the richer PWA install experience.
+/// No-show release config + waitlist claim offer endpoints (P1-1 + P1-2).
+/// Always compiled: the promotion helper is called unconditionally by jobs.rs.
+pub mod noshow;
 #[cfg(feature = "mod-qr")]
 pub mod qr;
 pub mod rate_dashboard;
@@ -1305,8 +1308,23 @@ fn booking_protected_routes() -> Router<SharedState> {
             )
             .route("/api/v1/bookings/{id}/invoice", get(get_booking_invoice))
             .route("/api/v1/bookings/quick", post(quick_book))
-            .route("/api/v1/bookings/{id}/checkin", post(booking_checkin));
+            .route("/api/v1/bookings/{id}/checkin", post(booking_checkin))
+            // P1-1: canonical hyphenated alias — idempotent, delegates to same handler
+            .route("/api/v1/bookings/{id}/check-in", post(booking_checkin));
     }
+
+    // P1-2: waitlist offers (always on — no feature gate needed; empty if no
+    // waitlist entries in DB).
+    router = router
+        .route("/api/v1/waitlist/offers", get(noshow::list_my_offers))
+        .route(
+            "/api/v1/waitlist/offers/{id}/claim",
+            post(noshow::claim_offer),
+        )
+        .route(
+            "/api/v1/lots/{id}/noshow-config",
+            get(noshow::get_lot_noshow_config).put(noshow::update_lot_noshow_config),
+        );
 
     #[cfg(feature = "mod-sharing")]
     {

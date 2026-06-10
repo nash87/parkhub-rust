@@ -166,6 +166,11 @@ use crate::{
             SetupStatus,
             SetupRequest,
 
+            // No-show config + waitlist offers (P1-1 + P1-2)
+            crate::api::noshow::LotNoshowConfig,
+            crate::api::noshow::UpdateLotNoshowConfigRequest,
+            crate::api::noshow::ClaimOfferRequest,
+
             // Common
             PaginationParams,
 
@@ -698,6 +703,12 @@ use crate::{
         crate::api::waitlist_ext::leave_lot_waitlist,
         crate::api::waitlist_ext::accept_waitlist_offer,
         crate::api::waitlist_ext::decline_waitlist_offer,
+
+        // No-show config + waitlist offers (P1-1 + P1-2)
+        crate::api::noshow::get_lot_noshow_config,
+        crate::api::noshow::update_lot_noshow_config,
+        crate::api::noshow::list_my_offers,
+        crate::api::noshow::claim_offer,
 
         // Admin widgets (dashboard layout + data)
         crate::api::widgets::get_widget_layout,

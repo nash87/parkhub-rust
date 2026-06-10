@@ -1,7 +1,11 @@
 //! Background job scheduler.
 //!
 //! Uses tokio interval tasks (no external cron dependency beyond what's already in the tree):
-//! - **`AutoRelease`** (every 5 min): cancel no-show bookings after the configured threshold
+//! - **`AutoRelease`** (every 5 min): cancel no-show bookings after the configured threshold;
+//!   per-lot `check_in_deadline_minutes` overrides the global `auto_release_minutes`; after
+//!   releasing, the next FIFO waitlist entry is promoted to Offered status (P1-1 + P1-2).
+//! - **`ExpireWaitlistOffers`** (every 5 min): expire outstanding waitlist offers whose
+//!   `offer_expires_at` has passed and promote the next Waiting entry (P1-2).
 //! - **`ExpandRecurring`** (every 1 h): create future booking instances for recurring series
 //! - **`PurgeExpired`** (every 24 h): remove old cancelled/expired bookings beyond retention period
 //! - **`AggregateOccupancy`** (every 15 min): persist aggregated occupancy stats to settings
@@ -62,6 +66,15 @@ pub fn start_background_jobs(state: SharedState) {
         |s| Box::pin(async move { retention_purge(&s).await }),
     );
 
+    // ── ExpireWaitlistOffers: every 5 minutes (P1-2) ────────────────────────
+    spawn_recurring_job(
+        "expire_waitlist_offers",
+        state.clone(),
+        None,
+        tokio::time::Duration::from_secs(300),
+        |s| Box::pin(async move { expire_waitlist_offers_job(&s).await }),
+    );
+
     // ── AggregateOccupancy: every 15 minutes ────────────────────────────────
     spawn_recurring_job(
         "aggregate_occupancy",
@@ -72,8 +85,9 @@ pub fn start_background_jobs(state: SharedState) {
     );
 
     info!(
-        "Background jobs started: AutoRelease (5m), ExpandRecurring (1h), \
-         PurgeExpired (24h), AggregateOccupancy (15m), RetentionPurge (24h)"
+        "Background jobs started: AutoRelease (5m), ExpireWaitlistOffers (5m), \
+         ExpandRecurring (1h), PurgeExpired (24h), AggregateOccupancy (15m), \
+         RetentionPurge (24h)"
     );
 }
 
@@ -125,10 +139,16 @@ fn spawn_recurring_job<F>(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Cancel bookings that are Active/Confirmed but past their start time by more
-/// than the configured `auto_release_minutes` and have never had a check-in.
+/// than the configured deadline (per-lot `check_in_deadline_minutes` or global
+/// `auto_release_minutes`) and have never had a check-in.
+///
+/// Per-lot deadline of `0` disables auto-release for that lot.
+///
+/// After releasing each booking, the next FIFO waitlist entry for the lot is
+/// promoted to Offered status (P1-2, AI-Act compliant).
 async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
-    // Read settings + bookings under a single short-lived read lock.
-    let (enabled, threshold_mins, bookings) = {
+    // Phase 1: read global enabled flag + all bookings under one short-lived lock.
+    let (enabled, global_threshold_mins, bookings) = {
         let guard = state.read().await;
         let enabled_str = guard
             .db
@@ -146,9 +166,9 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
             .await
             .unwrap_or(None)
             .unwrap_or_else(|| "30".to_string());
-        let mins = mins_str.parse::<i64>().unwrap_or(30);
+        let global_mins = mins_str.parse::<i64>().unwrap_or(30);
         let bookings = guard.db.list_bookings().await?;
-        (enabled, mins, bookings)
+        (enabled, global_mins, bookings)
     };
 
     if !enabled {
@@ -156,18 +176,57 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
     }
 
     let now = Utc::now();
-    let threshold = Duration::minutes(threshold_mins);
 
-    let to_release: Vec<_> = bookings
-        .into_iter()
-        .filter(|b| {
-            matches!(
-                b.status,
-                parkhub_common::BookingStatus::Active | parkhub_common::BookingStatus::Confirmed
-            ) && b.check_in_time.is_none()
-                && now > b.start_time + threshold
-        })
-        .collect();
+    // Phase 2: identify candidates, resolving per-lot deadline with a cache.
+    // Cache value semantics:
+    //   None     = no per-lot setting → fall back to global (`global_threshold_mins`)
+    //   Some(0)  = per-lot auto-release explicitly disabled
+    //   Some(n)  = per-lot deadline in minutes
+    let mut lot_deadline_cache: std::collections::HashMap<Uuid, Option<i64>> =
+        std::collections::HashMap::new();
+
+    let mut to_release: Vec<parkhub_common::Booking> = Vec::new();
+    for booking in bookings {
+        if !matches!(
+            booking.status,
+            parkhub_common::BookingStatus::Active | parkhub_common::BookingStatus::Confirmed
+        ) || booking.check_in_time.is_some()
+        {
+            continue;
+        }
+
+        // Look up per-lot deadline (cached to avoid redundant DB reads).
+        let per_lot_opt = if let Some(&cached) = lot_deadline_cache.get(&booking.lot_id) {
+            cached
+        } else {
+            let guard = state.read().await;
+            let raw = guard
+                .db
+                .get_setting(&crate::api::noshow::lot_deadline_key(
+                    &booking.lot_id.to_string(),
+                ))
+                .await
+                .unwrap_or(None)
+                .and_then(|v| v.parse::<i64>().ok());
+            drop(guard);
+            lot_deadline_cache.insert(booking.lot_id, raw);
+            raw
+        };
+
+        // Determine effective deadline:
+        // - Some(0): per-lot disabled → skip
+        // - Some(n): use per-lot value (n > 0)
+        // - None:    no per-lot setting → use global (global 0 = immediate release)
+        let deadline_mins = match per_lot_opt {
+            Some(0) => continue, // per-lot auto-release disabled for this lot
+            Some(n) => n,
+            None => global_threshold_mins,
+        };
+
+        if now > booking.start_time + Duration::minutes(deadline_mins) {
+            to_release.push(booking);
+        }
+    }
 
     if to_release.is_empty() {
         return Ok(());
@@ -180,6 +239,7 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
 
     for mut booking in to_release {
         let slot_id = booking.slot_id.to_string();
+        let lot_id = booking.lot_id;
         booking.status = parkhub_common::BookingStatus::NoShow;
         booking.updated_at = now;
 
@@ -188,7 +248,7 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
             error!("AutoRelease: failed to save booking {}: {e}", booking.id);
             continue;
         }
-        // Free the slot
+        // Free the slot.
         if let Err(e) = guard
             .db
             .update_slot_status(&slot_id, parkhub_common::SlotStatus::Available)
@@ -199,14 +259,26 @@ async fn auto_release_no_shows(state: &SharedState) -> anyhow::Result<()> {
                 booking.id
             );
         }
+
+        // Promote the next FIFO waitlist entry (P1-2).
+        let claim_window =
+            crate::api::noshow::lot_claim_window_minutes(&guard, &lot_id.to_string()).await;
+        crate::api::noshow::promote_next_waitlist_offer(&guard, lot_id, claim_window).await;
+
         drop(guard);
         info!(
-            "AutoRelease: booking {} marked NoShow, slot {slot_id} freed",
+            "AutoRelease: booking {} marked NoShow, slot {slot_id} freed, waitlist promoted",
             booking.id
         );
     }
 
     Ok(())
+}
+
+/// Expire outstanding waitlist offers and promote the next in line.
+async fn expire_waitlist_offers_job(state: &SharedState) -> anyhow::Result<()> {
+    let guard = state.read().await;
+    crate::api::noshow::expire_outstanding_offers(&guard).await
 }
 
 /// For every active recurring booking, ensure single-booking instances exist for
@@ -1088,5 +1160,244 @@ mod tests {
             "one active booking should be counted as occupied"
         );
         assert_eq!(total, 10, "total must match lot.total_slots");
+    }
+
+    // ── P1-1: per-lot deadline tests ──────────────────────────────────────
+
+    #[tokio::test]
+    async fn noshow_uses_per_lot_deadline_when_set() {
+        let (state, _dir) = job_test_state();
+        let lot_id = Uuid::new_v4();
+        let booking_id;
+
+        // Set up settings and booking, then drop the lock before running the job.
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            // Global threshold is 60 min — booking only 10 min past start would NOT fire
+            // under the global setting, but per-lot is 5 min → should release.
+            guard
+                .db
+                .set_setting("auto_release_minutes", "60")
+                .await
+                .unwrap();
+            guard
+                .db
+                .set_setting(
+                    &crate::api::noshow::lot_deadline_key(&lot_id.to_string()),
+                    "5",
+                )
+                .await
+                .unwrap();
+
+            let mut b = make_booking(
+                Uuid::new_v4(),
+                lot_id,
+                Uuid::new_v4(),
+                parkhub_common::BookingStatus::Confirmed,
+                0,
+                0,
+            );
+            b.start_time = Utc::now() - Duration::minutes(10);
+            booking_id = b.id;
+            guard.db.save_booking(&b).await.unwrap();
+        } // read guard dropped
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            updated.status,
+            parkhub_common::BookingStatus::NoShow,
+            "per-lot 5-min deadline exceeded → must be NoShow"
+        );
+    }
+
+    #[tokio::test]
+    async fn noshow_disabled_lot_skips_release() {
+        let (state, _dir) = job_test_state();
+        let lot_id = Uuid::new_v4();
+        let booking_id;
+
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            guard
+                .db
+                .set_setting("auto_release_minutes", "0")
+                .await
+                .unwrap();
+            // Per-lot deadline = 0 → disabled for this lot.
+            guard
+                .db
+                .set_setting(
+                    &crate::api::noshow::lot_deadline_key(&lot_id.to_string()),
+                    "0",
+                )
+                .await
+                .unwrap();
+
+            let mut b = make_booking(
+                Uuid::new_v4(),
+                lot_id,
+                Uuid::new_v4(),
+                parkhub_common::BookingStatus::Confirmed,
+                -2,
+                1,
+            );
+            b.start_time = Utc::now() - Duration::hours(3);
+            booking_id = b.id;
+            guard.db.save_booking(&b).await.unwrap();
+        } // read guard dropped
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            updated.status,
+            parkhub_common::BookingStatus::Confirmed,
+            "lot with deadline=0 must never be auto-released"
+        );
+    }
+
+    #[tokio::test]
+    async fn noshow_not_released_before_per_lot_deadline() {
+        let (state, _dir) = job_test_state();
+        let lot_id = Uuid::new_v4();
+        let booking_id;
+
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            // Per-lot deadline = 60 min; booking only 5 min past start → must not release.
+            guard
+                .db
+                .set_setting(
+                    &crate::api::noshow::lot_deadline_key(&lot_id.to_string()),
+                    "60",
+                )
+                .await
+                .unwrap();
+
+            let mut b = make_booking(
+                Uuid::new_v4(),
+                lot_id,
+                Uuid::new_v4(),
+                parkhub_common::BookingStatus::Confirmed,
+                0,
+                0,
+            );
+            b.start_time = Utc::now() - Duration::minutes(5);
+            booking_id = b.id;
+            guard.db.save_booking(&b).await.unwrap();
+        } // read guard dropped
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let updated = guard
+            .db
+            .get_booking(&booking_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            updated.status,
+            parkhub_common::BookingStatus::Confirmed,
+            "booking within per-lot deadline must remain Confirmed"
+        );
+    }
+
+    // ── P1-2: waitlist promotion on no-show release ───────────────────────
+
+    #[tokio::test]
+    async fn noshow_release_promotes_first_waiting_entry() {
+        let (state, _dir) = job_test_state();
+        let lot_id = Uuid::new_v4();
+        let waiter_id = Uuid::new_v4();
+        let entry_id;
+
+        {
+            let guard = state.read().await;
+            guard
+                .db
+                .set_setting("auto_release_enabled", "true")
+                .await
+                .unwrap();
+            guard
+                .db
+                .set_setting("auto_release_minutes", "0")
+                .await
+                .unwrap();
+
+            // Booking that will be released (started 2 hours ago, global deadline = 0).
+            let mut b = make_booking(
+                Uuid::new_v4(),
+                lot_id,
+                Uuid::new_v4(),
+                parkhub_common::BookingStatus::Confirmed,
+                -2,
+                1,
+            );
+            b.start_time = Utc::now() - Duration::hours(2);
+            guard.db.save_booking(&b).await.unwrap();
+
+            // Waitlist entry waiting for this lot.
+            let entry = parkhub_common::models::WaitlistEntry {
+                id: Uuid::new_v4(),
+                user_id: waiter_id,
+                lot_id,
+                created_at: Utc::now() - Duration::minutes(30),
+                notified_at: None,
+                status: parkhub_common::models::WaitlistStatus::Waiting,
+                offer_expires_at: None,
+                accepted_booking_id: None,
+            };
+            entry_id = entry.id;
+            guard.db.save_waitlist_entry(&entry).await.unwrap();
+        } // read guard dropped
+
+        auto_release_no_shows(&state).await.unwrap();
+
+        let guard = state.read().await;
+        let promoted = guard
+            .db
+            .get_waitlist_entry(&entry_id.to_string())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            promoted.status,
+            parkhub_common::models::WaitlistStatus::Offered,
+            "waitlist entry must be promoted to Offered after no-show release"
+        );
+        assert!(
+            promoted.offer_expires_at.is_some(),
+            "offer_expires_at must be set on promoted entry"
+        );
     }
 }
