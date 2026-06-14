@@ -82,6 +82,7 @@
     "vitest": "^4.1.0"
   },
   "overrides": {
+    "esbuild": "0.28.1",
     "vite": "^7.3.2",
     "yaml": "^2.8.3",
     "devalue": "^5.8.1",
