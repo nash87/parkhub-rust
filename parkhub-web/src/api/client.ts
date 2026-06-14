@@ -333,17 +333,30 @@ export const api = {
       body: JSON.stringify({ accessibility_needs }),
     }),
 
+  // EU AI Act Art. 50: the recommendations endpoint wraps the ranked list in
+  // an object alongside an automated-decision transparency notice (see
+  // parkhub-server RecommendationsResponse). Older clients expected a bare
+  // array — consumers must read `.recommendations`.
   getBookingRecommendations: () =>
-    request<Array<{
-      slot_id: string;
-      slot_number: number;
-      lot_id: string;
-      lot_name: string;
-      floor_name: string;
-      score: number;
-      reasons: string[];
-      reason_badges: string[];
-    }>>('/api/v1/bookings/recommendations'),
+    request<{
+      recommendations: Array<{
+        slot_id: string;
+        slot_number: number;
+        lot_id: string;
+        lot_name: string;
+        floor_name: string;
+        score: number;
+        reasons: string[];
+        reason_badges: string[];
+      }>;
+      automated_decision: {
+        is_automated: boolean;
+        basis: string[];
+        review_contact: string;
+        art22_review_available: boolean;
+        mode: 'algorithmic' | 'fifo_only';
+      };
+    }>('/api/v1/bookings/recommendations'),
 
   changePassword: (current_password: string, password: string, password_confirmation: string) =>
     request('/api/v1/users/me/password', {

@@ -1347,6 +1347,7 @@ export default {
       availableNow: 'Available now',
       preferredLot: 'Preferred lot',
       accessible: 'Accessible',
+      automatedAllocationNotice: 'These suggestions are produced by an automated system. You may pick any available spot; to request a human review of an allocation, contact {{contact}}.',
       help: 'Smart recommendations use your booking history, availability, pricing, and distance to suggest the best parking slots. The scoring algorithm weighs frequency (40%), availability (30%), price (20%), and distance (10%).',
     },
     history: {
