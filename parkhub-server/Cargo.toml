@@ -161,7 +161,7 @@ subtle = "2.6.1"
 # We only use the core PDF drawing APIs, not the optional HTML pipeline.
 # Keeping default-features off avoids the stale `kuchiki/html5ever/phf`
 # dependency chain that still pulls vulnerable `rand 0.7.x`.
-printpdf = { version = "0.9", default-features = false }
+printpdf = { version = "0.11", default-features = false }
 web-push = { version = "0.11", features = ["hyper-client"] }
 
 # ts-rs — optional, enabled by the `gen-types` feature. Used only by the
@@ -363,3 +363,5 @@ tokio = { version = "1", features = ["full", "rt-multi-thread"] }
 name = "integration"
 path = "../tests/main.rs"
 harness = true
+
+
