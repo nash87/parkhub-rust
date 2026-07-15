@@ -62,6 +62,7 @@ vi.mock('react-i18next', () => ({
         'book.confirm': 'Confirm Booking',
         'book.confirming': 'Confirming...',
         'book.success': 'Booking confirmed!',
+        'recommendations.automatedAllocationNotice': `These suggestions are produced by an automated system. You may pick any available spot; to request a human review of an allocation, contact ${opts?.contact ?? 'administrator'}.`,
         'common.error': 'Something went wrong',
         'bookings.insufficientCredits': 'Insufficient credits',
       };
@@ -556,6 +557,32 @@ describe('BookPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Your usual spot')).toBeInTheDocument();
       expect(screen.getByText('Available now')).toBeInTheDocument();
+    });
+  });
+
+  it('unwraps recommendations response and shows automated allocation notice', async () => {
+    const recData = [
+      { slot_id: 's1', slot_number: 42, lot_id: 'lot-1', lot_name: 'HQ Lot', floor_name: 'G', score: 90, reasons: ['Used 5 times'], reason_badges: ['your_usual_spot', 'available_now'] },
+    ];
+    mockGetBookingRecommendations.mockResolvedValueOnce({
+      success: true,
+      data: {
+        recommendations: recData,
+        automated_decision: {
+          is_automated: true,
+          basis: ['booking_history', 'policy_rules', 'priority_score'],
+          review_contact: 'administrator',
+          art22_review_available: true,
+          mode: 'algorithmic',
+        },
+      },
+    });
+
+    render(<BookPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Your usual spot')).toBeInTheDocument();
+      expect(screen.getByText(/human review of an allocation/)).toBeInTheDocument();
     });
   });
 
@@ -1065,3 +1092,5 @@ describe('BookPage', () => {
     await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
   });
 });
+
+

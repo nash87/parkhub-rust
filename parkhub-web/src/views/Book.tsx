@@ -288,15 +288,37 @@ const badgeLabels: Record<string, { label: string; color: string }> = {
   accessible: { label: 'Accessible', color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' },
 };
 
+interface AutomatedDecisionNotice {
+  is_automated: boolean;
+  basis: string[];
+  review_contact: string;
+  art22_review_available: boolean;
+  mode: 'algorithmic' | 'fifo_only';
+}
+
 function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onSelect: (lot: ParkingLot) => void; t: TFunction }) {
   const [recs, setRecs] = useState<Recommendation[]>([]);
+  const [notice, setNotice] = useState<AutomatedDecisionNotice | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .getBookingRecommendations()
       .then((res) => {
-        if (res.success && res.data) setRecs(res.data);
+        if (res.success && res.data) {
+          // EU AI Act Art. 50: the payload wraps the ranked list alongside the
+          // automated-decision transparency notice. Tolerate a bare array too
+          // (older API shape / other editions) so this never throws on .slice.
+          const data = res.data as unknown as
+            | Recommendation[]
+            | { recommendations?: Recommendation[]; automated_decision?: AutomatedDecisionNotice };
+          if (Array.isArray(data)) {
+            setRecs(data);
+          } else {
+            setRecs(data.recommendations ?? []);
+            setNotice(data.automated_decision ?? null);
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -341,6 +363,14 @@ function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onS
           );
         })}
       </div>
+      {notice?.is_automated && (
+        <p className="mt-3 text-[11px] leading-snug text-surface-500 dark:text-surface-400">
+          {t(
+            'recommendations.automatedAllocationNotice',
+            { contact: notice.review_contact },
+          )}
+        </p>
+      )}
     </div>
   );
 }
@@ -571,3 +601,5 @@ function ConfettiOverlay() {
     </div>
   );
 }
+
+
