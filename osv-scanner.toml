@@ -123,6 +123,6 @@ reason = "quick-xml NsReader namespace alloc (DoS) — same chain-locked scoping
 
 [[IgnoredVulns]]
 id = "GHSA-g7r4-m6w7-qqqr"
-reason = "esbuild LOW (build-time bundler via vite ^0.27 range; fix 0.28.1 floats automatically when vite bumps; not merge-gating)"
+reason = "esbuild LOW CVSS 2.5 (build-time bundler); fix 0.28.1 chain-locked by astro's ^0.27.3 range (vite 7.3.6 already allows ^0.28) — floats when astro widens; not merge-gating"
 
 
