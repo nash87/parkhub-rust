@@ -24,47 +24,65 @@ See also:
 
 ---
 
-## Current parity (2026-05-12)
+## Current parity (2026-06-14, committed snapshots)
 
-Latest alias-tranche comparison from regenerated local OpenAPI dumps:
+Recomputed from the two **committed** OpenAPI snapshots via the guarded
+`parkhub-php` normaliser (`scripts/diff-openapi.sh`, the awk-guarded one; the
+`parkhub-rust` copy rewrites Rust's own paths and mis-counts):
 
-- Rust input: `parkhub-rust@65752756ea9c775abca0a317c0ff42ac4535891e`
-  on branch `t-parkhub-openapi-alias-tranche`, based on
-  `github/main@24b763193130f1761d018893ed46334390cfd6ae`
-  (`docs/openapi/rust.json`)
-- PHP input: `parkhub-php@63a7a5228039657938733538aa53a24b7cf0b352`
-  on branch `t-parkhub-openapi-alias-tranche`, based on
-  `github/main@83a132283550d80e4a0553495bd05daf25093f8b`
-  (`docs/openapi/php.json`)
+- Rust input: `docs/openapi/rust.json` — last regenerated at
+  `parkhub-rust@3aa68fc7` (2026-06-10, #686), == current `github/main`.
+- PHP input: `docs/openapi/php.json` — last regenerated at
+  `parkhub-php@120cdc95` (2026-06-14, #542), == current `github/main`.
+
+Both snapshots track their repo's current main head, so these figures are the
+live parity state as of 2026-06-14, not a stale branch comparison.
 
 | Source | Path count (normalised) |
 |--------|-------------------------|
-| Rust (`utoipa`) | 239 |
-| PHP (Scramble) | 318 |
-| Shared | 210 |
-| Rust-only drift | 29 |
-| PHP-only drift | 108 |
-| Total drift | 137 |
+| Rust (`utoipa`) | 249 |
+| PHP (Scramble) | 329 |
+| Shared | 219 |
+| Rust-only drift | 30 |
+| PHP-only drift | 110 |
+| Total drift | 140 |
 
-The numbers above come from regenerated OpenAPI dumps, not grep/static route
-extractors. This alias tranche reduced total drift from `145` to `137` by adding
-thin compatibility aliases for `login`, `register`, `refresh`,
-`auth/change-password`, `health/detailed`, `status`, and the public docs
-surfaces.
+These supersede the stale 2026-05-12 figures (239/318/210/29/108). The snapshots
+moved ~4 weeks of feature commits (rust.json → #686, php.json → #542) that this
+doc never absorbed; total drift rose 137 → 140 as both sides shipped features.
 
-Current drift clusters:
+**Load-bearing finding — the 110 PHP-only paths are NOT 110 missing features.**
+A src-level audit splits them into:
+
+- **~49 annotation gaps** — the handler already exists and is routed in
+  `parkhub-server`, it only lacks a `#[utoipa::path]` annotation, so it never
+  reaches the spec (e.g. `admin/analytics/*`, `admin/reports/schedules`,
+  `bookings/history`, `bookings/stats`, `me`, `setup/wizard`). Several are
+  **live SPA consumers** (`AdminAnalytics.tsx:111`, `AdminScheduledReports.tsx:55`)
+  reading as gaps. Closing these is pure contract work, zero business logic —
+  the shape of the merged #631 alias tranche.
+- **~61 genuine functional gaps** — no Rust handler yet (booking lifecycle
+  extend/cancel, parts of admin bookings, etc.).
+
+So ~45% of the drift closes by annotation alone. Sequencing and the TDD slice
+queue live in `_handoffs/parkhub/2026-07-15-enhance-wave-tdd-plan.md`.
+
+Current drift clusters (recomputed 2026-06-14):
 
 | Cluster | Rust-only | PHP-only |
 |---|---:|---:|
-| Admin/reporting/settings | 14 | 39 |
-| Auth/profile/setup aliases | 1 | 7 |
-| Booking/QR/calendar | 1 | 15 |
-| Health/docs/status | 5 | 3 |
-| Import/export | 1 | 4 |
-| Payments/billing/pricing | 4 | 1 |
-| Demo/discovery/public | 1 | 15 |
-| User/tenant/vehicle/notification | 2 | 12 |
-| Other | 0 | 12 |
+| Admin/reporting/settings | 14 | 54 |
+| Bookings/QR/calendar | 2 | 15 |
+| Lots/zones/pricing | 5 | 7 |
+| Setup/system/modules | 0 | 9 |
+| User/me/vacation/absence | 3 | 14 |
+| Demo/discovery/public | 0 | 4 |
+| Payments/notifications/other | 6 | 7 |
+
+> Caveat: this is a **committed-snapshot recompute**, not a fresh server boot.
+> An authoritative recount (`--features full,headless` + boot `:18181` +
+> `scripts/dump-openapi.sh`) should be run after the next annotation tranches
+> land to confirm the 110 → ~61 drop.
 
 ## Methodology
 
@@ -164,3 +182,5 @@ never appear in a real drift report.
   (booking QR/payment/config, import aliases, profile/setup aliases) and classify
   Rust top-level operational endpoints explicitly.
 - **Feature tranche**: close the remaining admin/reporting/demo/user feature gaps or explicitly classify intentional divergences.
+
+
