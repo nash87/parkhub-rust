@@ -366,7 +366,7 @@ function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onS
       {notice?.is_automated && (
         <p className="mt-3 text-[11px] leading-snug text-surface-500 dark:text-surface-400">
           {t(
-            'book.automatedAllocationNotice',
+            'recommendations.automatedAllocationNotice',
             { contact: notice.review_contact },
           )}
         </p>
@@ -601,3 +601,5 @@ function ConfettiOverlay() {
     </div>
   );
 }
+
+

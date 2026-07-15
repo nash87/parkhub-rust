@@ -62,7 +62,7 @@ vi.mock('react-i18next', () => ({
         'book.confirm': 'Confirm Booking',
         'book.confirming': 'Confirming...',
         'book.success': 'Booking confirmed!',
-        'book.automatedAllocationNotice': `These suggestions are produced by an automated system. You may pick any available spot; to request a human review of an allocation, contact ${opts?.contact ?? 'administrator'}.`,
+        'recommendations.automatedAllocationNotice': `These suggestions are produced by an automated system. You may pick any available spot; to request a human review of an allocation, contact ${opts?.contact ?? 'administrator'}.`,
         'common.error': 'Something went wrong',
         'bookings.insufficientCredits': 'Insufficient credits',
       };
@@ -1092,3 +1092,5 @@ describe('BookPage', () => {
     await waitFor(() => expect(mockCreateBooking).toHaveBeenCalledTimes(1));
   });
 });
+
+
