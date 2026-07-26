@@ -106,7 +106,7 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 import { BookPage } from './Book';
-import type { ParkingLot, ParkingSlot, Vehicle } from '../api/client';
+import type { BookingRecommendation, ParkingLot, ParkingSlot, Vehicle } from '../api/client';
 
 function makeLot(overrides: Partial<ParkingLot> = {}): ParkingLot {
   return {
@@ -556,6 +556,43 @@ describe('BookPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Your usual spot')).toBeInTheDocument();
       expect(screen.getByText('Available now')).toBeInTheDocument();
+    });
+  });
+
+  it('renders recommendations from the current API response envelope', async () => {
+    const recData: BookingRecommendation[] = [
+      {
+        recommendation_id: 'rec-1',
+        slot_id: 's1',
+        slot_number: 42,
+        lot_id: 'lot-1',
+        lot_name: 'HQ Lot',
+        floor_name: 'G',
+        score: 90,
+        reasons: ['Used 5 times'],
+        reason_badges: ['your_usual_spot'],
+      },
+    ];
+    mockGetLots.mockResolvedValue({ success: true, data: [makeLot()] });
+    mockGetVehicles.mockResolvedValue({ success: true, data: [] });
+    mockGetBookingRecommendations.mockResolvedValueOnce({
+      success: true,
+      data: {
+        recommendations: recData,
+        automated_decision: {
+          is_automated: true,
+          basis: ['booking_history', 'policy_rules', 'priority_score'],
+          review_contact: 'administrator',
+          art22_review_available: true,
+          mode: 'algorithmic',
+        },
+      },
+    });
+
+    render(<BookPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Your usual spot')).toBeInTheDocument();
     });
   });
 
