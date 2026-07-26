@@ -47,6 +47,37 @@ export interface ApiResponse<T> {
   meta?: unknown;
 }
 
+export interface BookingRecommendation {
+  recommendation_id: string;
+  slot_id: string;
+  slot_number: number;
+  lot_id: string;
+  lot_name: string;
+  floor_name: string;
+  score: number;
+  reasons: string[];
+  reason_badges: string[];
+}
+
+export interface AutomatedDecisionNotice {
+  is_automated: boolean;
+  basis: string[];
+  review_contact: string;
+  art22_review_available: boolean;
+  mode: 'algorithmic' | 'fifo_only';
+}
+
+/** Current response payload for `GET /api/v1/bookings/recommendations`. */
+export interface BookingRecommendationsResponse {
+  recommendations: BookingRecommendation[];
+  automated_decision: AutomatedDecisionNotice;
+}
+
+/** Accept the pre-envelope response during rolling/version-skewed upgrades. */
+export type BookingRecommendationsPayload =
+  | BookingRecommendationsResponse
+  | BookingRecommendation[];
+
 /** Re-export generated closed-enum types under their short TS names. */
 export type SlotType = GeneratedSlotType;
 export type SlotFeature = GeneratedSlotFeature;
@@ -334,16 +365,7 @@ export const api = {
     }),
 
   getBookingRecommendations: () =>
-    request<Array<{
-      slot_id: string;
-      slot_number: number;
-      lot_id: string;
-      lot_name: string;
-      floor_name: string;
-      score: number;
-      reasons: string[];
-      reason_badges: string[];
-    }>>('/api/v1/bookings/recommendations'),
+    request<BookingRecommendationsPayload>('/api/v1/bookings/recommendations'),
 
   changePassword: (current_password: string, password: string, password_confirmation: string) =>
     request('/api/v1/users/me/password', {

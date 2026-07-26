@@ -9,7 +9,17 @@ import {
   TrendUpIcon, TrendDownIcon,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { api, type ParkingLot, type ParkingSlot, type Vehicle, type CreateBookingPayload, type DynamicPriceResult, type OperatingHoursData, type Booking } from '../api/client';
+import {
+  api,
+  type Booking,
+  type BookingRecommendation,
+  type CreateBookingPayload,
+  type DynamicPriceResult,
+  type OperatingHoursData,
+  type ParkingLot,
+  type ParkingSlot,
+  type Vehicle,
+} from '../api/client';
 import { SkeletonCard } from '../components/Skeleton';
 import { findOverlappingBooking } from '../hooks/useConflictCheck';
 import toast from 'react-hot-toast';
@@ -268,17 +278,6 @@ function isLotOpenNow(hours?: OperatingHoursData): boolean {
   return nowMin >= openMin || nowMin < closeMin; // overnight
 }
 
-interface Recommendation {
-  slot_id: string;
-  slot_number: number;
-  lot_id: string;
-  lot_name: string;
-  floor_name: string;
-  score: number;
-  reasons: string[];
-  reason_badges: string[];
-}
-
 const badgeLabels: Record<string, { label: string; color: string }> = {
   your_usual_spot: { label: 'Your usual spot', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
   best_price: { label: 'Best price', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
@@ -289,14 +288,26 @@ const badgeLabels: Record<string, { label: string; color: string }> = {
 };
 
 function RecommendationsSection({ lots, onSelect, t }: { lots: ParkingLot[]; onSelect: (lot: ParkingLot) => void; t: TFunction }) {
-  const [recs, setRecs] = useState<Recommendation[]>([]);
+  const [recs, setRecs] = useState<BookingRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api
       .getBookingRecommendations()
       .then((res) => {
-        if (res.success && res.data) setRecs(res.data);
+        if (res.success && res.data) {
+          // The current Rust API returns a transparency envelope. Retain
+          // runtime compatibility with an older bare-array response so a
+          // version-skewed deployment degrades to recommendations, not a
+          // render-time `.slice()` crash.
+          const data = res.data;
+          const recommendations = Array.isArray(data)
+            ? data
+            : Array.isArray(data.recommendations)
+              ? data.recommendations
+              : [];
+          setRecs(recommendations);
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false));

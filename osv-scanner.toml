@@ -100,3 +100,29 @@ reason = "rand 0.7.3 transitive; bumped where direct, locked elsewhere"
 [[IgnoredVulns]]
 id = "RUSTSEC-2026-0173"
 reason = "proc-macro-error2 unmaintained (transitive via validator_derive -> validator 0.20); no fixed version published"
+
+# --- 2026-07 advisory wave (sync with deny.toml; operator-approved
+# 2026-07-15, PR #710; upstream watch T-8322; re-evaluate 2026-10).
+# Everything with a reachable fix was bumped in the same change.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0206"
+reason = "rustybuzz unmaintained, no CVE (transitive via usvg 0.47 SVG/QR pipeline)"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0192"
+reason = "ttf-parser unmaintained, no CVE (transitive via usvg/fontdb/rustybuzz/lopdf)"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0194"
+reason = "quick-xml quadratic dup-attr (DoS) — runtime chain healed at 0.41 via plist 1.10; remaining chain-locked copies: wayland-scanner ^0.39 (build-time codegen) + tauri-winrt-notification ^0.7 via notify-rust (Windows toast writer); no dependent accepts 0.41 yet"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0195"
+reason = "quick-xml NsReader namespace alloc (DoS) — same chain-locked scoping as RUSTSEC-2026-0194"
+
+[[IgnoredVulns]]
+id = "GHSA-g7r4-m6w7-qqqr"
+reason = "esbuild LOW CVSS 2.5 (build-time bundler); fix 0.28.1 chain-locked by astro's ^0.27.3 range (vite 7.3.6 already allows ^0.28) — floats when astro widens; not merge-gating"
+
+

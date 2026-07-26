@@ -299,9 +299,15 @@ jobs:
         continue-on-error: false
         run: |
           set -euo pipefail
+          # --config makes the repo-root ignore ledger govern BOTH lockfiles;
+          # without it osv-scanner discovers config per scanned directory and
+          # the ledger never applies to parkhub-web/package-lock.json (the
+          # dependabot-local-ci-bridge job already passes it — this aligns
+          # the two callers).
           osv-scanner scan source \
             -L Cargo.lock \
             -L parkhub-web/package-lock.json \
+            --config=osv-scanner.toml \
             --format=sarif \
             --output=osv-scanner.sarif
 
@@ -409,3 +415,5 @@ jobs:
           # --fail-on critical matches the docker-publish.yml posture; HIGH is
           # surfaced informationally so the suppressed-set stays explicit.
           grype "${IMAGE}" --only-fixed --fail-on critical || true
+
+
