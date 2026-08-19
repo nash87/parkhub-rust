@@ -346,9 +346,14 @@ pub fn parse_operation(query: &str) -> Result<(String, String, HashMap<String, S
 
     // Extract arguments (simple parser)
     let mut args = HashMap::new();
+    // Search for the closing paren *after* the opening one. Two independent
+    // first-occurrence searches impose no ordering, so a query like `{ a) ( }`
+    // yielded `&body[4..1]` — a reversed range, which panics. The release
+    // profile sets `panic = "abort"`, so that ended the process.
     if let Some(paren_start) = body.find('(')
-        && let Some(paren_end) = body.find(')')
+        && let Some(relative_end) = body[paren_start + 1..].find(')')
     {
+        let paren_end = paren_start + 1 + relative_end;
         let args_str = &body[paren_start + 1..paren_end];
         for part in args_str.split(',') {
             let part = part.trim();
@@ -593,6 +598,24 @@ pub async fn graphql_schema() -> impl IntoResponse {
 
 #[cfg(test)]
 mod tests {
+    /// `body.find('(')` and `body.find(')')` were independent first-occurrence
+    /// searches with no ordering constraint, so a query whose `)` precedes its
+    /// `(` produced a reversed range and panicked. The release profile sets
+    /// `panic = "abort"`, so that ends the process rather than the request.
+    #[test]
+    fn parse_operation_survives_a_closing_paren_before_the_opening_one() {
+        let _ = parse_operation("{ a) ( }");
+        let _ = parse_operation("{ bookings) name( }");
+        let _ = parse_operation("{ x)( }");
+    }
+
+    #[test]
+    fn parse_operation_still_reads_well_formed_arguments() {
+        let (_op, field, args) = parse_operation(r#"{ booking(id: "abc") }"#).expect("parses");
+        assert_eq!(field, "booking");
+        assert_eq!(args.get("id").map(String::as_str), Some("abc"));
+    }
+
     use super::*;
 
     #[test]

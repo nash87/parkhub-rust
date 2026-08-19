@@ -79,6 +79,24 @@ pub struct OfflineLot {
 // Handlers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Truncate a display name to at most 12 **characters** for the PWA
+/// `short_name` field.
+///
+/// The previous implementation was `app_name[..12]` guarded by
+/// `app_name.len() > 12`. Both operate on **bytes**, so any name whose
+/// twelfth byte fell inside a multi-byte character panicked on the slice —
+/// `Parkplatz Köln` and `Tiefgarage Österreich` both do. `[profile.release]`
+/// sets `panic = "abort"`, so that aborts the process rather than failing
+/// the request, and because the name is persisted in the settings table and
+/// `GET /api/v1/pwa/manifest` is a public route, the server died again as
+/// soon as it restarted.
+///
+/// Note that a `CatchPanicLayer` would not have helped: it relies on
+/// `catch_unwind`, and `panic = "abort"` never unwinds.
+fn pwa_short_name(app_name: &str) -> String {
+    app_name.chars().take(12).collect()
+}
+
 /// `GET /api/v1/pwa/manifest` — dynamic manifest based on branding settings.
 pub async fn pwa_dynamic_manifest(State(state): State<SharedState>) -> impl IntoResponse {
     let state_guard = state.read().await;
@@ -131,12 +149,8 @@ pub async fn pwa_dynamic_manifest(State(state): State<SharedState>) -> impl Into
     drop(state_guard);
 
     let manifest = PwaManifest {
-        name: app_name.clone(),
-        short_name: if app_name.len() > 12 {
-            app_name[..12].to_string()
-        } else {
-            app_name
-        },
+        short_name: pwa_short_name(&app_name),
+        name: app_name,
         start_url: "/".to_string(),
         display: "standalone".to_string(),
         background_color: bg_color,
@@ -252,17 +266,50 @@ async fn get_lot_summaries(state: &crate::AppState) -> Vec<OfflineLot> {
 
 #[cfg(test)]
 mod tests {
+    /// `app_name[..12]` was a **byte** slice guarded by a **byte**-length
+    /// check. When byte 12 lands inside a multi-byte character the slice
+    /// panics, and `[profile.release] panic = "abort"` turns that into a
+    /// process abort. The value is persisted in the settings table and the
+    /// manifest route is public, so the server would die again on restart.
+    #[test]
+    fn short_name_never_splits_a_multibyte_character() {
+        // Byte 12 falls inside the `ö` in each of these.
+        for name in ["Parkplatz Köln", "Tiefgarage Österreich", "Parkhaus 12ä"] {
+            let short = pwa_short_name(name);
+            assert!(short.chars().count() <= 12, "{name}: {short}");
+            assert!(name.starts_with(&short), "{name}: {short}");
+        }
+    }
+
+    #[test]
+    fn short_name_truncates_by_characters_not_bytes() {
+        // 13 characters, all multi-byte: byte length is far beyond 12.
+        assert_eq!(pwa_short_name("ääääääääääääa").chars().count(), 12);
+    }
+
+    #[test]
+    fn short_name_leaves_short_names_untouched() {
+        assert_eq!(pwa_short_name("ParkHub"), "ParkHub");
+        assert_eq!(pwa_short_name(""), "");
+    }
+
+    #[test]
+    fn short_name_handles_astral_characters() {
+        let short = pwa_short_name("Parkhaus 🅿️🅿️🅿️🅿️🅿️");
+        assert!(short.chars().count() <= 12);
+    }
+
     use super::*;
 
     #[test]
     fn test_pwa_manifest_short_name_truncation() {
+        // This test previously re-implemented the truncation inside its own
+        // body and asserted on that copy, so it exercised nothing in
+        // production and could not observe the byte-slicing panic. Call the
+        // real function instead.
         let long_name = "A Very Long Application Name That Exceeds Twelve Characters";
-        let short = if long_name.len() > 12 {
-            long_name[..12].to_string()
-        } else {
-            long_name.to_string()
-        };
-        assert_eq!(short.len(), 12);
+        assert_eq!(pwa_short_name(long_name).chars().count(), 12);
+        assert_eq!(pwa_short_name(long_name), "A Very Long ");
     }
 
     #[test]
