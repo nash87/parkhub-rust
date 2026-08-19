@@ -982,3 +982,98 @@ async fn test_rate_limit_register() {
         "expected 429 after exceeding register rate limit"
     );
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// RESCHEDULE — the new window must actually be persisted
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// `reschedule_booking` answered `success: true` while writing the new times
+/// into a `reschedule:{id}` **setting** that nothing reads, and never calling
+/// `save_booking`. The user dragged a booking, the UI confirmed, and the
+/// booking still sat on the original day — silent data loss with a positive
+/// acknowledgement.
+#[tokio::test]
+async fn test_reschedule_persists_the_new_window() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+    let (lot_id, slot_id) = create_lot_and_get_slot(state.clone(), &admin_tok).await;
+
+    let start_time = Utc::now() + TimeDelta::hours(1);
+    let create_body = serde_json::json!({
+        "lot_id": lot_id,
+        "slot_id": slot_id,
+        "start_time": start_time,
+        "duration_minutes": 60,
+        "vehicle_id": Uuid::nil(),
+        "license_plate": "RESCHED-1",
+    });
+
+    let booking_id = {
+        let app = router(state.clone());
+        let resp = app
+            .oneshot(
+                Request::post("/api/v1/bookings")
+                    .header("content-type", "application/json")
+                    .header("authorization", format!("Bearer {admin_tok}"))
+                    .body(Body::from(serde_json::to_vec(&create_body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        body_json(resp).await["data"]["id"].as_str().unwrap().to_string()
+    };
+
+    let new_start = Utc::now() + TimeDelta::days(3);
+    let new_end = new_start + TimeDelta::hours(2);
+
+    {
+        let app = router(state.clone());
+        let resp = app
+            .oneshot(
+                Request::put(format!("/api/v1/bookings/{booking_id}/reschedule"))
+                    .header("content-type", "application/json")
+                    .header("authorization", format!("Bearer {admin_tok}"))
+                    .body(Body::from(
+                        serde_json::to_vec(&serde_json::json!({
+                            "new_start": new_start,
+                            "new_end": new_end,
+                        }))
+                        .unwrap(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK, "reschedule was not accepted");
+        assert_eq!(body_json(resp).await["data"]["success"], true);
+    }
+
+    // Read the booking back through the API. A handler that reports success
+    // must have changed the thing it claims to have changed.
+    let app = router(state);
+    let resp = app
+        .oneshot(
+            Request::get(format!("/api/v1/bookings/{booking_id}"))
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let json = body_json(resp).await;
+    let persisted_start = json["data"]["start_time"].as_str().unwrap();
+    let persisted = chrono::DateTime::parse_from_rfc3339(persisted_start)
+        .expect("start_time is rfc3339")
+        .with_timezone(&Utc);
+
+    // Compare instants, not serialised text — the wire format's sub-second
+    // precision is not what this test is about.
+    assert!(
+        (persisted - new_start).num_seconds().abs() < 2,
+        "the reschedule reported success but the booking kept its original start time \
+         (persisted {persisted}, requested {new_start})",
+    );
+}

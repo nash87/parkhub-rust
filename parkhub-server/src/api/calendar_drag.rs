@@ -191,19 +191,29 @@ pub async fn reschedule_booking(
         return (StatusCode::CONFLICT, Json(ApiResponse::success(response)));
     }
 
-    // Persist the reschedule by saving updated booking
-    let key = format!("reschedule:{booking_id}");
-    let reschedule_data = serde_json::json!({
-        "old_start": booking.start_time,
-        "old_end": booking.end_time,
-        "new_start": req.new_start,
-        "new_end": req.new_end,
-        "rescheduled_at": Utc::now(),
-    });
-    let _ = state_guard
-        .db
-        .set_setting(&key, &reschedule_data.to_string())
-        .await;
+    // Persist the new window on the booking itself.
+    //
+    // This previously serialised the change into a `reschedule:{id}`
+    // *setting* with `let _ =` and never called `save_booking`. Nothing
+    // anywhere reads that key, so the booking kept its original times while
+    // the handler answered `success: true` — a user dragged a booking, the
+    // UI confirmed, and they turned up on the wrong day to a slot someone
+    // else might hold. A discarded write result made it silent.
+    let mut updated = booking.clone();
+    updated.start_time = req.new_start;
+    updated.end_time = req.new_end;
+    updated.updated_at = Utc::now();
+
+    if let Err(e) = state_guard.db.save_booking(&updated).await {
+        tracing::error!("Failed to persist reschedule for booking {booking_id}: {e}");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ApiResponse::error(
+                "SERVER_ERROR",
+                "Failed to save the rescheduled booking",
+            )),
+        );
+    }
 
     let response = RescheduleResponse {
         booking_id,
