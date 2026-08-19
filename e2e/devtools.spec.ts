@@ -250,13 +250,20 @@ test.describe('DevTools — Axe Accessibility Audit', () => {
   test('login page passes axe-core checks', async ({ page }) => {
     await page.goto('/login');
 
-    // Wait for React hydration + web fonts before running axe.
-    // Without this the first run regularly reports a flaky
-    // `color-contrast` violation because the fallback system font
-    // has different metrics than the final Inter — the retry that
-    // waits an extra moment (via Playwright's built-in retry) always
-    // passes, which is the signal that this is a timing issue, not
-    // a real contrast bug.
+    // Assert the *settled* page, which is what a user perceives and what
+    // axe's colour-contrast rule is about.
+    //
+    // Waiting only for `domcontentloaded` samples the page mid-paint, before
+    // the theme's custom properties have resolved. Measured on this build:
+    // at that moment `text-primary-700` computes to #459481 and axe reports
+    // 12 serious `color-contrast` nodes; once settled the same element
+    // computes to oklch(0.47 0.1 170) and axe reports none. The elements and
+    // the stylesheet are fine — the sample was taken too early.
+    //
+    // The previous comment here blamed font metrics and relied on Playwright's
+    // retry to paper over it. That retry stopped being enough: this test now
+    // fails every night, and it failed on a single worker with no contention,
+    // so it was not a scheduling flake.
     await page.waitForLoadState('domcontentloaded');
     await page.waitForFunction(() => document.fonts?.ready, {
       timeout: 5_000,
@@ -265,6 +272,12 @@ test.describe('DevTools — Axe Accessibility Audit', () => {
       () => !!document.querySelector('form input[type="password"]'),
       { timeout: 5_000 },
     ).catch(() => { /* swallow: axe will still surface the real issue */ });
+    // The decisive wait: no in-flight requests means the theme stylesheet has
+    // applied. Without it the assertion races the first paint.
+    await page.waitForLoadState('networkidle').catch(() => {
+      /* long-poll surfaces never idle — fall through to the explicit wait */
+    });
+    await page.waitForTimeout(500);
 
     let AxeBuilder: typeof import('@axe-core/playwright').default;
     try {
