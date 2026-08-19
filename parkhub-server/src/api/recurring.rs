@@ -9,7 +9,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
 };
-use chrono::Utc;
+use chrono::{NaiveDate, NaiveTime, Utc};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -61,6 +61,73 @@ pub struct CreateRecurringBookingRequest {
     vehicle_plate: Option<String>,
 }
 
+/// Reject a recurring rule the expansion job could never turn into bookings.
+///
+/// The endpoint performed no validation at all: any payload that
+/// deserialised was persisted and answered `201 Created` with a fully
+/// populated body. The consumer (`jobs::expand_recurring`) then parsed the
+/// same fields and silently `warn`-and-continued on anything malformed, so
+/// a user saw a series that was created successfully and produced nothing,
+/// for ever, with no feedback anywhere they could see.
+///
+/// Worse than dropping it: `start_time: "22:00"` with `end_time: "06:00"`
+/// parses fine and yields `end < start`, which the job turns into bookings
+/// with a negative duration.
+///
+/// The formats mirror what the job actually parses — `%H:%M` for times,
+/// `%Y-%m-%d` for dates, and `days_of_week` as 0 = Monday … 6 = Sunday
+/// (`chrono::Weekday::num_days_from_monday`).
+fn validate_create_request(req: &CreateRecurringBookingRequest) -> Result<(), (&'static str, String)> {
+    if req.days_of_week.is_empty() {
+        return Err(("VALIDATION_ERROR", "days_of_week must not be empty".into()));
+    }
+    if let Some(bad) = req.days_of_week.iter().find(|d| **d > 6) {
+        return Err((
+            "VALIDATION_ERROR",
+            format!("days_of_week values must be 0 (Monday) to 6 (Sunday); got {bad}"),
+        ));
+    }
+
+    let Ok(start_time) = NaiveTime::parse_from_str(&req.start_time, "%H:%M") else {
+        return Err((
+            "VALIDATION_ERROR",
+            format!("start_time must be HH:MM; got '{}'", req.start_time),
+        ));
+    };
+    let Ok(end_time) = NaiveTime::parse_from_str(&req.end_time, "%H:%M") else {
+        return Err((
+            "VALIDATION_ERROR",
+            format!("end_time must be HH:MM; got '{}'", req.end_time),
+        ));
+    };
+    if end_time <= start_time {
+        return Err((
+            "VALIDATION_ERROR",
+            "end_time must be after start_time; overnight series are not supported".into(),
+        ));
+    }
+
+    let Ok(start_date) = NaiveDate::parse_from_str(&req.start_date, "%Y-%m-%d") else {
+        return Err((
+            "VALIDATION_ERROR",
+            format!("start_date must be YYYY-MM-DD; got '{}'", req.start_date),
+        ));
+    };
+    if let Some(ref raw_end) = req.end_date {
+        let Ok(end_date) = NaiveDate::parse_from_str(raw_end, "%Y-%m-%d") else {
+            return Err((
+                "VALIDATION_ERROR",
+                format!("end_date must be YYYY-MM-DD; got '{raw_end}'"),
+            ));
+        };
+        if end_date < start_date {
+            return Err(("VALIDATION_ERROR", "end_date must not precede start_date".into()));
+        }
+    }
+
+    Ok(())
+}
+
 /// `POST /api/v1/recurring-bookings` — create a recurring booking
 #[utoipa::path(
     post,
@@ -75,6 +142,13 @@ pub async fn create_recurring_booking(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<CreateRecurringBookingRequest>,
 ) -> (StatusCode, Json<ApiResponse<RecurringBooking>>) {
+    if let Err((code, message)) = validate_create_request(&req) {
+        return (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(ApiResponse::error(code, message)),
+        );
+    }
+
     let state_guard = state.read().await;
 
     let booking = RecurringBooking {
@@ -302,5 +376,90 @@ mod tests {
         assert!(req.slot_id.is_none());
         assert!(req.end_date.is_none());
         assert!(req.vehicle_plate.is_none());
+    }
+}
+
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+
+    fn valid() -> CreateRecurringBookingRequest {
+        CreateRecurringBookingRequest {
+            lot_id: Uuid::nil(),
+            slot_id: None,
+            days_of_week: vec![0, 1, 2, 3, 4],
+            start_date: "2026-09-01".into(),
+            end_date: Some("2026-12-01".into()),
+            start_time: "09:00".into(),
+            end_time: "17:00".into(),
+            vehicle_plate: None,
+        }
+    }
+
+    #[test]
+    fn a_well_formed_rule_is_accepted() {
+        assert!(validate_create_request(&valid()).is_ok());
+    }
+
+    #[test]
+    fn an_open_ended_series_is_allowed() {
+        let mut req = valid();
+        req.end_date = None;
+        assert!(validate_create_request(&req).is_ok());
+    }
+
+    #[test]
+    fn days_of_week_must_not_be_empty() {
+        let mut req = valid();
+        req.days_of_week = vec![];
+        assert!(validate_create_request(&req).is_err());
+    }
+
+    /// 0 = Monday … 6 = Sunday. A 7 is the classic off-by-one from an
+    /// ISO-weekday API and would silently match no day at all.
+    #[test]
+    fn days_of_week_must_be_in_range() {
+        let mut req = valid();
+        req.days_of_week = vec![0, 7];
+        assert!(validate_create_request(&req).is_err());
+    }
+
+    #[test]
+    fn times_must_parse() {
+        let mut req = valid();
+        req.start_time = "9am".into();
+        assert!(validate_create_request(&req).is_err());
+
+        let mut req = valid();
+        req.end_time = "".into();
+        assert!(validate_create_request(&req).is_err());
+    }
+
+    /// The damaging one: this parses cleanly and the expansion job turns it
+    /// into bookings whose end precedes their start.
+    #[test]
+    fn an_overnight_window_is_rejected_rather_than_expanded_backwards() {
+        let mut req = valid();
+        req.start_time = "22:00".into();
+        req.end_time = "06:00".into();
+        assert!(validate_create_request(&req).is_err());
+    }
+
+    #[test]
+    fn a_zero_length_window_is_rejected() {
+        let mut req = valid();
+        req.end_time = req.start_time.clone();
+        assert!(validate_create_request(&req).is_err());
+    }
+
+    #[test]
+    fn dates_must_parse_and_be_ordered() {
+        let mut req = valid();
+        req.start_date = "01/09/2026".into();
+        assert!(validate_create_request(&req).is_err());
+
+        let mut req = valid();
+        req.end_date = Some("2026-08-01".into());
+        assert!(validate_create_request(&req).is_err(), "end_date before start_date was accepted");
     }
 }
