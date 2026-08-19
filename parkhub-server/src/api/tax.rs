@@ -68,10 +68,14 @@ const PROFILES: &[TaxProfile] = &[
         reduced_rate: Some(0.10),
         reverse_charge_eu: true,
     },
-    // Switzerland — MWSTG Art. 25 (non-EU; MFN partners use normal rates)
+    // Switzerland — MWSTG Art. 25 (non-EU; MFN partners use normal rates).
+    // 8.1 % standard / 2.6 % reduced since 2024-01-01. A rise to 8.5 % is
+    // proposed for 2028 and is not in force.
+    // Source: Swiss Federal Tax Administration,
+    // https://www.estv.admin.ch/en/vat-rates-switzerland
     TaxProfile {
         country: "CH",
-        standard_rate: 0.077,
+        standard_rate: 0.081,
         reduced_rate: Some(0.026),
         reverse_charge_eu: false,
     },
@@ -324,13 +328,34 @@ mod tests {
     }
 
     #[test]
-    fn test_tax_profile_ch_rate_77() {
+    fn test_tax_profile_ch_standard_rate() {
         let ch = resolve_profile("CH");
         assert_eq!(ch.country, "CH");
-        // Switzerland's standard rate: 7.7 %.
-        assert!((ch.standard_rate - 0.077).abs() < f64::EPSILON);
+        // Switzerland's standard rate: 8.1 % since 2024-01-01.
+        // https://www.estv.admin.ch/en/vat-rates-switzerland
+        assert!((ch.standard_rate - 0.081).abs() < f64::EPSILON);
+        assert_eq!(ch.reduced_rate, Some(0.026));
         // Non-EU → no reverse-charge regime.
         assert!(!ch.reverse_charge_eu);
+    }
+
+    /// A standard rate at or below its own reduced rate is the shape a
+    /// half-finished rate update leaves behind: one of the pair moves and
+    /// the other does not. Switzerland sat at 7.7 % standard beside the
+    /// post-2024 2.6 % reduced rate for exactly that reason.
+    #[test]
+    fn every_profile_has_a_standard_rate_above_its_reduced_rate() {
+        for profile in PROFILES {
+            if let Some(reduced) = profile.reduced_rate {
+                assert!(
+                    profile.standard_rate > reduced,
+                    "{}: standard {} is not above reduced {}",
+                    profile.country,
+                    profile.standard_rate,
+                    reduced,
+                );
+            }
+        }
     }
 
     #[test]
