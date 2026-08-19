@@ -4,11 +4,23 @@
 //! Events are distributed via a `tokio::sync::broadcast` channel for fan-out to
 //! all connected clients.
 //!
-//! ## Authentication
+//! ## Authentication and what a client may see
 //!
-//! Clients authenticate via a query parameter `?token=...` containing a valid
-//! session token. The token is validated on upgrade; unauthenticated upgrades
-//! are rejected with `401 Unauthorized`.
+//! Clients may authenticate via a query parameter `?token=...` containing a
+//! valid session token. A token that is present must be valid, unexpired and
+//! belong to an active user, or the upgrade is rejected with
+//! `401 Unauthorized`. A connection without a token is accepted, because the
+//! lobby display is a legitimate unauthenticated consumer of live occupancy.
+//!
+//! Whatever the connection, **an event never carries someone else's
+//! identity**. Occupancy detail (lot, slot, counts) is broadcast to every
+//! subscriber; the `user_id` on a booking event reaches only the user it
+//! belongs to. See `WsEvent::redacted_for`.
+//!
+//! This module previously documented two mutually exclusive contracts —
+//! that tokenless upgrades were rejected, and that they "receive only public
+//! events" — and implemented neither: every subscriber received every event
+//! verbatim, `user_id` included.
 //!
 //! ## Heartbeat
 //!
@@ -30,6 +42,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{RwLock, broadcast};
 use tracing::{debug, warn};
+use uuid::Uuid;
 
 use crate::AppState;
 
@@ -89,6 +102,36 @@ impl WsEvent {
                 "user_id": user_id,
             }),
         )
+    }
+
+    /// Return this event as it may be shown to `viewer`.
+    ///
+    /// Occupancy detail — which lot, which slot, how many free — is the
+    /// point of the feed and is broadcast to everyone, including the
+    /// unauthenticated lobby display. A `user_id` is not: it is only ever
+    /// forwarded to the user it identifies.
+    ///
+    /// Every subscriber previously received every event verbatim, so any
+    /// client that could reach the endpoint got credential-free, real-time,
+    /// per-employee presence tracking by pseudonymous id.
+    #[must_use]
+    pub fn redacted_for(mut self, viewer: Option<Uuid>) -> Self {
+        let Some(subject) = self
+            .data
+            .get("user_id")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+        else {
+            return self; // carries no identity
+        };
+
+        let is_own = viewer.is_some_and(|v| v.to_string() == subject);
+
+        if !is_own && let Some(object) = self.data.as_object_mut() {
+            object.remove("user_id");
+        }
+
+        self
     }
 
     /// Create a `BookingCancelled` event.
@@ -199,15 +242,18 @@ type SharedState = Arc<RwLock<AppState>>;
 
 /// Handler for GET /api/v1/ws — upgrades to WebSocket.
 ///
-/// Authentication is performed via the `?token=...` query parameter.
-/// If a token is provided it must be a valid, non-expired session.
-/// Connections without a token are allowed but receive only public events.
+/// A `?token=...` query parameter is optional. When present it must resolve
+/// to a valid, unexpired session for an active user. The resolved user is
+/// carried into the socket so that events belonging to other users can have
+/// their identity stripped before they are forwarded.
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<SharedState>,
     Query(params): Query<WsQuery>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ApiResponse<()>>)> {
-    // Validate token if provided
+    // Validate token if provided, and remember who the caller is.
+    let mut viewer: Option<Uuid> = None;
+
     if let Some(ref token) = params.token {
         let state_guard = state.read().await;
         match state_guard.db.get_session(token).await {
@@ -216,6 +262,7 @@ pub async fn ws_handler(
                 match state_guard.db.get_user(&s.user_id.to_string()).await {
                     Ok(Some(u)) if u.is_active => {
                         debug!(user_id = %s.user_id, "WebSocket authenticated");
+                        viewer = Some(s.user_id);
                     }
                     _ => {
                         return Err((
@@ -240,12 +287,12 @@ pub async fn ws_handler(
         }
     }
 
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, state)))
+    Ok(ws.on_upgrade(move |socket| handle_socket(socket, state, viewer)))
 }
 
 /// Manages a single WebSocket connection: subscribes to the broadcast channel,
 /// forwards events to the client, and sends periodic pings.
-async fn handle_socket(socket: WebSocket, state: SharedState) {
+async fn handle_socket(socket: WebSocket, state: SharedState, viewer: Option<Uuid>) {
     use futures_util::{SinkExt, StreamExt};
 
     let broadcaster = {
@@ -294,6 +341,8 @@ async fn handle_socket(socket: WebSocket, state: SharedState) {
             event = rx.recv() => {
                 match event {
                     Ok(ws_event) => {
+                        // Strip identity that does not belong to this client.
+                        let ws_event = ws_event.redacted_for(viewer);
                         if let Ok(json) = serde_json::to_string(&ws_event)
                             && sender.send(Message::Text(json.into())).await.is_err() {
                                 break; // Client disconnected
@@ -529,5 +578,64 @@ mod tests {
     fn ws_query_deserialize_without_token() {
         let q: WsQuery = serde_json::from_str("{}").unwrap();
         assert!(q.token.is_none());
+    }
+}
+
+#[cfg(test)]
+mod redaction_tests {
+    use super::*;
+
+    fn user(n: u128) -> Uuid {
+        Uuid::from_u128(n)
+    }
+
+    #[test]
+    fn the_owner_of_a_booking_event_still_sees_their_own_id() {
+        let owner = user(1);
+        let event = WsEvent::booking_created("lot-1", "slot-1", &owner.to_string());
+
+        let seen = event.redacted_for(Some(owner));
+
+        assert_eq!(seen.data["user_id"], owner.to_string());
+    }
+
+    #[test]
+    fn another_authenticated_user_does_not_see_the_id() {
+        let owner = user(1);
+        let event = WsEvent::booking_created("lot-1", "slot-1", &owner.to_string());
+
+        let seen = event.redacted_for(Some(user(2)));
+
+        assert!(seen.data.get("user_id").is_none(), "leaked to another user: {}", seen.data);
+    }
+
+    /// The lobby display connects without a token. It needs occupancy, not
+    /// identities.
+    #[test]
+    fn an_unauthenticated_client_does_not_see_the_id() {
+        let event = WsEvent::booking_created("lot-1", "slot-1", &user(1).to_string());
+
+        let seen = event.redacted_for(None);
+
+        assert!(seen.data.get("user_id").is_none(), "leaked to an anonymous client: {}", seen.data);
+    }
+
+    #[test]
+    fn occupancy_detail_survives_redaction_for_everyone() {
+        let event = WsEvent::booking_created("lot-1", "slot-7", &user(1).to_string());
+
+        let seen = event.redacted_for(None);
+
+        assert_eq!(seen.data["lot_id"], "lot-1");
+        assert_eq!(seen.data["slot_id"], "slot-7");
+    }
+
+    #[test]
+    fn events_without_an_identity_are_untouched() {
+        let event = WsEvent::occupancy_update("lot-1", 3, 10);
+
+        let seen = event.clone().redacted_for(None);
+
+        assert_eq!(seen.data, event.data);
     }
 }
