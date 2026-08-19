@@ -5,7 +5,7 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
 };
@@ -13,7 +13,7 @@ use chrono::{DateTime, Datelike, NaiveTime, Utc};
 
 use parkhub_common::{ApiResponse, DayHours, OperatingHours};
 
-use super::SharedState;
+use super::{AuthUser, SharedState, check_admin};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -198,10 +198,14 @@ pub async fn get_operating_hours(
 )]
 pub async fn admin_update_operating_hours(
     State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
     Json(new_hours): Json<OperatingHours>,
 ) -> (StatusCode, Json<ApiResponse<OperatingHoursResponse>>) {
     let state = state.read().await;
+    if let Err((status, msg)) = check_admin(&state, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
 
     // Validate times
     if !new_hours.is_24h {

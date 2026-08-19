@@ -5,14 +5,14 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, State},
     http::StatusCode,
 };
 
 use parkhub_common::{ApiResponse, DynamicPriceResult, DynamicPricingRules};
 
-use super::SharedState;
+use super::{AuthUser, SharedState, check_admin};
 
 /// Settings key prefix for storing dynamic pricing rules per lot.
 const SETTINGS_KEY_PREFIX: &str = "dynamic_pricing:";
@@ -104,9 +104,13 @@ pub async fn get_dynamic_pricing(
 )]
 pub async fn admin_get_dynamic_pricing_rules(
     State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> (StatusCode, Json<ApiResponse<DynamicPricingRules>>) {
     let state = state.read().await;
+    if let Err((status, msg)) = check_admin(&state, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
 
     // Verify lot exists
     match state.db.get_parking_lot(&id).await {
@@ -170,10 +174,14 @@ pub struct UpdateDynamicPricingRequest {
 )]
 pub async fn admin_update_dynamic_pricing_rules(
     State(state): State<SharedState>,
+    Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<String>,
     Json(req): Json<UpdateDynamicPricingRequest>,
 ) -> (StatusCode, Json<ApiResponse<DynamicPricingRules>>) {
     let state = state.read().await;
+    if let Err((status, msg)) = check_admin(&state, &auth_user).await {
+        return (status, Json(ApiResponse::error("FORBIDDEN", msg)));
+    }
 
     // Verify lot exists
     match state.db.get_parking_lot(&id).await {

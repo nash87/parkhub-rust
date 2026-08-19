@@ -59,6 +59,10 @@ mod validation;
 mod booking_tests;
 #[cfg(all(test, feature = "full"))]
 mod calendar_tests;
+// Not gated on `feature = "full"`: the guard scans source text, and an
+// unguarded admin route is a defect under every feature combination.
+#[cfg(test)]
+mod admin_authz_tests;
 #[cfg(test)]
 mod coverage_tests;
 #[cfg(all(test, feature = "full"))]
