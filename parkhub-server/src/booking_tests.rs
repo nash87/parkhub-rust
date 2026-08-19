@@ -982,3 +982,178 @@ async fn test_rate_limit_register() {
         "expected 429 after exceeding register rate limit"
     );
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// QUICK BOOK — must obey the same rules as the primary creator
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// `quick_book` re-implemented creation inline: it never touched the credit
+/// ledger, so a user with no credits could still book, and the booking cost
+/// nothing. Combined with a refund on cancel that is the same minting shape
+/// the PHP edition had.
+#[tokio::test]
+async fn test_quick_book_is_refused_without_credits() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+    let (lot_id, _) = create_lot_and_get_slot(state.clone(), &admin_tok).await;
+
+    {
+        let guard = state.read().await;
+        guard.db.set_setting("credits_enabled", "true").await.expect("enable credits");
+        guard.db.set_setting("credits_per_booking", "10").await.expect("set price");
+    }
+
+    let (user_token, user_id) =
+        register_user_token(state.clone(), "quicknocredits@example.com", "SecurePass1!").await;
+    {
+        let guard = state.read().await;
+        if let Ok(Some(mut user)) = guard.db.get_user(&user_id).await {
+            user.credits_balance = 0;
+            guard.db.save_user(&user).await.expect("drain credits");
+        }
+    }
+
+    let app = router(state);
+    let resp = app
+        .oneshot(
+            Request::post("/api/v1/bookings/quick")
+                .header("content-type", "application/json")
+                .header("authorization", format!("Bearer {user_token}"))
+                .body(Body::from(
+                    serde_json::to_vec(&serde_json::json!({ "lot_id": lot_id })).unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "quick-book created a booking for a user with no credits",
+    );
+}
+
+/// A quick booking must cost what a booking costs.
+#[tokio::test]
+async fn test_quick_book_debits_credits() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+    let (lot_id, _) = create_lot_and_get_slot(state.clone(), &admin_tok).await;
+
+    {
+        let guard = state.read().await;
+        guard.db.set_setting("credits_enabled", "true").await.expect("enable credits");
+        guard.db.set_setting("credits_per_booking", "10").await.expect("set price");
+    }
+
+    let (user_token, user_id) =
+        register_user_token(state.clone(), "quickcredits@example.com", "SecurePass1!").await;
+    let before = {
+        let guard = state.read().await;
+        guard.db.get_user(&user_id).await.unwrap().unwrap().credits_balance
+    };
+
+    let app = router(state.clone());
+    let resp = app
+        .oneshot(
+            Request::post("/api/v1/bookings/quick")
+                .header("content-type", "application/json")
+                .header("authorization", format!("Bearer {user_token}"))
+                .body(Body::from(
+                    serde_json::to_vec(&serde_json::json!({ "lot_id": lot_id })).unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::CREATED);
+
+    let after = {
+        let guard = state.read().await;
+        guard.db.get_user(&user_id).await.unwrap().unwrap().credits_balance
+    };
+
+    assert_eq!(before - after, 10, "quick-book did not take a credit");
+}
+
+/// `QuickBookRequest::date` was declared and never referenced — the struct
+/// carries `#[allow(dead_code)]`, which suppressed the warning that would
+/// have said so. Every quick booking started one minute from now regardless
+/// of the date asked for.
+#[tokio::test]
+async fn test_quick_book_honours_the_requested_date() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+    let (lot_id, _) = create_lot_and_get_slot(state.clone(), &admin_tok).await;
+
+    let target = (Utc::now() + TimeDelta::days(3)).date_naive();
+
+    let app = router(state);
+    let resp = app
+        .oneshot(
+            Request::post("/api/v1/bookings/quick")
+                .header("content-type", "application/json")
+                .header("authorization", format!("Bearer {admin_tok}"))
+                .body(Body::from(
+                    serde_json::to_vec(&serde_json::json!({
+                        "lot_id": lot_id,
+                        "date": target.to_string(),
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(resp.status(), StatusCode::CREATED);
+    let json = body_json(resp).await;
+    let start = json["data"]["start_time"].as_str().expect("start_time");
+    let parsed = chrono::DateTime::parse_from_rfc3339(start).expect("rfc3339").date_naive();
+
+    assert_eq!(parsed, target, "a quick booking for a future date started today");
+}
+
+/// half_day and full_day shared one match arm, so both produced 8 hours.
+#[tokio::test]
+async fn test_quick_book_half_day_is_shorter_than_full_day() {
+    let state = test_state().await;
+    let admin_tok = admin_token(state.clone()).await;
+    let (lot_id, _) = create_lot_and_get_slot(state.clone(), &admin_tok).await;
+
+    async fn duration_minutes(
+        state: std::sync::Arc<tokio::sync::RwLock<crate::AppState>>,
+        token: &str,
+        lot_id: &str,
+        booking_type: &str,
+    ) -> i64 {
+        let app = router(state);
+        let resp = app
+            .oneshot(
+                Request::post("/api/v1/bookings/quick")
+                    .header("content-type", "application/json")
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::from(
+                        serde_json::to_vec(&serde_json::json!({
+                            "lot_id": lot_id,
+                            "booking_type": booking_type,
+                        }))
+                        .unwrap(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED, "{booking_type} quick-book failed");
+        let json = body_json(resp).await;
+        let s = chrono::DateTime::parse_from_rfc3339(json["data"]["start_time"].as_str().unwrap()).unwrap();
+        let e = chrono::DateTime::parse_from_rfc3339(json["data"]["end_time"].as_str().unwrap()).unwrap();
+        (e - s).num_minutes()
+    }
+
+    let half = duration_minutes(state.clone(), &admin_tok, &lot_id, "half_day_am").await;
+    let full = duration_minutes(state, &admin_tok, &lot_id, "full_day").await;
+
+    assert!(half < full, "half_day ({half} min) is not shorter than full_day ({full} min)");
+}

@@ -1300,7 +1300,6 @@ pub async fn get_booking_invoice(
 
 /// Request body for quick booking
 #[derive(Debug, Deserialize, utoipa::ToSchema)]
-#[allow(dead_code)]
 pub struct QuickBookRequest {
     lot_id: Uuid,
     date: Option<String>,
@@ -1320,183 +1319,96 @@ pub async fn quick_book(
     Extension(auth_user): Extension<AuthUser>,
     Json(req): Json<QuickBookRequest>,
 ) -> (StatusCode, Json<ApiResponse<Booking>>) {
-    let state_guard = state.write().await;
+    // Resolve the slot, the caller's vehicle and the window, then hand the
+    // rest to `create_booking`.
+    //
+    // This used to re-implement creation inline and so skipped everything
+    // that handler enforces: the credit ledger (a quick booking cost
+    // nothing, which combined with a refund on cancel is a way to mint
+    // credits), `require_vehicle` and `license_plate_mode` (it synthesised a
+    // Vehicle with an empty plate rather than enforcing them), and the
+    // operating-hours and conflict checks. The convenience here is picking a
+    // slot; it was never meant to be a second set of rules.
+    let booking_type = req.booking_type.as_deref().unwrap_or("full_day");
 
-    // T-1731: resolve the caller's tenant_id up-front so the booking inherits
-    // it when MODULE_MULTI_TENANT flips on.
-    let caller_tenant_id = super::resolve_tenant_id(&state_guard, auth_user.user_id).await;
+    let (slot_id, vehicle_id, license_plate) = {
+        let state_guard = state.read().await;
 
-    // Find first available slot in the lot
-    let slots = match state_guard
-        .db
-        .list_slots_by_lot(&req.lot_id.to_string())
-        .await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::error!("Failed to list slots: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ApiResponse::error("SERVER_ERROR", "Failed to list slots")),
-            );
-        }
-    };
+        let slots = match state_guard.db.list_slots_by_lot(&req.lot_id.to_string()).await {
+            Ok(slots) => slots,
+            Err(e) => {
+                tracing::error!("quick_book: failed to list slots: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ApiResponse::error("SERVER_ERROR", "Failed to look up slots")),
+                );
+            }
+        };
 
-    let available_slot = match slots.iter().find(|s| s.status == SlotStatus::Available) {
-        Some(s) => s.clone(),
-        None => {
+        let Some(slot) = slots.into_iter().find(|s| s.status == SlotStatus::Available) else {
             return (
                 StatusCode::CONFLICT,
-                Json(ApiResponse::error(
-                    "NO_SLOTS_AVAILABLE",
-                    "No available slots in this lot",
-                )),
+                Json(ApiResponse::error("NO_SLOTS_AVAILABLE", "No available slots in this lot")),
             );
-        }
+        };
+
+        // Prefer the caller's own vehicle. Passing it through means
+        // `require_vehicle` / `license_plate_mode` are evaluated against what
+        // the user actually has, instead of being sidestepped by a
+        // synthesised empty-plate vehicle.
+        let vehicle = state_guard
+            .db
+            .list_vehicles_by_user(&auth_user.user_id.to_string())
+            .await
+            .unwrap_or_default()
+            .into_iter()
+            .next();
+
+        (
+            slot.id,
+            vehicle.as_ref().map_or_else(Uuid::nil, |v| v.id),
+            vehicle.map(|v| v.license_plate).unwrap_or_default(),
+        )
+    };
+    // The read guard is dropped here on purpose: `create_booking` takes its
+    // own lock, and holding this one across the call would deadlock.
+
+    let duration_minutes = match booking_type {
+        "half_day_am" | "half_day_pm" => 4 * 60,
+        _ => 8 * 60,
     };
 
-    // Get user's default vehicle (or first vehicle)
-    let vehicles = state_guard
-        .db
-        .list_vehicles_by_user(&auth_user.user_id.to_string())
-        .await
-        .unwrap_or_default();
-
-    let vehicle = vehicles
-        .iter()
-        .find(|v| v.is_default)
-        .or_else(|| vehicles.first())
-        .cloned()
-        .unwrap_or_else(|| Vehicle {
-            id: Uuid::new_v4(),
-            user_id: auth_user.user_id,
-            license_plate: String::new(),
-            make: None,
-            model: None,
-            color: None,
-            vehicle_type: VehicleType::Car,
-            fuel_type: FuelType::Unknown,
-            is_default: false,
-            created_at: Utc::now(),
-        });
-
-    // Determine booking times based on type
-    let booking_type = req.booking_type.as_deref().unwrap_or("full_day");
+    // `date` was declared on the request and never read — the struct's
+    // `#[allow(dead_code)]` suppressed the warning that would have said so —
+    // so every quick booking started one minute from now whatever was asked
+    // for. A future date now starts at the beginning of that day; today (or
+    // no date) keeps starting shortly from now.
     let now = Utc::now();
-    let (start_time, end_time) = match booking_type {
-        "half_day_am" | "half_day_pm" => {
-            let start = now + TimeDelta::minutes(1);
-            let end = start + TimeDelta::hours(4);
-            (start, end)
-        }
-        _ => {
-            // full_day default: 8 hours
-            let start = now + TimeDelta::minutes(1);
-            let end = start + TimeDelta::hours(8);
-            (start, end)
-        }
-    };
-
-    // Look up floor name and pricing from the lot
-    let lot_opt = state_guard
-        .db
-        .get_parking_lot(&req.lot_id.to_string())
-        .await
-        .ok()
-        .flatten();
-
-    let floor_name = lot_opt.as_ref().map_or_else(
-        || "Level 1".to_string(),
-        |lot| {
-            lot.floors
-                .iter()
-                .find(|f| f.id == available_slot.floor_id)
-                .map_or_else(|| "Level 1".to_string(), |f| f.name.clone())
-        },
-    );
-
-    let hourly_rate = lot_opt
-        .as_ref()
-        .and_then(|lot| lot.pricing.rates.iter().find(|r| r.duration_minutes == 60))
-        .map_or(2.0, |r| r.price);
-    let daily_max_gs = lot_opt.as_ref().and_then(|lot| lot.pricing.daily_max);
-    let lot_currency_gs = lot_opt
-        .as_ref()
-        .map_or_else(|| "EUR".to_string(), |lot| lot.pricing.currency.clone());
-
-    #[allow(clippy::cast_precision_loss)]
-    let raw_price_gs = ((end_time - start_time).num_minutes() as f64 / 60.0) * hourly_rate;
-    let base_price = daily_max_gs.map_or(raw_price_gs, |cap| raw_price_gs.min(cap));
-    // Seller-country VAT rate resolved under the held write lock.
-    let vat_rate = super::tax::resolve_standard_rate(&state_guard).await;
-    let tax = base_price * vat_rate;
-    let total = base_price + tax;
-
-    let booking = Booking {
-        id: Uuid::new_v4(),
-        user_id: auth_user.user_id,
-        lot_id: req.lot_id,
-        slot_id: available_slot.id,
-        slot_number: available_slot.slot_number,
-        floor_name,
-        vehicle,
-        start_time,
-        end_time,
-        status: BookingStatus::Confirmed,
-        pricing: BookingPricing {
-            base_price,
-            discount: 0.0,
-            tax,
-            total,
-            currency: lot_currency_gs,
-            payment_status: PaymentStatus::Pending,
-            payment_method: None,
-        },
-        created_at: now,
-        updated_at: now,
-        check_in_time: None,
-        check_out_time: None,
-        qr_code: Some(Uuid::new_v4().to_string()),
-        notes: Some(format!("Quick book ({booking_type})")),
-        // T-1731: propagate caller's tenant_id.
-        tenant_id: caller_tenant_id.clone(),
-    };
-
-    if let Err(e) = state_guard.db.save_booking(&booking).await {
-        tracing::error!("Failed to save quick booking: {}", e);
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SERVER_ERROR",
-                "Failed to create booking",
-            )),
+    let start_time = req
+        .date
+        .as_deref()
+        .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
+        .filter(|d| *d > now.date_naive())
+        .and_then(|d| d.and_hms_opt(0, 0, 0))
+        .map_or_else(
+            || now + TimeDelta::minutes(1),
+            |naive| naive.and_utc(),
         );
-    }
 
-    // Update slot status — fail the booking if slot update fails to prevent double-booking
-    let mut updated_slot = available_slot;
-    updated_slot.status = SlotStatus::Reserved;
-    if let Err(e) = state_guard.db.save_parking_slot(&updated_slot).await {
-        tracing::error!("Failed to update slot status after quick booking: {}", e);
-        // Roll back the booking to avoid inconsistent state
-        let _ = state_guard.db.delete_booking(&booking.id.to_string()).await;
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ApiResponse::error(
-                "SLOT_UPDATE_FAILED",
-                "Failed to reserve slot",
-            )),
-        );
-    }
-
-    tracing::info!(
-        user_id = %auth_user.user_id,
-        booking_id = %booking.id,
-        slot_id = %booking.slot_id,
-        "Quick booking created"
-    );
-
-    (StatusCode::CREATED, Json(ApiResponse::success(booking)))
+    create_booking(
+        State(state),
+        Extension(auth_user),
+        Json(CreateBookingRequest {
+            lot_id: req.lot_id,
+            slot_id,
+            start_time,
+            duration_minutes,
+            vehicle_id,
+            license_plate,
+            notes: Some(format!("Quick book ({booking_type})")),
+        }),
+    )
+    .await
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
