@@ -41,7 +41,7 @@ jobs:
         # MIT/Apache-2.0 — orhun/git-cliff. Reads cliff.toml at repo root.
         # Pinned to the v4.8.0 release commit:
         # https://github.com/orhun/git-cliff-action/releases/tag/v4.8.0
-        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5
+        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2
         with:
           config: cliff.toml
           args: --output CHANGELOG.md
